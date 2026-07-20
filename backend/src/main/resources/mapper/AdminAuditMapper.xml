@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper">
+
+    <insert id="insertAuditTask" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO audit_task(
+            biz_type,
+            biz_id,
+            region,
+            machine_result,
+            status,
+            auditor_id,
+            remark
+        )
+        VALUES (
+            #{bizType},
+            #{bizId},
+            #{region},
+            #{machineResult},
+            #{status},
+            #{auditorId},
+            #{remark}
+        )
+    </insert>
+
+    <sql id="auditWhere">
+        WHERE 1 = 1
+        <if test="region != null and region != ''">
+            AND t.region = #{region}
+        </if>
+        <if test="bizType != null">
+            AND t.biz_type = #{bizType}
+        </if>
+        <if test="allowedBizTypes != null">
+            <choose>
+                <when test="allowedBizTypes.isEmpty()">
+                    AND 1 = 0
+                </when>
+                <otherwise>
+                    AND t.biz_type IN
+                    <foreach collection="allowedBizTypes" item="allowedBizType" open="(" separator="," close=")">
+                        #{allowedBizType}
+                    </foreach>
+                </otherwise>
+            </choose>
+        </if>
+        <if test="status != null">
+            AND t.status = #{status}
+        </if>
+    </sql>
+
+    <select id="countAuditTasks" resultType="long">
+        SELECT COUNT(1)
+        FROM audit_task t
+        <include refid="auditWhere"/>
+    </select>
+
+    <select id="selectAuditTasks" resultType="com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow">
+        SELECT t.id,
+               t.biz_type,
+               t.biz_id,
+               t.region,
+               t.machine_result,
+               t.status,
+               t.auditor_id,
+               t.remark,
+               CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
+               CASE WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
+               CASE WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
+               CASE WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
+               t.created_at,
+               t.updated_at
+        FROM audit_task t
+        LEFT JOIN review r ON r.id = t.biz_id AND t.biz_type = 3
+        LEFT JOIN post p ON p.id = t.biz_id AND t.biz_type = 4
+        LEFT JOIN deal d ON d.id = t.biz_id AND t.biz_type = 2
+        LEFT JOIN merchant_shop_change sc ON sc.id = t.biz_id AND t.biz_type = 5
+        LEFT JOIN merchant_review_appeal ra ON ra.id = t.biz_id AND t.biz_type = 6
+        LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
+        LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
+        LEFT JOIN merchant m ON m.id = d.merchant_id
+        LEFT JOIN merchant sm ON sm.id = sc.merchant_id
+        LEFT JOIN merchant ram ON ram.id = ra.merchant_id
+        <include refid="auditWhere"/>
+        ORDER BY t.id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectAuditTaskById" resultType="com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow">
+        SELECT t.id,
+               t.biz_type,
+               t.biz_id,
+               t.region,
+               t.machine_result,
+               t.status,
+               t.auditor_id,
+               t.remark,
+               CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
+               CASE WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
+               CASE WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
+               CASE WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
+               t.created_at,
+               t.updated_at
+        FROM audit_task t
+        LEFT JOIN review r ON r.id = t.biz_id AND t.biz_type = 3
+        LEFT JOIN post p ON p.id = t.biz_id AND t.biz_type = 4
+        LEFT JOIN deal d ON d.id = t.biz_id AND t.biz_type = 2
+        LEFT JOIN merchant_shop_change sc ON sc.id = t.biz_id AND t.biz_type = 5
+        LEFT JOIN merchant_review_appeal ra ON ra.id = t.biz_id AND t.biz_type = 6
+        LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
+        LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
+        LEFT JOIN merchant m ON m.id = d.merchant_id
+        LEFT JOIN merchant sm ON sm.id = sc.merchant_id
+        LEFT JOIN merchant ram ON ram.id = ra.merchant_id
+        WHERE t.id = #{taskId}
+    </select>
+
+    <select id="selectPendingAuditTaskByBiz" resultType="com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow">
+        SELECT t.id,
+               t.biz_type,
+               t.biz_id,
+               t.region,
+               t.machine_result,
+               t.status,
+               t.auditor_id,
+               t.remark,
+               CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
+               CASE WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
+               CASE WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
+               CASE WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
+               t.created_at,
+               t.updated_at
+        FROM audit_task t
+        LEFT JOIN review r ON r.id = t.biz_id AND t.biz_type = 3
+        LEFT JOIN post p ON p.id = t.biz_id AND t.biz_type = 4
+        LEFT JOIN deal d ON d.id = t.biz_id AND t.biz_type = 2
+        LEFT JOIN merchant_shop_change sc ON sc.id = t.biz_id AND t.biz_type = 5
+        LEFT JOIN merchant_review_appeal ra ON ra.id = t.biz_id AND t.biz_type = 6
+        LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
+        LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
+        LEFT JOIN merchant m ON m.id = d.merchant_id
+        LEFT JOIN merchant sm ON sm.id = sc.merchant_id
+        LEFT JOIN merchant ram ON ram.id = ra.merchant_id
+        WHERE t.biz_type = #{bizType}
+          AND t.biz_id = #{bizId}
+          AND t.status = 0
+        ORDER BY t.id DESC
+        LIMIT 1
+    </select>
+
+    <update id="invalidatePendingAuditTasksByBiz">
+        UPDATE audit_task
+        SET status = 2,
+            auditor_id = 0,
+            remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE biz_type = #{bizType}
+          AND biz_id = #{bizId}
+          AND status = 0
+    </update>
+
+    <update id="updateAuditTaskDecision">
+        UPDATE audit_task
+        SET status = #{status},
+            auditor_id = #{auditorId},
+            remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{taskId}
+          AND status = 0
+    </update>
+
+    <update id="updateDealAuditDecision">
+        UPDATE deal
+        SET audit_status=#{auditStatus},
+            status=0,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{dealId}
+          AND region=#{region}
+          AND audit_status=0
+          AND is_deleted=FALSE
+    </update>
+
+    <update id="updatePostAuditDecision">
+        UPDATE post
+        SET audit_status=#{auditStatus},
+            audit_remark=#{auditRemark},
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{postId}
+          AND region=#{region}
+          AND is_deleted=FALSE
+    </update>
+
+    <insert id="insertAuditLog">
+        INSERT INTO audit_log(admin_id, action, target, detail, ip)
+        VALUES (#{adminId}, #{action}, #{target}, #{detail}, #{ip})
+    </insert>
+</mapper>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.favorite.mapper.FavoriteMapper">
+    <sql id="targetColumns">s.name AS target_name, s.cover_url, s.score, s.price_per_capita, s.currency, s.address, c.name AS city_name, a.name AS area_name, s.has_deal, s.open_now, s.tags</sql>
+    <select id="selectShopTarget" resultType="com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow">
+        SELECT s.id AS target_id, <include refid="targetColumns"/> FROM shop s LEFT JOIN city c ON c.id=s.city_id LEFT JOIN area a ON a.id=s.area_id
+        WHERE s.id=#{targetId} AND s.region=#{region} AND s.is_deleted=FALSE AND s.status=1
+    </select>
+    <select id="selectPostTarget" resultType="com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow">
+        SELECT p.id AS target_id,p.title AS target_name,
+               (SELECT pi.url FROM post_image pi WHERE pi.post_id=p.id ORDER BY pi.sort_no,pi.id LIMIT 1) AS cover_url
+        FROM post p WHERE p.id=#{targetId} AND p.region=#{region} AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE
+    </select>
+    <select id="selectFavorite" resultType="com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow">
+        SELECT f.id, f.user_id, f.target_type, f.target_id, f.created_at,
+               CASE WHEN f.target_type=2 THEN p.title ELSE s.name END AS target_name,
+               CASE WHEN f.target_type=2 THEN (SELECT pi.url FROM post_image pi WHERE pi.post_id=p.id ORDER BY pi.sort_no,pi.id LIMIT 1) ELSE s.cover_url END AS cover_url,
+               s.score,s.price_per_capita,s.currency,s.address,c.name AS city_name,a.name AS area_name,s.has_deal,s.open_now,s.tags
+        FROM user_favorite f LEFT JOIN shop s ON f.target_type=1 AND s.id=f.target_id AND s.region=#{region} AND s.is_deleted=FALSE
+        LEFT JOIN post p ON f.target_type=2 AND p.id=f.target_id AND p.region=#{region} AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE
+        LEFT JOIN city c ON c.id=s.city_id LEFT JOIN area a ON a.id=s.area_id
+        WHERE f.user_id=#{userId} AND f.target_type=#{targetType} AND f.target_id=#{targetId}
+    </select>
+    <insert id="insertFavorite" useGeneratedKeys="true" keyProperty="id">INSERT INTO user_favorite(user_id,target_type,target_id) VALUES(#{userId},#{targetType},#{targetId})</insert>
+    <delete id="deleteFavorite">DELETE FROM user_favorite WHERE user_id=#{userId} AND target_type=#{targetType} AND target_id=#{targetId}</delete>
+    <select id="countFavorites" resultType="long">SELECT COUNT(1) FROM user_favorite f LEFT JOIN shop s ON f.target_type=1 AND s.id=f.target_id AND s.region=#{region} AND s.is_deleted=FALSE LEFT JOIN post p ON f.target_type=2 AND p.id=f.target_id AND p.region=#{region} AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE WHERE f.user_id=#{userId} AND ((f.target_type=1 AND s.id IS NOT NULL) OR (f.target_type=2 AND p.id IS NOT NULL))<if test="targetType != null"> AND f.target_type=#{targetType}</if></select>
+    <select id="selectFavorites" resultType="com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow">
+        SELECT f.id, f.user_id, f.target_type, f.target_id, f.created_at,
+               CASE WHEN f.target_type=2 THEN p.title ELSE s.name END AS target_name,
+               CASE WHEN f.target_type=2 THEN (SELECT pi.url FROM post_image pi WHERE pi.post_id=p.id ORDER BY pi.sort_no,pi.id LIMIT 1) ELSE s.cover_url END AS cover_url,
+               s.score,s.price_per_capita,s.currency,s.address,c.name AS city_name,a.name AS area_name,s.has_deal,s.open_now,s.tags
+        FROM user_favorite f LEFT JOIN shop s ON f.target_type=1 AND s.id=f.target_id AND s.region=#{region} AND s.is_deleted=FALSE
+        LEFT JOIN post p ON f.target_type=2 AND p.id=f.target_id AND p.region=#{region} AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE
+        LEFT JOIN city c ON c.id=s.city_id LEFT JOIN area a ON a.id=s.area_id
+        WHERE f.user_id=#{userId} AND ((f.target_type=1 AND s.id IS NOT NULL) OR (f.target_type=2 AND p.id IS NOT NULL))<if test="targetType != null"> AND f.target_type=#{targetType}</if>
+        ORDER BY f.id DESC LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+</mapper>

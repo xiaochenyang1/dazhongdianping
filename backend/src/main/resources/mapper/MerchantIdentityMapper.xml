@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.merchant.identity.mapper.MerchantIdentityMapper">
+
+    <select id="selectOperatorByAccount"
+            resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantOperatorRow">
+        SELECT mo.id,
+               mo.merchant_id,
+               mo.account,
+               mo.password_hash,
+               mo.name,
+               mo.operator_type,
+               mo.shop_scope_type,
+               mo.status AS operator_status,
+               m.status AS merchant_status,
+               m.audit_status,
+               m.region
+        FROM merchant_operator mo
+        JOIN merchant m ON m.id = mo.merchant_id
+        WHERE LOWER(mo.account) = LOWER(#{account})
+          AND mo.is_deleted = FALSE
+          AND m.is_deleted = FALSE
+    </select>
+
+    <select id="selectOperatorById"
+            resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantOperatorRow">
+        SELECT mo.id, mo.merchant_id, mo.account, mo.password_hash, mo.name, mo.phone, mo.email,
+               mo.operator_type, mo.shop_scope_type, mo.status AS operator_status,
+               m.status AS merchant_status, m.audit_status, m.region
+        FROM merchant_operator mo
+        JOIN merchant m ON m.id=mo.merchant_id
+        WHERE mo.id=#{operatorId} AND mo.is_deleted=FALSE AND m.is_deleted=FALSE
+    </select>
+
+    <select id="selectMerchantOperator"
+            resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantOperatorRow">
+        SELECT mo.id, mo.merchant_id, mo.account, mo.password_hash, mo.name, mo.phone, mo.email,
+               mo.operator_type, mo.shop_scope_type, mo.status AS operator_status
+        FROM merchant_operator mo
+        WHERE mo.id=#{operatorId} AND mo.merchant_id=#{merchantId} AND mo.is_deleted=FALSE
+    </select>
+
+    <insert id="insertMerchant" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO merchant(account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted)
+        VALUES(#{account}, #{companyName}, #{contactName}, #{contactPhone}, #{region}, #{auditStatus}, #{status}, FALSE)
+    </insert>
+
+    <insert id="insertOperator" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO merchant_operator(
+            merchant_id, account, password_hash, name, phone, email,
+            operator_type, shop_scope_type, status, is_deleted
+        )
+        VALUES(
+            #{merchantId}, #{account}, #{passwordHash}, #{name}, #{phone}, #{email},
+            #{operatorType}, #{shopScopeType}, #{operatorStatus}, FALSE
+        )
+    </insert>
+
+    <insert id="insertOperatorRole">
+        INSERT INTO merchant_operator_role(operator_id, role_id)
+        VALUES(#{operatorId}, #{roleId})
+    </insert>
+
+    <insert id="insertOperatorShop">INSERT INTO merchant_operator_shop(operator_id,shop_id) VALUES(#{operatorId},#{shopId})</insert>
+
+    <select id="selectAllRoles" resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantRoleRow">
+        SELECT id,code,name,permissions FROM merchant_role WHERE status=1 ORDER BY id
+    </select>
+    <select id="selectRolesByIds" resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantRoleRow">
+        SELECT id,code,name,permissions FROM merchant_role WHERE status=1 AND id IN
+        <foreach collection="roleIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        ORDER BY id
+    </select>
+    <select id="selectOperatorRoles" resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantRoleRow">
+        SELECT mr.id,mr.code,mr.name,mr.permissions FROM merchant_role mr
+        JOIN merchant_operator_role mor ON mor.role_id=mr.id
+        WHERE mor.operator_id=#{operatorId} AND mr.status=1 ORDER BY mr.id
+    </select>
+    <select id="selectOperatorShopIds" resultType="long">SELECT shop_id FROM merchant_operator_shop WHERE operator_id=#{operatorId} ORDER BY shop_id</select>
+    <select id="countOwnedShops" resultType="long">
+        SELECT COUNT(1) FROM shop WHERE merchant_id=#{merchantId} AND is_deleted=FALSE AND id IN
+        <foreach collection="shopIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+    <update id="updateOperatorStatus">UPDATE merchant_operator SET status=#{status},updated_at=CURRENT_TIMESTAMP WHERE id=#{operatorId} AND merchant_id=#{merchantId} AND operator_type=2 AND is_deleted=FALSE</update>
+    <select id="countMerchantStaff" resultType="long">SELECT COUNT(1) FROM merchant_operator WHERE merchant_id=#{merchantId} AND operator_type=2 AND is_deleted=FALSE</select>
+    <select id="selectMerchantStaff" resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantOperatorRow">
+        SELECT id,merchant_id,account,name,phone,email,operator_type,shop_scope_type,status AS operator_status
+        FROM merchant_operator WHERE merchant_id=#{merchantId} AND operator_type=2 AND is_deleted=FALSE
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+    <update id="updateOperatorProfile">
+        UPDATE merchant_operator SET name=#{name},phone=#{phone},email=#{email},shop_scope_type=#{shopScopeType},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{operatorId} AND merchant_id=#{merchantId} AND operator_type=2 AND is_deleted=FALSE
+    </update>
+    <delete id="deleteOperatorRoles">DELETE FROM merchant_operator_role WHERE operator_id=#{operatorId}</delete>
+    <delete id="deleteOperatorShops">DELETE FROM merchant_operator_shop WHERE operator_id=#{operatorId}</delete>
+    <insert id="insertOperationLog">INSERT INTO merchant_operation_log(merchant_id,operator_id,action,target_type,target_id,detail) VALUES(#{merchantId},#{operatorId},#{action},'staff',#{targetId},'')</insert>
+
+    <select id="selectApplication"
+            resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantApplicationRow">
+        SELECT id,
+               merchant_id,
+               license_url,
+               legal_person,
+               shop_photo_urls,
+               status,
+               reject_reason,
+               submitted_at,
+               audited_at,
+               updated_at
+        FROM merchant_application
+        WHERE merchant_id = #{merchantId}
+    </select>
+
+    <insert id="insertApplication">
+        INSERT INTO merchant_application(
+            merchant_id, license_url, legal_person, shop_photo_urls,
+            status, reject_reason, submitted_at
+        )
+        VALUES(
+            #{merchantId}, #{licenseUrl}, #{legalPerson}, #{shopPhotoUrls},
+            0, '', CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateApplication">
+        UPDATE merchant_application
+        SET license_url = #{licenseUrl},
+            legal_person = #{legalPerson},
+            shop_photo_urls = #{shopPhotoUrls},
+            status = 0,
+            reject_reason = '',
+            audit_by = 0,
+            submitted_at = CURRENT_TIMESTAMP,
+            audited_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE merchant_id = #{merchantId}
+    </update>
+
+    <update id="updateMerchantAuditStatus">
+        UPDATE merchant
+        SET audit_status = #{auditStatus},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{merchantId}
+          AND is_deleted = FALSE
+    </update>
+
+    <sql id="adminApplicationColumns">
+        ma.id,
+        ma.merchant_id,
+        m.account AS merchant_account,
+        m.company_name,
+        m.region,
+        ma.license_url,
+        ma.legal_person,
+        ma.shop_photo_urls,
+        ma.status,
+        ma.reject_reason,
+        ma.submitted_at,
+        ma.audited_at,
+        ma.updated_at
+    </sql>
+
+    <select id="countApplications" resultType="long">
+        SELECT COUNT(1)
+        FROM merchant_application ma
+        JOIN merchant m ON m.id = ma.merchant_id
+        WHERE m.region = #{region}
+          AND m.is_deleted = FALSE
+        <if test="status != null">
+            AND ma.status = #{status}
+        </if>
+    </select>
+
+    <select id="selectApplications"
+            resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantApplicationRow">
+        SELECT <include refid="adminApplicationColumns"/>
+        FROM merchant_application ma
+        JOIN merchant m ON m.id = ma.merchant_id
+        WHERE m.region = #{region}
+          AND m.is_deleted = FALSE
+        <if test="status != null">
+            AND ma.status = #{status}
+        </if>
+        ORDER BY ma.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectAdminApplication"
+            resultType="com.tuowei.dazhongdianping.module.merchant.identity.model.MerchantApplicationRow">
+        SELECT <include refid="adminApplicationColumns"/>
+        FROM merchant_application ma
+        JOIN merchant m ON m.id = ma.merchant_id
+        WHERE ma.merchant_id = #{merchantId}
+          AND m.region = #{region}
+          AND m.is_deleted = FALSE
+    </select>
+
+    <update id="auditApplication">
+        UPDATE merchant_application
+        SET status = #{status},
+            reject_reason = #{reason},
+            audit_by = #{adminId},
+            audited_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE merchant_id = #{merchantId}
+          AND status = 0
+    </update>
+</mapper>

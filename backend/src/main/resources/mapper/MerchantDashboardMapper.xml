@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.merchant.dashboard.mapper.MerchantDashboardMapper">
+    <sql id="dashboardShopIds">
+        SELECT id FROM shop WHERE merchant_id=#{merchantId} AND region=#{region} AND is_deleted=FALSE
+        <if test="shopId != null">AND id=#{shopId}</if>
+        <if test="shopIds != null">AND id IN <foreach collection="shopIds" item="id" open="(" separator="," close=")">#{id}</foreach></if>
+    </sql>
+    <select id="selectTotals" resultType="com.tuowei.dazhongdianping.module.merchant.dashboard.model.MerchantDashboardTotalsRow">
+        SELECT
+        COALESCE((SELECT SUM(view_count) FROM shop_view_daily WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND biz_date BETWEEN #{dateFrom} AND #{dateTo}),0) AS views,
+        COALESCE((SELECT COUNT(1) FROM `order` WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND pay_status=1 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS paid_orders,
+        COALESCE((SELECT SUM(amount) FROM `order` WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND pay_status=1 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS paid_amount,
+        COALESCE((SELECT COUNT(1) FROM coupon WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=2 AND verify_at&gt;=#{startAt} AND verify_at&lt;#{endAt}),0) AS verified_coupons,
+        COALESCE((SELECT COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS reservations_total,
+        COALESCE((SELECT COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=0 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS pending_reservations,
+        COALESCE((SELECT COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=1 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS confirmed_reservations,
+        COALESCE((SELECT COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=2 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS arrived_reservations,
+        COALESCE((SELECT COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=4 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS rejected_reservations,
+        COALESCE((SELECT COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=5 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS no_show_reservations,
+        COALESCE((SELECT AVG(score) FROM shop WHERE id IN (<include refid="dashboardShopIds"/>)),0) AS score,
+        COALESCE((SELECT SUM(review_count) FROM shop WHERE id IN (<include refid="dashboardShopIds"/>)),0) AS review_count
+    </select>
+    <select id="selectTrend" resultType="com.tuowei.dazhongdianping.module.merchant.dashboard.model.MerchantDashboardDailyRow">
+        SELECT biz_date,SUM(views) AS views,SUM(paid_orders) AS paid_orders,SUM(verified_coupons) AS verified_coupons,SUM(reservations) AS reservations
+        FROM (
+          SELECT biz_date, SUM(view_count) views,0 paid_orders,0 verified_coupons,0 reservations FROM shop_view_daily WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND biz_date BETWEEN #{dateFrom} AND #{dateTo} GROUP BY biz_date
+          UNION ALL SELECT CAST(created_at AS DATE),0,COUNT(1),0,0 FROM `order` WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND pay_status=1 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt} GROUP BY CAST(created_at AS DATE)
+          UNION ALL SELECT CAST(verify_at AS DATE),0,0,COUNT(1),0 FROM coupon WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=2 AND verify_at&gt;=#{startAt} AND verify_at&lt;#{endAt} GROUP BY CAST(verify_at AS DATE)
+          UNION ALL SELECT CAST(created_at AS DATE),0,0,0,COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt} GROUP BY CAST(created_at AS DATE)
+        ) metric GROUP BY biz_date ORDER BY biz_date
+    </select>
+</mapper>

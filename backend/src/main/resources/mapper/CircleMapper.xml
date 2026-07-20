@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.circle.mapper.CircleMapper">
+  <sql id="circleColumns">
+    c.id,c.region,c.name,c.description,c.cover_url,c.member_count,c.post_count,c.sort,c.status,
+    CASE WHEN #{userId} IS NOT NULL AND EXISTS(SELECT 1 FROM circle_member cm WHERE cm.circle_id=c.id AND cm.user_id=#{userId}) THEN TRUE ELSE FALSE END joined_by_current_user
+  </sql>
+  <select id="countCircles" resultType="long">
+    SELECT COUNT(*) FROM circle c WHERE c.region=#{region} AND c.status=1 AND c.is_deleted=FALSE
+    <if test="joinedOnly">AND #{userId} IS NOT NULL AND EXISTS(SELECT 1 FROM circle_member cm WHERE cm.circle_id=c.id AND cm.user_id=#{userId})</if>
+  </select>
+  <select id="listCircles" resultType="com.tuowei.dazhongdianping.module.circle.model.CircleRow">
+    SELECT <include refid="circleColumns"/> FROM circle c WHERE c.region=#{region} AND c.status=1 AND c.is_deleted=FALSE
+    <if test="joinedOnly">AND #{userId} IS NOT NULL AND EXISTS(SELECT 1 FROM circle_member cm WHERE cm.circle_id=c.id AND cm.user_id=#{userId})</if>
+    ORDER BY c.sort DESC,c.id DESC LIMIT #{limit} OFFSET #{offset}
+  </select>
+  <select id="findAvailable" resultType="com.tuowei.dazhongdianping.module.circle.model.CircleRow">
+    SELECT <include refid="circleColumns"/> FROM circle c WHERE c.id=#{id} AND c.region=#{region} AND c.status=1 AND c.is_deleted=FALSE
+  </select>
+  <select id="countMembers" resultType="long">SELECT COUNT(*) FROM circle_member WHERE circle_id=#{circleId}</select>
+  <select id="listMembers" resultType="com.tuowei.dazhongdianping.module.circle.model.CircleMemberRow">
+    SELECT u.id,u.nickname,u.avatar,u.signature,u.level,cm.created_at joined_at FROM circle_member cm
+    JOIN app_user u ON u.id=cm.user_id WHERE cm.circle_id=#{circleId} AND u.status=1 AND u.is_deleted=FALSE
+    ORDER BY cm.id DESC LIMIT #{limit} OFFSET #{offset}
+  </select>
+  <select id="countMembership" resultType="int">SELECT COUNT(*) FROM circle_member WHERE circle_id=#{circleId} AND user_id=#{userId}</select>
+  <insert id="insertMembership">INSERT INTO circle_member(circle_id,user_id) VALUES(#{circleId},#{userId})</insert>
+  <delete id="deleteMembership">DELETE FROM circle_member WHERE circle_id=#{circleId} AND user_id=#{userId}</delete>
+  <update id="incrementMembers">UPDATE circle SET member_count=member_count+1,updated_at=CURRENT_TIMESTAMP WHERE id=#{circleId}</update>
+  <update id="decrementMembers">UPDATE circle SET member_count=CASE WHEN member_count&gt;0 THEN member_count-1 ELSE 0 END,updated_at=CURRENT_TIMESTAMP WHERE id=#{circleId}</update>
+  <select id="currentMemberCount" resultType="int">SELECT member_count FROM circle WHERE id=#{circleId}</select>
+  <update id="refreshPostCountByPostId">
+    UPDATE circle SET post_count=(SELECT COUNT(*) FROM post p WHERE p.circle_id=circle.id AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE),updated_at=CURRENT_TIMESTAMP
+    WHERE id=(SELECT circle_id FROM post WHERE id=#{postId})
+  </update>
+  <select id="countAdminCircles" resultType="long">
+    SELECT COUNT(*) FROM circle WHERE region=#{region} AND is_deleted=FALSE
+    <if test="status != null">AND status=#{status}</if><if test="keyword != null and keyword != ''">AND name LIKE CONCAT('%',#{keyword},'%')</if>
+  </select>
+  <select id="listAdminCircles" resultType="com.tuowei.dazhongdianping.module.circle.model.CircleRow">
+    SELECT id,region,name,description,cover_url,member_count,post_count,sort,status,FALSE joined_by_current_user
+    FROM circle WHERE region=#{region} AND is_deleted=FALSE
+    <if test="status != null">AND status=#{status}</if><if test="keyword != null and keyword != ''">AND name LIKE CONCAT('%',#{keyword},'%')</if>
+    ORDER BY sort DESC,id DESC LIMIT #{limit} OFFSET #{offset}
+  </select>
+  <select id="findAdminCircle" resultType="com.tuowei.dazhongdianping.module.circle.model.CircleRow">
+    SELECT id,region,name,description,cover_url,member_count,post_count,sort,status,FALSE joined_by_current_user
+    FROM circle WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+  </select>
+  <select id="countNameConflict" resultType="int">
+    SELECT COUNT(*) FROM circle WHERE region=#{region} AND name=#{name} AND is_deleted=FALSE
+    <if test="excludeId != null">AND id&lt;&gt;#{excludeId}</if>
+  </select>
+  <insert id="insertCircle" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO circle(region,name,description,cover_url,member_count,post_count,sort,status,created_by,is_deleted)
+    VALUES(#{region},#{name},#{description},#{coverUrl},0,0,#{sort},1,0,FALSE)
+  </insert>
+  <update id="updateCircle">
+    UPDATE circle SET name=#{name},description=#{description},cover_url=#{coverUrl},sort=#{sort},updated_at=CURRENT_TIMESTAMP
+    WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+  </update>
+  <update id="updateCircleStatus">
+    UPDATE circle SET status=#{status},updated_at=CURRENT_TIMESTAMP WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+  </update>
+</mapper>

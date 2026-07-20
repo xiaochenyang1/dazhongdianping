@@ -1,0 +1,1 @@
+package com.tuowei.dazhongdianping.module.trade.model;import java.math.BigDecimal;import lombok.Data;@Data public class DealItemRow {private Long id;private Long dealId;private String name;private Integer quantity;private BigDecimal price;private Integer sort;}

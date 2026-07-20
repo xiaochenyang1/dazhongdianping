@@ -1,0 +1,33 @@
+# Node
+web/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+admin-web/node_modules/
+admin-web/dist/
+merchant-web/node_modules/
+merchant-web/dist/
+
+# Java
+backend/target/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+Thumbs.db
+.DS_Store
+
+# Flutter
+app/build/
+app/.dart_tool/
+
+# Local storage
+local-storage/uploads/
+
+# Agents
+.agents/
+.superpowers/
+
+# Logs
+*.log

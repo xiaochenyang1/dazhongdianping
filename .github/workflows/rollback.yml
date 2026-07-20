@@ -1,0 +1,46 @@
+name: rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Rollback environment
+        required: true
+        type: choice
+        options:
+          - test
+          - pre
+          - prod
+      region:
+        description: Rollback region
+        required: true
+        default: CN
+        type: choice
+        options:
+          - CN
+          - EU
+      target_version:
+        description: Optional explicit release version
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+      DEPLOY_REGION: ${{ inputs.region }}
+      TARGET_VERSION: ${{ inputs.target_version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Roll back release
+        shell: pwsh
+        run: ./scripts/ci/rollback-release.ps1 -TargetVersion $env:TARGET_VERSION

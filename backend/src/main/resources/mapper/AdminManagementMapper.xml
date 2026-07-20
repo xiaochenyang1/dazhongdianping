@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.management.mapper.AdminManagementMapper">
+
+    <select id="selectMerchantByAccount" resultType="com.tuowei.dazhongdianping.module.admin.management.model.MerchantRow">
+        SELECT id,
+               account,
+               company_name,
+               contact_name,
+               contact_phone,
+               region,
+               audit_status,
+               status
+        FROM merchant
+        WHERE account = #{account}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="selectMerchantById" resultType="com.tuowei.dazhongdianping.module.admin.management.model.MerchantRow">
+        SELECT id,
+               account,
+               company_name,
+               contact_name,
+               contact_phone,
+               region,
+               audit_status,
+               status
+        FROM merchant
+        WHERE id = #{merchantId}
+          AND is_deleted = FALSE
+    </select>
+
+    <insert id="insertMerchant" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO merchant(account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted)
+        VALUES (#{account}, #{companyName}, #{contactName}, #{contactPhone}, #{region}, #{auditStatus}, #{status}, FALSE)
+    </insert>
+
+    <select id="countCategoryByRegion" resultType="int">
+        SELECT COUNT(1)
+        FROM category
+        WHERE region = #{region}
+          AND id = #{categoryId}
+    </select>
+
+    <select id="countCityByRegion" resultType="int">
+        SELECT COUNT(1)
+        FROM city
+        WHERE region = #{region}
+          AND id = #{cityId}
+    </select>
+
+    <select id="countAreaByRegionAndCity" resultType="int">
+        SELECT COUNT(1)
+        FROM area
+        WHERE region = #{region}
+          AND city_id = #{cityId}
+          AND id = #{areaId}
+    </select>
+
+    <sql id="adminShopWhere">
+        WHERE s.is_deleted = FALSE
+        <if test="region != null and region != ''">
+            AND s.region = #{region}
+        </if>
+        <if test="cityId != null">
+            AND s.city_id = #{cityId}
+        </if>
+        <if test="areaId != null">
+            AND s.area_id = #{areaId}
+        </if>
+        <if test="categoryId != null">
+            AND s.category_id = #{categoryId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                LOWER(s.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(s.address) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(m.company_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            )
+        </if>
+    </sql>
+
+    <select id="countAdminShops" resultType="long">
+        SELECT COUNT(1)
+        FROM shop s
+        LEFT JOIN merchant m ON m.id = s.merchant_id
+        <include refid="adminShopWhere"/>
+    </select>
+
+    <select id="selectAdminShops" resultType="com.tuowei.dazhongdianping.module.admin.management.model.AdminShopRow">
+        SELECT s.id,
+               s.merchant_id,
+               m.company_name AS merchant_name,
+               s.region,
+               s.category_id,
+               cat.name AS category_name,
+               s.city_id,
+               c.name AS city_name,
+               s.area_id,
+               a.name AS area_name,
+               s.name,
+               s.cover_url,
+               s.phone,
+               s.score,
+               s.taste_score,
+               s.env_score,
+               s.service_score,
+               s.price_per_capita,
+               s.currency,
+               s.address,
+               s.latitude,
+               s.longitude,
+               s.business_hours,
+               s.summary,
+               s.has_deal,
+               s.open_now,
+               s.status,
+               s.is_deleted,
+               s.tags,
+               s.created_at,
+               s.updated_at
+        FROM shop s
+        LEFT JOIN merchant m ON m.id = s.merchant_id
+        LEFT JOIN category cat ON cat.id = s.category_id
+        LEFT JOIN city c ON c.id = s.city_id
+        LEFT JOIN area a ON a.id = s.area_id
+        <include refid="adminShopWhere"/>
+        ORDER BY s.id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectAdminShopDetail" resultType="com.tuowei.dazhongdianping.module.admin.management.model.AdminShopRow">
+        SELECT s.id,
+               s.merchant_id,
+               m.company_name AS merchant_name,
+               s.region,
+               s.category_id,
+               cat.name AS category_name,
+               s.city_id,
+               c.name AS city_name,
+               s.area_id,
+               a.name AS area_name,
+               s.name,
+               s.cover_url,
+               s.phone,
+               s.score,
+               s.taste_score,
+               s.env_score,
+               s.service_score,
+               s.price_per_capita,
+               s.currency,
+               s.address,
+               s.latitude,
+               s.longitude,
+               s.business_hours,
+               s.summary,
+               s.has_deal,
+               s.open_now,
+               s.status,
+               s.is_deleted,
+               s.tags,
+               s.created_at,
+               s.updated_at
+        FROM shop s
+        LEFT JOIN merchant m ON m.id = s.merchant_id
+        LEFT JOIN category cat ON cat.id = s.category_id
+        LEFT JOIN city c ON c.id = s.city_id
+        LEFT JOIN area a ON a.id = s.area_id
+        WHERE s.id = #{shopId}
+          AND s.region = #{region}
+          AND s.is_deleted = FALSE
+    </select>
+
+    <insert id="insertShop" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO shop(
+            merchant_id,
+            category_id,
+            city_id,
+            area_id,
+            region,
+            name,
+            cover_url,
+            phone,
+            score,
+            taste_score,
+            env_score,
+            service_score,
+            price_per_capita,
+            currency,
+            address,
+            latitude,
+            longitude,
+            business_hours,
+            summary,
+            has_deal,
+            open_now,
+            status,
+            is_deleted,
+            tags
+        )
+        VALUES (
+            #{merchantId},
+            #{categoryId},
+            #{cityId},
+            #{areaId},
+            #{region},
+            #{name},
+            #{coverUrl},
+            #{phone},
+            #{score},
+            #{tasteScore},
+            #{envScore},
+            #{serviceScore},
+            #{pricePerCapita},
+            #{currency},
+            #{address},
+            #{latitude},
+            #{longitude},
+            #{businessHours},
+            #{summary},
+            #{hasDeal},
+            #{openNow},
+            #{status},
+            FALSE,
+            #{tags}
+        )
+    </insert>
+
+    <update id="updateShop">
+        UPDATE shop
+        SET merchant_id = #{merchantId},
+            category_id = #{categoryId},
+            city_id = #{cityId},
+            area_id = #{areaId},
+            region = #{region},
+            name = #{name},
+            cover_url = #{coverUrl},
+            phone = #{phone},
+            score = #{score},
+            taste_score = #{tasteScore},
+            env_score = #{envScore},
+            service_score = #{serviceScore},
+            price_per_capita = #{pricePerCapita},
+            currency = #{currency},
+            address = #{address},
+            latitude = #{latitude},
+            longitude = #{longitude},
+            business_hours = #{businessHours},
+            summary = #{summary},
+            has_deal = #{hasDeal},
+            open_now = #{openNow},
+            status = #{status},
+            tags = #{tags},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="softDeleteShop">
+        UPDATE shop
+        SET is_deleted = TRUE,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{shopId}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </update>
+
+    <insert id="insertImportBatch" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO import_batch(admin_id, region, file_name, total, success, failed, status, error_file)
+        VALUES (#{adminId}, #{region}, #{fileName}, #{total}, #{success}, #{failed}, #{status}, #{errorFile})
+    </insert>
+
+    <update id="updateImportBatch">
+        UPDATE import_batch
+        SET total = #{total},
+            success = #{success},
+            failed = #{failed},
+            status = #{status},
+            error_file = #{errorFile}
+        WHERE id = #{id}
+    </update>
+
+    <sql id="importBatchWhere">
+        WHERE 1 = 1
+        <if test="region != null and region != ''">
+            AND region = #{region}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+    </sql>
+
+    <select id="countImportBatches" resultType="long">
+        SELECT COUNT(1)
+        FROM import_batch
+        <include refid="importBatchWhere"/>
+    </select>
+
+    <select id="selectImportBatches" resultType="com.tuowei.dazhongdianping.module.admin.management.model.ImportBatchRow">
+        SELECT id,
+               admin_id,
+               region,
+               file_name,
+               total,
+               success,
+               failed,
+               status,
+               error_file,
+               created_at
+        FROM import_batch
+        <include refid="importBatchWhere"/>
+        ORDER BY id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+</mapper>

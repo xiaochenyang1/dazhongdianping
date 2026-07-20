@@ -1,0 +1,1 @@
+package com.tuowei.dazhongdianping.module.trade.model;import java.math.BigDecimal;import lombok.Data;@Data public class PaymentRow {private Long id;private Long orderId;private String orderNo;private String channel;private String channelTxn;private BigDecimal amount;private String currency;private Integer status;private String rawResponse;}

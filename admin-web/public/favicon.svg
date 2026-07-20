@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="大众点评后台">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#fff7ed" />
+  <path d="M15 18h34a5 5 0 0 1 5 5v18a5 5 0 0 1-5 5H29l-8 8v-8h-6a5 5 0 0 1-5-5V23a5 5 0 0 1 5-5Z" fill="url(#g)" />
+  <path d="M22 28h20M22 35h12" stroke="#fff" stroke-linecap="round" stroke-width="4" />
+</svg>

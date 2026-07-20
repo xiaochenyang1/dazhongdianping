@@ -1,0 +1,10 @@
+import type { PageResult } from './browse'
+
+export interface CommunityPost {
+  id: number; userId: number; userName: string; title: string; content: string; contentType: number
+  shopId?: number | null; dealId?: number | null; likeCount: number; commentCount: number
+  images: string[]; topics: string[]; createdAt: string
+}
+export interface CommunityComment { id:number;postId:number;userId:number;userName:string;content:string;createdAt:string }
+export type CommunityPostPage = PageResult<CommunityPost>
+export type CommunityCommentPage = PageResult<CommunityComment>

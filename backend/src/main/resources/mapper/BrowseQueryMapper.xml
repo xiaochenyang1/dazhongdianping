@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.browse.mapper.BrowseQueryMapper">
+
+    <select id="selectCategoriesByRegion" resultType="com.tuowei.dazhongdianping.module.browse.model.CategoryRow">
+        SELECT id,
+               parent_id,
+               name,
+               sort_no
+        FROM category
+        WHERE region = #{region}
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <select id="selectCitiesByRegion" resultType="com.tuowei.dazhongdianping.module.browse.model.CityRow">
+        SELECT id,
+               code,
+               name,
+               sort_no
+        FROM city
+        WHERE region = #{region}
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <select id="selectAreasByRegionAndCity" resultType="com.tuowei.dazhongdianping.module.browse.model.AreaRow">
+        SELECT id,
+               city_id,
+               name,
+               sort_no
+        FROM area
+        WHERE region = #{region}
+          AND city_id = #{cityId}
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <select id="selectHomeBanners" resultType="com.tuowei.dazhongdianping.module.browse.model.BannerRow">
+        SELECT id,
+               title,
+               subtitle,
+               image_url,
+               link_url,
+               sort_no
+        FROM home_banner
+        WHERE region = #{region}
+          AND enabled = TRUE
+        <choose>
+            <when test="cityId != null">
+                AND (city_id IS NULL OR city_id = #{cityId})
+            </when>
+            <otherwise>
+                AND city_id IS NULL
+            </otherwise>
+        </choose>
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <select id="selectHomeFeed" resultType="com.tuowei.dazhongdianping.module.browse.model.HomeFeedRow">
+        SELECT id,
+               feed_type AS type,
+               title,
+               subtitle,
+               cover_url,
+               shop_id,
+               sort_no
+        FROM home_feed
+        WHERE region = #{region}
+          AND enabled = TRUE
+        <choose>
+            <when test="cityId != null">
+                AND (city_id IS NULL OR city_id = #{cityId})
+            </when>
+            <otherwise>
+                AND city_id IS NULL
+            </otherwise>
+        </choose>
+        ORDER BY sort_no ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <sql id="shopQueryWhere">
+        WHERE s.region = #{region}
+          AND s.status = 1
+          AND s.is_deleted = FALSE
+        <if test="categoryId != null">
+            AND s.category_id = #{categoryId}
+        </if>
+        <if test="cityId != null">
+            AND s.city_id = #{cityId}
+        </if>
+        <if test="areaId != null">
+            AND s.area_id = #{areaId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                LOWER(s.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(s.tags) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(s.address) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            )
+        </if>
+        <if test="minPrice != null">
+            AND s.price_per_capita <![CDATA[>=]]> #{minPrice}
+        </if>
+        <if test="maxPrice != null">
+            AND s.price_per_capita <![CDATA[<=]]> #{maxPrice}
+        </if>
+        <if test="minScore != null">
+            AND s.score <![CDATA[>=]]> #{minScore}
+        </if>
+        <if test="hasDeal != null">
+            AND s.has_deal = #{hasDeal}
+        </if>
+        <if test="openNow != null">
+            AND s.open_now = #{openNow}
+        </if>
+    </sql>
+
+    <select id="countShops" resultType="long">
+        SELECT COUNT(1)
+        FROM shop s
+        <include refid="shopQueryWhere"/>
+    </select>
+
+    <select id="selectShops" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopListRow">
+        SELECT s.id,
+               s.name,
+               s.cover_url,
+               s.score,
+               s.price_per_capita,
+               s.currency,
+               s.address,
+               a.name AS area_name,
+               c.name AS city_name,
+               cat.name AS category_name,
+               s.has_deal,
+               s.open_now,
+               s.tags
+        FROM shop s
+        LEFT JOIN area a ON a.id = s.area_id
+        LEFT JOIN city c ON c.id = s.city_id
+        LEFT JOIN category cat ON cat.id = s.category_id
+        <include refid="shopQueryWhere"/>
+        <choose>
+            <when test="sort == 'score'">
+                ORDER BY s.score DESC, s.id DESC
+            </when>
+            <when test="sort == 'popular'">
+                ORDER BY s.has_deal DESC, s.score DESC, s.id DESC
+            </when>
+            <when test="sort == 'distance'">
+                ORDER BY a.sort_no ASC, s.id ASC
+            </when>
+            <otherwise>
+                ORDER BY s.has_deal DESC, s.score DESC, s.id DESC
+            </otherwise>
+        </choose>
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectShopDetail" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopDetailRow">
+        SELECT s.id,
+               s.name,
+               s.cover_url,
+               s.score,
+               s.taste_score,
+               s.env_score,
+               s.service_score,
+               s.price_per_capita,
+               s.currency,
+               s.address,
+               s.phone,
+               s.business_hours,
+               s.summary,
+               cat.name AS category_name,
+               c.name AS city_name,
+               a.name AS area_name,
+               s.has_deal,
+               s.open_now,
+               s.tags
+        FROM shop s
+        LEFT JOIN category cat ON cat.id = s.category_id
+        LEFT JOIN city c ON c.id = s.city_id
+        LEFT JOIN area a ON a.id = s.area_id
+        WHERE s.region = #{region}
+          AND s.status = 1
+          AND s.is_deleted = FALSE
+          AND s.id = #{shopId}
+    </select>
+
+    <select id="selectShopPhotos" resultType="com.tuowei.dazhongdianping.module.browse.model.PhotoRow">
+        SELECT id,
+               shop_id,
+               image_url,
+               sort_no
+        FROM shop_photo
+        WHERE shop_id = #{shopId}
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <select id="selectShopDishes" resultType="com.tuowei.dazhongdianping.module.browse.model.DishRow">
+        SELECT id,
+               shop_id,
+               name,
+               price,
+               recommend_reason,
+               sort_no
+        FROM dish
+        WHERE shop_id = #{shopId}
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <sql id="publicShopReviewWhere">
+        WHERE r.region = #{region}
+          AND r.shop_id = #{shopId}
+          AND r.audit_status = 1
+          AND r.status = 1
+          AND r.is_deleted = FALSE
+    </sql>
+
+    <select id="countShopReviews" resultType="long">
+        SELECT COUNT(1)
+        FROM review r
+        <include refid="publicShopReviewWhere"/>
+    </select>
+
+    <select id="selectShopReviews" resultType="com.tuowei.dazhongdianping.module.browse.model.ReviewRow">
+        SELECT r.id,
+               r.shop_id,
+               r.user_name,
+               r.score_overall AS score,
+               r.content,
+               r.like_count AS liked_count,
+               r.comment_count,
+               m.company_name AS merchant_reply_merchant_name,
+               rr.content AS merchant_reply_content,
+               rr.created_at AS merchant_reply_created_at,
+               rr.updated_at AS merchant_reply_updated_at,
+               r.created_at
+        FROM review r
+        LEFT JOIN review_merchant_reply rr ON rr.review_id = r.id
+        LEFT JOIN merchant m ON m.id = rr.merchant_id
+        <include refid="publicShopReviewWhere"/>
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectShopSuggestions" resultType="com.tuowei.dazhongdianping.module.browse.model.SearchSuggestionRow">
+        SELECT s.name AS term,
+               'shop' AS type,
+               s.id AS ref_id
+        FROM shop s
+        WHERE s.region = #{region}
+          AND s.status = 1
+          AND s.is_deleted = FALSE
+          AND (
+              LOWER(s.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+              OR LOWER(s.tags) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+              OR LOWER(s.address) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+          )
+        ORDER BY s.score DESC, s.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectCategorySuggestions" resultType="com.tuowei.dazhongdianping.module.browse.model.SearchSuggestionRow">
+        SELECT c.name AS term,
+               'category' AS type,
+               c.id AS ref_id
+        FROM category c
+        WHERE c.region = #{region}
+          AND LOWER(c.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+        ORDER BY c.sort_no ASC, c.id ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectCategoryNamesByRegion" resultType="string">
+        SELECT name
+        FROM category
+        WHERE region = #{region}
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <select id="selectActiveShopTagsByRegion" resultType="string">
+        SELECT tags
+        FROM shop
+        WHERE region = #{region}
+          AND status = 1
+          AND is_deleted = FALSE
+          AND tags IS NOT NULL
+          AND tags != ''
+    </select>
+
+    <select id="selectApprovedReviewTagsByRegion" resultType="string">
+        SELECT tags
+        FROM review
+        WHERE region = #{region}
+          AND audit_status = 1
+          AND status = 1
+          AND is_deleted = FALSE
+          AND tags IS NOT NULL
+          AND tags != ''
+    </select>
+
+    <select id="selectSearchHistoryByUserRegionKeyword" resultType="com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow">
+        SELECT id,
+               user_id,
+               region,
+               keyword,
+               search_type,
+               created_at,
+               updated_at
+        FROM search_history
+        WHERE user_id = #{userId}
+          AND region = #{region}
+          AND keyword = #{keyword}
+        LIMIT 1
+    </select>
+
+    <insert id="insertSearchHistory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO search_history(
+            user_id,
+            region,
+            keyword,
+            search_type
+        )
+        VALUES (
+            #{userId},
+            #{region},
+            #{keyword},
+            #{searchType}
+        )
+    </insert>
+
+    <update id="touchSearchHistory">
+        UPDATE search_history
+        SET updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <select id="countSearchHistory" resultType="long">
+        SELECT COUNT(1)
+        FROM search_history
+        WHERE user_id = #{userId}
+          AND region = #{region}
+    </select>
+
+    <select id="selectSearchHistory" resultType="com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow">
+        SELECT id,
+               user_id,
+               region,
+               keyword,
+               search_type,
+               created_at,
+               updated_at
+        FROM search_history
+        WHERE user_id = #{userId}
+          AND region = #{region}
+        ORDER BY updated_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <delete id="deleteSearchHistory">
+        DELETE FROM search_history
+        WHERE user_id = #{userId}
+          AND region = #{region}
+    </delete>
+
+    <insert id="incrementShopView">
+        INSERT INTO shop_view_daily(shop_id, biz_date, view_count)
+        VALUES(#{shopId}, #{bizDate}, 1)
+        ON DUPLICATE KEY UPDATE view_count = view_count + 1, updated_at = CURRENT_TIMESTAMP
+    </insert>
+</mapper>

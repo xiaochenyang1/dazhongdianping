@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.merchant.trade.mapper.MerchantTradeMapper">
+
+    <sql id="dealColumns">
+        d.id,d.shop_id,d.merchant_id,d.region,d.type,d.title,d.cover_image,d.price,d.original_price,
+        d.currency,d.stock,d.sold_count,d.valid_start,d.valid_end,d.rules,d.audit_status,d.status,
+        s.name AS shop_name
+    </sql>
+
+    <sql id="dealWhere">
+        WHERE d.merchant_id=#{merchantId}
+          AND d.region=#{region}
+          AND d.is_deleted=FALSE
+        <if test="shopId != null">AND d.shop_id=#{shopId}</if>
+        <if test="shopId == null and shopIds != null">
+            AND d.shop_id IN
+            <foreach collection="shopIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        </if>
+        <if test="auditStatus != null">AND d.audit_status=#{auditStatus}</if>
+        <if test="status != null">AND d.status=#{status}</if>
+    </sql>
+
+    <select id="countDeals" resultType="long">
+        SELECT COUNT(1) FROM deal d <include refid="dealWhere"/>
+    </select>
+
+    <select id="selectDeals" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">
+        SELECT <include refid="dealColumns"/>
+        FROM deal d JOIN shop s ON s.id=d.shop_id
+        <include refid="dealWhere"/>
+        ORDER BY d.id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectDeal" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">
+        SELECT <include refid="dealColumns"/>
+        FROM deal d JOIN shop s ON s.id=d.shop_id
+        WHERE d.id=#{dealId} AND d.merchant_id=#{merchantId} AND d.region=#{region} AND d.is_deleted=FALSE
+    </select>
+
+    <select id="selectDealItems" resultType="com.tuowei.dazhongdianping.module.trade.model.DealItemRow">
+        SELECT id,deal_id,name,quantity,price,sort FROM deal_item WHERE deal_id=#{dealId} ORDER BY sort,id
+    </select>
+
+    <insert id="insertDeal" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO deal(shop_id,merchant_id,region,type,title,cover_image,price,original_price,currency,
+                         stock,sold_count,valid_start,valid_end,rules,audit_status,status,is_deleted)
+        VALUES(#{shopId},#{merchantId},#{region},#{type},#{title},#{coverImage},#{price},#{originalPrice},
+               #{currency},#{stock},0,#{validStart},#{validEnd},#{rules},0,0,FALSE)
+    </insert>
+
+    <update id="updateDeal">
+        UPDATE deal SET shop_id=#{shopId},type=#{type},title=#{title},cover_image=#{coverImage},price=#{price},
+                        original_price=#{originalPrice},currency=#{currency},stock=#{stock},valid_start=#{validStart},
+                        valid_end=#{validEnd},rules=#{rules},audit_status=0,status=0,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND merchant_id=#{merchantId} AND region=#{region} AND is_deleted=FALSE
+    </update>
+
+    <delete id="deleteDealItems">DELETE FROM deal_item WHERE deal_id=#{dealId}</delete>
+
+    <insert id="insertDealItems">
+        INSERT INTO deal_item(deal_id,name,quantity,price,sort) VALUES
+        <foreach collection="items" item="item" separator=",">
+            (#{dealId},#{item.name},#{item.quantity},#{item.price},#{item.sort})
+        </foreach>
+    </insert>
+
+    <update id="changeDealStatus">
+        UPDATE deal SET status=#{status},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{dealId} AND merchant_id=#{merchantId} AND region=#{region} AND is_deleted=FALSE
+          AND (#{status}=0 OR (audit_status=1 AND stock&lt;&gt;0
+               AND (valid_start IS NULL OR valid_start&lt;=CURRENT_DATE)
+               AND (valid_end IS NULL OR valid_end&gt;=CURRENT_DATE)))
+    </update>
+
+    <select id="countPaidOrders" resultType="long">
+        SELECT COUNT(1) FROM `order` WHERE deal_id=#{dealId} AND pay_status IN (1,2,3)
+    </select>
+
+    <sql id="orderColumns">
+        o.id,o.order_no,o.user_id,o.deal_id,o.shop_id,o.region,o.quantity,o.unit_price,o.amount,
+        o.currency,o.pay_method,o.pay_status,o.status,o.paid_at,o.expire_at,o.created_at,
+        d.title AS deal_title,s.name AS shop_name,d.cover_image
+    </sql>
+
+    <sql id="orderWhere">
+        WHERE s.merchant_id=#{merchantId}
+          AND o.region=#{region}
+          AND s.region=#{region}
+          AND s.is_deleted=FALSE
+        <if test="shopId != null">AND o.shop_id=#{shopId}</if>
+        <if test="shopId == null and shopIds != null">
+            AND o.shop_id IN
+            <foreach collection="shopIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        </if>
+        <if test="payStatus != null">AND o.pay_status=#{payStatus}</if>
+        <if test="refundStatus != null">
+            AND EXISTS (
+                SELECT 1 FROM refund r WHERE r.order_id=o.id AND r.status=#{refundStatus}
+            )
+        </if>
+        <if test="orderNo != null and orderNo != ''">AND o.order_no=#{orderNo}</if>
+        <if test="dateFrom != null">AND o.created_at&gt;=#{dateFrom}</if>
+        <if test="dateToExclusive != null">AND o.created_at&lt;#{dateToExclusive}</if>
+    </sql>
+
+    <select id="countOrders" resultType="long">
+        SELECT COUNT(1)
+        FROM `order` o
+        JOIN deal d ON d.id=o.deal_id
+        JOIN shop s ON s.id=o.shop_id
+        <include refid="orderWhere"/>
+    </select>
+
+    <select id="selectOrders" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">
+        SELECT <include refid="orderColumns"/>
+        FROM `order` o
+        JOIN deal d ON d.id=o.deal_id
+        JOIN shop s ON s.id=o.shop_id
+        <include refid="orderWhere"/>
+        ORDER BY o.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">
+        SELECT <include refid="orderColumns"/>
+        FROM `order` o
+        JOIN deal d ON d.id=o.deal_id
+        JOIN shop s ON s.id=o.shop_id
+        WHERE o.id=#{orderId}
+          AND s.merchant_id=#{merchantId}
+          AND o.region=#{region}
+          AND s.region=#{region}
+          AND s.is_deleted=FALSE
+    </select>
+
+    <select id="selectRefund" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">
+        SELECT id,order_id,coupon_id,amount,reason,status,audit_by,audit_reason,audited_at,created_at,updated_at
+        FROM refund
+        WHERE order_id=#{orderId}
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <update id="approveRefund">
+        UPDATE refund
+        SET status=1,audit_by=#{operatorId},audit_reason=#{reason},audited_at=CURRENT_TIMESTAMP,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE order_id=#{orderId} AND status=0
+    </update>
+
+    <update id="rejectRefund">
+        UPDATE refund
+        SET status=2,audit_by=#{operatorId},audit_reason=#{reason},audited_at=CURRENT_TIMESTAMP,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE order_id=#{orderId} AND status=0
+    </update>
+
+    <update id="markOrderRefunded">
+        UPDATE `order`
+        SET pay_status=2,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{orderId} AND pay_status=1 AND status=1
+    </update>
+
+    <update id="markCouponsRefunded">
+        UPDATE coupon SET status=4 WHERE order_id=#{orderId} AND status=1
+    </update>
+
+    <update id="restoreDealStock">
+        UPDATE deal
+        SET stock=CASE WHEN stock=-1 THEN -1 ELSE stock+#{quantity} END,
+            sold_count=CASE WHEN sold_count&gt;=#{quantity} THEN sold_count-#{quantity} ELSE 0 END,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{dealId}
+    </update>
+
+    <insert id="insertOperationLog">
+        INSERT INTO merchant_operation_log(merchant_id,operator_id,action,target_type,target_id,detail)
+        VALUES(#{merchantId},#{operatorId},#{action},#{targetType},#{targetId},#{detail})
+    </insert>
+</mapper>

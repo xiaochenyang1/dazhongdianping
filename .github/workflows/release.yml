@@ -1,0 +1,166 @@
+name: release
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment environment
+        required: true
+        type: choice
+        options:
+          - pre
+          - prod
+      region:
+        description: Deployment region
+        required: true
+        default: CN
+        type: choice
+        options:
+          - CN
+          - EU
+      release_version:
+        description: Optional release version override
+        required: false
+        type: string
+
+jobs:
+  deploy-test:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    environment: test
+    env:
+      DEPLOY_ENVIRONMENT: test
+      DEPLOY_REGION: CN
+      APP_RELEASE_VERSION: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            admin-web/package-lock.json
+      - name: Install frontend dependencies
+        run: |
+          npm ci --prefix web
+          npm ci --prefix admin-web
+      - name: Make Maven wrapper executable
+        run: chmod +x backend/mvnw
+      - name: Prepare SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Package release
+        shell: pwsh
+        run: |
+          $bundle = ./scripts/ci/package-release.ps1
+          "APP_RELEASE_BUNDLE=$bundle" >> $env:GITHUB_ENV
+      - name: Deploy test
+        shell: pwsh
+        run: ./scripts/ci/deploy-release.ps1
+
+  deploy-pre:
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'pre'
+    runs-on: ubuntu-latest
+    environment: pre
+    env:
+      DEPLOY_ENVIRONMENT: pre
+      DEPLOY_REGION: ${{ inputs.region }}
+      APP_RELEASE_VERSION: ${{ inputs.release_version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            admin-web/package-lock.json
+      - name: Install frontend dependencies
+        run: |
+          npm ci --prefix web
+          npm ci --prefix admin-web
+      - name: Make Maven wrapper executable
+        run: chmod +x backend/mvnw
+      - name: Prepare SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Package release
+        shell: pwsh
+        run: |
+          $bundle = ./scripts/ci/package-release.ps1
+          "APP_RELEASE_BUNDLE=$bundle" >> $env:GITHUB_ENV
+      - name: Deploy pre
+        shell: pwsh
+        run: ./scripts/ci/deploy-release.ps1
+
+  deploy-prod:
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    environment: prod
+    env:
+      DEPLOY_ENVIRONMENT: prod
+      DEPLOY_REGION: ${{ inputs.region }}
+      APP_RELEASE_VERSION: ${{ inputs.release_version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            admin-web/package-lock.json
+      - name: Install frontend dependencies
+        run: |
+          npm ci --prefix web
+          npm ci --prefix admin-web
+      - name: Make Maven wrapper executable
+        run: chmod +x backend/mvnw
+      - name: Prepare SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Package release
+        shell: pwsh
+        run: |
+          $bundle = ./scripts/ci/package-release.ps1
+          "APP_RELEASE_BUNDLE=$bundle" >> $env:GITHUB_ENV
+      - name: Deploy prod
+        shell: pwsh
+        run: ./scripts/ci/deploy-release.ps1

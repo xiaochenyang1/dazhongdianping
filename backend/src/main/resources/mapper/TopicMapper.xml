@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.topic.mapper.TopicMapper">
+  <sql id="topicColumns">
+    t.id,t.region,t.name,t.post_count,t.follower_count,t.recommended,t.pinned_sort,t.merged_to_id,t.status,
+    t.created_at,t.updated_at,
+    CASE WHEN #{userId} IS NOT NULL AND EXISTS(
+      SELECT 1 FROM topic_follow tf WHERE tf.topic_id=t.id AND tf.user_id=#{userId}
+    ) THEN TRUE ELSE FALSE END followed_by_current_user,
+    COALESCE(s.score,0) hot_score,COALESCE(s.post_count_7d,0) post_count_7d,
+    COALESCE(s.like_count_7d,0) like_count_7d,COALESCE(s.comment_count_7d,0) comment_count_7d,
+    s.calculated_at
+  </sql>
+
+  <select id="countPublicTopics" resultType="long">
+    SELECT COUNT(1) FROM topic t
+    WHERE t.region=#{region} AND t.status=1 AND t.merged_to_id IS NULL
+    <if test="sort == 'recommended'">AND t.recommended=TRUE</if>
+  </select>
+
+  <select id="listPublicTopics" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicRow">
+    SELECT <include refid="topicColumns"/>
+    FROM topic t LEFT JOIN topic_hot_snapshot s ON s.topic_id=t.id
+    WHERE t.region=#{region} AND t.status=1 AND t.merged_to_id IS NULL
+    <if test="sort == 'recommended'">AND t.recommended=TRUE</if>
+    <choose>
+      <when test="sort == 'hot'">
+        ORDER BY CASE WHEN t.pinned_sort&gt;0 THEN 0 ELSE 1 END,t.pinned_sort DESC,
+                 COALESCE(s.score,0) DESC,t.follower_count DESC,t.id DESC
+      </when>
+      <when test="sort == 'recommended'">ORDER BY t.pinned_sort DESC,t.id DESC</when>
+      <otherwise>ORDER BY t.id DESC</otherwise>
+    </choose>
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <select id="countFollowingTopics" resultType="long">
+    SELECT COUNT(1) FROM topic_follow tf JOIN topic t ON t.id=tf.topic_id
+    WHERE tf.user_id=#{userId} AND t.region=#{region} AND t.status=1 AND t.merged_to_id IS NULL
+  </select>
+
+  <select id="listFollowingTopics" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicRow">
+    SELECT <include refid="topicColumns"/>
+    FROM topic_follow followed JOIN topic t ON t.id=followed.topic_id
+    LEFT JOIN topic_hot_snapshot s ON s.topic_id=t.id
+    WHERE followed.user_id=#{userId} AND t.region=#{region} AND t.status=1 AND t.merged_to_id IS NULL
+    ORDER BY followed.created_at DESC,followed.id DESC
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <select id="findAvailable" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicRow">
+    SELECT <include refid="topicColumns"/>
+    FROM topic t LEFT JOIN topic_hot_snapshot s ON s.topic_id=t.id
+    WHERE t.id=#{id} AND t.region=#{region} AND t.status=1 AND t.merged_to_id IS NULL
+  </select>
+
+  <select id="selectByNameAnyStatus" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicRow">
+    SELECT id,region,name,post_count,follower_count,recommended,pinned_sort,merged_to_id,status,created_at,updated_at
+    FROM topic WHERE region=#{region} AND name=#{name} LIMIT 1
+  </select>
+
+  <select id="selectByIdAnyStatus" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicRow">
+    SELECT id,region,name,post_count,follower_count,recommended,pinned_sort,merged_to_id,status,created_at,updated_at
+    FROM topic WHERE id=#{id} AND region=#{region} LIMIT 1
+  </select>
+
+  <insert id="insertTopic" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO topic(region,name,post_count,follower_count,recommended,pinned_sort,merged_to_id,status)
+    VALUES(#{region},#{name},0,0,FALSE,0,NULL,1)
+  </insert>
+
+  <select id="countFollow" resultType="int">
+    SELECT COUNT(1) FROM topic_follow WHERE topic_id=#{topicId} AND user_id=#{userId}
+  </select>
+  <insert id="insertFollow">INSERT INTO topic_follow(topic_id,user_id) VALUES(#{topicId},#{userId})</insert>
+  <delete id="deleteFollow">DELETE FROM topic_follow WHERE topic_id=#{topicId} AND user_id=#{userId}</delete>
+  <update id="refreshFollowerCount">
+    UPDATE topic SET follower_count=(SELECT COUNT(1) FROM topic_follow WHERE topic_id=#{topicId}),
+      updated_at=CURRENT_TIMESTAMP WHERE id=#{topicId}
+  </update>
+  <select id="currentFollowerCount" resultType="int">SELECT follower_count FROM topic WHERE id=#{topicId}</select>
+
+  <select id="selectPostTopicIds" resultType="long">
+    SELECT topic_id FROM post_topic WHERE post_id=#{postId} ORDER BY id
+  </select>
+
+  <update id="refreshPostCounts">
+    UPDATE topic t SET post_count=(
+      SELECT COUNT(1) FROM post_topic pt JOIN post p ON p.id=pt.post_id
+      WHERE pt.topic_id=t.id AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE
+    ),updated_at=CURRENT_TIMESTAMP
+    WHERE t.id IN
+    <foreach collection="topicIds" item="topicId" open="(" separator="," close=")">#{topicId}</foreach>
+  </update>
+
+  <update id="touchTopicsByPostId">
+    UPDATE topic SET updated_at=CURRENT_TIMESTAMP
+    WHERE id IN (SELECT topic_id FROM post_topic WHERE post_id=#{postId})
+  </update>
+
+  <select id="selectPublicTopicIds" resultType="long">
+    SELECT id FROM topic WHERE region=#{region} AND status=1 AND merged_to_id IS NULL ORDER BY id
+  </select>
+
+  <select id="selectDirtyPublicTopicIds" resultType="long">
+    SELECT t.id FROM topic t LEFT JOIN topic_hot_snapshot s ON s.topic_id=t.id
+    WHERE t.region=#{region} AND t.status=1 AND t.merged_to_id IS NULL
+      AND (s.topic_id IS NULL OR t.updated_at&gt;s.calculated_at)
+    ORDER BY t.id
+  </select>
+
+  <select id="selectHotMetrics" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicHotMetricRow">
+    SELECT t.id topic_id,t.region,t.recommended,
+      COUNT(DISTINCT CASE WHEN p.created_at&gt;=#{cutoff} THEN p.id END) post_count_7d,
+      COUNT(DISTINCT CASE WHEN pl.created_at&gt;=#{cutoff} THEN pl.id END) like_count_7d,
+      COUNT(DISTINCT CASE WHEN pc.created_at&gt;=#{cutoff} AND pc.status=1 AND pc.is_deleted=FALSE THEN pc.id END) comment_count_7d
+    FROM topic t
+    LEFT JOIN post_topic pt ON pt.topic_id=t.id
+    LEFT JOIN post p ON p.id=pt.post_id AND p.region=t.region
+      AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE
+    LEFT JOIN post_like pl ON pl.post_id=p.id
+    LEFT JOIN post_comment pc ON pc.post_id=p.id
+    WHERE t.region=#{region} AND t.status=1 AND t.merged_to_id IS NULL AND t.id IN
+    <foreach collection="topicIds" item="topicId" open="(" separator="," close=")">#{topicId}</foreach>
+    GROUP BY t.id,t.region,t.recommended
+    ORDER BY t.id
+  </select>
+
+  <delete id="deleteHotSnapshots">
+    DELETE FROM topic_hot_snapshot WHERE topic_id IN
+    <foreach collection="topicIds" item="topicId" open="(" separator="," close=")">#{topicId}</foreach>
+  </delete>
+
+  <delete id="deleteInvalidHotSnapshots">
+    DELETE FROM topic_hot_snapshot
+    WHERE region=#{region} AND topic_id NOT IN (
+      SELECT id FROM topic WHERE region=#{region} AND status=1 AND merged_to_id IS NULL
+    )
+  </delete>
+
+  <insert id="insertHotSnapshot" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO topic_hot_snapshot(topic_id,region,score,post_count_7d,like_count_7d,comment_count_7d,calculated_at)
+    VALUES(#{topicId},#{region},#{score},#{postCount7d},#{likeCount7d},#{commentCount7d},#{calculatedAt})
+  </insert>
+
+  <select id="countRegionHotSnapshots" resultType="int">
+    SELECT COUNT(1) FROM topic_hot_snapshot WHERE region=#{region}
+  </select>
+
+  <sql id="adminTopicColumns">
+    t.id,t.region,t.name,t.post_count,t.follower_count,t.recommended,t.pinned_sort,t.merged_to_id,t.status,
+    t.created_at,t.updated_at,FALSE followed_by_current_user,
+    COALESCE(s.score,0) hot_score,COALESCE(s.post_count_7d,0) post_count_7d,
+    COALESCE(s.like_count_7d,0) like_count_7d,COALESCE(s.comment_count_7d,0) comment_count_7d,
+    s.calculated_at
+  </sql>
+
+  <select id="countAdminTopics" resultType="long">
+    SELECT COUNT(1) FROM topic t WHERE t.region=#{region}
+    <if test="status != null">AND t.status=#{status}</if>
+    <if test="recommended != null">AND t.recommended=#{recommended}</if>
+    <if test="keyword != null and keyword != ''">AND t.name LIKE CONCAT('%',#{keyword},'%')</if>
+  </select>
+
+  <select id="listAdminTopics" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicRow">
+    SELECT <include refid="adminTopicColumns"/> FROM topic t
+    LEFT JOIN topic_hot_snapshot s ON s.topic_id=t.id
+    WHERE t.region=#{region}
+    <if test="status != null">AND t.status=#{status}</if>
+    <if test="recommended != null">AND t.recommended=#{recommended}</if>
+    <if test="keyword != null and keyword != ''">AND t.name LIKE CONCAT('%',#{keyword},'%')</if>
+    ORDER BY t.pinned_sort DESC,t.id DESC LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <select id="findAdminTopic" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicRow">
+    SELECT <include refid="adminTopicColumns"/> FROM topic t
+    LEFT JOIN topic_hot_snapshot s ON s.topic_id=t.id
+    WHERE t.id=#{id} AND t.region=#{region}
+  </select>
+
+  <select id="findAdminTopicForUpdate" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicRow">
+    SELECT id,region,name,post_count,follower_count,recommended,pinned_sort,merged_to_id,status,created_at,updated_at
+    FROM topic WHERE id=#{id} AND region=#{region} FOR UPDATE
+  </select>
+
+  <select id="findAnyTopicForUpdate" resultType="com.tuowei.dazhongdianping.module.topic.model.TopicRow">
+    SELECT id,region,name,post_count,follower_count,recommended,pinned_sort,merged_to_id,status,created_at,updated_at
+    FROM topic WHERE id=#{id} FOR UPDATE
+  </select>
+
+  <select id="countTopicNameConflict" resultType="int">
+    SELECT COUNT(1) FROM topic WHERE region=#{region} AND name=#{name}
+    <if test="excludeId != null">AND id&lt;&gt;#{excludeId}</if>
+  </select>
+
+  <update id="updateTopicName">
+    UPDATE topic SET name=#{name},updated_at=CURRENT_TIMESTAMP WHERE id=#{id} AND region=#{region}
+  </update>
+
+  <update id="updateTopicRecommendation">
+    UPDATE topic SET recommended=#{recommended},pinned_sort=#{pinnedSort},updated_at=CURRENT_TIMESTAMP
+    WHERE id=#{id} AND region=#{region}
+  </update>
+
+  <update id="updateTopicStatus">
+    UPDATE topic SET status=#{status},updated_at=CURRENT_TIMESTAMP WHERE id=#{id} AND region=#{region}
+  </update>
+
+  <delete id="deleteHotSnapshot">DELETE FROM topic_hot_snapshot WHERE topic_id=#{topicId}</delete>
+
+  <select id="selectPostIdsByTopic" resultType="long">
+    SELECT post_id FROM post_topic WHERE topic_id=#{topicId} ORDER BY id
+  </select>
+  <select id="countPostTopic" resultType="int">
+    SELECT COUNT(1) FROM post_topic WHERE topic_id=#{topicId} AND post_id=#{postId}
+  </select>
+  <delete id="deletePostTopic">DELETE FROM post_topic WHERE topic_id=#{topicId} AND post_id=#{postId}</delete>
+  <update id="movePostTopic">
+    UPDATE post_topic SET topic_id=#{targetId} WHERE topic_id=#{sourceId} AND post_id=#{postId}
+  </update>
+
+  <select id="selectFollowerUserIds" resultType="long">
+    SELECT user_id FROM topic_follow WHERE topic_id=#{topicId} ORDER BY id
+  </select>
+  <select id="countTopicFollow" resultType="int">
+    SELECT COUNT(1) FROM topic_follow WHERE topic_id=#{topicId} AND user_id=#{userId}
+  </select>
+  <delete id="deleteTopicFollow">DELETE FROM topic_follow WHERE topic_id=#{topicId} AND user_id=#{userId}</delete>
+  <update id="moveTopicFollow">
+    UPDATE topic_follow SET topic_id=#{targetId} WHERE topic_id=#{sourceId} AND user_id=#{userId}
+  </update>
+
+  <update id="markTopicMerged">
+    UPDATE topic SET merged_to_id=#{targetId},status=2,recommended=FALSE,pinned_sort=0,post_count=0,
+      follower_count=0,updated_at=CURRENT_TIMESTAMP
+    WHERE id=#{sourceId} AND region=#{region}
+  </update>
+</mapper>

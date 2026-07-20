@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.message.mapper.MessageMapper">
+  <resultMap id="MessageMap" type="com.tuowei.dazhongdianping.module.message.model.MessageRow">
+    <id column="id" property="id"/><result column="conversation_id" property="conversationId"/>
+    <result column="from_user_id" property="fromUserId"/><result column="to_user_id" property="toUserId"/>
+    <result column="content" property="content"/><result column="is_read" property="read"/>
+    <result column="read_at" property="readAt"/><result column="created_at" property="createdAt"/>
+  </resultMap>
+  <select id="countAvailableUser" resultType="int">SELECT COUNT(*) FROM app_user WHERE id=#{userId} AND status=1 AND is_deleted=FALSE</select>
+  <select id="findConversation" resultType="long">SELECT id FROM conversation WHERE user_a=#{userA} AND user_b=#{userB}</select>
+  <insert id="insertConversation">INSERT INTO conversation(user_a,user_b) VALUES(#{userA},#{userB})</insert>
+  <select id="lastInsertedId" resultType="long">SELECT MAX(id) FROM message_report</select>
+  <select id="countConversationMember" resultType="int">SELECT COUNT(*) FROM conversation WHERE id=#{conversationId} AND (user_a=#{userId} OR user_b=#{userId})</select>
+  <select id="countBlockEitherDirection" resultType="int">SELECT COUNT(*) FROM user_block WHERE (user_id=#{firstUserId} AND blocked_user_id=#{secondUserId}) OR (user_id=#{secondUserId} AND blocked_user_id=#{firstUserId})</select>
+  <insert id="insertMessage" useGeneratedKeys="true" keyProperty="id">INSERT INTO message(conversation_id,from_user_id,to_user_id,content,is_read,status,is_deleted) VALUES(#{conversationId},#{fromUserId},#{toUserId},#{content},FALSE,1,FALSE)</insert>
+  <update id="updateConversation">UPDATE conversation SET last_message_id=#{messageId},last_message_preview=#{preview},last_message_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=#{conversationId}</update>
+  <select id="countConversations" resultType="long">SELECT COUNT(*) FROM conversation WHERE user_a=#{userId} OR user_b=#{userId}</select>
+  <select id="listConversations" resultType="com.tuowei.dazhongdianping.module.message.model.ConversationRow">
+    SELECT c.id,CASE WHEN c.user_a=#{userId} THEN c.user_b ELSE c.user_a END peer_user_id,
+      u.nickname peer_nickname,u.avatar peer_avatar,c.last_message_preview,c.last_message_at,
+      (SELECT COUNT(*) FROM message m WHERE m.conversation_id=c.id AND m.to_user_id=#{userId} AND m.is_read=FALSE AND m.is_deleted=FALSE) unread_count
+    FROM conversation c JOIN app_user u ON u.id=CASE WHEN c.user_a=#{userId} THEN c.user_b ELSE c.user_a END
+    WHERE c.user_a=#{userId} OR c.user_b=#{userId} ORDER BY c.last_message_at DESC,c.id DESC LIMIT #{limit} OFFSET #{offset}
+  </select>
+  <select id="countMessages" resultType="long">SELECT COUNT(*) FROM message WHERE conversation_id=#{conversationId} AND is_deleted=FALSE</select>
+  <select id="listMessages" resultMap="MessageMap">SELECT id,conversation_id,from_user_id,to_user_id,content,is_read,read_at,created_at FROM message WHERE conversation_id=#{conversationId} AND is_deleted=FALSE ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}</select>
+  <update id="markRead">UPDATE message SET is_read=TRUE,read_at=CURRENT_TIMESTAMP WHERE conversation_id=#{conversationId} AND to_user_id=#{userId} AND is_read=FALSE AND is_deleted=FALSE</update>
+  <insert id="insertBlock">INSERT INTO user_block(user_id,blocked_user_id) VALUES(#{userId},#{blockedUserId})</insert>
+  <delete id="deleteBlock">DELETE FROM user_block WHERE user_id=#{userId} AND blocked_user_id=#{blockedUserId}</delete>
+  <select id="countBlocks" resultType="long">SELECT COUNT(*) FROM user_block WHERE user_id=#{userId}</select>
+  <select id="listBlocks" resultType="com.tuowei.dazhongdianping.module.message.model.BlockedUserRow">
+    SELECT u.id,u.nickname,u.avatar,b.created_at blocked_at FROM user_block b JOIN app_user u ON u.id=b.blocked_user_id
+    WHERE b.user_id=#{userId} ORDER BY b.id DESC LIMIT #{limit} OFFSET #{offset}
+  </select>
+  <select id="countReport" resultType="int">SELECT COUNT(*) FROM message_report WHERE reporter_user_id=#{reporterUserId} AND target_type=#{targetType} AND target_id=#{targetId}</select>
+  <select id="countReportableTarget" resultType="int">
+    SELECT CASE WHEN #{targetType}=1 THEN (SELECT COUNT(*) FROM message m JOIN conversation c ON c.id=m.conversation_id WHERE m.id=#{targetId} AND (c.user_a=#{reporterUserId} OR c.user_b=#{reporterUserId}))
+                WHEN #{targetType}=2 THEN (SELECT COUNT(*) FROM conversation c WHERE c.id=#{targetId} AND (c.user_a=#{reporterUserId} OR c.user_b=#{reporterUserId})) ELSE 0 END
+  </select>
+  <insert id="insertReport">INSERT INTO message_report(reporter_user_id,target_type,target_id,reason,status) VALUES(#{reporterUserId},#{targetType},#{targetId},#{reason},0)</insert>
+</mapper>

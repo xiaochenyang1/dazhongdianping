@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.rank.mapper.RankMapper">
+    <sql id="rankSummaryColumns">
+        r.id, r.name, r.type, r.region, r.city_id, c.name AS city_name,
+        r.category_id, cat.name AS category_name, r.config_id, r.period, r.updated_at,
+        (SELECT COUNT(1) FROM rank_item count_item WHERE count_item.rank_id = r.id) AS item_count,
+        (SELECT s.cover_url FROM rank_item cover_item JOIN shop s ON s.id = cover_item.shop_id
+         WHERE cover_item.rank_id = r.id ORDER BY cover_item.position ASC LIMIT 1) AS cover_url,
+        (SELECT s.name FROM rank_item top_item JOIN shop s ON s.id = top_item.shop_id
+         WHERE top_item.rank_id = r.id ORDER BY top_item.position ASC LIMIT 1) AS top_shop_name
+    </sql>
+
+    <select id="selectRanks" resultType="com.tuowei.dazhongdianping.module.rank.model.RankSummaryRow">
+        SELECT <include refid="rankSummaryColumns"/>
+        FROM `rank` r
+        LEFT JOIN city c ON c.id = r.city_id
+        LEFT JOIN category cat ON cat.id = r.category_id
+        WHERE r.region = #{region} AND r.enabled = TRUE
+        <if test="cityId != null">AND r.city_id = #{cityId}</if>
+        <if test="categoryId != null">AND r.category_id = #{categoryId}</if>
+        <if test="type != null">AND r.type = #{type}</if>
+        ORDER BY r.type ASC, r.id DESC
+    </select>
+
+    <select id="selectRank" resultType="com.tuowei.dazhongdianping.module.rank.model.RankSummaryRow">
+        SELECT <include refid="rankSummaryColumns"/>
+        FROM `rank` r
+        LEFT JOIN city c ON c.id = r.city_id
+        LEFT JOIN category cat ON cat.id = r.category_id
+        WHERE r.id = #{rankId} AND r.region = #{region} AND r.enabled = TRUE
+    </select>
+
+    <select id="selectRankItems" resultType="com.tuowei.dazhongdianping.module.rank.model.RankItemRow">
+        SELECT ri.position, ri.score AS rank_score, ri.reason,
+               s.id AS shop_id, s.name AS shop_name, s.cover_url, s.score,
+               s.price_per_capita, s.currency, s.address,
+               c.name AS city_name, a.name AS area_name,
+               s.has_deal, s.open_now, s.tags
+        FROM rank_item ri
+        JOIN `rank` r ON r.id = ri.rank_id
+        JOIN shop s ON s.id = ri.shop_id AND s.region = r.region AND s.is_deleted = FALSE
+        LEFT JOIN city c ON c.id = s.city_id
+        LEFT JOIN area a ON a.id = s.area_id
+        WHERE ri.rank_id = #{rankId} AND r.region = #{region} AND r.enabled = TRUE
+        ORDER BY ri.position ASC, ri.id ASC
+    </select>
+
+    <select id="selectRankConfigs" resultType="com.tuowei.dazhongdianping.module.rank.model.RankConfigRow">
+        SELECT id, rank_type, region, city_id, category_id, version, calc_cycle, weight_json,
+               min_review_count, min_score, manual_intervene, status, effective_from, effective_to,
+               updated_by, updated_at
+        FROM rank_config WHERE region = #{region}
+        ORDER BY rank_type ASC, city_id ASC, category_id ASC, version DESC
+    </select>
+
+    <select id="selectRankConfig" resultType="com.tuowei.dazhongdianping.module.rank.model.RankConfigRow">
+        SELECT id, rank_type, region, city_id, category_id, version, calc_cycle, weight_json,
+               min_review_count, min_score, manual_intervene, status, effective_from, effective_to,
+               updated_by, updated_at
+        FROM rank_config WHERE id = #{configId} AND region = #{region}
+    </select>
+
+    <select id="selectNextConfigVersion" resultType="int">
+        SELECT COALESCE(MAX(version), 0) + 1 FROM rank_config
+        WHERE rank_type = #{rankType} AND region = #{region} AND city_id = #{cityId} AND category_id = #{categoryId}
+    </select>
+
+    <insert id="insertRankConfig" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO rank_config(rank_type, region, city_id, category_id, version, calc_cycle, weight_json,
+                                min_review_count, min_score, manual_intervene, status, updated_by)
+        VALUES(#{rankType}, #{region}, #{cityId}, #{categoryId}, #{version}, #{calcCycle}, #{weightJson},
+               #{minReviewCount}, #{minScore}, #{manualIntervene}, #{status}, #{updatedBy})
+    </insert>
+
+    <update id="updateDraftRankConfig">
+        UPDATE rank_config SET rank_type = #{rankType}, city_id = #{cityId}, category_id = #{categoryId},
+            calc_cycle = #{calcCycle}, weight_json = #{weightJson}, min_review_count = #{minReviewCount},
+            min_score = #{minScore}, manual_intervene = #{manualIntervene}, updated_by = #{updatedBy},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND region = #{region} AND status = 0
+    </update>
+
+    <update id="archivePublishedConfigs">
+        UPDATE rank_config SET status = 2, effective_to = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE rank_type = #{rankType} AND region = #{region} AND city_id = #{cityId}
+          AND category_id = #{categoryId} AND status = 1 AND id != #{id}
+    </update>
+
+    <update id="publishRankConfig">
+        UPDATE rank_config SET status = 1, effective_from = CURRENT_TIMESTAMP, effective_to = NULL,
+                               updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{configId} AND region = #{region}
+    </update>
+
+    <select id="selectRankCandidates" resultType="com.tuowei.dazhongdianping.module.rank.model.RankCandidateRow">
+        SELECT id AS shop_id, name AS shop_name, score, review_count, has_deal, open_now
+        FROM shop
+        WHERE region = #{region} AND city_id = #{cityId} AND category_id = #{categoryId}
+          AND status = 1 AND is_deleted = FALSE
+          AND review_count &gt;= #{minReviewCount} AND score &gt;= #{minScore}
+    </select>
+
+    <select id="selectCityName" resultType="string">
+        SELECT name FROM city WHERE id = #{cityId} AND region = #{region}
+    </select>
+
+    <select id="selectCategoryName" resultType="string">
+        SELECT name FROM category WHERE id = #{categoryId} AND region = #{region}
+    </select>
+
+    <update id="disableRankSnapshots">
+        UPDATE `rank` SET enabled = FALSE, updated_at = CURRENT_TIMESTAMP
+        WHERE type = #{rankType} AND region = #{region} AND city_id = #{cityId}
+          AND category_id = #{categoryId} AND enabled = TRUE
+    </update>
+
+    <insert id="insertRankSnapshot" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `rank`(name, type, region, city_id, category_id, config_id, period, enabled)
+        VALUES(#{name}, #{type}, #{region}, #{cityId}, #{categoryId}, #{configId}, #{period}, TRUE)
+    </insert>
+
+    <insert id="insertRankSnapshotItem">
+        INSERT INTO rank_item(rank_id, shop_id, position, score, reason)
+        VALUES(#{rankId}, #{shopId}, #{position}, #{score}, #{reason})
+    </insert>
+</mapper>

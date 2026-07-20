@@ -1,0 +1,1 @@
+package com.tuowei.dazhongdianping.module.trade.model.request;import jakarta.validation.constraints.*;public record OrderCreateRequest(@NotNull @Min(1) Long dealId,@NotNull @Min(1) @Max(20) Integer quantity){}

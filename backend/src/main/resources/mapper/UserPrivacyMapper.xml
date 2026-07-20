@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.auth.mapper.UserPrivacyMapper">
+
+    <insert id="insertExportTask" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO privacy_export_task(
+            user_id,
+            scope_json,
+            format,
+            status,
+            file_name,
+            file_path,
+            fail_reason
+        )
+        VALUES (
+            #{userId},
+            #{scopeJson},
+            #{format},
+            #{status},
+            #{fileName},
+            #{filePath},
+            #{failReason}
+        )
+    </insert>
+
+    <update id="updateExportTaskResult">
+        UPDATE privacy_export_task
+        SET status = #{status},
+            file_name = #{fileName},
+            file_path = #{filePath},
+            expire_at = #{expireAt},
+            fail_reason = '',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateExportTaskFailure">
+        UPDATE privacy_export_task
+        SET status = 4,
+            fail_reason = #{failReason},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="expireReadyExportTasks">
+        UPDATE privacy_export_task
+        SET status = 3,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND status = 2
+          AND expire_at IS NOT NULL
+          AND expire_at &lt;= CURRENT_TIMESTAMP
+    </update>
+
+    <select id="countRecentExportTasks" resultType="long">
+        SELECT COUNT(1)
+        FROM privacy_export_task
+        WHERE user_id = #{userId}
+          AND created_at >= #{since}
+          AND status != 5
+    </select>
+
+    <select id="countExportTasks" resultType="long">
+        SELECT COUNT(1)
+        FROM privacy_export_task
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectExportTasks" resultType="com.tuowei.dazhongdianping.module.auth.model.PrivacyExportTaskRow">
+        SELECT id,
+               user_id,
+               scope_json,
+               format,
+               status,
+               file_name,
+               file_path,
+               expire_at,
+               fail_reason,
+               created_at,
+               updated_at
+        FROM privacy_export_task
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectExportTaskByIdAndUserId" resultType="com.tuowei.dazhongdianping.module.auth.model.PrivacyExportTaskRow">
+        SELECT id,
+               user_id,
+               scope_json,
+               format,
+               status,
+               file_name,
+               file_path,
+               expire_at,
+               fail_reason,
+               created_at,
+               updated_at
+        FROM privacy_export_task
+        WHERE id = #{taskId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="selectLatestExportTaskByUserId" resultType="com.tuowei.dazhongdianping.module.auth.model.PrivacyExportTaskRow">
+        SELECT id,
+               user_id,
+               scope_json,
+               format,
+               status,
+               file_name,
+               file_path,
+               expire_at,
+               fail_reason,
+               created_at,
+               updated_at
+        FROM privacy_export_task
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insertDeleteTask" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO privacy_delete_task(
+            user_id,
+            verify_type,
+            account_snapshot,
+            reason,
+            status,
+            cooling_off_expire_at
+        )
+        VALUES (
+            #{userId},
+            #{verifyType},
+            #{accountSnapshot},
+            #{reason},
+            #{status},
+            #{coolingOffExpireAt}
+        )
+    </insert>
+
+    <select id="selectDeleteTaskByIdAndUserId" resultType="com.tuowei.dazhongdianping.module.auth.model.PrivacyDeleteTaskRow">
+        SELECT id,
+               user_id,
+               verify_type,
+               account_snapshot,
+               reason,
+               status,
+               cooling_off_expire_at,
+               completed_at,
+               cancelled_at,
+               created_at,
+               updated_at
+        FROM privacy_delete_task
+        WHERE id = #{taskId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="selectLatestDeleteTaskByUserId" resultType="com.tuowei.dazhongdianping.module.auth.model.PrivacyDeleteTaskRow">
+        SELECT id,
+               user_id,
+               verify_type,
+               account_snapshot,
+               reason,
+               status,
+               cooling_off_expire_at,
+               completed_at,
+               cancelled_at,
+               created_at,
+               updated_at
+        FROM privacy_delete_task
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectActiveDeleteTaskByUserId" resultType="com.tuowei.dazhongdianping.module.auth.model.PrivacyDeleteTaskRow">
+        SELECT id,
+               user_id,
+               verify_type,
+               account_snapshot,
+               reason,
+               status,
+               cooling_off_expire_at,
+               completed_at,
+               cancelled_at,
+               created_at,
+               updated_at
+        FROM privacy_delete_task
+        WHERE user_id = #{userId}
+          AND status IN (1, 2)
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectDueDeleteTaskByUserIdForUpdate" resultType="com.tuowei.dazhongdianping.module.auth.model.PrivacyDeleteTaskRow">
+        SELECT id,
+               user_id,
+               verify_type,
+               account_snapshot,
+               reason,
+               status,
+               cooling_off_expire_at,
+               completed_at,
+               cancelled_at,
+               created_at,
+               updated_at
+        FROM privacy_delete_task
+        WHERE user_id = #{userId}
+          AND status = 1
+          AND cooling_off_expire_at &lt;= CURRENT_TIMESTAMP
+        ORDER BY id DESC
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <update id="cancelDeleteTask">
+        UPDATE privacy_delete_task
+        SET status = 4,
+            cancelled_at = #{cancelledAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{taskId}
+          AND status = 1
+    </update>
+
+    <update id="completeDeleteTask">
+        UPDATE privacy_delete_task
+        SET status = 3,
+            completed_at = #{completedAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{taskId}
+          AND status = 1
+    </update>
+
+    <delete id="deleteSearchHistoryByUserId">
+        DELETE FROM search_history
+        WHERE user_id = #{userId}
+    </delete>
+
+    <delete id="deleteGrowthPointsLogsByUserId">
+        DELETE FROM growth_points_log
+        WHERE user_id = #{userId}
+    </delete>
+
+    <delete id="deleteVerificationCodesByTarget">
+        DELETE FROM verification_code
+        WHERE target = #{target}
+    </delete>
+
+    <update id="disableDevicesByUserId">
+        UPDATE user_device
+        SET push_channel = 0,
+            push_token = '',
+            status = 2,
+            last_active_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND status != 2
+    </update>
+
+    <update id="anonymizeUser">
+        UPDATE app_user
+        SET nickname = #{nickname},
+            avatar = '',
+            email = NULL,
+            phone = NULL,
+            password_hash = NULL,
+            gender = 0,
+            signature = '',
+            status = 2,
+            last_login_at = NULL,
+            is_deleted = TRUE,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="anonymizeReviews">
+        UPDATE review
+        SET user_id = 0,
+            user_name = #{nickname},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="anonymizeReviewComments">
+        UPDATE review_comment
+        SET user_id = 0,
+            user_name = #{nickname},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="anonymizeReviewReports">
+        UPDATE review_report
+        SET reporter_user_id = 0,
+            reporter_user_name = #{nickname},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE reporter_user_id = #{userId}
+    </update>
+
+    <update id="anonymizePosts">
+        UPDATE post SET user_id=0,user_name=#{nickname},audit_status=CASE WHEN audit_status=1 THEN 1 ELSE 2 END,
+                        audit_remark=CASE WHEN audit_status=1 THEN audit_remark ELSE '账号注销，内容停止公开' END,
+                        updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}
+    </update>
+    <update id="anonymizePostComments">
+        UPDATE post_comment SET user_id=0,user_name=#{nickname},updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}
+    </update>
+    <update id="anonymizePostReports">
+        UPDATE post_report SET reporter_user_id=0,reporter_user_name=#{nickname},updated_at=CURRENT_TIMESTAMP WHERE reporter_user_id=#{userId}
+    </update>
+
+    <select id="selectReviewsByUserId" resultType="com.tuowei.dazhongdianping.module.review.model.ReviewRow">
+        SELECT id,
+               user_id,
+               shop_id,
+               region,
+               user_name,
+               content,
+               score_overall,
+               score_taste,
+               score_env,
+               score_service,
+               cost,
+               currency,
+               like_count,
+               comment_count,
+               audit_status,
+               audit_remark,
+               status,
+               is_deleted,
+               tags,
+               created_at,
+               updated_at
+        FROM review
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectPostsByUserId" resultType="com.tuowei.dazhongdianping.module.community.model.PostRow">
+        SELECT id,user_id,region,user_name,title,content,content_type,shop_id,deal_id,like_count,comment_count,
+               audit_status,audit_remark,status,created_at,updated_at
+        FROM post WHERE user_id=#{userId} ORDER BY id DESC
+    </select>
+
+    <select id="selectOrdersByUserId" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">
+        SELECT o.id,
+               o.order_no,
+               o.user_id,
+               o.deal_id,
+               o.shop_id,
+               o.region,
+               o.quantity,
+               o.unit_price,
+               o.amount,
+               o.currency,
+               o.pay_method,
+               o.pay_status,
+               o.status,
+               o.paid_at,
+               o.expire_at,
+               o.created_at,
+               d.title AS deal_title,
+               s.name AS shop_name,
+               d.cover_image
+        FROM `order` o
+        LEFT JOIN deal d ON d.id = o.deal_id
+        LEFT JOIN shop s ON s.id = o.shop_id
+        WHERE o.user_id = #{userId}
+        ORDER BY o.id DESC
+    </select>
+
+    <select id="selectReservationsByUserId" resultType="com.tuowei.dazhongdianping.module.reservation.model.ReservationRow">
+        SELECT r.id,
+               r.reservation_no,
+               r.user_id,
+               r.shop_id,
+               r.slot_id,
+               r.region,
+               r.reserve_time,
+               r.people_count,
+               r.contact_name,
+               r.contact_phone,
+               r.remark,
+               r.status,
+               r.reschedule_count,
+               r.created_at,
+               s.name AS shop_name,
+               s.cover_url AS cover_image,
+               s.address,
+               rs.start_time,
+               rs.end_time,
+               rs.confirm_mode,
+               rs.cancel_before_minutes
+        FROM reservation r
+        LEFT JOIN shop s ON s.id = r.shop_id
+        LEFT JOIN reservation_slot rs ON rs.id = r.slot_id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.id DESC
+    </select>
+
+    <select id="selectFavoritesByUserId" resultType="com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow">
+        SELECT f.id,
+               f.user_id,
+               f.target_type,
+               f.target_id,
+               f.created_at,
+               CASE WHEN f.target_type = 1 THEN s.name ELSE '' END AS target_name,
+               CASE WHEN f.target_type = 1 THEN s.cover_url ELSE '' END AS cover_url,
+               CASE WHEN f.target_type = 1 THEN s.score ELSE NULL END AS score,
+               CASE WHEN f.target_type = 1 THEN s.price_per_capita ELSE NULL END AS price_per_capita,
+               CASE WHEN f.target_type = 1 THEN s.currency ELSE '' END AS currency,
+               CASE WHEN f.target_type = 1 THEN s.address ELSE '' END AS address,
+               CASE WHEN f.target_type = 1 THEN c.name ELSE '' END AS city_name,
+               CASE WHEN f.target_type = 1 THEN a.name ELSE '' END AS area_name,
+               CASE WHEN f.target_type = 1 THEN s.has_deal ELSE FALSE END AS has_deal,
+               CASE WHEN f.target_type = 1 THEN s.open_now ELSE FALSE END AS open_now,
+               CASE WHEN f.target_type = 1 THEN s.tags ELSE '' END AS tags
+        FROM user_favorite f
+        LEFT JOIN shop s ON f.target_type = 1 AND s.id = f.target_id
+        LEFT JOIN city c ON c.id = s.city_id
+        LEFT JOIN area a ON a.id = s.area_id
+        WHERE f.user_id = #{userId}
+        ORDER BY f.id DESC
+    </select>
+
+    <select id="selectGrowthPointsLogsByUserId" resultType="com.tuowei.dazhongdianping.module.auth.model.GrowthPointsLogRow">
+        SELECT id,
+               user_id,
+               type,
+               action,
+               biz_id,
+               change_amount,
+               balance_after,
+               remark,
+               created_at
+        FROM growth_points_log
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectSearchHistoryByUserId" resultType="com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow">
+        SELECT id,
+               user_id,
+               region,
+               keyword,
+               search_type,
+               created_at,
+               updated_at
+        FROM search_history
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC, id DESC
+    </select>
+    <select id="selectFollowingForExport" resultType="com.tuowei.dazhongdianping.module.auth.model.FollowExportRow">
+        SELECT u.id AS user_id,u.nickname,f.created_at AS followed_at FROM user_follow f JOIN app_user u ON u.id=f.followed_user_id
+        WHERE f.follower_user_id=#{userId} ORDER BY f.created_at DESC,f.id DESC
+    </select>
+    <select id="selectFollowersForExport" resultType="com.tuowei.dazhongdianping.module.auth.model.FollowExportRow">
+        SELECT u.id AS user_id,u.nickname,f.created_at AS followed_at FROM user_follow f JOIN app_user u ON u.id=f.follower_user_id
+        WHERE f.followed_user_id=#{userId} ORDER BY f.created_at DESC,f.id DESC
+    </select>
+    <delete id="deleteFollowRelationsByUserId">DELETE FROM user_follow WHERE follower_user_id=#{userId} OR followed_user_id=#{userId}</delete>
+    <delete id="deleteNotificationsByUserId">DELETE FROM user_notification WHERE user_id=#{userId}</delete>
+    <update id="anonymizeFollowNotificationsByActor">UPDATE user_notification SET actor_user_id=NULL,content='已注销用户曾关注了你',link_url='' WHERE actor_user_id=#{userId} AND type='social.follow'</update>
+    <select id="selectMessageConversationsForExport" resultType="map">
+        SELECT id,user_a AS userA,user_b AS userB,last_message_preview AS lastMessagePreview,last_message_at AS lastMessageAt,created_at AS createdAt
+        FROM conversation WHERE user_a=#{userId} OR user_b=#{userId} ORDER BY id DESC
+    </select>
+    <select id="selectMessagesForExport" resultType="map">
+        SELECT id,conversation_id AS conversationId,from_user_id AS fromUserId,to_user_id AS toUserId,content,is_read AS `read`,read_at AS readAt,created_at AS createdAt
+        FROM message WHERE from_user_id=#{userId} OR to_user_id=#{userId} ORDER BY id DESC
+    </select>
+    <delete id="deleteMessageBlocksByUserId">DELETE FROM user_block WHERE user_id=#{userId} OR blocked_user_id=#{userId}</delete>
+    <update id="anonymizeMessagesByUserId">
+        UPDATE message SET from_user_id=CASE WHEN from_user_id=#{userId} THEN 0 ELSE from_user_id END,
+            to_user_id=CASE WHEN to_user_id=#{userId} THEN 0 ELSE to_user_id END,
+            content=CASE WHEN from_user_id=#{userId} THEN '消息已因账号注销移除' ELSE content END,
+            is_read=CASE WHEN to_user_id=#{userId} THEN TRUE ELSE is_read END,
+            read_at=CASE WHEN to_user_id=#{userId} AND read_at IS NULL THEN CURRENT_TIMESTAMP ELSE read_at END
+        WHERE from_user_id=#{userId} OR to_user_id=#{userId}
+    </update>
+    <update id="anonymizeMessageReportsByUserId">UPDATE message_report SET reporter_user_id=0 WHERE reporter_user_id=#{userId}</update>
+    <select id="selectCirclesForExport" resultType="map">
+        SELECT c.id,c.name,c.region,cm.created_at AS joinedAt FROM circle_member cm JOIN circle c ON c.id=cm.circle_id
+        WHERE cm.user_id=#{userId} ORDER BY cm.id DESC
+    </select>
+    <update id="decrementCircleMemberCountsByUserId">
+        UPDATE circle SET member_count=CASE WHEN member_count&gt;0 THEN member_count-1 ELSE 0 END,updated_at=CURRENT_TIMESTAMP
+        WHERE id IN (SELECT circle_id FROM circle_member WHERE user_id=#{userId})
+    </update>
+    <delete id="deleteCircleMembershipsByUserId">DELETE FROM circle_member WHERE user_id=#{userId}</delete>
+    <select id="selectTopicsForExport" resultType="com.tuowei.dazhongdianping.module.auth.model.TopicFollowExportRow">
+        SELECT t.id,t.name,t.region,tf.created_at AS followed_at
+        FROM topic_follow tf
+        JOIN topic t ON t.id=tf.topic_id
+        WHERE tf.user_id=#{userId}
+        ORDER BY tf.id DESC
+    </select>
+    <select id="selectFollowedTopicIdsByUserId" resultType="long">
+        SELECT topic_id FROM topic_follow WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <delete id="deleteTopicFollowsByUserId">DELETE FROM topic_follow WHERE user_id=#{userId}</delete>
+    <update id="refreshTopicFollowerCount">
+        UPDATE topic
+        SET follower_count=(SELECT COUNT(1) FROM topic_follow WHERE topic_id=#{topicId}),
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{topicId}
+    </update>
+</mapper>

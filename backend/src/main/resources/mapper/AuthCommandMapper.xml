@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper">
+
+    <insert id="insertVerificationCode" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO verification_code(
+            scene,
+            target_type,
+            target,
+            code_hash,
+            device_id,
+            request_ip,
+            status,
+            expire_at
+        )
+        VALUES (
+            #{scene},
+            #{targetType},
+            #{target},
+            #{codeHash},
+            #{deviceId},
+            #{requestIp},
+            #{status},
+            #{expireAt}
+        )
+    </insert>
+
+    <select id="selectLatestVerificationCode" resultType="com.tuowei.dazhongdianping.module.auth.model.VerificationCodeRow">
+        SELECT id,
+               scene,
+               target_type,
+               target,
+               code_hash,
+               device_id,
+               request_ip,
+               status,
+               expire_at
+        FROM verification_code
+        WHERE scene = #{scene}
+          AND target_type = #{targetType}
+          AND target = #{target}
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <update id="markVerificationCodeUsed">
+        UPDATE verification_code
+        SET status = 3,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND status = 0
+          AND expire_at > CURRENT_TIMESTAMP
+    </update>
+
+    <select id="selectUserByEmail" resultType="com.tuowei.dazhongdianping.module.auth.model.AppUserRow">
+        SELECT id,
+               nickname,
+               avatar,
+               email,
+               phone,
+               password_hash,
+               gender,
+               signature,
+               preferred_region,
+               growth_value,
+               level,
+               points,
+               status,
+               last_login_at
+        FROM app_user
+        WHERE email = #{email}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="selectUserByPhone" resultType="com.tuowei.dazhongdianping.module.auth.model.AppUserRow">
+        SELECT id,
+               nickname,
+               avatar,
+               email,
+               phone,
+               password_hash,
+               gender,
+               signature,
+               preferred_region,
+               growth_value,
+               level,
+               points,
+               status,
+               last_login_at
+        FROM app_user
+        WHERE phone = #{phone}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="selectUserById" resultType="com.tuowei.dazhongdianping.module.auth.model.AppUserRow">
+        SELECT id,
+               nickname,
+               avatar,
+               email,
+               phone,
+               password_hash,
+               gender,
+               signature,
+               preferred_region,
+               growth_value,
+               level,
+               points,
+               status,
+               last_login_at
+        FROM app_user
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="selectUserByIdForUpdate" resultType="com.tuowei.dazhongdianping.module.auth.model.AppUserRow">
+        SELECT id,
+               nickname,
+               avatar,
+               email,
+               phone,
+               password_hash,
+               gender,
+               signature,
+               preferred_region,
+               growth_value,
+               level,
+               points,
+               status,
+               last_login_at
+        FROM app_user
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+        FOR UPDATE
+    </select>
+
+    <insert id="insertUser" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO app_user(
+            nickname,
+            avatar,
+            email,
+            phone,
+            password_hash,
+            gender,
+            signature,
+            preferred_region,
+            growth_value,
+            level,
+            points,
+            status,
+            last_login_at,
+            is_deleted
+        )
+        VALUES (
+            #{nickname},
+            #{avatar},
+            #{email},
+            #{phone},
+            #{passwordHash},
+            #{gender},
+            #{signature},
+            #{preferredRegion},
+            #{growthValue},
+            #{level},
+            #{points},
+            #{status},
+            #{lastLoginAt},
+            FALSE
+        )
+    </insert>
+
+    <update id="updateUserLastLogin">
+        UPDATE app_user
+        SET last_login_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="updateUserPassword">
+        UPDATE app_user
+        SET password_hash = #{passwordHash},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="updateUserProfile">
+        UPDATE app_user
+        SET nickname = #{nickname},
+            avatar = #{avatar},
+            gender = #{gender},
+            signature = #{signature},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="updateUserEmail">
+        UPDATE app_user
+        SET email = #{email},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="updateUserPhone">
+        UPDATE app_user
+        SET phone = #{phone},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="updateUserGrowthProfile">
+        UPDATE app_user
+        SET growth_value = #{growthValue},
+            level = #{level},
+            points = #{points},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </update>
+
+    <select id="countPublicReviewsByUserId" resultType="long">
+        SELECT COUNT(1)
+        FROM review
+        WHERE user_id = #{userId}
+          AND region = #{region}
+          AND audit_status = 1
+          AND status = 1
+          AND is_deleted = FALSE
+    </select>
+
+    <insert id="insertGrowthPointsLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO growth_points_log(
+            user_id,
+            type,
+            action,
+            biz_id,
+            change_amount,
+            balance_after,
+            remark,
+            created_at
+        )
+        VALUES (
+            #{userId},
+            #{type},
+            #{action},
+            #{bizId},
+            #{changeAmount},
+            #{balanceAfter},
+            #{remark},
+            #{createdAt}
+        )
+    </insert>
+
+    <select id="countGrowthPointsLogs" resultType="long">
+        SELECT COUNT(1)
+        FROM growth_points_log
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectGrowthPointsLogs" resultType="com.tuowei.dazhongdianping.module.auth.model.GrowthPointsLogRow">
+        SELECT id,
+               user_id,
+               type,
+               action,
+               biz_id,
+               change_amount,
+               balance_after,
+               remark,
+               created_at
+        FROM growth_points_log
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countGrowthPointsLogsByAction" resultType="long">
+        SELECT COUNT(1)
+        FROM growth_points_log
+        WHERE user_id = #{userId}
+          AND action = #{action}
+          AND type = #{type}
+          AND biz_id = #{bizId}
+    </select>
+
+    <select id="selectEnabledGrowthRule" resultType="com.tuowei.dazhongdianping.module.auth.model.GrowthRuleRow">
+        SELECT id, action, action_name, growth_value, points, daily_limit, enabled, updated_at
+        FROM growth_rule WHERE action = #{action} AND enabled = TRUE
+    </select>
+
+    <select id="countDailyGrowthActions" resultType="long">
+        SELECT COUNT(1) FROM growth_points_log
+        WHERE user_id = #{userId} AND action = #{action} AND type = 1
+          AND CAST(created_at AS DATE) = CURRENT_DATE
+    </select>
+
+    <select id="selectLevelByGrowth" resultType="int">
+        SELECT level FROM level_config
+        WHERE enabled = TRUE AND min_growth &lt;= #{growthValue}
+        ORDER BY min_growth DESC, level DESC LIMIT 1
+    </select>
+
+    <insert id="insertUserSession" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_session(
+            user_id,
+            refresh_token_hash,
+            status,
+            refresh_expire_at
+        )
+        VALUES (
+            #{userId},
+            #{refreshTokenHash},
+            #{status},
+            #{refreshExpireAt}
+        )
+    </insert>
+
+    <select id="selectUserSessionById" resultType="com.tuowei.dazhongdianping.module.auth.model.UserSessionRow">
+        SELECT id,
+               user_id,
+               refresh_token_hash,
+               status,
+               refresh_expire_at
+        FROM user_session
+        WHERE id = #{sessionId}
+    </select>
+
+    <select id="selectUserSessionByRefreshTokenHash" resultType="com.tuowei.dazhongdianping.module.auth.model.UserSessionRow">
+        SELECT id,
+               user_id,
+               refresh_token_hash,
+               status,
+               refresh_expire_at
+        FROM user_session
+        WHERE refresh_token_hash = #{refreshTokenHash}
+    </select>
+
+    <update id="updateUserSessionRefreshToken">
+        UPDATE user_session
+        SET refresh_token_hash = #{refreshTokenHash},
+            refresh_expire_at = #{refreshExpireAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND status = 1
+    </update>
+
+    <update id="revokeUserSession">
+        UPDATE user_session
+        SET status = 2,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{sessionId}
+          AND status = 1
+    </update>
+
+    <update id="revokeUserSessionsByUserId">
+        UPDATE user_session
+        SET status = 2,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND status = 1
+    </update>
+</mapper>

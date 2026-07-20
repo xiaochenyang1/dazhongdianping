@@ -1,0 +1,1 @@
+package com.tuowei.dazhongdianping.module.reservation.model.request;import com.fasterxml.jackson.annotation.JsonFormat;import jakarta.validation.constraints.NotBlank;import java.time.LocalDateTime;public record ReservationRescheduleRequest(Long slotId,@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss") LocalDateTime reserveTime,@NotBlank String reason){}

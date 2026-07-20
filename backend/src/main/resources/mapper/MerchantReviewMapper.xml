@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.merchant.review.mapper.MerchantReviewMapper">
+
+    <sql id="reviewListFrom">
+        FROM review r
+        JOIN shop s ON s.id = r.shop_id
+        JOIN merchant m ON m.id = s.merchant_id
+        LEFT JOIN review_merchant_reply rr ON rr.review_id = r.id
+        LEFT JOIN merchant_review_appeal a ON a.merchant_id = s.merchant_id AND a.review_id = r.id
+    </sql>
+
+    <sql id="reviewListWhere">
+        WHERE s.merchant_id = #{merchantId}
+          AND r.region = #{region}
+          AND s.region = #{region}
+          AND r.audit_status = 1
+          AND r.status = 1
+          AND r.is_deleted = FALSE
+          AND s.is_deleted = FALSE
+        <if test="shopId != null">
+            AND r.shop_id = #{shopId}
+        </if>
+        <if test="scopedShopIds != null">
+            AND r.shop_id IN
+            <foreach collection="scopedShopIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        </if>
+        <if test="replyStatus != null and replyStatus == 0">
+            AND rr.id IS NULL
+        </if>
+        <if test="replyStatus != null and replyStatus == 1">
+            AND rr.id IS NOT NULL
+        </if>
+        <if test="appealStatus != null">
+            AND a.status = #{appealStatus}
+        </if>
+        <if test="score != null">
+            AND r.score_overall = #{score}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                LOWER(r.content) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(r.user_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            )
+        </if>
+        <if test="dateFrom != null">
+            AND r.created_at <![CDATA[>=]]> #{dateFrom}
+        </if>
+        <if test="dateToExclusive != null">
+            AND r.created_at <![CDATA[<]]> #{dateToExclusive}
+        </if>
+    </sql>
+
+    <select id="countReviews" resultType="long">
+        SELECT COUNT(1)
+        <include refid="reviewListFrom"/>
+        <include refid="reviewListWhere"/>
+    </select>
+
+    <select id="selectReviews" resultType="com.tuowei.dazhongdianping.module.merchant.review.model.MerchantReviewRow">
+        SELECT r.id,
+               r.user_id,
+               r.shop_id,
+               s.name AS shop_name,
+               s.merchant_id,
+               m.company_name AS merchant_name,
+               r.region,
+               r.user_name,
+               r.content,
+               r.score_overall,
+               r.score_taste,
+               r.score_env,
+               r.score_service,
+               r.cost,
+               r.currency,
+               r.like_count,
+               r.comment_count,
+               r.audit_status,
+               r.status,
+               r.tags,
+               rr.id AS reply_id,
+               rr.content AS reply_content,
+               rr.operator_id AS reply_operator_id,
+               rr.created_at AS reply_created_at,
+               rr.updated_at AS reply_updated_at,
+               a.id AS appeal_id,
+               a.status AS appeal_status,
+               r.created_at,
+               r.updated_at
+        <include refid="reviewListFrom"/>
+        <include refid="reviewListWhere"/>
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectPublicReviewInMerchantScope"
+            resultType="com.tuowei.dazhongdianping.module.merchant.review.model.MerchantReviewRow">
+        SELECT r.id,
+               r.user_id,
+               r.shop_id,
+               s.name AS shop_name,
+               s.merchant_id,
+               m.company_name AS merchant_name,
+               r.region,
+               r.user_name,
+               r.content,
+               r.score_overall,
+               r.score_taste,
+               r.score_env,
+               r.score_service,
+               r.cost,
+               r.currency,
+               r.like_count,
+               r.comment_count,
+               r.audit_status,
+               r.status,
+               r.tags,
+               r.created_at,
+               r.updated_at
+        FROM review r
+        JOIN shop s ON s.id = r.shop_id
+        JOIN merchant m ON m.id = s.merchant_id
+        WHERE r.id = #{reviewId}
+          AND s.merchant_id = #{merchantId}
+          AND r.region = #{region}
+          AND s.region = #{region}
+          AND r.audit_status = 1
+          AND r.status = 1
+          AND r.is_deleted = FALSE
+          AND s.is_deleted = FALSE
+    </select>
+
+    <select id="selectReply" resultType="com.tuowei.dazhongdianping.module.merchant.review.model.ReviewMerchantReplyRow">
+        SELECT rr.id,
+               rr.review_id,
+               rr.shop_id,
+               rr.merchant_id,
+               m.company_name AS merchant_name,
+               rr.operator_id,
+               rr.content,
+               rr.created_at,
+               rr.updated_at
+        FROM review_merchant_reply rr
+        JOIN merchant m ON m.id = rr.merchant_id
+        WHERE rr.review_id = #{reviewId}
+    </select>
+
+    <insert id="insertReply" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO review_merchant_reply(review_id, shop_id, merchant_id, operator_id, content)
+        VALUES(#{reviewId}, #{shopId}, #{merchantId}, #{operatorId}, #{content})
+    </insert>
+
+    <update id="updateReply">
+        UPDATE review_merchant_reply
+        SET operator_id = #{operatorId},
+            content = #{content},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE review_id = #{reviewId}
+          AND merchant_id = #{merchantId}
+    </update>
+
+    <select id="selectAppeal" resultType="com.tuowei.dazhongdianping.module.merchant.review.model.MerchantReviewAppealRow">
+        SELECT id,
+               merchant_id,
+               operator_id,
+               review_id,
+               shop_id,
+               region,
+               base_review_updated_at,
+               reason,
+               evidence_urls,
+               status,
+               reject_reason,
+               audit_by,
+               submitted_at,
+               audited_at,
+               created_at,
+               updated_at
+        FROM merchant_review_appeal
+        WHERE id = #{appealId}
+          AND merchant_id = #{merchantId}
+          AND region = #{region}
+    </select>
+
+    <select id="selectAppealByReview" resultType="com.tuowei.dazhongdianping.module.merchant.review.model.MerchantReviewAppealRow">
+        SELECT id,
+               merchant_id,
+               operator_id,
+               review_id,
+               shop_id,
+               region,
+               base_review_updated_at,
+               reason,
+               evidence_urls,
+               status,
+               reject_reason,
+               audit_by,
+               submitted_at,
+               audited_at,
+               created_at,
+               updated_at
+        FROM merchant_review_appeal
+        WHERE merchant_id = #{merchantId}
+          AND region = #{region}
+          AND review_id = #{reviewId}
+        LIMIT 1
+    </select>
+
+    <select id="selectPendingAppealForAudit" resultType="com.tuowei.dazhongdianping.module.merchant.review.model.MerchantReviewAppealRow">
+        SELECT id,
+               merchant_id,
+               operator_id,
+               review_id,
+               shop_id,
+               region,
+               base_review_updated_at,
+               reason,
+               evidence_urls,
+               status,
+               reject_reason,
+               audit_by,
+               submitted_at,
+               audited_at,
+               created_at,
+               updated_at
+        FROM merchant_review_appeal
+        WHERE id = #{appealId}
+          AND region = #{region}
+          AND status = 1
+    </select>
+
+    <insert id="insertAppeal" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO merchant_review_appeal(
+            merchant_id,
+            operator_id,
+            review_id,
+            shop_id,
+            region,
+            reason,
+            evidence_urls,
+            status
+        )
+        VALUES(
+            #{merchantId},
+            #{operatorId},
+            #{reviewId},
+            #{shopId},
+            #{region},
+            #{reason},
+            #{evidenceUrls},
+            #{status}
+        )
+    </insert>
+
+    <update id="resetRejectedAppeal">
+        UPDATE merchant_review_appeal
+        SET status = 0,
+            reject_reason = '',
+            audit_by = 0,
+            audited_at = NULL,
+            operator_id = #{operatorId},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{appealId}
+          AND merchant_id = #{merchantId}
+          AND status = 3
+    </update>
+
+    <update id="updateAppealDraft">
+        UPDATE merchant_review_appeal
+        SET operator_id = #{operatorId},
+            reason = #{reason},
+            evidence_urls = #{evidenceUrls},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{appealId}
+          AND merchant_id = #{merchantId}
+          AND status = 0
+    </update>
+
+    <update id="submitAppeal">
+        UPDATE merchant_review_appeal
+        SET operator_id = #{operatorId},
+            base_review_updated_at = #{baseReviewUpdatedAt},
+            status = 1,
+            reject_reason = '',
+            submitted_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{appealId}
+          AND merchant_id = #{merchantId}
+          AND status = 0
+    </update>
+
+    <update id="approveAppeal">
+        UPDATE merchant_review_appeal
+        SET status = 2,
+            audit_by = #{auditBy},
+            audited_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{appealId}
+          AND region = #{region}
+          AND status = 1
+    </update>
+
+    <update id="rejectAppeal">
+        UPDATE merchant_review_appeal
+        SET status = 3,
+            reject_reason = #{reason},
+            audit_by = #{auditBy},
+            audited_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{appealId}
+          AND region = #{region}
+          AND status = 1
+    </update>
+
+    <update id="hideReviewForAppeal">
+        UPDATE review
+        SET audit_status = 2,
+            audit_remark = #{auditRemark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{reviewId}
+          AND region = #{region}
+          AND audit_status = 1
+          AND status = 1
+          AND is_deleted = FALSE
+          AND updated_at = #{baseReviewUpdatedAt}
+    </update>
+
+    <select id="selectActiveAppealIdsByReview" resultType="long">
+        SELECT id
+        FROM merchant_review_appeal
+        WHERE review_id = #{reviewId}
+          AND status IN (0, 1, 3)
+        ORDER BY id ASC
+    </select>
+
+    <update id="invalidateActiveAppealsByReview">
+        UPDATE merchant_review_appeal
+        SET status = 4,
+            reject_reason = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE review_id = #{reviewId}
+          AND status IN (0, 1, 3)
+    </update>
+
+    <insert id="insertOperationLog">
+        INSERT INTO merchant_operation_log(merchant_id, operator_id, action, target_type, target_id, detail)
+        VALUES(#{merchantId}, #{operatorId}, #{action}, #{targetType}, #{targetId}, #{detail})
+    </insert>
+</mapper>

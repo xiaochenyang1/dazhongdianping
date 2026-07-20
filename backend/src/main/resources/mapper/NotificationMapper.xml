@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.notification.mapper.NotificationMapper">
+  <resultMap id="NotificationMap" type="com.tuowei.dazhongdianping.module.notification.model.NotificationRow">
+    <id column="id" property="id"/><result column="user_id" property="userId"/><result column="actor_user_id" property="actorUserId"/><result column="region" property="region"/>
+    <result column="type" property="type"/><result column="title" property="title"/><result column="content" property="content"/>
+    <result column="link_url" property="linkUrl"/><result column="is_read" property="read"/><result column="read_at" property="readAt"/>
+    <result column="created_at" property="createdAt"/>
+  </resultMap>
+  <sql id="columns">id,user_id,actor_user_id,region,type,title,content,link_url,is_read,read_at,created_at</sql>
+  <select id="count" resultType="long">SELECT COUNT(*) FROM user_notification WHERE user_id=#{userId} AND region IN (#{region},'GLOBAL')</select>
+  <select id="list" resultMap="NotificationMap">SELECT <include refid="columns"/> FROM user_notification WHERE user_id=#{userId} AND region IN (#{region},'GLOBAL') ORDER BY id DESC LIMIT #{pageSize} OFFSET #{offset}</select>
+  <select id="countUnread" resultType="long">SELECT COUNT(*) FROM user_notification WHERE user_id=#{userId} AND region IN (#{region},'GLOBAL') AND is_read=FALSE</select>
+  <select id="findOwned" resultMap="NotificationMap">SELECT <include refid="columns"/> FROM user_notification WHERE id=#{id} AND user_id=#{userId} AND region IN (#{region},'GLOBAL')</select>
+  <update id="markRead">UPDATE user_notification SET is_read=TRUE,read_at=CURRENT_TIMESTAMP WHERE id=#{id} AND user_id=#{userId} AND region IN (#{region},'GLOBAL') AND is_read=FALSE</update>
+  <insert id="insert" useGeneratedKeys="true" keyProperty="id">INSERT INTO user_notification(user_id,actor_user_id,region,type,title,content,link_url,is_read) VALUES(#{userId},#{actorUserId},#{region},#{type},#{title},#{content},#{linkUrl},FALSE)</insert>
+</mapper>

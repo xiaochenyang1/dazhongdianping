@@ -1,0 +1,1 @@
+package com.tuowei.dazhongdianping.module.trade.model.request;import jakarta.validation.constraints.*;import java.math.BigDecimal;public record PaymentNotifyRequest(@NotBlank String orderNo,@NotBlank String channelTxn,@NotBlank String status,@NotNull @DecimalMin("0.01") BigDecimal amount,@NotBlank String signature){}

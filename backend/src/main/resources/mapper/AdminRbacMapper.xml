@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.rbac.mapper.AdminRbacMapper">
+
+    <select id="selectUserByAccount" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminUserRow">
+        SELECT id, account, password_hash, name, status, last_login_at
+        FROM admin_user
+        WHERE account = #{account}
+    </select>
+
+    <select id="selectUserById" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminUserRow">
+        SELECT id, account, password_hash, name, status, last_login_at
+        FROM admin_user
+        WHERE id = #{adminId}
+    </select>
+
+    <select id="selectActiveRolesByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow">
+        SELECT ar.id, ar.code, ar.name, ar.description, ar.status, ar.built_in
+        FROM admin_role ar
+        JOIN admin_user_role aur ON aur.role_id = ar.id
+        WHERE aur.admin_id = #{adminId}
+          AND ar.status = 1
+        ORDER BY ar.id
+    </select>
+
+    <select id="selectActivePermissionsByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow">
+        SELECT DISTINCT ap.id, ap.code, ap.name, ap.category, ap.permission_type, ap.status
+        FROM admin_permission ap
+        JOIN admin_role_permission arp ON arp.permission_id = ap.id
+        JOIN admin_role ar ON ar.id = arp.role_id AND ar.status = 1
+        JOIN admin_user_role aur ON aur.role_id = ar.id
+        WHERE aur.admin_id = #{adminId}
+          AND ap.status = 1
+        ORDER BY ap.code
+    </select>
+
+    <select id="selectRegionsByAdminId" resultType="string">
+        SELECT region
+        FROM admin_region_scope
+        WHERE admin_id = #{adminId}
+        ORDER BY region
+    </select>
+
+    <select id="selectActivePermissions" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow">
+        SELECT id, code, name, category, permission_type, status
+        FROM admin_permission
+        WHERE status = 1
+        ORDER BY category, code
+    </select>
+
+    <select id="selectRoles" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow">
+        SELECT id, code, name, description, status, built_in
+        FROM admin_role
+        ORDER BY built_in DESC, id
+    </select>
+
+    <select id="selectRoleById" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow">
+        SELECT id, code, name, description, status, built_in
+        FROM admin_role
+        WHERE id = #{roleId}
+    </select>
+
+    <select id="selectRoleByCode" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow">
+        SELECT id, code, name, description, status, built_in
+        FROM admin_role
+        WHERE code = #{code}
+    </select>
+
+    <select id="selectRolesByIds" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow">
+        SELECT id, code, name, description, status, built_in
+        FROM admin_role
+        WHERE id IN
+        <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
+            #{roleId}
+        </foreach>
+        ORDER BY id
+    </select>
+
+    <select id="selectRolesByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow">
+        SELECT ar.id, ar.code, ar.name, ar.description, ar.status, ar.built_in
+        FROM admin_role ar
+        JOIN admin_user_role aur ON aur.role_id = ar.id
+        WHERE aur.admin_id = #{adminId}
+        ORDER BY ar.id
+    </select>
+
+    <select id="selectPermissionIdsByRoleId" resultType="long">
+        SELECT permission_id
+        FROM admin_role_permission
+        WHERE role_id = #{roleId}
+        ORDER BY permission_id
+    </select>
+
+    <select id="selectActivePermissionsByIds" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow">
+        SELECT id, code, name, category, permission_type, status
+        FROM admin_permission
+        WHERE status = 1
+          AND id IN
+        <foreach collection="permissionIds" item="permissionId" open="(" separator="," close=")">
+            #{permissionId}
+        </foreach>
+        ORDER BY id
+    </select>
+
+    <select id="countAdminUsersByRoleId" resultType="long">
+        SELECT COUNT(1)
+        FROM admin_user_role
+        WHERE role_id = #{roleId}
+    </select>
+
+    <select id="countActiveSuperAdminUsers" resultType="long">
+        SELECT COUNT(DISTINCT au.id)
+        FROM admin_user au
+        JOIN admin_user_role aur ON aur.admin_id = au.id
+        JOIN admin_role ar ON ar.id = aur.role_id
+        WHERE au.status = 1
+          AND ar.status = 1
+          AND ar.code = 'super_admin'
+    </select>
+
+    <insert id="insertRole" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_role(code, name, description, status, built_in)
+        VALUES (#{code}, #{name}, #{description}, #{status}, #{builtIn})
+    </insert>
+
+    <update id="updateRole">
+        UPDATE admin_role
+        SET code = #{code},
+            name = #{name},
+            description = #{description},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateRoleStatus">
+        UPDATE admin_role
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{roleId}
+    </update>
+
+    <delete id="deleteRole">
+        DELETE FROM admin_role
+        WHERE id = #{roleId}
+    </delete>
+
+    <delete id="deleteRolePermissions">
+        DELETE FROM admin_role_permission
+        WHERE role_id = #{roleId}
+    </delete>
+
+    <insert id="insertRolePermission">
+        INSERT INTO admin_role_permission(role_id, permission_id)
+        VALUES (#{roleId}, #{permissionId})
+    </insert>
+
+    <select id="countAdminUsers" resultType="long">
+        SELECT COUNT(1)
+        FROM admin_user
+    </select>
+
+    <select id="selectAdminUsers" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminUserRow">
+        SELECT id, account, password_hash, name, status, last_login_at
+        FROM admin_user
+        ORDER BY id
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <insert id="insertUser" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO admin_user(account, password_hash, name, status)
+        VALUES (#{account}, #{passwordHash}, #{name}, #{status})
+    </insert>
+
+    <update id="updateUser">
+        UPDATE admin_user
+        SET name = #{name},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{adminId}
+    </update>
+
+    <update id="updateUserStatus">
+        UPDATE admin_user
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{adminId}
+    </update>
+
+    <update id="updateUserPassword">
+        UPDATE admin_user
+        SET password_hash = #{passwordHash},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{adminId}
+    </update>
+
+    <delete id="deleteUserRoles">
+        DELETE FROM admin_user_role
+        WHERE admin_id = #{adminId}
+    </delete>
+
+    <insert id="insertUserRole">
+        INSERT INTO admin_user_role(admin_id, role_id)
+        VALUES (#{adminId}, #{roleId})
+    </insert>
+
+    <delete id="deleteAdminRegions">
+        DELETE FROM admin_region_scope
+        WHERE admin_id = #{adminId}
+    </delete>
+
+    <insert id="insertAdminRegion">
+        INSERT INTO admin_region_scope(admin_id, region)
+        VALUES (#{adminId}, #{region})
+    </insert>
+
+    <update id="updateLastLoginAt">
+        UPDATE admin_user
+        SET last_login_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{adminId}
+    </update>
+
+    <insert id="insertAuditLog">
+        INSERT INTO audit_log(admin_id, action, target, detail, ip)
+        VALUES (#{adminId}, #{action}, #{target}, #{detail}, #{ip})
+    </insert>
+</mapper>

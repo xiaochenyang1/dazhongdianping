@@ -1,0 +1,6 @@
+{
+  "errors" : [ "第 2 条失败: 分类不存在或不属于当前区域" ],
+  "fileName" : "seed-cn-shops.xlsx",
+  "batchId" : 1,
+  "region" : "CN"
+}
