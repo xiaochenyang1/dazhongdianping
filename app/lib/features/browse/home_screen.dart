@@ -19,6 +19,7 @@ class HomeScreen extends StatefulWidget {
     required this.repository,
     this.region = AppRegion.eu,
     this.onRegionChanged,
+    this.onOrdersTap,
     this.onProfileTap,
     this.onNotificationTap,
     this.currentUserLabel,
@@ -38,6 +39,7 @@ class HomeScreen extends StatefulWidget {
   final BrowseRepository repository;
   final AppRegion region;
   final ValueChanged<AppRegion>? onRegionChanged;
+  final ValueChanged<BuildContext>? onOrdersTap;
   final ValueChanged<BuildContext>? onProfileTap;
   final ValueChanged<BuildContext>? onNotificationTap;
   final String? currentUserLabel;
@@ -65,8 +67,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _shops = widget.repository.loadFeaturedShops();
   }
 
-  void _retry() =>
-      setState(() => _shops = widget.repository.loadFeaturedShops());
+  void _retry() {
+    final future = widget.repository.loadFeaturedShops();
+    setState(() {
+      _shops = future;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -257,19 +263,24 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: 0,
         onDestinationSelected: (index) {
-          if (index == 1 && widget.communityRepository != null) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => CommunityFeedScreen(
-                  repository: widget.communityRepository!,
-                  canInteract: widget.canCommunityInteract,
-                  onUserTap: widget.onCommunityUserTap,
-                  circleRepository: widget.circleRepository,
-                  topicRepository: widget.topicRepository,
-                  onLoginRequired: widget.onCommunityLoginRequired,
+          switch (index) {
+            case 1 when widget.communityRepository != null:
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CommunityFeedScreen(
+                    repository: widget.communityRepository!,
+                    canInteract: widget.canCommunityInteract,
+                    onUserTap: widget.onCommunityUserTap,
+                    circleRepository: widget.circleRepository,
+                    topicRepository: widget.topicRepository,
+                    onLoginRequired: widget.onCommunityLoginRequired,
+                  ),
                 ),
-              ),
-            );
+              );
+            case 2:
+              widget.onOrdersTap?.call(context);
+            case 3:
+              widget.onProfileTap?.call(context);
           }
         },
         destinations: [

@@ -19,6 +19,7 @@ import 'package:dazhongdianping_app/features/message/conversation_list_screen.da
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_center_screen.dart';
+import 'package:dazhongdianping_app/features/user/user_collection_screen.dart';
 import 'package:dazhongdianping_app/features/user/device_lifecycle.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
@@ -159,6 +160,27 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
               );
             },
             currentUserLabel: authController.currentUser?.nickname,
+            onOrdersTap: (screenContext) {
+              if (authController.currentUser == null) {
+                Navigator.of(screenContext).push(
+                  MaterialPageRoute(
+                    builder: (_) => LoginScreen(
+                      controller: authController,
+                      onAuthenticated: (_) => Navigator.of(screenContext).pop(),
+                    ),
+                  ),
+                );
+                return;
+              }
+              Navigator.of(screenContext).push(
+                MaterialPageRoute(
+                  builder: (_) => UserCollectionScreen(
+                    repository: UserRepository(apiClient),
+                    collection: UserCollection.orders,
+                  ),
+                ),
+              );
+            },
             onNotificationTap: (screenContext) {
               if (authController.currentUser == null) {
                 Navigator.of(screenContext).push(
