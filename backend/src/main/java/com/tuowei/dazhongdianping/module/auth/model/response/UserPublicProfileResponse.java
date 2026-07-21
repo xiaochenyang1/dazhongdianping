@@ -12,6 +12,7 @@ public record UserPublicProfileResponse(
         Long reviewCount,
         Long followerCount,
         Long followingCount,
-        Boolean followedByCurrentUser
+        Boolean followedByCurrentUser,
+        UserExpertCertificationBadgeResponse expertCertification
 ) {
 }

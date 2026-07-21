@@ -83,6 +83,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'audit/expert-certifications',
+          name: 'audit-expert-certifications',
+          component: () => import('@/views/ExpertCertificationAuditView.vue'),
+          meta: {
+            requiresAuth: true,
+            title: '达人认证',
+            requiredPermission: 'audit:expert_certification:read',
+          },
+        },
+        {
           path: 'audit/merchant-applications',
           name: 'audit-merchant-applications',
           component: () => import('@/views/MerchantApplicationAuditView.vue'),

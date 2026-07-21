@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.model.UserSessionRow;
@@ -83,12 +84,14 @@ class PublicAuthServiceConcurrencyTest {
         SendCodeRateLimitService sendCodeRateLimitService = mock(SendCodeRateLimitService.class);
         UserPrivacyService userPrivacyService = mock(UserPrivacyService.class);
         SocialService socialService = mock(SocialService.class);
+        UserExpertCertificationService userExpertCertificationService = mock(UserExpertCertificationService.class);
         UserAccessTokenService userAccessTokenService = mock(UserAccessTokenService.class);
         PublicAuthService publicAuthService = new PublicAuthService(
                 authCommandMapper,
                 sendCodeRateLimitService,
                 userPrivacyService,
                 socialService,
+                userExpertCertificationService,
                 userAccessTokenService,
                 2_592_000
         );

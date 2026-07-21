@@ -12,6 +12,7 @@ public record AuthCurrentUserResponse(
         String preferredRegion,
         Integer level,
         Integer points,
-        Integer growthValue
+        Integer growthValue,
+        UserExpertCertificationStatusResponse expertCertification
 ) {
 }

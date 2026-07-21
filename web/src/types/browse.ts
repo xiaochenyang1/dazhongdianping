@@ -1,3 +1,5 @@
+import type { UserExpertCertificationBadge } from './auth'
+
 export type Region = 'CN' | 'EU'
 
 export interface CategoryNode {
@@ -84,6 +86,7 @@ export interface Dish {
 export interface ReviewPreview {
   id: number
   userName: string
+  authorCertification?: UserExpertCertificationBadge | null
   score: number
   content: string
   likedCount: number

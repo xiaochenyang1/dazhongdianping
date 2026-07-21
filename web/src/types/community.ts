@@ -1,8 +1,10 @@
+import type { UserExpertCertificationBadge } from './auth'
 import type { PageResult } from './browse'
 
 export interface CommunityPost {
   id: number; userId: number; userName: string; title: string; content: string; contentType: number
   shopId?: number | null; dealId?: number | null; likeCount: number; commentCount: number
+  authorCertification?: UserExpertCertificationBadge | null
   images: string[]; topics: string[]; createdAt: string
 }
 export interface CommunityCommentReply {

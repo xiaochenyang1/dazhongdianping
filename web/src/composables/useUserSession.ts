@@ -1,11 +1,31 @@
 import { reactive } from 'vue'
-import type { AuthCurrentUser, AuthMode, AuthSessionResponse } from '@/types/auth'
+import type {
+  AuthCurrentUser,
+  AuthMode,
+  AuthSessionResponse,
+  UserExpertCertificationStatus,
+} from '@/types/auth'
 
 const ACCESS_TOKEN_STORAGE_KEY = 'dzdp:user-access-token'
 const REFRESH_TOKEN_STORAGE_KEY = 'dzdp:user-refresh-token'
 const PROFILE_STORAGE_KEY = 'dzdp:user-profile'
 
 type PendingAuthAction = () => void | Promise<void>
+
+function emptyExpertCertificationStatus(): UserExpertCertificationStatus {
+  return {
+    id: null,
+    status: 0,
+    statusText: '未申请',
+    reason: '',
+    rejectReason: '',
+    badge: null,
+    submittedAt: '',
+    reviewedAt: '',
+    effectiveStartAt: '',
+    effectiveEndAt: '',
+  }
+}
 
 function parseCurrentUser(rawValue: string | null): AuthCurrentUser | undefined {
   if (!rawValue) {
@@ -30,6 +50,7 @@ function parseCurrentUser(rawValue: string | null): AuthCurrentUser | undefined 
         level: typeof parsed.level === 'number' ? parsed.level : 1,
         points: typeof parsed.points === 'number' ? parsed.points : 0,
         growthValue: typeof parsed.growthValue === 'number' ? parsed.growthValue : 0,
+        expertCertification: parsed.expertCertification ?? emptyExpertCertificationStatus(),
       }
     }
   } catch {
@@ -53,6 +74,7 @@ function toCurrentUser(session: AuthSessionResponse): AuthCurrentUser {
     level: 1,
     points: 0,
     growthValue: 0,
+    expertCertification: emptyExpertCertificationStatus(),
   }
 }
 

@@ -68,13 +68,15 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (30, 'system:role:write', '维护角色', 'system', 2, 1),
     (31, 'system:permission:read', '查看权限点', 'system', 1, 1),
     (32, 'data:geo:read', '查看基础数据', 'data', 1, 1),
-    (33, 'data:geo:write', '维护基础数据', 'data', 2, 1);
+    (33, 'data:geo:write', '维护基础数据', 'data', 2, 1),
+    (34, 'audit:expert_certification:read', '查看达人认证', 'audit', 1, 1),
+    (35, 'audit:expert_certification:write', '处理达人认证', 'audit', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region) VALUES (1, 'CN'), (1, 'EU');
 INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM admin_permission;
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
-    (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7),
+    (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13),
     (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33);

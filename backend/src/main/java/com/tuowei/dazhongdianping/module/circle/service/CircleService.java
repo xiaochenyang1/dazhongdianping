@@ -7,6 +7,8 @@ import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
+import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
+import com.tuowei.dazhongdianping.module.auth.model.response.UserExpertCertificationBadgeResponse;
 import com.tuowei.dazhongdianping.module.circle.mapper.CircleMapper;
 import com.tuowei.dazhongdianping.module.community.mapper.CommunityMapper;
 import com.tuowei.dazhongdianping.module.community.model.PostRow;
@@ -17,6 +19,7 @@ import com.tuowei.dazhongdianping.module.circle.model.response.CircleMemberRespo
 import com.tuowei.dazhongdianping.module.circle.model.response.CircleMembershipResponse;
 import com.tuowei.dazhongdianping.module.circle.model.response.CircleResponse;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.List;
 import java.util.LinkedHashSet;
 import org.springframework.dao.DuplicateKeyException;
@@ -28,7 +31,14 @@ public class CircleService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final CircleMapper mapper;
     private final CommunityMapper communityMapper;
-    public CircleService(CircleMapper mapper, CommunityMapper communityMapper) { this.mapper = mapper; this.communityMapper = communityMapper; }
+    private final UserExpertCertificationService userExpertCertificationService;
+    public CircleService(CircleMapper mapper,
+                         CommunityMapper communityMapper,
+                         UserExpertCertificationService userExpertCertificationService) {
+        this.mapper = mapper;
+        this.communityMapper = communityMapper;
+        this.userExpertCertificationService = userExpertCertificationService;
+    }
 
     public PageResult<CircleResponse> list(Boolean joined, Integer page, Integer pageSize) {
         PageWindow window = pageWindow(page, pageSize);
@@ -60,12 +70,17 @@ public class CircleService {
                 ? new LinkedHashSet<>()
                 : new LinkedHashSet<>(communityMapper.selectUserPostRepostIds(
                         rows.stream().map(PostRow::getId).toList(), currentUserId));
+        Map<Long, UserExpertCertificationBadgeResponse> badges = userExpertCertificationService.approvedBadges(
+                rows.stream().map(PostRow::getUserId).toList(),
+                region
+        );
         List<PostResponse> items = rows.stream()
                 .map(row -> new PostResponse(row.getId(), row.getUserId(), row.getCircleId(), row.getCircleName(),
                         row.getUserName(), row.getTitle(), row.getContent(), row.getContentType(), row.getShopId(), row.getDealId(),
                         row.getLikeCount(), row.getCommentCount(), row.getRepostCount(),
                         repostedPostIds.contains(row.getId()),
                         row.getAuditStatus(), "审核通过", row.getAuditRemark(), row.getStatus(),
+                        badges.get(row.getUserId()),
                         communityMapper.selectPostImages(row.getId()), communityMapper.selectPostTopics(row.getId()),
                         row.getCreatedAt() == null ? "" : row.getCreatedAt().format(FORMATTER),
                         row.getUpdatedAt() == null ? "" : row.getUpdatedAt().format(FORMATTER))).toList();

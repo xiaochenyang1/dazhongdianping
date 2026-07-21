@@ -16,6 +16,9 @@ import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditPassRequest;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditRejectRequest;
+import com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow;
+import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
+import com.tuowei.dazhongdianping.module.merchant.review.service.MerchantReviewService;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.review.service.ReviewService;
@@ -52,6 +55,12 @@ class AdminAuditServiceTest {
 
     @Mock
     private MerchantShopChangeService merchantShopChangeService;
+
+    @Mock
+    private MerchantReviewService merchantReviewService;
+
+    @Mock
+    private UserExpertCertificationService userExpertCertificationService;
 
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
@@ -120,6 +129,72 @@ class AdminAuditServiceTest {
         verify(adminAuditMapper, times(1)).insertAuditLog(anyLong(), anyString(), anyString(), anyString(), anyString());
     }
 
+    @Test
+    void shouldDispatchExpertCertificationPass() {
+        setAdminSession("audit:expert_certification:write");
+
+        AuditTaskRow pendingTask = auditTask(701L, 7, 8801L, "CN", 0, "");
+        AuditTaskRow passedTask = auditTask(701L, 7, 8801L, "CN", 1, "资料完整，可授予认证");
+        UserExpertCertificationRow certification = new UserExpertCertificationRow();
+        certification.setId(8801L);
+        certification.setUserId(9001L);
+        certification.setRegion("CN");
+        certification.setStatus(1);
+
+        when(adminAuditMapper.selectAuditTaskById(701L)).thenReturn(pendingTask, passedTask);
+        when(userExpertCertificationService.pendingCertificationForAudit(8801L, "CN")).thenReturn(certification);
+        when(adminAuditMapper.updateAuditTaskDecision(701L, 1, 1L, "资料完整，可授予认证")).thenReturn(1);
+
+        AdminAuditPassRequest request = new AdminAuditPassRequest();
+        request.setRemark("资料完整，可授予认证");
+
+        var response = adminAuditService.passTask(701L, request, "127.0.0.1");
+
+        assertThat(response.bizType()).isEqualTo(7);
+        assertThat(response.bizTypeText()).isEqualTo("达人认证");
+        verify(userExpertCertificationService).approveCertification(certification, 1L, "资料完整，可授予认证");
+        verify(adminAuditMapper).insertAuditLog(
+                1L,
+                "audit_expert_certification_pass",
+                "expert_certification:8801",
+                "资料完整，可授予认证",
+                "127.0.0.1"
+        );
+    }
+
+    @Test
+    void shouldDispatchExpertCertificationReject() {
+        setAdminSession("audit:expert_certification:write");
+
+        AuditTaskRow pendingTask = auditTask(702L, 7, 8802L, "CN", 0, "");
+        AuditTaskRow rejectedTask = auditTask(702L, 7, 8802L, "CN", 2, "公开内容不足，先补更多真实体验");
+        UserExpertCertificationRow certification = new UserExpertCertificationRow();
+        certification.setId(8802L);
+        certification.setUserId(9002L);
+        certification.setRegion("CN");
+        certification.setStatus(1);
+
+        when(adminAuditMapper.selectAuditTaskById(702L)).thenReturn(pendingTask, rejectedTask);
+        when(userExpertCertificationService.pendingCertificationForAudit(8802L, "CN")).thenReturn(certification);
+        when(adminAuditMapper.updateAuditTaskDecision(702L, 2, 1L, "公开内容不足，先补更多真实体验")).thenReturn(1);
+
+        AdminAuditRejectRequest request = new AdminAuditRejectRequest();
+        request.setReason("公开内容不足，先补更多真实体验");
+
+        var response = adminAuditService.rejectTask(702L, request, "127.0.0.1");
+
+        assertThat(response.bizType()).isEqualTo(7);
+        assertThat(response.status()).isEqualTo(2);
+        verify(userExpertCertificationService).rejectCertification(certification, 1L, "公开内容不足，先补更多真实体验");
+        verify(adminAuditMapper).insertAuditLog(
+                1L,
+                "audit_expert_certification_reject",
+                "expert_certification:8802",
+                "公开内容不足，先补更多真实体验",
+                "127.0.0.1"
+        );
+    }
+
     private Callable<Boolean> concurrentDecision(CountDownLatch ready,
                                                  CountDownLatch start,
                                                  Runnable decision) {
@@ -142,5 +217,31 @@ class AdminAuditServiceTest {
                 AdminSessionContext.clear();
             }
         };
+    }
+
+    private void setAdminSession(String permission) {
+        AdminSessionContext.set(new AdminSession(
+                1L,
+                "admin",
+                "系统管理员",
+                java.util.Set.of(permission),
+                java.util.Set.of("CN", "EU")
+        ));
+    }
+
+    private AuditTaskRow auditTask(Long taskId,
+                                   Integer bizType,
+                                   Long bizId,
+                                   String region,
+                                   Integer status,
+                                   String remark) {
+        AuditTaskRow row = new AuditTaskRow();
+        row.setId(taskId);
+        row.setBizType(bizType);
+        row.setBizId(bizId);
+        row.setRegion(region);
+        row.setStatus(status);
+        row.setRemark(remark);
+        return row;
     }
 }

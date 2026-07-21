@@ -9,6 +9,7 @@ import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
 import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
+import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;
@@ -62,19 +63,22 @@ public class ReviewService {
     private final UserGrowthService userGrowthService;
     private final MerchantReviewMapper merchantReviewMapper;
     private final NotificationService notificationService;
+    private final UserExpertCertificationService userExpertCertificationService;
 
     public ReviewService(ReviewMapper reviewMapper,
                          AuthCommandMapper authCommandMapper,
                          AdminAuditMapper adminAuditMapper,
                          UserGrowthService userGrowthService,
                          MerchantReviewMapper merchantReviewMapper,
-                         NotificationService notificationService) {
+                         NotificationService notificationService,
+                         UserExpertCertificationService userExpertCertificationService) {
         this.reviewMapper = reviewMapper;
         this.authCommandMapper = authCommandMapper;
         this.adminAuditMapper = adminAuditMapper;
         this.userGrowthService = userGrowthService;
         this.merchantReviewMapper = merchantReviewMapper;
         this.notificationService = notificationService;
+        this.userExpertCertificationService = userExpertCertificationService;
     }
 
     @Transactional
@@ -484,6 +488,7 @@ public class ReviewService {
                 row.getAuditRemark(),
                 row.getStatus(),
                 reviewStatusText(row.getStatus()),
+                userExpertCertificationService.approvedBadge(row.getUserId(), row.getRegion()),
                 splitTags(row.getTags()),
                 images,
                 toMerchantReplyResponse(reviewMapper.selectMerchantReply(row.getId())),

@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue'
 import { useUserSession } from '@/composables/useUserSession'
 import { getBrowserDeviceId } from '@/lib/device-id'
 import {
+  applyCurrentUserExpertCertification,
   bindCurrentUserAccount,
   fetchCurrentUser,
   sendAuthCode,
@@ -27,12 +28,19 @@ const browserDeviceId = getBrowserDeviceId()
 const passwordSaving = ref(false)
 const passwordErrorMessage = ref('')
 const passwordSuccessMessage = ref('')
+const expertApplying = ref(false)
+const expertErrorMessage = ref('')
+const expertSuccessMessage = ref('')
 
 const form = reactive({
   nickname: '',
   avatar: '',
   gender: 0,
   signature: '',
+})
+
+const expertForm = reactive({
+  reason: '',
 })
 
 const bindForm = reactive({
@@ -48,6 +56,30 @@ const passwordForm = reactive({
 })
 
 const bindTargetLabel = computed(() => (bindForm.type === 'email' ? '邮箱' : '手机号'))
+const expertCertification = computed(() => state.currentUser?.expertCertification ?? null)
+const expertStatusClass = computed(() => {
+  const status = expertCertification.value?.status ?? 0
+  if (status === 2) {
+    return 'status-pill status-pill--good'
+  }
+  if (status === 3) {
+    return 'status-pill status-pill--muted'
+  }
+  return 'status-pill status-pill--warn'
+})
+const expertButtonText = computed(() => {
+  const status = expertCertification.value?.status ?? 0
+  if (status === 1) {
+    return '审核中'
+  }
+  if (status === 2) {
+    return '已认证'
+  }
+  if (status === 3) {
+    return '重新提交申请'
+  }
+  return '提交达人申请'
+})
 const passwordHint = computed(() => {
   if (state.currentUser?.hasPassword) {
     return '当前账号已经有密码了，改密码时得把旧密码填对。'
@@ -63,6 +95,7 @@ function applyProfile() {
   form.avatar = state.currentUser.avatar || ''
   form.gender = state.currentUser.gender ?? 0
   form.signature = state.currentUser.signature || ''
+  expertForm.reason = state.currentUser.expertCertification?.reason || ''
 }
 
 async function bootstrap() {
@@ -201,6 +234,50 @@ async function submitPassword() {
     passwordErrorMessage.value = error instanceof Error ? error.message : '密码更新失败'
   } finally {
     passwordSaving.value = false
+  }
+}
+
+async function submitExpertCertification() {
+  if (!state.currentUser) {
+    return
+  }
+
+  const status = state.currentUser.expertCertification?.status ?? 0
+  const reason = expertForm.reason.trim()
+  if (status === 2) {
+    expertErrorMessage.value = '你已经是认证达人了，别搁这儿重复递单。'
+    expertSuccessMessage.value = ''
+    return
+  }
+  if (status === 1) {
+    expertErrorMessage.value = '当前申请还在审核中，先别重复提交。'
+    expertSuccessMessage.value = ''
+    return
+  }
+  if (!reason) {
+    expertErrorMessage.value = '申请理由不能为空，别拿空气申请达人。'
+    expertSuccessMessage.value = ''
+    return
+  }
+
+  expertApplying.value = true
+  expertErrorMessage.value = ''
+  expertSuccessMessage.value = ''
+
+  try {
+    const certification = await applyCurrentUserExpertCertification({ reason })
+    setCurrentUser({
+      ...state.currentUser,
+      expertCertification: certification,
+    })
+    expertForm.reason = certification.reason
+    expertSuccessMessage.value = certification.status === 1
+      ? '达人认证申请已经递上去了，等后台审核。'
+      : '达人认证状态已更新。'
+  } catch (error) {
+    expertErrorMessage.value = error instanceof Error ? error.message : '达人认证申请提交失败'
+  } finally {
+    expertApplying.value = false
   }
 }
 
@@ -382,6 +459,73 @@ void bootstrap()
             </form>
           </article>
         </div>
+      </section>
+
+      <section class="content-section">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">达人认证</p>
+            <h2>申请走后台审核，通过了再公开挂标，别拿自封头衔糊弄人。</h2>
+          </div>
+        </div>
+
+        <article class="manage-card">
+          <div class="manage-card__header">
+            <div>
+              <p class="eyebrow">当前状态</p>
+              <h3>只展示已通过且有效的认证，待审和驳回不会往公开资料上硬贴标签。</h3>
+            </div>
+            <span :class="expertStatusClass">{{ expertCertification?.statusText || '未申请' }}</span>
+          </div>
+
+          <p v-if="expertErrorMessage" class="feedback is-error">{{ expertErrorMessage }}</p>
+          <p v-if="expertSuccessMessage" class="feedback is-success">{{ expertSuccessMessage }}</p>
+
+          <div class="profile-grid">
+            <div class="hero-metric">
+              <span>公开标识</span>
+              <strong v-if="expertCertification?.badge">
+                <span class="verified-badge verified-badge--compact">{{ expertCertification.badge.label }}</span>
+              </strong>
+              <strong v-else>未公开展示</strong>
+            </div>
+            <div class="hero-metric">
+              <span>提交时间</span>
+              <strong>{{ expertCertification?.submittedAt || '还没提交' }}</strong>
+            </div>
+            <div class="hero-metric">
+              <span>审核时间</span>
+              <strong>{{ expertCertification?.reviewedAt || '暂无' }}</strong>
+            </div>
+          </div>
+
+          <p v-if="expertCertification?.rejectReason" class="feedback is-error">
+            驳回原因：{{ expertCertification.rejectReason }}
+          </p>
+
+          <form class="review-form" @submit.prevent="submitExpertCertification">
+            <label class="field field--full">
+              <span>申请理由</span>
+              <textarea
+                v-model="expertForm.reason"
+                rows="5"
+                maxlength="500"
+                spellcheck="false"
+                placeholder="比如你长期在哪个城市写探店、发攻略，公开内容为什么值得给你挂上达人标识。"
+                :disabled="expertCertification?.status === 1 || expertCertification?.status === 2"
+              />
+            </label>
+            <div class="hero-actions">
+              <button
+                type="submit"
+                class="primary-button"
+                :disabled="expertApplying || expertCertification?.status === 1 || expertCertification?.status === 2"
+              >
+                {{ expertApplying ? '提交中...' : expertButtonText }}
+              </button>
+            </div>
+          </form>
+        </article>
       </section>
     </template>
   </div>

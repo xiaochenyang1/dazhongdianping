@@ -8,6 +8,8 @@ import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
 import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
+import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
+import com.tuowei.dazhongdianping.module.auth.model.response.UserExpertCertificationBadgeResponse;
 import com.tuowei.dazhongdianping.module.community.mapper.CommunityMapper;
 import com.tuowei.dazhongdianping.module.circle.service.CircleService;
 import com.tuowei.dazhongdianping.module.circle.mapper.CircleMapper;
@@ -48,11 +50,13 @@ public class CommunityService {
     private final TopicService topicService;
     private final NotificationService notificationService;
     private final MentionNotificationService mentionNotificationService;
+    private final UserExpertCertificationService userExpertCertificationService;
 
     public CommunityService(CommunityMapper communityMapper, AdminAuditMapper adminAuditMapper,
                             CircleService circleService, CircleMapper circleMapper, TopicService topicService,
                             NotificationService notificationService,
-                            MentionNotificationService mentionNotificationService) {
+                            MentionNotificationService mentionNotificationService,
+                            UserExpertCertificationService userExpertCertificationService) {
         this.communityMapper = communityMapper;
         this.adminAuditMapper = adminAuditMapper;
         this.circleService = circleService;
@@ -60,6 +64,7 @@ public class CommunityService {
         this.topicService = topicService;
         this.notificationService = notificationService;
         this.mentionNotificationService = mentionNotificationService;
+        this.userExpertCertificationService = userExpertCertificationService;
     }
 
     @Transactional
@@ -313,7 +318,11 @@ public class CommunityService {
         UserSession user = UserSessionContext.get();
         boolean repostedByCurrentUser = user != null
                 && communityMapper.countUserPostRepost(row.getId(), user.userId()) > 0;
-        return toResponse(row, repostedByCurrentUser);
+        return toResponse(
+                row,
+                repostedByCurrentUser,
+                userExpertCertificationService.approvedBadge(row.getUserId(), row.getRegion())
+        );
     }
 
     private List<PostResponse> toResponses(List<PostRow> rows) {
@@ -323,14 +332,22 @@ public class CommunityService {
                 ? new LinkedHashSet<>()
                 : new LinkedHashSet<>(communityMapper.selectUserPostRepostIds(
                         rows.stream().map(PostRow::getId).toList(), user.userId()));
-        return rows.stream().map(row -> toResponse(row, repostedPostIds.contains(row.getId()))).toList();
+        Map<Long, UserExpertCertificationBadgeResponse> badges = userExpertCertificationService.approvedBadges(
+                rows.stream().map(PostRow::getUserId).toList(),
+                region()
+        );
+        return rows.stream()
+                .map(row -> toResponse(row, repostedPostIds.contains(row.getId()), badges.get(row.getUserId())))
+                .toList();
     }
 
-    private PostResponse toResponse(PostRow row, boolean repostedByCurrentUser) {
+    private PostResponse toResponse(PostRow row,
+                                    boolean repostedByCurrentUser,
+                                    UserExpertCertificationBadgeResponse authorCertification) {
         return new PostResponse(
                 row.getId(), row.getUserId(), row.getCircleId(), row.getCircleName(), row.getUserName(), row.getTitle(), row.getContent(), row.getContentType(),
                 row.getShopId(), row.getDealId(), row.getLikeCount(), row.getCommentCount(), row.getRepostCount(), repostedByCurrentUser, row.getAuditStatus(),
-                auditStatusText(row.getAuditStatus()), row.getAuditRemark(), row.getStatus(),
+                auditStatusText(row.getAuditStatus()), row.getAuditRemark(), row.getStatus(), authorCertification,
                 communityMapper.selectPostImages(row.getId()), communityMapper.selectPostTopics(row.getId()),
                 format(row.getCreatedAt()), format(row.getUpdatedAt())
         );

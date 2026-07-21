@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.auth.certification.mapper.UserExpertCertificationMapper">
+
+    <sql id="certificationColumns">
+        id,
+        user_id,
+        region,
+        reason,
+        status,
+        reject_reason,
+        audit_by,
+        submitted_at,
+        audited_at,
+        effective_start_at,
+        effective_end_at,
+        created_at,
+        updated_at
+    </sql>
+
+    <select id="selectByUserAndRegion" resultType="com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow">
+        SELECT <include refid="certificationColumns"/>
+        FROM user_expert_certification
+        WHERE user_id = #{userId}
+          AND region = #{region}
+        LIMIT 1
+    </select>
+
+    <select id="selectByUserAndRegionForUpdate" resultType="com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow">
+        SELECT <include refid="certificationColumns"/>
+        FROM user_expert_certification
+        WHERE user_id = #{userId}
+          AND region = #{region}
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <insert id="insertCertification" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_expert_certification(
+            user_id,
+            region,
+            reason,
+            status,
+            reject_reason,
+            audit_by,
+            submitted_at,
+            audited_at,
+            effective_start_at,
+            effective_end_at
+        )
+        VALUES (
+            #{userId},
+            #{region},
+            #{reason},
+            #{status},
+            #{rejectReason},
+            #{auditBy},
+            #{submittedAt},
+            #{auditedAt},
+            #{effectiveStartAt},
+            #{effectiveEndAt}
+        )
+    </insert>
+
+    <update id="resubmitCertification">
+        UPDATE user_expert_certification
+        SET reason = #{reason},
+            status = 1,
+            reject_reason = '',
+            audit_by = 0,
+            submitted_at = CURRENT_TIMESTAMP,
+            audited_at = NULL,
+            effective_start_at = NULL,
+            effective_end_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND region = #{region}
+    </update>
+
+    <select id="selectPendingCertificationForAudit" resultType="com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow">
+        SELECT <include refid="certificationColumns"/>
+        FROM user_expert_certification
+        WHERE id = #{certificationId}
+          AND region = #{region}
+          AND status = 1
+        LIMIT 1
+    </select>
+
+    <update id="approveCertification">
+        UPDATE user_expert_certification
+        SET status = 2,
+            reject_reason = '',
+            audit_by = #{auditBy},
+            audited_at = CURRENT_TIMESTAMP,
+            effective_start_at = CURRENT_TIMESTAMP,
+            effective_end_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND status = 1
+    </update>
+
+    <update id="rejectCertification">
+        UPDATE user_expert_certification
+        SET status = 3,
+            reject_reason = #{rejectReason},
+            audit_by = #{auditBy},
+            audited_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND status = 1
+    </update>
+
+    <select id="selectApprovedCertification" resultType="com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow">
+        SELECT <include refid="certificationColumns"/>
+        FROM user_expert_certification
+        WHERE user_id = #{userId}
+          AND region = #{region}
+          AND status = 2
+          AND (effective_start_at IS NULL OR effective_start_at <![CDATA[<=]]> CURRENT_TIMESTAMP)
+          AND (effective_end_at IS NULL OR effective_end_at <![CDATA[>]]> CURRENT_TIMESTAMP)
+        LIMIT 1
+    </select>
+
+    <select id="selectApprovedCertifications" resultType="com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow">
+        SELECT <include refid="certificationColumns"/>
+        FROM user_expert_certification
+        WHERE region = #{region}
+          AND status = 2
+          AND (effective_start_at IS NULL OR effective_start_at <![CDATA[<=]]> CURRENT_TIMESTAMP)
+          AND (effective_end_at IS NULL OR effective_end_at <![CDATA[>]]> CURRENT_TIMESTAMP)
+          AND user_id IN
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+    </select>
+</mapper>

@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.module.community.model.response;
 
+import com.tuowei.dazhongdianping.module.auth.model.response.UserExpertCertificationBadgeResponse;
 import java.util.List;
 
 public record PostResponse(
@@ -21,6 +22,7 @@ public record PostResponse(
         String auditStatusText,
         String auditRemark,
         Integer status,
+        UserExpertCertificationBadgeResponse authorCertification,
         List<String> images,
         List<String> topics,
         String createdAt,

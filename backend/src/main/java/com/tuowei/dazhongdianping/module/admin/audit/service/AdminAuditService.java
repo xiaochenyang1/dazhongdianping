@@ -14,6 +14,8 @@ import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditPas
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditRejectRequest;
 import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditTaskResponse;
 import com.tuowei.dazhongdianping.module.admin.auth.service.AdminPermissionChecker;
+import com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow;
+import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.service.ReviewService;
@@ -43,6 +45,7 @@ public class AdminAuditService {
     private static final int DEAL_BIZ_TYPE = 2;
     private static final int SHOP_CHANGE_BIZ_TYPE = 5;
     private static final int REVIEW_APPEAL_BIZ_TYPE = 6;
+    private static final int EXPERT_CERTIFICATION_BIZ_TYPE = 7;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final AdminAuditMapper adminAuditMapper;
@@ -50,6 +53,7 @@ public class AdminAuditService {
     private final ReviewService reviewService;
     private final MerchantShopChangeService merchantShopChangeService;
     private final MerchantReviewService merchantReviewService;
+    private final UserExpertCertificationService userExpertCertificationService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final CircleMapper circleMapper;
     private final CommunityMapper communityMapper;
@@ -62,6 +66,7 @@ public class AdminAuditService {
                              ReviewService reviewService,
                              MerchantShopChangeService merchantShopChangeService,
                              MerchantReviewService merchantReviewService,
+                             UserExpertCertificationService userExpertCertificationService,
                              ApplicationEventPublisher applicationEventPublisher,
                              CircleMapper circleMapper,
                              CommunityMapper communityMapper,
@@ -73,6 +78,7 @@ public class AdminAuditService {
         this.reviewService = reviewService;
         this.merchantShopChangeService = merchantShopChangeService;
         this.merchantReviewService = merchantReviewService;
+        this.userExpertCertificationService = userExpertCertificationService;
         this.applicationEventPublisher = applicationEventPublisher;
         this.circleMapper = circleMapper;
         this.communityMapper = communityMapper;
@@ -104,6 +110,9 @@ public class AdminAuditService {
         }
         if (task.getBizType() == REVIEW_APPEAL_BIZ_TYPE) {
             return passReviewAppealTask(task, request, requestIp);
+        }
+        if (task.getBizType() == EXPERT_CERTIFICATION_BIZ_TYPE) {
+            return passExpertCertificationTask(task, request, requestIp);
         }
         if (task.getBizType() == POST_BIZ_TYPE) {
             return decidePostTask(task, 1, normalizeRemark(request.getRemark()), "audit_post_pass", requestIp);
@@ -147,6 +156,9 @@ public class AdminAuditService {
         }
         if (task.getBizType() == REVIEW_APPEAL_BIZ_TYPE) {
             return rejectReviewAppealTask(task, request, requestIp);
+        }
+        if (task.getBizType() == EXPERT_CERTIFICATION_BIZ_TYPE) {
+            return rejectExpertCertificationTask(task, request, requestIp);
         }
         if (task.getBizType() == POST_BIZ_TYPE) {
             return decidePostTask(task, 2, request.getReason().trim(), "audit_post_reject", requestIp);
@@ -355,6 +367,56 @@ public class AdminAuditService {
         return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
     }
 
+    private AdminAuditTaskResponse passExpertCertificationTask(
+            AuditTaskRow task,
+            AdminAuditPassRequest request,
+            String requestIp
+    ) {
+        UserExpertCertificationRow certification = userExpertCertificationService.pendingCertificationForAudit(
+                task.getBizId(), currentRegion().name());
+        if (certification == null) {
+            throw new NotFoundException("达人认证申请不存在或已重新提交");
+        }
+        String remark = normalizeRemark(request.getRemark());
+        if (adminAuditMapper.updateAuditTaskDecision(task.getId(), 1, currentAdmin().adminId(), remark) == 0) {
+            throw new IllegalArgumentException("审核任务状态已变更");
+        }
+        userExpertCertificationService.approveCertification(certification, currentAdmin().adminId(), remark);
+        adminAuditMapper.insertAuditLog(
+                currentAdmin().adminId(),
+                "audit_expert_certification_pass",
+                "expert_certification:" + certification.getId(),
+                remark,
+                normalizeIp(requestIp)
+        );
+        return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
+    private AdminAuditTaskResponse rejectExpertCertificationTask(
+            AuditTaskRow task,
+            AdminAuditRejectRequest request,
+            String requestIp
+    ) {
+        UserExpertCertificationRow certification = userExpertCertificationService.pendingCertificationForAudit(
+                task.getBizId(), currentRegion().name());
+        if (certification == null) {
+            throw new NotFoundException("达人认证申请不存在或已重新提交");
+        }
+        String reason = request.getReason().trim();
+        if (adminAuditMapper.updateAuditTaskDecision(task.getId(), 2, currentAdmin().adminId(), reason) == 0) {
+            throw new IllegalArgumentException("审核任务状态已变更");
+        }
+        userExpertCertificationService.rejectCertification(certification, currentAdmin().adminId(), reason);
+        adminAuditMapper.insertAuditLog(
+                currentAdmin().adminId(),
+                "audit_expert_certification_reject",
+                "expert_certification:" + certification.getId(),
+                reason,
+                normalizeIp(requestIp)
+        );
+        return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
     private AdminAuditTaskResponse rejectDealTask(
             AuditTaskRow task,
             AdminAuditRejectRequest request,
@@ -389,7 +451,8 @@ public class AdminAuditService {
                 && row.getBizType() != DEAL_BIZ_TYPE
                 && row.getBizType() != POST_BIZ_TYPE
                 && row.getBizType() != SHOP_CHANGE_BIZ_TYPE
-                && row.getBizType() != REVIEW_APPEAL_BIZ_TYPE)) {
+                && row.getBizType() != REVIEW_APPEAL_BIZ_TYPE
+                && row.getBizType() != EXPERT_CERTIFICATION_BIZ_TYPE)) {
             throw new IllegalArgumentException("当前不支持此审核任务");
         }
         if (row.getStatus() == null || row.getStatus() != 0) {
@@ -400,7 +463,14 @@ public class AdminAuditService {
 
     private List<Integer> allowedBizTypes(boolean write) {
         AdminSession session = currentAdmin();
-        return List.of(DEAL_BIZ_TYPE, REVIEW_BIZ_TYPE, POST_BIZ_TYPE, SHOP_CHANGE_BIZ_TYPE, REVIEW_APPEAL_BIZ_TYPE)
+        return List.of(
+                        DEAL_BIZ_TYPE,
+                        REVIEW_BIZ_TYPE,
+                        POST_BIZ_TYPE,
+                        SHOP_CHANGE_BIZ_TYPE,
+                        REVIEW_APPEAL_BIZ_TYPE,
+                        EXPERT_CERTIFICATION_BIZ_TYPE
+                )
                 .stream()
                 .filter(bizType -> session.permissions().contains(permissionFor(bizType, write)))
                 .toList();
@@ -418,6 +488,7 @@ public class AdminAuditService {
             case POST_BIZ_TYPE -> "audit:post:" + action;
             case SHOP_CHANGE_BIZ_TYPE -> "audit:shop_change:" + action;
             case REVIEW_APPEAL_BIZ_TYPE -> "audit:review_appeal:" + action;
+            case EXPERT_CERTIFICATION_BIZ_TYPE -> "audit:expert_certification:" + action;
             default -> throw new IllegalArgumentException("不支持的审核类型");
         };
     }
@@ -449,6 +520,7 @@ public class AdminAuditService {
             case 4 -> "帖子";
             case 5 -> "门店变更";
             case 6 -> "商户点评申诉";
+            case 7 -> "达人认证";
             default -> "未知";
         };
     }

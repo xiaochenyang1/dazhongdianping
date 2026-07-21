@@ -705,6 +705,27 @@ CREATE TABLE IF NOT EXISTS app_user (
 CREATE UNIQUE INDEX IF NOT EXISTS uk_app_user_email ON app_user(email);
 CREATE UNIQUE INDEX IF NOT EXISTS uk_app_user_phone ON app_user(phone);
 
+CREATE TABLE IF NOT EXISTS user_expert_certification (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL,
+    reason VARCHAR(500) NOT NULL DEFAULT '',
+    status TINYINT NOT NULL DEFAULT 1,
+    reject_reason VARCHAR(255) NOT NULL DEFAULT '',
+    audit_by BIGINT NOT NULL DEFAULT 0,
+    submitted_at TIMESTAMP NULL,
+    audited_at TIMESTAMP NULL,
+    effective_start_at TIMESTAMP NULL,
+    effective_end_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_user_expert_certification_user_region
+    ON user_expert_certification(user_id, region);
+CREATE INDEX IF NOT EXISTS idx_user_expert_certification_region_status
+    ON user_expert_certification(region, status, user_id);
+
 CREATE TABLE IF NOT EXISTS user_follow (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     follower_user_id BIGINT NOT NULL,

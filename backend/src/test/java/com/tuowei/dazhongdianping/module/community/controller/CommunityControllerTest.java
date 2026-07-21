@@ -164,6 +164,41 @@ class CommunityControllerTest {
     }
 
     @Test
+    void shouldShowAuthorCertificationOnApprovedPost() throws Exception {
+        RegisteredUser author = registerUser("巴黎生活达人");
+        certifyUser(author.userId(), "EU");
+
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(author.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("巴黎探店路线图", "左岸喝咖啡、玛黑区吃饭、晚上再去塞纳河边遛弯。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long postId = readLong(created, "/data/id");
+
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(postId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/posts/{postId}", postId)
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userName").value("巴黎生活达人"))
+                .andExpect(jsonPath("$.data.authorCertification.code").value("local_expert"))
+                .andExpect(jsonPath("$.data.authorCertification.label").value("本地达人"));
+
+        mockMvc.perform(get("/api/c/v1/posts")
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].id").value(postId))
+                .andExpect(jsonPath("$.data.list[0].authorCertification.label").value("本地达人"));
+    }
+
+    @Test
     void shouldLikeCommentReportAndFavoriteApprovedPost() throws Exception {
         String authorToken = registerUser();
         MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
@@ -764,6 +799,27 @@ class CommunityControllerTest {
                 Long.class,
                 postId
         );
+    }
+
+    private void certifyUser(long userId, String region) {
+        jdbcTemplate.update("""
+                        INSERT INTO user_expert_certification(
+                            user_id,
+                            region,
+                            reason,
+                            status,
+                            reject_reason,
+                            audit_by,
+                            submitted_at,
+                            audited_at,
+                            effective_start_at,
+                            effective_end_at
+                        )
+                        VALUES (?, ?, ?, 2, '', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL)
+                        """,
+                userId,
+                region,
+                "社区公开内容稳定，补一枚达人认证给展示层用。");
     }
 
     private String postPayload(String title, String content) {

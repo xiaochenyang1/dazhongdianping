@@ -15,6 +15,7 @@ public class AdminMenuService {
                         leaf("audit.reviews", "点评审核", "/audit/reviews", "audit:review:read"),
                         leaf("audit.review_appeals", "商户点评申诉", "/audit/review-appeals", "audit:review_appeal:read"),
                         leaf("audit.posts", "帖子审核", "/audit/posts", "audit:post:read"),
+                        leaf("audit.expert_certifications", "达人认证", "/audit/expert-certifications", "audit:expert_certification:read"),
                         leaf("audit.merchant_applications", "商户资质审核", "/audit/merchant-applications", "audit:merchant_application:read")
                 )),
                 group("data", "数据管理", "/data", List.of(

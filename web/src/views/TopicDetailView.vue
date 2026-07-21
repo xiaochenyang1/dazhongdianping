@@ -77,7 +77,12 @@ watch(() => props.topicId, async (topicId) => {
       <div class="post-index">
         <article v-for="post in posts" :key="post.id" class="post-entry">
           <div class="post-meta">
-            <RouterLink :to="`/users/${post.userId}`">{{ post.userName }}</RouterLink>
+            <span class="name-with-badge">
+              <RouterLink :to="`/users/${post.userId}`">{{ post.userName }}</RouterLink>
+              <span v-if="post.authorCertification" class="verified-badge verified-badge--compact">
+                {{ post.authorCertification.label }}
+              </span>
+            </span>
             <span>{{ post.createdAt }}</span>
           </div>
           <h2><RouterLink :to="`/community/posts/${post.id}`">{{ post.title }}</RouterLink></h2>

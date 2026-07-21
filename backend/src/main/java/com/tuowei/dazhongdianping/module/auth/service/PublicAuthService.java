@@ -6,6 +6,7 @@ import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
+import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.model.UserSessionRow;
@@ -50,6 +51,7 @@ public class PublicAuthService {
     private final SendCodeRateLimitService sendCodeRateLimitService;
     private final UserPrivacyService userPrivacyService;
     private final SocialService socialService;
+    private final UserExpertCertificationService userExpertCertificationService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final long refreshTokenExpireSeconds;
 
@@ -57,12 +59,14 @@ public class PublicAuthService {
                              SendCodeRateLimitService sendCodeRateLimitService,
                              UserPrivacyService userPrivacyService,
                              SocialService socialService,
+                             UserExpertCertificationService userExpertCertificationService,
                              UserAccessTokenService userAccessTokenService,
                              @Value("${app.auth.refresh-token-expire-seconds}") long refreshTokenExpireSeconds) {
         this.authCommandMapper = authCommandMapper;
         this.sendCodeRateLimitService = sendCodeRateLimitService;
         this.userPrivacyService = userPrivacyService;
         this.socialService = socialService;
+        this.userExpertCertificationService = userExpertCertificationService;
         this.userAccessTokenService = userAccessTokenService;
         this.refreshTokenExpireSeconds = refreshTokenExpireSeconds;
     }
@@ -231,7 +235,8 @@ public class PublicAuthService {
                 authCommandMapper.countPublicReviewsByUserId(userId, currentRegion().name()),
                 socialService.followerCount(userId),
                 socialService.followingCount(userId),
-                socialService.followedByCurrentUser(userId)
+                socialService.followedByCurrentUser(userId),
+                userExpertCertificationService.approvedBadge(userId, currentRegion().name())
         );
     }
 
@@ -499,7 +504,8 @@ public class PublicAuthService {
                 userRow.getPreferredRegion(),
                 userRow.getLevel(),
                 userRow.getPoints(),
-                userRow.getGrowthValue()
+                userRow.getGrowthValue(),
+                userExpertCertificationService.currentUserStatus(userRow.getId(), currentRegion().name())
         );
     }
 

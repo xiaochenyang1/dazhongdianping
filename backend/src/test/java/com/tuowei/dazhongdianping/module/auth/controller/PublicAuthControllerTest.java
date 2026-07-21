@@ -546,6 +546,96 @@ class PublicAuthControllerTest {
     }
 
     @Test
+    void shouldApplyExpertCertificationAndExposePublicBadgeOnlyAfterAuditPass() throws Exception {
+        sendCode("register", "email", "expert@example.com");
+        MvcResult registerResult = mockMvc.perform(post("/api/c/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type": "email",
+                                  "account": "expert@example.com",
+                                  "code": "123456",
+                                  "password": "Passw0rd!",
+                                  "nickname": "巴黎探店老炮",
+                                  "preferredRegion": "EU"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String accessToken = readText(registerResult, "/data/accessToken");
+        long userId = Long.parseLong(readText(registerResult, "/data/user/id"));
+
+        mockMvc.perform(post("/api/c/v1/user/expert-certification/apply")
+                        .header("Authorization", bearer(accessToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "reason": "常住巴黎，过去一年持续写公开探店点评。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.status").value(1))
+                .andExpect(jsonPath("$.data.statusText").value("待审核"))
+                .andExpect(jsonPath("$.data.reason").value("常住巴黎，过去一年持续写公开探店点评。"))
+                .andExpect(jsonPath("$.data.badge.label").doesNotExist());
+
+        long certificationId = jdbcTemplate.queryForObject(
+                "SELECT id FROM user_expert_certification WHERE user_id = ? AND region = 'EU'",
+                Long.class,
+                userId
+        );
+        long taskId = jdbcTemplate.queryForObject(
+                "SELECT id FROM audit_task WHERE biz_type = 7 AND biz_id = ? AND status = 0",
+                Long.class,
+                certificationId
+        );
+
+        mockMvc.perform(get("/api/c/v1/user/me")
+                        .header("Authorization", bearer(accessToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.expertCertification.status").value(1))
+                .andExpect(jsonPath("$.data.expertCertification.statusText").value("待审核"))
+                .andExpect(jsonPath("$.data.expertCertification.badge.label").doesNotExist());
+
+        mockMvc.perform(get("/api/c/v1/user/{userId}", userId)
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.expertCertification.label").doesNotExist());
+
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", taskId)
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "remark": "公开内容稳定，可授予达人标识"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.bizType").value(7))
+                .andExpect(jsonPath("$.data.bizTypeText").value("达人认证"));
+
+        mockMvc.perform(get("/api/c/v1/user/me")
+                        .header("Authorization", bearer(accessToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.expertCertification.status").value(2))
+                .andExpect(jsonPath("$.data.expertCertification.statusText").value("已通过"))
+                .andExpect(jsonPath("$.data.expertCertification.badge.code").value("local_expert"))
+                .andExpect(jsonPath("$.data.expertCertification.badge.label").value("本地达人"));
+
+        mockMvc.perform(get("/api/c/v1/user/{userId}", userId)
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.expertCertification.code").value("local_expert"))
+                .andExpect(jsonPath("$.data.expertCertification.label").value("本地达人"));
+    }
+
+    @Test
     void shouldCountPublicReviewsWithinCurrentRegionOnPublicProfile() throws Exception {
         sendCode("register", "email", "public-region@example.com");
         MvcResult registerResult = mockMvc.perform(post("/api/c/v1/auth/register")
@@ -735,6 +825,20 @@ class PublicAuthControllerTest {
 
     private String bearer(String accessToken) {
         return "Bearer " + accessToken;
+    }
+
+    private String loginAdmin() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/admin/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "account": "admin",
+                                  "password": "admin123456"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        return readText(result, "/data/accessToken");
     }
 
     private String reviewPayload(long shopId,

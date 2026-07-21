@@ -313,6 +313,7 @@
     <select id="selectShopReviews" resultType="com.tuowei.dazhongdianping.module.browse.model.ReviewRow">
         SELECT r.id,
                r.shop_id,
+               r.user_id,
                r.user_name,
                r.score_overall AS score,
                r.content,

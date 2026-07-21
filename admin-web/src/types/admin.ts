@@ -227,7 +227,7 @@ export interface AdminAuditTask {
   region: Region
   status: number
   statusText: string
-  shopId: number
+  shopId: number | null
   shopName: string
   submittedBy: string
   summary: string

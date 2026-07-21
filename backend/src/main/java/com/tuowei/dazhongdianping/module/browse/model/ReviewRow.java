@@ -8,6 +8,7 @@ import lombok.Data;
 public class ReviewRow {
     private Long id;
     private Long shopId;
+    private Long userId;
     private String userName;
     private BigDecimal score;
     private String content;

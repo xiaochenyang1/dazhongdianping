@@ -42,6 +42,13 @@ const reportPanelOpen = ref(false)
 let reviewRequestId = 0
 let commentsRequestId = 0
 
+function normalizeReviewComments(list: ReviewComment[]): ReviewComment[] {
+  return list.map((comment) => ({
+    ...comment,
+    replies: Array.isArray(comment.replies) ? normalizeReviewComments(comment.replies) : [],
+  }))
+}
+
 useSeoMeta(() => {
   const canonicalPath = `/reviews/${props.reviewId}`
   const currentReview = review.value
@@ -183,7 +190,7 @@ async function loadComments(reviewId = props.reviewId, parentRequestId = reviewR
   try {
     const page = await listReviewComments(reviewId, { page: 1, pageSize: 20 })
     if (parentRequestId !== reviewRequestId || requestId !== commentsRequestId) return
-    comments.value = page.list
+    comments.value = normalizeReviewComments(page.list)
   } catch (error) {
     if (parentRequestId === reviewRequestId && requestId === commentsRequestId) {
       commentsErrorMessage.value = error instanceof Error ? error.message : '评论列表加载失败'
@@ -344,13 +351,18 @@ watch(
         <p class="eyebrow">{{ owned ? '我的点评详情' : '公开点评详情' }}</p>
         <h1>{{ review.shopName }}</h1>
         <p class="detail-hero__summary">
-          <RouterLink v-if="review.userId > 0" :to="`/users/${review.userId}`" class="inline-link">
-            {{ review.userName }}
-          </RouterLink>
-          <template v-else>
-            {{ review.userName }}
-          </template>
-          · {{ appState.region }} · {{ review.createdAt }}
+          <span class="name-with-badge">
+            <RouterLink v-if="review.userId > 0" :to="`/users/${review.userId}`" class="inline-link">
+              {{ review.userName }}
+            </RouterLink>
+            <template v-else>
+              <span>{{ review.userName }}</span>
+            </template>
+            <span v-if="review.authorCertification" class="verified-badge verified-badge--compact">
+              {{ review.authorCertification.label }}
+            </span>
+            <span>· {{ appState.region }} · {{ review.createdAt }}</span>
+          </span>
           <span v-if="owned"> · 最后更新 {{ review.updatedAt }}</span>
         </p>
 

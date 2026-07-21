@@ -38,7 +38,19 @@ onMounted(async()=>{try{posts.value=(await fetchPosts()).list}catch(e){errorMess
     <p v-if="errorMessage" class="feedback is-error">{{errorMessage}}</p>
     <div class="rank-list">
       <article v-for="post in posts" :key="post.id" class="content-card rank-item">
-        <div class="rank-item__body"><p class="eyebrow"><RouterLink :to="`/users/${post.userId}`">{{post.userName}}</RouterLink> · {{post.createdAt}}</p><h2><RouterLink :to="`/community/posts/${post.id}`">{{post.title}}</RouterLink></h2><p>{{post.content}}</p><div class="tag-row"><span v-for="topic in post.topics" :key="topic">#{{topic}}</span></div><small>喜欢 {{post.likeCount}} · 评论 {{post.commentCount}}</small></div>
+        <div class="rank-item__body">
+          <p class="eyebrow name-with-badge">
+            <RouterLink :to="`/users/${post.userId}`">{{ post.userName }}</RouterLink>
+            <span v-if="post.authorCertification" class="verified-badge verified-badge--compact">
+              {{ post.authorCertification.label }}
+            </span>
+            <span>· {{ post.createdAt }}</span>
+          </p>
+          <h2><RouterLink :to="`/community/posts/${post.id}`">{{ post.title }}</RouterLink></h2>
+          <p>{{ post.content }}</p>
+          <div class="tag-row"><span v-for="topic in post.topics" :key="topic">#{{ topic }}</span></div>
+          <small>喜欢 {{ post.likeCount }} · 评论 {{ post.commentCount }}</small>
+        </div>
       </article>
     </div>
   </section>

@@ -144,6 +144,31 @@ class ReviewControllerTest {
     }
 
     @Test
+    void shouldShowAuthorCertificationOnPublicReviewDetailAndPreview() throws Exception {
+        String account = "review-expert@example.com";
+        String userToken = registerUser(account, "认证点评人");
+        certifyUser(account, "CN");
+
+        long reviewId = createReview(userToken, 10001L, "这条点评拿来验证达人标识展示。", 5, 5, 4, 5, 108.00);
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingAuditTaskId(reviewId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/reviews/{reviewId}", reviewId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userName").value("认证点评人"))
+                .andExpect(jsonPath("$.data.authorCertification.code").value("local_expert"))
+                .andExpect(jsonPath("$.data.authorCertification.label").value("本地达人"));
+
+        mockMvc.perform(get("/api/c/v1/shops/10001/reviews"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].id").value(reviewId))
+                .andExpect(jsonPath("$.data.list[0].authorCertification.label").value("本地达人"));
+    }
+
+    @Test
     void shouldGrantGrowthAndPointsWhenCreatingReview() throws Exception {
         jdbcTemplate.update("UPDATE growth_rule SET enabled = FALSE WHERE action = 'review_image'");
         String account = "review-growth@example.com";
@@ -944,6 +969,32 @@ class ReviewControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andReturn();
         return readText(result, "/data/accessToken");
+    }
+
+    private void certifyUser(String account, String region) {
+        Long userId = jdbcTemplate.queryForObject(
+                "SELECT id FROM app_user WHERE email = ?",
+                Long.class,
+                account
+        );
+        jdbcTemplate.update("""
+                        INSERT INTO user_expert_certification(
+                            user_id,
+                            region,
+                            reason,
+                            status,
+                            reject_reason,
+                            audit_by,
+                            submitted_at,
+                            audited_at,
+                            effective_start_at,
+                            effective_end_at
+                        )
+                        VALUES (?, ?, ?, 2, '', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL)
+                        """,
+                userId,
+                region,
+                "公开点评持续稳定输出，可展示达人标识。");
     }
 
     private long pendingAuditTaskId(Long reviewId) {

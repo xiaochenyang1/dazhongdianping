@@ -11,6 +11,13 @@ const comments = ref<CommunityComment[]>([])
 const errorMessage = ref('')
 let requestSequence = 0
 
+function normalizeCommunityComments(list: CommunityComment[]): CommunityComment[] {
+  return list.map((comment) => ({
+    ...comment,
+    replies: Array.isArray(comment.replies) ? normalizeCommunityComments(comment.replies) : [],
+  }))
+}
+
 useSeoMeta(() => {
   const canonicalPath = `/community/posts/${props.postId}`
   const currentPost = post.value
@@ -73,7 +80,7 @@ watch(
       const [detail, page] = await Promise.all([fetchPost(postId), fetchPostComments(postId)])
       if (request !== requestSequence) return
       post.value = detail
-      comments.value = page.list
+      comments.value = normalizeCommunityComments(page.list)
     } catch (error) {
       if (request === requestSequence) {
         errorMessage.value = error instanceof Error ? error.message : '帖子加载失败'
@@ -89,7 +96,13 @@ watch(
     <div class="page-header">
       <div>
         <p class="eyebrow">
-          <RouterLink :to="`/users/${post.userId}`">{{ post.userName }}</RouterLink> · {{ post.createdAt }}
+          <span class="name-with-badge">
+            <RouterLink :to="`/users/${post.userId}`">{{ post.userName }}</RouterLink>
+            <span v-if="post.authorCertification" class="verified-badge verified-badge--compact">
+              {{ post.authorCertification.label }}
+            </span>
+            <span>· {{ post.createdAt }}</span>
+          </span>
         </p>
         <h1>{{ post.title }}</h1>
         <div class="tag-row">

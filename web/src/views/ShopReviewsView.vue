@@ -225,7 +225,12 @@ watch(
         <RouterLink v-for="review in reviews" :key="review.id" :to="`/reviews/${review.id}`" class="review-link-card">
           <article class="review-card">
             <div class="review-card__header">
-              <strong>{{ review.userName }}</strong>
+              <strong class="name-with-badge">
+                <span>{{ review.userName }}</span>
+                <span v-if="review.authorCertification" class="verified-badge verified-badge--compact">
+                  {{ review.authorCertification.label }}
+                </span>
+              </strong>
               <span>{{ review.createdAt }} · {{ review.score.toFixed(1) }}</span>
             </div>
             <p>{{ review.content }}</p>

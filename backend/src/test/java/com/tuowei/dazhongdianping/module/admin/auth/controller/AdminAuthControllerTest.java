@@ -93,8 +93,18 @@ class AdminAuthControllerTest {
                         .header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[1].code").value("audit"))
-                .andExpect(jsonPath("$.data[1].children[2].code").value("audit.posts"))
-                .andExpect(jsonPath("$.data[1].children[2].path").value("/audit/posts"));
+                .andExpect(jsonPath("$.data[1].children[?(@.code == 'audit.posts')].path").value("/audit/posts"));
+    }
+
+    @Test
+    void shouldExposeExpertCertificationAuditMenu() throws Exception {
+        String token = loginToken();
+
+        mockMvc.perform(get("/api/admin/v1/menus")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[1].children[?(@.code == 'audit.expert_certifications')].path")
+                        .value("/audit/expert-certifications"));
     }
 
     @Test
@@ -104,8 +114,8 @@ class AdminAuthControllerTest {
         mockMvc.perform(get("/api/admin/v1/menus")
                         .header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[1].children[3].code").value("audit.merchant_applications"))
-                .andExpect(jsonPath("$.data[1].children[3].path").value("/audit/merchant-applications"));
+                .andExpect(jsonPath("$.data[1].children[?(@.code == 'audit.merchant_applications')].path")
+                        .value("/audit/merchant-applications"));
     }
 
     private String loginToken() throws Exception {

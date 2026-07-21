@@ -1,3 +1,5 @@
+import type { UserExpertCertificationBadge } from './auth'
+
 export interface ReviewImage {
   id: number
   url: string
@@ -24,6 +26,7 @@ export interface ReviewDetail {
   auditRemark: string
   status: number
   statusText: string
+  authorCertification?: UserExpertCertificationBadge | null
   tags: string[]
   images: ReviewImage[]
   createdAt: string

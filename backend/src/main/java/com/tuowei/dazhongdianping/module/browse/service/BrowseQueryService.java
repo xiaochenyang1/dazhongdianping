@@ -4,8 +4,10 @@ import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.Region;
+import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
+import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.browse.mapper.BrowseQueryMapper;
 import com.tuowei.dazhongdianping.module.browse.model.AreaRow;
 import com.tuowei.dazhongdianping.module.browse.model.BannerRow;
@@ -54,9 +56,12 @@ public class BrowseQueryService {
     private static final DateTimeFormatter REVIEW_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final BrowseQueryMapper browseQueryMapper;
+    private final UserExpertCertificationService userExpertCertificationService;
 
-    public BrowseQueryService(BrowseQueryMapper browseQueryMapper) {
+    public BrowseQueryService(BrowseQueryMapper browseQueryMapper,
+                              UserExpertCertificationService userExpertCertificationService) {
         this.browseQueryMapper = browseQueryMapper;
+        this.userExpertCertificationService = userExpertCertificationService;
     }
 
     public List<CategoryNodeResponse> listCategories(Region region) {
@@ -336,6 +341,7 @@ public class BrowseQueryService {
         return new ReviewPreviewResponse(
                 row.getId(),
                 row.getUserName(),
+                userExpertCertificationService.approvedBadge(row.getUserId(), currentRegionName()),
                 row.getScore(),
                 row.getContent(),
                 row.getLikedCount(),
@@ -403,6 +409,10 @@ public class BrowseQueryService {
             throw new UnauthorizedException("用户登录状态不存在");
         }
         return userSession;
+    }
+
+    private String currentRegionName() {
+        return RegionContext.getRegion().name();
     }
 
     private void addHotTags(Map<String, Integer> counter, String tags) {

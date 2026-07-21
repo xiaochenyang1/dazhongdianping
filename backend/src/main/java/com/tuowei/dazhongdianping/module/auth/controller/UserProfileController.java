@@ -4,11 +4,14 @@ import com.tuowei.dazhongdianping.common.api.ApiResponse;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.module.auth.model.UserGrowthRecordQuery;
 import com.tuowei.dazhongdianping.module.auth.model.request.UserBindRequest;
+import com.tuowei.dazhongdianping.module.auth.model.request.UserExpertCertificationApplyRequest;
 import com.tuowei.dazhongdianping.module.auth.model.request.UserPasswordUpdateRequest;
 import com.tuowei.dazhongdianping.module.auth.model.request.UserProfileUpdateRequest;
 import com.tuowei.dazhongdianping.module.auth.model.response.AuthCurrentUserResponse;
 import com.tuowei.dazhongdianping.module.auth.model.response.UserGrowthRecordResponse;
+import com.tuowei.dazhongdianping.module.auth.model.response.UserExpertCertificationStatusResponse;
 import com.tuowei.dazhongdianping.module.auth.model.response.UserPublicProfileResponse;
+import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.auth.service.PublicAuthService;
 import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;
 import jakarta.validation.Valid;
@@ -28,10 +31,14 @@ public class UserProfileController {
 
     private final PublicAuthService publicAuthService;
     private final UserGrowthService userGrowthService;
+    private final UserExpertCertificationService userExpertCertificationService;
 
-    public UserProfileController(PublicAuthService publicAuthService, UserGrowthService userGrowthService) {
+    public UserProfileController(PublicAuthService publicAuthService,
+                                 UserGrowthService userGrowthService,
+                                 UserExpertCertificationService userExpertCertificationService) {
         this.publicAuthService = publicAuthService;
         this.userGrowthService = userGrowthService;
+        this.userExpertCertificationService = userExpertCertificationService;
     }
 
     @GetMapping("/me")
@@ -42,6 +49,22 @@ public class UserProfileController {
     @GetMapping("/growth/records")
     public ApiResponse<PageResult<UserGrowthRecordResponse>> listGrowthRecords(@Valid UserGrowthRecordQuery query) {
         return ApiResponse.success(userGrowthService.listCurrentUserGrowthRecords(query));
+    }
+
+    @GetMapping("/expert-certification")
+    public ApiResponse<UserExpertCertificationStatusResponse> currentExpertCertification() {
+        return ApiResponse.success(userExpertCertificationService.currentUserStatus());
+    }
+
+    @PostMapping("/expert-certification/apply")
+    public ApiResponse<UserExpertCertificationStatusResponse> applyExpertCertification(
+            @Valid @RequestBody UserExpertCertificationApplyRequest request
+    ) {
+        return ApiResponse.success(
+                "达人认证申请已提交",
+                "user.expert_certification_applied",
+                userExpertCertificationService.applyCurrentUser(request)
+        );
     }
 
     @PutMapping("/profile")

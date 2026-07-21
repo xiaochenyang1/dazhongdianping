@@ -2,6 +2,24 @@ import type { Region } from '@/types/browse'
 
 export type AuthMode = 'password' | 'code' | 'register' | 'reset'
 
+export interface UserExpertCertificationBadge {
+  code: string
+  label: string
+}
+
+export interface UserExpertCertificationStatus {
+  id: number | null
+  status: number
+  statusText: string
+  reason: string
+  rejectReason: string
+  badge: UserExpertCertificationBadge | null
+  submittedAt: string
+  reviewedAt: string
+  effectiveStartAt: string
+  effectiveEndAt: string
+}
+
 export interface AuthUser {
   id: number
   nickname: string
@@ -28,6 +46,7 @@ export interface AuthCurrentUser {
   level: number
   points: number
   growthValue: number
+  expertCertification: UserExpertCertificationStatus
 }
 
 export interface PublicUserProfile {
@@ -43,6 +62,7 @@ export interface PublicUserProfile {
   followerCount: number
   followingCount: number
   followedByCurrentUser: boolean
+  expertCertification: UserExpertCertificationBadge | null
 }
 
 export interface SocialUserSummary {
@@ -92,4 +112,8 @@ export interface UserBindPayload {
 export interface UserPasswordUpdatePayload {
   oldPassword?: string
   newPassword: string
+}
+
+export interface UserExpertCertificationApplyPayload {
+  reason: string
 }

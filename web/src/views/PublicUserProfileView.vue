@@ -61,7 +61,12 @@ watch(
             <img v-if="profile.avatar" :src="profile.avatar" :alt="profile.nickname" class="profile-avatar" />
             <div v-else class="profile-avatar profile-avatar--placeholder">{{ userInitial }}</div>
             <div>
-              <h1>{{ profile.nickname }}</h1>
+              <h1 class="name-with-badge">
+                <span>{{ profile.nickname }}</span>
+                <span v-if="profile.expertCertification" class="verified-badge">
+                  {{ profile.expertCertification.label }}
+                </span>
+              </h1>
               <p class="hero-panel__summary">
                 {{ profile.preferredRegion }} · Lv.{{ profile.level }} · 公开点评 {{ profile.reviewCount }} 条
               </p>
