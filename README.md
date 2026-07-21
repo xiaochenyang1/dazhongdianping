@@ -1,6 +1,6 @@
 # 大众点评(仿)项目骨架
 
-当前 M4 已闭环，M5 商户经营与通知、M6 Flutter 本地业务闭环均已落地。M7 已完成帖子、关注流、APP 私信、区域化官方圈子以及话题广场/7 天热榜：Flutter 可浏览和关注话题，PC Web 只读，管理端可治理、合并和重算热榜，并完成 `topics` 隐私导出/注销治理。真实 FCM/APNs 推送、真实支付 SDK、Google Maps 与目标环境凭证联调仍属于后续阶段。
+当前 M4 已闭环，M5 商户经营与通知、M6 Flutter 本地业务闭环均已落地。M7 已完成帖子（含转发/取消转发）、关注流、APP 私信、区域化官方圈子以及话题广场/7 天热榜：Flutter 可浏览、互动和关注话题，PC Web 只读，管理端可治理、合并和重算热榜，并完成 `topics` 隐私导出/注销治理。真实 FCM/APNs 推送、真实支付 SDK、Google Maps 与目标环境凭证联调仍属于后续阶段。
 
 当前仓库已经按文档口径起好了前后端最小骨架，目录别再瞎长了，先按这个往下做。
 
@@ -9,13 +9,13 @@
 - `docs/`: 需求、架构、接口、库表、实施、上线、值班等文档。
 - `backend/`: `Java 17 + Spring Boot + MyBatis` 后端骨架。
 - `web/`: `Vue 3 + TypeScript + Vite` PC Web 骨架。
-- `admin-web/`: `Vue 3 + TypeScript + Vite` 管理端运营后台，覆盖门店、审核、榜单、成长、圈子和话题治理。
+- `admin-web/`: `Vue 3 + TypeScript + Vite` 管理端运营后台，覆盖门店、分类/城市/商圈基础数据、审核、榜单、成长、圈子和话题治理。
 - `merchant-web/`: 独立商户工作台，覆盖注册、登录、资质、概览、门店、员工、预订、团购、订单退款、点评回复与申诉。
 - `app/`: Flutter 欧洲版工程，已覆盖浏览、搜索、登录、点评、团购、预订、社区帖子、话题广场、用户中心、通知与 GDPR 隐私中心闭环。
 
 ## 当前实现状态
 
-截至 `2026-07-18`，当前代码不是 PPT 工程，已经有一套能在本地跑起来的最小闭环：
+截至 `2026-07-21`，当前代码不是 PPT 工程，已经有一套能在本地跑起来的最小闭环：
 
 - `M1` 本地已完成：首页 / 列表 / 详情浏览，`CN / EU` 区域隔离，头部关键词搜索到商户列表(MySQL fallback,不是 ES 终态)，并已补公开搜索建议 / 热词 fallback 接口、登录用户搜索历史、历史清空入口和头部联想面板；管理端登录、门店 CRUD、种子导入、导入批次查询。
 - `M2` 已完成后端认证 + 点评/审核/互动最小闭环，`web` 已接登录弹层、游客拦截恢复、写点评 / 改点评、我的点评、点评详情互动区、我的资料 / 账号绑定 / 改密码、成长值流水页、公开用户主页：验证码发送、注册、验证码/密码登录、重置密码、`refresh`、`logout`、`/user/me`、`PUT /user/profile`、`POST /user/bind`、`PUT /user/password`、`GET /user/:id`、`GET /user/growth/records`、写点评 / 改点评 / 删点评 / 看点评详情 / 我的点评、点赞 / 评论 / 举报、本地图片上传、审核任务通过 / 驳回、门店评分聚合回写；游客在点赞 / 评论 / 举报时触发登录，登录后会自动续执行原动作。
@@ -27,8 +27,10 @@
 - `/api/b/v1` 已从单配置账号升级为数据库账号：支持商户注册、资质提交/查询、运营审核、主账号/员工登录、数据库角色权限、指定门店范围、员工列表/创建/编辑/启停；停用 `merchant_operator` 后其旧 B 端 token 会失效。M5b1 已补预订分页/详情/改期、真实经营看板和门店范围校验；M5b2 已补团购列表/创建/编辑/审核后上下架、门店订单分页筛选和退款通过/驳回；M5b3 已补新建/修改门店完整草稿、相册/菜单快照、提交审核、通过整体应用、驳回重提和线上版本冲突保护；M5b4 已补点评列表、商家回复、点评申诉草稿/保存/提交和 `biz_type=6` 管理端申诉审核。
 - M5 商户端已补齐当前 M5a 页面闭环：`merchant-web` 覆盖注册、登录、资质状态/提交/驳回重提、概览、门店、员工角色与门店范围、预订、团购、订单退款、点评回复/申诉；管理端新增商户资质审核和商户点评申诉专页；C 端新增通知列表、未读数、WebSocket ticket、实时推送与断线 REST 补偿。
 - 管理端数据库 RBAC 基础已完成：管理员、角色、权限点、管理员-角色、角色-权限和管理员区域范围均已落库；`/auth/me` 返回实时身份、权限与 `CN/EU` 范围，菜单、路由和 API 按权限过滤。角色停用后旧 token 仍可访问 `auth/me`，但权限会在下一次请求重新计算并被收回，固定受限 API 返回 `403`，动态审核列表可返回 `200` 空结果；管理员账号停用后旧 token 才会在下一次请求返回 `401`，前端清理 `localStorage` 并回到登录页。`admin-web` 已提供管理员账号与角色权限页面。
+- 管理端分类、城市和商圈治理已完成：`data:geo:read/write` 同时约束菜单、`/data/meta` 路由和管理 API，支持当前区域内 CRUD、排序、启停与受保护删除。公开元数据只展示启用项，显式使用停用 ID 的门店筛选返回空结果；历史门店详情仍保留原名称。管理端门店、导入、商户门店草稿/审核落库和榜单发布都会重新校验引用数据仍处于启用状态。
+- PC Web 商户列表已接价格、评分、团购、营业状态筛选和服务端真实分页；门店点评列表支持最新/最热/评分排序、最低评分和带图/无图筛选；门店详情支持相似推荐、原生分享并带剪贴板降级；门店、公开点评、社区/圈子/话题公开页已接入客户端运行时 `canonical`、`robots`、Open Graph、Twitter Card 和 JSON-LD metadata，但尚未提供 SSR/预渲染产物。
 - M6 Flutter MVP 基线已落地：默认 EU、CN/EU 与语言切换、密码/验证码登录、安全会话、浏览/搜索/门店详情、团购下单、预订创建、用户中心、通知列表与 ACK、隐私导出/认证下载保存/删除申请/撤销；地图、真实支付和推送未配置时明确阻止冒充成功。
-- M7 帖子、关注、私信、官方圈子和话题链路已落地：话题按 CN/EU 隔离，Flutter 提供推荐/热榜/已关注三 Tab 与关注写操作，PC Web 仅提供推荐/热榜/详情只读页面，管理端支持筛选、改名、推荐、置顶、屏蔽、不可逆合并和手动重算。
+- M7 帖子、转发、关注、私信、官方圈子和话题链路已落地：话题按 CN/EU 隔离，Flutter 提供推荐/热榜/已关注三 Tab 与关注写操作，帖子支持转发/取消转发，PC Web 仅提供推荐/热榜/详情只读页面，管理端支持筛选、改名、推荐、置顶、屏蔽、不可逆合并和手动重算。
 - M4 团购交易已完成环境安全的模拟闭环：团购详情、有限库存原子扣减、下单、`alipay_mock`/`stripe_mock` 支付、SHA-256 回调验签与幂等、按数量发券、订单/券列表、取消和退款；真实支付 SDK 留在 M6 区域化阶段。
 - M4 预订已完成：时段容量、自动/人工确认、创建、列表、详情、取消、改期、商户履约动作和变更时间线均已接入，Web 已提供在线预订和“我的预订”。
 - 管理端种子导入失败时会生成真实本地错误明细文件，批次查询返回同一条 `errorFile` 路径。
@@ -62,6 +64,7 @@
   - `GET /api/c/v1/home/feed`
   - `GET /api/c/v1/shops`
   - `GET /api/c/v1/shops/{shopId}`
+  - `GET /api/c/v1/shops/{shopId}/similar?limit=1..12`
   - `GET /api/c/v1/shops/{shopId}/reviews`
   - `GET /api/c/v1/search/suggest`
   - `GET /api/c/v1/search/hot`
@@ -127,13 +130,15 @@
   - `GET /api/c/v1/user/posts`
   - `GET /api/c/v1/user/posts/{postId}`
   - `POST /api/c/v1/posts/{postId}/like`
+  - `POST /api/c/v1/posts/{postId}/repost`
+  - `DELETE /api/c/v1/posts/{postId}/repost`
   - `GET/POST /api/c/v1/posts/{postId}/comments`
   - `POST /api/c/v1/posts/{postId}/report`
 - `M2` 已完成文件上传最小接口(默认本地落盘,可切 S3 兼容对象存储):
   - `POST /api/c/v1/files/upload`
   - `GET /api/c/v1/files/{fileName}`
 - 公开点评查询当前只返回审核通过内容:
-  - `GET /api/c/v1/shops/{shopId}/reviews`
+  - `GET /api/c/v1/shops/{shopId}/reviews?sort=latest|popular|score&minScore=4&hasImages=true|false`
   - `GET /api/c/v1/reviews/{reviewId}`
 - 公开点评详情在带登录态访问时，会额外返回 `likedByCurrentUser`
 - `M1` 管理端接口:
@@ -146,6 +151,15 @@
   - `DELETE /api/admin/v1/shops/{shopId}`
   - `POST /api/admin/v1/import/shops`
   - `GET /api/admin/v1/import/batches`
+  - `GET/POST /api/admin/v1/categories`
+  - `PUT/DELETE /api/admin/v1/categories/{id}`
+  - `PUT /api/admin/v1/categories/{id}/status`
+  - `GET/POST /api/admin/v1/cities`
+  - `PUT/DELETE /api/admin/v1/cities/{id}`
+  - `PUT /api/admin/v1/cities/{id}/status`
+  - `GET/POST /api/admin/v1/areas`
+  - `PUT/DELETE /api/admin/v1/areas/{id}`
+  - `PUT /api/admin/v1/areas/{id}/status`
 - `B` 端已实现工作台接口:
   - `GET /api/b/v1/health`
   - `GET /api/b/v1/account/me`
@@ -300,9 +314,10 @@ npm run build
 
 ## 已验证
 
-- `2026-07-18` 管理端数据库 RBAC 回归：`backend` 的 `./mvnw.cmd -q test` 通过 `212` 条测试；`admin-web` 的 `npm test` 通过 `12` 个测试文件、`25` 条测试，`npm run build` 退出 `0`；`browser-smoke` 通过 `7/7`，真实后端 `browser-e2e` 通过 `5/5`。浏览器验收覆盖创建 EU-only 审核员、菜单/路由/API 越权拦截、角色停用后的实时收权，以及账号停用后旧 token 返回 `401`、重载时清理旧 `localStorage` 会话。
-- 本轮同时执行了全部 `10` 个 `scripts/ci/test-*.ps1` 契约，均通过。该结果只证明本轮 RBAC 及既有脚本契约覆盖的范围，不替代真实支付、地图、推送或目标环境凭证验收。
-- 以下为 M5a 阶段的历史全仓基线，**不是**本轮 RBAC 结果：`backend` `201` 条测试；`web` `42` 条测试、`6` 条 Playwright 冒烟、`4` 条真实后端关键链路 E2E；`admin-web` `9` 条测试；`merchant-web` `13` 条测试；`app` `102` 条测试。原有浏览器与 CI 脚本说明仍适用于对应历史基线。
+- `2026-07-21` 本轮按功能包执行了聚焦验证，而不是重跑全仓：`web` 运行 `npm test -- src/services/browse.test.ts src/views/ShopListView.test.ts src/views/ShopDetailView.test.ts src/views/ShopReviewsView.test.ts src/composables/useSeoMeta.test.ts src/views/CommunityView.test.ts src/views/ReviewDetailView.test.ts src/views/CircleViews.test.ts src/views/TopicViews.test.ts`，`9` 个测试文件、`38` 条测试通过；`npm run build` 通过。
+- `merchant-web` 运行 `npm test -- src/layouts/MerchantLayout.test.ts src/services/merchant.test.ts src/views/OrdersView.test.ts src/views/ReservationsView.test.ts src/views/ReviewsView.test.ts`，`5` 个测试文件、`14` 条测试通过；`npm run build` 通过。
+- `backend` 运行 `.\mvnw.cmd -q "-Dtest=PublicBrowseControllerTest" test` 与 `.\mvnw.cmd -q "-Dtest=UserPrivacyControllerTest,CommunityControllerTest" test`，均通过；`app` 运行社区/圈子/话题、首页和消息的 `flutter test` 聚焦用例均通过；`scripts/ci/test-browser-e2e.ps1` 契约通过。
+- 上述结果只覆盖本轮切分并提交的功能，不替代全仓回归、真实 MySQL smoke、目标环境凭证联调或上线演练。
 
 ## MySQL 初始化 SQL
 
@@ -345,4 +360,4 @@ npm run build
 
 1. `scripts/ci/mysql-smoke.ps1` 已于 `2026-07-12` 用临时 `MySQL 8` 实例 (`127.0.0.1:13306`) 实跑通过；宿主机 `MySQL80` 那套现成 root 凭证仍然不可用，但这已经不是仓库侧阻塞。后面如果你非要复用宿主机服务，先把凭证收拾明白。
 2. 给目标环境的 `MySQL / Redis / S3` 和部署目标机补齐真实环境凭证、SSH secrets，并把现有发布 / 回滚流水线真正跑到目标环境上。
-3. 继续做 M7 的帖子转发和真实推送，并推进真实第三方/目标环境联调；帖子、关注流、私信、官方圈子和话题广场/热榜已经落地。
+3. 继续做 M7 的评论盖楼、`@` 提醒、通知聚合、达人认证和真实推送，并推进真实第三方/目标环境联调；帖子转发、关注流、私信、官方圈子和话题广场/热榜已经落地。
