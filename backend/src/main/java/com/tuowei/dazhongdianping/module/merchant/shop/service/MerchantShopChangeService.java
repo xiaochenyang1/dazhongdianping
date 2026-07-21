@@ -6,6 +6,7 @@ import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
+import com.tuowei.dazhongdianping.module.geodata.GeoReferenceLockService;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSession;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSessionContext;
 import com.tuowei.dazhongdianping.module.merchant.identity.service.MerchantAuthorizationService;
@@ -33,13 +34,16 @@ public class MerchantShopChangeService {
     private final MerchantShopChangeMapper mapper;
     private final MerchantAuthorizationService authorizationService;
     private final AdminAuditMapper adminAuditMapper;
+    private final GeoReferenceLockService geoReferenceLockService;
 
     public MerchantShopChangeService(MerchantShopChangeMapper mapper,
                                      MerchantAuthorizationService authorizationService,
-                                     AdminAuditMapper adminAuditMapper) {
+                                     AdminAuditMapper adminAuditMapper,
+                                     GeoReferenceLockService geoReferenceLockService) {
         this.mapper = mapper;
         this.authorizationService = authorizationService;
         this.adminAuditMapper = adminAuditMapper;
+        this.geoReferenceLockService = geoReferenceLockService;
     }
 
     public PageResult<Map<String, Object>> list(Long shopId,
@@ -186,7 +190,7 @@ public class MerchantShopChangeService {
     public Map<String, Object> save(Long changeId, ShopChangeSaveRequest request) {
         MerchantSession session = merchant();
         ShopChangeRow row = editableChange(changeId, session);
-        validateReferences(request);
+        requireActiveReferences(request.categoryId(), request.cityId(), request.areaId());
         String currency = request.currency().trim().toUpperCase();
         if (!expectedCurrency().equals(currency)) {
             throw new IllegalArgumentException("门店币种与当前区域不匹配");
@@ -280,16 +284,8 @@ public class MerchantShopChangeService {
         return row;
     }
 
-    private void validateReferences(ShopChangeSaveRequest request) {
-        if (mapper.countCategory(region(), request.categoryId()) != 1) {
-            throw new IllegalArgumentException("分类不存在或不属于当前区域");
-        }
-        if (mapper.countCity(region(), request.cityId()) != 1) {
-            throw new IllegalArgumentException("城市不存在或不属于当前区域");
-        }
-        if (mapper.countArea(region(), request.cityId(), request.areaId()) != 1) {
-            throw new IllegalArgumentException("商圈不存在或不属于当前城市");
-        }
+    public void requireActiveReferences(Long categoryId, Long cityId, Long areaId) {
+        geoReferenceLockService.requireActiveShopReferences(region(), categoryId, cityId, areaId);
     }
 
     private void validateComplete(ShopChangeRow row, List<ShopChangePhotoRow> photos) {

@@ -21,6 +21,7 @@ import com.tuowei.dazhongdianping.module.admin.management.model.response.AdminIm
 import com.tuowei.dazhongdianping.module.admin.management.model.response.AdminImportResultResponse;
 import com.tuowei.dazhongdianping.module.admin.management.model.response.AdminShopDetailResponse;
 import com.tuowei.dazhongdianping.module.admin.management.model.response.AdminShopSummaryResponse;
+import com.tuowei.dazhongdianping.module.geodata.GeoReferenceLockService;
 import com.tuowei.dazhongdianping.module.search.event.ShopSearchIndexChangedEvent;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,13 +44,16 @@ public class AdminManagementService {
     private static final Path IMPORT_ERROR_DIR = Path.of("local-storage", "import-errors");
 
     private final AdminManagementMapper adminManagementMapper;
+    private final GeoReferenceLockService geoReferenceLockService;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public AdminManagementService(AdminManagementMapper adminManagementMapper,
+                                  GeoReferenceLockService geoReferenceLockService,
                                   ObjectMapper objectMapper,
                                   ApplicationEventPublisher applicationEventPublisher) {
         this.adminManagementMapper = adminManagementMapper;
+        this.geoReferenceLockService = geoReferenceLockService;
         this.objectMapper = objectMapper;
         this.applicationEventPublisher = applicationEventPublisher;
     }
@@ -111,6 +115,11 @@ public class AdminManagementService {
     public AdminImportResultResponse importShops(AdminImportShopsRequest request) {
         Region region = requireWriteRegion(request.getRegion());
         AdminSession session = currentAdmin();
+        geoReferenceLockService.lockInOrder(
+                region.name(),
+                request.getRecords().stream().map(AdminImportShopRecordRequest::getCategoryId).toList(),
+                request.getRecords().stream().map(AdminImportShopRecordRequest::getCityId).toList(),
+                request.getRecords().stream().map(AdminImportShopRecordRequest::getAreaId).toList());
 
         ImportBatchRow batchRow = new ImportBatchRow();
         batchRow.setAdminId(session.adminId());
@@ -189,8 +198,8 @@ public class AdminManagementService {
     }
 
     private void validateImportRecord(AdminImportShopRecordRequest record, AdminShopRow row) {
-        row.setMerchantId(findOrCreateMerchant(record, row.getRegion()));
         validateShopReferences(row);
+        row.setMerchantId(findOrCreateMerchant(record, row.getRegion()));
     }
 
     private Long findOrCreateMerchant(AdminImportShopRecordRequest record, String region) {
@@ -214,15 +223,8 @@ public class AdminManagementService {
     }
 
     private void validateShopReferences(AdminShopRow row) {
-        if (adminManagementMapper.countCategoryByRegion(row.getRegion(), row.getCategoryId()) == 0) {
-            throw new IllegalArgumentException("分类不存在或不属于当前区域");
-        }
-        if (adminManagementMapper.countCityByRegion(row.getRegion(), row.getCityId()) == 0) {
-            throw new IllegalArgumentException("城市不存在或不属于当前区域");
-        }
-        if (adminManagementMapper.countAreaByRegionAndCity(row.getRegion(), row.getCityId(), row.getAreaId()) == 0) {
-            throw new IllegalArgumentException("商圈不存在或不属于当前城市");
-        }
+        geoReferenceLockService.requireActiveShopReferences(
+                row.getRegion(), row.getCategoryId(), row.getCityId(), row.getAreaId());
         if (row.getMerchantId() != null && row.getMerchantId() > 0) {
             MerchantRow merchantRow = adminManagementMapper.selectMerchantById(row.getMerchantId());
             if (merchantRow == null) {

@@ -104,14 +104,6 @@ public interface MerchantShopChangeMapper {
     void insertChangeDishes(@Param("changeId") Long changeId,
                             @Param("dishes") List<ShopChangeDishRequest> dishes);
 
-    int countCategory(@Param("region") String region, @Param("categoryId") Long categoryId);
-
-    int countCity(@Param("region") String region, @Param("cityId") Long cityId);
-
-    int countArea(@Param("region") String region,
-                  @Param("cityId") Long cityId,
-                  @Param("areaId") Long areaId);
-
     void insertOperationLog(@Param("merchantId") Long merchantId,
                             @Param("operatorId") Long operatorId,
                             @Param("action") String action,

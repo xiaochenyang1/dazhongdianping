@@ -178,6 +178,61 @@ class PublicBrowseControllerTest {
     }
 
     @Test
+    void shouldHideDisabledGeoDataWithoutBreakingHistoricalShopDetails() throws Exception {
+        jdbcTemplate.update("UPDATE category SET status=0 WHERE id IN (202, 210)");
+        jdbcTemplate.update("UPDATE city SET status=0 WHERE id=102");
+        jdbcTemplate.update("UPDATE area SET status=0 WHERE id=1021");
+
+        mockMvc.perform(get("/api/c/v1/categories").header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[*].children[?(@.id == 202)]").isEmpty())
+                .andExpect(jsonPath("$.data[?(@.id == 210)]").isEmpty());
+        mockMvc.perform(get("/api/c/v1/cities").header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.id == 102)]").isEmpty());
+        mockMvc.perform(get("/api/c/v1/cities/{cityId}/areas", 102L).header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isEmpty());
+
+        mockMvc.perform(get("/api/c/v1/shops").header("X-Region", "EU")
+                        .param("categoryId", "202"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/c/v1/shops").header("X-Region", "EU")
+                        .param("cityId", "102"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/c/v1/shops").header("X-Region", "EU")
+                        .param("areaId", "1021"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/c/v1/shops").header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list.length()").value(1))
+                .andExpect(jsonPath("$.data.hasMore").value(false));
+
+        mockMvc.perform(get("/api/c/v1/search/suggest").header("X-Region", "EU")
+                        .param("kw", "Lifestyle"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isEmpty());
+        mockMvc.perform(get("/api/c/v1/search/suggest").header("X-Region", "EU")
+                        .param("kw", "Mitte"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isEmpty());
+        mockMvc.perform(get("/api/c/v1/search/hot").header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.term == 'Lifestyle')]").isEmpty())
+                .andExpect(jsonPath("$.data[?(@.term == 'Breakfast')]").isEmpty());
+
+        mockMvc.perform(get("/api/c/v1/shops/{shopId}", 20002L).header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.categoryName").value("Cafe"))
+                .andExpect(jsonPath("$.data.cityName").value("Berlin"))
+                .andExpect(jsonPath("$.data.areaName").value("Mitte"));
+    }
+
+    @Test
     void shouldRecordListAndClearSearchHistoryForLoggedInUser() throws Exception {
         String accessToken = loginDemoUser();
 

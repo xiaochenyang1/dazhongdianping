@@ -47,33 +47,40 @@ DROP TABLE IF EXISTS `city`;
 DROP TABLE IF EXISTS `category`;
 
 CREATE TABLE `category` (
-  `id` BIGINT NOT NULL,
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
   `parent_id` BIGINT NOT NULL,
   `region` VARCHAR(8) NOT NULL,
   `name` VARCHAR(64) NOT NULL,
   `sort_no` INT NOT NULL DEFAULT 0,
+  `status` TINYINT NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
-  KEY `idx_category_region_parent_sort` (`region`, `parent_id`, `sort_no`, `id`)
+  UNIQUE KEY `uk_category_region_parent_name` (`region`, `parent_id`, `name`),
+  KEY `idx_category_region_status_parent_sort` (`region`, `status`, `parent_id`, `sort_no`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `city` (
-  `id` BIGINT NOT NULL,
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
   `code` VARCHAR(32) NOT NULL,
   `region` VARCHAR(8) NOT NULL,
   `name` VARCHAR(64) NOT NULL,
   `sort_no` INT NOT NULL DEFAULT 0,
+  `status` TINYINT NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
-  KEY `idx_city_region_sort` (`region`, `sort_no`, `id`)
+  UNIQUE KEY `uk_city_region_code` (`region`, `code`),
+  UNIQUE KEY `uk_city_region_name` (`region`, `name`),
+  KEY `idx_city_region_status_sort` (`region`, `status`, `sort_no`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `area` (
-  `id` BIGINT NOT NULL,
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
   `city_id` BIGINT NOT NULL,
   `region` VARCHAR(8) NOT NULL,
   `name` VARCHAR(64) NOT NULL,
   `sort_no` INT NOT NULL DEFAULT 0,
+  `status` TINYINT NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
-  KEY `idx_area_region_city_sort` (`region`, `city_id`, `sort_no`, `id`)
+  UNIQUE KEY `uk_area_region_city_name` (`region`, `city_id`, `name`),
+  KEY `idx_area_region_city_status_sort` (`region`, `city_id`, `status`, `sort_no`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `admin_user` (

@@ -43,6 +43,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'data/meta',
+          name: 'basic-data-management',
+          component: () => import('@/views/BasicDataManagementView.vue'),
+          meta: {
+            requiresAuth: true,
+            title: '基础数据',
+            requiredPermission: 'data:geo:read',
+          },
+        },
+        {
           path: 'audit/reviews',
           name: 'audit-reviews',
           component: () => import('@/views/AuditReviewView.vue'),

@@ -1,9 +1,12 @@
 package com.tuowei.dazhongdianping.module.search.gateway;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -178,5 +182,44 @@ class ElasticsearchShopSearchGatewayTest {
 
         assertThat(item.distanceMeters()).isEqualTo(856.4);
         server.verify();
+    }
+
+    @Test
+    void shouldReportElasticsearchFailureWhenDeletingStaleDocument() {
+        GatewayFixture fixture = gatewayFixture();
+        fixture.server().expect(requestTo("http://elasticsearch.test/shop_index/_doc/20002"))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        assertThatThrownBy(() -> fixture.gateway().deleteDocument(20002L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("删除 Elasticsearch 商户索引失败");
+        fixture.server().verify();
+    }
+
+    @Test
+    void shouldTreatMissingStaleDocumentAsAlreadyDeleted() {
+        GatewayFixture fixture = gatewayFixture();
+        fixture.server().expect(requestTo("http://elasticsearch.test/shop_index/_doc/20002"))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+        assertThatCode(() -> fixture.gateway().deleteDocument(20002L)).doesNotThrowAnyException();
+        fixture.server().verify();
+    }
+
+    private GatewayFixture gatewayFixture() {
+        SearchProperties properties = new SearchProperties();
+        properties.setBaseUrl("http://elasticsearch.test");
+        properties.setIndexName("shop_index");
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        return new GatewayFixture(
+                new ElasticsearchShopSearchGateway(properties, new ObjectMapper(), builder),
+                server
+        );
+    }
+
+    private record GatewayFixture(ElasticsearchShopSearchGateway gateway, MockRestServiceServer server) {
     }
 }

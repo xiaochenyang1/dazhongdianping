@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.geodata.mapper.AdminGeoDataMapper">
+
+    <select id="selectCategories" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminCategoryRow">
+        SELECT id, parent_id, region, name, sort_no, status
+        FROM category
+        WHERE region = #{region}
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <select id="selectCategory" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminCategoryRow">
+        SELECT id, parent_id, region, name, sort_no, status
+        FROM category
+        WHERE region = #{region} AND id = #{id}
+    </select>
+
+    <select id="selectCategoryForUpdate" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminCategoryRow">
+        SELECT id, parent_id, region, name, sort_no, status
+        FROM category
+        WHERE region = #{region} AND id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="countCategoryNameConflict" resultType="int">
+        SELECT COUNT(1)
+        FROM category
+        WHERE region = #{region} AND parent_id = #{parentId}
+          AND LOWER(name) = LOWER(#{name})
+          AND (#{excludeId} IS NULL OR id != #{excludeId})
+    </select>
+
+    <insert id="insertCategory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO category(parent_id, region, name, sort_no, status)
+        VALUES(#{parentId}, #{region}, #{name}, #{sortNo}, #{status})
+    </insert>
+
+    <update id="updateCategory">
+        UPDATE category
+        SET parent_id = #{parentId}, name = #{name}, sort_no = #{sortNo}
+        WHERE region = #{region} AND id = #{id}
+    </update>
+
+    <update id="updateCategoryStatus">
+        UPDATE category SET status = #{status}
+        WHERE region = #{region} AND id = #{id}
+    </update>
+
+    <select id="selectShopIdsByCategory" resultType="long">
+        SELECT id FROM shop
+        WHERE region = #{region} AND category_id = #{categoryId}
+        ORDER BY id
+    </select>
+
+    <delete id="deleteCategory">
+        DELETE FROM category WHERE region = #{region} AND id = #{id}
+    </delete>
+
+    <select id="countEnabledCategoryChildren" resultType="int">
+        SELECT COUNT(1) FROM category
+        WHERE region = #{region} AND parent_id = #{parentId} AND status = 1
+    </select>
+
+    <select id="countAnyCategoryChildren" resultType="int">
+        SELECT COUNT(1) FROM category
+        WHERE region = #{region} AND parent_id = #{parentId}
+    </select>
+
+    <select id="countCategoryBusinessReferences" resultType="int">
+        SELECT (SELECT COUNT(1) FROM shop WHERE region = #{region} AND category_id = #{categoryId})
+             + (SELECT COUNT(1) FROM merchant_shop_change WHERE region = #{region} AND category_id = #{categoryId})
+             + (SELECT COUNT(1) FROM rank_config WHERE region = #{region} AND category_id = #{categoryId})
+             + (SELECT COUNT(1) FROM `rank` WHERE region = #{region} AND category_id = #{categoryId})
+    </select>
+
+    <select id="selectCities" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminCityRow">
+        SELECT id, code, region, name, sort_no, status
+        FROM city
+        WHERE region = #{region}
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <select id="selectCity" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminCityRow">
+        SELECT id, code, region, name, sort_no, status
+        FROM city
+        WHERE region = #{region} AND id = #{id}
+    </select>
+
+    <select id="selectCityForUpdate" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminCityRow">
+        SELECT id, code, region, name, sort_no, status
+        FROM city
+        WHERE region = #{region} AND id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="countCityCodeConflict" resultType="int">
+        SELECT COUNT(1) FROM city
+        WHERE region = #{region} AND code = #{code}
+          AND (#{excludeId} IS NULL OR id != #{excludeId})
+    </select>
+
+    <select id="countCityNameConflict" resultType="int">
+        SELECT COUNT(1) FROM city
+        WHERE region = #{region} AND LOWER(name) = LOWER(#{name})
+          AND (#{excludeId} IS NULL OR id != #{excludeId})
+    </select>
+
+    <insert id="insertCity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO city(code, region, name, sort_no, status)
+        VALUES(#{code}, #{region}, #{name}, #{sortNo}, #{status})
+    </insert>
+
+    <update id="updateCity">
+        UPDATE city SET code = #{code}, name = #{name}, sort_no = #{sortNo}
+        WHERE region = #{region} AND id = #{id}
+    </update>
+
+    <update id="updateCityStatus">
+        UPDATE city SET status = #{status}
+        WHERE region = #{region} AND id = #{id}
+    </update>
+
+    <select id="selectShopIdsByCity" resultType="long">
+        SELECT id FROM shop
+        WHERE region = #{region} AND city_id = #{cityId}
+        ORDER BY id
+    </select>
+
+    <delete id="deleteCity">
+        DELETE FROM city WHERE region = #{region} AND id = #{id}
+    </delete>
+
+    <select id="countAreasByCity" resultType="int">
+        SELECT COUNT(1) FROM area WHERE region = #{region} AND city_id = #{cityId}
+    </select>
+
+    <select id="countCityBusinessReferences" resultType="int">
+        SELECT (SELECT COUNT(1) FROM shop WHERE region = #{region} AND city_id = #{cityId})
+             + (SELECT COUNT(1) FROM merchant_shop_change WHERE region = #{region} AND city_id = #{cityId})
+             + (SELECT COUNT(1) FROM home_banner WHERE region = #{region} AND city_id = #{cityId})
+             + (SELECT COUNT(1) FROM home_feed WHERE region = #{region} AND city_id = #{cityId})
+             + (SELECT COUNT(1) FROM rank_config WHERE region = #{region} AND city_id = #{cityId})
+             + (SELECT COUNT(1) FROM `rank` WHERE region = #{region} AND city_id = #{cityId})
+    </select>
+
+    <select id="selectAreas" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminAreaRow">
+        SELECT id, city_id, region, name, sort_no, status
+        FROM area
+        WHERE region = #{region}
+        <if test="cityId != null">AND city_id = #{cityId}</if>
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <select id="selectArea" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminAreaRow">
+        SELECT id, city_id, region, name, sort_no, status
+        FROM area
+        WHERE region = #{region} AND id = #{id}
+    </select>
+
+    <select id="selectAreaForUpdate" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminAreaRow">
+        SELECT id, city_id, region, name, sort_no, status
+        FROM area
+        WHERE region = #{region} AND id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="countAreaNameConflict" resultType="int">
+        SELECT COUNT(1) FROM area
+        WHERE region = #{region} AND city_id = #{cityId}
+          AND LOWER(name) = LOWER(#{name})
+          AND (#{excludeId} IS NULL OR id != #{excludeId})
+    </select>
+
+    <insert id="insertArea" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO area(city_id, region, name, sort_no, status)
+        VALUES(#{cityId}, #{region}, #{name}, #{sortNo}, #{status})
+    </insert>
+
+    <update id="updateArea">
+        UPDATE area SET city_id = #{cityId}, name = #{name}, sort_no = #{sortNo}
+        WHERE region = #{region} AND id = #{id}
+    </update>
+
+    <update id="updateAreaStatus">
+        UPDATE area SET status = #{status}
+        WHERE region = #{region} AND id = #{id}
+    </update>
+
+    <select id="selectShopIdsByArea" resultType="long">
+        SELECT id FROM shop
+        WHERE region = #{region} AND area_id = #{areaId}
+        ORDER BY id
+    </select>
+
+    <delete id="deleteArea">
+        DELETE FROM area WHERE region = #{region} AND id = #{id}
+    </delete>
+
+    <select id="countAreaReferences" resultType="int">
+        SELECT (SELECT COUNT(1) FROM shop WHERE region = #{region} AND area_id = #{areaId})
+             + (SELECT COUNT(1) FROM merchant_shop_change WHERE region = #{region} AND area_id = #{areaId})
+    </select>
+
+    <select id="selectShopAreaReferenceForUpdate" resultType="long">
+        SELECT id FROM shop
+        WHERE region = #{region} AND area_id = #{areaId}
+        ORDER BY id LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <select id="selectShopChangeAreaReferenceForUpdate" resultType="long">
+        SELECT id FROM merchant_shop_change
+        WHERE region = #{region} AND area_id = #{areaId}
+        ORDER BY id LIMIT 1
+        FOR UPDATE
+    </select>
+</mapper>

@@ -19,7 +19,8 @@ public class AdminMenuService {
                 )),
                 group("data", "数据管理", "/data", List.of(
                         leaf("data.shops", "商户管理", "/data/shops", "data:shop:read"),
-                        leaf("data.import", "种子导入", "/data/import", "data:shop:import")
+                        leaf("data.import", "种子导入", "/data/import", "data:shop:import"),
+                        leaf("data.meta", "基础数据", "/data/meta", "data:geo:read")
                 )),
                 group("operations", "运营配置", "/operations", List.of(
                         leaf("operations.ranks", "榜单规则", "/operations/ranks", "operations:rank:read"),

@@ -1,26 +1,44 @@
 CREATE TABLE IF NOT EXISTS category (
-    id BIGINT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     parent_id BIGINT NOT NULL,
     region VARCHAR(8) NOT NULL,
-    name VARCHAR(64) NOT NULL,
-    sort_no INT NOT NULL DEFAULT 0
+    name VARCHAR_IGNORECASE(64) NOT NULL,
+    sort_no INT NOT NULL DEFAULT 0,
+    status TINYINT NOT NULL DEFAULT 1
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_category_region_parent_name
+    ON category(region, parent_id, name);
+CREATE INDEX IF NOT EXISTS idx_category_region_status_parent_sort
+    ON category(region, status, parent_id, sort_no, id);
 
 CREATE TABLE IF NOT EXISTS city (
-    id BIGINT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(32) NOT NULL,
     region VARCHAR(8) NOT NULL,
-    name VARCHAR(64) NOT NULL,
-    sort_no INT NOT NULL DEFAULT 0
+    name VARCHAR_IGNORECASE(64) NOT NULL,
+    sort_no INT NOT NULL DEFAULT 0,
+    status TINYINT NOT NULL DEFAULT 1
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS uk_city_region_code ON city(region, code);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_city_region_name ON city(region, name);
+CREATE INDEX IF NOT EXISTS idx_city_region_status_sort
+    ON city(region, status, sort_no, id);
+
 CREATE TABLE IF NOT EXISTS area (
-    id BIGINT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     city_id BIGINT NOT NULL,
     region VARCHAR(8) NOT NULL,
-    name VARCHAR(64) NOT NULL,
-    sort_no INT NOT NULL DEFAULT 0
+    name VARCHAR_IGNORECASE(64) NOT NULL,
+    sort_no INT NOT NULL DEFAULT 0,
+    status TINYINT NOT NULL DEFAULT 1
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_area_region_city_name
+    ON area(region, city_id, name);
+CREATE INDEX IF NOT EXISTS idx_area_region_city_status_sort
+    ON area(region, city_id, status, sort_no, id);
 
 CREATE TABLE IF NOT EXISTS admin_user (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

@@ -13,18 +13,30 @@
     <select id="selectActiveShops" resultType="com.tuowei.dazhongdianping.module.search.model.ShopSearchDocumentRow">
         SELECT <include refid="searchDocumentColumns"/>
         FROM shop s
-        LEFT JOIN category cat ON cat.id = s.category_id
-        LEFT JOIN city c ON c.id = s.city_id
-        LEFT JOIN area a ON a.id = s.area_id
+        JOIN category cat ON cat.id = s.category_id
+                         AND cat.region = s.region
+                         AND cat.status = 1
+        JOIN city c ON c.id = s.city_id
+                   AND c.region = s.region
+                   AND c.status = 1
+        JOIN area a ON a.id = s.area_id
+                   AND a.region = s.region
+                   AND a.status = 1
         WHERE s.status = 1 AND s.is_deleted = FALSE
         ORDER BY s.id ASC
     </select>
     <select id="selectActiveShop" resultType="com.tuowei.dazhongdianping.module.search.model.ShopSearchDocumentRow">
         SELECT <include refid="searchDocumentColumns"/>
         FROM shop s
-        LEFT JOIN category cat ON cat.id = s.category_id
-        LEFT JOIN city c ON c.id = s.city_id
-        LEFT JOIN area a ON a.id = s.area_id
+        JOIN category cat ON cat.id = s.category_id
+                         AND cat.region = s.region
+                         AND cat.status = 1
+        JOIN city c ON c.id = s.city_id
+                   AND c.region = s.region
+                   AND c.status = 1
+        JOIN area a ON a.id = s.area_id
+                   AND a.region = s.region
+                   AND a.status = 1
         WHERE s.id = #{shopId} AND s.status = 1 AND s.is_deleted = FALSE
         LIMIT 1
     </select>

@@ -300,4 +300,58 @@ test.describe('browser smoke', () => {
     await expect(page.getByRole('heading', { name: '新建管理员' })).toBeVisible()
     await expect(page.getByLabel('登录账号')).toBeVisible()
   })
+
+  test('opens basic data management with read-only region metadata', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('dzdp:admin-token', 'geo-read-token')
+      localStorage.setItem('dzdp:admin-profile', JSON.stringify({ id: 2, account: 'geo.reader', name: '基础数据查看员' }))
+      localStorage.setItem('dzdp:admin-permissions', JSON.stringify(['data:geo:read']))
+      localStorage.setItem('dzdp:admin-regions', JSON.stringify(['EU']))
+      localStorage.setItem('dzdp:admin-region', 'EU')
+    })
+    await page.route('**/api/admin/v1/auth/me', async (route) => {
+      await route.fulfill({
+        json: envelope({
+          profile: { id: 2, account: 'geo.reader', name: '基础数据查看员' },
+          permissions: ['data:geo:read'],
+          regions: ['EU'],
+        }),
+      })
+    })
+    await page.route('**/api/admin/v1/menus', async (route) => {
+      await route.fulfill({
+        json: envelope([{
+          code: 'data',
+          name: '数据管理',
+          path: '/data',
+          children: [{ code: 'data.meta', name: '基础数据', path: '/data/meta', children: [] }],
+        }]),
+      })
+    })
+    await page.route('**/api/admin/v1/categories', async (route) => {
+      await route.fulfill({
+        json: envelope([{ id: 200, parentId: 0, name: 'Dining', sortNo: 1, status: 1 }]),
+      })
+    })
+    await page.route('**/api/admin/v1/cities', async (route) => {
+      await route.fulfill({
+        json: envelope([{ id: 101, code: 'PAR', name: 'Paris', sortNo: 1, status: 1 }]),
+      })
+    })
+    await page.route('**/api/admin/v1/areas**', async (route) => {
+      await route.fulfill({
+        json: envelope([{ id: 1011, cityId: 101, name: 'Le Marais', sortNo: 1, status: 1 }]),
+      })
+    })
+
+    await page.goto(`${adminBaseURL}/data/meta`)
+    await expect(page.getByRole('main').getByRole('heading', { name: '基础数据' })).toBeVisible()
+    await expect(page.getByText('Dining', { exact: true })).toBeVisible()
+    await expect(page.getByTestId('create-category')).toHaveCount(0)
+
+    await page.getByTestId('tab-areas').click()
+    await page.getByTestId('area-city-select').selectOption('101')
+    await expect(page.getByText('Le Marais', { exact: true })).toBeVisible()
+    await expect(page.getByTestId('create-area')).toHaveCount(0)
+  })
 })

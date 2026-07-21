@@ -31,4 +31,22 @@ describe('admin router permissions', () => {
     expect(router.currentRoute.value.path).toBe('/audit/reviews')
     expect(scrollTo).toHaveBeenCalledWith({ top: 0 })
   })
+
+  it('guards the basic data route with the geodata read permission', async () => {
+    await router.push('/data/meta')
+    expect(router.currentRoute.value.path).toBe('/dashboard')
+
+    const { setSession } = useAdminSession() as unknown as {
+      setSession: (token: string, profile: { id: number; account: string; name: string }, permissions: string[], regions: ('CN' | 'EU')[]) => void
+    }
+    setSession(
+      'admin-token',
+      { id: 7, account: 'auditor', name: '审核员' },
+      ['audit:review:read', 'data:geo:read'],
+      ['EU'],
+    )
+
+    await router.push('/data/meta')
+    expect(router.currentRoute.value.path).toBe('/data/meta')
+  })
 })

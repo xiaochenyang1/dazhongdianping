@@ -95,7 +95,10 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
         try {
             restClient.delete()
                     .uri("/{index}/_doc/{id}", searchProperties.getIndexName(), shopId)
-                    .exchange((request, response) -> null);
+                    .retrieve()
+                    .onStatus(status -> status.value() == 404, (request, response) -> {
+                    })
+                    .toBodilessEntity();
         } catch (RuntimeException exception) {
             throw new IllegalStateException("删除 Elasticsearch 商户索引失败", exception);
         }

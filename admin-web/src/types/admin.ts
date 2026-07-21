@@ -273,6 +273,48 @@ export interface Area {
   name: string
 }
 
+export interface AdminGeoCategory {
+  id: number
+  parentId: number
+  name: string
+  sortNo: number
+  status: number
+}
+
+export interface AdminGeoCity {
+  id: number
+  code: string
+  name: string
+  sortNo: number
+  status: number
+}
+
+export interface AdminGeoArea {
+  id: number
+  cityId: number
+  name: string
+  sortNo: number
+  status: number
+}
+
+export interface GeoCategoryPayload {
+  parentId: number
+  name: string
+  sortNo: number
+}
+
+export interface GeoCityPayload {
+  code: string
+  name: string
+  sortNo: number
+}
+
+export interface GeoAreaPayload {
+  cityId: number
+  name: string
+  sortNo: number
+}
+
 export interface RankConfig {
   id: number
   rankType: number

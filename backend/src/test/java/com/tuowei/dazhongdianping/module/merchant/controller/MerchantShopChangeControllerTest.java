@@ -159,6 +159,48 @@ class MerchantShopChangeControllerTest {
     }
 
     @Test
+    void shouldRejectDisabledCategoryWhenSavingDraft() throws Exception {
+        String token = merchantToken("merchant_eu_sichuan@example.com", "merchant123456");
+        long changeId = createExistingDraft(token);
+        jdbc.update("UPDATE category SET status=0 WHERE id=201");
+        mockMvc.perform(put("/api/b/v1/shop-changes/{id}", changeId)
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(shopBody("Disabled Category", "https://files.example/a.jpg")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("分类不存在、不启用或不属于当前区域"));
+    }
+
+    @Test
+    void shouldRejectDisabledCityWhenSavingDraft() throws Exception {
+        String token = merchantToken("merchant_eu_sichuan@example.com", "merchant123456");
+        long changeId = createExistingDraft(token);
+        jdbc.update("UPDATE city SET status=0 WHERE id=101");
+        mockMvc.perform(put("/api/b/v1/shop-changes/{id}", changeId)
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(shopBody("Disabled City", "https://files.example/a.jpg")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("城市不存在、不启用或不属于当前区域"));
+    }
+
+    @Test
+    void shouldRejectDisabledAreaWhenSavingDraft() throws Exception {
+        String token = merchantToken("merchant_eu_sichuan@example.com", "merchant123456");
+        long changeId = createExistingDraft(token);
+        jdbc.update("UPDATE area SET status=0 WHERE id=1011");
+        mockMvc.perform(put("/api/b/v1/shop-changes/{id}", changeId)
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(shopBody("Disabled Area", "https://files.example/a.jpg")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("商圈不存在、不启用或不属于当前城市"));
+    }
+
+    @Test
     void shouldValidateSnapshotLimitsAndCoverMembership() throws Exception {
         String token = merchantToken("merchant_eu_sichuan@example.com", "merchant123456");
         long changeId = createExistingDraft(token);

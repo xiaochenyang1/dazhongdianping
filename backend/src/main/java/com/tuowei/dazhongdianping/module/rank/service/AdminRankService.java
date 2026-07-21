@@ -91,6 +91,7 @@ public class AdminRankService {
         RankConfigRow config = requireConfig(configId);
         Map<String, BigDecimal> weight = readWeight(config.getWeightJson());
         validateWeight(weight);
+        requireScope(Region.valueOf(config.getRegion()), config.getCityId(), config.getCategoryId());
         List<RankCandidateRow> candidates = rankMapper.selectRankCandidates(config);
         if (candidates.isEmpty()) {
             throw new IllegalArgumentException("当前规则没有可入榜门店，旧榜单保持不变");
@@ -152,8 +153,8 @@ public class AdminRankService {
     }
 
     private void requireScope(Region region, Long cityId, Long categoryId) {
-        if (rankMapper.selectCityName(cityId, region.name()) == null) throw new IllegalArgumentException("城市不存在或不属于当前区域");
         if (rankMapper.selectCategoryName(categoryId, region.name()) == null) throw new IllegalArgumentException("分类不存在或不属于当前区域");
+        if (rankMapper.selectCityName(cityId, region.name()) == null) throw new IllegalArgumentException("城市不存在或不属于当前区域");
     }
 
     private void validateWeight(Map<String, BigDecimal> weight) {

@@ -111,6 +111,13 @@ function adminHeaders(token: string, region: 'CN' | 'EU') {
   }
 }
 
+function containsCategoryId(categories: Array<{ id: number; children?: unknown[] }>, categoryId: number): boolean {
+  return categories.some((category) =>
+    category.id === categoryId
+    || containsCategoryId((category.children ?? []) as Array<{ id: number; children?: unknown[] }>, categoryId),
+  )
+}
+
 async function createApprovedPublicReview(request: APIRequestContext, content: string) {
   const reviewerSession = await expectApiSuccess<{
     accessToken: string
@@ -203,6 +210,166 @@ async function createApprovedPublicReview(request: APIRequestContext, content: s
 }
 
 test.describe.serial('real backend review flow', () => {
+  test('governs EU categories cities and areas against the real backend', async ({ request }) => {
+    const suffix = Date.now().toString()
+    const categoryName = `E2E 分类 ${suffix}`
+    const cityCode = `E2E${suffix.slice(-10)}`
+    const cityName = `E2E 城市 ${suffix}`
+    const areaName = `E2E 商圈 ${suffix}`
+    let categoryId: number | undefined
+    let cityId: number | undefined
+    let areaId: number | undefined
+
+    const adminSession = await expectApiSuccess<{ accessToken: string }>(
+      await request.post(`${backendBaseURL}/api/admin/v1/auth/login`, {
+        headers: { 'Accept-Language': 'zh-CN', 'X-Region': 'EU' },
+        data: { account: 'admin', password: 'admin123456' },
+      }),
+    )
+    const headers = adminHeaders(adminSession.accessToken, 'EU')
+    const publicHeaders = { 'Accept-Language': 'zh-CN', 'X-Region': 'EU' }
+
+    try {
+      const category = await expectApiSuccess<{ id: number; status: number }>(
+        await request.post(`${backendBaseURL}/api/admin/v1/categories`, {
+          headers,
+          data: { parentId: 0, name: categoryName, sortNo: 9999 },
+        }),
+      )
+      categoryId = category.id
+      expect(category.status).toBe(1)
+
+      const city = await expectApiSuccess<{ id: number; code: string; status: number }>(
+        await request.post(`${backendBaseURL}/api/admin/v1/cities`, {
+          headers,
+          data: { code: cityCode.toLowerCase(), name: cityName, sortNo: 9999 },
+        }),
+      )
+      cityId = city.id
+      expect(city.code).toBe(cityCode)
+      expect(city.status).toBe(1)
+
+      const area = await expectApiSuccess<{ id: number; cityId: number; status: number }>(
+        await request.post(`${backendBaseURL}/api/admin/v1/areas`, {
+          headers,
+          data: { cityId, name: areaName, sortNo: 9999 },
+        }),
+      )
+      areaId = area.id
+      expect(area.cityId).toBe(cityId)
+      expect(area.status).toBe(1)
+
+      const publicCategories = await expectApiSuccess<Array<{ id: number; children: unknown[] }>>(
+        await request.get(`${backendBaseURL}/api/c/v1/categories`, { headers: publicHeaders }),
+      )
+      expect(containsCategoryId(publicCategories, categoryId)).toBeTruthy()
+
+      const publicCities = await expectApiSuccess<Array<{ id: number }>>(
+        await request.get(`${backendBaseURL}/api/c/v1/cities`, { headers: publicHeaders }),
+      )
+      expect(publicCities.some((item) => item.id === cityId)).toBeTruthy()
+
+      const publicAreas = await expectApiSuccess<Array<{ id: number }>>(
+        await request.get(`${backendBaseURL}/api/c/v1/cities/${cityId}/areas`, { headers: publicHeaders }),
+      )
+      expect(publicAreas.some((item) => item.id === areaId)).toBeTruthy()
+
+      await expectApiSuccess(
+        await request.put(`${backendBaseURL}/api/admin/v1/categories/${categoryId}/status`, {
+          headers,
+          data: { status: 0 },
+        }),
+      )
+      await expectApiSuccess(
+        await request.put(`${backendBaseURL}/api/admin/v1/areas/${areaId}/status`, {
+          headers,
+          data: { status: 0 },
+        }),
+      )
+      await expectApiSuccess(
+        await request.put(`${backendBaseURL}/api/admin/v1/cities/${cityId}/status`, {
+          headers,
+          data: { status: 0 },
+        }),
+      )
+
+      const hiddenCategories = await expectApiSuccess<Array<{ id: number; children: unknown[] }>>(
+        await request.get(`${backendBaseURL}/api/c/v1/categories`, { headers: publicHeaders }),
+      )
+      expect(containsCategoryId(hiddenCategories, categoryId)).toBeFalsy()
+      const hiddenCities = await expectApiSuccess<Array<{ id: number }>>(
+        await request.get(`${backendBaseURL}/api/c/v1/cities`, { headers: publicHeaders }),
+      )
+      expect(hiddenCities.some((item) => item.id === cityId)).toBeFalsy()
+      const hiddenAreas = await expectApiSuccess<Array<{ id: number }>>(
+        await request.get(`${backendBaseURL}/api/c/v1/cities/${cityId}/areas`, { headers: publicHeaders }),
+      )
+      expect(hiddenAreas).toEqual([])
+
+      for (const params of [{ categoryId }, { cityId }, { areaId }]) {
+        const shops = await expectApiSuccess<{ total: number }>(
+          await request.get(`${backendBaseURL}/api/c/v1/search/shops`, { headers: publicHeaders, params }),
+        )
+        expect(shops.total).toBe(0)
+      }
+
+      await expectApiFailure(
+        await request.delete(`${backendBaseURL}/api/admin/v1/categories/201`, { headers }),
+        409,
+      )
+      await expectApiFailure(
+        await request.delete(`${backendBaseURL}/api/admin/v1/cities/101`, { headers }),
+        409,
+      )
+      await expectApiFailure(
+        await request.delete(`${backendBaseURL}/api/admin/v1/areas/1011`, { headers }),
+        409,
+      )
+
+      await expectApiSuccess(
+        await request.put(`${backendBaseURL}/api/admin/v1/categories/${categoryId}/status`, {
+          headers,
+          data: { status: 1 },
+        }),
+      )
+      await expectApiSuccess(
+        await request.put(`${backendBaseURL}/api/admin/v1/cities/${cityId}/status`, {
+          headers,
+          data: { status: 1 },
+        }),
+      )
+      await expectApiSuccess(
+        await request.put(`${backendBaseURL}/api/admin/v1/areas/${areaId}/status`, {
+          headers,
+          data: { status: 1 },
+        }),
+      )
+
+      const restoredCategories = await expectApiSuccess<Array<{ id: number; children: unknown[] }>>(
+        await request.get(`${backendBaseURL}/api/c/v1/categories`, { headers: publicHeaders }),
+      )
+      expect(containsCategoryId(restoredCategories, categoryId)).toBeTruthy()
+      const restoredCities = await expectApiSuccess<Array<{ id: number }>>(
+        await request.get(`${backendBaseURL}/api/c/v1/cities`, { headers: publicHeaders }),
+      )
+      expect(restoredCities.some((item) => item.id === cityId)).toBeTruthy()
+      const restoredAreas = await expectApiSuccess<Array<{ id: number }>>(
+        await request.get(`${backendBaseURL}/api/c/v1/cities/${cityId}/areas`, { headers: publicHeaders }),
+      )
+      expect(restoredAreas.some((item) => item.id === areaId)).toBeTruthy()
+    } finally {
+      if (areaId !== undefined) {
+        await request.delete(`${backendBaseURL}/api/admin/v1/areas/${areaId}`, { headers })
+      }
+      if (cityId !== undefined) {
+        await request.delete(`${backendBaseURL}/api/admin/v1/cities/${cityId}`, { headers })
+      }
+      if (categoryId !== undefined) {
+        await request.delete(`${backendBaseURL}/api/admin/v1/categories/${categoryId}`, { headers })
+      }
+    }
+  })
+
   test('submits an image review against H2 backend, approves it, and sees growth records', async ({ page, context }) => {
     const reviewContent = `真实后端 E2E 点评 ${Date.now()}`
 

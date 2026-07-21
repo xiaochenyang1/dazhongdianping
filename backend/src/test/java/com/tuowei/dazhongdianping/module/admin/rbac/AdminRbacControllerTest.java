@@ -9,6 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -118,18 +122,25 @@ class AdminRbacControllerTest {
     @Test
     void shouldTreatSuperAdminPermissionIdsAsAnUnorderedSet() throws Exception {
         String token = login("admin", "admin123456");
+        MvcResult permissionsResult = mockMvc.perform(get("/api/admin/v1/rbac/permissions")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andReturn();
+        List<Long> permissionIds = new ArrayList<>();
+        objectMapper.readTree(permissionsResult.getResponse().getContentAsString())
+                .path("data")
+                .forEach(permission -> permissionIds.add(permission.path("id").asLong()));
+        Collections.reverse(permissionIds);
 
         mockMvc.perform(put("/api/admin/v1/rbac/roles/{roleId}", 1L)
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "code":"super_admin",
-                                  "name":"系统管理员",
-                                  "description":"维护管理员、角色和全站运营能力",
-                                  "permissionIds":[31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
-                                }
-                                """))
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "code", "super_admin",
+                                "name", "系统管理员",
+                                "description", "维护管理员、角色和全站运营能力",
+                                "permissionIds", permissionIds
+                        ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.code").value("super_admin"));
     }

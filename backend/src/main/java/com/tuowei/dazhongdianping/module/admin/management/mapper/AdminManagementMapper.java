@@ -16,14 +16,6 @@ public interface AdminManagementMapper {
 
     void insertMerchant(MerchantRow merchantRow);
 
-    Integer countCategoryByRegion(@Param("region") String region, @Param("categoryId") Long categoryId);
-
-    Integer countCityByRegion(@Param("region") String region, @Param("cityId") Long cityId);
-
-    Integer countAreaByRegionAndCity(@Param("region") String region,
-                                     @Param("cityId") Long cityId,
-                                     @Param("areaId") Long areaId);
-
     long countAdminShops(AdminShopListQuery query);
 
     List<AdminShopRow> selectAdminShops(AdminShopListQuery query);

@@ -11,6 +11,7 @@
                sort_no
         FROM category
         WHERE region = #{region}
+          AND status = 1
         ORDER BY sort_no ASC, id ASC
     </select>
 
@@ -21,18 +22,23 @@
                sort_no
         FROM city
         WHERE region = #{region}
+          AND status = 1
         ORDER BY sort_no ASC, id ASC
     </select>
 
     <select id="selectAreasByRegionAndCity" resultType="com.tuowei.dazhongdianping.module.browse.model.AreaRow">
-        SELECT id,
-               city_id,
-               name,
-               sort_no
-        FROM area
-        WHERE region = #{region}
-          AND city_id = #{cityId}
-        ORDER BY sort_no ASC, id ASC
+        SELECT a.id,
+               a.city_id,
+               a.name,
+               a.sort_no
+        FROM area a
+        JOIN city c ON c.id = a.city_id
+                   AND c.region = a.region
+                   AND c.status = 1
+        WHERE a.region = #{region}
+          AND a.city_id = #{cityId}
+          AND a.status = 1
+        ORDER BY a.sort_no ASC, a.id ASC
     </select>
 
     <select id="selectHomeBanners" resultType="com.tuowei.dazhongdianping.module.browse.model.BannerRow">
@@ -85,12 +91,35 @@
           AND s.is_deleted = FALSE
         <if test="categoryId != null">
             AND s.category_id = #{categoryId}
+            AND EXISTS (
+                SELECT 1 FROM category filter_category
+                WHERE filter_category.id = s.category_id
+                  AND filter_category.region = s.region
+                  AND filter_category.status = 1
+            )
         </if>
         <if test="cityId != null">
             AND s.city_id = #{cityId}
+            AND EXISTS (
+                SELECT 1 FROM city filter_city
+                WHERE filter_city.id = s.city_id
+                  AND filter_city.region = s.region
+                  AND filter_city.status = 1
+            )
         </if>
         <if test="areaId != null">
             AND s.area_id = #{areaId}
+            AND EXISTS (
+                SELECT 1
+                FROM area filter_area
+                JOIN city filter_area_city
+                  ON filter_area_city.id = filter_area.city_id
+                 AND filter_area_city.region = filter_area.region
+                 AND filter_area_city.status = 1
+                WHERE filter_area.id = s.area_id
+                  AND filter_area.region = s.region
+                  AND filter_area.status = 1
+            )
         </if>
         <if test="keyword != null and keyword != ''">
             AND (
@@ -116,9 +145,22 @@
         </if>
     </sql>
 
+    <sql id="activeShopGeoJoins">
+        JOIN area a ON a.id = s.area_id
+                   AND a.region = s.region
+                   AND a.status = 1
+        JOIN city c ON c.id = s.city_id
+                   AND c.region = s.region
+                   AND c.status = 1
+        JOIN category cat ON cat.id = s.category_id
+                         AND cat.region = s.region
+                         AND cat.status = 1
+    </sql>
+
     <select id="countShops" resultType="long">
         SELECT COUNT(1)
         FROM shop s
+        <include refid="activeShopGeoJoins"/>
         <include refid="shopQueryWhere"/>
     </select>
 
@@ -137,9 +179,7 @@
                s.open_now,
                s.tags
         FROM shop s
-        LEFT JOIN area a ON a.id = s.area_id
-        LEFT JOIN city c ON c.id = s.city_id
-        LEFT JOIN category cat ON cat.id = s.category_id
+        <include refid="activeShopGeoJoins"/>
         <include refid="shopQueryWhere"/>
         <choose>
             <when test="sort == 'score'">
@@ -250,6 +290,7 @@
                'shop' AS type,
                s.id AS ref_id
         FROM shop s
+        <include refid="activeShopGeoJoins"/>
         WHERE s.region = #{region}
           AND s.status = 1
           AND s.is_deleted = FALSE
@@ -268,6 +309,7 @@
                c.id AS ref_id
         FROM category c
         WHERE c.region = #{region}
+          AND c.status = 1
           AND LOWER(c.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
         ORDER BY c.sort_no ASC, c.id ASC
         LIMIT #{limit}
@@ -277,28 +319,35 @@
         SELECT name
         FROM category
         WHERE region = #{region}
+          AND status = 1
         ORDER BY sort_no ASC, id ASC
     </select>
 
     <select id="selectActiveShopTagsByRegion" resultType="string">
-        SELECT tags
-        FROM shop
-        WHERE region = #{region}
-          AND status = 1
-          AND is_deleted = FALSE
-          AND tags IS NOT NULL
-          AND tags != ''
+        SELECT s.tags
+        FROM shop s
+        <include refid="activeShopGeoJoins"/>
+        WHERE s.region = #{region}
+          AND s.status = 1
+          AND s.is_deleted = FALSE
+          AND s.tags IS NOT NULL
+          AND s.tags != ''
     </select>
 
     <select id="selectApprovedReviewTagsByRegion" resultType="string">
-        SELECT tags
-        FROM review
-        WHERE region = #{region}
-          AND audit_status = 1
-          AND status = 1
-          AND is_deleted = FALSE
-          AND tags IS NOT NULL
-          AND tags != ''
+        SELECT r.tags
+        FROM review r
+        JOIN shop s ON s.id = r.shop_id
+                   AND s.region = r.region
+                   AND s.status = 1
+                   AND s.is_deleted = FALSE
+        <include refid="activeShopGeoJoins"/>
+        WHERE r.region = #{region}
+          AND r.audit_status = 1
+          AND r.status = 1
+          AND r.is_deleted = FALSE
+          AND r.tags IS NOT NULL
+          AND r.tags != ''
     </select>
 
     <select id="selectSearchHistoryByUserRegionKeyword" resultType="com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow">

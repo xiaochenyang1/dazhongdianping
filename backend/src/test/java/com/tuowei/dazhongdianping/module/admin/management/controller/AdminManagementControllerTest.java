@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.module.admin.management.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,9 @@ class AdminManagementControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void shouldRejectAdminRequestWithoutToken() throws Exception {
@@ -380,7 +385,7 @@ class AdminManagementControllerTest {
         Path errorFilePath = Path.of(errorFile);
         assertTrue(Files.isRegularFile(errorFilePath), "导入失败明细文件应该真实落盘");
         String errorFileContent = Files.readString(errorFilePath);
-        assertTrue(errorFileContent.contains("分类不存在或不属于当前区域"), "导入失败明细文件应该写入失败原因");
+        assertTrue(errorFileContent.contains("分类不存在、不启用或不属于当前区域"), "导入失败明细文件应该写入失败原因");
 
         mockMvc.perform(get("/api/admin/v1/import/batches")
                         .header("Authorization", bearer(token)))
@@ -404,6 +409,95 @@ class AdminManagementControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.latitude").value(31.17654))
                 .andExpect(jsonPath("$.data.longitude").value(121.42567));
+    }
+
+    @Test
+    void shouldRejectDisabledCategoryForShopCreate() throws Exception {
+        String token = loginToken();
+        jdbcTemplate.update("UPDATE category SET status=0 WHERE id=102");
+        mockMvc.perform(post("/api/admin/v1/shops")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validShopBody("停用分类创建测试")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("分类不存在、不启用或不属于当前区域"));
+    }
+
+    @Test
+    void shouldRejectDisabledCityForShopUpdate() throws Exception {
+        String token = loginToken();
+        jdbcTemplate.update("UPDATE city SET status=0 WHERE id=1");
+        mockMvc.perform(put("/api/admin/v1/shops/{shopId}", 10001L)
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validShopBody("停用城市更新测试")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("城市不存在、不启用或不属于当前区域"));
+    }
+
+    @Test
+    void shouldKeepDisabledAreaImportFailureDetail() throws Exception {
+        String token = loginToken();
+        jdbcTemplate.update("UPDATE area SET status=0 WHERE id=11");
+        mockMvc.perform(post("/api/admin/v1/import/shops")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fileName":"disabled-area.json",
+                                  "region":"CN",
+                                  "records":[{
+                                    "merchantAccount":"disabled-area@example.com",
+                                    "companyName":"停用商圈导入商户",
+                                    "contactName":"测试员",
+                                    "contactPhone":"13800000009",
+                                    "shopName":"停用商圈导入门店",
+                                    "categoryId":102,"cityId":1,"areaId":11,
+                                    "address":"上海测试路1号","phone":"021-10000000",
+                                    "businessHours":"10:00-22:00","pricePerCapita":88,
+                                    "coverUrl":"https://example.com/disabled-area.jpg",
+                                    "summary":"停用商圈导入回归","score":4.0,
+                                    "tasteScore":4.0,"envScore":4.0,"serviceScore":4.0,
+                                    "currency":"CNY","hasDeal":false,"openNow":true,"tags":[]
+                                  }]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.success").value(0))
+                .andExpect(jsonPath("$.data.failed").value(1))
+                .andExpect(jsonPath("$.data.errorMessages[0]")
+                        .value("第 1 条失败: 商圈不存在、不启用或不属于当前城市"));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM merchant WHERE account='disabled-area@example.com'",
+                Integer.class));
+    }
+
+    private String validShopBody(String name) throws Exception {
+        return objectMapper.writeValueAsString(Map.ofEntries(
+                Map.entry("merchantId", 1001),
+                Map.entry("region", "CN"),
+                Map.entry("categoryId", 102),
+                Map.entry("cityId", 1),
+                Map.entry("areaId", 11),
+                Map.entry("name", name),
+                Map.entry("coverUrl", "https://example.com/admin-geo.jpg"),
+                Map.entry("phone", "021-10000000"),
+                Map.entry("pricePerCapita", 88),
+                Map.entry("currency", "CNY"),
+                Map.entry("address", "上海市测试路1号"),
+                Map.entry("businessHours", "10:00-22:00"),
+                Map.entry("summary", "基础数据启用状态回归"),
+                Map.entry("score", 4.0),
+                Map.entry("tasteScore", 4.0),
+                Map.entry("envScore", 4.0),
+                Map.entry("serviceScore", 4.0),
+                Map.entry("hasDeal", false),
+                Map.entry("openNow", true),
+                Map.entry("status", 1),
+                Map.entry("tags", new String[]{"测试"})
+        ));
     }
 
     private String loginToken() throws Exception {

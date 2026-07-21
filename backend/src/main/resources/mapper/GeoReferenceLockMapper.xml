@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.geodata.mapper.GeoReferenceLockMapper">
+
+    <select id="lockActiveCategory" resultType="long">
+        SELECT id
+        FROM category
+        WHERE region = #{region} AND id = #{categoryId} AND status = 1
+        FOR UPDATE
+    </select>
+
+    <select id="lockActiveCity" resultType="long">
+        SELECT id
+        FROM city
+        WHERE region = #{region} AND id = #{cityId} AND status = 1
+        FOR UPDATE
+    </select>
+
+    <select id="lockActiveArea" resultType="long">
+        SELECT id
+        FROM area
+        WHERE region = #{region} AND city_id = #{cityId} AND id = #{areaId} AND status = 1
+        FOR UPDATE
+    </select>
+
+    <select id="lockCategories" resultType="long">
+        SELECT id
+        FROM category
+        WHERE region = #{region} AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        ORDER BY id
+        FOR UPDATE
+    </select>
+
+    <select id="lockCities" resultType="long">
+        SELECT id
+        FROM city
+        WHERE region = #{region} AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        ORDER BY id
+        FOR UPDATE
+    </select>
+
+    <select id="lockAreas" resultType="long">
+        SELECT id
+        FROM area
+        WHERE region = #{region} AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        ORDER BY id
+        FOR UPDATE
+    </select>
+</mapper>

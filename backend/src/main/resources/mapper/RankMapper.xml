@@ -102,11 +102,13 @@
     </select>
 
     <select id="selectCityName" resultType="string">
-        SELECT name FROM city WHERE id = #{cityId} AND region = #{region}
+        SELECT name FROM city WHERE id = #{cityId} AND region = #{region} AND status = 1
+        FOR UPDATE
     </select>
 
     <select id="selectCategoryName" resultType="string">
-        SELECT name FROM category WHERE id = #{categoryId} AND region = #{region}
+        SELECT name FROM category WHERE id = #{categoryId} AND region = #{region} AND status = 1
+        FOR UPDATE
     </select>
 
     <update id="disableRankSnapshots">

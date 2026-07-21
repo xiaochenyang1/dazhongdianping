@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.module.rank.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 class AdminRankControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
     void shouldCreateDraftAndPublishNewSnapshot() throws Exception {
@@ -97,6 +100,59 @@ class AdminRankControllerTest {
                         .header("Authorization", "Bearer " + loginToken())
                         .header("X-Region", "EU"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldRejectDisabledScopeWhenCreatingDraft() throws Exception {
+        String token = loginToken();
+        jdbcTemplate.update("UPDATE category SET status=0 WHERE id=202");
+        mockMvc.perform(post("/api/admin/v1/ranks/config")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rankBody("EU", 102, 202)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("分类不存在或不属于当前区域"));
+    }
+
+    @Test
+    void shouldRecheckScopeBeforePublishingWithoutMutatingPublishedState() throws Exception {
+        String token = loginToken();
+        MvcResult draft = mockMvc.perform(post("/api/admin/v1/ranks/config")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rankBody("EU", 101, 201)))
+                .andExpect(status().isOk())
+                .andReturn();
+        long configId = objectMapper.readTree(draft.getResponse().getContentAsString()).at("/data/id").asLong();
+        jdbcTemplate.update("UPDATE city SET status=0 WHERE id=101");
+
+        mockMvc.perform(post("/api/admin/v1/ranks/config/{id}/publish", configId)
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Region", "EU"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("城市不存在或不属于当前区域"));
+
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT status FROM rank_config WHERE id=?", Integer.class, configId));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT status FROM rank_config WHERE id=3101", Integer.class));
+        assertEquals(Boolean.TRUE, jdbcTemplate.queryForObject(
+                "SELECT enabled FROM `rank` WHERE id=31001", Boolean.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM `rank` WHERE config_id=?", Integer.class, configId));
+    }
+
+    private String rankBody(String region, long cityId, long categoryId) {
+        return """
+                {
+                  "rankType":1,"region":"%s","cityId":%d,"categoryId":%d,
+                  "calcCycle":4,
+                  "weight":{"score":0.7,"reviewCount":0.2,"hasDeal":0.1},
+                  "minReviewCount":1,"minScore":4.0,"manualIntervene":true
+                }
+                """.formatted(region, cityId, categoryId);
     }
 
     private String loginToken() throws Exception {

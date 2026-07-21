@@ -229,6 +229,8 @@ public class AdminAuditService {
         if (change.getChangeType() == null || (change.getChangeType() != 1 && change.getChangeType() != 2)) {
             throw new IllegalArgumentException("门店变更类型不受支持");
         }
+        merchantShopChangeService.requireActiveReferences(
+                change.getCategoryId(), change.getCityId(), change.getAreaId());
         if (change.getChangeType() == 2) {
             merchantShopChangeService.validateExistingShopVersion(change);
         }

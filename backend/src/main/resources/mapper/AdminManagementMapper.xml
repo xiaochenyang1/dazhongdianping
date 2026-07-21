@@ -37,28 +37,6 @@
         VALUES (#{account}, #{companyName}, #{contactName}, #{contactPhone}, #{region}, #{auditStatus}, #{status}, FALSE)
     </insert>
 
-    <select id="countCategoryByRegion" resultType="int">
-        SELECT COUNT(1)
-        FROM category
-        WHERE region = #{region}
-          AND id = #{categoryId}
-    </select>
-
-    <select id="countCityByRegion" resultType="int">
-        SELECT COUNT(1)
-        FROM city
-        WHERE region = #{region}
-          AND id = #{cityId}
-    </select>
-
-    <select id="countAreaByRegionAndCity" resultType="int">
-        SELECT COUNT(1)
-        FROM area
-        WHERE region = #{region}
-          AND city_id = #{cityId}
-          AND id = #{areaId}
-    </select>
-
     <sql id="adminShopWhere">
         WHERE s.is_deleted = FALSE
         <if test="region != null and region != ''">

@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -247,6 +249,36 @@ class AdminShopChangeAuditControllerTest {
                         .header("X-Region", "EU")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"remark\":\"尝试覆盖旧版本\"}"))
+                .andExpect(status().isBadRequest());
+
+        assertEquals("Maison Sichuan Paris", jdbc.queryForObject(
+                "SELECT name FROM shop WHERE id=20001", String.class));
+        assertEquals(0, jdbc.queryForObject(
+                "SELECT status FROM audit_task WHERE id=?", Integer.class, taskId));
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT status FROM merchant_shop_change WHERE id=?", Integer.class, changeId));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"category", "city", "area"})
+    void shouldRollbackApprovalWhenGeoDataBecomesDisabled(String resource) throws Exception {
+        long changeId = submitExistingShopChange(
+                "Maison Sichuan Disabled " + resource,
+                "https://files.example/disabled-" + resource + ".jpg"
+        );
+        long taskId = taskId(changeId);
+        switch (resource) {
+            case "category" -> jdbc.update("UPDATE category SET status=0 WHERE id=201");
+            case "city" -> jdbc.update("UPDATE city SET status=0 WHERE id=101");
+            case "area" -> jdbc.update("UPDATE area SET status=0 WHERE id=1011");
+            default -> throw new IllegalArgumentException("unknown resource");
+        }
+
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{id}/pass", taskId)
+                        .header("Authorization", bearer(adminToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"remark\":\"基础数据已停用\"}"))
                 .andExpect(status().isBadRequest());
 
         assertEquals("Maison Sichuan Paris", jdbc.queryForObject(

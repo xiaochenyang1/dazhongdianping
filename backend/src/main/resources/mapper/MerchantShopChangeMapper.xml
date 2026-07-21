@@ -203,16 +203,6 @@
         </foreach>
     </insert>
 
-    <select id="countCategory" resultType="int">
-        SELECT COUNT(1) FROM category WHERE region=#{region} AND id=#{categoryId}
-    </select>
-    <select id="countCity" resultType="int">
-        SELECT COUNT(1) FROM city WHERE region=#{region} AND id=#{cityId}
-    </select>
-    <select id="countArea" resultType="int">
-        SELECT COUNT(1) FROM area WHERE region=#{region} AND city_id=#{cityId} AND id=#{areaId}
-    </select>
-
     <insert id="insertOperationLog">
         INSERT INTO merchant_operation_log(merchant_id,operator_id,action,target_type,target_id,detail)
         VALUES(#{merchantId},#{operatorId},#{action},#{targetType},#{targetId},#{detail})
