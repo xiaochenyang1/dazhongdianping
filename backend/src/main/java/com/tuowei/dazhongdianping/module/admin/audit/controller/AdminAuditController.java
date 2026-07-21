@@ -3,9 +3,11 @@ package com.tuowei.dazhongdianping.module.admin.audit.controller;
 import com.tuowei.dazhongdianping.common.api.ApiResponse;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.module.admin.auth.AdminPermission;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditLogQuery;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditTaskQuery;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditPassRequest;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditRejectRequest;
+import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditLogResponse;
 import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditTaskResponse;
 import com.tuowei.dazhongdianping.module.admin.audit.service.AdminAuditService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +30,12 @@ public class AdminAuditController {
 
     public AdminAuditController(AdminAuditService adminAuditService) {
         this.adminAuditService = adminAuditService;
+    }
+
+    @GetMapping("/audit/logs")
+    @AdminPermission(value = "system:audit_log:read", regionScoped = false)
+    public ApiResponse<PageResult<AdminAuditLogResponse>> listLogs(@Valid AdminAuditLogQuery query) {
+        return ApiResponse.success(adminAuditService.listLogs(query));
     }
 
     @GetMapping("/audit/tasks")

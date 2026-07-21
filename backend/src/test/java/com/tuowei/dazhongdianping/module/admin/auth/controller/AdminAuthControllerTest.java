@@ -118,6 +118,17 @@ class AdminAuthControllerTest {
                         .value("/audit/merchant-applications"));
     }
 
+    @Test
+    void shouldExposeAuditLogSystemMenu() throws Exception {
+        String token = loginToken();
+
+        mockMvc.perform(get("/api/admin/v1/menus")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[4].children[?(@.code == 'system.audit_logs')].path")
+                        .value("/system/audit-logs"));
+    }
+
     private String loginToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

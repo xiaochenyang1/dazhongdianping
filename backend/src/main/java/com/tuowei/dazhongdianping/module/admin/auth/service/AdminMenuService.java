@@ -31,7 +31,8 @@ public class AdminMenuService {
                 )),
                 group("system", "系统管理", "/system", List.of(
                         leaf("system.admins", "管理员账号", "/system/admins", "system:admin:read"),
-                        leaf("system.roles", "角色权限", "/system/roles", "system:role:read")
+                        leaf("system.roles", "角色权限", "/system/roles", "system:role:read"),
+                        leaf("system.audit_logs", "审计日志", "/system/audit-logs", "system:audit_log:read")
                 ))
         );
         List<AdminMenuResponse> result = new ArrayList<>();

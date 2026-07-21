@@ -1,6 +1,8 @@
 package com.tuowei.dazhongdianping.module.admin.audit.mapper;
 
+import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditLogQuery;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditTaskQuery;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AuditLogRow;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
@@ -8,6 +10,10 @@ import org.apache.ibatis.annotations.Param;
 public interface AdminAuditMapper {
 
     void insertAuditTask(AuditTaskRow row);
+
+    long countAuditLogs(AdminAuditLogQuery query);
+
+    List<AuditLogRow> selectAuditLogs(AdminAuditLogQuery query);
 
     long countAuditTasks(AdminAuditTaskQuery query);
 

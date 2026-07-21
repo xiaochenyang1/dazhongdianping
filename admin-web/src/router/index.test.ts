@@ -27,6 +27,9 @@ describe('admin router permissions', () => {
     await router.push('/system/admins')
     expect(router.currentRoute.value.path).toBe('/dashboard')
 
+    await router.push('/system/audit-logs')
+    expect(router.currentRoute.value.path).toBe('/dashboard')
+
     await router.push('/audit/reviews')
     expect(router.currentRoute.value.path).toBe('/audit/reviews')
     expect(scrollTo).toHaveBeenCalledWith({ top: 0 })
@@ -48,5 +51,23 @@ describe('admin router permissions', () => {
 
     await router.push('/data/meta')
     expect(router.currentRoute.value.path).toBe('/data/meta')
+  })
+
+  it('guards the audit log route with the system audit log permission', async () => {
+    await router.push('/system/audit-logs')
+    expect(router.currentRoute.value.path).toBe('/dashboard')
+
+    const { setSession } = useAdminSession() as unknown as {
+      setSession: (token: string, profile: { id: number; account: string; name: string }, permissions: string[], regions: ('CN' | 'EU')[]) => void
+    }
+    setSession(
+      'admin-token',
+      { id: 7, account: 'auditor', name: '审核员' },
+      ['audit:review:read', 'system:audit_log:read'],
+      ['EU'],
+    )
+
+    await router.push('/system/audit-logs')
+    expect(router.currentRoute.value.path).toBe('/system/audit-logs')
   })
 })

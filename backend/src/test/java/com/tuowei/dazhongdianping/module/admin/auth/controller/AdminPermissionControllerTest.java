@@ -90,6 +90,16 @@ class AdminPermissionControllerTest {
                 .andExpect(jsonPath("$.message").value("没有权限执行该操作"));
     }
 
+    @Test
+    void shouldRejectAuditLogQueryWithoutSystemPermission() throws Exception {
+        jdbc.update("INSERT INTO audit_log(id,admin_id,action,target,detail,ip) VALUES (9903,1,'admin.login_success','admin:1','后台登录成功','127.0.0.1')");
+
+        mockMvc.perform(get("/api/admin/v1/audit/logs")
+                        .header("Authorization", bearer(loginToken())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("没有权限执行该操作"));
+    }
+
     private String loginToken() throws Exception {
         var result = mockMvc.perform(post("/api/admin/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

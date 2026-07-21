@@ -73,6 +73,18 @@ export interface AdminAccountCreatePayload {
   regions: Region[]
 }
 
+export interface AdminAuditLog {
+  id: number
+  adminId: number
+  adminAccount: string
+  adminName: string
+  action: string
+  target: string
+  detail: string
+  ip: string
+  createdAt: string
+}
+
 export interface AdminAccountUpdatePayload {
   name: string
   roleIds: number[]

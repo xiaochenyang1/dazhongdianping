@@ -150,6 +150,7 @@
 | `Idempotency-Key` 重复提交保护 | 已完成当前基础版 | `README.md`、`docs/README.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 当前**无新增 SQL**；幂等结果默认走本地内存缓存,配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis;MySQL 审计表仍是目标态增强 | 同 key + 同请求体复用首个响应,同 key + 不同请求体返回 `409` |
 | 用户中心基础能力 | 已完成当前 `M2` 范围 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 直接复用 `app_user/verification_code/review/review_image`；`02_seed_data.sql` 已预置演示账号、我的点评、驳回案例 | 我的资料、账号绑定、改密码、成长值流水、我的点评、我的点评详情、公开用户主页最小版、驳回原因回显 |
 | M7 本地达人认证 | 已完成 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/业务流程与状态机.md`、`docs/权限矩阵.md`、`docs/术语与枚举规范.md` | `01_schema.sql` 建 `user_expert_certification`；`02_seed_data.sql` 预置 `audit:expert_certification:read/write` 并授予 `content_auditor`；运行时提交产生 `audit_task.biz_type=7` | 资料页提交 / 驳回后重提、管理端 `/audit/expert-certifications` 通过 / 驳回、公开主页 / 点评 / 帖子作者达人标展示 |
+| 管理端审计日志查询 | 已完成 | `README.md`、`docs/README.md`、`docs/接口设计.md`、`docs/权限矩阵.md` | 复用现有 `audit_log`；`02_seed_data.sql` 预置 `system:audit_log:read`；运行时登录、RBAC 和审核动作持续写日志 | 管理端 `/system/audit-logs` 支持按 `adminId/action/target/keyword` 分页筛选审计日志 |
 | 轻积分 / 等级 | 已完成当前范围 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `growth_points_log/growth_rule/level_config` 支撑发点评、获赞、带图点评、完成订单四类触发；每类按业务 ID 幂等写成长值/积分两条流水并更新用户等级 | 触发对应行为后可在 `/user/growth-records` 查看流水；管理端可维护规则与等级；重复支付回调或重复点赞不会重复奖励 |
 | 点评发布 / 互动 / 审核 | 已完成 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `review/review_image/review_like/review_comment/review_report/audit_task`；`02_seed_data.sql` 预置公开点评、点评图片、点赞、评论、待审 / 驳回审核任务；`review_report` 表会建好,但默认不塞演示举报记录,免得你第一次点举报就撞重复 | 写点评、编辑点评、删除点评、点评详情、点赞 / 评论 / 举报、管理端审核 |
 | 本地图片上传 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 这块不靠额外导库表跑上传文件本身；上传文件落 `backend/local-storage/uploads`；点评提交后图片 URL 仍落到 `review_image` | 写点评 / 编辑点评时选本地图片上传并预览 |
@@ -168,7 +169,7 @@
 |---|---|---|---|---|
 | M1-M4 用户核心链路 | 已完成（本地口径） | 浏览、搜索、认证、点评、成长、榜单、收藏、交易和预订均有后端、Web 与自动化覆盖 | 真实支付归第三方阶段；预订到店提醒归消息阶段 | 当前自动化、浏览器 E2E 和临时 MySQL 8 smoke 有通过记录；目标环境仍待验收 |
 | M5 商户经营后端 | 已完成 | 入驻、员工 RBAC、门店范围、预订、团购、订单退款、门店草稿、点评回复申诉已落地 | 无后端主流程缺口 | 后端权限、状态机、跨商户和跨区域测试通过 |
-| 商户端与管理端完整闭环 | 部分完成 | `merchant-web` 已有注册、登录、资质、看板、门店、员工、预订、团购、退款和点评页面；管理端已有数据库 RBAC、分类/城市/商圈、商户资质/点评/申诉/帖子审核、门店、榜单、成长、圈子和话题治理 | 用户治理；订单/退款/对账；运营活动；审计日志和隐私任务查询 | 已完成的 B/Admin 页面、权限、区域范围、角色实时收权、账号停用 `401` 和基础数据真实后端 E2E 通过；其余管理治理项另行验收 |
+| 商户端与管理端完整闭环 | 部分完成 | `merchant-web` 已有注册、登录、资质、看板、门店、员工、预订、团购、退款和点评页面；管理端已有数据库 RBAC、分类/城市/商圈、商户资质/点评/申诉/帖子审核、门店、榜单、成长、圈子和话题治理，以及审计日志查询 | 用户治理；订单/退款/对账；运营活动；隐私任务查询 | 已完成的 B/Admin 页面、权限、区域范围、角色实时收权、账号停用 `401`、审计日志查询和基础数据真实后端 E2E 通过；其余管理治理项另行验收 |
 | PC Web 产品缺口 | 部分完成 | 首页、列表、详情、搜索、交易、预订、用户中心和社区只读页已落地；商户高级筛选、真实分页、点评排序/评分/带图筛选、分享、门店相似推荐和公开页客户端运行时 metadata 已接入 | SEO SSR/预渲染产物 | 组件测试和后端查询测试覆盖已落地能力；SSR/预渲染尚未实现 |
 | 社区与消息尾项 | 部分完成 | 帖子、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、转发、关注流、私信、圈子、话题和通知聚合已落地 | 真实移动推送、认证商户号 | 自动化覆盖已落地的社交关系、达人审核与公开 badge、通知去重、`@提醒` 分发、隐私治理和 Flutter 转发/互动链路；尾项仍待实现 |
 | Flutter 与真实第三方 | 部分完成 | Flutter 具备区域切换、基础三语言入口、交易/社区/隐私主链路；未配置能力会诚实禁用 | 完整 i18n、点评翻译、Google Maps、Stripe/PayPal/支付宝/微信、FCM/APNs、邮件短信和内容审核 | 仅有仓库内 mock/契约与未配置阻断验证；真实 sandbox、凭证和供应商联调仍待验收 |

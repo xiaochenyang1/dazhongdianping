@@ -129,6 +129,12 @@ const router = createRouter({
           component: () => import('@/views/AdminRolesView.vue'),
           meta: { requiresAuth: true, title: '角色与权限', requiredPermission: 'system:role:read' },
         },
+        {
+          path: 'system/audit-logs',
+          name: 'system-audit-logs',
+          component: () => import('@/views/AdminAuditLogsView.vue'),
+          meta: { requiresAuth: true, title: '审计日志', requiredPermission: 'system:audit_log:read' },
+        },
       ],
     },
   ],

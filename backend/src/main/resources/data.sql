@@ -70,7 +70,8 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (32, 'data:geo:read', '查看基础数据', 'data', 1, 1),
     (33, 'data:geo:write', '维护基础数据', 'data', 2, 1),
     (34, 'audit:expert_certification:read', '查看达人认证', 'audit', 1, 1),
-    (35, 'audit:expert_certification:write', '处理达人认证', 'audit', 2, 1);
+    (35, 'audit:expert_certification:write', '处理达人认证', 'audit', 2, 1),
+    (36, 'system:audit_log:read', '查看审计日志', 'system', 1, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region) VALUES (1, 'CN'), (1, 'EU');

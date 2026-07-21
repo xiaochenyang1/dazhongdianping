@@ -7,11 +7,14 @@ import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditLogQuery;
 import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AuditLogRow;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditTaskQuery;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditPassRequest;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditRejectRequest;
+import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditLogResponse;
 import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditTaskResponse;
 import com.tuowei.dazhongdianping.module.admin.auth.service.AdminPermissionChecker;
 import com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow;
@@ -32,8 +35,8 @@ import com.tuowei.dazhongdianping.module.search.event.ShopSearchIndexChangedEven
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -85,6 +88,15 @@ public class AdminAuditService {
         this.topicService = topicService;
         this.mentionNotificationService = mentionNotificationService;
         this.permissionChecker = permissionChecker;
+    }
+
+    public PageResult<AdminAuditLogResponse> listLogs(AdminAuditLogQuery query) {
+        query.normalize();
+        long total = adminAuditMapper.countAuditLogs(query);
+        List<AdminAuditLogResponse> items = adminAuditMapper.selectAuditLogs(query).stream()
+                .map(this::toAuditLogResponse)
+                .toList();
+        return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);
     }
 
     public PageResult<AdminAuditTaskResponse> listTasks(AdminAuditTaskQuery query) {
@@ -525,6 +537,20 @@ public class AdminAuditService {
         };
     }
 
+    private AdminAuditLogResponse toAuditLogResponse(AuditLogRow row) {
+        return new AdminAuditLogResponse(
+                row.getId(),
+                row.getAdminId(),
+                safeText(row.getAdminAccount()),
+                safeText(row.getAdminName()),
+                safeText(row.getAction()),
+                safeText(row.getTarget()),
+                safeText(row.getDetail()),
+                safeText(row.getIp()),
+                formatDateTime(row.getCreatedAt())
+        );
+    }
+
     private String auditStatusText(Integer status) {
         return switch (status == null ? 0 : status) {
             case 1 -> "通过";
@@ -551,6 +577,10 @@ public class AdminAuditService {
 
     private String normalizeIp(String requestIp) {
         return StringUtils.hasText(requestIp) ? requestIp.trim() : "";
+    }
+
+    private String safeText(String value) {
+        return value == null ? "" : value;
     }
 
     private Region currentRegion() {

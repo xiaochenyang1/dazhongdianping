@@ -25,6 +25,53 @@
         )
     </insert>
 
+    <sql id="auditLogWhere">
+        WHERE 1 = 1
+        <if test="adminId != null">
+            AND l.admin_id = #{adminId}
+        </if>
+        <if test="action != null and action != ''">
+            AND l.action = #{action}
+        </if>
+        <if test="target != null and target != ''">
+            AND l.target = #{target}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                l.action LIKE CONCAT('%', #{keyword}, '%')
+                OR l.target LIKE CONCAT('%', #{keyword}, '%')
+                OR l.detail LIKE CONCAT('%', #{keyword}, '%')
+                OR l.ip LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(au.account, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(au.name, '') LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+    </sql>
+
+    <select id="countAuditLogs" resultType="long">
+        SELECT COUNT(1)
+        FROM audit_log l
+        LEFT JOIN admin_user au ON au.id = l.admin_id
+        <include refid="auditLogWhere"/>
+    </select>
+
+    <select id="selectAuditLogs" resultType="com.tuowei.dazhongdianping.module.admin.audit.model.AuditLogRow">
+        SELECT l.id,
+               l.admin_id,
+               COALESCE(au.account, '') AS admin_account,
+               COALESCE(au.name, '') AS admin_name,
+               l.action,
+               l.target,
+               l.detail,
+               l.ip,
+               l.created_at
+        FROM audit_log l
+        LEFT JOIN admin_user au ON au.id = l.admin_id
+        <include refid="auditLogWhere"/>
+        ORDER BY l.id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
     <sql id="auditWhere">
         WHERE 1 = 1
         <if test="region != null and region != ''">

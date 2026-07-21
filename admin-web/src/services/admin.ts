@@ -1,6 +1,7 @@
 import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/http'
 import type {
   AdminAuditTask,
+  AdminAuditLog,
   AdminImportBatch,
   AdminImportPayload,
   AdminImportResult,
@@ -49,6 +50,15 @@ export interface AdminAuditTaskQuery {
   region?: Region
   bizType?: number
   status?: number
+  page?: number
+  pageSize?: number
+}
+
+export interface AdminAuditLogQuery {
+  adminId?: number
+  action?: string
+  target?: string
+  keyword?: string
   page?: number
   pageSize?: number
 }
@@ -143,6 +153,10 @@ export function listImportBatches(query: AdminImportBatchQuery) {
 
 export function listAuditTasks(query: AdminAuditTaskQuery) {
   return apiGet<PageResult<AdminAuditTask>>('/api/admin/v1/audit/tasks', query)
+}
+
+export function listAdminAuditLogs(query: AdminAuditLogQuery) {
+  return apiGet<PageResult<AdminAuditLog>>('/api/admin/v1/audit/logs', query)
 }
 
 export function passAuditTask(taskId: number, payload: { remark?: string }) {
