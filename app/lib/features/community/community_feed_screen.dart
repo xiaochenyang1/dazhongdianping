@@ -120,6 +120,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                         PostEditorScreen(repository: widget.repository),
                   ),
                 );
+                if (!mounted) return;
                 _reload();
               },
               icon: const Icon(Icons.edit_outlined),

@@ -15,6 +15,8 @@ public record PostResponse(
         Long dealId,
         Integer likeCount,
         Integer commentCount,
+        Integer repostCount,
+        boolean repostedByCurrentUser,
         Integer auditStatus,
         String auditStatusText,
         String auditRemark,

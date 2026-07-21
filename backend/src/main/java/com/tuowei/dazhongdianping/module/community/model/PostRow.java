@@ -18,6 +18,7 @@ public class PostRow {
     private Long dealId;
     private Integer likeCount;
     private Integer commentCount;
+    private Integer repostCount;
     private Integer auditStatus;
     private String auditRemark;
     private Integer status;

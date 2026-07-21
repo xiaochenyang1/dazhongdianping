@@ -12,7 +12,11 @@ import 'package:flutter_test/flutter_test.dart';
 class CommunityScreenApi
     implements JsonApi, JsonMutationApi, JsonDeleteApi, FileUploadApi {
   String? path;
+  String? postPath;
+  String? deletePath;
   Object? body;
+  bool reposted = false;
+  int repostCount = 2;
 
   Map<String, dynamic> get post => {
     'id': 7,
@@ -23,11 +27,13 @@ class CommunityScreenApi
     'contentType': 1,
     'likeCount': 3,
     'commentCount': 1,
+    'repostCount': repostCount,
+    'repostedByCurrentUser': reposted,
     'auditStatus': 1,
     'auditStatusText': '审核通过',
     'auditRemark': '',
     'status': 1,
-    'images': const [],
+    'images': const ['https://files.example/market.jpg'],
     'topics': ['伦敦生活'],
     'createdAt': '2026-07-16 10:00:00',
   };
@@ -65,8 +71,14 @@ class CommunityScreenApi
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     this.path = path;
+    postPath = path;
     this.body = body;
     if (path.endsWith('/like')) return {'liked': true, 'likeCount': 4};
+    if (path.endsWith('/repost')) {
+      reposted = true;
+      repostCount = 3;
+      return {'postId': 7, 'reposted': true, 'repostCount': repostCount};
+    }
     if (path.endsWith('/comments')) {
       return {
         'id': 12,
@@ -84,7 +96,16 @@ class CommunityScreenApi
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async =>
       post;
   @override
-  Future<Map<String, dynamic>> deleteJson(String path) async => const {};
+  Future<Map<String, dynamic>> deleteJson(String path) async {
+    deletePath = path;
+    if (path.endsWith('/repost')) {
+      reposted = false;
+      repostCount = 2;
+      return {'postId': 7, 'reposted': false, 'repostCount': repostCount};
+    }
+    return const {};
+  }
+
   @override
   Future<Map<String, dynamic>> uploadBytes(
     String path, {
@@ -160,8 +181,45 @@ void main() {
     expect(find.text('伦敦咖啡'), findsOneWidget);
   });
 
+  testWidgets(
+    'community feed does not reload after disposal while editor is open',
+    (tester) async {
+      final showFeed = ValueNotifier(true);
+      addTearDown(showFeed.dispose);
+      final repository = CommunityRepository(CommunityScreenApi());
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ValueListenableBuilder<bool>(
+            valueListenable: showFeed,
+            builder: (_, visible, _) => visible
+                ? CommunityFeedScreen(repository: repository, canInteract: true)
+                : const SizedBox.shrink(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('发帖'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PostEditorScreen), findsOneWidget);
+
+      showFeed.value = false;
+      await tester.pump();
+      expect(
+        find.byType(CommunityFeedScreen, skipOffstage: false),
+        findsNothing,
+      );
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('community feed opens a readable post detail', (tester) async {
-    final repository = CommunityRepository(CommunityScreenApi());
+    final api = CommunityScreenApi();
+    final repository = CommunityRepository(api);
     await tester.pumpWidget(
       MaterialApp(
         home: CommunityFeedScreen(repository: repository, canInteract: true),
@@ -175,6 +233,51 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('下午三点后'), findsOneWidget);
+    expect(find.byKey(const Key('post-image-0')), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('收藏帖子'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('收藏帖子'));
+    await tester.pumpAndSettle();
+    expect(api.path, '/api/c/v1/favorites');
+    expect(api.body, {'targetType': 2, 'targetId': 7});
+    expect(find.text('取消收藏'), findsOneWidget);
+
+    await tester.tap(find.text('取消收藏'));
+    await tester.pumpAndSettle();
+    expect(api.deletePath, '/api/c/v1/favorites?targetType=2&targetId=7');
+
+    await tester.tap(find.text('转发 2'));
+    await tester.pumpAndSettle();
+    expect(api.postPath, '/api/c/v1/posts/7/repost');
+    expect(find.text('取消转发 3'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('取消转发 3'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('取消转发 3'));
+    await tester.pumpAndSettle();
+    expect(api.deletePath, '/api/c/v1/posts/7/repost');
+    expect(find.text('转发 2'), findsOneWidget);
+
+    await tester.tap(find.text('举报'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('post-report-reason')),
+      '内容已经过期',
+    );
+    await tester.tap(find.text('提交举报'));
+    await tester.pumpAndSettle();
+    expect(api.path, '/api/c/v1/posts/7/report');
+    expect(api.body, {'reason': '内容已经过期'});
+
+    await tester.scrollUntilVisible(
+      find.text('收藏了。'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('收藏了。'), findsOneWidget);
   });
 

@@ -9,6 +9,7 @@ import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
 import com.tuowei.dazhongdianping.module.circle.mapper.CircleMapper;
 import com.tuowei.dazhongdianping.module.community.mapper.CommunityMapper;
+import com.tuowei.dazhongdianping.module.community.model.PostRow;
 import com.tuowei.dazhongdianping.module.community.model.response.PostResponse;
 import com.tuowei.dazhongdianping.module.circle.model.CircleMemberRow;
 import com.tuowei.dazhongdianping.module.circle.model.CircleRow;
@@ -17,6 +18,7 @@ import com.tuowei.dazhongdianping.module.circle.model.response.CircleMembershipR
 import com.tuowei.dazhongdianping.module.circle.model.response.CircleResponse;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.LinkedHashSet;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,10 +54,18 @@ public class CircleService {
         PageWindow window = pageWindow(page, pageSize);
         String region = RegionContext.getRegion().name();
         long total = communityMapper.countCirclePosts(id, region);
-        List<PostResponse> items = communityMapper.selectCirclePosts(id, region, window.size(), window.offset()).stream()
+        Long currentUserId = optionalUserId();
+        List<PostRow> rows = communityMapper.selectCirclePosts(id, region, window.size(), window.offset());
+        LinkedHashSet<Long> repostedPostIds = currentUserId == null || rows.isEmpty()
+                ? new LinkedHashSet<>()
+                : new LinkedHashSet<>(communityMapper.selectUserPostRepostIds(
+                        rows.stream().map(PostRow::getId).toList(), currentUserId));
+        List<PostResponse> items = rows.stream()
                 .map(row -> new PostResponse(row.getId(), row.getUserId(), row.getCircleId(), row.getCircleName(),
                         row.getUserName(), row.getTitle(), row.getContent(), row.getContentType(), row.getShopId(), row.getDealId(),
-                        row.getLikeCount(), row.getCommentCount(), row.getAuditStatus(), "审核通过", row.getAuditRemark(), row.getStatus(),
+                        row.getLikeCount(), row.getCommentCount(), row.getRepostCount(),
+                        repostedPostIds.contains(row.getId()),
+                        row.getAuditStatus(), "审核通过", row.getAuditRemark(), row.getStatus(),
                         communityMapper.selectPostImages(row.getId()), communityMapper.selectPostTopics(row.getId()),
                         row.getCreatedAt() == null ? "" : row.getCreatedAt().format(FORMATTER),
                         row.getUpdatedAt() == null ? "" : row.getUpdatedAt().format(FORMATTER))).toList();

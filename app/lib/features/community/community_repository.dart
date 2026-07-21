@@ -12,6 +12,8 @@ class CommunityPost {
     required this.contentType,
     required this.likeCount,
     required this.commentCount,
+    required this.repostCount,
+    required this.repostedByCurrentUser,
     required this.auditStatus,
     required this.auditStatusText,
     required this.auditRemark,
@@ -34,6 +36,8 @@ class CommunityPost {
   final int? circleId;
   final int likeCount;
   final int commentCount;
+  final int repostCount;
+  final bool repostedByCurrentUser;
   final int auditStatus;
   final String auditStatusText;
   final String auditRemark;
@@ -53,6 +57,8 @@ class CommunityPost {
     circleId: json['circleId'] as int?,
     likeCount: json['likeCount'] as int? ?? 0,
     commentCount: json['commentCount'] as int? ?? 0,
+    repostCount: json['repostCount'] as int? ?? 0,
+    repostedByCurrentUser: json['repostedByCurrentUser'] as bool? ?? false,
     auditStatus: json['auditStatus'] as int? ?? 0,
     auditStatusText: json['auditStatusText'] as String? ?? '',
     auditRemark: json['auditRemark'] as String? ?? '',
@@ -127,6 +133,24 @@ class CommunityLikeResult {
   final int likeCount;
 }
 
+class CommunityRepostResult {
+  const CommunityRepostResult({
+    required this.postId,
+    required this.reposted,
+    required this.repostCount,
+  });
+  final int postId;
+  final bool reposted;
+  final int repostCount;
+
+  factory CommunityRepostResult.fromJson(Map<String, dynamic> json) =>
+      CommunityRepostResult(
+        postId: json['postId'] as int? ?? 0,
+        reposted: json['reposted'] as bool? ?? false,
+        repostCount: json['repostCount'] as int? ?? 0,
+      );
+}
+
 class CommunityImageUpload {
   const CommunityImageUpload({
     required this.bytes,
@@ -189,6 +213,16 @@ class CommunityRepository {
     );
   }
 
+  Future<CommunityRepostResult> repostPost(int postId) async =>
+      CommunityRepostResult.fromJson(
+        await api.postJson('/api/c/v1/posts/$postId/repost'),
+      );
+
+  Future<CommunityRepostResult> removeRepost(int postId) async =>
+      CommunityRepostResult.fromJson(
+        await _deleteApi.deleteJson('/api/c/v1/posts/$postId/repost'),
+      );
+
   Future<List<CommunityComment>> loadComments(int postId) async {
     final result = await api.getJson(
       '/api/c/v1/posts/$postId/comments',
@@ -212,6 +246,19 @@ class CommunityRepository {
     await api.postJson(
       '/api/c/v1/posts/$postId/report',
       body: {'reason': reason},
+    );
+  }
+
+  Future<void> favoritePost(int postId) async {
+    await api.postJson(
+      '/api/c/v1/favorites',
+      body: {'targetType': 2, 'targetId': postId},
+    );
+  }
+
+  Future<void> unfavoritePost(int postId) async {
+    await (api as JsonDeleteApi).deleteJson(
+      '/api/c/v1/favorites?targetType=2&targetId=$postId',
     );
   }
 

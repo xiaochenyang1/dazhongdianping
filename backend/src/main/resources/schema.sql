@@ -468,6 +468,7 @@ CREATE TABLE IF NOT EXISTS post (
     deal_id BIGINT,
     like_count INT NOT NULL DEFAULT 0,
     comment_count INT NOT NULL DEFAULT 0,
+    repost_count INT NOT NULL DEFAULT 0,
     audit_status TINYINT NOT NULL DEFAULT 0,
     audit_remark VARCHAR(255) NOT NULL DEFAULT '',
     status TINYINT NOT NULL DEFAULT 1,
@@ -545,6 +546,17 @@ CREATE TABLE IF NOT EXISTS post_like (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_post_like ON post_like(post_id, user_id);
+
+CREATE TABLE IF NOT EXISTS post_repost (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_post_repost_user ON post_repost(post_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_post_repost_user ON post_repost(user_id, created_at, id);
 
 CREATE TABLE IF NOT EXISTS post_comment (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

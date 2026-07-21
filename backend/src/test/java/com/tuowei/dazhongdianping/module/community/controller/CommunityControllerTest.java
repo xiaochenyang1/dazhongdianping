@@ -302,6 +302,93 @@ class CommunityControllerTest {
         org.assertj.core.api.Assertions.assertThat(topicPostCount(newTopicId)).isZero();
     }
 
+    @Test
+    void shouldRepostApprovedPostIdempotentlyAndHonorRegionAndVisibility() throws Exception {
+        String authorToken = registerUser();
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("可转发的社区帖子", "只有公开审核通过的内容才能被转发。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long postId = readLong(created, "/data/id");
+
+        String adminToken = loginAdmin();
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(postId))
+                        .header("Authorization", bearer(adminToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        String actorToken = registerUser();
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/repost", postId)
+                        .header("Authorization", bearer(actorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.postId").value(postId))
+                .andExpect(jsonPath("$.data.reposted").value(true))
+                .andExpect(jsonPath("$.data.repostCount").value(1));
+
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/repost", postId)
+                        .header("Authorization", bearer(actorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reposted").value(true))
+                .andExpect(jsonPath("$.data.repostCount").value(1));
+
+        mockMvc.perform(get("/api/c/v1/posts/{postId}", postId)
+                        .header("Authorization", bearer(actorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.repostCount").value(1))
+                .andExpect(jsonPath("$.data.repostedByCurrentUser").value(true));
+
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/repost", postId)
+                        .header("Authorization", bearer(actorToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isNotFound());
+
+        MvcResult pendingCreated = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(actorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("待审核不可转发", "审核前不应产生转发关系。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long pendingPostId = readLong(pendingCreated, "/data/id");
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/repost", postId)
+                        .header("Authorization", bearer(actorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/repost", pendingPostId)
+                        .header("Authorization", bearer(actorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/c/v1/posts/{postId}/repost", postId)
+                        .header("Authorization", bearer(actorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reposted").value(false))
+                .andExpect(jsonPath("$.data.repostCount").value(0));
+
+        mockMvc.perform(delete("/api/c/v1/posts/{postId}/repost", postId)
+                        .header("Authorization", bearer(actorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reposted").value(false))
+                .andExpect(jsonPath("$.data.repostCount").value(0));
+
+        org.assertj.core.api.Assertions.assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM post_repost WHERE post_id=? AND user_id=(SELECT id FROM app_user WHERE email LIKE 'community-%' ORDER BY id DESC LIMIT 1)",
+                Integer.class,
+                postId)).isZero();
+        org.assertj.core.api.Assertions.assertThat(jdbcTemplate.queryForObject(
+                "SELECT repost_count FROM post WHERE id=?", Integer.class, postId)).isZero();
+    }
+
     private int topicPostCount(long topicId) {
         return jdbcTemplate.queryForObject(
                 "SELECT post_count FROM topic WHERE id=?",

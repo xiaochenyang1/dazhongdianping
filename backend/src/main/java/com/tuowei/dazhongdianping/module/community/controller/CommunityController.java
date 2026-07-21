@@ -9,6 +9,7 @@ import com.tuowei.dazhongdianping.module.community.model.response.PostResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostLikeResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostReportResponse;
+import com.tuowei.dazhongdianping.module.community.model.response.PostRepostResponse;
 import com.tuowei.dazhongdianping.module.community.service.CommunityService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,6 +79,16 @@ public class CommunityController {
     @PostMapping("/posts/{postId}/like")
     public ApiResponse<PostLikeResponse> like(@PathVariable Long postId) {
         return ApiResponse.success(communityService.toggleLike(postId));
+    }
+
+    @PostMapping("/posts/{postId}/repost")
+    public ApiResponse<PostRepostResponse> repost(@PathVariable Long postId) {
+        return ApiResponse.success(communityService.repost(postId));
+    }
+
+    @DeleteMapping("/posts/{postId}/repost")
+    public ApiResponse<PostRepostResponse> removeRepost(@PathVariable Long postId) {
+        return ApiResponse.success(communityService.removeRepost(postId));
     }
 
     @PostMapping("/posts/{postId}/comments")

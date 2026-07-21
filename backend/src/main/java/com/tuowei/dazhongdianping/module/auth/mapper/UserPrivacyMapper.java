@@ -12,6 +12,7 @@ import com.tuowei.dazhongdianping.module.reservation.model.ReservationRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.trade.model.OrderRow;
 import com.tuowei.dazhongdianping.module.community.model.PostRow;
+import com.tuowei.dazhongdianping.module.community.model.PostRepostRow;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +73,10 @@ public interface UserPrivacyMapper {
 
     List<ReviewRow> selectReviewsByUserId(@Param("userId") Long userId);
     List<PostRow> selectPostsByUserId(@Param("userId") Long userId);
+    List<PostRepostRow> selectPostRepostsByUserId(@Param("userId") Long userId);
+    List<Long> selectAffectedRepostPostIdsForDeletion(@Param("userId") Long userId);
+    int deletePostRepostsForAccountDeletion(@Param("userId") Long userId);
+    int refreshPostRepostCount(@Param("postId") Long postId);
 
     List<OrderRow> selectOrdersByUserId(@Param("userId") Long userId);
 

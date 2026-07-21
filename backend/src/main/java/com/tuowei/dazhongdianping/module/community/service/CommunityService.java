@@ -21,10 +21,12 @@ import com.tuowei.dazhongdianping.module.community.model.response.PostResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostLikeResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostReportResponse;
+import com.tuowei.dazhongdianping.module.community.model.response.PostRepostResponse;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
 import java.util.List;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -126,8 +128,8 @@ public class CommunityService {
         int size = pageSize == null ? 12 : Math.min(50, Math.max(1, pageSize));
         UserSession user = currentUser();
         long total = communityMapper.countUserPosts(user.userId(), region());
-        List<PostResponse> list = communityMapper.selectUserPosts(user.userId(), region(), size, (currentPage - 1) * size)
-                .stream().map(this::toResponse).toList();
+        List<PostRow> rows = communityMapper.selectUserPosts(user.userId(), region(), size, (currentPage - 1) * size);
+        List<PostResponse> list = toResponses(rows);
         return new PageResult<>(list, total, currentPage, size, (currentPage - 1) * size + list.size() < total);
     }
 
@@ -135,8 +137,8 @@ public class CommunityService {
         int currentPage = page == null ? 1 : Math.max(1, page);
         int size = pageSize == null ? 12 : Math.min(50, Math.max(1, pageSize));
         long total = communityMapper.countPublicPosts(region());
-        List<PostResponse> list = communityMapper.selectPublicPosts(region(), size, (currentPage - 1) * size)
-                .stream().map(this::toResponse).toList();
+        List<PostRow> rows = communityMapper.selectPublicPosts(region(), size, (currentPage - 1) * size);
+        List<PostResponse> list = toResponses(rows);
         return new PageResult<>(list, total, currentPage, size, (currentPage - 1) * size + list.size() < total);
     }
 
@@ -145,8 +147,8 @@ public class CommunityService {
         int size = pageSize == null ? 12 : Math.min(50, Math.max(1, pageSize));
         UserSession user = currentUser();
         long total = communityMapper.countFollowingPosts(user.userId(), region());
-        List<PostResponse> list = communityMapper.selectFollowingPosts(user.userId(), region(), size, (currentPage - 1) * size)
-                .stream().map(this::toResponse).toList();
+        List<PostRow> rows = communityMapper.selectFollowingPosts(user.userId(), region(), size, (currentPage - 1) * size);
+        List<PostResponse> list = toResponses(rows);
         return new PageResult<>(list, total, currentPage, size, (currentPage - 1) * size + list.size() < total);
     }
 
@@ -154,8 +156,8 @@ public class CommunityService {
         int currentPage = page == null ? 1 : Math.max(1, page);
         int size = pageSize == null ? 20 : Math.min(50, Math.max(1, pageSize));
         long total = communityMapper.countTopicPosts(topicId, region());
-        List<PostResponse> list = communityMapper.selectTopicPosts(topicId, region(), size, (currentPage - 1) * size)
-                .stream().map(this::toResponse).toList();
+        List<PostRow> rows = communityMapper.selectTopicPosts(topicId, region(), size, (currentPage - 1) * size);
+        List<PostResponse> list = toResponses(rows);
         return new PageResult<>(list, total, currentPage, size,
                 (currentPage - 1) * size + list.size() < total);
     }
@@ -170,6 +172,32 @@ public class CommunityService {
         communityMapper.refreshPostLikeCount(postId);
         topicService.touchTopicsByPostId(postId);
         return new PostLikeResponse(postId, !liked, communityMapper.countPostLikes(postId));
+    }
+
+    @Transactional
+    public PostRepostResponse repost(Long postId) {
+        UserSession user = currentUser();
+        requirePublicPostForUpdate(postId);
+        if (communityMapper.countUserPostRepost(postId, user.userId()) == 0) {
+            try {
+                communityMapper.insertPostRepost(postId, user.userId(), region());
+            } catch (DuplicateKeyException ignored) {
+                // Duplicate repost requests should remain idempotent.
+            }
+        }
+        communityMapper.refreshPostRepostCount(postId);
+        topicService.touchTopicsByPostId(postId);
+        return new PostRepostResponse(postId, true, communityMapper.countPostReposts(postId));
+    }
+
+    @Transactional
+    public PostRepostResponse removeRepost(Long postId) {
+        UserSession user = currentUser();
+        requirePublicPostForUpdate(postId);
+        communityMapper.deletePostRepost(postId, user.userId());
+        communityMapper.refreshPostRepostCount(postId);
+        topicService.touchTopicsByPostId(postId);
+        return new PostRepostResponse(postId, false, communityMapper.countPostReposts(postId));
     }
 
     @Transactional
@@ -226,9 +254,26 @@ public class CommunityService {
     }
 
     private PostResponse toResponse(PostRow row) {
+        UserSession user = UserSessionContext.get();
+        boolean repostedByCurrentUser = user != null
+                && communityMapper.countUserPostRepost(row.getId(), user.userId()) > 0;
+        return toResponse(row, repostedByCurrentUser);
+    }
+
+    private List<PostResponse> toResponses(List<PostRow> rows) {
+        if (rows.isEmpty()) return List.of();
+        UserSession user = UserSessionContext.get();
+        LinkedHashSet<Long> repostedPostIds = user == null
+                ? new LinkedHashSet<>()
+                : new LinkedHashSet<>(communityMapper.selectUserPostRepostIds(
+                        rows.stream().map(PostRow::getId).toList(), user.userId()));
+        return rows.stream().map(row -> toResponse(row, repostedPostIds.contains(row.getId()))).toList();
+    }
+
+    private PostResponse toResponse(PostRow row, boolean repostedByCurrentUser) {
         return new PostResponse(
                 row.getId(), row.getUserId(), row.getCircleId(), row.getCircleName(), row.getUserName(), row.getTitle(), row.getContent(), row.getContentType(),
-                row.getShopId(), row.getDealId(), row.getLikeCount(), row.getCommentCount(), row.getAuditStatus(),
+                row.getShopId(), row.getDealId(), row.getLikeCount(), row.getCommentCount(), row.getRepostCount(), repostedByCurrentUser, row.getAuditStatus(),
                 auditStatusText(row.getAuditStatus()), row.getAuditRemark(), row.getStatus(),
                 communityMapper.selectPostImages(row.getId()), communityMapper.selectPostTopics(row.getId()),
                 format(row.getCreatedAt()), format(row.getUpdatedAt())
@@ -237,6 +282,12 @@ public class CommunityService {
 
     private PostRow requirePublicPost(Long postId) {
         PostRow row = communityMapper.selectPublicPost(postId, region());
+        if (row == null) throw new NotFoundException("帖子不存在");
+        return row;
+    }
+
+    private PostRow requirePublicPostForUpdate(Long postId) {
+        PostRow row = communityMapper.selectPublicPostForUpdate(postId, region());
         if (row == null) throw new NotFoundException("帖子不存在");
         return row;
     }

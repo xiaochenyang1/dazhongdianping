@@ -22,6 +22,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   late Future<CommunityPost> _post;
   late Future<List<CommunityComment>> _comments;
   final _commentController = TextEditingController();
+  final _reportController = TextEditingController();
+  bool _favoriteSaving = false;
+  bool _favorited = false;
+  bool _repostSaving = false;
 
   @override
   void initState() {
@@ -33,25 +37,123 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   void dispose() {
     _commentController.dispose();
+    _reportController.dispose();
     super.dispose();
   }
 
   Future<void> _like() async {
     final result = await widget.repository.toggleLike(widget.postId);
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(result.liked ? '已点赞' : '已取消点赞')));
-    }
-    setState(() => _post = widget.repository.loadPost(widget.postId));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result.liked ? '已点赞' : '已取消点赞')));
+    final refreshedPost = widget.repository.loadPost(widget.postId);
+    setState(() {
+      _post = refreshedPost;
+    });
   }
 
   Future<void> _comment() async {
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
     await widget.repository.createComment(widget.postId, content);
+    if (!mounted) return;
     _commentController.clear();
-    setState(() => _comments = widget.repository.loadComments(widget.postId));
+    final refreshedComments = widget.repository.loadComments(widget.postId);
+    setState(() {
+      _comments = refreshedComments;
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_favoriteSaving) return;
+    setState(() => _favoriteSaving = true);
+    try {
+      if (_favorited) {
+        await widget.repository.unfavoritePost(widget.postId);
+      } else {
+        await widget.repository.favoritePost(widget.postId);
+      }
+      if (mounted) setState(() => _favorited = !_favorited);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('收藏操作失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _favoriteSaving = false);
+    }
+  }
+
+  Future<void> _toggleRepost(CommunityPost post) async {
+    if (_repostSaving) return;
+    setState(() => _repostSaving = true);
+    try {
+      final result = post.repostedByCurrentUser
+          ? await widget.repository.removeRepost(widget.postId)
+          : await widget.repository.repostPost(widget.postId);
+      if (mounted) {
+        final refreshedPost = widget.repository.loadPost(widget.postId);
+        setState(() {
+          _post = refreshedPost;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.reposted ? '已转发' : '已取消转发')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('转发操作失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _repostSaving = false);
+    }
+  }
+
+  Future<void> _report() async {
+    _reportController.clear();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('举报帖子'),
+        content: TextField(
+          key: const Key('post-report-reason'),
+          controller: _reportController,
+          maxLength: 255,
+          maxLines: 4,
+          decoration: const InputDecoration(labelText: '举报理由'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(_reportController.text.trim()),
+            child: const Text('提交举报'),
+          ),
+        ],
+      ),
+    );
+    if (reason == null || reason.isEmpty) return;
+    try {
+      await widget.repository.reportPost(widget.postId, reason);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('举报已提交')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('举报提交失败：$error')));
+      }
+    }
   }
 
   @override
@@ -106,11 +208,64 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               style: const TextStyle(fontSize: 17, height: 1.65),
             ),
             const SizedBox(height: 16),
+            if (post.images.isNotEmpty) ...[
+              SizedBox(
+                height: 220,
+                child: PageView.builder(
+                  itemCount: post.images.length,
+                  itemBuilder: (_, index) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        post.images[index],
+                        key: Key('post-image-$index'),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const ColoredBox(
+                          color: Color(0xFFE9E4DE),
+                          child: Center(
+                            child: Icon(Icons.broken_image_outlined),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             if (widget.canInteract)
-              OutlinedButton.icon(
-                onPressed: _like,
-                icon: const Icon(Icons.favorite_border),
-                label: Text('点赞 ${post.likeCount}'),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _like,
+                    icon: const Icon(Icons.favorite_border),
+                    label: Text('点赞 ${post.likeCount}'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _favoriteSaving ? null : _toggleFavorite,
+                    icon: Icon(
+                      _favorited ? Icons.bookmark : Icons.bookmark_border,
+                    ),
+                    label: Text(_favorited ? '取消收藏' : '收藏帖子'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _repostSaving ? null : () => _toggleRepost(post),
+                    icon: const Icon(Icons.repeat),
+                    label: Text(
+                      post.repostedByCurrentUser
+                          ? '取消转发 ${post.repostCount}'
+                          : '转发 ${post.repostCount}',
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _report,
+                    icon: const Icon(Icons.flag_outlined),
+                    label: const Text('举报'),
+                  ),
+                ],
               ),
             const Divider(height: 32),
             const Text(

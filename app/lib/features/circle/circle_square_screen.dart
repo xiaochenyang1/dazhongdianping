@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
+import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:flutter/material.dart';
 
 class CircleSquareScreen extends StatelessWidget {
@@ -310,6 +311,17 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         trailing: Text('❤ ${post.likeCount}'),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => PostDetailScreen(
+                              repository: CommunityRepository(
+                                widget.repository.api,
+                              ),
+                              postId: post.id,
+                              canInteract: widget.canInteract,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   )

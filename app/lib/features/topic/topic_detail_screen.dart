@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
+import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -109,7 +110,16 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                   title: Text(post.title, style: const TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: Text(post.content, maxLines: 2, overflow: TextOverflow.ellipsis),
                   trailing: Text('❤ ${post.likeCount}'),
-                  onTap: widget.onUserTap == null ? null : () => widget.onUserTap!(context, post.userId),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PostDetailScreen(
+                        repository: CommunityRepository(widget.repository.api),
+                        postId: post.id,
+                        canInteract: widget.canInteract,
+                        onUserTap: widget.onUserTap,
+                      ),
+                    ),
+                  ),
                 ),
               )).toList(),
             );

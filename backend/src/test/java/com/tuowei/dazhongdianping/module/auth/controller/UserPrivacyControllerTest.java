@@ -147,6 +147,43 @@ class UserPrivacyControllerTest {
     }
 
     @Test
+    void shouldExportRepostRelationshipsWithPostData() throws Exception {
+        SessionFixture session = registerUser("privacy-reposts@example.com", "RepostsPass1!");
+        jdbcTemplate.update("""
+                INSERT INTO post(user_id,region,user_name,title,content,content_type,like_count,comment_count,
+                                 audit_status,audit_remark,status,is_deleted)
+                VALUES(91001,'EU','原帖作者','隐私导出的被转发帖子','公开帖子内容',1,0,0,1,'',1,FALSE)
+                """);
+        Long postId = jdbcTemplate.queryForObject(
+                "SELECT id FROM post WHERE title='隐私导出的被转发帖子'", Long.class);
+
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/repost", postId)
+                        .header("Authorization", bearer(session.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.repostCount").value(1));
+
+        MvcResult createResult = mockMvc.perform(post("/api/c/v1/privacy/export-tasks")
+                        .header("Authorization", bearer(session.accessToken()))
+                        .header("Idempotency-Key", "privacy-repost-export-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"modules\":[\"posts\"],\"format\":\"zip\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        MvcResult download = mockMvc.perform(get("/api/c/v1/privacy/export-tasks/{taskId}/download",
+                        readText(createResult, "/data/id"))
+                        .header("Authorization", bearer(session.accessToken())))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode root = objectMapper.readTree(unzipSingleEntry(download.getResponse().getContentAsByteArray()));
+
+        assertJsonText(root, "/modules/posts/0/recordType", "repost");
+        assertJsonText(root, "/modules/posts/0/postId", postId);
+        assertJsonText(root, "/modules/posts/0/title", "隐私导出的被转发帖子");
+        assertJsonText(root, "/modules/posts/0/region", "EU");
+    }
+
+    @Test
     void shouldExportRealFollowingAndFollowerRelationships() throws Exception {
         SessionFixture session = registerUser("privacy-follows@example.com", "FollowsPass1!");
         jdbcTemplate.update("INSERT INTO app_user(nickname,email,preferred_region,status,is_deleted) VALUES(?,?,?,?,FALSE)",
@@ -373,6 +410,30 @@ class UserPrivacyControllerTest {
         jdbcTemplate.update("INSERT INTO topic_follow(topic_id,user_id) VALUES(?,?)", deletionTopicTwo, session.userId());
         jdbcTemplate.update("INSERT INTO topic_follow(topic_id,user_id) VALUES(?,94001)", deletionTopicOne);
         jdbcTemplate.update("""
+                INSERT INTO post(user_id,region,user_name,title,content,content_type,like_count,comment_count,repost_count,
+                                 audit_status,audit_remark,status,is_deleted)
+                VALUES(91002,'EU','注销转发原帖作者','注销转发治理原帖','用于验证注销清理关系',1,0,0,1,1,'',1,FALSE)
+                """);
+        Long deletionRepostPostId = jdbcTemplate.queryForObject(
+                "SELECT id FROM post WHERE title='注销转发治理原帖'", Long.class);
+        jdbcTemplate.update(
+                "INSERT INTO post_repost(post_id,user_id,region) VALUES(?,?, 'EU')",
+                deletionRepostPostId,
+                session.userId()
+        );
+        jdbcTemplate.update("""
+                INSERT INTO post(user_id,region,user_name,title,content,content_type,like_count,comment_count,repost_count,
+                                 audit_status,audit_remark,status,is_deleted)
+                VALUES(?,?,?,?,?,1,0,0,1,1,'',1,FALSE)
+                """, session.userId(), "EU", "注销用户原帖", "被他人转发的原帖", "原帖内容");
+        Long ownedRepostPostId = jdbcTemplate.queryForObject(
+                "SELECT id FROM post WHERE title='被他人转发的原帖'", Long.class);
+        jdbcTemplate.update(
+                "INSERT INTO post_repost(post_id,user_id,region) VALUES(?,?, 'EU')",
+                ownedRepostPostId,
+                relatedUserId
+        );
+        jdbcTemplate.update("""
                 INSERT INTO topic_hot_snapshot(topic_id,region,score,post_count_7d,like_count_7d,comment_count_7d,calculated_at)
                 VALUES(?,'EU',77,1,1,1,CURRENT_TIMESTAMP)
                 """, deletionTopicOne);
@@ -464,6 +525,14 @@ class UserPrivacyControllerTest {
                 "SELECT follower_count FROM topic WHERE id=?", Integer.class, deletionTopicTwo);
         Integer preservedTopicSnapshots = jdbcTemplate.queryForObject(
                 "SELECT COUNT(1) FROM topic_hot_snapshot WHERE topic_id=?", Integer.class, deletionTopicOne);
+        Integer remainingPostReposts = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM post_repost WHERE user_id=?", Integer.class, session.userId());
+        Integer governedRepostCount = jdbcTemplate.queryForObject(
+                "SELECT repost_count FROM post WHERE id=?", Integer.class, deletionRepostPostId);
+        Integer remainingRepostsOnOwnedPost = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM post_repost WHERE post_id=?", Integer.class, ownedRepostPostId);
+        Integer governedOwnedRepostCount = jdbcTemplate.queryForObject(
+                "SELECT repost_count FROM post WHERE id=?", Integer.class, ownedRepostPostId);
 
         if (deleteTaskStatus == null || deleteTaskStatus != 3) {
             throw new AssertionError("删除任务没有被处理成已完成");
@@ -485,6 +554,10 @@ class UserPrivacyControllerTest {
         if (governedTopicOneCount == null || governedTopicOneCount != 1) throw new AssertionError("话题一关注数没有按真实关系重算");
         if (governedTopicTwoCount == null || governedTopicTwoCount != 0) throw new AssertionError("话题二关注数没有按真实关系重算");
         if (preservedTopicSnapshots == null || preservedTopicSnapshots != 1) throw new AssertionError("匿名热榜快照不应按用户删除");
+        if (remainingPostReposts == null || remainingPostReposts != 0) throw new AssertionError("用户注销后帖子转发关系没有清理");
+        if (governedRepostCount == null || governedRepostCount != 0) throw new AssertionError("用户注销后帖子转发数没有按真实关系重算");
+        if (remainingRepostsOnOwnedPost == null || remainingRepostsOnOwnedPost != 0) throw new AssertionError("用户注销后原帖上的他人转发关系没有治理");
+        if (governedOwnedRepostCount == null || governedOwnedRepostCount != 0) throw new AssertionError("用户注销后原帖转发数没有重算");
     }
 
     private SessionFixture registerUser(String email, String password) throws Exception {

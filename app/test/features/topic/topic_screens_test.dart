@@ -47,6 +47,10 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     String path, {
     Map<String, Object?>? query,
   }) async {
+    if (path == '/api/c/v1/posts/7') return post;
+    if (path == '/api/c/v1/posts/7/comments') {
+      return {'list': const [], 'total': 0};
+    }
     if (path == '/api/c/v1/topics/following') {
       followingCalls++;
       return {
@@ -147,6 +151,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('已关注'), findsWidgets);
     expect(find.text('89 人关注'), findsOneWidget);
+  });
+
+  testWidgets('topic post opens the community post detail', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicDetailScreen(
+          repository: TopicRepository(TopicScreenApi()),
+          initial: TopicSummary.fromJson(TopicScreenApi().topic()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('周末咖啡地图'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('帖子详情'), findsOneWidget);
+    expect(find.text('三家新店实测。'), findsOneWidget);
   });
 
   testWidgets('failed optimistic follow restores state and count', (

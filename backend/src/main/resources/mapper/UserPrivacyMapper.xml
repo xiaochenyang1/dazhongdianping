@@ -340,10 +340,32 @@
     </select>
 
     <select id="selectPostsByUserId" resultType="com.tuowei.dazhongdianping.module.community.model.PostRow">
-        SELECT id,user_id,region,user_name,title,content,content_type,shop_id,deal_id,like_count,comment_count,
+        SELECT id,user_id,region,user_name,title,content,content_type,shop_id,deal_id,like_count,comment_count,repost_count,
                audit_status,audit_remark,status,created_at,updated_at
         FROM post WHERE user_id=#{userId} ORDER BY id DESC
     </select>
+    <select id="selectPostRepostsByUserId" resultType="com.tuowei.dazhongdianping.module.community.model.PostRepostRow">
+        SELECT pr.id,pr.post_id,pr.user_id,pr.region,pr.created_at,
+               p.title AS post_title,p.user_id AS post_user_id,p.user_name AS post_user_name
+        FROM post_repost pr
+        LEFT JOIN post p ON p.id=pr.post_id
+        WHERE pr.user_id=#{userId}
+        ORDER BY pr.id DESC
+    </select>
+    <select id="selectAffectedRepostPostIdsForDeletion" resultType="long">
+        SELECT DISTINCT pr.post_id
+        FROM post_repost pr
+        LEFT JOIN post p ON p.id=pr.post_id
+        WHERE pr.user_id=#{userId} OR p.user_id=#{userId}
+        ORDER BY pr.post_id
+    </select>
+    <delete id="deletePostRepostsForAccountDeletion">
+        DELETE FROM post_repost
+        WHERE user_id=#{userId} OR post_id IN (SELECT id FROM post WHERE user_id=#{userId})
+    </delete>
+    <update id="refreshPostRepostCount">
+        UPDATE post SET repost_count=(SELECT COUNT(1) FROM post_repost WHERE post_id=#{postId}) WHERE id=#{postId}
+    </update>
 
     <select id="selectOrdersByUserId" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">
         SELECT o.id,

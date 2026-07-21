@@ -21,6 +21,8 @@ class CommunityFakeApi
     'dealId': null,
     'likeCount': 3,
     'commentCount': 1,
+    'repostCount': 2,
+    'repostedByCurrentUser': false,
     'auditStatus': 1,
     'auditStatusText': '审核通过',
     'auditRemark': '',
@@ -72,6 +74,9 @@ class CommunityFakeApi
     if (path.endsWith('/like')) {
       return {'postId': 7, 'liked': true, 'likeCount': 4};
     }
+    if (path.endsWith('/repost')) {
+      return {'postId': 7, 'reposted': true, 'repostCount': 3};
+    }
     if (path.endsWith('/comments')) {
       return {
         'id': 12,
@@ -105,6 +110,9 @@ class CommunityFakeApi
   Future<Map<String, dynamic>> deleteJson(String path) async {
     method = 'DELETE';
     this.path = path;
+    if (path.endsWith('/repost')) {
+      return {'postId': 7, 'reposted': false, 'repostCount': 2};
+    }
     return const {};
   }
 
@@ -202,6 +210,21 @@ void main() {
     await repository.reportPost(7, '信息过期');
     expect(api.path, '/api/c/v1/posts/7/report');
     expect(api.body, {'reason': '信息过期'});
+  });
+
+  test('community repository reposts and removes a repost', () async {
+    final api = CommunityFakeApi();
+    final repository = CommunityRepository(api);
+
+    final repost = await repository.repostPost(7);
+    expect(api.method, 'POST');
+    expect(api.path, '/api/c/v1/posts/7/repost');
+    expect(repost.reposted, isTrue);
+    expect(repost.repostCount, 3);
+
+    await repository.removeRepost(7);
+    expect(api.method, 'DELETE');
+    expect(api.path, '/api/c/v1/posts/7/repost');
   });
 
   test('community repository uploads post image bytes', () async {

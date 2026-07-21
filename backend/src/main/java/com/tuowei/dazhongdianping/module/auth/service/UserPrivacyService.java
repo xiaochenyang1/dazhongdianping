@@ -26,6 +26,7 @@ import com.tuowei.dazhongdianping.module.auth.model.response.PrivacyExportTaskRe
 import com.tuowei.dazhongdianping.module.auth.model.response.PrivacyOverviewResponse;
 import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
 import com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow;
+import com.tuowei.dazhongdianping.module.community.model.PostRepostRow;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.trade.model.OrderRow;
@@ -282,6 +283,11 @@ public class UserPrivacyService {
             userPrivacyMapper.anonymizeReviews(userId, anonymousName);
             userPrivacyMapper.anonymizeReviewComments(userId, anonymousName);
             userPrivacyMapper.anonymizeReviewReports(userId, anonymousName);
+            List<Long> repostedPostIds = userPrivacyMapper.selectAffectedRepostPostIdsForDeletion(userId);
+            userPrivacyMapper.deletePostRepostsForAccountDeletion(userId);
+            for (Long postId : repostedPostIds) {
+                userPrivacyMapper.refreshPostRepostCount(postId);
+            }
             userPrivacyMapper.anonymizePosts(userId, anonymousName);
             userPrivacyMapper.anonymizePostComments(userId, anonymousName);
             userPrivacyMapper.anonymizePostReports(userId, anonymousName);
@@ -529,8 +535,10 @@ public class UserPrivacyService {
     }
 
     private List<Map<String, Object>> buildPostModule(Long userId) {
-        return userPrivacyMapper.selectPostsByUserId(userId).stream().map(row -> {
+        List<Map<String, Object>> items = new ArrayList<>();
+        userPrivacyMapper.selectPostsByUserId(userId).forEach(row -> {
             Map<String, Object> item = new LinkedHashMap<>();
+            item.put("recordType", "authored");
             item.put("id", row.getId());
             item.put("region", row.getRegion());
             item.put("title", row.getTitle());
@@ -540,13 +548,27 @@ public class UserPrivacyService {
             item.put("dealId", row.getDealId());
             item.put("likeCount", row.getLikeCount());
             item.put("commentCount", row.getCommentCount());
+            item.put("repostCount", row.getRepostCount());
             item.put("auditStatus", row.getAuditStatus());
             item.put("auditRemark", row.getAuditRemark());
             item.put("status", row.getStatus());
             item.put("createdAt", formatDateTime(row.getCreatedAt()));
             item.put("updatedAt", formatDateTime(row.getUpdatedAt()));
-            return item;
-        }).toList();
+            items.add(item);
+        });
+        for (PostRepostRow row : userPrivacyMapper.selectPostRepostsByUserId(userId)) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("recordType", "repost");
+            item.put("id", row.getId());
+            item.put("postId", row.getPostId());
+            item.put("region", row.getRegion());
+            item.put("title", row.getPostTitle());
+            item.put("postUserId", row.getPostUserId());
+            item.put("postUserName", row.getPostUserName());
+            item.put("repostedAt", formatDateTime(row.getCreatedAt()));
+            items.add(item);
+        }
+        return items;
     }
 
     private Map<String, Object> buildFollowModule(Long userId) {

@@ -13,6 +13,7 @@ public interface CommunityMapper {
     void insertPostTopic(@Param("postId") Long postId, @Param("topicId") Long topicId);
     PostRow selectOwnedPost(@Param("postId") Long postId, @Param("userId") Long userId, @Param("region") String region);
     PostRow selectPublicPost(@Param("postId") Long postId, @Param("region") String region);
+    PostRow selectPublicPostForUpdate(@Param("postId") Long postId, @Param("region") String region);
     List<String> selectPostImages(@Param("postId") Long postId);
     List<String> selectPostTopics(@Param("postId") Long postId);
     long countUserPosts(@Param("userId") Long userId, @Param("region") String region);
@@ -39,6 +40,12 @@ public interface CommunityMapper {
     int deletePostLike(@Param("postId") Long postId, @Param("userId") Long userId);
     int countPostLikes(@Param("postId") Long postId);
     int refreshPostLikeCount(@Param("postId") Long postId);
+    int countUserPostRepost(@Param("postId") Long postId, @Param("userId") Long userId);
+    List<Long> selectUserPostRepostIds(@Param("postIds") List<Long> postIds, @Param("userId") Long userId);
+    void insertPostRepost(@Param("postId") Long postId, @Param("userId") Long userId, @Param("region") String region);
+    int deletePostRepost(@Param("postId") Long postId, @Param("userId") Long userId);
+    int countPostReposts(@Param("postId") Long postId);
+    int refreshPostRepostCount(@Param("postId") Long postId);
     void insertPostComment(PostCommentRow row);
     long countPostComments(@Param("postId") Long postId);
     List<PostCommentRow> selectPostComments(@Param("postId") Long postId, @Param("limit") Integer limit, @Param("offset") Integer offset);

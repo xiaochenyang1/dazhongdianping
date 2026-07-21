@@ -508,6 +508,7 @@ CREATE TABLE `post` (
   `deal_id` BIGINT DEFAULT NULL,
   `like_count` INT NOT NULL DEFAULT 0,
   `comment_count` INT NOT NULL DEFAULT 0,
+  `repost_count` INT NOT NULL DEFAULT 0,
   `audit_status` TINYINT NOT NULL DEFAULT 0,
   `audit_remark` VARCHAR(255) NOT NULL DEFAULT '',
   `status` TINYINT NOT NULL DEFAULT 1,
@@ -584,6 +585,17 @@ CREATE TABLE `post_like` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_post_like` (`post_id`, `user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `post_repost` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `post_id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `region` VARCHAR(8) NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_post_repost_user` (`post_id`, `user_id`),
+  KEY `idx_post_repost_user` (`user_id`, `created_at`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `post_comment` (

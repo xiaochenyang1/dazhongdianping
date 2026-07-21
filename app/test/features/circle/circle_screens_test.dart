@@ -17,34 +17,37 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     'status': 1,
     'joinedByCurrentUser': joined,
   };
+  Map<String, dynamic> get post => {
+    'id': 7,
+    'userId': 9,
+    'userName': '伦敦小王',
+    'circleId': 3,
+    'circleName': '伦敦生活圈',
+    'title': '周末市集指南',
+    'content': '本周六开放',
+    'contentType': 1,
+    'likeCount': 2,
+    'commentCount': 1,
+    'auditStatus': 1,
+    'auditStatusText': '审核通过',
+    'auditRemark': '',
+    'images': const [],
+    'topics': const [],
+    'createdAt': '2026-07-17 10:00:00',
+  };
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
   }) async {
+    if (path == '/api/c/v1/posts/7') return post;
+    if (path == '/api/c/v1/posts/7/comments') {
+      return {'list': const [], 'total': 0};
+    }
     if (path.endsWith('/members')) return {'list': const [], 'total': 0};
     if (path.endsWith('/posts')) {
       return {
-        'list': [
-          {
-            'id': 7,
-            'userId': 9,
-            'userName': '伦敦小王',
-            'circleId': 3,
-            'circleName': '伦敦生活圈',
-            'title': '周末市集指南',
-            'content': '本周六开放',
-            'contentType': 1,
-            'likeCount': 2,
-            'commentCount': 1,
-            'auditStatus': 1,
-            'auditStatusText': '审核通过',
-            'auditRemark': '',
-            'images': const [],
-            'topics': const [],
-            'createdAt': '2026-07-17 10:00:00',
-          },
-        ],
+        'list': [post],
         'total': 1,
       };
     }
@@ -95,5 +98,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('已加入'), findsOneWidget);
     expect(find.textContaining('13 位成员'), findsOneWidget);
+  });
+
+  testWidgets('circle post opens the community post detail', (tester) async {
+    final api = CircleScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleDetailScreen(
+          repository: CircleRepository(api),
+          initial: AppCircle.fromJson(api.circle()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('周末市集指南'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('帖子详情'), findsOneWidget);
+    expect(find.text('本周六开放'), findsOneWidget);
   });
 }
