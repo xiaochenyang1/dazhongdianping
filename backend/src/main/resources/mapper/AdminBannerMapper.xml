@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.banner.mapper.AdminBannerMapper">
+
+    <sql id="bannerColumns">
+        hb.id,
+        hb.city_id,
+        c.name AS city_name,
+        hb.region,
+        hb.title,
+        hb.subtitle,
+        hb.image_url,
+        hb.link_url,
+        hb.enabled,
+        hb.sort_no
+    </sql>
+
+    <select id="selectBanners" resultType="com.tuowei.dazhongdianping.module.admin.banner.model.AdminBannerRow">
+        SELECT
+        <include refid="bannerColumns"/>
+        FROM home_banner hb
+        LEFT JOIN city c ON c.id = hb.city_id AND c.region = hb.region
+        WHERE hb.region = #{region}
+        <if test="cityId != null">
+            AND (hb.city_id IS NULL OR hb.city_id = #{cityId})
+        </if>
+        ORDER BY hb.sort_no ASC, hb.id ASC
+    </select>
+
+    <select id="selectBanner" resultType="com.tuowei.dazhongdianping.module.admin.banner.model.AdminBannerRow">
+        SELECT
+        <include refid="bannerColumns"/>
+        FROM home_banner hb
+        LEFT JOIN city c ON c.id = hb.city_id AND c.region = hb.region
+        WHERE hb.id = #{id}
+          AND hb.region = #{region}
+        LIMIT 1
+    </select>
+
+    <select id="selectNextBannerId" resultType="long">
+        SELECT COALESCE(MAX(id), 0) + 1
+        FROM home_banner
+    </select>
+
+    <select id="countActiveCity" resultType="int">
+        SELECT COUNT(1)
+        FROM city
+        WHERE id = #{cityId}
+          AND region = #{region}
+          AND status = 1
+    </select>
+
+    <insert id="insertBanner">
+        INSERT INTO home_banner(
+            id,
+            city_id,
+            region,
+            title,
+            subtitle,
+            image_url,
+            link_url,
+            enabled,
+            sort_no
+        ) VALUES (
+            #{id},
+            #{cityId},
+            #{region},
+            #{title},
+            #{subtitle},
+            #{imageUrl},
+            #{linkUrl},
+            #{enabled},
+            #{sortNo}
+        )
+    </insert>
+
+    <update id="updateBanner">
+        UPDATE home_banner
+        SET city_id = #{cityId},
+            title = #{title},
+            subtitle = #{subtitle},
+            image_url = #{imageUrl},
+            link_url = #{linkUrl},
+            sort_no = #{sortNo}
+        WHERE id = #{id}
+          AND region = #{region}
+    </update>
+
+    <update id="updateBannerStatus">
+        UPDATE home_banner
+        SET enabled = #{enabled}
+        WHERE id = #{id}
+          AND region = #{region}
+    </update>
+
+    <delete id="deleteBanner">
+        DELETE FROM home_banner
+        WHERE id = #{id}
+          AND region = #{region}
+    </delete>
+</mapper>

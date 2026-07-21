@@ -3,6 +3,8 @@ import type {
   AdminAuditTask,
   AdminAuditLog,
   AdminOrder,
+  AdminBanner,
+  AdminBannerPayload,
   AdminPrivacyTask,
   AdminImportBatch,
   AdminImportPayload,
@@ -85,6 +87,10 @@ export interface AdminOrderQuery {
   dateTo?: string
   page?: number
   pageSize?: number
+}
+
+export interface AdminBannerQuery {
+  cityId?: number
 }
 
 export function loginAdmin(payload: { account: string; password: string }) {
@@ -189,6 +195,26 @@ export function listAdminPrivacyTasks(query: AdminPrivacyTaskQuery) {
 
 export function listAdminOrders(query: AdminOrderQuery) {
   return apiGet<PageResult<AdminOrder>>('/api/admin/v1/orders', query)
+}
+
+export function listAdminBanners(query?: AdminBannerQuery) {
+  return apiGet<AdminBanner[]>('/api/admin/v1/banners', query)
+}
+
+export function createAdminBanner(payload: AdminBannerPayload) {
+  return apiPost<AdminBanner>('/api/admin/v1/banners', payload)
+}
+
+export function updateAdminBanner(bannerId: number, payload: AdminBannerPayload) {
+  return apiPut<AdminBanner>(`/api/admin/v1/banners/${bannerId}`, payload)
+}
+
+export function updateAdminBannerStatus(bannerId: number, enabled: boolean) {
+  return apiPut<AdminBanner>(`/api/admin/v1/banners/${bannerId}/status`, { enabled })
+}
+
+export function removeAdminBanner(bannerId: number) {
+  return apiDelete<void>(`/api/admin/v1/banners/${bannerId}`)
 }
 
 export function passAuditTask(taskId: number, payload: { remark?: string }) {

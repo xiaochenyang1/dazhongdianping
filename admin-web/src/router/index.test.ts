@@ -106,4 +106,22 @@ describe('admin router permissions', () => {
     await router.push('/system/privacy-tasks')
     expect(router.currentRoute.value.path).toBe('/system/privacy-tasks')
   })
+
+  it('guards the banner route with the banner read permission', async () => {
+    await router.push('/operations/banners')
+    expect(router.currentRoute.value.path).toBe('/dashboard')
+
+    const { setSession } = useAdminSession() as unknown as {
+      setSession: (token: string, profile: { id: number; account: string; name: string }, permissions: string[], regions: ('CN' | 'EU')[]) => void
+    }
+    setSession(
+      'admin-token',
+      { id: 7, account: 'auditor', name: '审核员' },
+      ['audit:review:read', 'operations:banner:read'],
+      ['EU'],
+    )
+
+    await router.push('/operations/banners')
+    expect(router.currentRoute.value.path).toBe('/operations/banners')
+  })
 })

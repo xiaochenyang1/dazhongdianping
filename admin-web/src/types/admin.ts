@@ -146,6 +146,28 @@ export interface AdminOrder {
   refundCreatedAt: string
 }
 
+export interface AdminBanner {
+  id: number
+  region: Region
+  cityId: number | null
+  cityName: string
+  title: string
+  subtitle: string
+  imageUrl: string
+  linkUrl: string
+  enabled: boolean
+  sortNo: number
+}
+
+export interface AdminBannerPayload {
+  cityId: number | null
+  title: string
+  subtitle: string
+  imageUrl: string
+  linkUrl: string
+  sortNo: number
+}
+
 export interface AdminAccountUpdatePayload {
   name: string
   roleIds: number[]

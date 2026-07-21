@@ -40,7 +40,7 @@ INSERT INTO `admin_role` (`id`, `code`, `name`, `description`, `status`, `built_
   (1, 'super_admin', '超级管理员', '维护管理员、角色和全站运营能力', 1, 1),
   (2, 'content_auditor', '内容审核员', '审核点评、帖子、达人认证和商户点评申诉', 1, 1),
   (3, 'merchant_auditor', '商户审核员', '审核商户资质、团购和门店变更', 1, 1),
-  (4, 'operations_manager', '运营管理员', '维护榜单、成长、圈子和话题', 1, 1),
+  (4, 'operations_manager', '运营管理员', '维护 Banner、榜单、成长、圈子和话题', 1, 1),
   (5, 'data_operator', '数据管理员', '维护基础数据、门店、导入批次、订单退款查询和搜索索引', 1, 1);
 
 INSERT INTO `admin_permission` (`id`, `code`, `name`, `category`, `permission_type`, `status`) VALUES
@@ -70,6 +70,8 @@ INSERT INTO `admin_permission` (`id`, `code`, `name`, `category`, `permission_ty
   (24, 'operations:circle:write', '维护官方圈子', 'operations', 2, 1),
   (25, 'operations:topic:read', '查看话题治理', 'operations', 1, 1),
   (26, 'operations:topic:write', '维护话题治理', 'operations', 2, 1),
+  (39, 'operations:banner:read', '查看 Banner 配置', 'operations', 1, 1),
+  (40, 'operations:banner:write', '维护 Banner 配置', 'operations', 2, 1),
   (27, 'system:admin:read', '查看管理员', 'system', 1, 1),
   (28, 'system:admin:write', '维护管理员', 'system', 2, 1),
   (29, 'system:role:read', '查看角色', 'system', 1, 1),
@@ -89,7 +91,7 @@ INSERT INTO `admin_role_permission` (`role_id`, `permission_id`) SELECT 1, `id` 
 INSERT INTO `admin_role_permission` (`role_id`, `permission_id`) VALUES
   (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35),
   (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13),
-  (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26),
+  (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40),
   (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38);
 
 INSERT INTO `merchant` (`id`, `account`, `company_name`, `contact_name`, `contact_phone`, `region`, `audit_status`, `status`, `is_deleted`) VALUES
