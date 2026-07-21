@@ -333,6 +333,48 @@ CREATE TABLE IF NOT EXISTS hot_keyword (
     enabled BOOLEAN NOT NULL DEFAULT TRUE
 );
 
+CREATE TABLE IF NOT EXISTS operation_activity (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    code VARCHAR(64) NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    city_id BIGINT NOT NULL DEFAULT 0,
+    channel TINYINT NOT NULL DEFAULT 1,
+    type TINYINT NOT NULL DEFAULT 1,
+    status TINYINT NOT NULL DEFAULT 0,
+    cover VARCHAR(255) NOT NULL DEFAULT '',
+    landing_url VARCHAR(255) NOT NULL DEFAULT '',
+    rule_json VARCHAR(2000) NOT NULL DEFAULT '{}',
+    start_at TIMESTAMP NULL,
+    end_at TIMESTAMP NULL,
+    created_by BIGINT NOT NULL DEFAULT 0,
+    updated_by BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_operation_activity_code ON operation_activity(code);
+CREATE INDEX IF NOT EXISTS idx_operation_activity_region_city_status
+    ON operation_activity(region, city_id, status, start_at, id);
+
+CREATE TABLE IF NOT EXISTS operation_activity_item (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    activity_id BIGINT NOT NULL,
+    target_type TINYINT NOT NULL,
+    target_id BIGINT NOT NULL DEFAULT 0,
+    title VARCHAR(128) NOT NULL DEFAULT '',
+    subtitle VARCHAR(255) NOT NULL DEFAULT '',
+    image VARCHAR(255) NOT NULL DEFAULT '',
+    sort INT NOT NULL DEFAULT 0,
+    extra_json VARCHAR(2000) NOT NULL DEFAULT '{}',
+    status TINYINT NOT NULL DEFAULT 1
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_operation_activity_item_target
+    ON operation_activity_item(activity_id, target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_operation_activity_item_sort
+    ON operation_activity_item(activity_id, status, sort, id);
+
 CREATE TABLE IF NOT EXISTS home_feed (
     id BIGINT PRIMARY KEY,
     city_id BIGINT,

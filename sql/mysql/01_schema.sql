@@ -34,6 +34,8 @@ DROP TABLE IF EXISTS `review_comment`;
 DROP TABLE IF EXISTS `review_like`;
 DROP TABLE IF EXISTS `review_image`;
 DROP TABLE IF EXISTS `review`;
+DROP TABLE IF EXISTS `operation_activity_item`;
+DROP TABLE IF EXISTS `operation_activity`;
 DROP TABLE IF EXISTS `hot_keyword`;
 DROP TABLE IF EXISTS `home_feed`;
 DROP TABLE IF EXISTS `home_banner`;
@@ -378,6 +380,45 @@ CREATE TABLE `hot_keyword` (
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   KEY `idx_hot_keyword_region_enabled_sort` (`region`, `enabled`, `sort`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `operation_activity` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(128) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `region` VARCHAR(8) NOT NULL DEFAULT 'CN',
+  `city_id` BIGINT NOT NULL DEFAULT 0,
+  `channel` TINYINT NOT NULL DEFAULT 1,
+  `type` TINYINT NOT NULL DEFAULT 1,
+  `status` TINYINT NOT NULL DEFAULT 0,
+  `cover` VARCHAR(255) NOT NULL DEFAULT '',
+  `landing_url` VARCHAR(255) NOT NULL DEFAULT '',
+  `rule_json` VARCHAR(2000) NOT NULL DEFAULT '{}',
+  `start_at` DATETIME DEFAULT NULL,
+  `end_at` DATETIME DEFAULT NULL,
+  `created_by` BIGINT NOT NULL DEFAULT 0,
+  `updated_by` BIGINT NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_operation_activity_code` (`code`),
+  KEY `idx_operation_activity_region_city_status` (`region`, `city_id`, `status`, `start_at`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `operation_activity_item` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `activity_id` BIGINT NOT NULL,
+  `target_type` TINYINT NOT NULL,
+  `target_id` BIGINT NOT NULL DEFAULT 0,
+  `title` VARCHAR(128) NOT NULL DEFAULT '',
+  `subtitle` VARCHAR(255) NOT NULL DEFAULT '',
+  `image` VARCHAR(255) NOT NULL DEFAULT '',
+  `sort` INT NOT NULL DEFAULT 0,
+  `extra_json` VARCHAR(2000) NOT NULL DEFAULT '{}',
+  `status` TINYINT NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_operation_activity_item_target` (`activity_id`, `target_type`, `target_id`),
+  KEY `idx_operation_activity_item_sort` (`activity_id`, `status`, `sort`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `home_feed` (

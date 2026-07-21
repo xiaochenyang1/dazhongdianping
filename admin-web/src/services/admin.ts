@@ -7,6 +7,10 @@ import type {
   AdminBannerPayload,
   AdminHotWord,
   AdminHotWordPayload,
+  AdminOperationActivity,
+  AdminOperationActivityItem,
+  AdminOperationActivityItemPayload,
+  AdminOperationActivityPayload,
   AdminPrivacyTask,
   AdminImportBatch,
   AdminImportPayload,
@@ -93,6 +97,11 @@ export interface AdminOrderQuery {
 
 export interface AdminBannerQuery {
   cityId?: number
+}
+
+export interface AdminOperationActivityQuery {
+  cityId?: number
+  status?: number
 }
 
 export function loginAdmin(payload: { account: string; password: string }) {
@@ -237,6 +246,50 @@ export function updateAdminHotWordStatus(hotWordId: number, enabled: boolean) {
 
 export function removeAdminHotWord(hotWordId: number) {
   return apiDelete<void>(`/api/admin/v1/search/hotwords/${hotWordId}`)
+}
+
+export function listAdminOperationActivities(query?: AdminOperationActivityQuery) {
+  return apiGet<AdminOperationActivity[]>('/api/admin/v1/operations/activities', query)
+}
+
+export function createAdminOperationActivity(payload: AdminOperationActivityPayload) {
+  return apiPost<AdminOperationActivity>('/api/admin/v1/operations/activities', payload)
+}
+
+export function updateAdminOperationActivity(activityId: number, payload: AdminOperationActivityPayload) {
+  return apiPut<AdminOperationActivity>(`/api/admin/v1/operations/activities/${activityId}`, payload)
+}
+
+export function updateAdminOperationActivityStatus(activityId: number, status: number) {
+  return apiPut<AdminOperationActivity>(`/api/admin/v1/operations/activities/${activityId}/status`, { status })
+}
+
+export function removeAdminOperationActivity(activityId: number) {
+  return apiDelete<void>(`/api/admin/v1/operations/activities/${activityId}`)
+}
+
+export function listAdminOperationActivityItems(activityId: number) {
+  return apiGet<AdminOperationActivityItem[]>(`/api/admin/v1/operations/activities/${activityId}/items`)
+}
+
+export function createAdminOperationActivityItem(activityId: number, payload: AdminOperationActivityItemPayload) {
+  return apiPost<AdminOperationActivityItem>(`/api/admin/v1/operations/activities/${activityId}/items`, payload)
+}
+
+export function updateAdminOperationActivityItem(
+  activityId: number,
+  itemId: number,
+  payload: AdminOperationActivityItemPayload,
+) {
+  return apiPut<AdminOperationActivityItem>(`/api/admin/v1/operations/activities/${activityId}/items/${itemId}`, payload)
+}
+
+export function updateAdminOperationActivityItemStatus(activityId: number, itemId: number, status: number) {
+  return apiPut<AdminOperationActivityItem>(`/api/admin/v1/operations/activities/${activityId}/items/${itemId}/status`, { status })
+}
+
+export function removeAdminOperationActivityItem(activityId: number, itemId: number) {
+  return apiDelete<void>(`/api/admin/v1/operations/activities/${activityId}/items/${itemId}`)
 }
 
 export function passAuditTask(taskId: number, payload: { remark?: string }) {

@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.activity.mapper.AdminOperationActivityMapper">
+
+    <sql id="activityColumns">
+        oa.id,
+        oa.name,
+        oa.code,
+        oa.region,
+        oa.city_id,
+        c.name AS city_name,
+        oa.channel,
+        oa.type,
+        oa.status,
+        oa.cover,
+        oa.landing_url,
+        oa.rule_json,
+        oa.start_at,
+        oa.end_at,
+        oa.created_by,
+        oa.updated_by,
+        oa.created_at,
+        oa.updated_at,
+        COALESCE(stats.item_count, 0) AS item_count
+    </sql>
+
+    <sql id="itemColumns">
+        oai.id,
+        oai.activity_id,
+        oai.target_type,
+        oai.target_id,
+        COALESCE(s.name, d.title, p.title, r.name, t.name, '') AS target_name,
+        oai.title,
+        oai.subtitle,
+        oai.image,
+        oai.sort,
+        oai.extra_json,
+        oai.status
+    </sql>
+
+    <select id="selectActivities" resultType="com.tuowei.dazhongdianping.module.admin.activity.model.AdminOperationActivityRow">
+        SELECT
+        <include refid="activityColumns"/>
+        FROM operation_activity oa
+        LEFT JOIN city c ON c.id = oa.city_id AND c.region = oa.region
+        LEFT JOIN (
+            SELECT activity_id, COUNT(1) AS item_count
+            FROM operation_activity_item
+            GROUP BY activity_id
+        ) stats ON stats.activity_id = oa.id
+        WHERE oa.region = #{region}
+        <if test="cityId != null">
+            AND (oa.city_id = 0 OR oa.city_id = #{cityId})
+        </if>
+        <if test="status != null">
+            AND oa.status = #{status}
+        </if>
+        ORDER BY oa.updated_at DESC, oa.id DESC
+    </select>
+
+    <select id="selectActivity" resultType="com.tuowei.dazhongdianping.module.admin.activity.model.AdminOperationActivityRow">
+        SELECT
+        <include refid="activityColumns"/>
+        FROM operation_activity oa
+        LEFT JOIN city c ON c.id = oa.city_id AND c.region = oa.region
+        LEFT JOIN (
+            SELECT activity_id, COUNT(1) AS item_count
+            FROM operation_activity_item
+            GROUP BY activity_id
+        ) stats ON stats.activity_id = oa.id
+        WHERE oa.id = #{id}
+          AND oa.region = #{region}
+        LIMIT 1
+    </select>
+
+    <select id="countActiveCity" resultType="int">
+        SELECT COUNT(1)
+        FROM city
+        WHERE id = #{cityId}
+          AND region = #{region}
+          AND status = 1
+    </select>
+
+    <select id="countActivityCodeConflict" resultType="int">
+        SELECT COUNT(1)
+        FROM operation_activity
+        WHERE LOWER(code) = LOWER(#{code})
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <insert id="insertActivity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO operation_activity(
+            name,
+            code,
+            region,
+            city_id,
+            channel,
+            type,
+            status,
+            cover,
+            landing_url,
+            rule_json,
+            start_at,
+            end_at,
+            created_by,
+            updated_by
+        ) VALUES (
+            #{name},
+            #{code},
+            #{region},
+            #{cityId},
+            #{channel},
+            #{type},
+            #{status},
+            #{cover},
+            #{landingUrl},
+            #{ruleJson},
+            #{startAt},
+            #{endAt},
+            #{createdBy},
+            #{updatedBy}
+        )
+    </insert>
+
+    <update id="updateActivity">
+        UPDATE operation_activity
+        SET name = #{name},
+            code = #{code},
+            city_id = #{cityId},
+            channel = #{channel},
+            type = #{type},
+            cover = #{cover},
+            landing_url = #{landingUrl},
+            rule_json = #{ruleJson},
+            start_at = #{startAt},
+            end_at = #{endAt},
+            updated_by = #{updatedBy},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND region = #{region}
+    </update>
+
+    <update id="updateActivityStatus">
+        UPDATE operation_activity
+        SET status = #{status},
+            updated_by = #{updatedBy},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND region = #{region}
+    </update>
+
+    <delete id="deleteActivity">
+        DELETE FROM operation_activity
+        WHERE id = #{id}
+          AND region = #{region}
+    </delete>
+
+    <delete id="deleteItemsByActivity">
+        DELETE FROM operation_activity_item
+        WHERE activity_id = #{activityId}
+    </delete>
+
+    <select id="selectItems" resultType="com.tuowei.dazhongdianping.module.admin.activity.model.AdminOperationActivityItemRow">
+        SELECT
+        <include refid="itemColumns"/>
+        FROM operation_activity_item oai
+        INNER JOIN operation_activity oa ON oa.id = oai.activity_id
+        LEFT JOIN shop s ON oai.target_type = 1 AND s.id = oai.target_id AND s.region = oa.region
+        LEFT JOIN deal d ON oai.target_type = 2 AND d.id = oai.target_id AND d.region = oa.region
+        LEFT JOIN post p ON oai.target_type = 3 AND p.id = oai.target_id AND p.region = oa.region
+        LEFT JOIN rank r ON oai.target_type = 4 AND r.id = oai.target_id AND r.region = oa.region
+        LEFT JOIN topic t ON oai.target_type = 5 AND t.id = oai.target_id AND t.region = oa.region
+        WHERE oai.activity_id = #{activityId}
+          AND oa.region = #{region}
+        ORDER BY oai.sort ASC, oai.id ASC
+    </select>
+
+    <select id="selectItem" resultType="com.tuowei.dazhongdianping.module.admin.activity.model.AdminOperationActivityItemRow">
+        SELECT
+        <include refid="itemColumns"/>
+        FROM operation_activity_item oai
+        INNER JOIN operation_activity oa ON oa.id = oai.activity_id
+        LEFT JOIN shop s ON oai.target_type = 1 AND s.id = oai.target_id AND s.region = oa.region
+        LEFT JOIN deal d ON oai.target_type = 2 AND d.id = oai.target_id AND d.region = oa.region
+        LEFT JOIN post p ON oai.target_type = 3 AND p.id = oai.target_id AND p.region = oa.region
+        LEFT JOIN rank r ON oai.target_type = 4 AND r.id = oai.target_id AND r.region = oa.region
+        LEFT JOIN topic t ON oai.target_type = 5 AND t.id = oai.target_id AND t.region = oa.region
+        WHERE oai.activity_id = #{activityId}
+          AND oai.id = #{id}
+          AND oa.region = #{region}
+        LIMIT 1
+    </select>
+
+    <select id="countActivityItemConflict" resultType="int">
+        SELECT COUNT(1)
+        FROM operation_activity_item
+        WHERE activity_id = #{activityId}
+          AND target_type = #{targetType}
+          AND target_id = #{targetId}
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <insert id="insertItem" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO operation_activity_item(
+            activity_id,
+            target_type,
+            target_id,
+            title,
+            subtitle,
+            image,
+            sort,
+            extra_json,
+            status
+        ) VALUES (
+            #{activityId},
+            #{targetType},
+            #{targetId},
+            #{title},
+            #{subtitle},
+            #{image},
+            #{sort},
+            #{extraJson},
+            #{status}
+        )
+    </insert>
+
+    <update id="updateItem">
+        UPDATE operation_activity_item
+        SET target_type = #{targetType},
+            target_id = #{targetId},
+            title = #{title},
+            subtitle = #{subtitle},
+            image = #{image},
+            sort = #{sort},
+            extra_json = #{extraJson}
+        WHERE id = #{id}
+          AND activity_id = #{activityId}
+    </update>
+
+    <update id="updateItemStatus">
+        UPDATE operation_activity_item
+        SET status = #{status}
+        WHERE id = #{id}
+          AND activity_id = #{activityId}
+          AND EXISTS (
+            SELECT 1
+            FROM operation_activity oa
+            WHERE oa.id = #{activityId}
+              AND oa.region = #{region}
+          )
+    </update>
+
+    <delete id="deleteItem">
+        DELETE FROM operation_activity_item
+        WHERE id = #{id}
+          AND activity_id = #{activityId}
+          AND EXISTS (
+            SELECT 1
+            FROM operation_activity oa
+            WHERE oa.id = #{activityId}
+              AND oa.region = #{region}
+          )
+    </delete>
+
+    <select id="countAvailableShop" resultType="int">
+        SELECT COUNT(1)
+        FROM shop
+        WHERE id = #{targetId}
+          AND region = #{region}
+          AND status = 1
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="countAvailableDeal" resultType="int">
+        SELECT COUNT(1)
+        FROM deal
+        WHERE id = #{targetId}
+          AND region = #{region}
+          AND audit_status = 1
+          AND status = 1
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="countAvailablePost" resultType="int">
+        SELECT COUNT(1)
+        FROM post
+        WHERE id = #{targetId}
+          AND region = #{region}
+          AND audit_status = 1
+          AND status = 1
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="countAvailableRank" resultType="int">
+        SELECT COUNT(1)
+        FROM rank
+        WHERE id = #{targetId}
+          AND region = #{region}
+          AND enabled = TRUE
+    </select>
+
+    <select id="countAvailableTopic" resultType="int">
+        SELECT COUNT(1)
+        FROM topic
+        WHERE id = #{targetId}
+          AND region = #{region}
+          AND status = 1
+          AND merged_to_id IS NULL
+    </select>
+</mapper>

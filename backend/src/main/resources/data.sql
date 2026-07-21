@@ -32,7 +32,7 @@ INSERT INTO admin_role (id, code, name, description, status, built_in) VALUES
     (1, 'super_admin', '超级管理员', '维护管理员、角色和全站运营能力', 1, TRUE),
     (2, 'content_auditor', '内容审核员', '审核点评、帖子和商户点评申诉', 1, TRUE),
     (3, 'merchant_auditor', '商户审核员', '审核商户资质、团购和门店变更', 1, TRUE),
-    (4, 'operations_manager', '运营管理员', '维护 Banner、热词、榜单、成长、圈子和话题', 1, TRUE),
+    (4, 'operations_manager', '运营管理员', '维护 Banner、热词、运营活动、榜单、成长、圈子和话题', 1, TRUE),
     (5, 'data_operator', '数据管理员', '维护基础数据、门店、导入批次、订单退款查询和搜索索引', 1, TRUE);
 
 INSERT INTO admin_permission (id, code, name, category, permission_type, status) VALUES
@@ -66,6 +66,8 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (40, 'operations:banner:write', '维护 Banner 配置', 'operations', 2, 1),
     (41, 'operations:hotword:read', '查看搜索热词', 'operations', 1, 1),
     (42, 'operations:hotword:write', '维护搜索热词', 'operations', 2, 1),
+    (43, 'operations:activity:read', '查看运营活动', 'operations', 1, 1),
+    (44, 'operations:activity:write', '维护运营活动', 'operations', 2, 1),
     (27, 'system:admin:read', '查看管理员', 'system', 1, 1),
     (28, 'system:admin:write', '维护管理员', 'system', 2, 1),
     (29, 'system:role:read', '查看角色', 'system', 1, 1),
@@ -85,7 +87,7 @@ INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM adm
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13),
-    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42),
+    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
@@ -266,6 +268,63 @@ INSERT INTO rank_item (id, rank_id, shop_id, position, score, reason) VALUES
     (310001, 31001, 20001, 1, 93.60, '巴黎川味口碑稳定，当前有优惠。'),
     (310002, 31002, 20001, 1, 91.80, '综合评分与口味分领先。'),
     (310003, 31003, 20001, 1, 82.00, '华人聚餐热度稳定。');
+
+INSERT INTO operation_activity (
+    id, name, code, region, city_id, channel, type, status, cover, landing_url,
+    rule_json, start_at, end_at, created_by, updated_by
+) VALUES
+    (
+        5001, '欧洲开学季聚餐专题', 'eu_school_2026_q3', 'EU', 101, 4, 2, 2,
+        'https://placehold.co/1200x720/0f172a/ffffff?text=EU+Activity',
+        'app://activity/eu_school_2026_q3',
+        '{"audience":["student","new_user"],"sort":"manual"}',
+        TIMESTAMP '2026-09-01 00:00:00',
+        TIMESTAMP '2026-09-30 23:59:59',
+        1,
+        1
+    ),
+    (
+        5002, '上海夜宵回血计划', 'cn_late_night_2026_q3', 'CN', 0, 1, 1, 1,
+        'https://placehold.co/1200x720/7c2d12/ffffff?text=CN+Night+Activity',
+        'app://activity/cn_late_night_2026_q3',
+        '{"audience":["night_owl"],"sort":"manual"}',
+        TIMESTAMP '2026-07-25 00:00:00',
+        TIMESTAMP '2026-08-15 23:59:59',
+        1,
+        1
+    );
+
+INSERT INTO operation_activity_item (
+    id, activity_id, target_type, target_id, title, subtitle, image, sort, extra_json, status
+) VALUES
+    (
+        7001, 5001, 1, 20001, '巴黎华人火锅局', '川味聚餐稳，不用靠运气',
+        'https://placehold.co/720x420/1d4ed8/ffffff?text=EU+Activity+Shop',
+        1,
+        '{"badge":"热门","trackCode":"eu_school_shop_20001"}',
+        1
+    ),
+    (
+        7002, 5001, 2, 41001, '留学生双人晚餐', 'Sichuan Dinner for Two',
+        'https://placehold.co/720x420/7c3aed/ffffff?text=EU+Activity+Deal',
+        2,
+        '{"badge":"折扣","trackCode":"eu_school_deal_41001"}',
+        1
+    ),
+    (
+        7003, 5001, 4, 31001, '巴黎华人必吃榜', '先看榜单再订位',
+        'https://placehold.co/720x420/0f766e/ffffff?text=EU+Activity+Rank',
+        3,
+        '{"trackCode":"eu_school_rank_31001"}',
+        1
+    ),
+    (
+        7004, 5002, 6, 0, '夜宵活动规则', '查看补贴说明和跳转规则',
+        'https://placehold.co/720x420/f97316/ffffff?text=CN+Activity+Guide',
+        1,
+        '{"url":"https://promo.example.com/cn/night-owl","badge":"说明"}',
+        1
+    );
 
 INSERT INTO growth_rule (id, action, action_name, growth_value, points, daily_limit, enabled) VALUES
     (1, 'review_create', '发布点评', 10, 5, 5, TRUE),

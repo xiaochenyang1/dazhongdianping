@@ -181,6 +181,66 @@ export interface AdminHotWordPayload {
   sortNo: number
 }
 
+export interface AdminOperationActivity {
+  id: number
+  region: Region
+  cityId: number
+  cityName: string
+  name: string
+  code: string
+  channel: number
+  channelText: string
+  type: number
+  typeText: string
+  status: number
+  statusText: string
+  cover: string
+  landingUrl: string
+  rule: Record<string, unknown>
+  startAt: string
+  endAt: string
+  itemCount: number
+}
+
+export interface AdminOperationActivityPayload {
+  name: string
+  code: string
+  cityId: number
+  channel: number
+  type: number
+  cover: string
+  landingUrl: string
+  rule: Record<string, unknown> | null
+  startAt: string | null
+  endAt: string | null
+}
+
+export interface AdminOperationActivityItem {
+  id: number
+  activityId: number
+  targetType: number
+  targetTypeText: string
+  targetId: number
+  targetName: string
+  title: string
+  subtitle: string
+  image: string
+  sort: number
+  extra: Record<string, unknown>
+  status: number
+  statusText: string
+}
+
+export interface AdminOperationActivityItemPayload {
+  targetType: number
+  targetId: number
+  title: string
+  subtitle: string
+  image: string
+  sort: number
+  extra: Record<string, unknown> | null
+}
+
 export interface AdminAccountUpdatePayload {
   name: string
   roleIds: number[]

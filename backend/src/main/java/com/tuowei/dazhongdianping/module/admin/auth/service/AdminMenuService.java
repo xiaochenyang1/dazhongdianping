@@ -30,7 +30,8 @@ public class AdminMenuService {
                         leaf("operations.circles", "官方圈子", "/operations/circles", "operations:circle:read"),
                         leaf("operations.topics", "话题治理", "/operations/topics", "operations:topic:read"),
                         leaf("operations.banners", "Banner 配置", "/operations/banners", "operations:banner:read"),
-                        leaf("operations.hotwords", "搜索热词", "/operations/hotwords", "operations:hotword:read")
+                        leaf("operations.hotwords", "搜索热词", "/operations/hotwords", "operations:hotword:read"),
+                        leaf("operations.activities", "运营活动", "/operations/activities", "operations:activity:read")
                 )),
                 group("system", "系统管理", "/system", List.of(
                         leaf("system.admins", "管理员账号", "/system/admins", "system:admin:read"),
