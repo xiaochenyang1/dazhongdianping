@@ -40,6 +40,20 @@ Assert-True ($browserE2eScript -match "spring.profiles.active=h2") "real E2E bac
 Assert-True ($browserE2eScript -match "PLAYWRIGHT_OUTPUT_DIR") "browser E2E script must isolate Playwright output per run"
 Assert-True ($browserE2eScript -match "@playwright[\\/]test[\\/]cli.js") "browser E2E script must invoke Playwright directly without npm recursion"
 Assert-True ($browserE2eScript -match "Stop-Process") "browser E2E script must stop every managed process in finally"
+Assert-True ($browserE2eScript -match "Stop-BackendListener") "browser E2E script must clean a detached backend listener by verified jar path"
+Assert-True ($browserE2eScript -match '\$backendProcess\s*=\s*\$null') "browser E2E script must initialize the backend process handle before try/finally"
+
+$listenerFunctionMatch = [regex]::Match($browserE2eScript, '(?s)function Stop-BackendListener\s*\{.*?\r?\n\}')
+Assert-True $listenerFunctionMatch.Success "browser E2E script must define a complete backend listener cleanup function"
+$listenerFunction = $listenerFunctionMatch.Value
+Assert-True ($listenerFunction -match '\[int\]\$ExpectedProcessId') "backend listener cleanup must receive the process id started by this run"
+Assert-True ($listenerFunction -match '\$ownerId\s+-ne\s+\$ExpectedProcessId') "backend listener cleanup must reject listeners owned by another process"
+
+$listenerCall = ($browserE2eScript -split "`r?`n" |
+    Where-Object { $_ -match '^\s*Stop-BackendListener\s+-' } |
+    Select-Object -Last 1)
+Assert-True ($listenerCall -match '-ExpectedProcessId') "finally must pass the expected backend process id to listener cleanup"
+Assert-True ($listenerCall -match '\$backendProcess\.Id') "finally must derive listener cleanup identity from this run backend process"
 
 $realBackendSpec = Get-Content -LiteralPath $realBackendSpecPath -Raw
 Assert-True ($realBackendSpec -match "PLAYWRIGHT_REAL_BACKEND") "real backend spec must skip unless real backend mode is enabled"

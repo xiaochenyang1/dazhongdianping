@@ -17,6 +17,8 @@ $mvnw = Join-Path $backendDir $(if ($runningOnWindows) { "mvnw.cmd" } else { "mv
 $managedProcesses = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
 $runDir = Join-Path ([System.IO.Path]::GetTempPath()) ("dazhongdianping-e2e-" + [System.Guid]::NewGuid().ToString("N"))
 $succeeded = $false
+$backendProcess = $null
+$backendJar = $null
 
 function Write-Step {
     param([string]$Message)
@@ -189,6 +191,41 @@ function Stop-ManagedProcesses {
     }
 }
 
+function Stop-BackendListener {
+    param(
+        [int]$Port,
+        [int]$ExpectedProcessId,
+        [string]$ExpectedJarPath
+    )
+
+    if (-not $runningOnWindows -or $ExpectedProcessId -le 0 -or [string]::IsNullOrWhiteSpace($ExpectedJarPath)) {
+        return
+    }
+
+    try {
+        $owners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique
+        foreach ($ownerId in $owners) {
+            if ([int]$ownerId -ne $ExpectedProcessId) {
+                continue
+            }
+            $candidate = Get-CimInstance Win32_Process -Filter "ProcessId = $ownerId" -ErrorAction SilentlyContinue
+            $commandLine = [string]$candidate.CommandLine
+            if ($commandLine.IndexOf($ExpectedJarPath, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+                continue
+            }
+            Stop-Process -Id $ownerId -Force -ErrorAction Stop
+            $stopped = Get-Process -Id $ownerId -ErrorAction SilentlyContinue
+            if ($null -ne $stopped) {
+                [void]$stopped.WaitForExit(10000)
+            }
+        }
+    }
+    catch {
+        Write-Warning "Failed to clean backend listener on port ${Port}: $($_.Exception.Message)"
+    }
+}
+
 function Restore-EnvironmentVariable {
     param(
         [string]$Name,
@@ -305,6 +342,7 @@ try {
 }
 finally {
     Stop-ManagedProcesses
+    Stop-BackendListener -Port $BackendPort -ExpectedProcessId $(if ($null -eq $backendProcess) { 0 } else { $backendProcess.Id }) -ExpectedJarPath $(if ($null -eq $backendJar) { "" } else { $backendJar.FullName })
 
     Restore-EnvironmentVariable -Name "PLAYWRIGHT_REAL_BACKEND" -Value $previousRealBackend
     Restore-EnvironmentVariable -Name "PLAYWRIGHT_EXTERNAL_SERVERS" -Value $previousExternalServers
