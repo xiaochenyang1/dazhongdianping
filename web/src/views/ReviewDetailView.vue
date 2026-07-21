@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
 import { useUserSession } from '@/composables/useUserSession'
+import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
 import { formatMoney } from '@/lib/currency'
 import {
   createReviewComment,
@@ -37,6 +38,53 @@ const comments = ref<ReviewComment[]>([])
 const commentContent = ref('')
 const reportReason = ref('')
 const reportPanelOpen = ref(false)
+let reviewRequestId = 0
+let commentsRequestId = 0
+
+useSeoMeta(() => {
+  const canonicalPath = `/reviews/${props.reviewId}`
+  const currentReview = review.value
+  const isPublic = !props.owned && currentReview?.auditStatus === 1 && currentReview.status === 1
+  if (!currentReview) {
+    return {
+      title: props.owned ? '我的点评详情' : '点评详情',
+      description: '查看公开点评详情、图片、点赞、评论和举报入口。',
+      canonical: canonicalPath,
+      robots: 'noindex,nofollow',
+    }
+  }
+
+  return {
+    title: `${currentReview.shopName}点评 - ${currentReview.userName}`,
+    description: toSeoDescription(`${currentReview.shopName} 的公开点评：${currentReview.content}`),
+    canonical: canonicalPath,
+    robots: isPublic ? 'index,follow' : 'noindex,nofollow',
+    image: currentReview.images[0]?.url,
+    type: 'article' as const,
+    jsonLd: isPublic
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'Review',
+          url: absoluteSeoUrl(canonicalPath),
+          author: { '@type': 'Person', name: currentReview.userName },
+          datePublished: currentReview.createdAt,
+          dateModified: currentReview.updatedAt,
+          reviewBody: currentReview.content,
+          reviewRating: {
+            '@type': 'Rating',
+            ratingValue: currentReview.scoreOverall,
+            bestRating: 5,
+            worstRating: 1,
+          },
+          itemReviewed: {
+            '@type': 'Restaurant',
+            name: currentReview.shopName,
+            url: absoluteSeoUrl(`/shops/${currentReview.shopId}`),
+          },
+        }
+      : null,
+  }
+})
 
 const auditClass = computed(() => {
   const auditStatus = review.value?.auditStatus ?? 0
@@ -58,6 +106,12 @@ function resetInteractionFeedback() {
   interactionErrorMessage.value = ''
 }
 
+function resolveInteractionReviewId(resumedReviewId?: unknown) {
+  return typeof resumedReviewId === 'number'
+    ? resumedReviewId
+    : review.value?.id ?? (!props.owned ? props.reviewId : undefined)
+}
+
 function ensureSignedIn(afterLogin?: () => void | Promise<void>) {
   if (sessionState.accessToken) {
     return true
@@ -72,30 +126,49 @@ function ensureSignedIn(afterLogin?: () => void | Promise<void>) {
 }
 
 async function loadReview() {
-  if (Number.isNaN(props.reviewId)) {
+  const requestId = ++reviewRequestId
+  ++commentsRequestId
+  const targetReviewId = props.reviewId
+  const owned = props.owned
+  review.value = null
+  comments.value = []
+  commentsLoading.value = false
+  errorMessage.value = ''
+  commentsErrorMessage.value = ''
+  resetInteractionFeedback()
+  reportPanelOpen.value = false
+  if (Number.isNaN(targetReviewId)) {
     errorMessage.value = '点评 ID 不合法'
+    loading.value = false
     return
   }
 
   loading.value = true
-  errorMessage.value = ''
 
   try {
-    review.value = props.owned ? await fetchOwnedReviewDetail(props.reviewId) : await fetchReviewDetail(props.reviewId)
+    const detail = owned
+      ? await fetchOwnedReviewDetail(targetReviewId)
+      : await fetchReviewDetail(targetReviewId)
+    if (requestId !== reviewRequestId) return
+    review.value = detail
     if (interactionEnabled.value) {
-      await loadComments()
+      await loadComments(targetReviewId, requestId)
     } else {
       comments.value = []
       commentsErrorMessage.value = ''
     }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '点评详情加载失败'
+    if (requestId === reviewRequestId) {
+      errorMessage.value = error instanceof Error ? error.message : '点评详情加载失败'
+    }
   } finally {
-    loading.value = false
+    if (requestId === reviewRequestId) loading.value = false
   }
 }
 
-async function loadComments() {
+async function loadComments(reviewId = props.reviewId, parentRequestId = reviewRequestId) {
+  const requestId = ++commentsRequestId
+  if (parentRequestId !== reviewRequestId) return
   if (!interactionEnabled.value) {
     comments.value = []
     commentsErrorMessage.value = ''
@@ -106,17 +179,27 @@ async function loadComments() {
   commentsErrorMessage.value = ''
 
   try {
-    const page = await listReviewComments(props.reviewId, { page: 1, pageSize: 20 })
+    const page = await listReviewComments(reviewId, { page: 1, pageSize: 20 })
+    if (parentRequestId !== reviewRequestId || requestId !== commentsRequestId) return
     comments.value = page.list
   } catch (error) {
-    commentsErrorMessage.value = error instanceof Error ? error.message : '评论列表加载失败'
+    if (parentRequestId === reviewRequestId && requestId === commentsRequestId) {
+      commentsErrorMessage.value = error instanceof Error ? error.message : '评论列表加载失败'
+    }
   } finally {
-    commentsLoading.value = false
+    if (parentRequestId === reviewRequestId && requestId === commentsRequestId) {
+      commentsLoading.value = false
+    }
   }
 }
 
-async function handleToggleLike() {
-  if (!review.value || !interactionEnabled.value || !ensureSignedIn(() => handleToggleLike())) {
+async function handleToggleLike(resumedReviewId?: unknown) {
+  const targetReviewId = resolveInteractionReviewId(resumedReviewId)
+  const hasResumedReviewId = typeof resumedReviewId === 'number'
+  if (!targetReviewId || (!hasResumedReviewId && !interactionEnabled.value)) {
+    return
+  }
+  if (!ensureSignedIn(() => handleToggleLike(targetReviewId))) {
     return
   }
 
@@ -124,9 +207,13 @@ async function handleToggleLike() {
   resetInteractionFeedback()
 
   try {
-    const result = await toggleReviewLike(review.value.id)
-    review.value.likeCount = result.likeCount
-    review.value.likedByCurrentUser = result.liked
+    const result = await toggleReviewLike(targetReviewId)
+    if (review.value?.id === targetReviewId) {
+      review.value.likeCount = result.likeCount
+      review.value.likedByCurrentUser = result.liked
+    } else {
+      await loadReview()
+    }
     interactionMessage.value = result.liked ? '这次点赞真落下去了。' : '点赞已经取消。'
   } catch (error) {
     interactionErrorMessage.value = error instanceof Error ? error.message : '点赞操作失败'
@@ -135,17 +222,20 @@ async function handleToggleLike() {
   }
 }
 
-async function submitComment() {
-  if (!review.value || !interactionEnabled.value) {
+async function submitComment(resumedReviewId?: unknown, resumedContent?: unknown) {
+  const targetReviewId = resolveInteractionReviewId(resumedReviewId)
+  const hasResumedReviewId = typeof resumedReviewId === 'number'
+  if (!targetReviewId || (!hasResumedReviewId && !interactionEnabled.value)) {
     return
   }
 
-  const content = commentContent.value.trim()
+  const contentSource = typeof resumedContent === 'string' ? resumedContent : commentContent.value
+  const content = contentSource.trim()
   if (!content) {
     interactionErrorMessage.value = '评论内容不能为空'
     return
   }
-  if (!ensureSignedIn(() => submitComment())) {
+  if (!ensureSignedIn(() => submitComment(targetReviewId, content))) {
     return
   }
 
@@ -153,9 +243,13 @@ async function submitComment() {
   resetInteractionFeedback()
 
   try {
-    const created = await createReviewComment(review.value.id, { content })
-    comments.value = [created, ...comments.value]
-    review.value.commentCount += 1
+    const created = await createReviewComment(targetReviewId, { content })
+    if (review.value?.id === targetReviewId) {
+      comments.value = [created, ...comments.value.filter((item) => item.id !== created.id)]
+      review.value.commentCount += 1
+    } else {
+      await loadReview()
+    }
     commentContent.value = ''
     interactionMessage.value = '评论已经发出去了。'
   } catch (error) {
@@ -165,17 +259,20 @@ async function submitComment() {
   }
 }
 
-async function submitReport() {
-  if (!review.value || !interactionEnabled.value) {
+async function submitReport(resumedReviewId?: unknown, resumedReason?: unknown) {
+  const targetReviewId = resolveInteractionReviewId(resumedReviewId)
+  const hasResumedReviewId = typeof resumedReviewId === 'number'
+  if (!targetReviewId || (!hasResumedReviewId && !interactionEnabled.value)) {
     return
   }
 
-  const reason = reportReason.value.trim()
+  const reasonSource = typeof resumedReason === 'string' ? resumedReason : reportReason.value
+  const reason = reasonSource.trim()
   if (!reason) {
     interactionErrorMessage.value = '举报理由不能为空'
     return
   }
-  if (!ensureSignedIn(() => submitReport())) {
+  if (!ensureSignedIn(() => submitReport(targetReviewId, reason))) {
     return
   }
 
@@ -183,7 +280,10 @@ async function submitReport() {
   resetInteractionFeedback()
 
   try {
-    await reportReview(review.value.id, { reason })
+    await reportReview(targetReviewId, { reason })
+    if (!review.value || review.value.id !== targetReviewId) {
+      await loadReview()
+    }
     reportReason.value = ''
     reportPanelOpen.value = false
     interactionMessage.value = '举报已提交，后台会复核这条点评。'
