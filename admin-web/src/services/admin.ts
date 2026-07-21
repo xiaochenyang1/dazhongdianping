@@ -5,6 +5,8 @@ import type {
   AdminOrder,
   AdminBanner,
   AdminBannerPayload,
+  AdminHotWord,
+  AdminHotWordPayload,
   AdminPrivacyTask,
   AdminImportBatch,
   AdminImportPayload,
@@ -215,6 +217,26 @@ export function updateAdminBannerStatus(bannerId: number, enabled: boolean) {
 
 export function removeAdminBanner(bannerId: number) {
   return apiDelete<void>(`/api/admin/v1/banners/${bannerId}`)
+}
+
+export function listAdminHotWords() {
+  return apiGet<AdminHotWord[]>('/api/admin/v1/search/hotwords')
+}
+
+export function createAdminHotWord(payload: AdminHotWordPayload) {
+  return apiPost<AdminHotWord>('/api/admin/v1/search/hotwords', payload)
+}
+
+export function updateAdminHotWord(hotWordId: number, payload: AdminHotWordPayload) {
+  return apiPut<AdminHotWord>(`/api/admin/v1/search/hotwords/${hotWordId}`, payload)
+}
+
+export function updateAdminHotWordStatus(hotWordId: number, enabled: boolean) {
+  return apiPut<AdminHotWord>(`/api/admin/v1/search/hotwords/${hotWordId}/status`, { enabled })
+}
+
+export function removeAdminHotWord(hotWordId: number) {
+  return apiDelete<void>(`/api/admin/v1/search/hotwords/${hotWordId}`)
 }
 
 export function passAuditTask(taskId: number, payload: { remark?: string }) {

@@ -34,6 +34,7 @@ DROP TABLE IF EXISTS `review_comment`;
 DROP TABLE IF EXISTS `review_like`;
 DROP TABLE IF EXISTS `review_image`;
 DROP TABLE IF EXISTS `review`;
+DROP TABLE IF EXISTS `hot_keyword`;
 DROP TABLE IF EXISTS `home_feed`;
 DROP TABLE IF EXISTS `home_banner`;
 DROP TABLE IF EXISTS `merchant_shop_change_dish`;
@@ -367,6 +368,16 @@ CREATE TABLE `home_banner` (
   `sort_no` INT NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_home_banner_region_city_enabled_sort` (`region`, `enabled`, `city_id`, `sort_no`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `hot_keyword` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `region` VARCHAR(8) NOT NULL,
+  `keyword` VARCHAR(64) NOT NULL,
+  `sort` INT NOT NULL DEFAULT 0,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `idx_hot_keyword_region_enabled_sort` (`region`, `enabled`, `sort`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `home_feed` (

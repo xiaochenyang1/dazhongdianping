@@ -124,4 +124,22 @@ describe('admin router permissions', () => {
     await router.push('/operations/banners')
     expect(router.currentRoute.value.path).toBe('/operations/banners')
   })
+
+  it('guards the hotword route with the hotword read permission', async () => {
+    await router.push('/operations/hotwords')
+    expect(router.currentRoute.value.path).toBe('/dashboard')
+
+    const { setSession } = useAdminSession() as unknown as {
+      setSession: (token: string, profile: { id: number; account: string; name: string }, permissions: string[], regions: ('CN' | 'EU')[]) => void
+    }
+    setSession(
+      'admin-token',
+      { id: 7, account: 'auditor', name: '审核员' },
+      ['audit:review:read', 'operations:hotword:read'],
+      ['EU'],
+    )
+
+    await router.push('/operations/hotwords')
+    expect(router.currentRoute.value.path).toBe('/operations/hotwords')
+  })
 })

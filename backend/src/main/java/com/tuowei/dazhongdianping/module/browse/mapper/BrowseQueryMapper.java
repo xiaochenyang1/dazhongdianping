@@ -6,6 +6,7 @@ import com.tuowei.dazhongdianping.module.browse.model.CategoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.CityRow;
 import com.tuowei.dazhongdianping.module.browse.model.DishRow;
 import com.tuowei.dazhongdianping.module.browse.model.HomeFeedRow;
+import com.tuowei.dazhongdianping.module.browse.model.HotKeywordRow;
 import com.tuowei.dazhongdianping.module.browse.model.PhotoRow;
 import com.tuowei.dazhongdianping.module.browse.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchSuggestionRow;
@@ -28,6 +29,8 @@ public interface BrowseQueryMapper {
     List<BannerRow> selectHomeBanners(@Param("region") String region, @Param("cityId") Long cityId);
 
     List<HomeFeedRow> selectHomeFeed(@Param("region") String region, @Param("cityId") Long cityId, @Param("limit") Integer limit);
+
+    List<HotKeywordRow> selectConfiguredHotKeywords(@Param("region") String region, @Param("limit") Integer limit);
 
     long countShops(ShopListQuery query);
 

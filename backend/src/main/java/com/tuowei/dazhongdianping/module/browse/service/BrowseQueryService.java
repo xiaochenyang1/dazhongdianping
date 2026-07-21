@@ -15,6 +15,7 @@ import com.tuowei.dazhongdianping.module.browse.model.CategoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.CityRow;
 import com.tuowei.dazhongdianping.module.browse.model.DishRow;
 import com.tuowei.dazhongdianping.module.browse.model.HomeFeedRow;
+import com.tuowei.dazhongdianping.module.browse.model.HotKeywordRow;
 import com.tuowei.dazhongdianping.module.browse.model.PhotoRow;
 import com.tuowei.dazhongdianping.module.browse.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
@@ -218,14 +219,18 @@ public class BrowseQueryService {
     }
 
     public List<SearchHotWordResponse> listHotSearchWords(Region region, int limit) {
-        Map<String, Integer> counter = new HashMap<>();
-        browseQueryMapper.selectCategoryNamesByRegion(region.name()).forEach(term -> addHotTerm(counter, term));
-        browseQueryMapper.selectActiveShopTagsByRegion(region.name()).forEach(tags -> addHotTags(counter, tags));
-        browseQueryMapper.selectApprovedReviewTagsByRegion(region.name()).forEach(tags -> addHotTags(counter, tags));
+        int normalizedLimit = normalizeSearchLimit(limit);
+        Map<String, Integer> counter = buildHotWordCounter(region);
+        List<HotKeywordRow> configured = browseQueryMapper.selectConfiguredHotKeywords(region.name(), normalizedLimit);
+        if (!configured.isEmpty()) {
+            return configured.stream()
+                    .map(row -> new SearchHotWordResponse(row.getKeyword(), counter.getOrDefault(row.getKeyword(), 1)))
+                    .toList();
+        }
         return counter.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed()
                         .thenComparing(Map.Entry::getKey))
-                .limit(normalizeSearchLimit(limit))
+                .limit(normalizedLimit)
                 .map(entry -> new SearchHotWordResponse(entry.getKey(), entry.getValue()))
                 .toList();
     }
@@ -375,6 +380,14 @@ public class BrowseQueryService {
                 row.getSearchType(),
                 row.getUpdatedAt().format(REVIEW_TIME_FORMATTER)
         );
+    }
+
+    private Map<String, Integer> buildHotWordCounter(Region region) {
+        Map<String, Integer> counter = new HashMap<>();
+        browseQueryMapper.selectCategoryNamesByRegion(region.name()).forEach(term -> addHotTerm(counter, term));
+        browseQueryMapper.selectActiveShopTagsByRegion(region.name()).forEach(tags -> addHotTags(counter, tags));
+        browseQueryMapper.selectApprovedReviewTagsByRegion(region.name()).forEach(tags -> addHotTags(counter, tags));
+        return counter;
     }
 
     private void recordSearchHistoryIfNeeded(Region region, String keyword) {

@@ -168,6 +168,19 @@ export interface AdminBannerPayload {
   sortNo: number
 }
 
+export interface AdminHotWord {
+  id: number
+  region: Region
+  keyword: string
+  enabled: boolean
+  sortNo: number
+}
+
+export interface AdminHotWordPayload {
+  keyword: string
+  sortNo: number
+}
+
 export interface AdminAccountUpdatePayload {
   name: string
   roleIds: number[]

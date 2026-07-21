@@ -128,6 +128,7 @@ const router = createRouter({
         { path: 'operations/circles', name: 'circle-management', component: () => import('@/views/CircleManagementView.vue'), meta: { requiresAuth: true, title: '官方圈子', requiredPermission: 'operations:circle:read' } },
         { path: 'operations/topics', name: 'topic-management', component: () => import('@/views/TopicManagementView.vue'), meta: { requiresAuth: true, title: '话题治理', requiredPermission: 'operations:topic:read' } },
         { path: 'operations/banners', name: 'banner-management', component: () => import('@/views/BannerManagementView.vue'), meta: { requiresAuth: true, title: 'Banner 配置', requiredPermission: 'operations:banner:read' } },
+        { path: 'operations/hotwords', name: 'hotword-management', component: () => import('@/views/HotWordManagementView.vue'), meta: { requiresAuth: true, title: '搜索热词', requiredPermission: 'operations:hotword:read' } },
         {
           path: 'system/admins',
           name: 'system-admins',

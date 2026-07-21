@@ -85,6 +85,17 @@
         LIMIT #{limit}
     </select>
 
+    <select id="selectConfiguredHotKeywords" resultType="com.tuowei.dazhongdianping.module.browse.model.HotKeywordRow">
+        SELECT id,
+               keyword,
+               sort AS sort_no
+        FROM hot_keyword
+        WHERE region = #{region}
+          AND enabled = TRUE
+        ORDER BY sort ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
     <sql id="shopQueryWhere">
         WHERE s.region = #{region}
           AND s.status = 1
