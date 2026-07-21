@@ -8,6 +8,7 @@
     <result column="read_at" property="readAt"/><result column="created_at" property="createdAt"/>
   </resultMap>
   <select id="countAvailableUser" resultType="int">SELECT COUNT(*) FROM app_user WHERE id=#{userId} AND status=1 AND is_deleted=FALSE</select>
+  <select id="selectUserName" resultType="string">SELECT COALESCE(NULLIF(TRIM(nickname),''),NULLIF(TRIM(email),''),NULLIF(TRIM(phone),''),'匿名用户') FROM app_user WHERE id=#{userId}</select>
   <select id="findConversation" resultType="long">SELECT id FROM conversation WHERE user_a=#{userA} AND user_b=#{userB}</select>
   <insert id="insertConversation">INSERT INTO conversation(user_a,user_b) VALUES(#{userA},#{userB})</insert>
   <select id="lastInsertedId" resultType="long">SELECT MAX(id) FROM message_report</select>

@@ -10,6 +10,7 @@ import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/home_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/post_editor_screen.dart';
+import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
 import 'package:dazhongdianping_app/features/circle/circle_square_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
@@ -224,6 +225,77 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                                     ),
                                   ),
                                 ),
+                          ),
+                        ),
+                      );
+                    },
+                    onPostTap: (postId) {
+                      Navigator.of(screenContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => PostDetailScreen(
+                            repository: communityRepository,
+                            postId: postId,
+                            canInteract: authController.currentUser != null,
+                            onUserTap: (context, userId) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => PublicUserProfileScreen(
+                                    repository: UserRepository(apiClient),
+                                    userId: userId,
+                                    canFollow:
+                                        authController.currentUser != null,
+                                    currentUserId:
+                                        authController.currentUser?.id,
+                                    onMessage: (peerUserId) =>
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => ChatScreen(
+                                              repository: MessageRepository(
+                                                apiClient,
+                                              ),
+                                              conversation: ConversationSummary(
+                                                id: 0,
+                                                peerUserId: peerUserId,
+                                                peerNickname: '私信用户',
+                                                peerAvatar: '',
+                                                lastMessagePreview: '',
+                                                lastMessageAt: '',
+                                                unreadCount: 0,
+                                              ),
+                                              currentUserId: authController
+                                                  .currentUser!
+                                                  .id,
+                                            ),
+                                          ),
+                                        ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    onConversationTap: (conversationId, peerUserId, peerName) {
+                      if (authController.currentUser == null) {
+                        return;
+                      }
+                      Navigator.of(screenContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            repository: MessageRepository(apiClient),
+                            conversation: ConversationSummary(
+                              id: conversationId,
+                              peerUserId: peerUserId ?? 0,
+                              peerNickname: peerName.isEmpty
+                                  ? '私信用户'
+                                  : peerName,
+                              peerAvatar: '',
+                              lastMessagePreview: '',
+                              lastMessageAt: '',
+                              unreadCount: 0,
+                            ),
+                            currentUserId: authController.currentUser!.id,
                           ),
                         ),
                       );

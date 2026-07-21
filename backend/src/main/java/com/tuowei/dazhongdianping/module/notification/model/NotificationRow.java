@@ -6,11 +6,13 @@ public class NotificationRow {
     private Long id;
     private Long userId;
     private Long actorUserId;
+    private String actorName;
     private String region;
     private String type;
     private String title;
     private String content;
     private String linkUrl;
+    private Integer aggregateCount;
     private Boolean read;
     private LocalDateTime readAt;
     private LocalDateTime createdAt;
@@ -21,6 +23,8 @@ public class NotificationRow {
     public void setUserId(Long userId) { this.userId = userId; }
     public Long getActorUserId() { return actorUserId; }
     public void setActorUserId(Long actorUserId) { this.actorUserId = actorUserId; }
+    public String getActorName() { return actorName; }
+    public void setActorName(String actorName) { this.actorName = actorName; }
     public String getRegion() { return region; }
     public void setRegion(String region) { this.region = region; }
     public String getType() { return type; }
@@ -31,6 +35,8 @@ public class NotificationRow {
     public void setContent(String content) { this.content = content; }
     public String getLinkUrl() { return linkUrl; }
     public void setLinkUrl(String linkUrl) { this.linkUrl = linkUrl; }
+    public Integer getAggregateCount() { return aggregateCount; }
+    public void setAggregateCount(Integer aggregateCount) { this.aggregateCount = aggregateCount; }
     public Boolean getRead() { return read; }
     public void setRead(Boolean read) { this.read = read; }
     public LocalDateTime getReadAt() { return readAt; }

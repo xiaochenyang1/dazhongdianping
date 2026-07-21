@@ -7,6 +7,7 @@ import { logoutUser } from '@/services/auth'
 import { clearSearchHistory, fetchHotSearchWords, fetchSearchHistory, fetchSearchSuggestions } from '@/services/browse'
 import type { SearchHistoryItem, SearchHotWord, SearchSuggestion } from '@/types/browse'
 import { useNotifications } from '@/composables/useNotifications'
+import type { UserNotification } from '@/types/notification'
 
 interface SearchPanelItem {
   key: string
@@ -150,6 +151,17 @@ function handleSearchBlur() {
   window.setTimeout(() => {
     searchFocused.value = false
   }, 120)
+}
+
+async function handleNotificationClick(item: UserNotification) {
+  await markRead(item)
+  notificationOpen.value = false
+  if (item.type === 'message.direct') {
+    return
+  }
+  if (item.linkUrl) {
+    await router.push(item.linkUrl)
+  }
 }
 
 async function handleLogout() {
@@ -414,8 +426,10 @@ watch(
             <div class="notification-popover__head"><strong>消息通知</strong><span>{{ notificationState.connected ? '实时在线' : '离线补偿' }}</span></div>
             <p v-if="notificationState.loading" class="notification-empty">加载中...</p>
             <p v-else-if="notificationState.items.length === 0" class="notification-empty">暂无通知</p>
-            <button v-for="item in notificationState.items" :key="item.id" type="button" class="notification-item" :class="{ unread: !item.read }" @click="markRead(item); item.linkUrl && router.push(item.linkUrl); notificationOpen = false">
-              <strong>{{ item.title }}</strong><span>{{ item.content }}</span><small>{{ item.createdAt }}</small>
+            <button v-for="item in notificationState.items" :key="item.id" type="button" class="notification-item" :class="{ unread: !item.read }" @click="handleNotificationClick(item)">
+              <strong>{{ item.title }}<template v-if="item.aggregateCount > 1"> · x{{ item.aggregateCount }}</template></strong>
+              <span>{{ item.content }}</span>
+              <small>{{ item.createdAt }}<template v-if="item.type === 'message.direct'"> · 请在 APP 查看</template></small>
             </button>
           </div>
         </div>

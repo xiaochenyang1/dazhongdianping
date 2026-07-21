@@ -12,9 +12,25 @@ const routerMocks = vi.hoisted(() => ({
   push: vi.fn(),
 }))
 
+const notificationMocks = vi.hoisted(() => ({
+  state: {
+    items: [] as Array<Record<string, unknown>>,
+    unreadCount: 0,
+    connected: true,
+    loading: false,
+  },
+  refresh: vi.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
+  markRead: vi.fn(),
+}))
+
 vi.mock('@/services/browse', () => browseMocks)
 vi.mock('@/services/auth', () => ({
   logoutUser: vi.fn(),
+}))
+vi.mock('@/composables/useNotifications', () => ({
+  useNotifications: () => notificationMocks,
 }))
 vi.mock('@/composables/useUserSession', () => ({
   useUserSession: () => ({
@@ -63,6 +79,14 @@ describe('AppHeader', () => {
   beforeEach(() => {
     Object.values(browseMocks).forEach((mock) => mock.mockReset())
     routerMocks.push.mockReset()
+    notificationMocks.refresh.mockReset()
+    notificationMocks.connect.mockReset()
+    notificationMocks.disconnect.mockReset()
+    notificationMocks.markRead.mockReset()
+    notificationMocks.state.items = []
+    notificationMocks.state.unreadCount = 0
+    notificationMocks.state.connected = true
+    notificationMocks.state.loading = false
     localStorage.clear()
     useAppContext().setRegion('CN')
   })
@@ -166,6 +190,45 @@ describe('AppHeader', () => {
     expect(browseMocks.fetchSearchSuggestions).toHaveBeenNthCalledWith(2, '咖啡')
     expect(host.textContent).toContain('Coffee Lab')
     expect(host.textContent).not.toContain('咖啡馆')
+    app.unmount()
+  })
+
+  it('renders aggregated notifications and keeps direct messages from pushing invalid web routes', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 99,
+        type: 'message.direct',
+        title: '收到私信',
+        content: '阿木：第二条私信提醒',
+        linkUrl: '/messages/conversations/33',
+        aggregateCount: 2,
+        read: false,
+        createdAt: '2026-07-21 10:30:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 2
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    expect(trigger).toBeDefined()
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('收到私信')
+    expect(host.textContent).toContain('x2')
+    expect(host.textContent).toContain('请在 APP 查看')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    expect(item).not.toBeNull()
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).not.toHaveBeenCalled()
     app.unmount()
   })
 })

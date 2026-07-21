@@ -295,7 +295,7 @@ public class UserPrivacyService {
             userPrivacyMapper.deleteGrowthPointsLogsByUserId(userId);
             userPrivacyMapper.deleteFollowRelationsByUserId(userId);
             userPrivacyMapper.deleteNotificationsByUserId(userId);
-            userPrivacyMapper.anonymizeFollowNotificationsByActor(userId);
+            userPrivacyMapper.anonymizeActorNotificationsByActor(userId);
             userPrivacyMapper.deleteMessageBlocksByUserId(userId);
             userPrivacyMapper.anonymizeMessagesByUserId(userId);
             userPrivacyMapper.anonymizeMessageReportsByUserId(userId);

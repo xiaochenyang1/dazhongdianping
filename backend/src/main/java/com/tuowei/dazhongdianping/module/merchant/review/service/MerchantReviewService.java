@@ -12,6 +12,7 @@ import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSession;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSessionContext;
 import com.tuowei.dazhongdianping.module.merchant.identity.service.MerchantAuthorizationService;
+import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.merchant.review.mapper.MerchantReviewMapper;
 import com.tuowei.dazhongdianping.module.merchant.review.model.MerchantReviewAppealRow;
 import com.tuowei.dazhongdianping.module.merchant.review.model.MerchantReviewRow;
@@ -41,15 +42,18 @@ public class MerchantReviewService {
     private final MerchantAuthorizationService authorizationService;
     private final AdminAuditMapper adminAuditMapper;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
 
     public MerchantReviewService(MerchantReviewMapper mapper,
                                  MerchantAuthorizationService authorizationService,
                                  AdminAuditMapper adminAuditMapper,
-                                 ObjectMapper objectMapper) {
+                                 ObjectMapper objectMapper,
+                                 NotificationService notificationService) {
         this.mapper = mapper;
         this.authorizationService = authorizationService;
         this.adminAuditMapper = adminAuditMapper;
         this.objectMapper = objectMapper;
+        this.notificationService = notificationService;
     }
 
     public PageResult<Map<String, Object>> reviews(Long shopId,
@@ -122,6 +126,11 @@ public class MerchantReviewService {
             mapper.insertOperationLog(
                     session.merchantId(), session.operatorId(), "review_reply_update", "review", reviewId, content
             );
+        }
+        if (review.getUserId() != null && review.getUserId() > 0) {
+            notificationService.create(review.getUserId(), null, review.getRegion(), "review.reply", "商家回复",
+                    review.getMerchantName() + " 回复了你的点评：" + preview(content),
+                    "/reviews/" + reviewId);
         }
         return replyMap(mapper.selectReply(reviewId));
     }
@@ -427,6 +436,14 @@ public class MerchantReviewService {
 
     private String format(LocalDateTime value) {
         return value == null ? "" : value.format(DATE_TIME_FORMATTER);
+    }
+
+    private String preview(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        String normalized = text.trim();
+        return normalized.length() <= 24 ? normalized : normalized.substring(0, 24) + "...";
     }
 
     private MerchantSession merchant() {

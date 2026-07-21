@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface MessageMapper {
     int countAvailableUser(@Param("userId") Long userId);
+    String selectUserName(@Param("userId") Long userId);
     Long findConversation(@Param("userA") Long userA, @Param("userB") Long userB);
     int insertConversation(@Param("userA") Long userA, @Param("userB") Long userB);
     Long lastInsertedId();

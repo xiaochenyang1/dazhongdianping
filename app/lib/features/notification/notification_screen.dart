@@ -6,10 +6,15 @@ class NotificationScreen extends StatefulWidget {
     super.key,
     required this.repository,
     this.onUserTap,
+    this.onPostTap,
+    this.onConversationTap,
   });
 
   final NotificationRepository repository;
   final ValueChanged<int>? onUserTap;
+  final ValueChanged<int>? onPostTap;
+  final void Function(int conversationId, int? peerUserId, String peerName)?
+  onConversationTap;
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -58,6 +63,28 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final userId = match == null ? null : int.tryParse(match.group(1)!);
     if (notification.type == 'social.follow' && userId != null) {
       widget.onUserTap?.call(userId);
+      return;
+    }
+    final postMatch = RegExp(
+      r'^/community/posts/(\d+)$',
+    ).firstMatch(notification.linkUrl);
+    final postId = postMatch == null ? null : int.tryParse(postMatch.group(1)!);
+    if (postId != null) {
+      widget.onPostTap?.call(postId);
+      return;
+    }
+    final conversationMatch = RegExp(
+      r'^/messages/conversations/(\d+)$',
+    ).firstMatch(notification.linkUrl);
+    final conversationId = conversationMatch == null
+        ? null
+        : int.tryParse(conversationMatch.group(1)!);
+    if (notification.type == 'message.direct' && conversationId != null) {
+      widget.onConversationTap?.call(
+        conversationId,
+        notification.actorUserId,
+        notification.actorName,
+      );
     }
   }
 
@@ -100,6 +127,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
+                      if (notification.aggregateCount > 1)
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE7DE),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'x${notification.aggregateCount}',
+                            style: const TextStyle(
+                              color: Color(0xFFB83D16),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                       if (!notification.read)
                         const Text(
                           '未读',

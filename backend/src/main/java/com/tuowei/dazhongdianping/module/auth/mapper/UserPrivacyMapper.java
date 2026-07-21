@@ -91,7 +91,7 @@ public interface UserPrivacyMapper {
     List<FollowExportRow> selectFollowersForExport(@Param("userId") Long userId);
     int deleteFollowRelationsByUserId(@Param("userId") Long userId);
     int deleteNotificationsByUserId(@Param("userId") Long userId);
-    int anonymizeFollowNotificationsByActor(@Param("userId") Long userId);
+    int anonymizeActorNotificationsByActor(@Param("userId") Long userId);
     List<Map<String, Object>> selectMessageConversationsForExport(@Param("userId") Long userId);
     List<Map<String, Object>> selectMessagesForExport(@Param("userId") Long userId);
     int deleteMessageBlocksByUserId(@Param("userId") Long userId);

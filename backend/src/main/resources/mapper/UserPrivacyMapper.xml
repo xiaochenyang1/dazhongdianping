@@ -485,7 +485,22 @@
     </select>
     <delete id="deleteFollowRelationsByUserId">DELETE FROM user_follow WHERE follower_user_id=#{userId} OR followed_user_id=#{userId}</delete>
     <delete id="deleteNotificationsByUserId">DELETE FROM user_notification WHERE user_id=#{userId}</delete>
-    <update id="anonymizeFollowNotificationsByActor">UPDATE user_notification SET actor_user_id=NULL,content='已注销用户曾关注了你',link_url='' WHERE actor_user_id=#{userId} AND type='social.follow'</update>
+    <update id="anonymizeActorNotificationsByActor">
+        UPDATE user_notification
+        SET actor_user_id=NULL,
+            content=CASE type
+                WHEN 'social.follow' THEN '已注销用户曾关注了你'
+                WHEN 'review.like' THEN '已注销用户曾点赞你的点评'
+                WHEN 'review.comment' THEN '已注销用户曾评论你的点评'
+                WHEN 'post.like' THEN '已注销用户曾点赞你的帖子'
+                WHEN 'post.comment' THEN '已注销用户曾评论你的帖子'
+                WHEN 'post.repost' THEN '已注销用户曾转发你的帖子'
+                WHEN 'message.direct' THEN '你收到过来自已注销用户的私信'
+                ELSE content
+            END,
+            link_url=CASE WHEN type IN ('social.follow','message.direct') THEN '' ELSE link_url END
+        WHERE actor_user_id=#{userId}
+    </update>
     <select id="selectMessageConversationsForExport" resultType="map">
         SELECT id,user_a AS userA,user_b AS userB,last_message_preview AS lastMessagePreview,last_message_at AS lastMessageAt,created_at AS createdAt
         FROM conversation WHERE user_a=#{userId} OR user_b=#{userId} ORDER BY id DESC

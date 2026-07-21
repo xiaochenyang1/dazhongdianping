@@ -54,11 +54,21 @@ public class NotificationService {
 
     @Transactional
     public Map<String, Object> create(Long userId, Long actorUserId, String region, String type, String title, String content, String linkUrl) {
-        NotificationRow row = new NotificationRow();
-        row.setUserId(userId); row.setActorUserId(actorUserId); row.setRegion(region); row.setType(type); row.setTitle(title);
-        row.setContent(content == null ? "" : content); row.setLinkUrl(linkUrl == null ? "" : linkUrl);
-        mapper.insert(row);
-        NotificationRow stored = mapper.findOwned(row.getId(), userId, region);
+        String normalizedLinkUrl = linkUrl == null ? "" : linkUrl;
+        NotificationRow aggregate = normalizedLinkUrl.isBlank()
+                ? null
+                : mapper.findLatestUnreadForAggregate(userId, region, type, normalizedLinkUrl);
+        NotificationRow stored;
+        if (aggregate != null) {
+            mapper.bumpAggregate(aggregate.getId(), actorUserId, title, content == null ? "" : content, normalizedLinkUrl);
+            stored = mapper.findOwned(aggregate.getId(), userId, region);
+        } else {
+            NotificationRow row = new NotificationRow();
+            row.setUserId(userId); row.setActorUserId(actorUserId); row.setRegion(region); row.setType(type); row.setTitle(title);
+            row.setContent(content == null ? "" : content); row.setLinkUrl(normalizedLinkUrl); row.setAggregateCount(1);
+            mapper.insert(row);
+            stored = mapper.findOwned(row.getId(), userId, region);
+        }
         Map<String, Object> response = toResponse(stored);
         Runnable send = () -> {
             if ("GLOBAL".equals(region)) sessions.sendAllRegions(userId, Map.of("type", "notification.new", "data", response));
@@ -76,7 +86,9 @@ public class NotificationService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", row.getId()); result.put("type", row.getType()); result.put("title", row.getTitle());
         result.put("actorUserId", row.getActorUserId());
+        result.put("actorName", row.getActorName() == null ? "" : row.getActorName());
         result.put("content", row.getContent()); result.put("linkUrl", row.getLinkUrl());
+        result.put("aggregateCount", row.getAggregateCount() == null ? 1 : row.getAggregateCount());
         result.put("read", Boolean.TRUE.equals(row.getRead()));
         result.put("readAt", row.getReadAt() == null ? "" : row.getReadAt().format(FORMATTER));
         result.put("createdAt", row.getCreatedAt() == null ? "" : row.getCreatedAt().format(FORMATTER));

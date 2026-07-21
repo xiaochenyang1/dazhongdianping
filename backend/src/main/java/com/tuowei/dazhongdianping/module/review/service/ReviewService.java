@@ -12,6 +12,7 @@ import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;
+import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentListQuery;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentRow;
@@ -57,17 +58,20 @@ public class ReviewService {
     private final AdminAuditMapper adminAuditMapper;
     private final UserGrowthService userGrowthService;
     private final MerchantReviewMapper merchantReviewMapper;
+    private final NotificationService notificationService;
 
     public ReviewService(ReviewMapper reviewMapper,
                          AuthCommandMapper authCommandMapper,
                          AdminAuditMapper adminAuditMapper,
                          UserGrowthService userGrowthService,
-                         MerchantReviewMapper merchantReviewMapper) {
+                         MerchantReviewMapper merchantReviewMapper,
+                         NotificationService notificationService) {
         this.reviewMapper = reviewMapper;
         this.authCommandMapper = authCommandMapper;
         this.adminAuditMapper = adminAuditMapper;
         this.userGrowthService = userGrowthService;
         this.merchantReviewMapper = merchantReviewMapper;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -138,6 +142,9 @@ public class ReviewService {
                     && review.getUserId() > 0
                     && !session.userId().equals(review.getUserId())) {
                 userGrowthService.rewardForReviewLiked(review.getUserId(), reviewId);
+                notificationService.create(review.getUserId(), session.userId(), review.getRegion(), "review.like", "点评获赞",
+                        currentUserName() + " 赞了你的点评：" + preview(review.getContent()),
+                        "/reviews/" + reviewId);
             }
         }
         refreshInteractionCounts(reviewId);
@@ -151,7 +158,7 @@ public class ReviewService {
     @Transactional
     public ReviewCommentResponse createComment(Long reviewId, ReviewCommentCreateRequest request) {
         AppUserRow currentUser = currentUserRow();
-        requirePublicReview(reviewId);
+        ReviewRow review = requirePublicReview(reviewId);
 
         ReviewCommentRow row = new ReviewCommentRow();
         row.setReviewId(reviewId);
@@ -162,6 +169,13 @@ public class ReviewService {
         row.setCreatedAt(LocalDateTime.now());
         reviewMapper.insertReviewComment(row);
         refreshInteractionCounts(reviewId);
+        if (review.getUserId() != null
+                && review.getUserId() > 0
+                && !currentUser.getId().equals(review.getUserId())) {
+            notificationService.create(review.getUserId(), currentUser.getId(), review.getRegion(), "review.comment", "点评新评论",
+                    row.getUserName() + " 评论了你的点评：" + preview(row.getContent()),
+                    "/reviews/" + reviewId);
+        }
 
         return toReviewCommentResponse(row, currentUser.getId());
     }
@@ -547,6 +561,18 @@ public class ReviewService {
                 .map(String::trim)
                 .reduce((left, right) -> left + "," + right)
                 .orElse("");
+    }
+
+    private String currentUserName() {
+        return resolveUserName(currentUserRow());
+    }
+
+    private String preview(String text) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String normalized = text.trim();
+        return normalized.length() <= 24 ? normalized : normalized.substring(0, 24) + "...";
     }
 
     private String formatDateTime(LocalDateTime value) {

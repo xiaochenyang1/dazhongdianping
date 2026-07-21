@@ -395,6 +395,8 @@ class UserPrivacyControllerTest {
         jdbcTemplate.update("INSERT INTO conversation(user_a,user_b,last_message_preview,last_message_at) VALUES(?,?,?,CURRENT_TIMESTAMP)", Math.min(session.userId(), relatedUserId), Math.max(session.userId(), relatedUserId), "注销前私信");
         Long messageConversationId = jdbcTemplate.queryForObject("SELECT id FROM conversation WHERE user_a=? AND user_b=?", Long.class, Math.min(session.userId(), relatedUserId), Math.max(session.userId(), relatedUserId));
         jdbcTemplate.update("INSERT INTO message(conversation_id,from_user_id,to_user_id,content,is_read,status,is_deleted) VALUES(?,?,?,?,FALSE,1,FALSE)", messageConversationId, session.userId(), relatedUserId, "注销前私信");
+        jdbcTemplate.update("INSERT INTO user_notification(user_id,actor_user_id,region,type,title,content,link_url,aggregate_count,is_read) VALUES(?,?,'EU','review.like','点评获赞','隐私测试用户赞了你的点评：真有帮助','/reviews/3',2,FALSE)", relatedUserId, session.userId());
+        jdbcTemplate.update("INSERT INTO user_notification(user_id,actor_user_id,region,type,title,content,link_url,aggregate_count,is_read) VALUES(?,?,'GLOBAL','message.direct','收到私信','隐私测试用户：注销前私信',?,1,FALSE)", relatedUserId, session.userId(), "/messages/conversations/" + messageConversationId);
         jdbcTemplate.update("INSERT INTO user_block(user_id,blocked_user_id) VALUES(?,?)", session.userId(), relatedUserId);
         jdbcTemplate.update("INSERT INTO message_report(reporter_user_id,target_type,target_id,reason,status) VALUES(?,2,?,'注销前举报',0)", session.userId(), messageConversationId);
         jdbcTemplate.update("INSERT INTO circle(region,name,description,member_count,post_count,sort,status,created_by,is_deleted) VALUES('EU','注销治理圈','治理测试',1,0,10,1,1,FALSE)");
@@ -512,6 +514,8 @@ class UserPrivacyControllerTest {
         );
         Integer remainingRelations = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM user_follow WHERE follower_user_id=? OR followed_user_id=?", Integer.class, session.userId(), session.userId());
         Integer anonymizedSourceNotifications = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM user_notification WHERE user_id=? AND actor_user_id IS NULL AND content='已注销用户曾关注了你' AND link_url=''", Integer.class, relatedUserId);
+        Integer anonymizedReviewLikeNotifications = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM user_notification WHERE user_id=? AND actor_user_id IS NULL AND content='已注销用户曾点赞你的点评' AND link_url='/reviews/3'", Integer.class, relatedUserId);
+        Integer anonymizedDirectMessageNotifications = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM user_notification WHERE user_id=? AND actor_user_id IS NULL AND content='你收到过来自已注销用户的私信' AND link_url=''", Integer.class, relatedUserId);
         Integer remainingBlocks = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM user_block WHERE user_id=? OR blocked_user_id=?", Integer.class, session.userId(), session.userId());
         Integer governedMessages = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM message WHERE conversation_id=? AND from_user_id=0 AND content='消息已因账号注销移除'", Integer.class, messageConversationId);
         Integer anonymizedReports = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM message_report WHERE target_id=? AND reporter_user_id=0", Integer.class, messageConversationId);
@@ -545,6 +549,8 @@ class UserPrivacyControllerTest {
         }
         if (remainingRelations == null || remainingRelations != 0) throw new AssertionError("用户注销后关注关系没有清理");
         if (anonymizedSourceNotifications == null || anonymizedSourceNotifications != 1) throw new AssertionError("用户注销后关注通知来源没有匿名化");
+        if (anonymizedReviewLikeNotifications == null || anonymizedReviewLikeNotifications != 1) throw new AssertionError("用户注销后点评点赞通知来源没有匿名化");
+        if (anonymizedDirectMessageNotifications == null || anonymizedDirectMessageNotifications != 1) throw new AssertionError("用户注销后私信通知来源没有匿名化");
         if (remainingBlocks == null || remainingBlocks != 0) throw new AssertionError("用户注销后拉黑关系没有清理");
         if (governedMessages == null || governedMessages != 1) throw new AssertionError("用户注销后本人私信没有匿名化");
         if (anonymizedReports == null || anonymizedReports != 1) throw new AssertionError("用户注销后举报身份没有匿名化");

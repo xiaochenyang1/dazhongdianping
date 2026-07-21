@@ -22,6 +22,7 @@ import com.tuowei.dazhongdianping.module.community.model.response.PostLikeRespon
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostRepostResponse;
+import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
@@ -39,14 +40,17 @@ public class CommunityService {
     private final CircleService circleService;
     private final CircleMapper circleMapper;
     private final TopicService topicService;
+    private final NotificationService notificationService;
 
     public CommunityService(CommunityMapper communityMapper, AdminAuditMapper adminAuditMapper,
-                            CircleService circleService, CircleMapper circleMapper, TopicService topicService) {
+                            CircleService circleService, CircleMapper circleMapper, TopicService topicService,
+                            NotificationService notificationService) {
         this.communityMapper = communityMapper;
         this.adminAuditMapper = adminAuditMapper;
         this.circleService = circleService;
         this.circleMapper = circleMapper;
         this.topicService = topicService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -165,10 +169,17 @@ public class CommunityService {
     @Transactional
     public PostLikeResponse toggleLike(Long postId) {
         UserSession user = currentUser();
-        requirePublicPost(postId);
+        PostRow post = requirePublicPost(postId);
         boolean liked = communityMapper.countUserPostLike(postId, user.userId()) > 0;
         if (liked) communityMapper.deletePostLike(postId, user.userId());
-        else communityMapper.insertPostLike(postId, user.userId());
+        else {
+            communityMapper.insertPostLike(postId, user.userId());
+            if (post.getUserId() != null && !user.userId().equals(post.getUserId())) {
+                notificationService.create(post.getUserId(), user.userId(), post.getRegion(), "post.like", "帖子获赞",
+                        actorName(user.userId()) + " 赞了你的帖子《" + preview(post.getTitle()) + "》",
+                        "/community/posts/" + postId);
+            }
+        }
         communityMapper.refreshPostLikeCount(postId);
         topicService.touchTopicsByPostId(postId);
         return new PostLikeResponse(postId, !liked, communityMapper.countPostLikes(postId));
@@ -177,16 +188,23 @@ public class CommunityService {
     @Transactional
     public PostRepostResponse repost(Long postId) {
         UserSession user = currentUser();
-        requirePublicPostForUpdate(postId);
+        PostRow post = requirePublicPostForUpdate(postId);
+        boolean created = false;
         if (communityMapper.countUserPostRepost(postId, user.userId()) == 0) {
             try {
                 communityMapper.insertPostRepost(postId, user.userId(), region());
+                created = true;
             } catch (DuplicateKeyException ignored) {
                 // Duplicate repost requests should remain idempotent.
             }
         }
         communityMapper.refreshPostRepostCount(postId);
         topicService.touchTopicsByPostId(postId);
+        if (created && post.getUserId() != null && !user.userId().equals(post.getUserId())) {
+            notificationService.create(post.getUserId(), user.userId(), post.getRegion(), "post.repost", "帖子被转发",
+                    actorName(user.userId()) + " 转发了你的帖子《" + preview(post.getTitle()) + "》",
+                    "/community/posts/" + postId);
+        }
         return new PostRepostResponse(postId, true, communityMapper.countPostReposts(postId));
     }
 
@@ -203,7 +221,7 @@ public class CommunityService {
     @Transactional
     public PostCommentResponse createComment(Long postId, PostCommentCreateRequest request) {
         UserSession user = currentUser();
-        requirePublicPost(postId);
+        PostRow post = requirePublicPost(postId);
         PostCommentRow row = new PostCommentRow();
         row.setPostId(postId);
         row.setUserId(user.userId());
@@ -212,6 +230,11 @@ public class CommunityService {
         communityMapper.insertPostComment(row);
         communityMapper.refreshPostCommentCount(postId);
         topicService.touchTopicsByPostId(postId);
+        if (post.getUserId() != null && !user.userId().equals(post.getUserId())) {
+            notificationService.create(post.getUserId(), user.userId(), post.getRegion(), "post.comment", "帖子新评论",
+                    row.getUserName() + " 评论了你的帖子：" + preview(row.getContent()),
+                    "/community/posts/" + postId);
+        }
         return toComment(row);
     }
 
@@ -333,6 +356,18 @@ public class CommunityService {
 
     private String format(java.time.LocalDateTime value) {
         return value == null ? "" : value.format(FORMATTER);
+    }
+
+    private String actorName(Long userId) {
+        return communityMapper.selectUserName(userId);
+    }
+
+    private String preview(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        String normalized = text.trim();
+        return normalized.length() <= 24 ? normalized : normalized.substring(0, 24) + "...";
     }
 
     private String auditStatusText(Integer status) {

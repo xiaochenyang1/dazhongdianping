@@ -18,6 +18,7 @@ import com.tuowei.dazhongdianping.module.message.model.response.ConversationResp
 import com.tuowei.dazhongdianping.module.message.model.response.MessageReportResponse;
 import com.tuowei.dazhongdianping.module.message.model.response.MessageResponse;
 import com.tuowei.dazhongdianping.module.message.model.response.ReadMessagesResponse;
+import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.notification.websocket.NotificationSessionRegistry;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,8 +35,9 @@ public class MessageService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final MessageMapper mapper;
     private final NotificationSessionRegistry sessions;
-    public MessageService(MessageMapper mapper, NotificationSessionRegistry sessions) {
-        this.mapper = mapper; this.sessions = sessions;
+    private final NotificationService notifications;
+    public MessageService(MessageMapper mapper, NotificationSessionRegistry sessions, NotificationService notifications) {
+        this.mapper = mapper; this.sessions = sessions; this.notifications = notifications;
     }
 
     @Transactional
@@ -58,6 +60,9 @@ public class MessageService {
         mapper.insertMessage(row);
         mapper.updateConversation(conversationId, row.getId(), preview(row.getContent()));
         MessageResponse response = toMessage(row);
+        notifications.create(receiverId, senderId, "GLOBAL", "message.direct", "收到私信",
+                mapper.selectUserName(senderId) + "：" + preview(row.getContent()),
+                "/messages/conversations/" + conversationId);
         Runnable notifyReceiver = () -> sessions.sendAllRegions(receiverId,
                 Map.of("type", "message.new", "data", response));
         if (TransactionSynchronizationManager.isSynchronizationActive()) {

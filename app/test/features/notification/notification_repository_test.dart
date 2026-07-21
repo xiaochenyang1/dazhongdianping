@@ -15,9 +15,12 @@ class NotificationFakeApi implements JsonApi {
         {
           'id': 1,
           'type': 'review.reply',
+          'actorUserId': 9,
+          'actorName': 'Maison Sichuan',
           'title': '商家回复',
           'content': '谢谢支持',
           'linkUrl': '/reviews/1',
+          'aggregateCount': 3,
           'read': false,
           'createdAt': '2026-07-15 10:00:00',
         },
@@ -32,9 +35,12 @@ class NotificationFakeApi implements JsonApi {
     return {
       'id': 1,
       'type': 'review.reply',
+      'actorUserId': 9,
+      'actorName': 'Maison Sichuan',
       'title': '商家回复',
       'content': '谢谢支持',
       'linkUrl': '/reviews/1',
+      'aggregateCount': 3,
       'read': true,
       'createdAt': '2026-07-15 10:00:00',
     };
@@ -47,8 +53,12 @@ void main() {
     final repository = NotificationRepository(api);
     final messages = await repository.load();
     expect(messages.single.read, isFalse);
+    expect(messages.single.actorUserId, 9);
+    expect(messages.single.actorName, 'Maison Sichuan');
+    expect(messages.single.aggregateCount, 3);
     final read = await repository.ack(1);
     expect(api.path, '/api/c/v1/notifications/1/ack');
     expect(read.read, isTrue);
+    expect(read.aggregateCount, 3);
   });
 }

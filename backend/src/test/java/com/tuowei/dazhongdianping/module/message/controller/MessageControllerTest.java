@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -79,6 +80,38 @@ class MessageControllerTest {
                         .header("Authorization", bearer(receiver.token())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.list[0].unreadCount").value(0));
+    }
+
+    @Test
+    void shouldAggregateUnreadDirectMessagesIntoNotificationCenter() throws Exception {
+        UserAccess sender = registerUser("私信通知发送者");
+        UserAccess receiver = registerUser("私信通知接收者");
+
+        MvcResult first = send(sender, receiver.id(), "第一条私信提醒")
+                .andExpect(status().isOk())
+                .andReturn();
+        long conversationId = readLong(first, "/data/conversationId");
+
+        send(sender, receiver.id(), "第二条私信提醒")
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/notifications/unread-count")
+                        .header("Authorization", bearer(receiver.token()))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(2));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(receiver.token()))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].type").value("message.direct"))
+                .andExpect(jsonPath("$.data.list[0].actorUserId").value(sender.id()))
+                .andExpect(jsonPath("$.data.list[0].actorName").value("私信通知发送者"))
+                .andExpect(jsonPath("$.data.list[0].aggregateCount").value(2))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/messages/conversations/" + conversationId))
+                .andExpect(jsonPath("$.data.list[0].content", Matchers.containsString("第二条私信提醒")));
     }
 
     @Test

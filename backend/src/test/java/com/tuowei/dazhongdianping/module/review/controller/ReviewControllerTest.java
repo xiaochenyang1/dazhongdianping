@@ -430,6 +430,53 @@ class ReviewControllerTest {
     }
 
     @Test
+    void shouldAggregateReviewInteractionNotifications() throws Exception {
+        String authorToken = registerUser("review-notification-author@example.com", "点评通知作者");
+        long reviewId = createReview(authorToken, 10001L, "这条点评专门用来验通知聚合。", 5, 5, 5, 5, 128.00);
+
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingAuditTaskId(reviewId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        String likerToken = registerUser("review-notification-like@example.com", "点赞提醒用户");
+        String commenterToken = registerUser("review-notification-comment@example.com", "评论提醒用户");
+
+        mockMvc.perform(post("/api/c/v1/reviews/{reviewId}/like", reviewId)
+                        .header("Authorization", bearer(likerToken)))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/c/v1/reviews/{reviewId}/like", reviewId)
+                        .header("Authorization", bearer(commenterToken)))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/c/v1/reviews/{reviewId}/comments", reviewId)
+                        .header("Authorization", bearer(commenterToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "我再补一条评论，把聚合通知打实。"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/notifications/unread-count")
+                        .header("Authorization", bearer(authorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(3));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(authorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.list[0].type").value("review.comment"))
+                .andExpect(jsonPath("$.data.list[0].aggregateCount").value(1))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/reviews/" + reviewId))
+                .andExpect(jsonPath("$.data.list[1].type").value("review.like"))
+                .andExpect(jsonPath("$.data.list[1].aggregateCount").value(2))
+                .andExpect(jsonPath("$.data.list[1].linkUrl").value("/reviews/" + reviewId));
+    }
+
+    @Test
     void shouldRejectCrossRegionReviewAccessAndInteractions() throws Exception {
         String userToken = registerUser("review-region@example.com", "区域用户");
 

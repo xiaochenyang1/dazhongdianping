@@ -7,6 +7,23 @@ let socket: WebSocket | undefined
 let reconnectTimer: number | undefined
 let shouldReconnect = false
 
+function unreadWeight(notification: UserNotification | undefined) {
+  if (!notification || notification.read) {
+    return 0
+  }
+  return notification.aggregateCount || 1
+}
+
+function upsertNotification(notification: UserNotification) {
+  const index = state.items.findIndex((item) => item.id === notification.id)
+  const previous = index >= 0 ? state.items[index] : undefined
+  if (index >= 0) {
+    state.items.splice(index, 1)
+  }
+  state.items.unshift(notification)
+  state.unreadCount = Math.max(0, state.unreadCount - unreadWeight(previous) + unreadWeight(notification))
+}
+
 async function refresh() {
   state.loading = true
   try {
@@ -29,8 +46,7 @@ async function connect() {
   socket.onmessage = (event) => {
     const payload = JSON.parse(String(event.data)) as { type?: string; data?: UserNotification }
     if (payload.type === 'notification.new' && payload.data) {
-      state.items.unshift(payload.data)
-      state.unreadCount += 1
+      upsertNotification(payload.data)
     }
   }
   socket.onclose = () => {
@@ -51,7 +67,7 @@ async function markRead(notification: UserNotification) {
   if (!notification.read) {
     const updated = await ackNotification(notification.id)
     Object.assign(notification, updated)
-    state.unreadCount = Math.max(0, state.unreadCount - 1)
+    state.unreadCount = Math.max(0, state.unreadCount - (notification.aggregateCount || 1))
   }
 }
 

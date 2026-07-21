@@ -233,6 +233,63 @@ class CommunityControllerTest {
     }
 
     @Test
+    void shouldAggregatePostInteractionNotifications() throws Exception {
+        String authorToken = registerUser();
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("通知聚合帖子", "连续互动不该把通知列表刷成瀑布。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long postId = readLong(created, "/data/id");
+
+        String adminToken = loginAdmin();
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(postId))
+                        .header("Authorization", bearer(adminToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        String actorOneToken = registerUser();
+        String actorTwoToken = registerUser();
+
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/like", postId)
+                        .header("Authorization", bearer(actorOneToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/like", postId)
+                        .header("Authorization", bearer(actorTwoToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", postId)
+                        .header("Authorization", bearer(actorOneToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"这条帖子值得补一条评论提醒。\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/notifications/unread-count")
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(3));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.list[0].type").value("post.comment"))
+                .andExpect(jsonPath("$.data.list[0].aggregateCount").value(1))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/community/posts/" + postId))
+                .andExpect(jsonPath("$.data.list[1].type").value("post.like"))
+                .andExpect(jsonPath("$.data.list[1].aggregateCount").value(2))
+                .andExpect(jsonPath("$.data.list[1].linkUrl").value("/community/posts/" + postId));
+    }
+
+    @Test
     void shouldRefreshTopicPostCountsAcrossAuditEditAndDelete() throws Exception {
         String userToken = registerUser();
         MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
