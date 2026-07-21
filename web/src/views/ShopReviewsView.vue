@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useAppContext } from '@/composables/useAppContext'
 import { formatMoney } from '@/lib/currency'
-import { fetchShopDetail, fetchShopReviews } from '@/services/browse'
+import { fetchShopDetail, fetchShopReviews, type ShopReviewQuery } from '@/services/browse'
 import type { ReviewPreview, ShopDetail } from '@/types/browse'
 
 const props = defineProps<{
@@ -20,6 +20,11 @@ const reviews = ref<ReviewPreview[]>([])
 const reviewTotal = ref(0)
 const reviewPage = ref(1)
 const reviewHasMore = ref(false)
+const reviewSort = ref<ShopReviewQuery['sort']>('latest')
+const reviewMinScore = ref('')
+const reviewHasImages = ref('')
+let reviewsRequestId = 0
+let appliedReviewQuery: ShopReviewQuery = {}
 
 const REVIEW_PAGE_SIZE = 20
 
@@ -49,30 +54,59 @@ const reviewFacts = computed(() => {
   ]
 })
 
-async function loadReviews() {
-  if (Number.isNaN(props.shopId)) {
+function currentReviewQuery(): ShopReviewQuery {
+  const query: ShopReviewQuery = {}
+  if (reviewSort.value && reviewSort.value !== 'latest') query.sort = reviewSort.value
+  if (reviewMinScore.value) query.minScore = Number(reviewMinScore.value)
+  if (reviewHasImages.value === 'true') query.hasImages = true
+  if (reviewHasImages.value === 'false') query.hasImages = false
+  return query
+}
+
+function loadReviewsPage(shopId: number, page: number, query: ShopReviewQuery) {
+  return Object.keys(query).length > 0
+    ? fetchShopReviews(shopId, page, REVIEW_PAGE_SIZE, query)
+    : fetchShopReviews(shopId, page, REVIEW_PAGE_SIZE)
+}
+
+async function loadReviews(clearShop = false) {
+  const requestId = ++reviewsRequestId
+  const shopId = props.shopId
+  const query = currentReviewQuery()
+  loadingMore.value = false
+  loadMoreErrorMessage.value = ''
+  if (clearShop) shop.value = null
+  reviews.value = []
+  reviewTotal.value = 0
+  reviewPage.value = 1
+  reviewHasMore.value = false
+  if (Number.isNaN(shopId)) {
     errorMessage.value = '商户 ID 不合法'
+    loading.value = false
     return
   }
 
-  loading.value = true
+  loading.value = clearShop || shop.value == null
   errorMessage.value = ''
-  loadMoreErrorMessage.value = ''
 
   try {
     const [shopDetail, reviewResult] = await Promise.all([
-      fetchShopDetail(props.shopId),
-      fetchShopReviews(props.shopId, 1, REVIEW_PAGE_SIZE),
+      fetchShopDetail(shopId),
+      loadReviewsPage(shopId, 1, query),
     ])
+    if (requestId !== reviewsRequestId) return
     shop.value = shopDetail
     reviews.value = reviewResult.list
     reviewTotal.value = reviewResult.total
     reviewPage.value = reviewResult.page
     reviewHasMore.value = reviewResult.hasMore
+    appliedReviewQuery = query
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '门店点评加载失败'
+    if (requestId === reviewsRequestId) {
+      errorMessage.value = error instanceof Error ? error.message : '门店点评加载失败'
+    }
   } finally {
-    loading.value = false
+    if (requestId === reviewsRequestId) loading.value = false
   }
 }
 
@@ -81,25 +115,31 @@ async function loadMoreReviews() {
     return
   }
 
+  const requestId = reviewsRequestId
+  const shopId = props.shopId
+  const targetPage = reviewPage.value + 1
   loadingMore.value = true
   loadMoreErrorMessage.value = ''
   try {
-    const nextPage = await fetchShopReviews(props.shopId, reviewPage.value + 1, REVIEW_PAGE_SIZE)
+    const nextPage = await loadReviewsPage(shopId, targetPage, appliedReviewQuery)
+    if (requestId !== reviewsRequestId || props.shopId !== shopId) return
     reviews.value = [...reviews.value, ...nextPage.list]
     reviewTotal.value = nextPage.total
     reviewPage.value = nextPage.page
     reviewHasMore.value = nextPage.hasMore
   } catch (error) {
-    loadMoreErrorMessage.value = error instanceof Error ? error.message : '更多点评加载失败'
+    if (requestId === reviewsRequestId) {
+      loadMoreErrorMessage.value = error instanceof Error ? error.message : '更多点评加载失败'
+    }
   } finally {
-    loadingMore.value = false
+    if (requestId === reviewsRequestId) loadingMore.value = false
   }
 }
 
 watch(
   [() => props.shopId, () => state.region],
   () => {
-    void loadReviews()
+    void loadReviews(true)
   },
   { immediate: true },
 )
@@ -150,6 +190,34 @@ watch(
         <div>
           <p class="eyebrow">点评列表</p>
           <h2>审核通过的公开点评集中放这儿，别都挤在详情页预览里。</h2>
+        </div>
+        <div class="review-filters" aria-label="点评筛选">
+          <label class="compact-field">
+            <span>排序</span>
+            <select v-model="reviewSort" data-testid="review-sort">
+              <option value="latest">最新</option>
+              <option value="popular">最热</option>
+              <option value="score">评分</option>
+            </select>
+          </label>
+          <label class="compact-field">
+            <span>最低评分</span>
+            <select v-model="reviewMinScore" data-testid="review-min-score">
+              <option value="">不限</option>
+              <option value="4">4 分</option>
+              <option value="4.5">4.5 分</option>
+              <option value="5">5 分</option>
+            </select>
+          </label>
+          <label class="compact-field">
+            <span>图片</span>
+            <select v-model="reviewHasImages" data-testid="review-has-images">
+              <option value="">全部</option>
+              <option value="true">带图</option>
+              <option value="false">无图</option>
+            </select>
+          </label>
+          <button type="button" class="secondary-button" data-testid="apply-review-filters" @click="loadReviews()">应用</button>
         </div>
       </div>
 

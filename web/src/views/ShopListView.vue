@@ -11,14 +11,21 @@ const { state, setCityId } = useAppContext()
 const route = useRoute()
 
 const loading = ref(false)
+const loadingMore = ref(false)
 const errorMessage = ref('')
+const loadMoreErrorMessage = ref('')
 const categories = ref<CategoryNode[]>([])
 const cities = ref<City[]>([])
 const areas = ref<Area[]>([])
 const shops = ref<ShopListItem[]>([])
 const shopTotal = ref(0)
 const shopHasMore = ref(false)
+const shopPage = ref(1)
 const userLocation = ref<{ lat: number; lng: number } | null>(null)
+let bootstrapRequestId = 0
+let areaRequestId = 0
+let shopRequestId = 0
+let cityChangeRequestId = 0
 
 const filters = reactive({
   keyword: routeKeyword(),
@@ -26,6 +33,11 @@ const filters = reactive({
   cityId: state.cityId as number | undefined,
   areaId: undefined as number | undefined,
   sort: 'smart',
+  minPrice: '',
+  maxPrice: '',
+  minScore: '',
+  hasDeal: '',
+  openNow: '',
 })
 
 const sortLabelMap = {
@@ -75,6 +87,15 @@ const activeFilterTags = computed(() => {
     tags.push(sortLabelMap[filters.sort as keyof typeof sortLabelMap])
   }
 
+  if (filters.minPrice || filters.maxPrice) {
+    tags.push(`人均 ${filters.minPrice || '不限'} - ${filters.maxPrice || '不限'}`)
+  }
+  if (filters.minScore) tags.push(`评分 >= ${filters.minScore}`)
+  if (filters.hasDeal === 'true') tags.push('有团购')
+  if (filters.hasDeal === 'false') tags.push('无团购')
+  if (filters.openNow === 'true') tags.push('营业中')
+  if (filters.openNow === 'false') tags.push('休息中')
+
   return tags
 })
 
@@ -104,12 +125,26 @@ function routeKeyword() {
 }
 
 async function bootstrapPage() {
+  const requestId = ++bootstrapRequestId
+  ++areaRequestId
+  ++shopRequestId
+  ++cityChangeRequestId
   loading.value = true
+  loadingMore.value = false
   errorMessage.value = ''
+  loadMoreErrorMessage.value = ''
+  categories.value = []
+  cities.value = []
+  areas.value = []
+  shops.value = []
+  shopTotal.value = 0
+  shopHasMore.value = false
+  shopPage.value = 1
   filters.keyword = routeKeyword()
 
   try {
     const [nextCategories, nextCities] = await Promise.all([fetchCategories(), fetchCities()])
+    if (requestId !== bootstrapRequestId) return
     categories.value = nextCategories
     cities.value = nextCities
 
@@ -121,49 +156,104 @@ async function bootstrapPage() {
     filters.cityId = resolvedCityId
     setCityId(resolvedCityId)
 
-    await loadAreas()
+    const areasLoaded = await loadAreas()
+    if (requestId !== bootstrapRequestId || !areasLoaded) return
     await loadShops()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '商户列表加载失败'
+    if (requestId === bootstrapRequestId) {
+      errorMessage.value = error instanceof Error ? error.message : '商户列表加载失败'
+    }
   } finally {
-    loading.value = false
+    if (requestId === bootstrapRequestId) loading.value = false
   }
 }
 
 async function loadAreas() {
-  if (!filters.cityId) {
-    areas.value = []
-    return
+  const requestId = ++areaRequestId
+  const cityId = filters.cityId
+  areas.value = []
+  if (!cityId) return true
+
+  try {
+    const nextAreas = await fetchAreas(cityId)
+    if (requestId !== areaRequestId || filters.cityId !== cityId) return false
+    areas.value = nextAreas
+    return true
+  } catch (error) {
+    if (requestId !== areaRequestId) return false
+    throw error
   }
-  areas.value = await fetchAreas(filters.cityId)
 }
 
-async function loadShops() {
-  loading.value = true
-  errorMessage.value = ''
+async function loadShops(append = false) {
+  if (append && (!shopHasMore.value || loadingMore.value)) return
+  const requestId = ++shopRequestId
+  const targetPage = append ? shopPage.value + 1 : 1
+  const requestFilters = { ...filters }
+  if (append) {
+    loadingMore.value = true
+    loadMoreErrorMessage.value = ''
+  } else {
+    loading.value = true
+    loadingMore.value = false
+    errorMessage.value = ''
+    loadMoreErrorMessage.value = ''
+    shops.value = []
+    shopTotal.value = 0
+    shopHasMore.value = false
+    shopPage.value = 1
+  }
   try {
-    if (filters.sort === 'distance' && !userLocation.value) {
-      userLocation.value = await resolveUserLocation()
+    let location = userLocation.value
+    if (requestFilters.sort === 'distance' && !location) {
+      location = await resolveUserLocation()
+      if (requestId !== shopRequestId) return
+      userLocation.value = location
     }
     const page = await fetchShops({
-      keyword: filters.keyword || undefined,
-      categoryId: filters.categoryId,
-      cityId: filters.cityId,
-      areaId: filters.areaId,
-      sort: filters.sort,
-      lat: filters.sort === 'distance' ? userLocation.value?.lat : undefined,
-      lng: filters.sort === 'distance' ? userLocation.value?.lng : undefined,
-      page: 1,
+      keyword: requestFilters.keyword || undefined,
+      categoryId: requestFilters.categoryId,
+      cityId: requestFilters.cityId,
+      areaId: requestFilters.areaId,
+      sort: requestFilters.sort,
+      lat: requestFilters.sort === 'distance' ? location?.lat : undefined,
+      lng: requestFilters.sort === 'distance' ? location?.lng : undefined,
+      minPrice: optionalNumber(requestFilters.minPrice),
+      maxPrice: optionalNumber(requestFilters.maxPrice),
+      minScore: optionalNumber(requestFilters.minScore),
+      hasDeal: optionalBoolean(requestFilters.hasDeal),
+      openNow: optionalBoolean(requestFilters.openNow),
+      page: targetPage,
       pageSize: 12,
     })
-    shops.value = page.list
+    if (requestId !== shopRequestId) return
+    shops.value = append ? [...shops.value, ...page.list] : page.list
     shopTotal.value = page.total
+    shopPage.value = page.page
     shopHasMore.value = page.hasMore
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '商户列表加载失败'
+    if (requestId !== shopRequestId) return
+    const message = error instanceof Error ? error.message : '商户列表加载失败'
+    if (append) loadMoreErrorMessage.value = message
+    else errorMessage.value = message
   } finally {
-    loading.value = false
+    if (requestId === shopRequestId) {
+      if (append) loadingMore.value = false
+      else loading.value = false
+    }
   }
+}
+
+function optionalNumber(value: string | number) {
+  if (value === '' || value === null || value === undefined) return undefined
+  const parsed = typeof value === 'number' ? value : Number(value.trim())
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function optionalBoolean(value: string) {
+  if (value === 'true') return true
+  if (value === 'false') return false
+  return undefined
 }
 
 function resolveUserLocation() {
@@ -184,11 +274,29 @@ function resolveUserLocation() {
   })
 }
 
-function onCityChange(value: string) {
+async function onCityChange(value: string) {
+  const requestId = ++cityChangeRequestId
   filters.cityId = Number(value)
   filters.areaId = undefined
   setCityId(filters.cityId)
-  void loadAreas().then(() => loadShops())
+  ++shopRequestId
+  loading.value = true
+  loadingMore.value = false
+  errorMessage.value = ''
+  loadMoreErrorMessage.value = ''
+  shops.value = []
+  shopTotal.value = 0
+  shopHasMore.value = false
+  shopPage.value = 1
+  try {
+    if (await loadAreas()) await loadShops()
+  } catch (error) {
+    if (requestId === cityChangeRequestId) {
+      errorMessage.value = error instanceof Error ? error.message : '商圈加载失败'
+    }
+  } finally {
+    if (requestId === cityChangeRequestId) loading.value = false
+  }
 }
 
 function resetFilters() {
@@ -196,6 +304,11 @@ function resetFilters() {
   filters.categoryId = undefined
   filters.areaId = undefined
   filters.sort = 'smart'
+  filters.minPrice = ''
+  filters.maxPrice = ''
+  filters.minScore = ''
+  filters.hasDeal = ''
+  filters.openNow = ''
   void loadShops()
 }
 
@@ -248,7 +361,7 @@ watch(
 
       <label class="field">
         <span>城市</span>
-        <select :value="filters.cityId" @change="onCityChange(($event.target as HTMLSelectElement).value)">
+        <select :value="filters.cityId" @change="void onCityChange(($event.target as HTMLSelectElement).value)">
           <option v-for="city in cities" :key="city.id" :value="city.id">
             {{ city.name }}
           </option>
@@ -285,8 +398,42 @@ watch(
         </select>
       </label>
 
+      <div class="filter-inline-grid">
+        <label class="field">
+          <span>最低人均</span>
+          <input v-model="filters.minPrice" data-testid="filter-min-price" type="number" min="0" step="1" placeholder="不限" />
+        </label>
+        <label class="field">
+          <span>最高人均</span>
+          <input v-model="filters.maxPrice" data-testid="filter-max-price" type="number" min="0" step="1" placeholder="不限" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>最低评分</span>
+        <input v-model="filters.minScore" data-testid="filter-min-score" type="number" min="0" max="5" step="0.1" placeholder="不限" />
+      </label>
+
+      <label class="field">
+        <span>团购</span>
+        <select v-model="filters.hasDeal" data-testid="filter-has-deal">
+          <option value="">不限</option>
+          <option value="true">有团购</option>
+          <option value="false">无团购</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>营业状态</span>
+        <select v-model="filters.openNow" data-testid="filter-open-now">
+          <option value="">不限</option>
+          <option value="true">营业中</option>
+          <option value="false">休息中</option>
+        </select>
+      </label>
+
       <div class="filters-panel__actions">
-        <button type="button" class="primary-button" @click="loadShops">应用筛选</button>
+        <button type="button" class="primary-button" @click="loadShops()">应用筛选</button>
         <button type="button" class="secondary-button" @click="resetFilters">重置</button>
       </div>
     </aside>
@@ -320,6 +467,17 @@ watch(
           <ShopCard :shop="shop" />
         </RouterLink>
       </div>
+      <p v-if="loadMoreErrorMessage" class="feedback is-error">{{ loadMoreErrorMessage }}</p>
+      <button
+        v-if="shopHasMore"
+        type="button"
+        class="secondary-button list-load-more"
+        data-testid="load-more-shops"
+        :disabled="loadingMore"
+        @click="loadShops(true)"
+      >
+        {{ loadingMore ? '加载中...' : '加载更多门店' }}
+      </button>
     </div>
   </section>
 </template>

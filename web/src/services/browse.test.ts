@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiDelete, apiGet } from '@/lib/http'
-import { clearSearchHistory, fetchSearchHistory, fetchShopReviews, fetchShops } from './browse'
+import { clearSearchHistory, fetchSearchHistory, fetchSimilarShops, fetchShopReviews, fetchShops } from './browse'
 
 vi.mock('@/lib/http', () => ({
   apiDelete: vi.fn(),
@@ -22,6 +22,22 @@ describe('fetchShopReviews', () => {
     })
   })
 
+  it('sends review sorting and image filters to the public endpoint', () => {
+    fetchShopReviews(10001, 2, 20, {
+      sort: 'popular',
+      minScore: 4,
+      hasImages: true,
+    })
+
+    expect(apiGet).toHaveBeenCalledWith('/api/c/v1/shops/10001/reviews', {
+      page: 2,
+      pageSize: 20,
+      sort: 'popular',
+      minScore: 4,
+      hasImages: true,
+    })
+  })
+
   it('uses the unified shop search endpoint for list queries', () => {
     fetchShops({
       keyword: '火锅',
@@ -37,6 +53,14 @@ describe('fetchShopReviews', () => {
       sort: 'distance',
       lat: 31.2304,
       lng: 121.4737,
+    })
+  })
+
+  it('requests nearby similar shops with an explicit limit', () => {
+    fetchSimilarShops(10001, 6)
+
+    expect(apiGet).toHaveBeenCalledWith('/api/c/v1/shops/10001/similar', {
+      limit: 6,
     })
   })
 

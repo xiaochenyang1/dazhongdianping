@@ -1,4 +1,4 @@
-import { createApp, defineComponent, nextTick } from 'vue'
+import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -25,6 +25,12 @@ async function mount(component: object, props = {}) {
   await Promise.resolve()
   await nextTick()
   return { host, app }
+}
+
+async function flushView() {
+  await Promise.resolve()
+  await Promise.resolve()
+  await nextTick()
 }
 
 const topic = {
@@ -89,6 +95,17 @@ describe('topic read-only views', () => {
     app.unmount()
   })
 
+  it('publishes CollectionPage metadata for the public topic index', async () => {
+    const { app } = await mount(TopicListView)
+    const canonical = `${window.location.origin}/topics`
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(canonical)
+    expect(document.head.querySelector('meta[property="og:url"]')?.getAttribute('content')).toBe(canonical)
+    const schema = JSON.parse(document.head.querySelector('script[type="application/ld+json"]')?.textContent ?? '{}')
+    expect(schema).toMatchObject({ '@type': 'CollectionPage', url: canonical })
+    expect(schema.mainEntity.itemListElement[0]).toMatchObject({ position: 1, url: `${window.location.origin}/topics/31` })
+    app.unmount()
+  })
+
   it('renders topic detail posts and author links without write controls', async () => {
     const { host, app } = await mount(TopicDetailView, { topicId: 31 })
     expect(host.textContent).toContain('88 人关注')
@@ -98,6 +115,52 @@ describe('topic read-only views', () => {
     expect(host.textContent).not.toContain('关注话题')
     expect(host.textContent).not.toContain('创建话题')
     expect(host.textContent).not.toContain('发布帖子')
+    app.unmount()
+  })
+
+  it('publishes CollectionPage metadata and JSON-LD for a public topic', async () => {
+    const { app } = await mount(TopicDetailView, { topicId: 31 })
+    const canonical = document.head.querySelector('link[rel="canonical"]')
+    expect(canonical?.getAttribute('href')).toBe(`${window.location.origin}/topics/31`)
+    expect(document.title).toContain('伦敦咖啡')
+    const schema = JSON.parse(document.head.querySelector('script[type="application/ld+json"]')?.textContent ?? '{}')
+    expect(schema).toMatchObject({ '@type': 'CollectionPage', name: '伦敦咖啡', url: canonical?.getAttribute('href') })
+    expect(schema.mainEntity.itemListElement[0]).toMatchObject({ position: 1, url: `${window.location.origin}/community/posts/7` })
+    app.unmount()
+  })
+
+  it('reloads a reused topic route, clears old content, and ignores stale responses', async () => {
+    const pending = new Map<number, (value: typeof topic) => void>()
+    mocks.fetchTopic.mockImplementation((id: number) => new Promise<typeof topic>((resolve) => pending.set(id, resolve)))
+    mocks.fetchTopicPosts.mockResolvedValue({ list: [], total: 0, page: 1, pageSize: 30, hasMore: false })
+    const topicId = ref(31)
+    const Root = defineComponent({ setup: () => () => h(TopicDetailView, { topicId: topicId.value }) })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.component('RouterLink', RouterLinkStub)
+    app.mount(host)
+    await flushView()
+
+    pending.get(31)?.({ ...topic, id: 31, name: '话题 31' })
+    await flushView()
+    expect(host.textContent).toContain('话题 31')
+
+    topicId.value = 32
+    await flushView()
+    expect(host.textContent).not.toContain('话题 31')
+    topicId.value = 33
+    await flushView()
+    expect(mocks.fetchTopic).toHaveBeenCalledWith(32)
+    expect(mocks.fetchTopic).toHaveBeenCalledWith(33)
+
+    pending.get(33)?.({ ...topic, id: 33, name: '话题 33' })
+    await flushView()
+    pending.get(32)?.({ ...topic, id: 32, name: '话题 32' })
+    await flushView()
+
+    expect(host.textContent).toContain('话题 33')
+    expect(host.textContent).not.toContain('话题 32')
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${window.location.origin}/topics/33`)
     app.unmount()
   })
 })

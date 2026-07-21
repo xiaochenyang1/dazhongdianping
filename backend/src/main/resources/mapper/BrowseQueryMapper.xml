@@ -200,6 +200,11 @@
 
     <select id="selectShopDetail" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopDetailRow">
         SELECT s.id,
+               s.category_id,
+               s.city_id,
+               s.area_id,
+               s.latitude,
+               s.longitude,
                s.name,
                s.cover_url,
                s.score,
@@ -226,6 +231,38 @@
           AND s.status = 1
           AND s.is_deleted = FALSE
           AND s.id = #{shopId}
+    </select>
+
+    <select id="selectSimilarShops" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopListRow">
+        SELECT s.id,
+               s.category_id,
+               s.city_id,
+               s.area_id,
+               s.latitude,
+               s.longitude,
+               s.name,
+               s.cover_url,
+               s.score,
+               s.price_per_capita,
+               s.currency,
+               s.address,
+               a.name AS area_name,
+               c.name AS city_name,
+               cat.name AS category_name,
+               s.has_deal,
+               s.open_now,
+               s.tags
+        FROM shop s
+        <include refid="activeShopGeoJoins"/>
+        WHERE s.region = #{region}
+          AND s.status = 1
+          AND s.is_deleted = FALSE
+          AND s.id != #{shopId}
+          AND (s.category_id = #{categoryId} OR s.city_id = #{cityId})
+        ORDER BY CASE WHEN s.category_id = #{categoryId} THEN 0 ELSE 1 END,
+                 CASE WHEN s.area_id = #{areaId} THEN 0 ELSE 1 END,
+                 s.score DESC,
+                 s.id ASC
     </select>
 
     <select id="selectShopPhotos" resultType="com.tuowei.dazhongdianping.module.browse.model.PhotoRow">
@@ -256,6 +293,15 @@
           AND r.audit_status = 1
           AND r.status = 1
           AND r.is_deleted = FALSE
+        <if test="minScore != null">
+            AND r.score_overall <![CDATA[>=]]> #{minScore}
+        </if>
+        <if test="hasImages != null and hasImages">
+            AND EXISTS (SELECT 1 FROM review_image ri WHERE ri.review_id = r.id)
+        </if>
+        <if test="hasImages != null and !hasImages">
+            AND NOT EXISTS (SELECT 1 FROM review_image ri WHERE ri.review_id = r.id)
+        </if>
     </sql>
 
     <select id="countShopReviews" resultType="long">
@@ -281,7 +327,17 @@
         LEFT JOIN review_merchant_reply rr ON rr.review_id = r.id
         LEFT JOIN merchant m ON m.id = rr.merchant_id
         <include refid="publicShopReviewWhere"/>
-        ORDER BY r.created_at DESC, r.id DESC
+        <choose>
+            <when test="sort == 'popular'">
+                ORDER BY r.like_count DESC, r.comment_count DESC, r.created_at DESC, r.id DESC
+            </when>
+            <when test="sort == 'score'">
+                ORDER BY r.score_overall DESC, r.created_at DESC, r.id DESC
+            </when>
+            <otherwise>
+                ORDER BY r.created_at DESC, r.id DESC
+            </otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 

@@ -13,6 +13,7 @@ import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopDetailRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListQuery;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListRow;
+import java.math.BigDecimal;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
@@ -34,14 +35,26 @@ public interface BrowseQueryMapper {
 
     ShopDetailRow selectShopDetail(@Param("region") String region, @Param("shopId") Long shopId);
 
+    List<ShopListRow> selectSimilarShops(@Param("region") String region,
+                                         @Param("shopId") Long shopId,
+                                         @Param("categoryId") Long categoryId,
+                                         @Param("cityId") Long cityId,
+                                         @Param("areaId") Long areaId);
+
     List<PhotoRow> selectShopPhotos(@Param("shopId") Long shopId);
 
     List<DishRow> selectShopDishes(@Param("shopId") Long shopId);
 
-    long countShopReviews(@Param("region") String region, @Param("shopId") Long shopId);
+    long countShopReviews(@Param("region") String region,
+                          @Param("shopId") Long shopId,
+                          @Param("minScore") BigDecimal minScore,
+                          @Param("hasImages") Boolean hasImages);
 
     List<ReviewRow> selectShopReviews(@Param("region") String region,
                                       @Param("shopId") Long shopId,
+                                      @Param("sort") String sort,
+                                      @Param("minScore") BigDecimal minScore,
+                                      @Param("hasImages") Boolean hasImages,
                                       @Param("limit") Integer limit,
                                       @Param("offset") Integer offset);
 

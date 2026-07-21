@@ -6,6 +6,11 @@ import lombok.Data;
 @Data
 public class ShopDetailRow {
     private Long id;
+    private Long categoryId;
+    private Long cityId;
+    private Long areaId;
+    private Double latitude;
+    private Double longitude;
     private String name;
     private String coverUrl;
     private BigDecimal score;

@@ -22,6 +22,11 @@ export interface ShopQueryParams {
   sort?: string
   lat?: number
   lng?: number
+  minPrice?: number
+  maxPrice?: number
+  minScore?: number
+  hasDeal?: boolean
+  openNow?: boolean
   page?: number
   pageSize?: number
 }
@@ -54,10 +59,21 @@ export function fetchShopDetail(shopId: number) {
   return apiGet<ShopDetail>(`/api/c/v1/shops/${shopId}`)
 }
 
-export function fetchShopReviews(shopId: number, page = 1, pageSize = 10) {
+export function fetchSimilarShops(shopId: number, limit = 6) {
+  return apiGet<ShopListItem[]>(`/api/c/v1/shops/${shopId}/similar`, { limit })
+}
+
+export interface ShopReviewQuery {
+  sort?: 'latest' | 'popular' | 'score'
+  minScore?: number
+  hasImages?: boolean
+}
+
+export function fetchShopReviews(shopId: number, page = 1, pageSize = 10, query: ShopReviewQuery = {}) {
   return apiGet<PageResult<ReviewPreview>>(`/api/c/v1/shops/${shopId}/reviews`, {
     page,
     pageSize,
+    ...query,
   })
 }
 

@@ -1,23 +1,60 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchTopic, fetchTopicPosts, type PublicTopic } from '@/services/topic'
 import type { CommunityPost } from '@/types/community'
+import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
 
 const props = defineProps<{ topicId: number }>()
 const topic = ref<PublicTopic | null>(null)
 const posts = ref<CommunityPost[]>([])
 const error = ref('')
+let requestSequence = 0
 
-onMounted(async () => {
+useSeoMeta(() => {
+  const canonicalPath = `/topics/${props.topicId}`
+  const currentTopic = topic.value
+  if (!currentTopic) return { title: '话题详情', description: '查看话题热度构成和公开社区帖子。', canonical: canonicalPath, robots: 'noindex,nofollow' }
+  const canonical = absoluteSeoUrl(canonicalPath)
+  return {
+    title: `#${currentTopic.name}`,
+    description: `${currentTopic.followerCount} 人关注，${currentTopic.postCount} 篇公开帖子。${currentTopic.name} 的城市生活讨论与经验分享。`,
+    canonical: canonicalPath,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: currentTopic.name,
+      description: `${currentTopic.followerCount} 人关注，${currentTopic.postCount} 篇公开帖子。`,
+      url: canonical,
+      about: { '@type': 'Thing', name: currentTopic.name },
+      mainEntity: {
+        '@type': 'ItemList',
+        itemListElement: posts.value.map((post, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: post.title,
+          url: absoluteSeoUrl(`/community/posts/${post.id}`),
+          description: toSeoDescription(post.content),
+        })),
+      },
+    },
+  }
+})
+
+watch(() => props.topicId, async (topicId) => {
+  const request = ++requestSequence
+  topic.value = null
+  posts.value = []
+  error.value = ''
   try {
-    const [detail, page] = await Promise.all([fetchTopic(props.topicId), fetchTopicPosts(props.topicId)])
+    const [detail, page] = await Promise.all([fetchTopic(topicId), fetchTopicPosts(topicId)])
+    if (request !== requestSequence) return
     topic.value = detail
     posts.value = page.list
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '话题加载失败'
+    if (request === requestSequence) error.value = cause instanceof Error ? cause.message : '话题加载失败'
   }
-})
+}, { immediate: true })
 </script>
 
 <template>

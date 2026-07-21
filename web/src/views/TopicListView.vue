@@ -2,11 +2,35 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchHotTopics, fetchTopics, type PublicTopic } from '@/services/topic'
+import { absoluteSeoUrl, useSeoMeta } from '@/composables/useSeoMeta'
 
 const topics = ref<PublicTopic[]>([])
 const mode = ref<'recommended' | 'hot'>('recommended')
 const loading = ref(false)
 const error = ref('')
+
+useSeoMeta(() => ({
+  title: '话题广场',
+  description: mode.value === 'hot' ? '浏览最近 7 天公开帖子、点赞与评论计算出的城市话题热榜。' : '浏览当前区域推荐话题与公开社区讨论。',
+  canonical: '/topics',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: '话题广场',
+    description: '浏览当前区域推荐话题与最近 7 天热榜。',
+    url: absoluteSeoUrl('/topics'),
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: topics.value.map((topic, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: topic.name,
+        url: absoluteSeoUrl(`/topics/${topic.id}`),
+        description: `${topic.postCount} 篇公开帖子，${topic.followerCount} 人关注`,
+      })),
+    },
+  },
+}))
 
 async function load(nextMode: 'recommended' | 'hot') {
   mode.value = nextMode

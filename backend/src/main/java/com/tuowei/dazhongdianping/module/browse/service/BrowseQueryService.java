@@ -34,6 +34,7 @@ import com.tuowei.dazhongdianping.module.browse.model.response.SearchSuggestionR
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopDetailResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopListItemResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.MerchantReplyResponse;
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -143,13 +144,43 @@ public class BrowseQueryService {
         );
     }
 
-    public PageResult<ReviewPreviewResponse> listShopReviews(Region region, Long shopId, int page, int pageSize) {
+    public List<ShopListItemResponse> listSimilarShops(Region region, Long shopId, int limit) {
+        ShopDetailRow source = browseQueryMapper.selectShopDetail(region.name(), shopId);
+        if (source == null) {
+            throw new NotFoundException("商户不存在");
+        }
+        return browseQueryMapper.selectSimilarShops(
+                        region.name(),
+                        shopId,
+                        source.getCategoryId(),
+                        source.getCityId(),
+                        source.getAreaId()
+                ).stream()
+                .sorted(similarShopComparator(source))
+                .limit(limit)
+                .map(row -> toShopListItemResponse(row, distanceMeters(source, row)))
+                .toList();
+    }
+
+    public PageResult<ReviewPreviewResponse> listShopReviews(Region region,
+                                                             Long shopId,
+                                                             int page,
+                                                             int pageSize,
+                                                             String sort,
+                                                             BigDecimal minScore,
+                                                             Boolean hasImages) {
         ensureShopExists(region, shopId);
+        if (!List.of("latest", "popular", "score").contains(sort)) {
+            throw new IllegalArgumentException("sort 仅支持 latest、popular 或 score");
+        }
         int offset = (page - 1) * pageSize;
-        long total = browseQueryMapper.countShopReviews(region.name(), shopId);
+        long total = browseQueryMapper.countShopReviews(region.name(), shopId, minScore, hasImages);
         List<ReviewPreviewResponse> items = browseQueryMapper.selectShopReviews(
                         region.name(),
                         shopId,
+                        sort,
+                        minScore,
+                        hasImages,
                         pageSize,
                         offset
                 ).stream()
@@ -240,6 +271,10 @@ public class BrowseQueryService {
     }
 
     private ShopListItemResponse toShopListItemResponse(ShopListRow row) {
+        return toShopListItemResponse(row, null);
+    }
+
+    private ShopListItemResponse toShopListItemResponse(ShopListRow row, Double distanceMeters) {
         return new ShopListItemResponse(
                 row.getId(),
                 row.getName(),
@@ -252,8 +287,41 @@ public class BrowseQueryService {
                 row.getCityName(),
                 row.getHasDeal(),
                 row.getOpenNow(),
-                splitTags(row.getTags())
+                splitTags(row.getTags()),
+                distanceMeters
         );
+    }
+
+    private Comparator<ShopListRow> similarShopComparator(ShopDetailRow source) {
+        return Comparator.<ShopListRow>comparingInt(row -> similarityScore(source, row)).reversed()
+                .thenComparing(row -> distanceMeters(source, row), Comparator.nullsLast(Double::compareTo))
+                .thenComparing(ShopListRow::getScore, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(ShopListRow::getId);
+    }
+
+    private int similarityScore(ShopDetailRow source, ShopListRow candidate) {
+        int score = Objects.equals(source.getCategoryId(), candidate.getCategoryId()) ? 4 : 0;
+        score += Objects.equals(source.getAreaId(), candidate.getAreaId()) ? 2 : 0;
+        if (splitTags(source.getTags()).stream().anyMatch(splitTags(candidate.getTags())::contains)) {
+            score += 1;
+        }
+        return score;
+    }
+
+    private Double distanceMeters(ShopDetailRow source, ShopListRow candidate) {
+        if (source.getLatitude() == null || source.getLongitude() == null
+                || candidate.getLatitude() == null || candidate.getLongitude() == null) {
+            return null;
+        }
+        double sourceLatitude = Math.toRadians(source.getLatitude());
+        double candidateLatitude = Math.toRadians(candidate.getLatitude());
+        double latitudeDelta = candidateLatitude - sourceLatitude;
+        double longitudeDelta = Math.toRadians(candidate.getLongitude() - source.getLongitude());
+        double haversine = Math.pow(Math.sin(latitudeDelta / 2), 2)
+                + Math.cos(sourceLatitude) * Math.cos(candidateLatitude)
+                * Math.pow(Math.sin(longitudeDelta / 2), 2);
+        double distance = 2 * 6_371_000 * Math.asin(Math.sqrt(haversine));
+        return Math.round(distance * 10.0) / 10.0;
     }
 
     private PhotoResponse toPhotoResponse(PhotoRow row) {

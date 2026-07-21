@@ -3,8 +3,31 @@ import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchPosts } from '@/services/community'
 import type { CommunityPost } from '@/types/community'
+import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
 
 const posts=ref<CommunityPost[]>([]),errorMessage=ref('')
+useSeoMeta(() => ({
+  title: '华人社区',
+  description: '只读浏览欧洲华人攻略、探店和生活经验。',
+  canonical: '/community',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: '华人社区',
+    description: '只读浏览欧洲华人攻略、探店和生活经验。',
+    url: absoluteSeoUrl('/community'),
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: posts.value.map((post, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: post.title,
+        url: absoluteSeoUrl(`/community/posts/${post.id}`),
+        description: toSeoDescription(post.content),
+      })),
+    },
+  },
+}))
 onMounted(async()=>{try{posts.value=(await fetchPosts()).list}catch(e){errorMessage.value=e instanceof Error?e.message:'社区加载失败'}})
 </script>
 
@@ -14,9 +37,9 @@ onMounted(async()=>{try{posts.value=(await fetchPosts()).list}catch(e){errorMess
     <p class="feedback">下载 APP 参与互动、发布攻略和管理自己的帖子。<RouterLink to="/groups">浏览官方圈子</RouterLink> · <RouterLink to="/topics">查看话题广场与热榜</RouterLink></p>
     <p v-if="errorMessage" class="feedback is-error">{{errorMessage}}</p>
     <div class="rank-list">
-      <RouterLink v-for="post in posts" :key="post.id" :to="`/community/posts/${post.id}`" class="content-card rank-item">
-        <div class="rank-item__body"><p class="eyebrow"><RouterLink :to="`/users/${post.userId}`">{{post.userName}}</RouterLink> · {{post.createdAt}}</p><h2>{{post.title}}</h2><p>{{post.content}}</p><div class="tag-row"><span v-for="topic in post.topics" :key="topic">#{{topic}}</span></div><small>喜欢 {{post.likeCount}} · 评论 {{post.commentCount}}</small></div>
-      </RouterLink>
+      <article v-for="post in posts" :key="post.id" class="content-card rank-item">
+        <div class="rank-item__body"><p class="eyebrow"><RouterLink :to="`/users/${post.userId}`">{{post.userName}}</RouterLink> · {{post.createdAt}}</p><h2><RouterLink :to="`/community/posts/${post.id}`">{{post.title}}</RouterLink></h2><p>{{post.content}}</p><div class="tag-row"><span v-for="topic in post.topics" :key="topic">#{{topic}}</span></div><small>喜欢 {{post.likeCount}} · 评论 {{post.commentCount}}</small></div>
+      </article>
     </div>
   </section>
 </template>

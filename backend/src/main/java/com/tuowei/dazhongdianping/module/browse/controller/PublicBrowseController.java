@@ -20,6 +20,7 @@ import com.tuowei.dazhongdianping.module.browse.service.BrowseQueryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -76,14 +77,27 @@ public class PublicBrowseController {
         return ApiResponse.success(browseQueryService.getShopDetail(currentRegion(), shopId));
     }
 
+    @GetMapping("/shops/{shopId}/similar")
+    public ApiResponse<List<ShopListItemResponse>> listSimilarShops(
+            @PathVariable Long shopId,
+            @RequestParam(defaultValue = "6")
+            @Min(value = 1, message = "limit 最小为 1")
+            @Max(value = 12, message = "limit 最大为 12") Integer limit) {
+        return ApiResponse.success(browseQueryService.listSimilarShops(currentRegion(), shopId, limit));
+    }
+
     @GetMapping("/shops/{shopId}/reviews")
     public ApiResponse<PageResult<ReviewPreviewResponse>> listShopReviews(
             @PathVariable Long shopId,
             @RequestParam(defaultValue = "1") @Min(value = 1, message = "page 最小为 1") Integer page,
             @RequestParam(defaultValue = "10")
             @Min(value = 1, message = "pageSize 最小为 1")
-            @Max(value = 50, message = "pageSize 最大为 50") Integer pageSize) {
-        return ApiResponse.success(browseQueryService.listShopReviews(currentRegion(), shopId, page, pageSize));
+            @Max(value = 50, message = "pageSize 最大为 50") Integer pageSize,
+            @RequestParam(defaultValue = "latest") String sort,
+            @RequestParam(required = false) BigDecimal minScore,
+            @RequestParam(required = false) Boolean hasImages) {
+        return ApiResponse.success(browseQueryService.listShopReviews(
+                currentRegion(), shopId, page, pageSize, sort, minScore, hasImages));
     }
 
     @GetMapping("/search/suggest")

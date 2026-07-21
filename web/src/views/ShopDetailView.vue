@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import ShopCard from '@/components/ShopCard.vue'
 import { useAppContext } from '@/composables/useAppContext'
+import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
 import { formatMoney } from '@/lib/currency'
-import { fetchShopDetail, fetchShopReviews } from '@/services/browse'
+import { fetchShopDetail, fetchSimilarShops, fetchShopReviews } from '@/services/browse'
 import { addFavorite, fetchFavorites, removeFavorite } from '@/services/favorite'
 import { fetchShopDeals } from '@/services/trade'
 import type { DealSummary } from '@/types/trade'
 import { useUserSession } from '@/composables/useUserSession'
-import type { ReviewPreview, ShopDetail } from '@/types/browse'
+import type { ReviewPreview, ShopDetail, ShopListItem } from '@/types/browse'
 
 const route = useRoute()
 const { state } = useAppContext()
@@ -21,37 +23,95 @@ const reviews = ref<ReviewPreview[]>([])
 const favorited = ref(false)
 const favoriteLoading = ref(false)
 const deals = ref<DealSummary[]>([])
+const shareMessage = ref('')
+const similarShops = ref<ShopListItem[]>([])
+let detailRequestId = 0
 
 const shopId = computed(() => Number(route.params.id))
 
+useSeoMeta(() => {
+  const canonicalPath = `/shops/${shopId.value}`
+  const currentShop = shop.value
+  if (!currentShop) {
+    return {
+      title: '门店详情',
+      description: '查看门店地址、营业时间、评分、优惠、点评与附近推荐。',
+      canonical: canonicalPath,
+      robots: 'noindex,nofollow',
+    }
+  }
+
+  return {
+    title: `${currentShop.name} - ${currentShop.cityName}${currentShop.categoryName}`,
+    description: toSeoDescription(`${currentShop.summary} 地址：${currentShop.address}。`),
+    canonical: canonicalPath,
+    image: currentShop.coverUrl,
+    type: 'restaurant' as const,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'Restaurant',
+      url: absoluteSeoUrl(canonicalPath),
+      name: currentShop.name,
+      description: currentShop.summary,
+      image: currentShop.coverUrl,
+      telephone: currentShop.phone,
+      servesCuisine: currentShop.categoryName,
+      openingHours: currentShop.businessHours,
+      currenciesAccepted: currentShop.currency,
+      priceRange: `${currentShop.currency} ${currentShop.pricePerCapita}`,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: currentShop.address,
+        addressLocality: currentShop.cityName,
+        addressRegion: currentShop.areaName,
+      },
+    },
+  }
+})
+
 async function loadShopDetail() {
-  if (Number.isNaN(shopId.value)) {
+  const requestId = ++detailRequestId
+  const targetShopId = shopId.value
+  shop.value = null
+  reviews.value = []
+  deals.value = []
+  similarShops.value = []
+  favorited.value = false
+  shareMessage.value = ''
+  errorMessage.value = ''
+  if (Number.isNaN(targetShopId)) {
     errorMessage.value = '商户 ID 不合法'
+    loading.value = false
     return
   }
 
   loading.value = true
-  errorMessage.value = ''
 
   try {
-    const [shopDetail, reviewPage, dealList] = await Promise.all([
-      fetchShopDetail(shopId.value),
-      fetchShopReviews(shopId.value, 1, 3),
-      fetchShopDeals(shopId.value),
+    const [shopDetail, reviewPage, dealList, similarList] = await Promise.all([
+      fetchShopDetail(targetShopId),
+      fetchShopReviews(targetShopId, 1, 3),
+      fetchShopDeals(targetShopId),
+      fetchSimilarShops(targetShopId, 6).catch(() => []),
     ])
+    if (requestId !== detailRequestId) return
     shop.value = shopDetail
     reviews.value = reviewPage.list
     deals.value = dealList
+    similarShops.value = similarList
     if (sessionState.accessToken) {
       const favorites = await fetchFavorites(1, 1, 50)
-      favorited.value = favorites.list.some((item) => item.targetId === shopId.value)
+      if (requestId !== detailRequestId) return
+      favorited.value = favorites.list.some((item) => item.targetId === targetShopId)
     } else {
       favorited.value = false
     }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '商户详情加载失败'
+    if (requestId === detailRequestId) {
+      errorMessage.value = error instanceof Error ? error.message : '商户详情加载失败'
+    }
   } finally {
-    loading.value = false
+    if (requestId === detailRequestId) loading.value = false
   }
 }
 
@@ -67,6 +127,38 @@ async function toggleFavorite() {
     favorited.value = !favorited.value
   } finally { favoriteLoading.value = false }
 }
+
+async function shareShop() {
+  if (!shop.value) return
+  shareMessage.value = ''
+  const payload = {
+    title: shop.value.name,
+    text: `${shop.value.name} · ${shop.value.cityName} · ${shop.value.score.toFixed(1)} 分`,
+    url: window.location.href,
+  }
+  try {
+    if (typeof navigator.share === 'function') {
+      await navigator.share(payload)
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(payload.url)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = payload.url
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      textarea.remove()
+    }
+    shareMessage.value = '分享链接已准备好'
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    shareMessage.value = error instanceof Error ? error.message : '分享失败，请稍后重试'
+  }
+}
+
 
 watch(
   [shopId, () => state.region],
@@ -110,8 +202,10 @@ watch(
           <RouterLink :to="`/shops/${shop.id}/reviews`" class="secondary-button">全部点评</RouterLink>
           <RouterLink to="/user/reviews" class="secondary-button">我的点评</RouterLink>
           <button type="button" class="secondary-button" :disabled="favoriteLoading" @click="toggleFavorite">{{ favorited ? '取消收藏' : '收藏门店' }}</button>
+          <button type="button" class="secondary-button" data-testid="share-shop" @click="shareShop">分享</button>
           <RouterLink :to="`/shops/${shop.id}/reserve`" class="secondary-button">在线预订</RouterLink>
         </div>
+        <p v-if="shareMessage" class="feedback" role="status">{{ shareMessage }}</p>
       </div>
     </section>
 
@@ -207,6 +301,25 @@ watch(
         </RouterLink>
       </div>
       <p v-else class="feedback">这家店还没有公开点评，想补第一条就直接去写点评。</p>
+    </section>
+
+    <section v-if="similarShops.length > 0" class="content-section" data-testid="similar-shops">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">附近推荐</p>
+          <h2>附近相似门店</h2>
+        </div>
+      </div>
+      <div class="shop-grid">
+        <RouterLink
+          v-for="similarShop in similarShops"
+          :key="similarShop.id"
+          :to="`/shops/${similarShop.id}`"
+          class="shop-grid__link"
+        >
+          <ShopCard :shop="similarShop" />
+        </RouterLink>
+      </div>
     </section>
   </template>
 </template>
