@@ -1,7 +1,7 @@
 # 大众点评(仿)项目文档总览
 
 > 文档状态:主文档、实施计划、测试、上线、采购、值班、自动化与执行台账模板已补齐,当前已可支撑本地继续开发
-> 最后更新:2026-07-15
+> 最后更新:2026-07-21
 
 ## 1. 项目概述
 
@@ -20,7 +20,7 @@
 
 - `backend`: `Java 17 + Spring Boot 3.3.5 + MyBatis`,默认运行配置指向 `MySQL`,`H2` 保留为 profile / 测试环境,本地 `158` 条测试已通过。
 - `web`: 首页 / 商户列表 / 商户详情 / 独立门店点评列表 / 登录弹层 / 写点评 / 我的点评 / 成长值流水 / 点评详情互动 / 图片上传 / 我的资料 / 账号绑定 / 改密码 / 公开用户主页 / 隐私中心已接上当前接口,头部已补登录用户搜索历史面板 / 清空和 `CN / EU` 区域切换,切区后会按当前区域重拉热词 / 搜索历史 / 联想面板;`npm test`(`36` 条测试)、`npm run build`、`npm run test:e2e`(`6` 条 Playwright 冒烟) 和 `npm run test:e2e:real`(`4` 条真实后端关键链路 E2E) 已通过。
-- `admin-web`: 管理员登录、门店 CRUD、点评审核、种子导入、导入批次查询已接通,`npm run build` 已通过。
+- `admin-web`: 管理员登录、门店 CRUD、点评审核、达人认证审核、种子导入、导入批次查询已接通,`npm run build` 已通过。
 - `merchant-web`: 独立商户工作台已落地，`npm test` 与 `npm run build` 已通过。
 - `app`: M6 Flutter MVP 基线已落地，覆盖默认 EU、CN/EU 与语言切换、登录与安全会话、浏览/搜索/门店详情、团购、预订、用户中心、通知列表与 ACK、GDPR 导出/下载保存/删除申请/撤销；`flutter test` 43 条、`flutter analyze`、`flutter build web --no-wasm-dry-run` 已通过。点评完整业务化、地图、推送和真实支付仍在继续实施。
 
@@ -35,8 +35,9 @@
 - `Idempotency-Key` 重复提交保护已完成:同 key + 同请求体复用首个响应,同 key + 不同请求体返回 `409`;默认本地内存,配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis,`web` 通用写请求会自动带 key。
 - `/api/b/v1` 已完成 M5a/M5b1/M5b2/M5b3/M5b4 后端闭环：数据库商户账号、注册入驻、资质审核、员工 RBAC/门店范围、预订工作台、券核销、经营看板、团购提交审核/上下架、门店订单与整单退款审核、门店基础资料/相册/菜单完整草稿审核，以及点评列表、商家回复、点评申诉和管理端申诉审核均已落地。
 - M5 商户端已补齐：独立 `merchant-web`、管理端商户点评申诉专页、通知 REST + WebSocket 实时推送与断线补偿均已落地。
+- M7 本地达人认证已落地：`web` 资料页支持查询、提交和驳回后重提；管理端新增 `/audit/expert-certifications` 审核页；公开用户主页、点评和帖子作者在“已通过且有效”时显示 `local_expert / 本地达人` 标识。
 - M6 Flutter 已完成通知基础链路与隐私中心主闭环；第三方能力未配置时只展示明确不可用状态，不使用 mock 冒充真实联调。
-- MySQL 初始化脚本已整理到 `sql/mysql/00_all_in_one.sql`、`sql/mysql/01_schema.sql` 和 `sql/mysql/02_seed_data.sql`,并带可直接密码登录的演示账号、点赞/评论演示数据、点评互动相关表、成长值积分流水表和搜索历史表。
+- MySQL 初始化脚本已整理到 `sql/mysql/00_all_in_one.sql`、`sql/mysql/01_schema.sql` 和 `sql/mysql/02_seed_data.sql`,并带可直接密码登录的演示账号、点赞/评论演示数据、点评互动相关表、成长值积分流水表、搜索历史表，以及 `user_expert_certification` 表和达人认证审核权限种子。
 
 还没做完的别硬吹:
 

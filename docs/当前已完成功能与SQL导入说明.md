@@ -1,8 +1,8 @@
 # 当前已完成功能与 SQL 导入说明
 
 > 最后更新:2026-07-21
-> M7 补充：已完成帖子与转发、评论盖楼、帖子正文/评论 `@提醒`、关注流、私信、官方圈子、区域化话题广场、7 天热榜、三端页面、管理端治理和话题隐私治理。
-> 适用范围:当前仓库真实已落地的 `M1` 至 `M7` 本地闭环；真实欧洲支付、Google Maps、FCM/APNs 和目标环境凭证联调仍未完成
+> M7 补充：已完成帖子与转发、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、关注流、私信、官方圈子、区域化话题广场、7 天热榜、三端页面、管理端治理和话题隐私治理。
+> 适用范围:当前仓库真实已落地的 `M1` 至 `M7` 本地闭环；真实欧洲支付、Google Maps、FCM/APNs、认证商户号和目标环境凭证联调仍未完成
 
 ## 1. 现在已经做完了什么
 
@@ -31,12 +31,13 @@
 ### 1.2 M2 认证、用户中心、点评互动审核最小闭环
 
 - 认证已完成:验证码发送、注册、验证码登录、密码登录、重置密码、`refresh`、`logout`。
-- 用户中心已完成:我的资料页、我的点评页、成长值流水页、公开用户主页、游客拦截恢复、游客互动登录后自动续执行、`GET /user/me`、`PUT /user/profile`、`POST /user/bind`、`PUT /user/password`、`GET /user/:id`、`GET /user/growth/records`。
+- 用户中心已完成:我的资料页、我的点评页、成长值流水页、公开用户主页、游客拦截恢复、游客互动登录后自动续执行、`GET /user/me`、`GET /user/expert-certification`、`POST /user/expert-certification/apply`、`PUT /user/profile`、`POST /user/bind`、`PUT /user/password`、`GET /user/:id`、`GET /user/growth/records`。
 - 点评体系已完成:写点评、编辑点评、删除点评、公开点评详情、我的点评详情、点赞/取消点赞、评论发布/列表、举报点评、本地图片上传、管理端审核通过/驳回、门店评分聚合回写。
 - 轻积分 / 等级已完成当前范围:发点评、点评获赞、带图点评和完成订单分别读取 `review_create/review_liked/review_image/order_complete` 规则，按用户、动作、类型和业务 ID 幂等写成长值/积分流水；等级按 `level_config` 阈值自动升级，管理端可维护成长规则与 `Lv1-Lv8`，`GET /user/growth/records` 可分页查看流水。
+- 本地达人认证已完成:资料页支持提交和驳回后重提，状态口径为 `0未申请 1待审核 2已通过 3已驳回`；管理端达人认证审核复用统一审核中心 `audit_task.biz_type=7`，公开用户主页、点评和帖子作者只有“已通过且有效”时才展示 `code=local_expert,label=本地达人`。
 - 前端页面已完成:
-  - `web`: 登录弹层、头部搜索历史面板 / 清空、`CN / EU` 区域切换、我的资料(含绑定账号 / 改密码)、我的点评、成长值流水、公开用户主页、独立门店点评列表、点评详情、点评详情互动区、写点评 / 编辑点评、本地图片上传、商户详情页点评预览点赞/评论数、门店相似推荐，以及公开页客户端运行时 SEO `canonical` / `robots` / Open Graph / Twitter Card / JSON-LD（尚未提供 SSR/预渲染）
-  - `admin-web`: 管理员登录、控制台概览、门店管理、点评审核 `/audit/reviews`、商户点评申诉 `/audit/review-appeals`、帖子审核 `/audit/posts`、种子导入和 `CN / EU` 区域切换
+  - `web`: 登录弹层、头部搜索历史面板 / 清空、`CN / EU` 区域切换、我的资料(含达人申请 / 绑定账号 / 改密码)、我的点评、成长值流水、公开用户主页、独立门店点评列表、点评详情、点评详情互动区、写点评 / 编辑点评、本地图片上传、商户详情页点评预览点赞/评论数、门店相似推荐，以及公开页客户端运行时 SEO `canonical` / `robots` / Open Graph / Twitter Card / JSON-LD（尚未提供 SSR/预渲染）
+  - `admin-web`: 管理员登录、控制台概览、门店管理、点评审核 `/audit/reviews`、达人认证 `/audit/expert-certifications`、商户点评申诉 `/audit/review-appeals`、帖子审核 `/audit/posts`、种子导入和 `CN / EU` 区域切换
 - 管理端种子导入失败明细已完成真实本地文件输出:`errorFile` 指向 `local-storage/import-errors/*.json`。
 
 ### 1.3 认证安全补充能力
@@ -114,7 +115,7 @@
 
 ### 1.8 还没做完的别硬吹
 
-- M1-M7 当前文档已声明的帖子、转发、关注流、1v1 私信、官方圈子、话题热榜、评论盖楼和帖子正文/评论 `@提醒` 本地闭环均已完成，M5a 商户注册/资质/员工与管理端商户审核前台、管理端数据库 RBAC，以及分类/城市/商圈基础数据治理均已收口。剩余仓库内缺口集中在用户治理、订单/退款/对账、运营活动、审计/隐私任务查询，以及 PC SEO 的 SSR/预渲染、达人认证、完整国际化和真实第三方适配；门店相似推荐与公开页客户端运行时 metadata 已完成，真实环境凭证联调仍未完成。
+- M1-M7 当前文档已声明的帖子、转发、关注流、1v1 私信、官方圈子、话题热榜、评论盖楼、帖子正文/评论 `@提醒` 和本地达人认证闭环均已完成，M5a 商户注册/资质/员工与管理端商户审核前台、管理端数据库 RBAC，以及分类/城市/商圈基础数据治理均已收口。剩余仓库内缺口集中在用户治理、订单/退款/对账、运营活动、审计/隐私任务查询，以及 PC SEO 的 SSR/预渲染、认证商户号、完整国际化和真实第三方适配；门店相似推荐与公开页客户端运行时 metadata 已完成，真实环境凭证联调仍未完成。
 
 - 真实 `MySQL` 导库 + 默认配置启动冒烟已补 `scripts/ci/mysql-smoke.ps1` 和 GitHub Actions 入口,并已于 `2026-07-12` 用临时 `MySQL 8` 实例 (`127.0.0.1:13306`) 在当前机器实跑通过；宿主机 `MySQL80` 的现成 root 凭证仍不可用，但这已经不是仓库侧阻塞。
 - `Redis` 状态存储和 `S3` 兼容对象存储代码入口已接入:验证码限流、`Idempotency-Key` 幂等缓存可通过 `APP_STATE_STORE_PROVIDER=redis` 切 Redis,文件上传可通过 `APP_FILE_STORAGE_PROVIDER=s3` 切 S3。仓库内 Playwright 浏览器冒烟已补,`scripts/ci/browser-smoke.ps1` 会直接托管 `web` / `admin-web` 的 Vite 进程并运行 `web/e2e/browser-smoke.spec.ts`,GitHub Actions 已纳入 `-IncludeBrowserSmoke`;真实后端关键链路 E2E 已补 `scripts/ci/browser-e2e.ps1`,并已覆盖真实图片上传、成长值流水页、手机号绑定、改密码后重新登录、后台成功导入以及游客点赞 / 评论 / 举报登录后自动续执行;`scripts/ci/storage-smoke.ps1` 已补 S3 兼容对象存储真上传冒烟并纳入 `-IncludeStorageSmoke`;`.github/workflows/release.yml` / `rollback.yml` 和 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已补最小发布 / 回滚自动化。还没完成的是带真实 MySQL / Redis / S3 / SSH 凭证的环境联调与发布回滚演练。
@@ -148,6 +149,7 @@
 | 验证码发送限流 | 已完成当前本地版 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 当前**无新增 SQL**；`send-code` 限流先走本地内存计数,现有导库脚本不用额外改表 | 重复发送验证码时触发 `429 + Retry-After` |
 | `Idempotency-Key` 重复提交保护 | 已完成当前基础版 | `README.md`、`docs/README.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 当前**无新增 SQL**；幂等结果默认走本地内存缓存,配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis;MySQL 审计表仍是目标态增强 | 同 key + 同请求体复用首个响应,同 key + 不同请求体返回 `409` |
 | 用户中心基础能力 | 已完成当前 `M2` 范围 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 直接复用 `app_user/verification_code/review/review_image`；`02_seed_data.sql` 已预置演示账号、我的点评、驳回案例 | 我的资料、账号绑定、改密码、成长值流水、我的点评、我的点评详情、公开用户主页最小版、驳回原因回显 |
+| M7 本地达人认证 | 已完成 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/业务流程与状态机.md`、`docs/权限矩阵.md`、`docs/术语与枚举规范.md` | `01_schema.sql` 建 `user_expert_certification`；`02_seed_data.sql` 预置 `audit:expert_certification:read/write` 并授予 `content_auditor`；运行时提交产生 `audit_task.biz_type=7` | 资料页提交 / 驳回后重提、管理端 `/audit/expert-certifications` 通过 / 驳回、公开主页 / 点评 / 帖子作者达人标展示 |
 | 轻积分 / 等级 | 已完成当前范围 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `growth_points_log/growth_rule/level_config` 支撑发点评、获赞、带图点评、完成订单四类触发；每类按业务 ID 幂等写成长值/积分两条流水并更新用户等级 | 触发对应行为后可在 `/user/growth-records` 查看流水；管理端可维护规则与等级；重复支付回调或重复点赞不会重复奖励 |
 | 点评发布 / 互动 / 审核 | 已完成 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `review/review_image/review_like/review_comment/review_report/audit_task`；`02_seed_data.sql` 预置公开点评、点评图片、点赞、评论、待审 / 驳回审核任务；`review_report` 表会建好,但默认不塞演示举报记录,免得你第一次点举报就撞重复 | 写点评、编辑点评、删除点评、点评详情、点赞 / 评论 / 举报、管理端审核 |
 | 本地图片上传 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 这块不靠额外导库表跑上传文件本身；上传文件落 `backend/local-storage/uploads`；点评提交后图片 URL 仍落到 `review_image` | 写点评 / 编辑点评时选本地图片上传并预览 |
@@ -168,7 +170,7 @@
 | M5 商户经营后端 | 已完成 | 入驻、员工 RBAC、门店范围、预订、团购、订单退款、门店草稿、点评回复申诉已落地 | 无后端主流程缺口 | 后端权限、状态机、跨商户和跨区域测试通过 |
 | 商户端与管理端完整闭环 | 部分完成 | `merchant-web` 已有注册、登录、资质、看板、门店、员工、预订、团购、退款和点评页面；管理端已有数据库 RBAC、分类/城市/商圈、商户资质/点评/申诉/帖子审核、门店、榜单、成长、圈子和话题治理 | 用户治理；订单/退款/对账；运营活动；审计日志和隐私任务查询 | 已完成的 B/Admin 页面、权限、区域范围、角色实时收权、账号停用 `401` 和基础数据真实后端 E2E 通过；其余管理治理项另行验收 |
 | PC Web 产品缺口 | 部分完成 | 首页、列表、详情、搜索、交易、预订、用户中心和社区只读页已落地；商户高级筛选、真实分页、点评排序/评分/带图筛选、分享、门店相似推荐和公开页客户端运行时 metadata 已接入 | SEO SSR/预渲染产物 | 组件测试和后端查询测试覆盖已落地能力；SSR/预渲染尚未实现 |
-| 社区与消息尾项 | 部分完成 | 帖子、评论盖楼、帖子正文/评论 `@提醒`、转发、关注流、私信、圈子、话题和通知聚合已落地 | 达人认证 | 自动化覆盖已落地的社交关系、通知去重、`@提醒` 分发、隐私治理和 Flutter 转发/互动链路；尾项仍待实现 |
+| 社区与消息尾项 | 部分完成 | 帖子、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、转发、关注流、私信、圈子、话题和通知聚合已落地 | 真实移动推送、认证商户号 | 自动化覆盖已落地的社交关系、达人审核与公开 badge、通知去重、`@提醒` 分发、隐私治理和 Flutter 转发/互动链路；尾项仍待实现 |
 | Flutter 与真实第三方 | 部分完成 | Flutter 具备区域切换、基础三语言入口、交易/社区/隐私主链路；未配置能力会诚实禁用 | 完整 i18n、点评翻译、Google Maps、Stripe/PayPal/支付宝/微信、FCM/APNs、邮件短信和内容审核 | 仅有仓库内 mock/契约与未配置阻断验证；真实 sandbox、凭证和供应商联调仍待验收 |
 | 目标环境与上线执行 | 外部待验收 | MySQL、Redis、S3、ES、发布回滚脚本及 CI workflow 已存在 | 真实云资源、域名证书、CDN、SSH、预算、联系人和供应商账号 | 仅脚本和 workflow 已准备；目标环境发布/回滚演练尚未执行 |
 
@@ -266,4 +268,4 @@
 
 1. `scripts/ci/mysql-smoke.ps1` 已经在临时 `MySQL 8` 实例上跑绿；如果要复用宿主机 `MySQL80`,先把它那套 root 凭证修好。
 2. 接着给目标环境的 `MySQL / Redis / 对象存储 / SSH` 参数补齐,跑绿现有 `storage-smoke.ps1`、`deploy-release.ps1` 和 `rollback-release.ps1`。
-3. 继续推进 M7 达人认证和真实推送，以及真实支付、地图和 MySQL / Redis / S3 / SSH 凭证联调；帖子转发、评论盖楼、帖子正文/评论 `@提醒`、话题广场/热榜已经落地。
+3. 继续推进真实移动推送、认证商户号，以及真实支付、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、话题广场/热榜已经落地。

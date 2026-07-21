@@ -2,8 +2,8 @@
 -- This script recreates the local MySQL schema used by the current codebase.
 -- Run it only on a database that can be reset safely.
 -- Coverage:
--- - M1 browse + admin shop/import minimal closure
--- - M2 auth + review submit/audit/interaction minimal closure
+-- - Current code MySQL schema for the implemented M1-M7 local closure
+-- - Includes privacy center, merchant RBAC/workbench, unified audit center and local expert certification
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -23,6 +23,7 @@ DROP TABLE IF EXISTS `user_device`;
 DROP TABLE IF EXISTS `user_policy_accept_log`;
 DROP TABLE IF EXISTS `privacy_delete_task`;
 DROP TABLE IF EXISTS `privacy_export_task`;
+DROP TABLE IF EXISTS `user_expert_certification`;
 DROP TABLE IF EXISTS `app_user`;
 DROP TABLE IF EXISTS `audit_log`;
 DROP TABLE IF EXISTS `audit_task`;
@@ -746,6 +747,25 @@ CREATE TABLE `app_user` (
   UNIQUE KEY `uk_app_user_email` (`email`),
   UNIQUE KEY `uk_app_user_phone` (`phone`),
   KEY `idx_app_user_status` (`status`, `is_deleted`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `user_expert_certification` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  `region` VARCHAR(8) NOT NULL,
+  `reason` VARCHAR(500) NOT NULL DEFAULT '',
+  `status` TINYINT NOT NULL DEFAULT 1,
+  `reject_reason` VARCHAR(255) NOT NULL DEFAULT '',
+  `audit_by` BIGINT NOT NULL DEFAULT 0,
+  `submitted_at` DATETIME DEFAULT NULL,
+  `audited_at` DATETIME DEFAULT NULL,
+  `effective_start_at` DATETIME DEFAULT NULL,
+  `effective_end_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_expert_certification_user_region` (`user_id`,`region`),
+  KEY `idx_user_expert_certification_region_status` (`region`,`status`,`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `user_follow` (
