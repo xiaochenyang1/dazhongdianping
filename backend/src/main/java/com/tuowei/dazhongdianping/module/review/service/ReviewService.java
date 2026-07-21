@@ -24,6 +24,7 @@ import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.review.model.request.ReviewCommentCreateRequest;
 import com.tuowei.dazhongdianping.module.review.model.request.ReviewReportRequest;
 import com.tuowei.dazhongdianping.module.review.model.request.ReviewSaveRequest;
+import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentReplyResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewDetailResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewImageResponse;
@@ -38,8 +39,10 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -159,12 +162,15 @@ public class ReviewService {
     public ReviewCommentResponse createComment(Long reviewId, ReviewCommentCreateRequest request) {
         AppUserRow currentUser = currentUserRow();
         ReviewRow review = requirePublicReview(reviewId);
+        ReviewCommentThreadTarget threadTarget = resolveReviewCommentThread(reviewId, request.getReplyTo());
 
         ReviewCommentRow row = new ReviewCommentRow();
         row.setReviewId(reviewId);
         row.setUserId(currentUser.getId());
         row.setUserName(resolveUserName(currentUser));
         row.setContent(request.getContent().trim());
+        row.setParentId(threadTarget.parentId());
+        row.setReplyTo(threadTarget.replyToId());
         row.setStatus(1);
         row.setCreatedAt(LocalDateTime.now());
         reviewMapper.insertReviewComment(row);
@@ -177,17 +183,33 @@ public class ReviewService {
                     "/reviews/" + reviewId);
         }
 
-        return toReviewCommentResponse(row, currentUser.getId());
+        return toReviewCommentResponse(row, currentUser.getId(), threadTarget.replyTo(), List.of());
     }
 
     public PageResult<ReviewCommentResponse> listComments(Long reviewId, ReviewCommentListQuery query) {
         requirePublicReview(reviewId);
         query.setReviewId(reviewId);
         query.normalize();
-        long total = reviewMapper.countPublicReviewComments(reviewId);
+        long total = reviewMapper.countPublicRootReviewComments(reviewId);
         Long currentUserId = currentUserIdOrNull();
-        List<ReviewCommentResponse> items = reviewMapper.selectPublicReviewComments(query).stream()
-                .map(row -> toReviewCommentResponse(row, currentUserId))
+        List<ReviewCommentRow> rootRows = reviewMapper.selectPublicRootReviewComments(query);
+        if (rootRows.isEmpty()) {
+            return new PageResult<>(List.of(), total, query.getPage(), query.getPageSize(), false);
+        }
+
+        List<Long> parentIds = rootRows.stream().map(ReviewCommentRow::getId).toList();
+        Map<Long, List<ReviewCommentResponse>> repliesByParent = new LinkedHashMap<>();
+        for (ReviewCommentRow row : reviewMapper.selectPublicReviewCommentReplies(reviewId, parentIds)) {
+            repliesByParent.computeIfAbsent(row.getParentId(), ignored -> new ArrayList<>())
+                    .add(toReviewCommentResponse(row, currentUserId, toReviewCommentReplyResponse(row), List.of()));
+        }
+
+        List<ReviewCommentResponse> items = rootRows.stream()
+                .map(row -> toReviewCommentResponse(
+                        row,
+                        currentUserId,
+                        null,
+                        repliesByParent.getOrDefault(row.getId(), List.of())))
                 .toList();
         return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);
     }
@@ -482,15 +504,57 @@ public class ReviewService {
         );
     }
 
-    private ReviewCommentResponse toReviewCommentResponse(ReviewCommentRow row, Long currentUserId) {
+    private ReviewCommentResponse toReviewCommentResponse(ReviewCommentRow row,
+                                                          Long currentUserId,
+                                                          ReviewCommentReplyResponse replyTo,
+                                                          List<ReviewCommentResponse> replies) {
         return new ReviewCommentResponse(
                 row.getId(),
                 row.getReviewId(),
                 row.getUserId(),
                 row.getUserName(),
                 row.getContent(),
+                row.getParentId() == null ? 0L : row.getParentId(),
+                replyTo,
+                replies,
                 currentUserId != null && currentUserId.equals(row.getUserId()),
                 formatDateTime(row.getCreatedAt())
+        );
+    }
+
+    private ReviewCommentReplyResponse toReviewCommentReplyResponse(ReviewCommentRow row) {
+        if (row.getReplyTo() == null || row.getReplyTo() <= 0) {
+            return null;
+        }
+        return new ReviewCommentReplyResponse(
+                row.getReplyTo(),
+                row.getReplyToUserId(),
+                row.getReplyToUserName(),
+                row.getReplyToContent()
+        );
+    }
+
+    private ReviewCommentThreadTarget resolveReviewCommentThread(Long reviewId, Long replyToId) {
+        long normalizedReplyTo = replyToId == null ? 0L : replyToId;
+        if (normalizedReplyTo <= 0) {
+            return new ReviewCommentThreadTarget(0L, 0L, null);
+        }
+        ReviewCommentRow replyTarget = reviewMapper.selectPublicReviewCommentById(reviewId, normalizedReplyTo);
+        if (replyTarget == null) {
+            throw new IllegalArgumentException("回复目标不存在");
+        }
+        Long parentId = replyTarget.getParentId() != null && replyTarget.getParentId() > 0
+                ? replyTarget.getParentId()
+                : replyTarget.getId();
+        return new ReviewCommentThreadTarget(
+                parentId,
+                replyTarget.getId(),
+                new ReviewCommentReplyResponse(
+                        replyTarget.getId(),
+                        replyTarget.getUserId(),
+                        replyTarget.getUserName(),
+                        replyTarget.getContent()
+                )
         );
     }
 
@@ -622,5 +686,10 @@ public class ReviewService {
     @FunctionalInterface
     private interface ScoreExtractor {
         BigDecimal getScore(ReviewRow row);
+    }
+
+    private record ReviewCommentThreadTarget(Long parentId,
+                                             Long replyToId,
+                                             ReviewCommentReplyResponse replyTo) {
     }
 }

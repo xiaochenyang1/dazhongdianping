@@ -436,12 +436,14 @@ CREATE TABLE `review_comment` (
   `user_id` BIGINT NOT NULL,
   `user_name` VARCHAR(64) NOT NULL,
   `content` VARCHAR(300) NOT NULL,
+  `parent_id` BIGINT NOT NULL DEFAULT 0,
+  `reply_to` BIGINT NOT NULL DEFAULT 0,
   `status` TINYINT NOT NULL DEFAULT 1,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `idx_review_comment_review_id` (`review_id`, `status`, `is_deleted`, `created_at`, `id`)
+  KEY `idx_review_comment_review_id` (`review_id`, `status`, `is_deleted`, `parent_id`, `created_at`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `review_report` (
@@ -604,12 +606,14 @@ CREATE TABLE `post_comment` (
   `user_id` BIGINT NOT NULL,
   `user_name` VARCHAR(64) NOT NULL,
   `content` VARCHAR(500) NOT NULL,
+  `parent_id` BIGINT NOT NULL DEFAULT 0,
+  `reply_to` BIGINT NOT NULL DEFAULT 0,
   `status` TINYINT NOT NULL DEFAULT 1,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `idx_post_comment_post` (`post_id`, `status`, `is_deleted`, `created_at`, `id`)
+  KEY `idx_post_comment_post` (`post_id`, `status`, `is_deleted`, `parent_id`, `created_at`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `post_report` (

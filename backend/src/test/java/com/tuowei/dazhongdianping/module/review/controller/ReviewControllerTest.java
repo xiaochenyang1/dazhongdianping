@@ -430,6 +430,96 @@ class ReviewControllerTest {
     }
 
     @Test
+    void shouldThreadReviewCommentsWithinSameReview() throws Exception {
+        String parentToken = registerUser("review-thread-parent@example.com", "点评楼主");
+        MvcResult parentResult = mockMvc.perform(post("/api/c/v1/reviews/1/comments")
+                        .header("Authorization", bearer(parentToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "这条点评下面先起一层楼。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.parentId").value(0))
+                .andReturn();
+        long parentCommentId = readLong(parentResult, "/data/id");
+
+        String replyToken = registerUser("review-thread-reply@example.com", "跟楼用户");
+        MvcResult replyResult = mockMvc.perform(post("/api/c/v1/reviews/1/comments")
+                        .header("Authorization", bearer(replyToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "我来跟一层。",
+                                  "replyTo": %d
+                                }
+                                """.formatted(parentCommentId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.parentId").value(parentCommentId))
+                .andExpect(jsonPath("$.data.replyTo.id").value(parentCommentId))
+                .andExpect(jsonPath("$.data.replyTo.userName").value("点评楼主"))
+                .andReturn();
+        long replyCommentId = readLong(replyResult, "/data/id");
+
+        String nestedReplyToken = registerUser("review-thread-nested@example.com", "楼中回复用户");
+        mockMvc.perform(post("/api/c/v1/reviews/1/comments")
+                        .header("Authorization", bearer(nestedReplyToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "我回的是楼中回复，但不能再无限套娃。",
+                                  "replyTo": %d
+                                }
+                                """.formatted(replyCommentId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.parentId").value(parentCommentId))
+                .andExpect(jsonPath("$.data.replyTo.id").value(replyCommentId))
+                .andExpect(jsonPath("$.data.replyTo.userName").value("跟楼用户"));
+
+        mockMvc.perform(get("/api/c/v1/reviews/1/comments")
+                        .header("Authorization", bearer(nestedReplyToken))
+                        .param("page", "1")
+                        .param("pageSize", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.list[0].id").value(parentCommentId))
+                .andExpect(jsonPath("$.data.list[0].parentId").value(0))
+                .andExpect(jsonPath("$.data.list[0].replies.length()").value(2))
+                .andExpect(jsonPath("$.data.list[0].replies[0].replyTo.id").value(parentCommentId))
+                .andExpect(jsonPath("$.data.list[0].replies[1].replyTo.id").value(replyCommentId))
+                .andExpect(jsonPath("$.data.list[0].replies[1].mine").value(true));
+    }
+
+    @Test
+    void shouldRejectReplyingToCommentFromAnotherReview() throws Exception {
+        String userToken = registerUser("review-cross-reply@example.com", "串楼用户");
+        MvcResult otherReviewComment = mockMvc.perform(post("/api/c/v1/reviews/2/comments")
+                        .header("Authorization", bearer(userToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "这条评论属于另一条点评。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        long otherCommentId = readLong(otherReviewComment, "/data/id");
+
+        mockMvc.perform(post("/api/c/v1/reviews/1/comments")
+                        .header("Authorization", bearer(userToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "别想跨点评串楼。",
+                                  "replyTo": %d
+                                }
+                                """.formatted(otherCommentId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
     void shouldAggregateReviewInteractionNotifications() throws Exception {
         String authorToken = registerUser("review-notification-author@example.com", "点评通知作者");
         long reviewId = createReview(authorToken, 10001L, "这条点评专门用来验通知聚合。", 5, 5, 5, 5, 128.00);

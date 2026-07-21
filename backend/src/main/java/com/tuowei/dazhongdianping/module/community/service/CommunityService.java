@@ -20,13 +20,18 @@ import com.tuowei.dazhongdianping.module.community.model.request.PostReportReque
 import com.tuowei.dazhongdianping.module.community.model.response.PostResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostLikeResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentResponse;
+import com.tuowei.dazhongdianping.module.community.model.response.PostCommentReplyResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostRepostResponse;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -222,11 +227,15 @@ public class CommunityService {
     public PostCommentResponse createComment(Long postId, PostCommentCreateRequest request) {
         UserSession user = currentUser();
         PostRow post = requirePublicPost(postId);
+        PostCommentThreadTarget threadTarget = resolvePostCommentThread(postId, request.replyTo());
         PostCommentRow row = new PostCommentRow();
         row.setPostId(postId);
         row.setUserId(user.userId());
         row.setUserName(communityMapper.selectUserName(user.userId()));
         row.setContent(request.content().trim());
+        row.setParentId(threadTarget.parentId());
+        row.setReplyTo(threadTarget.replyToId());
+        row.setCreatedAt(LocalDateTime.now());
         communityMapper.insertPostComment(row);
         communityMapper.refreshPostCommentCount(postId);
         topicService.touchTopicsByPostId(postId);
@@ -235,16 +244,28 @@ public class CommunityService {
                     row.getUserName() + " 评论了你的帖子：" + preview(row.getContent()),
                     "/community/posts/" + postId);
         }
-        return toComment(row);
+        return toComment(row, user.userId(), threadTarget.replyTo(), List.of());
     }
 
     public PageResult<PostCommentResponse> comments(Long postId, Integer page, Integer pageSize) {
         requirePublicPost(postId);
         int currentPage = page == null ? 1 : Math.max(1, page);
         int size = pageSize == null ? 20 : Math.min(50, Math.max(1, pageSize));
-        long total = communityMapper.countPostComments(postId);
-        List<PostCommentResponse> list = communityMapper.selectPostComments(postId, size, (currentPage - 1) * size)
-                .stream().map(this::toComment).toList();
+        long total = communityMapper.countRootPostComments(postId);
+        Long currentUserId = currentUserIdOrNull();
+        List<PostCommentRow> rootRows = communityMapper.selectRootPostComments(postId, size, (currentPage - 1) * size);
+        if (rootRows.isEmpty()) {
+            return new PageResult<>(List.of(), total, currentPage, size, false);
+        }
+        List<Long> parentIds = rootRows.stream().map(PostCommentRow::getId).toList();
+        Map<Long, List<PostCommentResponse>> repliesByParent = new LinkedHashMap<>();
+        for (PostCommentRow row : communityMapper.selectPostCommentReplies(postId, parentIds)) {
+            repliesByParent.computeIfAbsent(row.getParentId(), ignored -> new ArrayList<>())
+                    .add(toComment(row, currentUserId, toReplyComment(row), List.of()));
+        }
+        List<PostCommentResponse> list = rootRows.stream()
+                .map(row -> toComment(row, currentUserId, null, repliesByParent.getOrDefault(row.getId(), List.of())))
+                .toList();
         return new PageResult<>(list, total, currentPage, size, (currentPage - 1) * size + list.size() < total);
     }
 
@@ -315,9 +336,58 @@ public class CommunityService {
         return row;
     }
 
-    private PostCommentResponse toComment(PostCommentRow row) {
-        return new PostCommentResponse(row.getId(), row.getPostId(), row.getUserId(), row.getUserName(),
-                row.getContent(), format(row.getCreatedAt()));
+    private PostCommentResponse toComment(PostCommentRow row,
+                                          Long currentUserId,
+                                          PostCommentReplyResponse replyTo,
+                                          List<PostCommentResponse> replies) {
+        return new PostCommentResponse(
+                row.getId(),
+                row.getPostId(),
+                row.getUserId(),
+                row.getUserName(),
+                row.getContent(),
+                row.getParentId() == null ? 0L : row.getParentId(),
+                replyTo,
+                replies,
+                currentUserId != null && currentUserId.equals(row.getUserId()),
+                format(row.getCreatedAt())
+        );
+    }
+
+    private PostCommentReplyResponse toReplyComment(PostCommentRow row) {
+        if (row.getReplyTo() == null || row.getReplyTo() <= 0) {
+            return null;
+        }
+        return new PostCommentReplyResponse(
+                row.getReplyTo(),
+                row.getReplyToUserId(),
+                row.getReplyToUserName(),
+                row.getReplyToContent()
+        );
+    }
+
+    private PostCommentThreadTarget resolvePostCommentThread(Long postId, Long replyToId) {
+        long normalizedReplyTo = replyToId == null ? 0L : replyToId;
+        if (normalizedReplyTo <= 0) {
+            return new PostCommentThreadTarget(0L, 0L, null);
+        }
+        PostCommentRow replyTarget = communityMapper.selectPostCommentById(postId, normalizedReplyTo);
+        if (replyTarget == null) {
+            throw new IllegalArgumentException("回复目标不存在");
+        }
+        Long parentId = replyTarget.getParentId() != null && replyTarget.getParentId() > 0
+                ? replyTarget.getParentId()
+                : replyTarget.getId();
+        return new PostCommentThreadTarget(
+                parentId,
+                replyTarget.getId(),
+                new PostCommentReplyResponse(
+                        replyTarget.getId(),
+                        replyTarget.getUserId(),
+                        replyTarget.getUserName(),
+                        replyTarget.getContent()
+                )
+        );
     }
 
     private List<Long> saveAssets(Long postId, PostSaveRequest request) {
@@ -350,6 +420,11 @@ public class CommunityService {
         return session;
     }
 
+    private Long currentUserIdOrNull() {
+        UserSession session = UserSessionContext.get();
+        return session == null ? null : session.userId();
+    }
+
     private String region() {
         return RegionContext.getRegion().name();
     }
@@ -376,5 +451,10 @@ public class CommunityService {
             case 2 -> "审核驳回";
             default -> "待审核";
         };
+    }
+
+    private record PostCommentThreadTarget(Long parentId,
+                                           Long replyToId,
+                                           PostCommentReplyResponse replyTo) {
     }
 }

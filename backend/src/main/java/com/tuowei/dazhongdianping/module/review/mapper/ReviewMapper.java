@@ -52,9 +52,15 @@ public interface ReviewMapper {
 
     void insertReviewComment(ReviewCommentRow row);
 
-    long countPublicReviewComments(@Param("reviewId") Long reviewId);
+    long countPublicRootReviewComments(@Param("reviewId") Long reviewId);
 
-    List<ReviewCommentRow> selectPublicReviewComments(ReviewCommentListQuery query);
+    List<ReviewCommentRow> selectPublicRootReviewComments(ReviewCommentListQuery query);
+
+    List<ReviewCommentRow> selectPublicReviewCommentReplies(@Param("reviewId") Long reviewId,
+                                                            @Param("parentIds") List<Long> parentIds);
+
+    ReviewCommentRow selectPublicReviewCommentById(@Param("reviewId") Long reviewId,
+                                                   @Param("commentId") Long commentId);
 
     void insertReviewReport(ReviewReportRow row);
 

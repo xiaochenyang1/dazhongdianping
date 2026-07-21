@@ -111,15 +111,44 @@
     <select id="countPostReposts" resultType="int">SELECT COUNT(1) FROM post_repost WHERE post_id=#{postId}</select>
     <update id="refreshPostRepostCount">UPDATE post SET repost_count=(SELECT COUNT(1) FROM post_repost WHERE post_id=#{postId}) WHERE id=#{postId}</update>
     <insert id="insertPostComment" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO post_comment(post_id,user_id,user_name,content,status,is_deleted)
-        VALUES(#{postId},#{userId},#{userName},#{content},1,FALSE)
+        INSERT INTO post_comment(post_id,user_id,user_name,content,parent_id,reply_to,status,is_deleted)
+        VALUES(#{postId},#{userId},#{userName},#{content},#{parentId},#{replyTo},1,FALSE)
     </insert>
     <select id="countPostComments" resultType="long">
         SELECT COUNT(1) FROM post_comment WHERE post_id=#{postId} AND status=1 AND is_deleted=FALSE
     </select>
-    <select id="selectPostComments" resultType="com.tuowei.dazhongdianping.module.community.model.PostCommentRow">
-        SELECT id,post_id,user_id,user_name,content,created_at FROM post_comment
-        WHERE post_id=#{postId} AND status=1 AND is_deleted=FALSE ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    <select id="countRootPostComments" resultType="long">
+        SELECT COUNT(1) FROM post_comment WHERE post_id=#{postId} AND status=1 AND is_deleted=FALSE AND parent_id=0
+    </select>
+    <sql id="postCommentColumns">
+        pc.id,pc.post_id,pc.user_id,pc.user_name,pc.content,pc.parent_id,pc.reply_to,
+        reply.user_id AS reply_to_user_id,
+        reply.user_name AS reply_to_user_name,
+        reply.content AS reply_to_content,
+        pc.status,pc.is_deleted,pc.created_at,pc.updated_at
+    </sql>
+    <select id="selectRootPostComments" resultType="com.tuowei.dazhongdianping.module.community.model.PostCommentRow">
+        SELECT <include refid="postCommentColumns"/>
+        FROM post_comment pc
+        LEFT JOIN post_comment reply ON reply.id=pc.reply_to AND reply.is_deleted=FALSE
+        WHERE pc.post_id=#{postId} AND pc.status=1 AND pc.is_deleted=FALSE AND pc.parent_id=0
+        ORDER BY pc.created_at DESC,pc.id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+    <select id="selectPostCommentReplies" resultType="com.tuowei.dazhongdianping.module.community.model.PostCommentRow">
+        SELECT <include refid="postCommentColumns"/>
+        FROM post_comment pc
+        LEFT JOIN post_comment reply ON reply.id=pc.reply_to AND reply.is_deleted=FALSE
+        WHERE pc.post_id=#{postId} AND pc.status=1 AND pc.is_deleted=FALSE
+          AND pc.parent_id IN
+        <foreach collection="parentIds" item="parentId" open="(" separator="," close=")">#{parentId}</foreach>
+        ORDER BY pc.parent_id DESC,pc.created_at ASC,pc.id ASC
+    </select>
+    <select id="selectPostCommentById" resultType="com.tuowei.dazhongdianping.module.community.model.PostCommentRow">
+        SELECT <include refid="postCommentColumns"/>
+        FROM post_comment pc
+        LEFT JOIN post_comment reply ON reply.id=pc.reply_to AND reply.is_deleted=FALSE
+        WHERE pc.post_id=#{postId} AND pc.id=#{commentId} AND pc.status=1 AND pc.is_deleted=FALSE
+        LIMIT 1
     </select>
     <update id="refreshPostCommentCount">UPDATE post SET comment_count=(SELECT COUNT(1) FROM post_comment WHERE post_id=#{postId} AND status=1 AND is_deleted=FALSE) WHERE id=#{postId}</update>
     <select id="selectPostReport" resultType="com.tuowei.dazhongdianping.module.community.model.PostReportRow">

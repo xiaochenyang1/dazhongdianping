@@ -107,6 +107,10 @@ class CommunityComment {
     required this.userId,
     required this.userName,
     required this.content,
+    required this.parentId,
+    required this.replyTo,
+    required this.replies,
+    required this.mine,
     required this.createdAt,
   });
   final int id;
@@ -114,6 +118,10 @@ class CommunityComment {
   final int userId;
   final String userName;
   final String content;
+  final int parentId;
+  final CommunityCommentReplyTarget? replyTo;
+  final List<CommunityComment> replies;
+  final bool mine;
   final String createdAt;
 
   factory CommunityComment.fromJson(Map<String, dynamic> json) =>
@@ -123,8 +131,43 @@ class CommunityComment {
         userId: json['userId'] as int? ?? 0,
         userName: json['userName'] as String? ?? '',
         content: json['content'] as String? ?? '',
+        parentId: json['parentId'] as int? ?? 0,
+        replyTo: CommunityCommentReplyTarget.fromNullableJson(
+          json['replyTo'] as Map<String, dynamic>?,
+        ),
+        replies: (json['replies'] as List<dynamic>? ?? const [])
+            .cast<Map<String, dynamic>>()
+            .map(CommunityComment.fromJson)
+            .toList(),
+        mine: json['mine'] as bool? ?? false,
         createdAt: json['createdAt'] as String? ?? '',
       );
+}
+
+class CommunityCommentReplyTarget {
+  const CommunityCommentReplyTarget({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    required this.content,
+  });
+
+  final int id;
+  final int userId;
+  final String userName;
+  final String content;
+
+  factory CommunityCommentReplyTarget.fromJson(Map<String, dynamic> json) =>
+      CommunityCommentReplyTarget(
+        id: json['id'] as int,
+        userId: json['userId'] as int? ?? 0,
+        userName: json['userName'] as String? ?? '',
+        content: json['content'] as String? ?? '',
+      );
+
+  static CommunityCommentReplyTarget? fromNullableJson(
+    Map<String, dynamic>? json,
+  ) => json == null ? null : CommunityCommentReplyTarget.fromJson(json);
 }
 
 class CommunityLikeResult {
@@ -234,11 +277,18 @@ class CommunityRepository {
         .toList();
   }
 
-  Future<CommunityComment> createComment(int postId, String content) async =>
+  Future<CommunityComment> createComment(
+    int postId,
+    String content, {
+    int? replyTo,
+  }) async =>
       CommunityComment.fromJson(
         await api.postJson(
           '/api/c/v1/posts/$postId/comments',
-          body: {'content': content},
+          body: {
+            'content': content,
+            if (replyTo != null) 'replyTo': replyTo,
+          },
         ),
       );
 

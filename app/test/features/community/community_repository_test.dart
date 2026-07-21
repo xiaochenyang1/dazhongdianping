@@ -49,6 +49,28 @@ class CommunityFakeApi
             'userId': 10,
             'userName': '评论用户',
             'content': '收藏了。',
+            'parentId': 0,
+            'replyTo': null,
+            'replies': [
+              {
+                'id': 12,
+                'postId': 7,
+                'userId': 13,
+                'userName': '楼中回复用户',
+                'content': '我补一层楼中回复。',
+                'parentId': 11,
+                'replyTo': {
+                  'id': 11,
+                  'userId': 10,
+                  'userName': '评论用户',
+                  'content': '收藏了。',
+                },
+                'replies': [],
+                'mine': false,
+                'createdAt': '2026-07-16 11:10:00',
+              },
+            ],
+            'mine': false,
             'createdAt': '2026-07-16 11:00:00',
           },
         ],
@@ -84,6 +106,17 @@ class CommunityFakeApi
         'userId': 9,
         'userName': '伦敦小王',
         'content': (body as Map)['content'],
+        'parentId': (body as Map)['replyTo'] ?? 0,
+        'replyTo': body['replyTo'] == null
+            ? null
+            : {
+                'id': body['replyTo'],
+                'userId': 10,
+                'userName': '评论用户',
+                'content': '收藏了。',
+              },
+        'replies': const [],
+        'mine': true,
         'createdAt': '2026-07-16 12:00:00',
       };
     }
@@ -203,13 +236,27 @@ void main() {
 
     final comment = await repository.createComment(7, '确实有用');
     expect(comment.content, '确实有用');
+    expect(comment.parentId, 0);
 
     final comments = await repository.loadComments(7);
     expect(comments.single.userName, '评论用户');
+    expect(comments.single.replies.single.replyTo?.userName, '评论用户');
 
     await repository.reportPost(7, '信息过期');
     expect(api.path, '/api/c/v1/posts/7/report');
     expect(api.body, {'reason': '信息过期'});
+  });
+
+  test('community repository sends replyTo when creating a threaded reply', () async {
+    final api = CommunityFakeApi();
+    final repository = CommunityRepository(api);
+
+    final reply = await repository.createComment(7, '楼中回复', replyTo: 11);
+
+    expect(api.path, '/api/c/v1/posts/7/comments');
+    expect(api.body, {'content': '楼中回复', 'replyTo': 11});
+    expect(reply.replyTo?.id, 11);
+    expect(reply.parentId, 11);
   });
 
   test('community repository reposts and removes a repost', () async {

@@ -23,6 +23,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   late Future<List<CommunityComment>> _comments;
   final _commentController = TextEditingController();
   final _reportController = TextEditingController();
+  CommunityComment? _replyTarget;
   bool _favoriteSaving = false;
   bool _favorited = false;
   bool _repostSaving = false;
@@ -56,13 +57,28 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Future<void> _comment() async {
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
-    await widget.repository.createComment(widget.postId, content);
+    await widget.repository.createComment(
+      widget.postId,
+      content,
+      replyTo: _replyTarget?.id,
+    );
     if (!mounted) return;
     _commentController.clear();
     final refreshedComments = widget.repository.loadComments(widget.postId);
+    final refreshedPost = widget.repository.loadPost(widget.postId);
     setState(() {
+      _post = refreshedPost;
       _comments = refreshedComments;
+      _replyTarget = null;
     });
+  }
+
+  void _selectReply(CommunityComment comment) {
+    setState(() => _replyTarget = comment);
+  }
+
+  void _clearReply() {
+    setState(() => _replyTarget = null);
   }
 
   Future<void> _toggleFavorite() async {
@@ -155,6 +171,57 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       }
     }
   }
+
+  Widget _buildCommentItem(CommunityComment comment, {double indent = 0}) =>
+      Padding(
+        padding: EdgeInsets.only(left: indent),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(comment.userName),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (comment.replyTo != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '回复 ${comment.replyTo!.userName}：${comment.replyTo!.content}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  Text(comment.content),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    children: [
+                      Text(comment.createdAt),
+                      if (widget.canInteract)
+                        TextButton(
+                          key: Key('comment-reply-${comment.id}'),
+                          onPressed: () => _selectReply(comment),
+                          child: const Text('回复'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (comment.replies.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Column(
+                  children: comment.replies
+                      .map((reply) => _buildCommentItem(reply, indent: 8))
+                      .toList(),
+                ),
+              ),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -274,6 +341,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
             if (widget.canInteract) ...[
               const SizedBox(height: 8),
+              if (_replyTarget != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text('正在回复 ${_replyTarget!.userName}'),
+                      ),
+                      TextButton(
+                        onPressed: _clearReply,
+                        child: const Text('取消回复'),
+                      ),
+                    ],
+                  ),
+                ),
               Row(
                 children: [
                   Expanded(
@@ -297,13 +379,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 }
                 return Column(
                   children: snapshot.data!
-                      .map(
-                        (item) => ListTile(
-                          title: Text(item.userName),
-                          subtitle: Text(item.content),
-                          trailing: Text(item.createdAt),
-                        ),
-                      )
+                      .map((item) => _buildCommentItem(item))
                       .toList(),
                 );
               },

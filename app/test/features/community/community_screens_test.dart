@@ -53,6 +53,28 @@ class CommunityScreenApi
             'userId': 10,
             'userName': '评论用户',
             'content': '收藏了。',
+            'parentId': 0,
+            'replyTo': null,
+            'replies': [
+              {
+                'id': 12,
+                'postId': 7,
+                'userId': 13,
+                'userName': '楼中回复用户',
+                'content': '我补一层楼中回复。',
+                'parentId': 11,
+                'replyTo': {
+                  'id': 11,
+                  'userId': 10,
+                  'userName': '评论用户',
+                  'content': '收藏了。',
+                },
+                'replies': [],
+                'mine': false,
+                'createdAt': '2026-07-16 11:10:00',
+              },
+            ],
+            'mine': false,
             'createdAt': '2026-07-16 11:00:00',
           },
         ],
@@ -86,6 +108,17 @@ class CommunityScreenApi
         'userId': 9,
         'userName': '当前用户',
         'content': (body as Map)['content'],
+        'parentId': (body as Map)['replyTo'] ?? 0,
+        'replyTo': body['replyTo'] == null
+            ? null
+            : {
+                'id': body['replyTo'],
+                'userId': 10,
+                'userName': '评论用户',
+                'content': '收藏了。',
+              },
+        'replies': const [],
+        'mine': true,
         'createdAt': '2026-07-16 12:00:00',
       };
     }
@@ -279,6 +312,39 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('收藏了。'), findsOneWidget);
+    expect(find.text('我补一层楼中回复。'), findsOneWidget);
+  });
+
+  testWidgets('post detail can reply to a threaded comment', (tester) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityFeedScreen(
+          repository: CommunityRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('伦敦周末市场指南'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('comment-reply-11')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('comment-reply-11')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('正在回复 评论用户'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).last, '楼中回复');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+
+    expect(api.postPath, '/api/c/v1/posts/7/comments');
+    expect(api.body, {'content': '楼中回复', 'replyTo': 11});
   });
 
   testWidgets('community author opens the public user profile callback', (

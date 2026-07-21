@@ -36,8 +36,18 @@ export interface ReviewComment {
   userId: number
   userName: string
   content: string
+  parentId: number
+  replyTo?: ReviewCommentReply | null
+  replies: ReviewComment[]
   mine: boolean
   createdAt: string
+}
+
+export interface ReviewCommentReply {
+  id: number
+  userId: number
+  userName: string
+  content: string
 }
 
 export interface ReviewLikeResult {
@@ -92,6 +102,7 @@ export interface UserReviewQuery {
 
 export interface ReviewCommentPayload {
   content: string
+  replyTo?: number
 }
 
 export interface ReviewCommentQuery {

@@ -72,6 +72,8 @@
             user_id,
             user_name,
             content,
+            parent_id,
+            reply_to,
             status,
             is_deleted
         )
@@ -80,6 +82,8 @@
             #{userId},
             #{userName},
             #{content},
+            #{parentId},
+            #{replyTo},
             #{status},
             FALSE
         )
@@ -207,31 +211,67 @@
     </delete>
 
     <sql id="publicReviewCommentWhere">
-        WHERE review_id = #{reviewId}
-          AND status = 1
-          AND is_deleted = FALSE
+        WHERE rc.review_id = #{reviewId}
+          AND rc.status = 1
+          AND rc.is_deleted = FALSE
     </sql>
 
-    <select id="countPublicReviewComments" resultType="long">
+    <sql id="publicReviewCommentColumns">
+        rc.id,
+        rc.review_id,
+        rc.user_id,
+        rc.user_name,
+        rc.content,
+        rc.parent_id,
+        rc.reply_to,
+        reply.user_id AS reply_to_user_id,
+        reply.user_name AS reply_to_user_name,
+        reply.content AS reply_to_content,
+        rc.status,
+        rc.is_deleted,
+        rc.created_at,
+        rc.updated_at
+    </sql>
+
+    <select id="countPublicRootReviewComments" resultType="long">
         SELECT COUNT(1)
-        FROM review_comment
+        FROM review_comment rc
         <include refid="publicReviewCommentWhere"/>
+          AND rc.parent_id = 0
     </select>
 
-    <select id="selectPublicReviewComments" resultType="com.tuowei.dazhongdianping.module.review.model.ReviewCommentRow">
-        SELECT id,
-               review_id,
-               user_id,
-               user_name,
-               content,
-               status,
-               is_deleted,
-               created_at,
-               updated_at
-        FROM review_comment
+    <select id="selectPublicRootReviewComments" resultType="com.tuowei.dazhongdianping.module.review.model.ReviewCommentRow">
+        SELECT
+        <include refid="publicReviewCommentColumns"/>
+        FROM review_comment rc
+        LEFT JOIN review_comment reply ON reply.id = rc.reply_to AND reply.is_deleted = FALSE
         <include refid="publicReviewCommentWhere"/>
-        ORDER BY created_at DESC, id DESC
+          AND rc.parent_id = 0
+        ORDER BY rc.created_at DESC, rc.id DESC
         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectPublicReviewCommentReplies" resultType="com.tuowei.dazhongdianping.module.review.model.ReviewCommentRow">
+        SELECT
+        <include refid="publicReviewCommentColumns"/>
+        FROM review_comment rc
+        LEFT JOIN review_comment reply ON reply.id = rc.reply_to AND reply.is_deleted = FALSE
+        <include refid="publicReviewCommentWhere"/>
+          AND rc.parent_id IN
+        <foreach collection="parentIds" item="parentId" open="(" separator="," close=")">
+            #{parentId}
+        </foreach>
+        ORDER BY rc.parent_id DESC, rc.created_at ASC, rc.id ASC
+    </select>
+
+    <select id="selectPublicReviewCommentById" resultType="com.tuowei.dazhongdianping.module.review.model.ReviewCommentRow">
+        SELECT
+        <include refid="publicReviewCommentColumns"/>
+        FROM review_comment rc
+        LEFT JOIN review_comment reply ON reply.id = rc.reply_to AND reply.is_deleted = FALSE
+        <include refid="publicReviewCommentWhere"/>
+          AND rc.id = #{commentId}
+        LIMIT 1
     </select>
 
     <select id="selectReviewReportByReporter" resultType="com.tuowei.dazhongdianping.module.review.model.ReviewReportRow">

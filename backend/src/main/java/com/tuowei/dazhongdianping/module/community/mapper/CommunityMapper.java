@@ -48,7 +48,13 @@ public interface CommunityMapper {
     int refreshPostRepostCount(@Param("postId") Long postId);
     void insertPostComment(PostCommentRow row);
     long countPostComments(@Param("postId") Long postId);
-    List<PostCommentRow> selectPostComments(@Param("postId") Long postId, @Param("limit") Integer limit, @Param("offset") Integer offset);
+    long countRootPostComments(@Param("postId") Long postId);
+    List<PostCommentRow> selectRootPostComments(@Param("postId") Long postId,
+                                                @Param("limit") Integer limit,
+                                                @Param("offset") Integer offset);
+    List<PostCommentRow> selectPostCommentReplies(@Param("postId") Long postId,
+                                                  @Param("parentIds") List<Long> parentIds);
+    PostCommentRow selectPostCommentById(@Param("postId") Long postId, @Param("commentId") Long commentId);
     int refreshPostCommentCount(@Param("postId") Long postId);
     PostReportRow selectPostReport(@Param("postId") Long postId, @Param("userId") Long userId);
     void insertPostReport(PostReportRow row);

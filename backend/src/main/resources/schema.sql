@@ -391,13 +391,15 @@ CREATE TABLE IF NOT EXISTS review_comment (
     user_id BIGINT NOT NULL,
     user_name VARCHAR(64) NOT NULL,
     content VARCHAR(300) NOT NULL,
+    parent_id BIGINT NOT NULL DEFAULT 0,
+    reply_to BIGINT NOT NULL DEFAULT 0,
     status TINYINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE INDEX IF NOT EXISTS idx_review_comment_review_id ON review_comment(review_id, status, is_deleted, created_at, id);
+CREATE INDEX IF NOT EXISTS idx_review_comment_review_id ON review_comment(review_id, status, is_deleted, parent_id, created_at, id);
 
 CREATE TABLE IF NOT EXISTS review_report (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -564,13 +566,15 @@ CREATE TABLE IF NOT EXISTS post_comment (
     user_id BIGINT NOT NULL,
     user_name VARCHAR(64) NOT NULL,
     content VARCHAR(500) NOT NULL,
+    parent_id BIGINT NOT NULL DEFAULT 0,
+    reply_to BIGINT NOT NULL DEFAULT 0,
     status TINYINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE INDEX IF NOT EXISTS idx_post_comment_post ON post_comment(post_id, status, is_deleted, created_at, id);
+CREATE INDEX IF NOT EXISTS idx_post_comment_post ON post_comment(post_id, status, is_deleted, parent_id, created_at, id);
 
 CREATE TABLE IF NOT EXISTS post_report (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

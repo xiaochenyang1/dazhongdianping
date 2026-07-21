@@ -11,6 +11,11 @@ public class ReviewCommentRow {
     private Long userId;
     private String userName;
     private String content;
+    private Long parentId;
+    private Long replyTo;
+    private Long replyToUserId;
+    private String replyToUserName;
+    private String replyToContent;
     private Integer status;
     private Boolean isDeleted;
     private LocalDateTime createdAt;

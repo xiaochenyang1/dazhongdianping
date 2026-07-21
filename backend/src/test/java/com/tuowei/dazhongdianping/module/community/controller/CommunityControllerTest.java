@@ -233,6 +233,143 @@ class CommunityControllerTest {
     }
 
     @Test
+    void shouldThreadPostCommentsWithinSamePost() throws Exception {
+        String authorToken = registerUser();
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("可盖楼帖子", "这条帖子专门给评论盖楼回归用。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long postId = readLong(created, "/data/id");
+
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(postId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        String parentToken = registerUser();
+        MvcResult parentResult = mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", postId)
+                        .header("Authorization", bearer(parentToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "顶层先开一楼。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.parentId").value(0))
+                .andReturn();
+        long parentCommentId = readLong(parentResult, "/data/id");
+
+        String replyToken = registerUser();
+        MvcResult replyResult = mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", postId)
+                        .header("Authorization", bearer(replyToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "我跟一层。",
+                                  "replyTo": %d
+                                }
+                                """.formatted(parentCommentId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.parentId").value(parentCommentId))
+                .andExpect(jsonPath("$.data.replyTo.id").value(parentCommentId))
+                .andReturn();
+        long replyCommentId = readLong(replyResult, "/data/id");
+
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", postId)
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "我回的是楼中回复。",
+                                  "replyTo": %d
+                                }
+                                """.formatted(replyCommentId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.parentId").value(parentCommentId))
+                .andExpect(jsonPath("$.data.replyTo.id").value(replyCommentId));
+
+        mockMvc.perform(get("/api/c/v1/posts/{postId}/comments", postId)
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].id").value(parentCommentId))
+                .andExpect(jsonPath("$.data.list[0].parentId").value(0))
+                .andExpect(jsonPath("$.data.list[0].replies.length()").value(2))
+                .andExpect(jsonPath("$.data.list[0].replies[0].replyTo.id").value(parentCommentId))
+                .andExpect(jsonPath("$.data.list[0].replies[1].replyTo.id").value(replyCommentId));
+    }
+
+    @Test
+    void shouldRejectReplyingToCommentFromAnotherPost() throws Exception {
+        String authorToken = registerUser();
+        MvcResult firstPostResult = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("第一条帖子", "先留一个评论目标。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long firstPostId = readLong(firstPostResult, "/data/id");
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(firstPostId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        MvcResult secondPostResult = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("第二条帖子", "这里不能拿第一条的评论串楼。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long secondPostId = readLong(secondPostResult, "/data/id");
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(secondPostId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        MvcResult otherCommentResult = mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", secondPostId)
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "这条评论属于另一条帖子。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        long otherCommentId = readLong(otherCommentResult, "/data/id");
+
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", firstPostId)
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "别跨帖子串楼。",
+                                  "replyTo": %d
+                                }
+                                """.formatted(otherCommentId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
     void shouldAggregatePostInteractionNotifications() throws Exception {
         String authorToken = registerUser();
         MvcResult created = mockMvc.perform(post("/api/c/v1/posts")

@@ -36,6 +36,7 @@ const interactionErrorMessage = ref('')
 const review = ref<ReviewDetail | null>(null)
 const comments = ref<ReviewComment[]>([])
 const commentContent = ref('')
+const activeReplyTarget = ref<ReviewComment | null>(null)
 const reportReason = ref('')
 const reportPanelOpen = ref(false)
 let reviewRequestId = 0
@@ -137,6 +138,7 @@ async function loadReview() {
   commentsErrorMessage.value = ''
   resetInteractionFeedback()
   reportPanelOpen.value = false
+  activeReplyTarget.value = null
   if (Number.isNaN(targetReviewId)) {
     errorMessage.value = '点评 ID 不合法'
     loading.value = false
@@ -231,6 +233,8 @@ async function submitComment(resumedReviewId?: unknown, resumedContent?: unknown
 
   const contentSource = typeof resumedContent === 'string' ? resumedContent : commentContent.value
   const content = contentSource.trim()
+  const replyTo =
+    activeReplyTarget.value && activeReplyTarget.value.id > 0 ? activeReplyTarget.value.id : undefined
   if (!content) {
     interactionErrorMessage.value = '评论内容不能为空'
     return
@@ -243,20 +247,33 @@ async function submitComment(resumedReviewId?: unknown, resumedContent?: unknown
   resetInteractionFeedback()
 
   try {
-    const created = await createReviewComment(targetReviewId, { content })
+    await createReviewComment(targetReviewId, replyTo ? { content, replyTo } : { content })
     if (review.value?.id === targetReviewId) {
-      comments.value = [created, ...comments.value.filter((item) => item.id !== created.id)]
       review.value.commentCount += 1
+      await loadComments(targetReviewId)
     } else {
       await loadReview()
     }
     commentContent.value = ''
-    interactionMessage.value = '评论已经发出去了。'
+    activeReplyTarget.value = null
+    interactionMessage.value = replyTo ? '回复已经发出去了。' : '评论已经发出去了。'
   } catch (error) {
     interactionErrorMessage.value = error instanceof Error ? error.message : '评论发布失败'
   } finally {
     commentSubmitting.value = false
   }
+}
+
+function startReply(target: ReviewComment) {
+  resetInteractionFeedback()
+  if (!ensureSignedIn()) {
+    return
+  }
+  activeReplyTarget.value = target
+}
+
+function clearReplyTarget() {
+  activeReplyTarget.value = null
 }
 
 async function submitReport(resumedReviewId?: unknown, resumedReason?: unknown) {
@@ -444,6 +461,10 @@ watch(
             placeholder="说人话，别整复制粘贴那一套。"
           />
         </label>
+        <div v-if="activeReplyTarget" class="reply-banner">
+          <span class="support-copy">正在回复 {{ activeReplyTarget.userName }}</span>
+          <button type="button" class="ghost-button" @click="clearReplyTarget">取消回复</button>
+        </div>
         <div class="comment-composer__actions">
           <span class="support-copy">{{ sessionState.accessToken ? '当前评论会直接公开展示在这条点评下。' : '登录后才能评论。' }}</span>
           <button
@@ -465,7 +486,7 @@ watch(
       <div class="section-header section-header--compact">
         <div>
           <p class="eyebrow">评论列表</p>
-          <h2>当前先做平铺评论，够用就先别折腾盖楼。</h2>
+          <h2>现在是真盖楼了，回谁、挂哪层，都别再装没看见。</h2>
         </div>
       </div>
 
@@ -485,9 +506,63 @@ watch(
             <span>{{ item.createdAt }}<template v-if="item.mine"> · 我的评论</template></span>
           </div>
           <p>{{ item.content }}</p>
+          <div class="comment-card__actions">
+            <button type="button" class="ghost-button" @click="startReply(item)">回复</button>
+          </div>
+          <div v-if="item.replies.length > 0" class="comment-replies">
+            <article v-for="reply in item.replies" :key="reply.id" class="comment-card comment-card--reply">
+              <div class="comment-card__header">
+                <strong>
+                  <RouterLink v-if="reply.userId > 0" :to="`/users/${reply.userId}`" class="inline-link">
+                    {{ reply.userName }}
+                  </RouterLink>
+                  <template v-else>
+                    {{ reply.userName }}
+                  </template>
+                </strong>
+                <span>{{ reply.createdAt }}<template v-if="reply.mine"> · 我的回复</template></span>
+              </div>
+              <p v-if="reply.replyTo" class="reply-context">回复 {{ reply.replyTo.userName }}：{{ reply.replyTo.content }}</p>
+              <p>{{ reply.content }}</p>
+              <div class="comment-card__actions">
+                <button type="button" class="ghost-button" @click="startReply(reply)">回复</button>
+              </div>
+            </article>
+          </div>
         </article>
       </div>
       <p v-else class="feedback">这条点评现在还没人评论，你要不先开个头。</p>
     </section>
   </template>
 </template>
+
+<style scoped>
+.reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 0;
+}
+
+.comment-card__actions {
+  margin-top: 10px;
+}
+
+.comment-replies {
+  margin-top: 14px;
+  padding-left: 18px;
+  border-left: 2px solid rgba(148, 163, 184, 0.28);
+  display: grid;
+  gap: 12px;
+}
+
+.comment-card--reply {
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.reply-context {
+  margin-bottom: 8px;
+  color: #64748b;
+}
+</style>
