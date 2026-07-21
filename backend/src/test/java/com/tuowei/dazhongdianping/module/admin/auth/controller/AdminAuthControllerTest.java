@@ -129,6 +129,17 @@ class AdminAuthControllerTest {
                         .value("/system/audit-logs"));
     }
 
+    @Test
+    void shouldExposePrivacyTaskSystemMenu() throws Exception {
+        String token = loginToken();
+
+        mockMvc.perform(get("/api/admin/v1/menus")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[4].children[?(@.code == 'system.privacy_tasks')].path")
+                        .value("/system/privacy-tasks"));
+    }
+
     private String loginToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -85,6 +85,29 @@ export interface AdminAuditLog {
   createdAt: string
 }
 
+export interface AdminPrivacyTask {
+  id: number
+  taskType: number
+  taskTypeText: string
+  userId: number
+  userNickname: string
+  account: string
+  status: number
+  statusText: string
+  modules: string[]
+  format: string
+  fileName: string
+  failReason: string
+  verifyType: string
+  reason: string
+  expireAt: string
+  coolingOffExpireAt: string
+  completedAt: string
+  cancelledAt: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface AdminAccountUpdatePayload {
   name: string
   roleIds: number[]

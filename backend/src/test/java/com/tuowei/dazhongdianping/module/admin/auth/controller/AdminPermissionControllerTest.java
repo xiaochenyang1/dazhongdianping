@@ -100,6 +100,17 @@ class AdminPermissionControllerTest {
                 .andExpect(jsonPath("$.message").value("没有权限执行该操作"));
     }
 
+    @Test
+    void shouldRejectPrivacyTaskQueryWithoutSystemPermission() throws Exception {
+        jdbc.update("INSERT INTO privacy_export_task(id,user_id,scope_json,format,status,file_name,file_path,fail_reason) "
+                + "VALUES (9904,9001,'[\"account\"]','zip',0,'','','')");
+
+        mockMvc.perform(get("/api/admin/v1/privacy/tasks")
+                        .header("Authorization", bearer(loginToken())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("没有权限执行该操作"));
+    }
+
     private String loginToken() throws Exception {
         var result = mockMvc.perform(post("/api/admin/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

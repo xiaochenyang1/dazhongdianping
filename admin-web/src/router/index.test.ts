@@ -70,4 +70,22 @@ describe('admin router permissions', () => {
     await router.push('/system/audit-logs')
     expect(router.currentRoute.value.path).toBe('/system/audit-logs')
   })
+
+  it('guards the privacy task route with the system privacy task permission', async () => {
+    await router.push('/system/privacy-tasks')
+    expect(router.currentRoute.value.path).toBe('/dashboard')
+
+    const { setSession } = useAdminSession() as unknown as {
+      setSession: (token: string, profile: { id: number; account: string; name: string }, permissions: string[], regions: ('CN' | 'EU')[]) => void
+    }
+    setSession(
+      'admin-token',
+      { id: 7, account: 'auditor', name: '审核员' },
+      ['audit:review:read', 'system:privacy_task:read'],
+      ['EU'],
+    )
+
+    await router.push('/system/privacy-tasks')
+    expect(router.currentRoute.value.path).toBe('/system/privacy-tasks')
+  })
 })

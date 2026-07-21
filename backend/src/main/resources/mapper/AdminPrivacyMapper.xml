@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.privacy.mapper.AdminPrivacyMapper">
+
+    <sql id="privacyTaskSource">
+        SELECT e.id,
+               1 AS task_type,
+               e.user_id,
+               COALESCE(u.nickname, '') AS user_nickname,
+               COALESCE(NULLIF(u.email, ''), NULLIF(u.phone, ''), '') AS account,
+               e.status,
+               e.scope_json,
+               e.format,
+               e.file_name,
+               e.fail_reason,
+               '' AS verify_type,
+               '' AS reason,
+               e.expire_at,
+               NULL AS cooling_off_expire_at,
+               NULL AS completed_at,
+               NULL AS cancelled_at,
+               e.created_at,
+               e.updated_at
+        FROM privacy_export_task e
+        LEFT JOIN app_user u ON u.id = e.user_id
+        UNION ALL
+        SELECT d.id,
+               2 AS task_type,
+               d.user_id,
+               COALESCE(u.nickname, '') AS user_nickname,
+               COALESCE(d.account_snapshot, COALESCE(NULLIF(u.email, ''), NULLIF(u.phone, ''), '')) AS account,
+               d.status,
+               '' AS scope_json,
+               '' AS format,
+               '' AS file_name,
+               '' AS fail_reason,
+               d.verify_type,
+               d.reason,
+               NULL AS expire_at,
+               d.cooling_off_expire_at,
+               d.completed_at,
+               d.cancelled_at,
+               d.created_at,
+               d.updated_at
+        FROM privacy_delete_task d
+        LEFT JOIN app_user u ON u.id = d.user_id
+    </sql>
+
+    <sql id="privacyTaskWhere">
+        WHERE 1 = 1
+        <if test="userId != null">
+            AND t.user_id = #{userId}
+        </if>
+        <if test="taskType != null">
+            AND t.task_type = #{taskType}
+        </if>
+        <if test="status != null">
+            AND t.status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                t.user_nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR t.account LIKE CONCAT('%', #{keyword}, '%')
+                OR t.scope_json LIKE CONCAT('%', #{keyword}, '%')
+                OR t.file_name LIKE CONCAT('%', #{keyword}, '%')
+                OR t.fail_reason LIKE CONCAT('%', #{keyword}, '%')
+                OR t.reason LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+    </sql>
+
+    <select id="countPrivacyTasks" resultType="long">
+        SELECT COUNT(1)
+        FROM (
+            <include refid="privacyTaskSource"/>
+        ) t
+        <include refid="privacyTaskWhere"/>
+    </select>
+
+    <select id="selectPrivacyTasks" resultType="com.tuowei.dazhongdianping.module.admin.privacy.model.AdminPrivacyTaskRow">
+        SELECT t.id,
+               t.task_type,
+               t.user_id,
+               t.user_nickname,
+               t.account,
+               t.status,
+               t.scope_json,
+               t.format,
+               t.file_name,
+               t.fail_reason,
+               t.verify_type,
+               t.reason,
+               t.expire_at,
+               t.cooling_off_expire_at,
+               t.completed_at,
+               t.cancelled_at,
+               t.created_at,
+               t.updated_at
+        FROM (
+            <include refid="privacyTaskSource"/>
+        ) t
+        <include refid="privacyTaskWhere"/>
+        ORDER BY t.created_at DESC, t.id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+</mapper>

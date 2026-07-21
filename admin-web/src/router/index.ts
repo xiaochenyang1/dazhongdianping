@@ -135,6 +135,12 @@ const router = createRouter({
           component: () => import('@/views/AdminAuditLogsView.vue'),
           meta: { requiresAuth: true, title: '审计日志', requiredPermission: 'system:audit_log:read' },
         },
+        {
+          path: 'system/privacy-tasks',
+          name: 'system-privacy-tasks',
+          component: () => import('@/views/AdminPrivacyTasksView.vue'),
+          meta: { requiresAuth: true, title: '隐私任务', requiredPermission: 'system:privacy_task:read' },
+        },
       ],
     },
   ],
