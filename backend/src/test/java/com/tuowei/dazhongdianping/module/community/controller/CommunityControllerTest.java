@@ -427,6 +427,120 @@ class CommunityControllerTest {
     }
 
     @Test
+    void shouldNotifyMentionedUsersWhenApprovedPostGoesPublic() throws Exception {
+        RegisteredUser author = registerUser("发帖作者");
+        RegisteredUser mentioned = registerUser("被艾特用户");
+
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(author.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("正文艾特帖子", "审核通过后麻烦 @被艾特用户 来看一下，重复 @被艾特用户 也别刷屏。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long postId = readLong(created, "/data/id");
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(mentioned.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(postId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/notifications/unread-count")
+                        .header("Authorization", bearer(mentioned.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(1));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(mentioned.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].type").value("social.mention"))
+                .andExpect(jsonPath("$.data.list[0].actorUserId").value(author.userId()))
+                .andExpect(jsonPath("$.data.list[0].actorName").value("发帖作者"))
+                .andExpect(jsonPath("$.data.list[0].title").value("有人@了你"))
+                .andExpect(jsonPath("$.data.list[0].content").value("发帖作者 在帖子《正文艾特帖子》中提到了你"))
+                .andExpect(jsonPath("$.data.list[0].aggregateCount").value(1))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/community/posts/" + postId));
+    }
+
+    @Test
+    void shouldNotifyCommentMentionsAndSkipInvalidTargets() throws Exception {
+        RegisteredUser author = registerUser("原帖作者");
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(author.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("评论艾特帖子", "给评论里的 @提醒 做回归。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long postId = readLong(created, "/data/id");
+
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(postId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        RegisteredUser mentioned = registerUser("楼里被艾特");
+        RegisteredUser actor = registerUser("评论人自己");
+        RegisteredUser duplicateOne = registerUser("重名用户");
+        RegisteredUser duplicateTwo = registerUser("重名用户");
+
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", postId)
+                        .header("Authorization", bearer(actor.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "@楼里被艾特 麻烦看下，重复 @楼里被艾特 不要再刷一次，@评论人自己 自己别提醒自己，@重名用户 这种重名别乱发，@不存在用户 也别硬凑。"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/notifications/unread-count")
+                        .header("Authorization", bearer(mentioned.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(1));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(mentioned.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].type").value("social.mention"))
+                .andExpect(jsonPath("$.data.list[0].actorUserId").value(actor.userId()))
+                .andExpect(jsonPath("$.data.list[0].actorName").value("评论人自己"))
+                .andExpect(jsonPath("$.data.list[0].title").value("有人@了你"))
+                .andExpect(jsonPath("$.data.list[0].content").value("评论人自己 在帖子《评论艾特帖子》的评论中提到了你"))
+                .andExpect(jsonPath("$.data.list[0].aggregateCount").value(1))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/community/posts/" + postId));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(duplicateOne.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(duplicateTwo.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
     void shouldRefreshTopicPostCountsAcrossAuditEditAndDelete() throws Exception {
         String userToken = registerUser();
         MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
@@ -592,6 +706,10 @@ class CommunityControllerTest {
     }
 
     private String registerUser() throws Exception {
+        return registerUser("社区测试用户").accessToken();
+    }
+
+    private RegisteredUser registerUser(String nickname) throws Exception {
         String account = "community-" + UUID.randomUUID() + "@example.com";
         mockMvc.perform(post("/api/c/v1/auth/send-code")
                         .with(request -> {
@@ -617,13 +735,13 @@ class CommunityControllerTest {
                                   "account": "%s",
                                   "code": "123456",
                                   "password": "Passw0rd!",
-                                  "nickname": "社区测试用户",
+                                  "nickname": "%s",
                                   "preferredRegion": "EU"
                                 }
-                                """.formatted(account)))
+                                """.formatted(account, nickname)))
                 .andExpect(status().isOk())
                 .andReturn();
-        return readText(result, "/data/accessToken");
+        return new RegisteredUser(readLong(result, "/data/user/id"), readText(result, "/data/accessToken"), nickname);
     }
 
     private String loginAdmin() throws Exception {
@@ -673,4 +791,6 @@ class CommunityControllerTest {
         JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
         return root.at(pointer).asLong();
     }
+
+    private record RegisteredUser(long userId, String accessToken, String nickname) {}
 }

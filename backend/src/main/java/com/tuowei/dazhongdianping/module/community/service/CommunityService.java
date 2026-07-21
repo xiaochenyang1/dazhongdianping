@@ -23,6 +23,7 @@ import com.tuowei.dazhongdianping.module.community.model.response.PostCommentRes
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentReplyResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostRepostResponse;
+import com.tuowei.dazhongdianping.module.notification.service.MentionNotificationService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
 import java.time.LocalDateTime;
@@ -46,16 +47,19 @@ public class CommunityService {
     private final CircleMapper circleMapper;
     private final TopicService topicService;
     private final NotificationService notificationService;
+    private final MentionNotificationService mentionNotificationService;
 
     public CommunityService(CommunityMapper communityMapper, AdminAuditMapper adminAuditMapper,
                             CircleService circleService, CircleMapper circleMapper, TopicService topicService,
-                            NotificationService notificationService) {
+                            NotificationService notificationService,
+                            MentionNotificationService mentionNotificationService) {
         this.communityMapper = communityMapper;
         this.adminAuditMapper = adminAuditMapper;
         this.circleService = circleService;
         this.circleMapper = circleMapper;
         this.topicService = topicService;
         this.notificationService = notificationService;
+        this.mentionNotificationService = mentionNotificationService;
     }
 
     @Transactional
@@ -244,6 +248,14 @@ public class CommunityService {
                     row.getUserName() + " 评论了你的帖子：" + preview(row.getContent()),
                     "/community/posts/" + postId);
         }
+        mentionNotificationService.notifyMentionedUsers(
+                user.userId(),
+                post.getRegion(),
+                row.getContent(),
+                "有人@了你",
+                row.getUserName() + " 在帖子《" + preview(post.getTitle()) + "》的评论中提到了你",
+                "/community/posts/" + postId
+        );
         return toComment(row, user.userId(), threadTarget.replyTo(), List.of());
     }
 

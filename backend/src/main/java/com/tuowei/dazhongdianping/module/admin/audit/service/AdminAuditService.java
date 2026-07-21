@@ -18,6 +18,9 @@ import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.service.ReviewService;
 import com.tuowei.dazhongdianping.module.circle.mapper.CircleMapper;
+import com.tuowei.dazhongdianping.module.community.mapper.CommunityMapper;
+import com.tuowei.dazhongdianping.module.community.model.PostRow;
+import com.tuowei.dazhongdianping.module.notification.service.MentionNotificationService;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
 import com.tuowei.dazhongdianping.module.merchant.shop.model.ShopChangeRow;
 import com.tuowei.dazhongdianping.module.merchant.shop.service.MerchantShopChangeService;
@@ -49,7 +52,9 @@ public class AdminAuditService {
     private final MerchantReviewService merchantReviewService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final CircleMapper circleMapper;
+    private final CommunityMapper communityMapper;
     private final TopicService topicService;
+    private final MentionNotificationService mentionNotificationService;
     private final AdminPermissionChecker permissionChecker;
 
     public AdminAuditService(AdminAuditMapper adminAuditMapper,
@@ -59,7 +64,9 @@ public class AdminAuditService {
                              MerchantReviewService merchantReviewService,
                              ApplicationEventPublisher applicationEventPublisher,
                              CircleMapper circleMapper,
+                             CommunityMapper communityMapper,
                              TopicService topicService,
+                             MentionNotificationService mentionNotificationService,
                              AdminPermissionChecker permissionChecker) {
         this.adminAuditMapper = adminAuditMapper;
         this.reviewMapper = reviewMapper;
@@ -68,7 +75,9 @@ public class AdminAuditService {
         this.merchantReviewService = merchantReviewService;
         this.applicationEventPublisher = applicationEventPublisher;
         this.circleMapper = circleMapper;
+        this.communityMapper = communityMapper;
         this.topicService = topicService;
+        this.mentionNotificationService = mentionNotificationService;
         this.permissionChecker = permissionChecker;
     }
 
@@ -206,6 +215,19 @@ public class AdminAuditService {
         }
         circleMapper.refreshPostCountByPostId(task.getBizId());
         topicService.refreshPostCountsByPostId(task.getBizId());
+        if (status == 1) {
+            PostRow post = communityMapper.selectPublicPost(task.getBizId(), currentRegion().name());
+            if (post != null && post.getUserId() != null) {
+                mentionNotificationService.notifyMentionedUsers(
+                        post.getUserId(),
+                        post.getRegion(),
+                        post.getContent(),
+                        "有人@了你",
+                        post.getUserName() + " 在帖子《" + preview(post.getTitle()) + "》中提到了你",
+                        "/community/posts/" + post.getId()
+                );
+            }
+        }
         adminAuditMapper.insertAuditLog(
                 currentAdmin().adminId(),
                 action,
@@ -437,6 +459,14 @@ public class AdminAuditService {
             case 2 -> "驳回";
             default -> "待人审";
         };
+    }
+
+    private String preview(String text) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String normalized = text.trim();
+        return normalized.length() <= 24 ? normalized : normalized.substring(0, 24) + "...";
     }
 
     private String formatDateTime(LocalDateTime value) {
