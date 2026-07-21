@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
+  int conversationCalls = 0;
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
@@ -12,6 +14,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   }) async {
     if (path.endsWith('/blocks')) return {'list': const [], 'total': 0};
     if (path.endsWith('/conversations')) {
+      conversationCalls += 1;
       return {
         'list': [
           {
@@ -88,5 +91,25 @@ void main() {
     await tester.tap(find.byIcon(Icons.send_rounded));
     await tester.pumpAndSettle();
     expect(find.text('走起'), findsOneWidget);
+  });
+
+  testWidgets('conversation refresh replaces the future without async setState errors', (tester) async {
+    final api = ScreenMessageApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversationListScreen(
+          repository: MessageRepository(api),
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(api.conversationCalls, 1);
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+
+    expect(api.conversationCalls, 2);
+    expect(find.text('伦敦小王'), findsOneWidget);
   });
 }

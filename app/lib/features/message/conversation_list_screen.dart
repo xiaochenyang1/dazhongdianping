@@ -16,6 +16,16 @@ class ConversationListScreen extends StatefulWidget {
 class _ConversationListScreenState extends State<ConversationListScreen> {
   late Future<List<ConversationSummary>> _future = widget.repository
       .loadConversations();
+
+  Future<void> _reload() async {
+    final future = widget.repository.loadConversations();
+    if (!mounted) return;
+    setState(() {
+      _future = future;
+    });
+    await future;
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('私信')),
@@ -32,8 +42,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
           return const Center(child: Text('还没有私信，去公开主页打个招呼吧。'));
         }
         return RefreshIndicator(
-          onRefresh: () async =>
-              setState(() => _future = widget.repository.loadConversations()),
+          onRefresh: _reload,
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: snapshot.data!.length,
@@ -91,9 +100,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                       ),
                     );
                     if (mounted) {
-                      setState(
-                        () => _future = widget.repository.loadConversations(),
-                      );
+                      await _reload();
                     }
                   },
                 ),
