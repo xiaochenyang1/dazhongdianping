@@ -33,7 +33,7 @@ INSERT INTO admin_role (id, code, name, description, status, built_in) VALUES
     (2, 'content_auditor', '内容审核员', '审核点评、帖子和商户点评申诉', 1, TRUE),
     (3, 'merchant_auditor', '商户审核员', '审核商户资质、团购和门店变更', 1, TRUE),
     (4, 'operations_manager', '运营管理员', '维护榜单、成长、圈子和话题', 1, TRUE),
-    (5, 'data_operator', '数据管理员', '维护基础数据、门店、导入批次和搜索索引', 1, TRUE);
+    (5, 'data_operator', '数据管理员', '维护基础数据、门店、导入批次、订单退款查询和搜索索引', 1, TRUE);
 
 INSERT INTO admin_permission (id, code, name, category, permission_type, status) VALUES
     (1, 'dashboard:read', '查看控制台', 'dashboard', 1, 1),
@@ -72,7 +72,8 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (34, 'audit:expert_certification:read', '查看达人认证', 'audit', 1, 1),
     (35, 'audit:expert_certification:write', '处理达人认证', 'audit', 2, 1),
     (36, 'system:audit_log:read', '查看审计日志', 'system', 1, 1),
-    (37, 'system:privacy_task:read', '查看隐私任务', 'system', 1, 1);
+    (37, 'system:privacy_task:read', '查看隐私任务', 'system', 1, 1),
+    (38, 'data:order:read', '查看订单退款', 'data', 1, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region) VALUES (1, 'CN'), (1, 'EU');
@@ -81,7 +82,7 @@ INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13),
     (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26),
-    (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33);
+    (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
     (1001, 'merchant_cn_hotpot@example.com', '沪上渝里餐饮', '王磊', '13800000001', 'CN', 1, 1, FALSE),

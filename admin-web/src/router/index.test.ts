@@ -53,6 +53,24 @@ describe('admin router permissions', () => {
     expect(router.currentRoute.value.path).toBe('/data/meta')
   })
 
+  it('guards the order route with the order read permission', async () => {
+    await router.push('/data/orders')
+    expect(router.currentRoute.value.path).toBe('/dashboard')
+
+    const { setSession } = useAdminSession() as unknown as {
+      setSession: (token: string, profile: { id: number; account: string; name: string }, permissions: string[], regions: ('CN' | 'EU')[]) => void
+    }
+    setSession(
+      'admin-token',
+      { id: 7, account: 'auditor', name: '审核员' },
+      ['audit:review:read', 'data:order:read'],
+      ['EU'],
+    )
+
+    await router.push('/data/orders')
+    expect(router.currentRoute.value.path).toBe('/data/orders')
+  })
+
   it('guards the audit log route with the system audit log permission', async () => {
     await router.push('/system/audit-logs')
     expect(router.currentRoute.value.path).toBe('/dashboard')

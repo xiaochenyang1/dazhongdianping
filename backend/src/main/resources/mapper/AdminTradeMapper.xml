@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.trade.mapper.AdminTradeMapper">
+
+    <sql id="orderFrom">
+        FROM `order` o
+        LEFT JOIN deal d ON d.id = o.deal_id
+        JOIN shop s ON s.id = o.shop_id
+        JOIN merchant m ON m.id = s.merchant_id
+        LEFT JOIN app_user u ON u.id = o.user_id
+        LEFT JOIN payment p ON p.order_id = o.id
+            AND p.id = (SELECT MAX(px.id) FROM payment px WHERE px.order_id = o.id)
+        LEFT JOIN refund r ON r.order_id = o.id
+    </sql>
+
+    <sql id="orderWhere">
+        WHERE o.region = #{region}
+          AND s.region = #{region}
+        <if test="query.merchantId != null">
+            AND s.merchant_id = #{query.merchantId}
+        </if>
+        <if test="query.shopId != null">
+            AND o.shop_id = #{query.shopId}
+        </if>
+        <if test="query.userId != null">
+            AND o.user_id = #{query.userId}
+        </if>
+        <if test="query.payStatus != null">
+            AND o.pay_status = #{query.payStatus}
+        </if>
+        <if test="query.refundStatus != null">
+            AND r.status = #{query.refundStatus}
+        </if>
+        <if test="query.orderNo != null and query.orderNo != ''">
+            AND o.order_no = #{query.orderNo}
+        </if>
+        <if test="query.dateFrom != null">
+            AND o.created_at &gt;= #{query.dateFrom}
+        </if>
+        <if test="dateToExclusive != null">
+            AND o.created_at &lt; #{dateToExclusive}
+        </if>
+    </sql>
+
+    <select id="countOrders" resultType="long">
+        SELECT COUNT(1)
+        <include refid="orderFrom"/>
+        <include refid="orderWhere"/>
+    </select>
+
+    <select id="selectOrders" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.AdminOrderRow">
+        SELECT o.id,
+               o.order_no,
+               s.merchant_id,
+               m.company_name AS merchant_name,
+               o.shop_id,
+               s.name AS shop_name,
+               o.user_id,
+               COALESCE(u.nickname, '') AS user_nickname,
+               COALESCE(NULLIF(u.email, ''), NULLIF(u.phone, ''), '') AS account,
+               o.deal_id,
+               COALESCE(d.title, '') AS deal_title,
+               o.quantity,
+               o.unit_price,
+               o.amount,
+               o.currency,
+               o.pay_method,
+               o.pay_status,
+               o.status,
+               p.channel AS payment_channel,
+               p.channel_txn AS payment_channel_txn,
+               p.status AS payment_status,
+               o.paid_at,
+               o.created_at,
+               p.created_at AS payment_created_at,
+               r.id AS refund_id,
+               r.amount AS refund_amount,
+               r.reason AS refund_reason,
+               r.status AS refund_status,
+               r.audit_reason AS refund_audit_reason,
+               r.audited_at AS refund_audited_at,
+               r.created_at AS refund_created_at
+        <include refid="orderFrom"/>
+        <include refid="orderWhere"/>
+        ORDER BY o.created_at DESC, o.id DESC
+        LIMIT #{query.pageSize} OFFSET #{query.offset}
+    </select>
+</mapper>

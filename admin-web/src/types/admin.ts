@@ -108,6 +108,44 @@ export interface AdminPrivacyTask {
   updatedAt: string
 }
 
+export interface AdminOrder {
+  id: number
+  orderNo: string
+  merchantId: number
+  merchantName: string
+  shopId: number
+  shopName: string
+  userId: number
+  userNickname: string
+  account: string
+  dealId: number
+  dealTitle: string
+  quantity: number
+  unitPrice: number
+  amount: number
+  currency: string
+  payMethod: string
+  payStatus: number
+  payStatusText: string
+  status: number
+  statusText: string
+  paymentChannel: string
+  paymentChannelTxn: string
+  paymentStatus: number | null
+  paymentStatusText: string
+  paidAt: string
+  createdAt: string
+  paymentCreatedAt: string
+  refundId: number | null
+  refundAmount: number | null
+  refundReason: string
+  refundStatus: number | null
+  refundStatusText: string
+  refundAuditReason: string
+  refundAuditedAt: string
+  refundCreatedAt: string
+}
+
 export interface AdminAccountUpdatePayload {
   name: string
   roleIds: number[]

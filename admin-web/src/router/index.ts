@@ -53,6 +53,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'data/orders',
+          name: 'data-orders',
+          component: () => import('@/views/AdminOrdersView.vue'),
+          meta: {
+            requiresAuth: true,
+            title: '订单退款',
+            requiredPermission: 'data:order:read',
+          },
+        },
+        {
           path: 'audit/reviews',
           name: 'audit-reviews',
           component: () => import('@/views/AuditReviewView.vue'),

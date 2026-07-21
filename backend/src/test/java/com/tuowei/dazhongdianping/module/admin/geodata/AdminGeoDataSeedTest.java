@@ -49,6 +49,16 @@ class AdminGeoDataSeedTest {
     }
 
     @Test
+    void shouldGrantOrderReadPermissionToDataOperator() {
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM admin_role_permission arp "
+                        + "JOIN admin_role ar ON ar.id=arp.role_id "
+                        + "JOIN admin_permission ap ON ap.id=arp.permission_id "
+                        + "WHERE ar.code='data_operator' AND ap.code='data:order:read'",
+                Integer.class));
+    }
+
+    @Test
     void shouldRejectDuplicateGeoDataWithinTheSameScope() {
         assertThrows(DuplicateKeyException.class, () -> jdbcTemplate.update(
                 "INSERT INTO category(parent_id, region, name, sort_no) VALUES(?,?,?,?)",

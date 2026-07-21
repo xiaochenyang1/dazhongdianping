@@ -119,6 +119,17 @@ class AdminAuthControllerTest {
     }
 
     @Test
+    void shouldExposeOrderManagementMenu() throws Exception {
+        String token = loginToken();
+
+        mockMvc.perform(get("/api/admin/v1/menus")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[2].children[?(@.code == 'data.orders')].path")
+                        .value("/data/orders"));
+    }
+
+    @Test
     void shouldExposeAuditLogSystemMenu() throws Exception {
         String token = loginToken();
 
