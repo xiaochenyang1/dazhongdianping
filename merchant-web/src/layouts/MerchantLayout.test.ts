@@ -8,7 +8,10 @@ vi.mock('@/composables/useMerchantSession', () => ({
 }))
 vi.mock('vue-router', () => ({
   RouterLink: { props: ['to'], template: '<a :data-to="to"><slot /></a>' },
-  RouterView: { template: '<div />' },
+  RouterView: {
+    props: { permissions: { type: Array, default: () => [] } },
+    template: '<div data-testid="router-view">{{ permissions.join(",") }}</div>',
+  },
   useRoute: () => ({ path: '/dashboard', meta: { title: '经营概览' } }),
   useRouter: () => ({ replace: vi.fn() }),
 }))
@@ -36,5 +39,15 @@ describe('MerchantLayout', () => {
     const owner = await render(['staff:manage'])
     expect(owner.host.textContent).toContain('员工管理')
     owner.app.unmount()
+  })
+
+  it('filters navigation by read permissions and passes permissions to the routed view', async () => {
+    const { app, host } = await render(['shop:view', 'reservation:view', 'review:reply'])
+    const paths = [...host.querySelectorAll('a')].map((link) => link.getAttribute('data-to'))
+
+    expect(paths).toEqual(['/shops', '/reservations', '/reviews'])
+    expect(host.querySelector('[data-testid="router-view"]')?.textContent)
+      .toBe('shop:view,reservation:view,review:reply')
+    app.unmount()
   })
 })

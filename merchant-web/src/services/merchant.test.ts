@@ -9,6 +9,7 @@ const httpMocks = vi.hoisted(() => ({
 vi.mock('@/lib/http', () => httpMocks)
 
 import {
+  auditRefund,
   createStaff,
   fetchSettlementStatus,
   fetchStaffs,
@@ -65,5 +66,14 @@ describe('merchant identity services', () => {
     expect(httpMocks.apiGet).toHaveBeenCalledWith('/api/b/v1/staffs', { page: 1, pageSize: 20 })
     expect(httpMocks.apiPost).toHaveBeenCalledWith('/api/b/v1/staffs', staff)
     expect(httpMocks.apiPut).toHaveBeenCalledWith('/api/b/v1/staffs/9/status', { status: 2 })
+  })
+
+  it('uses the backend refund audit decision contract', async () => {
+    await auditRefund(88, 'approve', '订单与退款申请已核对')
+
+    expect(httpMocks.apiPost).toHaveBeenCalledWith('/api/b/v1/orders/88/refund-audit', {
+      decision: 'approve',
+      reason: '订单与退款申请已核对',
+    })
   })
 })

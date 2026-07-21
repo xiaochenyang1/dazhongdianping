@@ -59,6 +59,8 @@ p { text-wrap: pretty; }
 .table tr:last-child td { border-bottom: 0; }
 .table-subtext { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
 .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.refund-audit { min-width: 220px; display: grid; gap: 8px; }
+.refund-audit input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .muted { color: var(--muted); }
 .error { color: var(--danger); }
 .feedback { color: var(--muted); text-align: center; }

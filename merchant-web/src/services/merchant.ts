@@ -47,6 +47,47 @@ export interface MerchantStaffPayload {
   shopIds: number[]
 }
 export interface MerchantShopOption { id: number; name: string }
+export interface MerchantOrderRefund {
+  id?: number
+  amount?: number
+  reason?: string
+  status: number
+  statusText: string
+}
+export interface MerchantOrder {
+  id: number
+  orderNo: string
+  shopName: string
+  amount: number
+  currency: string
+  payStatus: number
+  payStatusText: string
+  refund?: MerchantOrderRefund
+}
+export interface MerchantReviewReply { id: number; content: string; updatedAt?: string }
+export interface MerchantReviewAppeal { id: number; status: number; statusText: string }
+export interface MerchantReview {
+  id: number
+  shopId: number
+  shopName: string
+  userId: number
+  userName: string
+  content: string
+  scoreOverall: number
+  createdAt: string
+  merchantReply?: MerchantReviewReply | null
+  appeal?: MerchantReviewAppeal | null
+}
+export interface MerchantReservation {
+  id: number
+  reservationNo: string
+  shop: { id: number; name: string }
+  reserveTime: string
+  status: number
+  statusText: string
+  canConfirm: boolean
+  canReject: boolean
+}
 
 export function loginMerchant(payload: { account: string; password: string }) { return apiPost<MerchantLogin>('/api/b/v1/auth/login', payload) }
 export function registerMerchant(payload: MerchantRegistrationPayload) { return apiPost<MerchantRegistrationResult>('/api/b/v1/auth/register', payload) }
@@ -60,14 +101,16 @@ export function fetchStaffs(params?: { page?: number; pageSize?: number }) { ret
 export function createStaff(payload: MerchantStaffPayload & { account: string; password: string }) { return apiPost<MerchantStaff>('/api/b/v1/staffs', payload) }
 export function updateStaff(id: number, payload: MerchantStaffPayload) { return apiPut<MerchantStaff>(`/api/b/v1/staffs/${id}`, payload) }
 export function updateStaffStatus(id: number, status: 1 | 2) { return apiPut<MerchantStaff>(`/api/b/v1/staffs/${id}/status`, { status }) }
-export function fetchReservations(params?: object) { return apiGet<PageResult<Record<string, unknown>>>('/api/b/v1/reservations', params) }
+export function fetchReservations(params?: object) { return apiGet<PageResult<MerchantReservation>>('/api/b/v1/reservations', params) }
 export function confirmReservation(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/confirm`) }
 export function rejectReservation(id: number, reason: string) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/reject`, { reason }) }
 export function fetchDeals(params?: object) { return apiGet<PageResult<Record<string, unknown>>>('/api/b/v1/deals', params) }
 export function updateDealStatus(id: number, status: number) { return apiPut<Record<string, unknown>>(`/api/b/v1/deals/${id}/status`, { status }) }
-export function fetchOrders(params?: object) { return apiGet<PageResult<Record<string, unknown>>>('/api/b/v1/orders', params) }
-export function auditRefund(id: number, approved: boolean, reason?: string) { return apiPost<Record<string, unknown>>(`/api/b/v1/orders/${id}/refund-audit`, { approved, reason }) }
-export function fetchReviews(params?: object) { return apiGet<PageResult<Record<string, unknown>>>('/api/b/v1/reviews', params) }
+export function fetchOrders(params?: object) { return apiGet<PageResult<MerchantOrder>>('/api/b/v1/orders', params) }
+export function auditRefund(id: number, decision: 'approve' | 'reject', reason: string) {
+  return apiPost<Record<string, unknown>>(`/api/b/v1/orders/${id}/refund-audit`, { decision, reason })
+}
+export function fetchReviews(params?: object) { return apiGet<PageResult<MerchantReview>>('/api/b/v1/reviews', params) }
 export function saveReply(id: number, content: string) { return apiPut<Record<string, unknown>>(`/api/b/v1/reviews/${id}/reply`, { content }) }
 export function createAppealDraft(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reviews/${id}/appeal-drafts`) }
 export function saveAppeal(id: number, payload: { reason: string; evidenceUrls: string[] }) { return apiPut<Record<string, unknown>>(`/api/b/v1/review-appeals/${id}`, payload) }
