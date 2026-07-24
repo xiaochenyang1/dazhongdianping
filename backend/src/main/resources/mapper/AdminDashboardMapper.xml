@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.dashboard.mapper.AdminDashboardMapper">
+
+    <select id="countShops" resultType="long">
+        SELECT COUNT(1)
+        FROM shop
+        WHERE region = #{region}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="countImportBatches" resultType="long">
+        SELECT COUNT(1)
+        FROM import_batch
+        WHERE region = #{region}
+    </select>
+
+    <select id="countPaidOrders" resultType="long">
+        SELECT COUNT(1)
+        FROM `order`
+        WHERE region = #{region}
+          AND pay_status = 1
+    </select>
+
+    <select id="countPendingRefunds" resultType="long">
+        SELECT COUNT(1)
+        FROM refund r
+        JOIN `order` o ON o.id = r.order_id
+        WHERE o.region = #{region}
+          AND r.status = 0
+    </select>
+
+    <select id="countPendingAuditTasks" resultType="long">
+        SELECT COUNT(1)
+        FROM audit_task t
+        WHERE t.region = #{region}
+          AND t.status = 0
+        <choose>
+            <when test="allowedBizTypes == null or allowedBizTypes.isEmpty()">
+                AND 1 = 0
+            </when>
+            <otherwise>
+                AND t.biz_type IN
+                <foreach collection="allowedBizTypes" item="bizType" open="(" separator="," close=")">
+                    #{bizType}
+                </foreach>
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="countUsers" resultType="long">
+        SELECT COUNT(1)
+        FROM app_user
+        WHERE status &lt;&gt; 3
+    </select>
+</mapper>

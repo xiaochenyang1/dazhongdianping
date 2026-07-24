@@ -2,8 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAdminSession } from '@/composables/useAdminSession'
-import { listImportBatches, listShops } from '@/services/admin'
-import type { AdminImportBatch, AdminShopSummary } from '@/types/admin'
+import { getAdminDashboardOverview, listImportBatches, listShops } from '@/services/admin'
+import type { AdminDashboardOverview, AdminImportBatch, AdminShopSummary } from '@/types/admin'
 
 const { state } = useAdminSession()
 
@@ -11,36 +11,62 @@ const loading = ref(false)
 const errorMessage = ref('')
 const recentShops = ref<AdminShopSummary[]>([])
 const recentBatches = ref<AdminImportBatch[]>([])
-const totalShops = ref(0)
-const totalBatches = ref(0)
-const latestSuccessCount = ref(0)
+const overview = ref<AdminDashboardOverview | null>(null)
 let snapshotRequestId = 0
 
+const canReadDashboard = computed(() => state.permissions.includes('dashboard:read'))
 const canReadShops = computed(() => state.permissions.includes('data:shop:read'))
 const canReadImportBatches = computed(() => state.permissions.includes('data:import_batch:read'))
 const canImportShops = computed(() => state.permissions.includes('data:shop:import'))
+const canReadOrders = computed(() => state.permissions.includes('data:order:read'))
+const canReadUsers = computed(() => state.permissions.includes('system:user:read'))
+
 const metrics = computed(() => {
   const items = [] as Array<{ label: string; value: number; note: string }>
+  if (!overview.value) {
+    return items
+  }
   if (canReadShops.value) {
     items.push({
       label: '当前区域门店数',
-      value: totalShops.value,
+      value: overview.value.shopCount,
       note: `区域 ${state.region} 下的最小可管理存量`,
     })
   }
   if (canReadImportBatches.value) {
+    items.push({
+      label: '导入批次数',
+      value: overview.value.importBatchCount,
+      note: '看得见批次，才谈得上运营回灌',
+    })
+  }
+  if (canReadOrders.value) {
     items.push(
       {
-        label: '导入批次数',
-        value: totalBatches.value,
-        note: '看得见批次，才谈得上运营回灌',
+        label: '已支付订单',
+        value: overview.value.paidOrderCount,
+        note: '当前区域累计已支付订单',
       },
       {
-        label: '最近批次成功数',
-        value: latestSuccessCount.value,
-        note: '用来盯导入动作是不是在真干活',
+        label: '待处理退款',
+        value: overview.value.pendingRefundCount,
+        note: '需要商户或平台继续处理',
       },
     )
+  }
+  if (canReadDashboard.value) {
+    items.push({
+      label: '待审任务',
+      value: overview.value.pendingAuditTaskCount,
+      note: '按当前账号审核权限汇总',
+    })
+  }
+  if (canReadUsers.value) {
+    items.push({
+      label: 'C 端用户数',
+      value: overview.value.userCount,
+      note: '不含已注销匿名化用户',
+    })
   }
   return items
 })
@@ -49,14 +75,13 @@ async function loadSnapshot() {
   const requestId = ++snapshotRequestId
   const loadShops = canReadShops.value
   const loadBatches = canReadImportBatches.value
+  const loadOverview = canReadDashboard.value
   const region = state.region
-  if (!loadShops && !loadBatches) {
+  if (!loadShops && !loadBatches && !loadOverview) {
     if (requestId === snapshotRequestId) {
       recentShops.value = []
       recentBatches.value = []
-      totalShops.value = 0
-      totalBatches.value = 0
-      latestSuccessCount.value = 0
+      overview.value = null
       errorMessage.value = ''
       loading.value = false
     }
@@ -69,25 +94,28 @@ async function loadSnapshot() {
   }
 
   try {
-    const [shopsPage, batchesPage] = await Promise.all([
-      loadShops ? listShops({
-        region,
-        page: 1,
-        pageSize: 5,
-      }) : Promise.resolve(undefined),
-      loadBatches ? listImportBatches({
-        region,
-        page: 1,
-        pageSize: 5,
-      }) : Promise.resolve(undefined),
+    const [shopsPage, batchesPage, overviewData] = await Promise.all([
+      loadShops
+        ? listShops({
+            region,
+            page: 1,
+            pageSize: 5,
+          })
+        : Promise.resolve(undefined),
+      loadBatches
+        ? listImportBatches({
+            region,
+            page: 1,
+            pageSize: 5,
+          })
+        : Promise.resolve(undefined),
+      loadOverview ? getAdminDashboardOverview() : Promise.resolve(undefined),
     ])
 
     if (requestId === snapshotRequestId) {
       recentShops.value = shopsPage?.list ?? []
       recentBatches.value = batchesPage?.list ?? []
-      totalShops.value = shopsPage?.total ?? 0
-      totalBatches.value = batchesPage?.total ?? 0
-      latestSuccessCount.value = batchesPage?.list[0]?.success ?? 0
+      overview.value = overviewData ?? null
     }
   } catch (error) {
     if (requestId === snapshotRequestId) {
@@ -114,13 +142,14 @@ watch(
     <div class="page-header">
       <div>
         <p class="eyebrow">控制台概览</p>
-        <h1>当前区域 {{ state.region }} 的基础数据状态，一眼看明白。</h1>
-        <p>这页不装神弄鬼，就盯门店、批次和最近动作，先保证运营能用。</p>
+        <h1>当前区域 {{ state.region }} 的经营与审核状态，一眼看明白。</h1>
+        <p>汇总门店、导入、订单退款和待审任务，先保证运营能用。</p>
       </div>
 
       <div class="header-actions">
         <RouterLink v-if="canReadShops" to="/data/shops" class="primary-link">去管门店</RouterLink>
         <RouterLink v-if="canImportShops" to="/data/import" class="secondary-link">去做导入</RouterLink>
+        <RouterLink v-if="canReadOrders" to="/data/orders" class="secondary-link">看订单退款</RouterLink>
       </div>
     </div>
 
@@ -190,6 +219,33 @@ watch(
                 {{ batch.statusText }}
               </span>
               <span>{{ batch.createdAt }}</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section v-if="canReadDashboard && overview" class="content-card">
+        <div class="section-headline">
+          <div>
+            <p class="eyebrow">待审拆分</p>
+            <h2>按当前账号权限拆开看，别把没权限的任务也算进去。</h2>
+          </div>
+        </div>
+        <div v-if="!overview.pendingAuditBreakdown.length" class="empty-state">当前账号没有可查看的待审任务。</div>
+        <div v-else class="stack-list">
+          <article
+            v-for="item in overview.pendingAuditBreakdown"
+            :key="item.bizType"
+            class="stack-list__item"
+          >
+            <div>
+              <strong>{{ item.label }}</strong>
+              <p>bizType={{ item.bizType }}</p>
+            </div>
+            <div class="stack-list__meta">
+              <span class="status-pill" :class="item.count > 0 ? 'status-pill--warn' : 'status-pill--good'">
+                {{ item.count }} 条
+              </span>
             </div>
           </article>
         </div>

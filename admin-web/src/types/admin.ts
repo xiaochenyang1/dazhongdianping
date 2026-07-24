@@ -445,6 +445,23 @@ export interface AdminAuditTask {
   updatedAt: string
 }
 
+export interface AdminDashboardAuditBreakdown {
+  bizType: number
+  label: string
+  count: number
+}
+
+export interface AdminDashboardOverview {
+  region: Region | string
+  shopCount: number
+  importBatchCount: number
+  paidOrderCount: number
+  pendingRefundCount: number
+  pendingAuditTaskCount: number
+  userCount: number
+  pendingAuditBreakdown: AdminDashboardAuditBreakdown[]
+}
+
 export interface AdminDealItem {
   id?: number
   dealId?: number

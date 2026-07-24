@@ -33,6 +33,7 @@ import type {
   AdminShopDetail,
   AdminShopSavePayload,
   AdminShopSummary,
+  AdminDashboardOverview,
   PageResult,
   Region,
   RankConfig,
@@ -235,6 +236,10 @@ export function listAdminPrivacyTasks(query: AdminPrivacyTaskQuery) {
 
 export function listAdminOrders(query: AdminOrderQuery) {
   return apiGet<PageResult<AdminOrder>>('/api/admin/v1/orders', query)
+}
+
+export function getAdminDashboardOverview() {
+  return apiGet<AdminDashboardOverview>('/api/admin/v1/dashboard/overview')
 }
 
 export function auditAdminOrderRefund(orderId: number, payload: AdminRefundAuditPayload) {

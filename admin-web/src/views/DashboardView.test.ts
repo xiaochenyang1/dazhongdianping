@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   listImportBatches: vi.fn(),
   listShops: vi.fn(),
+  getAdminDashboardOverview: vi.fn(),
   state: {
     region: 'EU',
     permissions: ['audit:review:read'] as string[],
@@ -59,6 +60,7 @@ describe('DashboardView', () => {
   beforeEach(() => {
     mocks.listImportBatches.mockReset()
     mocks.listShops.mockReset()
+    mocks.getAdminDashboardOverview.mockReset()
     mocks.state = reactive({
       region: 'EU',
       permissions: ['audit:review:read'] as string[],
@@ -71,6 +73,7 @@ describe('DashboardView', () => {
 
     expect(mocks.listShops).not.toHaveBeenCalled()
     expect(mocks.listImportBatches).not.toHaveBeenCalled()
+    expect(mocks.getAdminDashboardOverview).not.toHaveBeenCalled()
     expect(host.textContent).not.toContain('当前区域门店数')
     expect(host.textContent).not.toContain('导入批次数')
     expect(host.textContent).not.toContain('去管门店')
@@ -80,17 +83,39 @@ describe('DashboardView', () => {
   })
 
   it('loads and displays each dashboard module granted to a data administrator', async () => {
-    mocks.state.permissions = ['data:shop:read', 'data:import_batch:read', 'data:shop:import']
+    mocks.state.permissions = [
+      'dashboard:read',
+      'data:shop:read',
+      'data:import_batch:read',
+      'data:shop:import',
+      'data:order:read',
+      'system:user:read',
+    ]
     mocks.listShops.mockResolvedValue({ list: [], total: 3 })
     mocks.listImportBatches.mockResolvedValue({ list: [], total: 2 })
+    mocks.getAdminDashboardOverview.mockResolvedValue({
+      region: 'EU',
+      shopCount: 3,
+      importBatchCount: 2,
+      paidOrderCount: 8,
+      pendingRefundCount: 1,
+      pendingAuditTaskCount: 4,
+      userCount: 20,
+      pendingAuditBreakdown: [{ bizType: 2, label: '团购审核', count: 4 }],
+    })
 
     const { app, host } = mount()
     await flush()
 
     expect(mocks.listShops).toHaveBeenCalledWith({ region: 'EU', page: 1, pageSize: 5 })
     expect(mocks.listImportBatches).toHaveBeenCalledWith({ region: 'EU', page: 1, pageSize: 5 })
+    expect(mocks.getAdminDashboardOverview).toHaveBeenCalled()
     expect(host.textContent).toContain('当前区域门店数')
     expect(host.textContent).toContain('导入批次数')
+    expect(host.textContent).toContain('已支付订单')
+    expect(host.textContent).toContain('待处理退款')
+    expect(host.textContent).toContain('待审任务')
+    expect(host.textContent).toContain('团购审核')
     expect(host.textContent).toContain('去管门店')
     expect(host.textContent).toContain('去做导入')
 
