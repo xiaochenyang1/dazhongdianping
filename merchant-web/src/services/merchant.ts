@@ -87,6 +87,12 @@ export interface MerchantReservation {
   statusText: string
   canConfirm: boolean
   canReject: boolean
+  canArrive?: boolean
+  canNoShow?: boolean
+  canReschedule?: boolean
+  peopleCount?: number
+  contactName?: string
+  contactPhone?: string
 }
 export interface MerchantCoupon {
   id: number
@@ -254,6 +260,8 @@ export function updateStaffStatus(id: number, status: 1 | 2) { return apiPut<Mer
 export function fetchReservations(params?: object) { return apiGet<PageResult<MerchantReservation>>('/api/b/v1/reservations', params) }
 export function confirmReservation(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/confirm`) }
 export function rejectReservation(id: number, reason: string) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/reject`, { reason }) }
+export function arriveReservation(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/arrive`) }
+export function markReservationNoShow(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/no-show`) }
 export function fetchDeals(params?: object) { return apiGet<PageResult<MerchantDeal>>('/api/b/v1/deals', params) }
 export function fetchDeal(id: number) { return apiGet<MerchantDeal>(`/api/b/v1/deals/${id}`) }
 export function createDeal(payload: MerchantDealPayload) { return apiPost<MerchantDeal>('/api/b/v1/deals', payload) }
