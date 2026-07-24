@@ -45,7 +45,18 @@ class MerchantDealControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.list[0].id").value(dealId))
                 .andExpect(jsonPath("$.data.list[0].auditStatus").value(0))
-                .andExpect(jsonPath("$.data.list[0].status").value(0));
+                .andExpect(jsonPath("$.data.list[0].auditStatusText").value("待审核"))
+                .andExpect(jsonPath("$.data.list[0].status").value(0))
+                .andExpect(jsonPath("$.data.list[0].statusText").value("已下架"));
+
+        mockMvc.perform(get("/api/b/v1/deals/{id}", dealId)
+                        .header("Authorization", bearer(merchantToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(dealId))
+                .andExpect(jsonPath("$.data.title").value("双人套餐"))
+                .andExpect(jsonPath("$.data.items[0].name").value("主菜"))
+                .andExpect(jsonPath("$.data.auditStatusText").value("待审核"));
 
         assertEquals(1, jdbc.queryForObject(
                 "SELECT COUNT(1) FROM audit_task WHERE biz_type=2 AND biz_id=? AND status=0",

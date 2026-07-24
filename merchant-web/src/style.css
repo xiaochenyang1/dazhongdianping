@@ -70,6 +70,13 @@ p { text-wrap: pretty; }
 .verify-form button { justify-self: start; }
 .result-card h3 { margin: 6px 0 12px; }
 .result-card p { margin: 6px 0; }
+.deal-form-card { margin-bottom: 18px; }
+.deal-form .full-span { grid-column: 1 / -1; }
+.deal-items { display: grid; gap: 10px; }
+.deal-item-row { display: grid; grid-template-columns: 2fr 0.8fr 0.8fr 0.7fr auto; gap: 8px; }
+@media (max-width: 900px) {
+  .deal-item-row { grid-template-columns: 1fr; }
+}
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 label { display: grid; gap: 7px; color: #383d42; font-weight: 650; }
 

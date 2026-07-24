@@ -101,6 +101,48 @@ export interface MerchantCoupon {
   verifyBy?: number
   expireAt?: string
 }
+export interface MerchantDealItem {
+  id?: number
+  name: string
+  quantity: number
+  price: number
+  sort: number
+}
+export interface MerchantDeal {
+  id: number
+  shopId: number
+  shopName?: string
+  type: number
+  title: string
+  coverImage: string
+  price: number
+  originalPrice: number
+  currency: string
+  stock: number
+  soldCount?: number
+  validStart?: string
+  validEnd?: string
+  rules?: string
+  auditStatus: number
+  auditStatusText?: string
+  status: number
+  statusText?: string
+  items?: MerchantDealItem[]
+}
+export interface MerchantDealPayload {
+  shopId: number
+  type: number
+  title: string
+  coverImage: string
+  price: number
+  originalPrice: number
+  currency: string
+  stock: number
+  validStart?: string | null
+  validEnd?: string | null
+  rules?: string
+  items: MerchantDealItem[]
+}
 
 export function loginMerchant(payload: { account: string; password: string }) { return apiPost<MerchantLogin>('/api/b/v1/auth/login', payload) }
 export function registerMerchant(payload: MerchantRegistrationPayload) { return apiPost<MerchantRegistrationResult>('/api/b/v1/auth/register', payload) }
@@ -117,8 +159,11 @@ export function updateStaffStatus(id: number, status: 1 | 2) { return apiPut<Mer
 export function fetchReservations(params?: object) { return apiGet<PageResult<MerchantReservation>>('/api/b/v1/reservations', params) }
 export function confirmReservation(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/confirm`) }
 export function rejectReservation(id: number, reason: string) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/reject`, { reason }) }
-export function fetchDeals(params?: object) { return apiGet<PageResult<Record<string, unknown>>>('/api/b/v1/deals', params) }
-export function updateDealStatus(id: number, status: number) { return apiPut<Record<string, unknown>>(`/api/b/v1/deals/${id}/status`, { status }) }
+export function fetchDeals(params?: object) { return apiGet<PageResult<MerchantDeal>>('/api/b/v1/deals', params) }
+export function fetchDeal(id: number) { return apiGet<MerchantDeal>(`/api/b/v1/deals/${id}`) }
+export function createDeal(payload: MerchantDealPayload) { return apiPost<MerchantDeal>('/api/b/v1/deals', payload) }
+export function updateDeal(id: number, payload: MerchantDealPayload) { return apiPut<MerchantDeal>(`/api/b/v1/deals/${id}`, payload) }
+export function updateDealStatus(id: number, status: number) { return apiPut<MerchantDeal>(`/api/b/v1/deals/${id}/status`, { status }) }
 export function fetchOrders(params?: object) { return apiGet<PageResult<MerchantOrder>>('/api/b/v1/orders', params) }
 export function auditRefund(id: number, decision: 'approve' | 'reject', reason: string) {
   return apiPost<Record<string, unknown>>(`/api/b/v1/orders/${id}/refund-audit`, { decision, reason })

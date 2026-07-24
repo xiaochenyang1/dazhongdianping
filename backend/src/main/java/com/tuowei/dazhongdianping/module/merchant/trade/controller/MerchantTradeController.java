@@ -39,6 +39,11 @@ public class MerchantTradeController {
         return ApiResponse.success(service.deals(shopId, auditStatus, status, page, pageSize));
     }
 
+    @GetMapping("/deals/{id}")
+    public ApiResponse<Map<String, Object>> deal(@PathVariable Long id) {
+        return ApiResponse.success(service.deal(id));
+    }
+
     @PostMapping("/deals")
     public ApiResponse<Map<String, Object>> createDeal(@Valid @RequestBody MerchantDealSaveRequest request) {
         return ApiResponse.success("团购已提交审核", "merchant.deal_submitted", service.createDeal(request));

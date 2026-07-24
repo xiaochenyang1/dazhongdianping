@@ -10,11 +10,14 @@ vi.mock('@/lib/http', () => httpMocks)
 
 import {
   auditRefund,
+  createDeal,
   createStaff,
+  fetchDeal,
   fetchSettlementStatus,
   fetchStaffs,
   registerMerchant,
   submitSettlement,
+  updateDeal,
   updateStaffStatus,
   verifyCoupon,
 } from './merchant'
@@ -82,5 +85,30 @@ describe('merchant identity services', () => {
     await verifyCoupon(' VERIFYME001 ')
 
     expect(httpMocks.apiPost).toHaveBeenCalledWith('/api/b/v1/coupons/VERIFYME001/verify')
+  })
+
+  it('uses the backend deal create/update/detail contracts', async () => {
+    const payload = {
+      shopId: 20001,
+      type: 1,
+      title: '双人套餐',
+      coverImage: 'https://files.example/deal.jpg',
+      price: 49.9,
+      originalPrice: 68,
+      currency: 'EUR',
+      stock: 20,
+      validStart: '2026-07-01',
+      validEnd: '2026-12-31',
+      rules: '周末通用',
+      items: [{ name: '主菜', quantity: 1, price: 30, sort: 1 }],
+    }
+
+    await createDeal(payload)
+    await updateDeal(501, payload)
+    await fetchDeal(501)
+
+    expect(httpMocks.apiPost).toHaveBeenCalledWith('/api/b/v1/deals', payload)
+    expect(httpMocks.apiPut).toHaveBeenCalledWith('/api/b/v1/deals/501', payload)
+    expect(httpMocks.apiGet).toHaveBeenCalledWith('/api/b/v1/deals/501')
   })
 })

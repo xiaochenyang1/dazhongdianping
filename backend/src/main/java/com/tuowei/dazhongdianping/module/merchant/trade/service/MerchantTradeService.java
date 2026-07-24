@@ -69,6 +69,13 @@ public class MerchantTradeService {
         );
     }
 
+    public Map<String, Object> deal(Long dealId) {
+        MerchantSession session = merchant();
+        DealRow existing = requireDeal(dealId, session);
+        authorizationService.requireShop(session, "deal:edit", existing.getShopId());
+        return dealMap(existing, true);
+    }
+
     @Transactional
     public Map<String, Object> createDeal(MerchantDealSaveRequest request) {
         MerchantSession session = merchant();
@@ -280,12 +287,32 @@ public class MerchantTradeService {
         result.put("validEnd", row.getValidEnd());
         result.put("rules", row.getRules());
         result.put("auditStatus", row.getAuditStatus());
+        result.put("auditStatusText", auditStatusText(row.getAuditStatus()));
         result.put("status", row.getStatus());
+        result.put("statusText", statusText(row.getStatus()));
         if (includeItems) {
             List<DealItemRow> items = mapper.selectDealItems(row.getId());
             result.put("items", items);
         }
         return result;
+    }
+
+    private String auditStatusText(Integer status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case 1 -> "已通过";
+            case 2 -> "已驳回";
+            default -> "待审核";
+        };
+    }
+
+    private String statusText(Integer status) {
+        if (status == null) {
+            return "";
+        }
+        return status == 1 ? "已上架" : "已下架";
     }
 
     private void validateDateRange(LocalDate dateFrom, LocalDate dateTo) {
