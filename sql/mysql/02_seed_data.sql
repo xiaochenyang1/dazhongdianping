@@ -94,13 +94,15 @@ INSERT INTO `admin_permission` (`id`, `code`, `name`, `category`, `permission_ty
   (47, 'audit:user_appeal:read', '查看用户封禁申诉', 'audit', 1, 1),
   (48, 'audit:user_appeal:write', '处理用户封禁申诉', 'audit', 2, 1),
   (50, 'operations:sensitive_word:read', '查看敏感词库', 'operations', 1, 1),
-  (51, 'operations:sensitive_word:write', '维护敏感词库', 'operations', 2, 1);
+  (51, 'operations:sensitive_word:write', '维护敏感词库', 'operations', 2, 1),
+  (52, 'audit:report:read', '查看内容举报', 'audit', 1, 1),
+  (53, 'audit:report:write', '处理内容举报', 'audit', 2, 1);
 
 INSERT INTO `admin_user_role` (`admin_id`, `role_id`) VALUES (1, 1);
 INSERT INTO `admin_region_scope` (`admin_id`, `region`) VALUES (1, 'CN'), (1, 'EU');
 INSERT INTO `admin_role_permission` (`role_id`, `permission_id`) SELECT 1, `id` FROM `admin_permission`;
 INSERT INTO `admin_role_permission` (`role_id`, `permission_id`) VALUES
-  (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35),
+  (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
   (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13),
   (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51),
   (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49);

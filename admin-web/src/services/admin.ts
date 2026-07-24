@@ -15,6 +15,9 @@ import type {
   AdminHotWordPayload,
   AdminSensitiveWord,
   AdminSensitiveWordPayload,
+  AdminReport,
+  AdminReportQuery,
+  AdminReportResolvePayload,
   AdminOperationActivity,
   AdminOperationActivityItem,
   AdminOperationActivityItemPayload,
@@ -302,6 +305,14 @@ export function updateAdminHotWordStatus(hotWordId: number, enabled: boolean) {
 
 export function removeAdminHotWord(hotWordId: number) {
   return apiDelete<void>(`/api/admin/v1/search/hotwords/${hotWordId}`)
+}
+
+export function listAdminReports(query: AdminReportQuery = {}) {
+  return apiGet<PageResult<AdminReport>>('/api/admin/v1/audit/reports', query)
+}
+
+export function resolveAdminReport(reportType: string, reportId: number, payload: AdminReportResolvePayload) {
+  return apiPost<AdminReport>(`/api/admin/v1/audit/reports/${reportType}/${reportId}/resolve`, payload)
 }
 
 export function listAdminSensitiveWords() {

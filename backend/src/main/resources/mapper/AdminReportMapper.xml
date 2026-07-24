@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.report.mapper.AdminReportMapper">
+
+    <sql id="keywordFilter">
+        <if test="keyword != null and keyword != ''">
+            AND (
+                LOWER(reporter_user_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(reason) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(target_summary) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(target_author_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            )
+        </if>
+    </sql>
+
+    <sql id="unionReports">
+        SELECT * FROM (
+            SELECT
+                rr.id,
+                'review' AS report_type,
+                rr.review_id AS target_id,
+                CAST(NULL AS INTEGER) AS target_type,
+                rr.reporter_user_id,
+                rr.reporter_user_name,
+                rr.reason,
+                rr.status,
+                r.region AS region,
+                LEFT(r.content, 120) AS target_summary,
+                r.user_name AS target_author_name,
+                r.user_id AS target_author_id,
+                r.audit_status AS target_audit_status,
+                r.status AS target_status,
+                rr.created_at
+            FROM review_report rr
+            JOIN review r ON r.id = rr.review_id
+            WHERE rr.is_deleted = FALSE
+              AND r.region = #{region}
+              AND r.is_deleted = FALSE
+
+            UNION ALL
+
+            SELECT
+                pr.id,
+                'post' AS report_type,
+                pr.post_id AS target_id,
+                CAST(NULL AS INTEGER) AS target_type,
+                pr.reporter_user_id,
+                pr.reporter_user_name,
+                pr.reason,
+                pr.status,
+                p.region AS region,
+                LEFT(COALESCE(p.title, p.content), 120) AS target_summary,
+                p.user_name AS target_author_name,
+                p.user_id AS target_author_id,
+                p.audit_status AS target_audit_status,
+                p.status AS target_status,
+                pr.created_at
+            FROM post_report pr
+            JOIN post p ON p.id = pr.post_id
+            WHERE pr.is_deleted = FALSE
+              AND p.region = #{region}
+              AND p.is_deleted = FALSE
+
+            UNION ALL
+
+            SELECT
+                mr.id,
+                'message' AS report_type,
+                mr.target_id AS target_id,
+                mr.target_type AS target_type,
+                mr.reporter_user_id,
+                COALESCE(u.nickname, '') AS reporter_user_name,
+                mr.reason,
+                mr.status,
+                'GLOBAL' AS region,
+                CASE
+                    WHEN mr.target_type = 1 THEN LEFT(COALESCE(m.content, ''), 120)
+                    ELSE CONCAT('会话 #', mr.target_id)
+                END AS target_summary,
+                CASE
+                    WHEN mr.target_type = 1 THEN COALESCE(fu.nickname, '')
+                    ELSE ''
+                END AS target_author_name,
+                CASE
+                    WHEN mr.target_type = 1 THEN m.from_user_id
+                    ELSE 0
+                END AS target_author_id,
+                CAST(NULL AS INTEGER) AS target_audit_status,
+                CAST(NULL AS INTEGER) AS target_status,
+                mr.created_at
+            FROM message_report mr
+            LEFT JOIN app_user u ON u.id = mr.reporter_user_id
+            LEFT JOIN message m ON mr.target_type = 1 AND m.id = mr.target_id
+            LEFT JOIN app_user fu ON fu.id = m.from_user_id
+            WHERE 1 = 1
+        ) reports
+        WHERE 1 = 1
+        <if test="reportType != null and reportType != ''">
+            AND report_type = #{reportType}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <include refid="keywordFilter"/>
+    </sql>
+
+    <select id="countReports" resultType="long">
+        SELECT COUNT(1) FROM (
+            <include refid="unionReports"/>
+        ) counted
+    </select>
+
+    <select id="selectReports" resultType="com.tuowei.dazhongdianping.module.admin.report.model.AdminReportRow">
+        <include refid="unionReports"/>
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectReviewReport" resultType="com.tuowei.dazhongdianping.module.admin.report.model.AdminReportRow">
+        SELECT
+            rr.id,
+            'review' AS report_type,
+            rr.review_id AS target_id,
+            CAST(NULL AS INTEGER) AS target_type,
+            rr.reporter_user_id,
+            rr.reporter_user_name,
+            rr.reason,
+            rr.status,
+            r.region AS region,
+            LEFT(r.content, 120) AS target_summary,
+            r.user_name AS target_author_name,
+            r.user_id AS target_author_id,
+            r.audit_status AS target_audit_status,
+            r.status AS target_status,
+            rr.created_at
+        FROM review_report rr
+        JOIN review r ON r.id = rr.review_id
+        WHERE rr.id = #{id}
+          AND rr.is_deleted = FALSE
+          AND r.region = #{region}
+          AND r.is_deleted = FALSE
+        LIMIT 1
+    </select>
+
+    <select id="selectPostReport" resultType="com.tuowei.dazhongdianping.module.admin.report.model.AdminReportRow">
+        SELECT
+            pr.id,
+            'post' AS report_type,
+            pr.post_id AS target_id,
+            CAST(NULL AS INTEGER) AS target_type,
+            pr.reporter_user_id,
+            pr.reporter_user_name,
+            pr.reason,
+            pr.status,
+            p.region AS region,
+            LEFT(COALESCE(p.title, p.content), 120) AS target_summary,
+            p.user_name AS target_author_name,
+            p.user_id AS target_author_id,
+            p.audit_status AS target_audit_status,
+            p.status AS target_status,
+            pr.created_at
+        FROM post_report pr
+        JOIN post p ON p.id = pr.post_id
+        WHERE pr.id = #{id}
+          AND pr.is_deleted = FALSE
+          AND p.region = #{region}
+          AND p.is_deleted = FALSE
+        LIMIT 1
+    </select>
+
+    <select id="selectMessageReport" resultType="com.tuowei.dazhongdianping.module.admin.report.model.AdminReportRow">
+        SELECT
+            mr.id,
+            'message' AS report_type,
+            mr.target_id AS target_id,
+            mr.target_type AS target_type,
+            mr.reporter_user_id,
+            COALESCE(u.nickname, '') AS reporter_user_name,
+            mr.reason,
+            mr.status,
+            'GLOBAL' AS region,
+            CASE
+                WHEN mr.target_type = 1 THEN LEFT(COALESCE(m.content, ''), 120)
+                ELSE CONCAT('会话 #', mr.target_id)
+            END AS target_summary,
+            CASE
+                WHEN mr.target_type = 1 THEN COALESCE(fu.nickname, '')
+                ELSE ''
+            END AS target_author_name,
+            CASE
+                WHEN mr.target_type = 1 THEN m.from_user_id
+                ELSE 0
+            END AS target_author_id,
+            CAST(NULL AS INTEGER) AS target_audit_status,
+            CAST(NULL AS INTEGER) AS target_status,
+            mr.created_at
+        FROM message_report mr
+        LEFT JOIN app_user u ON u.id = mr.reporter_user_id
+        LEFT JOIN message m ON mr.target_type = 1 AND m.id = mr.target_id
+        LEFT JOIN app_user fu ON fu.id = m.from_user_id
+        WHERE mr.id = #{id}
+        LIMIT 1
+    </select>
+
+    <update id="resolveReviewReport">
+        UPDATE review_report
+        SET status = #{status}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND status = 0 AND is_deleted = FALSE
+    </update>
+
+    <update id="resolvePostReport">
+        UPDATE post_report
+        SET status = #{status}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND status = 0 AND is_deleted = FALSE
+    </update>
+
+    <update id="resolveMessageReport">
+        UPDATE message_report
+        SET status = #{status}
+        WHERE id = #{id} AND status = 0
+    </update>
+
+    <update id="hideReview">
+        UPDATE review
+        SET audit_status = 2,
+            audit_remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{reviewId}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="hidePost">
+        UPDATE post
+        SET audit_status = 2,
+            audit_remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{postId}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="resolvePendingReviewReports">
+        UPDATE review_report
+        SET status = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE review_id = #{reviewId} AND status = 0 AND is_deleted = FALSE
+    </update>
+
+    <update id="resolvePendingPostReports">
+        UPDATE post_report
+        SET status = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE post_id = #{postId} AND status = 0 AND is_deleted = FALSE
+    </update>
+
+</mapper>

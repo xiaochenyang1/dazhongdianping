@@ -236,6 +236,41 @@ export interface AdminSensitiveWordPayload {
   remark: string
 }
 
+export interface AdminReport {
+  id: number
+  reportType: 'review' | 'post' | 'message' | string
+  reportTypeText: string
+  targetId: number
+  targetType?: number | null
+  targetTypeText: string
+  reporterUserId: number
+  reporterUserName: string
+  reason: string
+  status: number
+  statusText: string
+  region: string
+  targetSummary: string
+  targetAuthorId?: number | null
+  targetAuthorName: string
+  targetAuditStatus?: number | null
+  targetStatus?: number | null
+  targetStatusText: string
+  createdAt: string
+}
+
+export interface AdminReportQuery {
+  reportType?: string
+  status?: number
+  keyword?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface AdminReportResolvePayload {
+  action: 'dismiss' | 'hide'
+  remark?: string
+}
+
 export interface AdminOperationActivity {
   id: number
   region: Region

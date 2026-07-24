@@ -103,6 +103,12 @@ const router = createRouter({
           },
         },
         {
+          path: 'audit/reports',
+          name: 'audit-reports',
+          component: () => import('@/views/ReportManagementView.vue'),
+          meta: { requiresAuth: true, title: '内容举报', requiredPermission: 'audit:report:read' },
+        },
+        {
           path: 'audit/user-appeals',
           name: 'audit-user-appeals',
           component: () => import('@/views/UserAppealAuditView.vue'),
