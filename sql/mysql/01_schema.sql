@@ -382,6 +382,33 @@ CREATE TABLE `hot_keyword` (
   KEY `idx_hot_keyword_region_enabled_sort` (`region`, `enabled`, `sort`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `sensitive_word` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `region` VARCHAR(8) NOT NULL,
+  `word` VARCHAR(64) NOT NULL,
+  `match_mode` TINYINT NOT NULL DEFAULT 1 COMMENT '1包含匹配',
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `remark` VARCHAR(255) NOT NULL DEFAULT '',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_sensitive_word_region_word` (`region`, `word`),
+  KEY `idx_sensitive_word_region_enabled` (`region`, `enabled`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `user_shop_browse_history` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  `shop_id` BIGINT NOT NULL,
+  `region` VARCHAR(8) NOT NULL,
+  `view_count` INT NOT NULL DEFAULT 1,
+  `last_viewed_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_shop_browse_history` (`user_id`,`shop_id`,`region`),
+  KEY `idx_user_shop_browse_history_user_region` (`user_id`,`region`,`last_viewed_at`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE `operation_activity` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(128) NOT NULL,

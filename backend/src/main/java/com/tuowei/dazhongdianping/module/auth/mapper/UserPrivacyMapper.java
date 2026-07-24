@@ -52,6 +52,7 @@ public interface UserPrivacyMapper {
 
     int completeDeleteTask(@Param("taskId") Long taskId, @Param("completedAt") LocalDateTime completedAt);
 
+    int deleteBrowseHistoryByUserId(@Param("userId") Long userId);
     int deleteSearchHistoryByUserId(@Param("userId") Long userId);
 
     int deleteGrowthPointsLogsByUserId(@Param("userId") Long userId);

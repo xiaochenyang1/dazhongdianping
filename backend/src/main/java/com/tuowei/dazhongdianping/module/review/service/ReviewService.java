@@ -13,6 +13,7 @@ import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCe
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;
+import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentListQuery;
@@ -65,13 +66,16 @@ public class ReviewService {
     private final NotificationService notificationService;
     private final UserExpertCertificationService userExpertCertificationService;
 
+    private final SensitiveWordFilterService sensitiveWordFilterService;
+
     public ReviewService(ReviewMapper reviewMapper,
                          AuthCommandMapper authCommandMapper,
                          AdminAuditMapper adminAuditMapper,
                          UserGrowthService userGrowthService,
                          MerchantReviewMapper merchantReviewMapper,
                          NotificationService notificationService,
-                         UserExpertCertificationService userExpertCertificationService) {
+                         UserExpertCertificationService userExpertCertificationService,
+                         SensitiveWordFilterService sensitiveWordFilterService) {
         this.reviewMapper = reviewMapper;
         this.authCommandMapper = authCommandMapper;
         this.adminAuditMapper = adminAuditMapper;
@@ -79,12 +83,14 @@ public class ReviewService {
         this.merchantReviewMapper = merchantReviewMapper;
         this.notificationService = notificationService;
         this.userExpertCertificationService = userExpertCertificationService;
+        this.sensitiveWordFilterService = sensitiveWordFilterService;
     }
 
     @Transactional
     public ReviewDetailResponse createReview(ReviewSaveRequest request) {
         AppUserRow currentUser = currentUserRow();
         ensureShopExists(currentRegion().name(), request.getShopId());
+        sensitiveWordFilterService.assertClean(currentRegion().name(), request.getContent());
 
         ReviewRow row = new ReviewRow();
         row.setUserId(currentUser.getId());
@@ -166,6 +172,7 @@ public class ReviewService {
     public ReviewCommentResponse createComment(Long reviewId, ReviewCommentCreateRequest request) {
         AppUserRow currentUser = currentUserRow();
         ReviewRow review = requirePublicReview(reviewId);
+        sensitiveWordFilterService.assertClean(review.getRegion(), request.getContent());
         ReviewCommentThreadTarget threadTarget = resolveReviewCommentThread(reviewId, request.getReplyTo());
 
         ReviewCommentRow row = new ReviewCommentRow();
@@ -269,6 +276,7 @@ public class ReviewService {
             throw new IllegalArgumentException("点评所属门店不可修改");
         }
         ensureShopExists(existing.getRegion(), existing.getShopId());
+        sensitiveWordFilterService.assertClean(existing.getRegion(), request.getContent());
         boolean wasPublic = isPublicReview(existing);
         adminAuditMapper.invalidatePendingAuditTasksByBiz(
                 REVIEW_AUDIT_BIZ_TYPE,

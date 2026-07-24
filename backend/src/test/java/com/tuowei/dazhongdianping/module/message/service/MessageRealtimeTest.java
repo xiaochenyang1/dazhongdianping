@@ -6,11 +6,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.tuowei.dazhongdianping.common.region.Region;
+import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
 import com.tuowei.dazhongdianping.module.message.mapper.MessageMapper;
 import com.tuowei.dazhongdianping.module.message.model.MessageRow;
 import com.tuowei.dazhongdianping.module.message.model.request.SendMessageRequest;
+import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.notification.websocket.NotificationSessionRegistry;
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +25,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 class MessageRealtimeTest {
     @AfterEach void cleanup() {
         UserSessionContext.clear();
+        RegionContext.clear();
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.clearSynchronization();
         }
@@ -32,6 +36,7 @@ class MessageRealtimeTest {
         MessageMapper mapper = Mockito.mock(MessageMapper.class);
         NotificationSessionRegistry sessions = Mockito.mock(NotificationSessionRegistry.class);
         NotificationService notifications = Mockito.mock(NotificationService.class);
+        SensitiveWordFilterService sensitiveWordFilterService = Mockito.mock(SensitiveWordFilterService.class);
         when(mapper.countAvailableUser(22L)).thenReturn(1);
         when(mapper.countBlockEitherDirection(11L, 22L)).thenReturn(0);
         when(mapper.findConversation(11L, 22L)).thenReturn(33L);
@@ -42,9 +47,11 @@ class MessageRealtimeTest {
             return 1;
         });
         UserSessionContext.set(new UserSession(11L, 99L));
+        RegionContext.setRegion(Region.CN);
         TransactionSynchronizationManager.initSynchronization();
 
-        new MessageService(mapper, sessions, notifications).send(new SendMessageRequest(22L, "事务消息"));
+        new MessageService(mapper, sessions, notifications, sensitiveWordFilterService)
+                .send(new SendMessageRequest(22L, "事务消息"));
 
         verify(sessions, never()).sendAllRegions(eq(22L), any());
         for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {

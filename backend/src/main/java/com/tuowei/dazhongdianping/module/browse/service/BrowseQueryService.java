@@ -20,6 +20,7 @@ import com.tuowei.dazhongdianping.module.browse.model.PhotoRow;
 import com.tuowei.dazhongdianping.module.browse.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchSuggestionRow;
+import com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopDetailRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListQuery;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListRow;
@@ -34,6 +35,7 @@ import com.tuowei.dazhongdianping.module.browse.model.response.ReviewPreviewResp
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHotWordResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchSuggestionResponse;
+import com.tuowei.dazhongdianping.module.browse.model.response.ShopBrowseHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopDetailResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopListItemResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.MerchantReplyResponse;
@@ -119,6 +121,7 @@ public class BrowseQueryService {
             throw new NotFoundException("商户不存在");
         }
         browseQueryMapper.incrementShopView(shopId, java.time.LocalDate.now());
+        recordShopBrowseHistoryIfNeeded(region, shopId);
         List<PhotoResponse> photos = browseQueryMapper.selectShopPhotos(shopId).stream()
                 .map(this::toPhotoResponse)
                 .toList();
@@ -256,6 +259,45 @@ public class BrowseQueryService {
     public void clearSearchHistory(Region region) {
         UserSession userSession = requireUserSession();
         browseQueryMapper.deleteSearchHistory(userSession.userId(), region.name());
+    }
+
+    public PageResult<ShopBrowseHistoryResponse> listShopBrowseHistory(Region region, int page, int pageSize) {
+        UserSession userSession = requireUserSession();
+        int normalizedPage = Math.max(page, 1);
+        int normalizedSize = Math.min(Math.max(pageSize, 1), 50);
+        long total = browseQueryMapper.countShopBrowseHistory(userSession.userId(), region.name());
+        List<ShopBrowseHistoryResponse> items = browseQueryMapper
+                .selectShopBrowseHistory(
+                        userSession.userId(),
+                        region.name(),
+                        normalizedSize,
+                        (normalizedPage - 1) * normalizedSize
+                )
+                .stream()
+                .map(this::toShopBrowseHistoryResponse)
+                .toList();
+        return new PageResult<>(
+                items,
+                total,
+                normalizedPage,
+                normalizedSize,
+                (long) normalizedPage * normalizedSize < total
+        );
+    }
+
+    @Transactional
+    public void clearShopBrowseHistory(Region region) {
+        UserSession userSession = requireUserSession();
+        browseQueryMapper.deleteShopBrowseHistory(userSession.userId(), region.name());
+    }
+
+    @Transactional
+    public void removeShopBrowseHistoryItem(Region region, Long shopId) {
+        UserSession userSession = requireUserSession();
+        if (shopId == null || shopId <= 0) {
+            throw new IllegalArgumentException("shopId 无效");
+        }
+        browseQueryMapper.deleteShopBrowseHistoryItem(userSession.userId(), shopId, region.name());
     }
 
     private void ensureShopExists(Region region, Long shopId) {
@@ -414,6 +456,40 @@ public class BrowseQueryService {
         row.setKeyword(normalizedKeyword);
         row.setSearchType(1);
         browseQueryMapper.insertSearchHistory(row);
+    }
+
+    private void recordShopBrowseHistoryIfNeeded(Region region, Long shopId) {
+        UserSession userSession = UserSessionContext.get();
+        if (userSession == null || shopId == null) {
+            return;
+        }
+        if (browseQueryMapper.touchShopBrowseHistory(userSession.userId(), shopId, region.name()) == 0) {
+            try {
+                browseQueryMapper.insertShopBrowseHistory(userSession.userId(), shopId, region.name());
+            } catch (org.springframework.dao.DuplicateKeyException ignored) {
+                browseQueryMapper.touchShopBrowseHistory(userSession.userId(), shopId, region.name());
+            }
+        }
+    }
+
+    private ShopBrowseHistoryResponse toShopBrowseHistoryResponse(ShopBrowseHistoryRow row) {
+        return new ShopBrowseHistoryResponse(
+                row.getId(),
+                row.getShopId(),
+                row.getShopName(),
+                row.getCoverUrl(),
+                row.getScore(),
+                row.getPricePerCapita(),
+                row.getCurrency(),
+                row.getAddress(),
+                row.getCityName(),
+                row.getAreaName(),
+                row.getHasDeal(),
+                row.getOpenNow(),
+                splitTags(row.getTags()),
+                row.getViewCount() == null ? 1 : row.getViewCount(),
+                row.getLastViewedAt() == null ? "" : row.getLastViewedAt().format(REVIEW_TIME_FORMATTER)
+        );
     }
 
     private UserSession requireUserSession() {

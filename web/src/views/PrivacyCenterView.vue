@@ -49,6 +49,7 @@ const exportModules = reactive<Record<PrivacyExportModule, boolean>>({
   posts: true,
   reservations: true,
   favorites: true,
+  browse_history: true,
   follows: true,
 })
 
@@ -365,6 +366,13 @@ void bootstrap()
               <span>
                 <strong>收藏数据</strong>
                 <small>收藏对象、门店快照和收藏时间。</small>
+              </span>
+            </label>
+            <label class="privacy-module-card">
+              <input v-model="exportModules.browse_history" type="checkbox" />
+              <span>
+                <strong>浏览足迹</strong>
+                <small>最近浏览过的门店、查看次数和最近访问时间。</small>
               </span>
             </label>
             <label class="privacy-module-card">

@@ -84,7 +84,9 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (45, 'system:user:read', '查看用户', 'system', 1, 1),
     (46, 'system:user:write', '处置用户', 'system', 2, 1),
     (47, 'audit:user_appeal:read', '查看用户封禁申诉', 'audit', 1, 1),
-    (48, 'audit:user_appeal:write', '处理用户封禁申诉', 'audit', 2, 1);
+    (48, 'audit:user_appeal:write', '处理用户封禁申诉', 'audit', 2, 1),
+    (50, 'operations:sensitive_word:read', '查看敏感词库', 'operations', 1, 1),
+    (51, 'operations:sensitive_word:write', '维护敏感词库', 'operations', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region) VALUES (1, 'CN'), (1, 'EU');
@@ -92,7 +94,7 @@ INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM adm
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13),
-    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44),
+    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
@@ -283,18 +285,18 @@ INSERT INTO operation_activity (
         'https://placehold.co/1200x720/0f172a/ffffff?text=EU+Activity',
         'app://activity/eu_school_2026_q3',
         '{"audience":["student","new_user"],"sort":"manual"}',
-        TIMESTAMP '2026-09-01 00:00:00',
-        TIMESTAMP '2026-09-30 23:59:59',
+        TIMESTAMP '2026-07-01 00:00:00',
+        TIMESTAMP '2026-12-31 23:59:59',
         1,
         1
     ),
     (
-        5002, '上海夜宵回血计划', 'cn_late_night_2026_q3', 'CN', 0, 1, 1, 1,
+        5002, '上海夜宵回血计划', 'cn_late_night_2026_q3', 'CN', 0, 1, 1, 2,
         'https://placehold.co/1200x720/7c2d12/ffffff?text=CN+Night+Activity',
         'app://activity/cn_late_night_2026_q3',
         '{"audience":["night_owl"],"sort":"manual"}',
-        TIMESTAMP '2026-07-25 00:00:00',
-        TIMESTAMP '2026-08-15 23:59:59',
+        TIMESTAMP '2026-07-01 00:00:00',
+        TIMESTAMP '2026-12-31 23:59:59',
         1,
         1
     );
@@ -351,3 +353,7 @@ INSERT INTO reservation_slot(id,shop_id,region,biz_date,start_time,end_time,capa
  (50001,10001,'CN',DATE '2026-07-20',TIME '18:00:00',TIME '20:00:00',10,0,1,120,TRUE),
  (50002,10001,'CN',DATE '2026-07-21',TIME '19:00:00',TIME '21:00:00',10,0,2,120,TRUE),
  (51001,20001,'EU',DATE '2026-07-20',TIME '18:30:00',TIME '20:30:00',12,0,2,180,TRUE);
+
+INSERT INTO sensitive_word (region, word, match_mode, enabled, remark) VALUES
+    ('CN', '违禁演示词', 1, TRUE, '本地联调演示敏感词'),
+    ('EU', 'banned-demo', 1, TRUE, 'local demo sensitive word');

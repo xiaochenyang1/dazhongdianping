@@ -44,9 +44,11 @@ const navItems = [
   { to: '/', label: '首页' },
   { to: '/shops', label: '商户列表' },
   { to: '/ranks', label: '城市榜单', matchPrefix: '/ranks' },
+  { to: '/activities', label: '运营活动', matchPrefix: '/activities' },
   { to: '/community', label: '华人社区', matchPrefix: '/community' },
   { to: '/user/reviews', label: '我的点评', matchPrefix: '/user/reviews' },
   { to: '/user/favorites', label: '我的收藏', matchPrefix: '/user/favorites' },
+  { to: '/user/browse-history', label: '我的足迹', matchPrefix: '/user/browse-history' },
   { to: '/user/orders', label: '我的订单', matchPrefix: '/user/orders' },
   { to: '/user/coupons', label: '我的券', matchPrefix: '/user/coupons' },
   { to: '/user/reservations', label: '我的预订', matchPrefix: '/user/reservations' },
@@ -153,14 +155,34 @@ function handleSearchBlur() {
   }, 120)
 }
 
+function notificationRoute(item: UserNotification) {
+  if (item.type === 'message.direct') {
+    return null
+  }
+  if (!item.linkUrl) {
+    return null
+  }
+  // Strip query markers like ?remind=30 so Vue Router lands on the reservation page.
+  const path = item.linkUrl.split('?')[0]
+  return path || null
+}
+
+function notificationHint(item: UserNotification) {
+  if (item.type === 'message.direct') {
+    return ' · 请在 APP 查看'
+  }
+  if (item.type === 'reservation.reminder') {
+    return ' · 预订提醒'
+  }
+  return ''
+}
+
 async function handleNotificationClick(item: UserNotification) {
   await markRead(item)
   notificationOpen.value = false
-  if (item.type === 'message.direct') {
-    return
-  }
-  if (item.linkUrl) {
-    await router.push(item.linkUrl)
+  const target = notificationRoute(item)
+  if (target) {
+    await router.push(target)
   }
 }
 
@@ -429,7 +451,7 @@ watch(
             <button v-for="item in notificationState.items" :key="item.id" type="button" class="notification-item" :class="{ unread: !item.read }" @click="handleNotificationClick(item)">
               <strong>{{ item.title }}<template v-if="item.aggregateCount > 1"> · x{{ item.aggregateCount }}</template></strong>
               <span>{{ item.content }}</span>
-              <small>{{ item.createdAt }}<template v-if="item.type === 'message.direct'"> · 请在 APP 查看</template></small>
+              <small>{{ item.createdAt }}{{ notificationHint(item) }}</small>
             </button>
           </div>
         </div>

@@ -143,7 +143,7 @@ describe('PrivacyCenterView', () => {
     await flushView()
 
     expect(privacyMocks.createPrivacyExportTask).toHaveBeenCalledWith({
-      modules: ['account', 'reviews', 'orders', 'posts', 'reservations', 'favorites', 'follows'],
+      modules: ['account', 'reviews', 'orders', 'posts', 'reservations', 'favorites', 'browse_history', 'follows'],
       format: 'zip',
     })
     expect(privacyMocks.fetchPrivacyOverview).toHaveBeenCalledTimes(2)

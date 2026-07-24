@@ -487,4 +487,60 @@
         VALUES(#{shopId}, #{bizDate}, 1)
         ON DUPLICATE KEY UPDATE view_count = view_count + 1, updated_at = CURRENT_TIMESTAMP
     </insert>
+
+    <update id="touchShopBrowseHistory">
+        UPDATE user_shop_browse_history
+        SET view_count = view_count + 1,
+            last_viewed_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND shop_id = #{shopId}
+          AND region = #{region}
+    </update>
+    <insert id="insertShopBrowseHistory">
+        INSERT INTO user_shop_browse_history(user_id, shop_id, region, view_count, last_viewed_at)
+        VALUES (#{userId}, #{shopId}, #{region}, 1, CURRENT_TIMESTAMP)
+    </insert>
+    <select id="countShopBrowseHistory" resultType="long">
+        SELECT COUNT(1)
+        FROM user_shop_browse_history h
+        JOIN shop s ON s.id = h.shop_id AND s.region = h.region AND s.is_deleted = FALSE AND s.status = 1
+        WHERE h.user_id = #{userId}
+          AND h.region = #{region}
+    </select>
+    <select id="selectShopBrowseHistory" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow">
+        SELECT h.id, h.user_id, h.shop_id, h.region, h.view_count, h.last_viewed_at, h.created_at,
+               s.name AS shop_name, s.cover_url, s.score, s.price_per_capita, s.currency, s.address,
+               c.name AS city_name, a.name AS area_name, s.has_deal, s.open_now, s.tags
+        FROM user_shop_browse_history h
+        JOIN shop s ON s.id = h.shop_id AND s.region = h.region AND s.is_deleted = FALSE AND s.status = 1
+        LEFT JOIN city c ON c.id = s.city_id
+        LEFT JOIN area a ON a.id = s.area_id
+        WHERE h.user_id = #{userId}
+          AND h.region = #{region}
+        ORDER BY h.last_viewed_at DESC, h.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+    <delete id="deleteShopBrowseHistory">
+        DELETE FROM user_shop_browse_history
+        WHERE user_id = #{userId}
+          AND region = #{region}
+    </delete>
+    <delete id="deleteShopBrowseHistoryItem">
+        DELETE FROM user_shop_browse_history
+        WHERE user_id = #{userId}
+          AND shop_id = #{shopId}
+          AND region = #{region}
+    </delete>
+    <select id="selectShopBrowseHistoryByUserId" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow">
+        SELECT h.id, h.user_id, h.shop_id, h.region, h.view_count, h.last_viewed_at, h.created_at,
+               s.name AS shop_name, s.cover_url, s.score, s.price_per_capita, s.currency, s.address,
+               c.name AS city_name, a.name AS area_name, s.has_deal, s.open_now, s.tags
+        FROM user_shop_browse_history h
+        LEFT JOIN shop s ON s.id = h.shop_id
+        LEFT JOIN city c ON c.id = s.city_id
+        LEFT JOIN area a ON a.id = s.area_id
+        WHERE h.user_id = #{userId}
+        ORDER BY h.last_viewed_at DESC, h.id DESC
+    </select>
+
 </mapper>

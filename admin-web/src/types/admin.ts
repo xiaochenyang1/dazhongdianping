@@ -222,6 +222,20 @@ export interface AdminHotWordPayload {
   sortNo: number
 }
 
+export interface AdminSensitiveWord {
+  id: number
+  region: Region
+  word: string
+  matchMode: number
+  enabled: boolean
+  remark: string
+}
+
+export interface AdminSensitiveWordPayload {
+  word: string
+  remark: string
+}
+
 export interface AdminOperationActivity {
   id: number
   region: Region

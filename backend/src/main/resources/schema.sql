@@ -1025,5 +1025,32 @@ CREATE TABLE IF NOT EXISTS circle_member (
 );
 CREATE INDEX IF NOT EXISTS idx_circle_region_status_sort ON circle(region,status,is_deleted,sort,id);
 CREATE INDEX IF NOT EXISTS idx_circle_member_user ON circle_member(user_id,circle_id);
+
+CREATE TABLE IF NOT EXISTS sensitive_word (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL,
+    word VARCHAR(64) NOT NULL,
+    match_mode TINYINT NOT NULL DEFAULT 1,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    remark VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_sensitive_word_region_word ON sensitive_word(region, word);
+CREATE INDEX IF NOT EXISTS idx_sensitive_word_region_enabled ON sensitive_word(region, enabled, id);
+
+CREATE TABLE IF NOT EXISTS user_shop_browse_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    shop_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL,
+    view_count INT NOT NULL DEFAULT 1,
+    last_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_user_shop_browse_history ON user_shop_browse_history(user_id, shop_id, region);
+CREATE INDEX IF NOT EXISTS idx_user_shop_browse_history_user_region ON user_shop_browse_history(user_id, region, last_viewed_at, id);
+
+
 ALTER TABLE post ADD COLUMN IF NOT EXISTS circle_id BIGINT NULL;
 CREATE INDEX IF NOT EXISTS idx_post_circle_status ON post(circle_id,audit_status,status,is_deleted,id);

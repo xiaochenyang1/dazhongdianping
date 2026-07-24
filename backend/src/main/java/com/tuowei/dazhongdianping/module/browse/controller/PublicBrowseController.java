@@ -14,6 +14,7 @@ import com.tuowei.dazhongdianping.module.browse.model.response.ReviewPreviewResp
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHotWordResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchSuggestionResponse;
+import com.tuowei.dazhongdianping.module.browse.model.response.ShopBrowseHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopDetailResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopListItemResponse;
 import com.tuowei.dazhongdianping.module.browse.service.BrowseQueryService;
@@ -121,6 +122,26 @@ public class PublicBrowseController {
     public ApiResponse<Void> clearSearchHistory() {
         browseQueryService.clearSearchHistory(currentRegion());
         return ApiResponse.success("搜索历史已清空", "search.history_cleared", null);
+    }
+
+    @GetMapping("/user/browse-history")
+    public ApiResponse<PageResult<ShopBrowseHistoryResponse>> listShopBrowseHistory(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer pageSize
+    ) {
+        return ApiResponse.success(browseQueryService.listShopBrowseHistory(currentRegion(), page, pageSize));
+    }
+
+    @DeleteMapping("/user/browse-history")
+    public ApiResponse<Void> clearShopBrowseHistory() {
+        browseQueryService.clearShopBrowseHistory(currentRegion());
+        return ApiResponse.success("浏览足迹已清空", "browse.history_cleared", null);
+    }
+
+    @DeleteMapping("/user/browse-history/{shopId}")
+    public ApiResponse<Void> removeShopBrowseHistoryItem(@PathVariable Long shopId) {
+        browseQueryService.removeShopBrowseHistoryItem(currentRegion(), shopId);
+        return ApiResponse.success("足迹已删除", "browse.history_item_removed", null);
     }
 
     private Region currentRegion() {

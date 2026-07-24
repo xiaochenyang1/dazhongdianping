@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.moderation.mapper.SensitiveWordMapper">
+
+    <sql id="wordColumns">
+        id, region, word, match_mode, enabled, remark, created_at, updated_at
+    </sql>
+
+    <select id="selectWords" resultType="com.tuowei.dazhongdianping.module.moderation.model.SensitiveWordRow">
+        SELECT <include refid="wordColumns"/>
+        FROM sensitive_word
+        WHERE region = #{region}
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectEnabledWords" resultType="string">
+        SELECT word
+        FROM sensitive_word
+        WHERE region = #{region}
+          AND enabled = TRUE
+        ORDER BY LENGTH(word) DESC, id ASC
+    </select>
+
+    <select id="selectWord" resultType="com.tuowei.dazhongdianping.module.moderation.model.SensitiveWordRow">
+        SELECT <include refid="wordColumns"/>
+        FROM sensitive_word
+        WHERE id = #{id}
+          AND region = #{region}
+        LIMIT 1
+    </select>
+
+    <select id="countWordConflict" resultType="int">
+        SELECT COUNT(1)
+        FROM sensitive_word
+        WHERE region = #{region}
+          AND LOWER(word) = LOWER(#{word})
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <insert id="insertWord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sensitive_word(region, word, match_mode, enabled, remark)
+        VALUES (#{region}, #{word}, #{matchMode}, #{enabled}, #{remark})
+    </insert>
+
+    <update id="updateWord">
+        UPDATE sensitive_word
+        SET word = #{word},
+            match_mode = #{matchMode},
+            remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND region = #{region}
+    </update>
+
+    <update id="updateWordStatus">
+        UPDATE sensitive_word
+        SET enabled = #{enabled},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND region = #{region}
+    </update>
+
+    <delete id="deleteWord">
+        DELETE FROM sensitive_word
+        WHERE id = #{id}
+          AND region = #{region}
+    </delete>
+</mapper>

@@ -231,4 +231,40 @@ describe('AppHeader', () => {
     expect(routerMocks.push).not.toHaveBeenCalled()
     app.unmount()
   })
+
+  it('routes reservation reminder notifications to the reservation detail page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 101,
+        type: 'reservation.reminder',
+        title: '预订即将开始（30 分钟）',
+        content: '测试门店 · 2026-07-24 18:30 · 2 人',
+        linkUrl: '/user/reservations/88?remind=30',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-24 18:00:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('预订即将开始（30 分钟）')
+    expect(host.textContent).toContain('预订提醒')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/reservations/88')
+    app.unmount()
+  })
 })

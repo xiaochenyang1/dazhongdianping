@@ -11,6 +11,7 @@ import com.tuowei.dazhongdianping.module.browse.model.PhotoRow;
 import com.tuowei.dazhongdianping.module.browse.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchSuggestionRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
+import com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopDetailRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListQuery;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListRow;
@@ -93,4 +94,28 @@ public interface BrowseQueryMapper {
     int deleteSearchHistory(@Param("userId") Long userId, @Param("region") String region);
 
     void incrementShopView(@Param("shopId") Long shopId, @Param("bizDate") java.time.LocalDate bizDate);
+
+    int touchShopBrowseHistory(@Param("userId") Long userId,
+                                @Param("shopId") Long shopId,
+                                @Param("region") String region);
+
+    int insertShopBrowseHistory(@Param("userId") Long userId,
+                                 @Param("shopId") Long shopId,
+                                 @Param("region") String region);
+
+    long countShopBrowseHistory(@Param("userId") Long userId, @Param("region") String region);
+
+    java.util.List<ShopBrowseHistoryRow> selectShopBrowseHistory(@Param("userId") Long userId,
+                                                                  @Param("region") String region,
+                                                                  @Param("limit") Integer limit,
+                                                                  @Param("offset") Integer offset);
+
+    int deleteShopBrowseHistory(@Param("userId") Long userId, @Param("region") String region);
+
+    int deleteShopBrowseHistoryItem(@Param("userId") Long userId,
+                                    @Param("shopId") Long shopId,
+                                    @Param("region") String region);
+
+    java.util.List<ShopBrowseHistoryRow> selectShopBrowseHistoryByUserId(@Param("userId") Long userId);
+
 }

@@ -233,6 +233,11 @@
           AND status = 1
     </update>
 
+    <delete id="deleteBrowseHistoryByUserId">
+        DELETE FROM user_shop_browse_history
+        WHERE user_id = #{userId}
+    </delete>
+
     <delete id="deleteSearchHistoryByUserId">
         DELETE FROM search_history
         WHERE user_id = #{userId}

@@ -11,6 +11,8 @@ import com.tuowei.dazhongdianping.common.user.UserSessionContext;
 import com.tuowei.dazhongdianping.config.PrivacyProperties;
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import com.tuowei.dazhongdianping.module.auth.mapper.UserPrivacyMapper;
+import com.tuowei.dazhongdianping.module.browse.mapper.BrowseQueryMapper;
+import com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow;
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.model.GrowthPointsLogRow;
 import com.tuowei.dazhongdianping.module.auth.model.PrivacyDeleteTaskRow;
@@ -76,6 +78,7 @@ public class UserPrivacyService {
             "posts",
             "reservations",
             "favorites",
+            "browse_history",
             "follows",
             "messages",
             "circles",
@@ -85,6 +88,7 @@ public class UserPrivacyService {
 
     private final AuthCommandMapper authCommandMapper;
     private final UserPrivacyMapper userPrivacyMapper;
+    private final BrowseQueryMapper browseQueryMapper;
     private final PrivacyProperties privacyProperties;
     private final ObjectMapper objectMapper;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -92,10 +96,12 @@ public class UserPrivacyService {
 
     public UserPrivacyService(AuthCommandMapper authCommandMapper,
                               UserPrivacyMapper userPrivacyMapper,
+                              BrowseQueryMapper browseQueryMapper,
                               PrivacyProperties privacyProperties,
                               ObjectMapper objectMapper) {
         this.authCommandMapper = authCommandMapper;
         this.userPrivacyMapper = userPrivacyMapper;
+        this.browseQueryMapper = browseQueryMapper;
         this.privacyProperties = privacyProperties;
         this.objectMapper = objectMapper;
     }
@@ -291,6 +297,7 @@ public class UserPrivacyService {
             userPrivacyMapper.anonymizePosts(userId, anonymousName);
             userPrivacyMapper.anonymizePostComments(userId, anonymousName);
             userPrivacyMapper.anonymizePostReports(userId, anonymousName);
+            userPrivacyMapper.deleteBrowseHistoryByUserId(userId);
             userPrivacyMapper.deleteSearchHistoryByUserId(userId);
             userPrivacyMapper.deleteGrowthPointsLogsByUserId(userId);
             userPrivacyMapper.deleteFollowRelationsByUserId(userId);
@@ -472,6 +479,7 @@ public class UserPrivacyService {
                 case "posts" -> buildPostModule(currentUser.getId());
                 case "reservations" -> buildReservationModule(currentUser.getId());
                 case "favorites" -> buildFavoriteModule(currentUser.getId());
+                case "browse_history" -> buildBrowseHistoryModule(currentUser.getId());
                 case "follows" -> buildFollowModule(currentUser.getId());
                 case "messages" -> buildMessageModule(currentUser.getId());
                 case "circles" -> userPrivacyMapper.selectCirclesForExport(currentUser.getId());
@@ -645,6 +653,31 @@ public class UserPrivacyService {
         item.put("remark", row.getRemark());
         item.put("status", row.getStatus());
         item.put("rescheduleCount", row.getRescheduleCount());
+        item.put("createdAt", formatDateTime(row.getCreatedAt()));
+        return item;
+    }
+
+    private List<Map<String, Object>> buildBrowseHistoryModule(Long userId) {
+        return browseQueryMapper.selectShopBrowseHistoryByUserId(userId).stream()
+                .map(this::toBrowseHistoryExportItem)
+                .toList();
+    }
+
+    private Map<String, Object> toBrowseHistoryExportItem(ShopBrowseHistoryRow row) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", row.getId());
+        item.put("shopId", row.getShopId());
+        item.put("region", row.getRegion());
+        item.put("shopName", row.getShopName());
+        item.put("coverUrl", row.getCoverUrl());
+        item.put("score", row.getScore());
+        item.put("pricePerCapita", row.getPricePerCapita());
+        item.put("currency", row.getCurrency());
+        item.put("address", row.getAddress());
+        item.put("cityName", row.getCityName());
+        item.put("areaName", row.getAreaName());
+        item.put("viewCount", row.getViewCount());
+        item.put("lastViewedAt", formatDateTime(row.getLastViewedAt()));
         item.put("createdAt", formatDateTime(row.getCreatedAt()));
         return item;
     }

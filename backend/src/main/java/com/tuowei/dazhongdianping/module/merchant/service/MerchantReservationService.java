@@ -173,13 +173,43 @@ public class MerchantReservationService {
     private Map<String, Object> timelineMap(ReservationLogRow row) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("actionType", row.getActionType());
+        result.put("actionText", actionText(row.getActionType()));
         result.put("operatorType", row.getOperatorType());
+        result.put("operatorText", operatorText(row.getOperatorType()));
         result.put("operatorId", row.getOperatorId());
         result.put("fromStatus", row.getFromStatus());
         result.put("toStatus", row.getToStatus());
-        result.put("remark", row.getRemark());
+        result.put("remark", row.getRemark() == null ? "" : row.getRemark());
         result.put("createdAt", row.getCreatedAt());
         return result;
+    }
+
+    private String actionText(Integer actionType) {
+        if (actionType == null) {
+            return "创建预订";
+        }
+        return switch (actionType) {
+            case 2 -> "商户确认";
+            case 3 -> "商户拒绝";
+            case 4 -> "用户取消";
+            case 5 -> "用户改期";
+            case 6 -> "商户改期";
+            case 7 -> "确认到店";
+            case 8 -> "标记爽约";
+            case 9 -> "到店提醒";
+            default -> "创建预订";
+        };
+    }
+
+    private String operatorText(Integer operatorType) {
+        if (operatorType == null) {
+            return "用户";
+        }
+        return switch (operatorType) {
+            case 2 -> "商户";
+            case 3 -> "系统";
+            default -> "用户";
+        };
     }
 
     private String statusText(int status) {

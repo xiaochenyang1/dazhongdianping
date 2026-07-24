@@ -18,6 +18,7 @@ import com.tuowei.dazhongdianping.module.message.model.response.ConversationResp
 import com.tuowei.dazhongdianping.module.message.model.response.MessageReportResponse;
 import com.tuowei.dazhongdianping.module.message.model.response.MessageResponse;
 import com.tuowei.dazhongdianping.module.message.model.response.ReadMessagesResponse;
+import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.notification.websocket.NotificationSessionRegistry;
 import java.time.LocalDateTime;
@@ -36,8 +37,11 @@ public class MessageService {
     private final MessageMapper mapper;
     private final NotificationSessionRegistry sessions;
     private final NotificationService notifications;
-    public MessageService(MessageMapper mapper, NotificationSessionRegistry sessions, NotificationService notifications) {
+    private final SensitiveWordFilterService sensitiveWordFilterService;
+    public MessageService(MessageMapper mapper, NotificationSessionRegistry sessions, NotificationService notifications,
+                          SensitiveWordFilterService sensitiveWordFilterService) {
         this.mapper = mapper; this.sessions = sessions; this.notifications = notifications;
+        this.sensitiveWordFilterService = sensitiveWordFilterService;
     }
 
     @Transactional
@@ -47,6 +51,12 @@ public class MessageService {
         if (senderId == receiverId) throw new IllegalArgumentException("不能给自己发送私信");
         requireAvailableUser(receiverId);
         if (mapper.countBlockEitherDirection(senderId, receiverId) > 0) throw new ConflictException("双方存在拉黑关系，无法发送私信");
+        // 私信跨区域，按 GLOBAL + 当前请求区域词库联合拦截
+        sensitiveWordFilterService.assertClean("GLOBAL", request.content());
+        var region = com.tuowei.dazhongdianping.common.region.RegionContext.getRegion();
+        if (region != null) {
+            sensitiveWordFilterService.assertClean(region.name(), request.content());
+        }
         long userA = Math.min(senderId, receiverId);
         long userB = Math.max(senderId, receiverId);
         Long conversationId = mapper.findConversation(userA, userB);

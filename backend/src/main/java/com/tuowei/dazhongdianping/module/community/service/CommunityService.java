@@ -25,6 +25,7 @@ import com.tuowei.dazhongdianping.module.community.model.response.PostCommentRes
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentReplyResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostRepostResponse;
+import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
 import com.tuowei.dazhongdianping.module.notification.service.MentionNotificationService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
@@ -52,11 +53,14 @@ public class CommunityService {
     private final MentionNotificationService mentionNotificationService;
     private final UserExpertCertificationService userExpertCertificationService;
 
+    private final SensitiveWordFilterService sensitiveWordFilterService;
+
     public CommunityService(CommunityMapper communityMapper, AdminAuditMapper adminAuditMapper,
                             CircleService circleService, CircleMapper circleMapper, TopicService topicService,
                             NotificationService notificationService,
                             MentionNotificationService mentionNotificationService,
-                            UserExpertCertificationService userExpertCertificationService) {
+                            UserExpertCertificationService userExpertCertificationService,
+                            SensitiveWordFilterService sensitiveWordFilterService) {
         this.communityMapper = communityMapper;
         this.adminAuditMapper = adminAuditMapper;
         this.circleService = circleService;
@@ -65,11 +69,13 @@ public class CommunityService {
         this.notificationService = notificationService;
         this.mentionNotificationService = mentionNotificationService;
         this.userExpertCertificationService = userExpertCertificationService;
+        this.sensitiveWordFilterService = sensitiveWordFilterService;
     }
 
     @Transactional
     public PostResponse create(PostSaveRequest request) {
         UserSession user = currentUser();
+        sensitiveWordFilterService.assertClean(region(), request.title(), request.content());
         PostRow row = new PostRow();
         if (request.circleId() != null) circleService.requirePostingMembership(request.circleId(), user.userId());
         row.setUserId(user.userId());
@@ -104,6 +110,7 @@ public class CommunityService {
         UserSession user = currentUser();
         PostRow row = communityMapper.selectOwnedPost(postId, user.userId(), region());
         if (row == null) throw new NotFoundException("帖子不存在");
+        sensitiveWordFilterService.assertClean(region(), request.title(), request.content());
         List<Long> oldTopicIds = topicService.topicIdsForPost(postId);
         row.setTitle(request.title().trim());
         row.setContent(request.content().trim());
@@ -236,6 +243,7 @@ public class CommunityService {
     public PostCommentResponse createComment(Long postId, PostCommentCreateRequest request) {
         UserSession user = currentUser();
         PostRow post = requirePublicPost(postId);
+        sensitiveWordFilterService.assertClean(post.getRegion(), request.content());
         PostCommentThreadTarget threadTarget = resolvePostCommentThread(postId, request.replyTo());
         PostCommentRow row = new PostCommentRow();
         row.setPostId(postId);

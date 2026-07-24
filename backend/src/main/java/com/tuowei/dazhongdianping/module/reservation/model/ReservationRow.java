@@ -1,1 +1,31 @@
-package com.tuowei.dazhongdianping.module.reservation.model;import java.time.*;import lombok.Data;@Data public class ReservationRow{private Long id;private String reservationNo;private Long userId;private Long shopId;private Long slotId;private String region;private LocalDateTime reserveTime;private Integer peopleCount;private String contactName;private String contactPhone;private String remark;private Integer status;private Integer rescheduleCount;private LocalDateTime createdAt;private String shopName;private String coverImage;private String address;private LocalTime startTime;private LocalTime endTime;private Integer confirmMode;private Integer cancelBeforeMinutes;}
+package com.tuowei.dazhongdianping.module.reservation.model;
+
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import lombok.Data;
+
+@Data
+public class ReservationRow {
+    private Long id;
+    private String reservationNo;
+    private Long userId;
+    private Long shopId;
+    private Long slotId;
+    private String region;
+    private LocalDateTime reserveTime;
+    private Integer peopleCount;
+    private String contactName;
+    private String contactPhone;
+    private String remark;
+    private Integer status;
+    private Integer rescheduleCount;
+    private Integer remindStatus;
+    private LocalDateTime createdAt;
+    private String shopName;
+    private String coverImage;
+    private String address;
+    private LocalTime startTime;
+    private LocalTime endTime;
+    private Integer confirmMode;
+    private Integer cancelBeforeMinutes;
+}

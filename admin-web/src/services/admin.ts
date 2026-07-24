@@ -13,6 +13,8 @@ import type {
   AdminBannerPayload,
   AdminHotWord,
   AdminHotWordPayload,
+  AdminSensitiveWord,
+  AdminSensitiveWordPayload,
   AdminOperationActivity,
   AdminOperationActivityItem,
   AdminOperationActivityItemPayload,
@@ -300,6 +302,26 @@ export function updateAdminHotWordStatus(hotWordId: number, enabled: boolean) {
 
 export function removeAdminHotWord(hotWordId: number) {
   return apiDelete<void>(`/api/admin/v1/search/hotwords/${hotWordId}`)
+}
+
+export function listAdminSensitiveWords() {
+  return apiGet<AdminSensitiveWord[]>('/api/admin/v1/operations/sensitive-words')
+}
+
+export function createAdminSensitiveWord(payload: AdminSensitiveWordPayload) {
+  return apiPost<AdminSensitiveWord>('/api/admin/v1/operations/sensitive-words', payload)
+}
+
+export function updateAdminSensitiveWord(wordId: number, payload: AdminSensitiveWordPayload) {
+  return apiPut<AdminSensitiveWord>(`/api/admin/v1/operations/sensitive-words/${wordId}`, payload)
+}
+
+export function updateAdminSensitiveWordStatus(wordId: number, enabled: boolean) {
+  return apiPut<AdminSensitiveWord>(`/api/admin/v1/operations/sensitive-words/${wordId}/status`, { enabled })
+}
+
+export function removeAdminSensitiveWord(wordId: number) {
+  return apiDelete<void>(`/api/admin/v1/operations/sensitive-words/${wordId}`)
 }
 
 export function listAdminOperationActivities(query?: AdminOperationActivityQuery) {

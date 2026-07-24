@@ -22,7 +22,7 @@ public class UserAuthInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String authorization = request.getHeader("Authorization");
         if (isPublicReviewReadRequest(request) || isPublicPostReadRequest(request)
-                || isPublicUserProfileReadRequest(request) || isPublicShopListRequest(request)
+                || isPublicUserProfileReadRequest(request) || isPublicShopReadRequest(request)
                 || isPublicCircleReadRequest(request) || isPublicTopicReadRequest(request)) {
             if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
                 UserSessionContext.set(publicAuthService.authenticate(authorization.substring(7)));
@@ -55,9 +55,12 @@ public class UserAuthInterceptor implements HandlerInterceptor {
                 || request.getRequestURI().startsWith("/api/c/v1/posts/"));
     }
 
-    private boolean isPublicShopListRequest(HttpServletRequest request) {
+    private boolean isPublicShopReadRequest(HttpServletRequest request) {
+        // 门店列表/详情/点评/相似推荐/预订时段均允许游客读；若带登录态则注入 session 以便写足迹等。
         return "GET".equalsIgnoreCase(request.getMethod())
-                && "/api/c/v1/shops".equals(request.getRequestURI());
+                && request.getRequestURI() != null
+                && (request.getRequestURI().equals("/api/c/v1/shops")
+                || request.getRequestURI().startsWith("/api/c/v1/shops/"));
     }
 
     private boolean isPublicCircleReadRequest(HttpServletRequest request) {

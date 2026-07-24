@@ -105,6 +105,18 @@ public interface ReservationMapper {
             @Param("status") Integer status
     );
 
+    List<ReservationRow> selectDueReminders(
+            @Param("now") LocalDateTime now,
+            @Param("windowEnd") LocalDateTime windowEnd,
+            @Param("limit") Integer limit
+    );
+
+    int markRemindStatus(
+            @Param("id") Long id,
+            @Param("expectedStatus") Integer expectedStatus,
+            @Param("nextStatus") Integer nextStatus
+    );
+
     void insertLog(ReservationLogRow row);
 
     List<ReservationLogRow> selectLogs(@Param("reservationId") Long reservationId);
