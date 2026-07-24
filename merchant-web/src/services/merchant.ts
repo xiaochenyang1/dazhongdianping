@@ -143,6 +143,81 @@ export interface MerchantDealPayload {
   rules?: string
   items: MerchantDealItem[]
 }
+export interface MerchantShopChangePhoto {
+  id?: number
+  imageUrl: string
+  photoType: number
+  sort: number
+}
+export interface MerchantShopChangeDish {
+  id?: number
+  name: string
+  price: number
+  recommendReason?: string
+  sort: number
+}
+export interface MerchantShopChange {
+  id: number
+  changeType: number
+  targetShopId: number
+  merchantId?: number
+  merchantName?: string
+  region?: string
+  categoryId: number
+  cityId: number
+  areaId: number
+  name: string
+  coverUrl: string
+  phone?: string
+  pricePerCapita: number
+  currency: string
+  address: string
+  latitude?: number | null
+  longitude?: number | null
+  businessHours: string
+  summary: string
+  openNow: boolean
+  tags?: string[]
+  status: number
+  statusText?: string
+  rejectReason?: string
+  submittedAt?: string
+  auditedAt?: string
+  photos?: MerchantShopChangePhoto[]
+  dishes?: MerchantShopChangeDish[]
+}
+export interface MerchantShopChangePayload {
+  categoryId: number
+  cityId: number
+  areaId: number
+  name: string
+  coverUrl: string
+  phone?: string
+  pricePerCapita: number
+  currency: string
+  address: string
+  latitude?: number | null
+  longitude?: number | null
+  businessHours: string
+  summary: string
+  openNow: boolean
+  tags: string[]
+}
+export interface GeoCategoryNode {
+  id: number
+  name: string
+  children?: GeoCategoryNode[]
+}
+export interface GeoCity {
+  id: number
+  name: string
+  code?: string
+}
+export interface GeoArea {
+  id: number
+  name: string
+  cityId?: number
+}
 
 export function loginMerchant(payload: { account: string; password: string }) { return apiPost<MerchantLogin>('/api/b/v1/auth/login', payload) }
 export function registerMerchant(payload: MerchantRegistrationPayload) { return apiPost<MerchantRegistrationResult>('/api/b/v1/auth/register', payload) }
@@ -152,6 +227,25 @@ export function fetchAccount() { return apiGet<MerchantAccount>('/api/b/v1/accou
 export function fetchRoles() { return apiGet<{ list: MerchantRole[] }>('/api/b/v1/roles') }
 export function fetchDashboard(params?: { shopId?: number; dateFrom?: string; dateTo?: string }) { return apiGet<Record<string, unknown>>('/api/b/v1/dashboard', params) }
 export function fetchShops(params?: object) { return apiGet<PageResult<MerchantShopOption & Record<string, unknown>>>('/api/b/v1/shops', params) }
+export function fetchCategories() { return apiGet<GeoCategoryNode[]>('/api/c/v1/categories') }
+export function fetchCities() { return apiGet<GeoCity[]>('/api/c/v1/cities') }
+export function fetchAreas(cityId: number) { return apiGet<GeoArea[]>(`/api/c/v1/cities/${cityId}/areas`) }
+export function fetchShopChanges(params?: object) { return apiGet<PageResult<MerchantShopChange>>('/api/b/v1/shop-changes', params) }
+export function fetchShopChange(id: number) { return apiGet<MerchantShopChange>(`/api/b/v1/shop-changes/${id}`) }
+export function createNewShopDraft() { return apiPost<MerchantShopChange>('/api/b/v1/shops/change-drafts') }
+export function createUpdateShopDraft(shopId: number) { return apiPost<MerchantShopChange>(`/api/b/v1/shops/${shopId}/change-drafts`) }
+export function saveShopChange(id: number, payload: MerchantShopChangePayload) {
+  return apiPut<MerchantShopChange>(`/api/b/v1/shop-changes/${id}`, payload)
+}
+export function saveShopChangePhotos(id: number, photos: MerchantShopChangePhoto[]) {
+  return apiPut<MerchantShopChange>(`/api/b/v1/shop-changes/${id}/photos`, { photos })
+}
+export function saveShopChangeDishes(id: number, dishes: MerchantShopChangeDish[]) {
+  return apiPut<MerchantShopChange>(`/api/b/v1/shop-changes/${id}/dishes`, { dishes })
+}
+export function submitShopChange(id: number) {
+  return apiPost<MerchantShopChange>(`/api/b/v1/shop-changes/${id}/submit`)
+}
 export function fetchStaffs(params?: { page?: number; pageSize?: number }) { return apiGet<PageResult<MerchantStaff>>('/api/b/v1/staffs', params) }
 export function createStaff(payload: MerchantStaffPayload & { account: string; password: string }) { return apiPost<MerchantStaff>('/api/b/v1/staffs', payload) }
 export function updateStaff(id: number, payload: MerchantStaffPayload) { return apiPut<MerchantStaff>(`/api/b/v1/staffs/${id}`, payload) }

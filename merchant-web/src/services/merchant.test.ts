@@ -11,12 +11,20 @@ vi.mock('@/lib/http', () => httpMocks)
 import {
   auditRefund,
   createDeal,
+  createNewShopDraft,
   createStaff,
+  createUpdateShopDraft,
   fetchDeal,
   fetchSettlementStatus,
+  fetchShopChange,
+  fetchShopChanges,
   fetchStaffs,
   registerMerchant,
+  saveShopChange,
+  saveShopChangeDishes,
+  saveShopChangePhotos,
   submitSettlement,
+  submitShopChange,
   updateDeal,
   updateStaffStatus,
   verifyCoupon,
@@ -110,5 +118,45 @@ describe('merchant identity services', () => {
     expect(httpMocks.apiPost).toHaveBeenCalledWith('/api/b/v1/deals', payload)
     expect(httpMocks.apiPut).toHaveBeenCalledWith('/api/b/v1/deals/501', payload)
     expect(httpMocks.apiGet).toHaveBeenCalledWith('/api/b/v1/deals/501')
+  })
+
+  it('uses the backend shop-change draft contracts', async () => {
+    const payload = {
+      categoryId: 201,
+      cityId: 101,
+      areaId: 1011,
+      name: 'Maison Sichuan Draft',
+      coverUrl: 'https://files.example/new-cover.jpg',
+      phone: '+33142345678',
+      pricePerCapita: 42,
+      currency: 'EUR',
+      address: '18 Rue du Temple, Paris',
+      latitude: 48.8566,
+      longitude: 2.3522,
+      businessHours: '11:30-22:30',
+      summary: '新版门店资料',
+      openNow: true,
+      tags: ['Chinese', 'Spicy'],
+    }
+    const photos = [{ imageUrl: 'https://files.example/new-cover.jpg', photoType: 1, sort: 1 }]
+    const dishes = [{ name: '水煮鱼', price: 28, recommendReason: '招牌', sort: 1 }]
+
+    await createNewShopDraft()
+    await createUpdateShopDraft(20001)
+    await fetchShopChanges({ page: 1, pageSize: 20 })
+    await fetchShopChange(9001)
+    await saveShopChange(9001, payload)
+    await saveShopChangePhotos(9001, photos)
+    await saveShopChangeDishes(9001, dishes)
+    await submitShopChange(9001)
+
+    expect(httpMocks.apiPost).toHaveBeenCalledWith('/api/b/v1/shops/change-drafts')
+    expect(httpMocks.apiPost).toHaveBeenCalledWith('/api/b/v1/shops/20001/change-drafts')
+    expect(httpMocks.apiGet).toHaveBeenCalledWith('/api/b/v1/shop-changes', { page: 1, pageSize: 20 })
+    expect(httpMocks.apiGet).toHaveBeenCalledWith('/api/b/v1/shop-changes/9001')
+    expect(httpMocks.apiPut).toHaveBeenCalledWith('/api/b/v1/shop-changes/9001', payload)
+    expect(httpMocks.apiPut).toHaveBeenCalledWith('/api/b/v1/shop-changes/9001/photos', { photos })
+    expect(httpMocks.apiPut).toHaveBeenCalledWith('/api/b/v1/shop-changes/9001/dishes', { dishes })
+    expect(httpMocks.apiPost).toHaveBeenCalledWith('/api/b/v1/shop-changes/9001/submit')
   })
 })
