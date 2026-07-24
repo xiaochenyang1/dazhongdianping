@@ -20,6 +20,10 @@ const canReadImportBatches = computed(() => state.permissions.includes('data:imp
 const canImportShops = computed(() => state.permissions.includes('data:shop:import'))
 const canReadOrders = computed(() => state.permissions.includes('data:order:read'))
 const canReadUsers = computed(() => state.permissions.includes('system:user:read'))
+const canReadDeals = computed(() => state.permissions.includes('audit:deal:read'))
+const canReadShopChanges = computed(() => state.permissions.includes('audit:shop_change:read'))
+const canReadReviews = computed(() => state.permissions.includes('audit:review:read'))
+const canReadPosts = computed(() => state.permissions.includes('audit:post:read'))
 
 const metrics = computed(() => {
   const items = [] as Array<{ label: string; value: number; note: string }>
@@ -66,6 +70,55 @@ const metrics = computed(() => {
       label: 'C 端用户数',
       value: overview.value.userCount,
       note: '不含已注销匿名化用户',
+    })
+  }
+  return items
+})
+
+const quickLinks = computed(() => {
+  const items = [] as Array<{ to: string; label: string; note: string; value?: number }>
+  if (canReadDeals.value) {
+    const count = overview.value?.pendingAuditBreakdown.find((item) => item.bizType === 2)?.count
+    items.push({
+      to: '/audit/deals',
+      label: '待审团购',
+      note: '审核团购创建与重提',
+      value: count,
+    })
+  }
+  if (canReadShopChanges.value) {
+    const count = overview.value?.pendingAuditBreakdown.find((item) => item.bizType === 5)?.count
+    items.push({
+      to: '/audit/shop-changes',
+      label: '待审门店草稿',
+      note: '审核门店新建/修改快照',
+      value: count,
+    })
+  }
+  if (canReadReviews.value) {
+    const count = overview.value?.pendingAuditBreakdown.find((item) => item.bizType === 3)?.count
+    items.push({
+      to: '/audit/reviews',
+      label: '待审点评',
+      note: '处理用户点评审核',
+      value: count,
+    })
+  }
+  if (canReadPosts.value) {
+    const count = overview.value?.pendingAuditBreakdown.find((item) => item.bizType === 4)?.count
+    items.push({
+      to: '/audit/posts',
+      label: '待审帖子',
+      note: '处理社区内容审核',
+      value: count,
+    })
+  }
+  if (canReadOrders.value) {
+    items.push({
+      to: '/data/orders',
+      label: '待处理退款',
+      note: '进入订单退款页继续处理',
+      value: overview.value?.pendingRefundCount,
     })
   }
   return items
@@ -165,6 +218,28 @@ watch(
         <span>{{ metric.note }}</span>
       </article>
     </div>
+
+    <section v-if="quickLinks.length" class="content-card" style="margin-top: 18px">
+      <div class="section-headline">
+        <div>
+          <p class="eyebrow">快捷入口</p>
+          <h2>有待办就直接跳，别在菜单里翻半天。</h2>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <RouterLink
+          v-for="link in quickLinks"
+          :key="link.to"
+          :to="link.to"
+          class="stat-card"
+          data-testid="dashboard-quick-link"
+        >
+          <p>{{ link.label }}</p>
+          <strong>{{ link.value ?? 0 }}</strong>
+          <span>{{ link.note }}</span>
+        </RouterLink>
+      </div>
+    </section>
 
     <div class="two-column-layout">
       <section v-if="canReadShops" class="content-card">

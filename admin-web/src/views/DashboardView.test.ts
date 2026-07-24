@@ -90,6 +90,8 @@ describe('DashboardView', () => {
       'data:shop:import',
       'data:order:read',
       'system:user:read',
+      'audit:deal:read',
+      'audit:shop_change:read',
     ]
     mocks.listShops.mockResolvedValue({ list: [], total: 3 })
     mocks.listImportBatches.mockResolvedValue({ list: [], total: 2 })
@@ -101,7 +103,10 @@ describe('DashboardView', () => {
       pendingRefundCount: 1,
       pendingAuditTaskCount: 4,
       userCount: 20,
-      pendingAuditBreakdown: [{ bizType: 2, label: '团购审核', count: 4 }],
+      pendingAuditBreakdown: [
+        { bizType: 2, label: '团购审核', count: 4 },
+        { bizType: 5, label: '门店草稿审核', count: 2 },
+      ],
     })
 
     const { app, host } = mount()
@@ -116,8 +121,11 @@ describe('DashboardView', () => {
     expect(host.textContent).toContain('待处理退款')
     expect(host.textContent).toContain('待审任务')
     expect(host.textContent).toContain('团购审核')
+    expect(host.textContent).toContain('待审团购')
+    expect(host.textContent).toContain('待审门店草稿')
     expect(host.textContent).toContain('去管门店')
     expect(host.textContent).toContain('去做导入')
+    expect(host.querySelectorAll('[data-testid="dashboard-quick-link"]').length).toBeGreaterThanOrEqual(3)
 
     app.unmount()
   })
