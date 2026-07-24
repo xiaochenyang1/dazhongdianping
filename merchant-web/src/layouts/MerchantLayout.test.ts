@@ -34,6 +34,7 @@ describe('MerchantLayout', () => {
   it('only exposes staff management with staff:manage permission', async () => {
     const without = await render(['coupon:verify'])
     expect(without.host.textContent).not.toContain('员工管理')
+    expect(without.host.textContent).toContain('券码核销')
     without.app.unmount()
 
     const owner = await render(['staff:manage'])
@@ -42,12 +43,12 @@ describe('MerchantLayout', () => {
   })
 
   it('filters navigation by read permissions and passes permissions to the routed view', async () => {
-    const { app, host } = await render(['shop:view', 'reservation:view', 'review:reply'])
+    const { app, host } = await render(['shop:view', 'reservation:view', 'review:reply', 'coupon:verify'])
     const paths = [...host.querySelectorAll('a')].map((link) => link.getAttribute('data-to'))
 
-    expect(paths).toEqual(['/shops', '/reservations', '/reviews'])
+    expect(paths).toEqual(['/shops', '/reservations', '/coupons', '/reviews'])
     expect(host.querySelector('[data-testid="router-view"]')?.textContent)
-      .toBe('shop:view,reservation:view,review:reply')
+      .toBe('shop:view,reservation:view,review:reply,coupon:verify')
     app.unmount()
   })
 })

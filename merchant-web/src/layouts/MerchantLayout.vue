@@ -13,6 +13,7 @@ const baseLinks = [
   { path: '/reservations', label: '预订处理', permission: 'reservation:view' },
   { path: '/deals', label: '团购管理', permission: 'deal:edit' },
   { path: '/orders', label: '订单退款', permission: 'order:view' },
+  { path: '/coupons', label: '券码核销', permission: 'coupon:verify' },
   { path: '/reviews', label: '点评经营', permission: 'shop:view' },
   { path: '/staffs', label: '员工管理', permission: 'staff:manage' },
 ]

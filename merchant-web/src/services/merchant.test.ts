@@ -16,6 +16,7 @@ import {
   registerMerchant,
   submitSettlement,
   updateStaffStatus,
+  verifyCoupon,
 } from './merchant'
 
 describe('merchant identity services', () => {
@@ -75,5 +76,11 @@ describe('merchant identity services', () => {
       decision: 'approve',
       reason: '订单与退款申请已核对',
     })
+  })
+
+  it('uses the backend coupon verify contract', async () => {
+    await verifyCoupon(' VERIFYME001 ')
+
+    expect(httpMocks.apiPost).toHaveBeenCalledWith('/api/b/v1/coupons/VERIFYME001/verify')
   })
 })

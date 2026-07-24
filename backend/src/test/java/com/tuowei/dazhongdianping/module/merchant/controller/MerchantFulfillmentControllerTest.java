@@ -64,7 +64,9 @@ class MerchantFulfillmentControllerTest {
                         .header("Authorization", bearer(merchant))
                         .header("X-Region", "EU"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value(2));
+                .andExpect(jsonPath("$.data.status").value(2))
+                .andExpect(jsonPath("$.data.statusText").value("已使用"))
+                .andExpect(jsonPath("$.data.code").value("VERIFYME001"));
     }
 
     @Test

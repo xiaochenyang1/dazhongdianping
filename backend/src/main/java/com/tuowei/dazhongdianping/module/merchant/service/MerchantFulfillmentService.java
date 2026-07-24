@@ -162,10 +162,23 @@ public class MerchantFulfillmentService {
         result.put("shopId", row.getShopId());
         result.put("shopName", row.getShopName());
         result.put("status", row.getStatus());
+        result.put("statusText", couponStatusText(row.getStatus()));
         result.put("verifyAt", row.getVerifyAt());
         result.put("verifyBy", row.getVerifyBy());
         result.put("expireAt", row.getExpireAt());
         return result;
+    }
+
+    private String couponStatusText(Integer status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case 2 -> "已使用";
+            case 3 -> "已过期";
+            case 4 -> "已退款";
+            default -> "待使用";
+        };
     }
 
     private String reservationStatusText(int status) {

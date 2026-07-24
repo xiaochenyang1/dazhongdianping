@@ -88,6 +88,19 @@ export interface MerchantReservation {
   canConfirm: boolean
   canReject: boolean
 }
+export interface MerchantCoupon {
+  id: number
+  code: string
+  dealId: number
+  dealTitle: string
+  shopId: number
+  shopName: string
+  status: number
+  statusText?: string
+  verifyAt?: string
+  verifyBy?: number
+  expireAt?: string
+}
 
 export function loginMerchant(payload: { account: string; password: string }) { return apiPost<MerchantLogin>('/api/b/v1/auth/login', payload) }
 export function registerMerchant(payload: MerchantRegistrationPayload) { return apiPost<MerchantRegistrationResult>('/api/b/v1/auth/register', payload) }
@@ -109,6 +122,10 @@ export function updateDealStatus(id: number, status: number) { return apiPut<Rec
 export function fetchOrders(params?: object) { return apiGet<PageResult<MerchantOrder>>('/api/b/v1/orders', params) }
 export function auditRefund(id: number, decision: 'approve' | 'reject', reason: string) {
   return apiPost<Record<string, unknown>>(`/api/b/v1/orders/${id}/refund-audit`, { decision, reason })
+}
+export function verifyCoupon(code: string) {
+  const normalized = code.trim()
+  return apiPost<MerchantCoupon>(`/api/b/v1/coupons/${encodeURIComponent(normalized)}/verify`)
 }
 export function fetchReviews(params?: object) { return apiGet<PageResult<MerchantReview>>('/api/b/v1/reviews', params) }
 export function saveReply(id: number, content: string) { return apiPut<Record<string, unknown>>(`/api/b/v1/reviews/${id}/reply`, { content }) }

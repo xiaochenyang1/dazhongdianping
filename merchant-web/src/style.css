@@ -63,7 +63,13 @@ p { text-wrap: pretty; }
 .refund-audit input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .muted { color: var(--muted); }
 .error { color: var(--danger); }
+.success-text { color: var(--success); }
 .feedback { color: var(--muted); text-align: center; }
+.verify-card, .result-card { margin-bottom: 18px; }
+.verify-form { display: grid; gap: 14px; max-width: 520px; }
+.verify-form button { justify-self: start; }
+.result-card h3 { margin: 6px 0 12px; }
+.result-card p { margin: 6px 0; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 label { display: grid; gap: 7px; color: #383d42; font-weight: 650; }
 

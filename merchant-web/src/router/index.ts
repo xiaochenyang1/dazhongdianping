@@ -17,6 +17,7 @@ const router = createRouter({
         { path: 'reservations', component: () => import('@/views/ReservationsView.vue'), meta: { requiresAuth: true, title: '预订处理' } },
         { path: 'deals', component: () => import('@/views/DealsView.vue'), meta: { requiresAuth: true, title: '团购管理' } },
         { path: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { requiresAuth: true, title: '订单退款' } },
+        { path: 'coupons', component: () => import('@/views/CouponsView.vue'), meta: { requiresAuth: true, title: '券码核销' } },
       { path: 'reviews', component: () => import('@/views/ReviewsView.vue'), meta: { requiresAuth: true, title: '点评经营' } },
       { path: 'staffs', component: () => import('@/views/StaffsView.vue'), meta: { requiresAuth: true, title: '员工管理' } },
       ],
