@@ -119,6 +119,16 @@ const router = createRouter({
           meta: { requiresAuth: true, title: '商户资质审核', requiredPermission: 'audit:merchant_application:read' },
         },
         {
+          path: 'audit/shop-changes',
+          name: 'audit-shop-changes',
+          component: () => import('@/views/ShopChangeAuditView.vue'),
+          meta: {
+            requiresAuth: true,
+            title: '门店草稿审核',
+            requiredPermission: 'audit:shop_change:read',
+          },
+        },
+        {
           path: 'data/import',
           name: 'shop-import',
           component: () => import('@/views/ImportView.vue'),
