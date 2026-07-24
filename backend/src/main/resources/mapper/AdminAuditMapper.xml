@@ -72,6 +72,23 @@
         LIMIT #{pageSize} OFFSET #{offset}
     </select>
 
+    <sql id="auditTaskJoins">
+        LEFT JOIN review r ON r.id = t.biz_id AND t.biz_type = 3
+        LEFT JOIN post p ON p.id = t.biz_id AND t.biz_type = 4
+        LEFT JOIN deal d ON d.id = t.biz_id AND t.biz_type = 2
+        LEFT JOIN merchant_shop_change sc ON sc.id = t.biz_id AND t.biz_type = 5
+        LEFT JOIN merchant_review_appeal ra ON ra.id = t.biz_id AND t.biz_type = 6
+        LEFT JOIN user_expert_certification uc ON uc.id = t.biz_id AND t.biz_type = 7
+        LEFT JOIN app_user au ON au.id = uc.user_id AND t.biz_type = 7
+        LEFT JOIN user_ban_appeal ba ON ba.id = t.biz_id AND t.biz_type = 8
+        LEFT JOIN app_user bau ON bau.id = ba.user_id AND t.biz_type = 8
+        LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
+        LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
+        LEFT JOIN merchant m ON m.id = d.merchant_id
+        LEFT JOIN merchant sm ON sm.id = sc.merchant_id
+        LEFT JOIN merchant ram ON ram.id = ra.merchant_id
+    </sql>
+
     <sql id="auditWhere">
         WHERE 1 = 1
         <if test="region != null and region != ''">
@@ -96,11 +113,29 @@
         <if test="status != null">
             AND t.status = #{status}
         </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                CAST(t.biz_id AS CHAR) LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(m.company_name, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(sm.company_name, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(ram.company_name, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(s.name, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(sc.name, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(d.title, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(sc.summary, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(p.content, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(r.content, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(au.nickname, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(bau.nickname, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(ba.account, '') LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
     </sql>
 
     <select id="countAuditTasks" resultType="long">
         SELECT COUNT(1)
         FROM audit_task t
+        <include refid="auditTaskJoins"/>
         <include refid="auditWhere"/>
     </select>
 
@@ -120,20 +155,7 @@
                t.created_at,
                t.updated_at
         FROM audit_task t
-        LEFT JOIN review r ON r.id = t.biz_id AND t.biz_type = 3
-        LEFT JOIN post p ON p.id = t.biz_id AND t.biz_type = 4
-        LEFT JOIN deal d ON d.id = t.biz_id AND t.biz_type = 2
-        LEFT JOIN merchant_shop_change sc ON sc.id = t.biz_id AND t.biz_type = 5
-        LEFT JOIN merchant_review_appeal ra ON ra.id = t.biz_id AND t.biz_type = 6
-        LEFT JOIN user_expert_certification uc ON uc.id = t.biz_id AND t.biz_type = 7
-        LEFT JOIN app_user au ON au.id = uc.user_id AND t.biz_type = 7
-        LEFT JOIN user_ban_appeal ba ON ba.id = t.biz_id AND t.biz_type = 8
-        LEFT JOIN app_user bau ON bau.id = ba.user_id AND t.biz_type = 8
-        LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
-        LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
-        LEFT JOIN merchant m ON m.id = d.merchant_id
-        LEFT JOIN merchant sm ON sm.id = sc.merchant_id
-        LEFT JOIN merchant ram ON ram.id = ra.merchant_id
+        <include refid="auditTaskJoins"/>
         <include refid="auditWhere"/>
         ORDER BY t.id DESC
         LIMIT #{pageSize} OFFSET #{offset}

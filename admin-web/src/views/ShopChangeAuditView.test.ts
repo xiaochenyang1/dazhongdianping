@@ -91,6 +91,7 @@ describe('ShopChangeAuditView', () => {
       region: 'EU',
       bizType: 5,
       status: 0,
+      keyword: undefined,
       page: 1,
       pageSize: 10,
     })
@@ -99,6 +100,25 @@ describe('ShopChangeAuditView', () => {
     expect(host.textContent).toContain('巴黎川味餐饮')
     expect(host.textContent).toContain('水煮鱼')
     expect(host.textContent).toContain('18 Rue du Temple, Paris')
+
+    const keyword = host.querySelector<HTMLInputElement>('[data-testid="shop-change-keyword-filter"]')
+    if (!keyword) throw new Error('找不到关键词输入框')
+    keyword.value = 'Maison'
+    keyword.dispatchEvent(new Event('input'))
+    const applyButton = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('应用筛选'),
+    )
+    if (!applyButton) throw new Error('找不到应用筛选按钮')
+    applyButton.click()
+    await flushView()
+    expect(adminMocks.listAuditTasks).toHaveBeenLastCalledWith({
+      region: 'EU',
+      bizType: 5,
+      status: 0,
+      keyword: 'Maison',
+      page: 1,
+      pageSize: 10,
+    })
 
     const passButton = [...host.querySelectorAll('button')].find((button) =>
       button.textContent?.includes('通过门店草稿'),

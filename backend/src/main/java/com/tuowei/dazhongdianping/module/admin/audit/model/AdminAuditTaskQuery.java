@@ -12,6 +12,7 @@ public class AdminAuditTaskQuery {
     private String region;
     private Integer bizType;
     private Integer status;
+    private String keyword;
     private List<Integer> allowedBizTypes;
 
     @Min(value = 1, message = "page 最小为 1")
@@ -30,6 +31,14 @@ public class AdminAuditTaskQuery {
             region = null;
         } else {
             region = region.trim().toUpperCase();
+        }
+        if (!StringUtils.hasText(keyword)) {
+            keyword = null;
+        } else {
+            keyword = keyword.trim();
+            if (keyword.length() > 64) {
+                keyword = keyword.substring(0, 64);
+            }
         }
         if (page == null || page < 1) {
             page = 1;

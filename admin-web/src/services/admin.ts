@@ -66,6 +66,7 @@ export interface AdminAuditTaskQuery {
   region?: Region
   bizType?: number
   status?: number
+  keyword?: string
   page?: number
   pageSize?: number
 }

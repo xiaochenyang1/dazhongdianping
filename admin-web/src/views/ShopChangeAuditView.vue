@@ -15,7 +15,7 @@ const selectedTaskId = ref<number | null>(null)
 const shopChangeDetail = ref<AdminShopChangeDetail | null>(null)
 const approveRemark = ref('')
 const rejectReason = ref('')
-const filters = reactive({ status: '0', page: 1, pageSize: 10 })
+const filters = reactive({ status: '0', keyword: '', page: 1, pageSize: 10 })
 
 const selectedTask = computed(
   () =>
@@ -45,6 +45,7 @@ async function loadTasks() {
       region: state.region,
       bizType: 5,
       status: filters.status === '' ? undefined : Number(filters.status),
+      keyword: filters.keyword.trim() || undefined,
       page: filters.page,
       pageSize: filters.pageSize,
     })
@@ -173,6 +174,15 @@ watch(
               <option value="1">通过</option>
               <option value="2">驳回</option>
             </select>
+          </label>
+          <label class="field">
+            <span>关键词</span>
+            <input
+              v-model="filters.keyword"
+              name="shop-change-keyword-filter"
+              data-testid="shop-change-keyword-filter"
+              placeholder="商户名 / 门店名 / 摘要"
+            />
           </label>
           <div class="toolbar-actions">
             <button type="button" class="primary-button" @click="applyFilters">应用筛选</button>
