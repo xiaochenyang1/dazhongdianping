@@ -247,6 +247,13 @@ onMounted(load)
 
     <article v-if="formOpen" class="card deal-form-card" data-testid="deal-form">
       <h3>{{ editingId == null ? '新建团购' : `编辑团购 #${editingId}` }}</h3>
+      <p
+        v-if="editingId != null && items.find((item) => item.id === editingId)?.auditStatus === 2"
+        class="error"
+        data-testid="deal-form-reject-reason"
+      >
+        最近驳回原因：{{ items.find((item) => item.id === editingId)?.rejectReason || '未填写' }}。修改后保存会重新提交审核。
+      </p>
       <form class="form-grid deal-form" @submit.prevent="save">
         <label>
           <span>门店</span>
@@ -342,7 +349,16 @@ onMounted(load)
             </td>
             <td>{{ item.shopName || `shop:${item.shopId}` }}</td>
             <td>{{ item.price }} {{ item.currency }}</td>
-            <td>{{ item.auditStatusText || item.auditStatus }}</td>
+            <td>
+              <div>{{ item.auditStatusText || item.auditStatus }}</div>
+              <span
+                v-if="item.auditStatus === 2 && item.rejectReason"
+                class="table-subtext"
+                :data-testid="`deal-reject-reason-${item.id}`"
+              >
+                驳回原因：{{ item.rejectReason }}
+              </span>
+            </td>
             <td>
               <button
                 v-if="canEdit"

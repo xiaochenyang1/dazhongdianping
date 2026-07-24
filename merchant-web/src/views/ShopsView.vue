@@ -482,6 +482,13 @@ onMounted(load)
             {{ activeDraft.changeType === 1 ? '新门店草稿' : `修改门店 #${activeDraft.targetShopId}` }}
             · {{ activeDraft.statusText || activeDraft.status }}
           </p>
+          <p
+            v-if="activeDraft.status === 3 && activeDraft.rejectReason"
+            class="error"
+            data-testid="shop-draft-reject-reason"
+          >
+            驳回原因：{{ activeDraft.rejectReason }}。修改后可重新保存并提交审核。
+          </p>
         </div>
         <button type="button" class="secondary-action" @click="editorOpen = false">收起编辑器</button>
       </div>

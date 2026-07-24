@@ -125,6 +125,7 @@ export interface MerchantDeal {
   rules?: string
   auditStatus: number
   auditStatusText?: string
+  rejectReason?: string
   status: number
   statusText?: string
   items?: MerchantDealItem[]

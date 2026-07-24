@@ -55,8 +55,9 @@ const draftDetail = {
   summary: '新版门店资料',
   openNow: true,
   tags: ['Chinese', 'Spicy'],
-  status: 0,
-  statusText: '草稿',
+  status: 3,
+  statusText: '已驳回',
+  rejectReason: '封面与营业执照主体不一致',
   photos: [{ imageUrl: 'https://files.example/new-cover.jpg', photoType: 1, sort: 1 }],
   dishes: [{ name: '水煮鱼', price: 28, recommendReason: '招牌', sort: 1 }],
 }
@@ -72,7 +73,15 @@ describe('ShopsView', () => {
       hasMore: false,
     })
     mocks.fetchShopChanges.mockResolvedValue({
-      list: [{ id: 9001, changeType: 2, targetShopId: 20001, name: 'Maison Sichuan Draft', status: 0, statusText: '草稿' }],
+      list: [{
+        id: 9001,
+        changeType: 2,
+        targetShopId: 20001,
+        name: 'Maison Sichuan Draft',
+        status: 3,
+        statusText: '已驳回',
+        rejectReason: '封面与营业执照主体不一致',
+      }],
       total: 1,
       page: 1,
       pageSize: 50,
@@ -131,11 +140,14 @@ describe('ShopsView', () => {
     const { app, host } = mount()
     await flush()
 
+    expect(host.textContent).toContain('驳回：封面与营业执照主体不一致')
+
     host.querySelector<HTMLButtonElement>('[data-testid="shop-draft-open-9001"]')?.click()
     await flush()
 
     expect(mocks.fetchShopChange).toHaveBeenCalledWith(9001)
     expect(host.querySelector('[data-testid="shop-draft-editor"]')).not.toBeNull()
+    expect(host.textContent).toContain('驳回原因：封面与营业执照主体不一致')
     app.unmount()
   })
 })

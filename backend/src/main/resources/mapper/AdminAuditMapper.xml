@@ -233,6 +233,7 @@
     <update id="updateDealAuditDecision">
         UPDATE deal
         SET audit_status=#{auditStatus},
+            reject_reason=#{rejectReason},
             status=0,
             updated_at=CURRENT_TIMESTAMP
         WHERE id=#{dealId}

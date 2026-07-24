@@ -288,6 +288,7 @@ public class MerchantTradeService {
         result.put("rules", row.getRules());
         result.put("auditStatus", row.getAuditStatus());
         result.put("auditStatusText", auditStatusText(row.getAuditStatus()));
+        result.put("rejectReason", row.getRejectReason() == null ? "" : row.getRejectReason());
         result.put("status", row.getStatus());
         result.put("statusText", statusText(row.getStatus()));
         if (includeItems) {

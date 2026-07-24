@@ -23,6 +23,7 @@ public class DealRow {
     private LocalDate validEnd;
     private String rules;
     private Integer auditStatus;
+    private String rejectReason;
     private Integer status;
     private String shopName;
 }

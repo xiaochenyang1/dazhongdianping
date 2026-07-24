@@ -86,6 +86,41 @@ class MerchantDealControllerTest {
     }
 
     @Test
+    void shouldExposeDealRejectReasonAfterAdminRejection() throws Exception {
+        String merchantToken = merchantToken();
+        long dealId = createDeal(merchantToken, 20001L, "待驳回套餐");
+        Long taskId = jdbc.queryForObject(
+                "SELECT id FROM audit_task WHERE biz_type=2 AND biz_id=? AND status=0",
+                Long.class,
+                dealId
+        );
+
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/reject", taskId)
+                        .header("Authorization", bearer(adminToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"价格与规则描述不一致\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value(2));
+
+        mockMvc.perform(get("/api/b/v1/deals/{id}", dealId)
+                        .header("Authorization", bearer(merchantToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.auditStatus").value(2))
+                .andExpect(jsonPath("$.data.auditStatusText").value("已驳回"))
+                .andExpect(jsonPath("$.data.rejectReason").value("价格与规则描述不一致"));
+
+        mockMvc.perform(get("/api/b/v1/deals")
+                        .header("Authorization", bearer(merchantToken))
+                        .header("X-Region", "EU")
+                        .param("shopId", "20001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].id").value(dealId))
+                .andExpect(jsonPath("$.data.list[0].rejectReason").value("价格与规则描述不一致"));
+    }
+
+    @Test
     void shouldEnforceScopedShopAndResubmitAuditAfterEditing() throws Exception {
         String ownerToken = merchantToken();
         String staffAccount = "deal-manager-" + UUID.randomUUID() + "@example.com";

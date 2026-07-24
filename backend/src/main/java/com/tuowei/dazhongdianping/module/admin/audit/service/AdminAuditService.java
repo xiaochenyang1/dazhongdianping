@@ -229,7 +229,7 @@ public class AdminAuditService {
         if (adminAuditMapper.updateAuditTaskDecision(task.getId(), 1, currentAdmin().adminId(), remark) == 0) {
             throw new IllegalArgumentException("审核任务状态已变更");
         }
-        if (adminAuditMapper.updateDealAuditDecision(task.getBizId(), currentRegion().name(), 1) == 0) {
+        if (adminAuditMapper.updateDealAuditDecision(task.getBizId(), currentRegion().name(), 1, "") == 0) {
             throw new NotFoundException("团购不存在或已重新提交");
         }
         adminAuditMapper.insertAuditLog(
@@ -510,7 +510,7 @@ public class AdminAuditService {
         if (adminAuditMapper.updateAuditTaskDecision(task.getId(), 2, currentAdmin().adminId(), reason) == 0) {
             throw new IllegalArgumentException("审核任务状态已变更");
         }
-        if (adminAuditMapper.updateDealAuditDecision(task.getBizId(), currentRegion().name(), 2) == 0) {
+        if (adminAuditMapper.updateDealAuditDecision(task.getBizId(), currentRegion().name(), 2, reason) == 0) {
             throw new NotFoundException("团购不存在或已重新提交");
         }
         adminAuditMapper.insertAuditLog(

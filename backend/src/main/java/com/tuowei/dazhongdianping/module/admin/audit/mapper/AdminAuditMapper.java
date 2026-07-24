@@ -35,7 +35,8 @@ public interface AdminAuditMapper {
 
     int updateDealAuditDecision(@Param("dealId") Long dealId,
                                 @Param("region") String region,
-                                @Param("auditStatus") Integer auditStatus);
+                                @Param("auditStatus") Integer auditStatus,
+                                @Param("rejectReason") String rejectReason);
 
     int updatePostAuditDecision(@Param("postId") Long postId,
                                 @Param("region") String region,

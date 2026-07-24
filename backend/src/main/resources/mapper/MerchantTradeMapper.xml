@@ -4,7 +4,7 @@
 
     <sql id="dealColumns">
         d.id,d.shop_id,d.merchant_id,d.region,d.type,d.title,d.cover_image,d.price,d.original_price,
-        d.currency,d.stock,d.sold_count,d.valid_start,d.valid_end,d.rules,d.audit_status,d.status,
+        d.currency,d.stock,d.sold_count,d.valid_start,d.valid_end,d.rules,d.audit_status,d.reject_reason,d.status,
         s.name AS shop_name
     </sql>
 
@@ -44,15 +44,15 @@
 
     <insert id="insertDeal" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO deal(shop_id,merchant_id,region,type,title,cover_image,price,original_price,currency,
-                         stock,sold_count,valid_start,valid_end,rules,audit_status,status,is_deleted)
+                         stock,sold_count,valid_start,valid_end,rules,audit_status,reject_reason,status,is_deleted)
         VALUES(#{shopId},#{merchantId},#{region},#{type},#{title},#{coverImage},#{price},#{originalPrice},
-               #{currency},#{stock},0,#{validStart},#{validEnd},#{rules},0,0,FALSE)
+               #{currency},#{stock},0,#{validStart},#{validEnd},#{rules},0,'',0,FALSE)
     </insert>
 
     <update id="updateDeal">
         UPDATE deal SET shop_id=#{shopId},type=#{type},title=#{title},cover_image=#{coverImage},price=#{price},
                         original_price=#{originalPrice},currency=#{currency},stock=#{stock},valid_start=#{validStart},
-                        valid_end=#{validEnd},rules=#{rules},audit_status=0,status=0,updated_at=CURRENT_TIMESTAMP
+                        valid_end=#{validEnd},rules=#{rules},audit_status=0,reject_reason='',status=0,updated_at=CURRENT_TIMESTAMP
         WHERE id=#{id} AND merchant_id=#{merchantId} AND region=#{region} AND is_deleted=FALSE
     </update>
 

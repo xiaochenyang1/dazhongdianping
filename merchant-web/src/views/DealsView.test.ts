@@ -55,8 +55,9 @@ describe('DealsView', () => {
           currency: 'EUR',
           stock: 20,
           soldCount: 0,
-          auditStatus: 0,
-          auditStatusText: '待审核',
+          auditStatus: 2,
+          auditStatusText: '已驳回',
+          rejectReason: '价格与规则描述不一致',
           status: 0,
           statusText: '已下架',
         },
@@ -138,10 +139,13 @@ describe('DealsView', () => {
     const { app, host } = mount()
     await flush()
 
+    expect(host.textContent).toContain('驳回原因：价格与规则描述不一致')
+
     host.querySelector<HTMLButtonElement>('[data-testid="deal-edit-501"]')?.click()
     await flush()
 
     expect(mocks.fetchDeal).toHaveBeenCalledWith(501)
+    expect(host.textContent).toContain('最近驳回原因：价格与规则描述不一致')
     setInput(host, 'deal-title', '改版双人套餐')
     await nextTick()
     host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
