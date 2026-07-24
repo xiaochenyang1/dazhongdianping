@@ -126,6 +126,9 @@ describe('DashboardView', () => {
     expect(host.textContent).toContain('去管门店')
     expect(host.textContent).toContain('去做导入')
     expect(host.querySelectorAll('[data-testid="dashboard-quick-link"]').length).toBeGreaterThanOrEqual(3)
+    const breakdownLinks = [...host.querySelectorAll('[data-testid="dashboard-audit-breakdown-link"]')]
+    expect(breakdownLinks.length).toBeGreaterThanOrEqual(2)
+    expect(breakdownLinks.some((link) => link.getAttribute('href') === '/audit/deals' || link.getAttribute('to') === '/audit/deals' || (link as HTMLElement).dataset.to === '/audit/deals' || link.outerHTML.includes('/audit/deals'))).toBe(true)
 
     app.unmount()
   })

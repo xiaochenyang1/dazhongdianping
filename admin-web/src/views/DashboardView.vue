@@ -75,6 +75,16 @@ const metrics = computed(() => {
   return items
 })
 
+const auditRouteByBizType: Record<number, string> = {
+  2: '/audit/deals',
+  3: '/audit/reviews',
+  4: '/audit/posts',
+  5: '/audit/shop-changes',
+  6: '/audit/review-appeals',
+  7: '/audit/expert-certifications',
+  8: '/audit/user-appeals',
+}
+
 const quickLinks = computed(() => {
   const items = [] as Array<{ to: string; label: string; note: string; value?: number }>
   if (canReadDeals.value) {
@@ -122,6 +132,16 @@ const quickLinks = computed(() => {
     })
   }
   return items
+})
+
+const clickableAuditBreakdown = computed(() => {
+  if (!overview.value) return []
+  return overview.value.pendingAuditBreakdown
+    .map((item) => ({
+      ...item,
+      to: auditRouteByBizType[item.bizType],
+    }))
+    .filter((item) => Boolean(item.to))
 })
 
 async function loadSnapshot() {
@@ -306,23 +326,25 @@ watch(
             <h2>按当前账号权限拆开看，别把没权限的任务也算进去。</h2>
           </div>
         </div>
-        <div v-if="!overview.pendingAuditBreakdown.length" class="empty-state">当前账号没有可查看的待审任务。</div>
+        <div v-if="!clickableAuditBreakdown.length" class="empty-state">当前账号没有可查看的待审任务。</div>
         <div v-else class="stack-list">
-          <article
-            v-for="item in overview.pendingAuditBreakdown"
+          <RouterLink
+            v-for="item in clickableAuditBreakdown"
             :key="item.bizType"
+            :to="item.to"
             class="stack-list__item"
+            data-testid="dashboard-audit-breakdown-link"
           >
             <div>
               <strong>{{ item.label }}</strong>
-              <p>bizType={{ item.bizType }}</p>
+              <p>bizType={{ item.bizType }} · 点击进入审核页</p>
             </div>
             <div class="stack-list__meta">
               <span class="status-pill" :class="item.count > 0 ? 'status-pill--warn' : 'status-pill--good'">
                 {{ item.count }} 条
               </span>
             </div>
-          </article>
+          </RouterLink>
         </div>
       </section>
     </div>
