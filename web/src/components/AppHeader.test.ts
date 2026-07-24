@@ -306,4 +306,40 @@ describe('AppHeader', () => {
     })
     app.unmount()
   })
+
+  it('routes refund result notifications to order detail page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 303,
+        type: 'order.refund.result',
+        title: '退款已驳回',
+        content: '双人套餐 · 订单 OD123 · 商户已驳回退款：已超过退款时限',
+        linkUrl: '/user/orders/88?refund=rejected',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-24 19:00:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('退款已驳回')
+    expect(host.textContent).toContain('退款结果')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/orders/88')
+    app.unmount()
+  })
 })

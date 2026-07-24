@@ -126,6 +126,10 @@ class AdminTradeControllerTest {
         org.assertj.core.api.Assertions.assertThat(stock).isEqualTo(21);
         org.assertj.core.api.Assertions.assertThat(soldCount).isEqualTo(11);
         org.assertj.core.api.Assertions.assertThat(auditLogs).isEqualTo(1);
+        Integer refundNotifications = jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE user_id=9002 AND type='order.refund.result' AND title='退款已通过'",
+                Integer.class);
+        org.assertj.core.api.Assertions.assertThat(refundNotifications).isEqualTo(1);
     }
 
     @Test
@@ -146,6 +150,10 @@ class AdminTradeControllerTest {
                 "SELECT COUNT(1) FROM audit_log WHERE action = 'refund_reject' AND target = 'order:9302'",
                 Integer.class);
         org.assertj.core.api.Assertions.assertThat(auditLogs).isEqualTo(1);
+        Integer refundNotifications = jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE user_id=9002 AND type='order.refund.result' AND title='退款已驳回'",
+                Integer.class);
+        org.assertj.core.api.Assertions.assertThat(refundNotifications).isEqualTo(1);
     }
 
     @Test

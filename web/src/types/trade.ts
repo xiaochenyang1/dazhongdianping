@@ -13,6 +13,33 @@ export interface CouponDetail extends Coupon {
   qrImageUrl: string
   verifyHint: string
 }
-export interface TradeOrder { id:number;orderNo:string;dealId:number;dealTitle:string;shopId:number;shopName:string;coverImage:string;quantity:number;unitPrice:number;amount:number;currency:string;payStatus:number;payStatusText:string;status:number;coupons?:Coupon[] }
+export interface OrderRefund {
+  id: number
+  amount: number
+  reason: string
+  status: number
+  statusText: string
+  auditReason?: string
+  auditedAt?: string
+  createdAt?: string
+}
+export interface TradeOrder {
+  id: number
+  orderNo: string
+  dealId: number
+  dealTitle: string
+  shopId: number
+  shopName: string
+  coverImage: string
+  quantity: number
+  unitPrice: number
+  amount: number
+  currency: string
+  payStatus: number
+  payStatusText: string
+  status: number
+  refund?: OrderRefund
+  coupons?: Coupon[]
+}
 export interface PaymentIntent { paymentId:number;channel:string;channelTxn:string;orderNo:string;amount:number;currency:string }
 export type OrderPage=PageResult<TradeOrder>;export type CouponPage=PageResult<Coupon>

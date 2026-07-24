@@ -13,6 +13,7 @@ import com.tuowei.dazhongdianping.module.admin.trade.model.AdminOrderRow;
 import com.tuowei.dazhongdianping.module.admin.trade.model.request.AdminRefundAuditRequest;
 import com.tuowei.dazhongdianping.module.admin.trade.model.response.AdminOrderResponse;
 import com.tuowei.dazhongdianping.module.admin.trade.model.response.AdminTradeReconcileResponse;
+import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.trade.model.RefundRow;
 import com.tuowei.dazhongdianping.module.trade.model.TradeReconcileResult;
 import com.tuowei.dazhongdianping.module.trade.service.TradeCompensationService;
@@ -30,19 +31,23 @@ import org.springframework.util.StringUtils;
 public class AdminTradeService {
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String REFUND_RESULT_TYPE = "order.refund.result";
 
     private final AdminTradeMapper mapper;
     private final AdminAuditMapper adminAuditMapper;
     private final TradeCompensationService tradeCompensationService;
+    private final NotificationService notificationService;
 
     public AdminTradeService(
             AdminTradeMapper mapper,
             AdminAuditMapper adminAuditMapper,
-            TradeCompensationService tradeCompensationService
+            TradeCompensationService tradeCompensationService,
+            NotificationService notificationService
     ) {
         this.mapper = mapper;
         this.adminAuditMapper = adminAuditMapper;
         this.tradeCompensationService = tradeCompensationService;
+        this.notificationService = notificationService;
     }
 
     public PageResult<AdminOrderResponse> listOrders(AdminOrderQuery query) {
@@ -78,15 +83,18 @@ public class AdminTradeService {
         String reason = request.reason().trim();
         AdminSession admin = currentAdmin();
         String action;
+        boolean approved;
         if ("approve".equals(decision)) {
             requireAffected(mapper.approveRefund(orderId, admin.adminId(), reason));
             requireAffected(mapper.markOrderRefunded(orderId));
             mapper.markCouponsRefunded(orderId);
             requireAffected(mapper.restoreDealStock(order.getDealId(), order.getQuantity()));
             action = "refund_approve";
+            approved = true;
         } else if ("reject".equals(decision)) {
             requireAffected(mapper.rejectRefund(orderId, admin.adminId(), reason));
             action = "refund_reject";
+            approved = false;
         } else {
             throw new IllegalArgumentException("退款审核决定只允许 approve 或 reject");
         }
@@ -97,7 +105,30 @@ public class AdminTradeService {
                 reason,
                 StringUtils.hasText(requestIp) ? requestIp.trim() : ""
         );
+        notifyRefundResult(order, approved, reason);
         return toResponse(mapper.selectOrderById(region, orderId));
+    }
+
+    private void notifyRefundResult(AdminOrderRow order, boolean approved, String reason) {
+        if (order.getUserId() == null) {
+            return;
+        }
+        String dealTitle = StringUtils.hasText(order.getDealTitle()) ? order.getDealTitle() : "团购订单";
+        String orderNo = StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo() : String.valueOf(order.getId());
+        String title = approved ? "退款已通过" : "退款已驳回";
+        String content = dealTitle
+                + " · 订单 " + orderNo
+                + " · 平台" + (approved ? "已同意退款" : "已驳回退款")
+                + (StringUtils.hasText(reason) ? "：" + reason : "");
+        String linkUrl = "/user/orders/" + order.getId() + "?refund=" + (approved ? "approved" : "rejected");
+        notificationService.create(
+                order.getUserId(),
+                RegionContext.getRegion().name(),
+                REFUND_RESULT_TYPE,
+                title,
+                content,
+                linkUrl
+        );
     }
 
     @Transactional

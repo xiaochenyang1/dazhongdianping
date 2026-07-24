@@ -190,6 +190,9 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'coupon.expired') {
     return ' · 券码已过期'
   }
+  if (item.type === 'order.refund.result') {
+    return ' · 退款结果'
+  }
   return ''
 }
 

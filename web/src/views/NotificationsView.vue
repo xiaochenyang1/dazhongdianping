@@ -38,6 +38,7 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'reservation.reminder') return '预订提醒'
   if (item.type === 'coupon.reminder') return '券码到期提醒'
   if (item.type === 'coupon.expired') return '券码已过期'
+  if (item.type === 'order.refund.result') return '退款结果'
   if (item.type === 'social.mention') return '@提醒'
   return item.type
 }

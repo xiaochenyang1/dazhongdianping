@@ -166,4 +166,40 @@ describe('NotificationsView', () => {
     })
     app.unmount()
   })
+
+  it('routes refund result notifications to order detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 12,
+          type: 'order.refund.result',
+          title: '退款已通过',
+          content: '双人套餐 · 订单 OD123 · 商户已同意退款：符合退款规则',
+          linkUrl: '/user/orders/88?refund=approved',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-24 16:30:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('退款已通过')
+    expect(host.textContent).toContain('退款结果')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/orders/88')
+    app.unmount()
+  })
 })

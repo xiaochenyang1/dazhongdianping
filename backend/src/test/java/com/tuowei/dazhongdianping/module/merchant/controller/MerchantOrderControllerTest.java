@@ -75,6 +75,16 @@ class MerchantOrderControllerTest {
                 Long.class,
                 order.orderId()
         ));
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type='order.refund.result' AND link_url LIKE ?",
+                Integer.class,
+                "%/user/orders/" + order.orderId() + "%"
+        ));
+        assertEquals("退款已通过", jdbc.queryForObject(
+                "SELECT title FROM user_notification WHERE type='order.refund.result' AND link_url LIKE ? ORDER BY id DESC LIMIT 1",
+                String.class,
+                "%/user/orders/" + order.orderId() + "%"
+        ));
     }
 
     @Test
@@ -118,6 +128,11 @@ class MerchantOrderControllerTest {
                 "SELECT status FROM coupon WHERE order_id=?",
                 Integer.class,
                 order.orderId()
+        ));
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type='order.refund.result' AND title='退款已驳回' AND link_url LIKE ?",
+                Integer.class,
+                "%/user/orders/" + order.orderId() + "%"
         ));
     }
 

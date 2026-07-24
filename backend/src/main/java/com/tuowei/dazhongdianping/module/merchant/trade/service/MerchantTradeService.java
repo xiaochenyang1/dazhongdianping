@@ -12,6 +12,7 @@ import com.tuowei.dazhongdianping.module.merchant.identity.service.MerchantAutho
 import com.tuowei.dazhongdianping.module.merchant.trade.mapper.MerchantTradeMapper;
 import com.tuowei.dazhongdianping.module.merchant.trade.model.request.MerchantDealSaveRequest;
 import com.tuowei.dazhongdianping.module.merchant.trade.model.request.MerchantRefundAuditRequest;
+import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.trade.model.DealItemRow;
 import com.tuowei.dazhongdianping.module.trade.model.DealRow;
 import com.tuowei.dazhongdianping.module.trade.model.OrderRow;
@@ -29,17 +30,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class MerchantTradeService {
 
     private static final int DEAL_AUDIT_BIZ_TYPE = 2;
+    private static final String REFUND_RESULT_TYPE = "order.refund.result";
 
     private final MerchantTradeMapper mapper;
     private final AdminAuditMapper adminAuditMapper;
     private final MerchantAuthorizationService authorizationService;
+    private final NotificationService notificationService;
 
     public MerchantTradeService(MerchantTradeMapper mapper,
                                 AdminAuditMapper adminAuditMapper,
-                                MerchantAuthorizationService authorizationService) {
+                                MerchantAuthorizationService authorizationService,
+                                NotificationService notificationService) {
         this.mapper = mapper;
         this.adminAuditMapper = adminAuditMapper;
         this.authorizationService = authorizationService;
+        this.notificationService = notificationService;
     }
 
     public PageResult<Map<String, Object>> deals(Long shopId,
@@ -202,22 +207,45 @@ public class MerchantTradeService {
         String decision = request.decision().trim().toLowerCase();
         String reason = request.reason().trim();
         String action;
+        boolean approved;
         if ("approve".equals(decision)) {
             requireAffected(mapper.approveRefund(orderId, session.operatorId(), reason));
             requireAffected(mapper.markOrderRefunded(orderId));
             mapper.markCouponsRefunded(orderId);
             requireAffected(mapper.restoreDealStock(order.getDealId(), order.getQuantity()));
             action = "refund_approve";
+            approved = true;
         } else if ("reject".equals(decision)) {
             requireAffected(mapper.rejectRefund(orderId, session.operatorId(), reason));
             action = "refund_reject";
+            approved = false;
         } else {
             throw new IllegalArgumentException("退款审核决定只允许 approve 或 reject");
         }
         mapper.insertOperationLog(
                 session.merchantId(), session.operatorId(), action, "order", orderId, reason
         );
+        notifyRefundResult(order, approved, reason, "商户");
         return orderMap(requireOrder(orderId, session));
+    }
+
+    private void notifyRefundResult(OrderRow order, boolean approved, String reason, String auditorLabel) {
+        if (order.getUserId() == null) {
+            return;
+        }
+        String dealTitle = order.getDealTitle() == null || order.getDealTitle().isBlank()
+                ? "团购订单"
+                : order.getDealTitle();
+        String title = approved ? "退款已通过" : "退款已驳回";
+        String content = dealTitle
+                + " · 订单 " + order.getOrderNo()
+                + " · " + auditorLabel + (approved ? "已同意退款" : "已驳回退款")
+                + (reason == null || reason.isBlank() ? "" : "：" + reason);
+        String linkUrl = "/user/orders/" + order.getId() + "?refund=" + (approved ? "approved" : "rejected");
+        String region = order.getRegion() == null || order.getRegion().isBlank()
+                ? RegionContext.getRegion().name()
+                : order.getRegion();
+        notificationService.create(order.getUserId(), region, REFUND_RESULT_TYPE, title, content, linkUrl);
     }
 
     private void validate(MerchantDealSaveRequest request) {
