@@ -21,12 +21,23 @@ const items = ref<UserNotification[]>([])
 function notificationRoute(item: UserNotification) {
   if (item.type === 'message.direct') return null
   if (!item.linkUrl) return null
+  // Coupon reminders need status/code query so the coupons page can highlight the target code.
+  if (item.type === 'coupon.reminder' || item.type === 'coupon.expired') {
+    const [path, search = ''] = item.linkUrl.split('?')
+    const query: Record<string, string> = {}
+    new URLSearchParams(search).forEach((value, key) => {
+      query[key] = value
+    })
+    return { path: path || '/user/coupons', query }
+  }
   return item.linkUrl.split('?')[0] || null
 }
 
 function notificationHint(item: UserNotification) {
   if (item.type === 'message.direct') return '请在 APP 查看私信'
   if (item.type === 'reservation.reminder') return '预订提醒'
+  if (item.type === 'coupon.reminder') return '券码到期提醒'
+  if (item.type === 'coupon.expired') return '券码已过期'
   if (item.type === 'social.mention') return '@提醒'
   return item.type
 }

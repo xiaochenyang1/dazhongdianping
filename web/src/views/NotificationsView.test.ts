@@ -69,6 +69,17 @@ describe('NotificationsView', () => {
           createdAt: '2026-07-24 16:00:00',
         },
         {
+          id: 3,
+          type: 'coupon.reminder',
+          title: '券码即将过期（1 天内）',
+          content: '双人套餐 · 测试火锅 · 有效期至 2026-07-25 · 券码 CPABC123',
+          linkUrl: '/user/coupons?status=1&code=CPABC123&remind=1',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-24 15:30:00',
+        },
+        {
           id: 2,
           type: 'message.direct',
           title: '收到私信',
@@ -80,7 +91,7 @@ describe('NotificationsView', () => {
           createdAt: '2026-07-24 15:00:00',
         },
       ],
-      total: 2,
+      total: 3,
       page: 1,
       pageSize: 20,
       hasMore: false,
@@ -97,6 +108,8 @@ describe('NotificationsView', () => {
 
     expect(notificationServiceMocks.fetchNotifications).toHaveBeenCalledWith(1, 20)
     expect(host.textContent).toContain('预订提醒（2 小时）')
+    expect(host.textContent).toContain('券码即将过期（1 天内）')
+    expect(host.textContent).toContain('券码到期提醒')
     expect(host.textContent).toContain('收到私信')
 
     host.querySelector<HTMLButtonElement>('[data-testid="notifications-mark-all"]')?.click()
@@ -115,6 +128,42 @@ describe('NotificationsView', () => {
 
     expect(notificationStateMocks.markRead).toHaveBeenCalled()
     expect(routerMocks.push).toHaveBeenCalledWith('/user/reservations/88')
+    app.unmount()
+  })
+
+  it('routes coupon reminder notifications to my coupons page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 9,
+          type: 'coupon.reminder',
+          title: '券码即将过期（1 天内）',
+          content: '双人套餐 · 测试火锅 · 有效期至 2026-07-25 · 券码 CPABC123',
+          linkUrl: '/user/coupons?status=1&code=CPABC123&remind=1',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-24 15:30:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith({
+      path: '/user/coupons',
+      query: { status: '1', code: 'CPABC123', remind: '1' },
+    })
     app.unmount()
   })
 })

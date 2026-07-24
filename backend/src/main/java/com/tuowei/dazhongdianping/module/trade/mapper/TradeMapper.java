@@ -114,4 +114,20 @@ public interface TradeMapper {
     int markOrderRefunded(@Param("orderId") Long orderId);
 
     int markCouponsRefunded(@Param("orderId") Long orderId);
+
+    List<CouponRow> selectExpiredActiveCoupons(@Param("limit") Integer limit);
+
+    int markCouponExpired(@Param("couponId") Long couponId);
+
+    List<CouponRow> selectDueCouponReminders(
+            @Param("today") java.time.LocalDate today,
+            @Param("windowEnd") java.time.LocalDate windowEnd,
+            @Param("limit") Integer limit
+    );
+
+    int markCouponRemindStatus(
+            @Param("couponId") Long couponId,
+            @Param("expectedStatus") Integer expectedStatus,
+            @Param("nextStatus") Integer nextStatus
+    );
 }

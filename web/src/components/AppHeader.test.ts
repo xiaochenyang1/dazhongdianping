@@ -267,4 +267,43 @@ describe('AppHeader', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/reservations/88')
     app.unmount()
   })
+
+  it('routes coupon reminder notifications to my coupons page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 202,
+        type: 'coupon.reminder',
+        title: '券码即将过期（1 天内）',
+        content: '双人套餐 · 测试火锅 · 有效期至 2026-07-25 · 券码 CPABC123',
+        linkUrl: '/user/coupons?status=1&code=CPABC123&remind=1',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-24 18:00:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('券码即将过期（1 天内）')
+    expect(host.textContent).toContain('券码到期提醒')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith({
+      path: '/user/coupons',
+      query: { status: '1', code: 'CPABC123', remind: '1' },
+    })
+    app.unmount()
+  })
 })
