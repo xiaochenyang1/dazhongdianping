@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.activity.mapper.PublicActivityMapper">
+
+    <sql id="activityColumns">
+        oa.id,
+        oa.name,
+        oa.code,
+        oa.region,
+        oa.city_id,
+        c.name AS city_name,
+        oa.channel,
+        oa.type,
+        oa.status,
+        oa.cover,
+        oa.landing_url,
+        oa.rule_json,
+        oa.start_at,
+        oa.end_at,
+        COALESCE(stats.item_count, 0) AS item_count
+    </sql>
+
+    <sql id="onlineWindow">
+        oa.status = 2
+        AND (oa.start_at IS NULL OR oa.start_at &lt;= CURRENT_TIMESTAMP)
+        AND (oa.end_at IS NULL OR oa.end_at &gt;= CURRENT_TIMESTAMP)
+    </sql>
+
+    <sql id="itemColumns">
+        oai.id,
+        oai.activity_id,
+        oai.target_type,
+        oai.target_id,
+        COALESCE(s.name, d.title, p.title, r.name, t.name, '') AS target_name,
+        oai.title,
+        oai.subtitle,
+        oai.image,
+        oai.sort,
+        oai.extra_json,
+        oai.status
+    </sql>
+
+    <select id="selectOnlineActivities" resultType="com.tuowei.dazhongdianping.module.activity.model.PublicActivityRow">
+        SELECT
+        <include refid="activityColumns"/>
+        FROM operation_activity oa
+        LEFT JOIN city c ON c.id = oa.city_id AND c.region = oa.region
+        LEFT JOIN (
+            SELECT activity_id, COUNT(1) AS item_count
+            FROM operation_activity_item
+            WHERE status = 1
+            GROUP BY activity_id
+        ) stats ON stats.activity_id = oa.id
+        WHERE oa.region = #{region}
+          AND <include refid="onlineWindow"/>
+        <if test="cityId != null">
+            AND (oa.city_id = 0 OR oa.city_id = #{cityId})
+        </if>
+        <if test="channel != null">
+            AND oa.channel = #{channel}
+        </if>
+        ORDER BY
+            CASE WHEN oa.city_id = 0 THEN 1 ELSE 0 END ASC,
+            CASE WHEN oa.start_at IS NULL THEN 1 ELSE 0 END ASC,
+            oa.start_at DESC,
+            oa.id DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <select id="selectOnlineActivity" resultType="com.tuowei.dazhongdianping.module.activity.model.PublicActivityRow">
+        SELECT
+        <include refid="activityColumns"/>
+        FROM operation_activity oa
+        LEFT JOIN city c ON c.id = oa.city_id AND c.region = oa.region
+        LEFT JOIN (
+            SELECT activity_id, COUNT(1) AS item_count
+            FROM operation_activity_item
+            WHERE status = 1
+            GROUP BY activity_id
+        ) stats ON stats.activity_id = oa.id
+        WHERE oa.id = #{id}
+          AND oa.region = #{region}
+          AND <include refid="onlineWindow"/>
+        LIMIT 1
+    </select>
+
+    <select id="selectEnabledItems" resultType="com.tuowei.dazhongdianping.module.activity.model.PublicActivityItemRow">
+        SELECT
+        <include refid="itemColumns"/>
+        FROM operation_activity_item oai
+        INNER JOIN operation_activity oa ON oa.id = oai.activity_id
+        LEFT JOIN shop s ON oai.target_type = 1 AND s.id = oai.target_id AND s.region = oa.region
+        LEFT JOIN deal d ON oai.target_type = 2 AND d.id = oai.target_id AND d.region = oa.region
+        LEFT JOIN post p ON oai.target_type = 3 AND p.id = oai.target_id AND p.region = oa.region
+        LEFT JOIN rank r ON oai.target_type = 4 AND r.id = oai.target_id AND r.region = oa.region
+        LEFT JOIN topic t ON oai.target_type = 5 AND t.id = oai.target_id AND t.region = oa.region
+        WHERE oai.activity_id = #{activityId}
+          AND oa.region = #{region}
+          AND oai.status = 1
+        ORDER BY oai.sort ASC, oai.id ASC
+    </select>
+</mapper>

@@ -2,7 +2,9 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
+import { fetchActivities } from '@/services/activity'
 import { fetchCategories, fetchCities, fetchHomeBanners, fetchHomeFeed } from '@/services/browse'
+import type { ActivitySummary } from '@/types/activity'
 import type { Banner, CategoryNode, City, HomeFeedItem } from '@/types/browse'
 
 const { state, setCityId } = useAppContext()
@@ -13,6 +15,7 @@ const categories = ref<CategoryNode[]>([])
 const cities = ref<City[]>([])
 const banners = ref<Banner[]>([])
 const feed = ref<HomeFeedItem[]>([])
+const activities = ref<ActivitySummary[]>([])
 
 const activeCity = computed(() => cities.value.find((item) => item.id === state.cityId))
 
@@ -48,9 +51,10 @@ async function loadHomeContent() {
     return
   }
   try {
-    ;[banners.value, feed.value] = await Promise.all([
+    ;[banners.value, feed.value, activities.value] = await Promise.all([
       fetchHomeBanners(state.cityId),
       fetchHomeFeed(state.cityId, 6),
+      fetchActivities({ cityId: state.cityId, limit: 4 }),
     ])
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '首页内容加载失败'
@@ -127,6 +131,33 @@ watch(
           <RouterLink class="banner-card__link" :to="item.linkUrl">查看落点</RouterLink>
         </div>
       </article>
+    </div>
+  </section>
+
+  <section v-if="activities.length > 0" class="content-section">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">运营活动</p>
+        <h2>管理端上线的专题，首页直接透出。</h2>
+      </div>
+      <RouterLink to="/activities" class="text-link">查看全部活动</RouterLink>
+    </div>
+    <div class="activity-grid">
+      <RouterLink
+        v-for="item in activities"
+        :key="item.id"
+        :to="`/activities/${item.id}`"
+        class="activity-card"
+      >
+        <img :src="item.cover" :alt="item.name" />
+        <div class="activity-card__body">
+          <div class="shop-card__heading">
+            <h3>{{ item.name }}</h3>
+            <span class="status-pill is-deal">{{ item.typeText }}</span>
+          </div>
+          <p>{{ item.cityName }} · {{ item.channelText }} · {{ item.itemCount }} 个资源</p>
+        </div>
+      </RouterLink>
     </div>
   </section>
 
