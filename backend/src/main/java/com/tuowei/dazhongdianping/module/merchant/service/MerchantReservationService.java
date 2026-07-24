@@ -11,7 +11,10 @@ import com.tuowei.dazhongdianping.module.reservation.mapper.ReservationMapper;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationLogRow;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationRow;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationSlotRow;
+import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantSlotSaveRequest;
+import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantSlotStatusRequest;
 import com.tuowei.dazhongdianping.module.reservation.model.request.ReservationRescheduleRequest;
+import java.time.LocalTime;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -143,6 +146,155 @@ public class MerchantReservationService {
         return reservationMap(reservationMapper.selectMerchantReservation(
                 reservationId, merchant.merchantId(), region()
         ), true);
+    }
+
+
+    public PageResult<Map<String, Object>> listSlots(
+            Long shopId,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            Boolean enabled,
+            Integer page,
+            Integer pageSize
+    ) {
+        MerchantSession merchant = merchant();
+        authorizationService.requirePermission(merchant, "reservation:view");
+        List<Long> shopIds = authorizationService.scopedShopIds(merchant);
+        if (shopIds != null && shopIds.isEmpty()) {
+            return new PageResult<>(List.of(), 0, 1, 20, false);
+        }
+        if (shopId != null && shopIds != null && !shopIds.contains(shopId)) {
+            throw new NotFoundException("门店不存在");
+        }
+        if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
+            throw new IllegalArgumentException("dateFrom 不能晚于 dateTo");
+        }
+        int normalizedPage = page == null ? 1 : Math.max(1, page);
+        int normalizedPageSize = pageSize == null ? 20 : Math.min(100, Math.max(1, pageSize));
+        long total = reservationMapper.countMerchantSlots(
+                merchant.merchantId(), region(), shopIds, shopId, dateFrom, dateTo, enabled
+        );
+        List<Map<String, Object>> list = reservationMapper.selectMerchantSlots(
+                merchant.merchantId(), region(), shopIds, shopId, dateFrom, dateTo, enabled,
+                normalizedPageSize, (normalizedPage - 1) * normalizedPageSize
+        ).stream().map(this::slotMap).toList();
+        return new PageResult<>(list, total, normalizedPage, normalizedPageSize,
+                (normalizedPage - 1L) * normalizedPageSize + list.size() < total);
+    }
+
+    @Transactional
+    public Map<String, Object> createSlot(MerchantSlotSaveRequest request) {
+        MerchantSession merchant = merchant();
+        authorizationService.requirePermission(merchant, "reservation:confirm");
+        validateSlotRequest(request);
+        ensureShopWritable(merchant, request.shopId());
+        ReservationSlotRow row = new ReservationSlotRow();
+        row.setShopId(request.shopId());
+        row.setRegion(region());
+        row.setBizDate(request.bizDate());
+        row.setStartTime(request.startTime());
+        row.setEndTime(request.endTime());
+        row.setCapacity(request.capacity());
+        row.setReservedCount(0);
+        row.setConfirmMode(request.confirmMode());
+        row.setCancelBeforeMinutes(request.cancelBeforeMinutes());
+        row.setEnabled(request.enabled() == null || request.enabled());
+        reservationMapper.insertSlot(row);
+        ReservationSlotRow stored = reservationMapper.selectMerchantSlot(row.getId(), merchant.merchantId(), region());
+        if (stored == null) {
+            throw new IllegalStateException("时段创建失败");
+        }
+        return slotMap(stored);
+    }
+
+    @Transactional
+    public Map<String, Object> updateSlot(Long slotId, MerchantSlotSaveRequest request) {
+        MerchantSession merchant = merchant();
+        authorizationService.requirePermission(merchant, "reservation:confirm");
+        validateSlotRequest(request);
+        ReservationSlotRow existing = reservationMapper.selectMerchantSlot(slotId, merchant.merchantId(), region());
+        if (existing == null) {
+            throw new NotFoundException("时段不存在");
+        }
+        ensureShopWritable(merchant, existing.getShopId());
+        if (!existing.getShopId().equals(request.shopId())) {
+            throw new IllegalArgumentException("时段所属门店不可修改");
+        }
+        if (request.capacity() < (existing.getReservedCount() == null ? 0 : existing.getReservedCount())) {
+            throw new IllegalArgumentException("容量不能小于已占用人数");
+        }
+        ReservationSlotRow row = new ReservationSlotRow();
+        row.setId(slotId);
+        row.setShopId(existing.getShopId());
+        row.setRegion(region());
+        row.setBizDate(request.bizDate());
+        row.setStartTime(request.startTime());
+        row.setEndTime(request.endTime());
+        row.setCapacity(request.capacity());
+        row.setConfirmMode(request.confirmMode());
+        row.setCancelBeforeMinutes(request.cancelBeforeMinutes());
+        row.setEnabled(request.enabled() == null ? existing.getEnabled() : request.enabled());
+        if (reservationMapper.updateSlot(row) != 1) {
+            throw new IllegalArgumentException("时段更新失败，请检查容量与占用");
+        }
+        return slotMap(reservationMapper.selectMerchantSlot(slotId, merchant.merchantId(), region()));
+    }
+
+    @Transactional
+    public Map<String, Object> updateSlotEnabled(Long slotId, MerchantSlotStatusRequest request) {
+        MerchantSession merchant = merchant();
+        authorizationService.requirePermission(merchant, "reservation:confirm");
+        ReservationSlotRow existing = reservationMapper.selectMerchantSlot(slotId, merchant.merchantId(), region());
+        if (existing == null) {
+            throw new NotFoundException("时段不存在");
+        }
+        ensureShopWritable(merchant, existing.getShopId());
+        if (reservationMapper.updateSlotEnabled(slotId, merchant.merchantId(), region(), request.enabled()) != 1) {
+            throw new NotFoundException("时段不存在");
+        }
+        return slotMap(reservationMapper.selectMerchantSlot(slotId, merchant.merchantId(), region()));
+    }
+
+    private void validateSlotRequest(MerchantSlotSaveRequest request) {
+        if (request.endTime().isBefore(request.startTime()) || request.endTime().equals(request.startTime())) {
+            throw new IllegalArgumentException("结束时间必须晚于开始时间");
+        }
+        if (request.bizDate().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("不能配置过去日期的时段");
+        }
+    }
+
+    private void ensureShopWritable(MerchantSession merchant, Long shopId) {
+        if (shopId == null || shopId <= 0) {
+            throw new IllegalArgumentException("shopId 无效");
+        }
+        List<Long> shopIds = authorizationService.scopedShopIds(merchant);
+        if (shopIds != null && !shopIds.contains(shopId)) {
+            throw new NotFoundException("门店不存在");
+        }
+        if (reservationMapper.countOwnedShop(merchant.merchantId(), region(), shopId) == 0) {
+            throw new NotFoundException("门店不存在");
+        }
+    }
+
+    private Map<String, Object> slotMap(ReservationSlotRow row) {
+        int reserved = row.getReservedCount() == null ? 0 : row.getReservedCount();
+        int capacity = row.getCapacity() == null ? 0 : row.getCapacity();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", row.getId());
+        result.put("shopId", row.getShopId());
+        result.put("shopName", row.getShopName());
+        result.put("bizDate", row.getBizDate());
+        result.put("startTime", row.getStartTime());
+        result.put("endTime", row.getEndTime());
+        result.put("capacity", capacity);
+        result.put("reservedCount", reserved);
+        result.put("remainingCount", Math.max(0, capacity - reserved));
+        result.put("confirmMode", row.getConfirmMode());
+        result.put("confirmModeText", row.getConfirmMode() != null && row.getConfirmMode() == 1 ? "自动确认" : "人工确认");
+        result.put("cancelBeforeMinutes", row.getCancelBeforeMinutes());
+        result.put("enabled", Boolean.TRUE.equals(row.getEnabled()));
+        return result;
     }
 
     private Map<String, Object> reservationMap(ReservationRow row, boolean includeTimeline) {

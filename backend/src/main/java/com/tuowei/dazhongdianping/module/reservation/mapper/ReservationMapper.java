@@ -120,4 +120,46 @@ public interface ReservationMapper {
     void insertLog(ReservationLogRow row);
 
     List<ReservationLogRow> selectLogs(@Param("reservationId") Long reservationId);
+
+    List<ReservationSlotRow> selectMerchantSlots(
+            @Param("merchantId") Long merchantId,
+            @Param("region") String region,
+            @Param("shopIds") List<Long> shopIds,
+            @Param("shopId") Long shopId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo,
+            @Param("enabled") Boolean enabled,
+            @Param("limit") Integer limit,
+            @Param("offset") Integer offset
+    );
+
+    long countMerchantSlots(
+            @Param("merchantId") Long merchantId,
+            @Param("region") String region,
+            @Param("shopIds") List<Long> shopIds,
+            @Param("shopId") Long shopId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo,
+            @Param("enabled") Boolean enabled
+    );
+
+    ReservationSlotRow selectMerchantSlot(
+            @Param("slotId") Long slotId,
+            @Param("merchantId") Long merchantId,
+            @Param("region") String region
+    );
+
+    int countOwnedShop(@Param("merchantId") Long merchantId, @Param("region") String region, @Param("shopId") Long shopId);
+
+    void insertSlot(ReservationSlotRow row);
+
+    int updateSlot(ReservationSlotRow row);
+
+    int updateSlotEnabled(
+            @Param("slotId") Long slotId,
+            @Param("merchantId") Long merchantId,
+            @Param("region") String region,
+            @Param("enabled") Boolean enabled
+    );
+
 }

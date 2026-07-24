@@ -78,6 +78,31 @@ export interface MerchantReview {
   merchantReply?: MerchantReviewReply | null
   appeal?: MerchantReviewAppeal | null
 }
+export interface MerchantReservationSlot {
+  id: number
+  shopId: number
+  shopName?: string
+  bizDate: string
+  startTime: string
+  endTime: string
+  capacity: number
+  reservedCount: number
+  remainingCount: number
+  confirmMode: number
+  confirmModeText: string
+  cancelBeforeMinutes: number
+  enabled: boolean
+}
+export interface MerchantReservationSlotPayload {
+  shopId: number
+  bizDate: string
+  startTime: string
+  endTime: string
+  capacity: number
+  confirmMode: number
+  cancelBeforeMinutes: number
+  enabled?: boolean
+}
 export interface MerchantReservation {
   id: number
   reservationNo: string
@@ -262,6 +287,10 @@ export function confirmReservation(id: number) { return apiPost<Record<string, u
 export function rejectReservation(id: number, reason: string) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/reject`, { reason }) }
 export function arriveReservation(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/arrive`) }
 export function markReservationNoShow(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/no-show`) }
+export function fetchReservationSlots(params?: object) { return apiGet<PageResult<MerchantReservationSlot>>('/api/b/v1/reservation-slots', params) }
+export function createReservationSlot(payload: MerchantReservationSlotPayload) { return apiPost<MerchantReservationSlot>('/api/b/v1/reservation-slots', payload) }
+export function updateReservationSlot(id: number, payload: MerchantReservationSlotPayload) { return apiPut<MerchantReservationSlot>(`/api/b/v1/reservation-slots/${id}`, payload) }
+export function updateReservationSlotStatus(id: number, enabled: boolean) { return apiPut<MerchantReservationSlot>(`/api/b/v1/reservation-slots/${id}/status`, { enabled }) }
 export function fetchDeals(params?: object) { return apiGet<PageResult<MerchantDeal>>('/api/b/v1/deals', params) }
 export function fetchDeal(id: number) { return apiGet<MerchantDeal>(`/api/b/v1/deals/${id}`) }
 export function createDeal(payload: MerchantDealPayload) { return apiPost<MerchantDeal>('/api/b/v1/deals', payload) }

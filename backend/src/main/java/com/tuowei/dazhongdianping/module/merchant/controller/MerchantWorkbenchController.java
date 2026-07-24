@@ -13,6 +13,8 @@ import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantLoginReq
 import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantRejectReservationRequest;
 import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantRegisterRequest;
 import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantSettlementApplyRequest;
+import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantSlotSaveRequest;
+import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantSlotStatusRequest;
 import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantStaffCreateRequest;
 import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantStaffStatusRequest;
 import com.tuowei.dazhongdianping.module.merchant.model.request.MerchantStaffUpdateRequest;
@@ -196,6 +198,47 @@ public class MerchantWorkbenchController {
     @PostMapping("/reservations/{id}/no-show")
     public ApiResponse<Map<String, Object>> markReservationNoShow(@PathVariable Long id) {
         return ApiResponse.success(merchantFulfillmentService.noShow(id));
+    }
+
+    @GetMapping("/reservation-slots")
+    public ApiResponse<PageResult<Map<String, Object>>> reservationSlots(
+            @RequestParam(required = false) Long shopId,
+            @RequestParam(required = false) LocalDate dateFrom,
+            @RequestParam(required = false) LocalDate dateTo,
+            @RequestParam(required = false) Boolean enabled,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer pageSize
+    ) {
+        return ApiResponse.success(merchantReservationService.listSlots(
+                shopId, dateFrom, dateTo, enabled, page, pageSize
+        ));
+    }
+
+    @PostMapping("/reservation-slots")
+    public ApiResponse<Map<String, Object>> createReservationSlot(
+            @Valid @RequestBody MerchantSlotSaveRequest request
+    ) {
+        return ApiResponse.success("时段已创建", "merchant.slot_created", merchantReservationService.createSlot(request));
+    }
+
+    @PutMapping("/reservation-slots/{id}")
+    public ApiResponse<Map<String, Object>> updateReservationSlot(
+            @PathVariable Long id,
+            @Valid @RequestBody MerchantSlotSaveRequest request
+    ) {
+        return ApiResponse.success("时段已更新", "merchant.slot_updated", merchantReservationService.updateSlot(id, request));
+    }
+
+    @PutMapping("/reservation-slots/{id}/status")
+    public ApiResponse<Map<String, Object>> updateReservationSlotStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody MerchantSlotStatusRequest request
+    ) {
+        return ApiResponse.success(
+                "时段状态已更新",
+                "merchant.slot_status_updated",
+                merchantReservationService.updateSlotEnabled(id, request)
+        );
     }
 
     @PostMapping("/coupons/{code}/verify")

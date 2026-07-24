@@ -37,4 +37,72 @@
 </update>
 <insert id="insertLog">INSERT INTO reservation_change_log(reservation_id,action_type,operator_type,operator_id,from_status,to_status,old_reserve_time,new_reserve_time,remark) VALUES(#{reservationId},#{actionType},#{operatorType},#{operatorId},#{fromStatus},#{toStatus},#{oldReserveTime},#{newReserveTime},#{remark})</insert>
 <select id="selectLogs" resultType="com.tuowei.dazhongdianping.module.reservation.model.ReservationLogRow">SELECT id,reservation_id,action_type,operator_type,operator_id,from_status,to_status,old_reserve_time,new_reserve_time,remark,created_at FROM reservation_change_log WHERE reservation_id=#{reservationId} ORDER BY id DESC</select>
+
+<select id="countMerchantSlots" resultType="long">
+  SELECT COUNT(1)
+  FROM reservation_slot rs
+  JOIN shop s ON s.id = rs.shop_id
+  WHERE s.merchant_id = #{merchantId}
+    AND rs.region = #{region}
+    <if test="shopIds != null"> AND rs.shop_id IN <foreach collection="shopIds" item="scopedShopId" open="(" separator="," close=")">#{scopedShopId}</foreach></if>
+    <if test="shopId != null"> AND rs.shop_id = #{shopId}</if>
+    <if test="dateFrom != null"> AND rs.biz_date &gt;= #{dateFrom}</if>
+    <if test="dateTo != null"> AND rs.biz_date &lt;= #{dateTo}</if>
+    <if test="enabled != null"> AND rs.enabled = #{enabled}</if>
+</select>
+<select id="selectMerchantSlots" resultType="com.tuowei.dazhongdianping.module.reservation.model.ReservationSlotRow">
+  SELECT rs.id, rs.shop_id, rs.region, rs.biz_date, rs.start_time, rs.end_time, rs.capacity, rs.reserved_count,
+         rs.confirm_mode, rs.cancel_before_minutes, rs.enabled, s.name AS shop_name
+  FROM reservation_slot rs
+  JOIN shop s ON s.id = rs.shop_id
+  WHERE s.merchant_id = #{merchantId}
+    AND rs.region = #{region}
+    <if test="shopIds != null"> AND rs.shop_id IN <foreach collection="shopIds" item="scopedShopId" open="(" separator="," close=")">#{scopedShopId}</foreach></if>
+    <if test="shopId != null"> AND rs.shop_id = #{shopId}</if>
+    <if test="dateFrom != null"> AND rs.biz_date &gt;= #{dateFrom}</if>
+    <if test="dateTo != null"> AND rs.biz_date &lt;= #{dateTo}</if>
+    <if test="enabled != null"> AND rs.enabled = #{enabled}</if>
+  ORDER BY rs.biz_date ASC, rs.start_time ASC, rs.id ASC
+  LIMIT #{limit} OFFSET #{offset}
+</select>
+<select id="selectMerchantSlot" resultType="com.tuowei.dazhongdianping.module.reservation.model.ReservationSlotRow">
+  SELECT rs.id, rs.shop_id, rs.region, rs.biz_date, rs.start_time, rs.end_time, rs.capacity, rs.reserved_count,
+         rs.confirm_mode, rs.cancel_before_minutes, rs.enabled, s.name AS shop_name
+  FROM reservation_slot rs
+  JOIN shop s ON s.id = rs.shop_id
+  WHERE rs.id = #{slotId}
+    AND s.merchant_id = #{merchantId}
+    AND rs.region = #{region}
+  LIMIT 1
+</select>
+<select id="countOwnedShop" resultType="int">
+  SELECT COUNT(1) FROM shop WHERE id=#{shopId} AND merchant_id=#{merchantId} AND region=#{region} AND is_deleted=FALSE AND status=1
+</select>
+<insert id="insertSlot" useGeneratedKeys="true" keyProperty="id">
+  INSERT INTO reservation_slot(shop_id, region, biz_date, start_time, end_time, capacity, reserved_count, confirm_mode, cancel_before_minutes, enabled)
+  VALUES(#{shopId}, #{region}, #{bizDate}, #{startTime}, #{endTime}, #{capacity}, 0, #{confirmMode}, #{cancelBeforeMinutes}, #{enabled})
+</insert>
+<update id="updateSlot">
+  UPDATE reservation_slot
+  SET biz_date = #{bizDate},
+      start_time = #{startTime},
+      end_time = #{endTime},
+      capacity = #{capacity},
+      confirm_mode = #{confirmMode},
+      cancel_before_minutes = #{cancelBeforeMinutes},
+      enabled = #{enabled},
+      updated_at = CURRENT_TIMESTAMP
+  WHERE id = #{id}
+    AND shop_id = #{shopId}
+    AND region = #{region}
+    AND capacity &gt;= reserved_count
+</update>
+<update id="updateSlotEnabled">
+  UPDATE reservation_slot rs
+  SET enabled = #{enabled}, updated_at = CURRENT_TIMESTAMP
+  WHERE rs.id = #{slotId}
+    AND rs.region = #{region}
+    AND rs.shop_id IN (SELECT id FROM shop WHERE merchant_id = #{merchantId})
+</update>
+
 </mapper>

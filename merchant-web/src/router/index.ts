@@ -15,6 +15,7 @@ const router = createRouter({
         { path: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { requiresAuth: true, title: '经营概览' } },
         { path: 'shops', component: () => import('@/views/ShopsView.vue'), meta: { requiresAuth: true, title: '门店管理' } },
         { path: 'reservations', component: () => import('@/views/ReservationsView.vue'), meta: { requiresAuth: true, title: '预订处理' } },
+        { path: 'reservation-slots', component: () => import('@/views/ReservationSlotsView.vue'), meta: { requiresAuth: true, title: '预订时段' } },
         { path: 'deals', component: () => import('@/views/DealsView.vue'), meta: { requiresAuth: true, title: '团购管理' } },
         { path: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { requiresAuth: true, title: '订单退款' } },
         { path: 'coupons', component: () => import('@/views/CouponsView.vue'), meta: { requiresAuth: true, title: '券码核销' } },

@@ -11,6 +11,7 @@ const baseLinks = [
   { path: '/dashboard', label: '经营概览', permission: 'dashboard:view' },
   { path: '/shops', label: '门店管理', permission: 'shop:view' },
   { path: '/reservations', label: '预订处理', permission: 'reservation:view' },
+  { path: '/reservation-slots', label: '预订时段', permission: 'reservation:view' },
   { path: '/deals', label: '团购管理', permission: 'deal:edit' },
   { path: '/orders', label: '订单退款', permission: 'order:view' },
   { path: '/coupons', label: '券码核销', permission: 'coupon:verify' },
