@@ -82,6 +82,14 @@ class MerchantFulfillmentControllerTest {
                 .andExpect(jsonPath("$.data.status").value(2))
                 .andExpect(jsonPath("$.data.statusText").value("已使用"))
                 .andExpect(jsonPath("$.data.code").value("VERIFYME001"));
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE user_id=9001 AND type='coupon.verified' AND link_url='/user/coupons/VERIFYME001'",
+                Integer.class
+        ));
+        assertEquals("券码已核销", jdbc.queryForObject(
+                "SELECT title FROM user_notification WHERE user_id=9001 AND type='coupon.verified' ORDER BY id DESC LIMIT 1",
+                String.class
+        ));
     }
 
     @Test

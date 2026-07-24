@@ -205,6 +205,9 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'post.audit.result') {
     return ' · 帖子审核'
   }
+  if (item.type === 'coupon.verified') {
+    return ' · 券码核销'
+  }
   return ''
 }
 

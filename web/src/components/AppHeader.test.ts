@@ -486,4 +486,40 @@ describe('AppHeader', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/community/posts/99')
     app.unmount()
   })
+
+  it('routes coupon verified notifications to coupon detail page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 808,
+        type: 'coupon.verified',
+        title: '券码已核销',
+        content: '双人套餐 · 测试火锅 · 券码 CPABC123 已核销成功',
+        linkUrl: '/user/coupons/CPABC123',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-25 13:00:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('券码已核销')
+    expect(host.textContent).toContain('券码核销')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/coupons/CPABC123')
+    app.unmount()
+  })
 })

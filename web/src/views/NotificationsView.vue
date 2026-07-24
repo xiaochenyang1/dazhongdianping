@@ -43,6 +43,7 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'review.audit.result') return '点评审核'
   if (item.type === 'expert.certification.result') return '达人认证'
   if (item.type === 'post.audit.result') return '帖子审核'
+  if (item.type === 'coupon.verified') return '券码核销'
   if (item.type === 'social.mention') return '@提醒'
   return item.type
 }

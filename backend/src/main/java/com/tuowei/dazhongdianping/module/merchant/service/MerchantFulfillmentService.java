@@ -24,6 +24,7 @@ public class MerchantFulfillmentService {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final String RESERVATION_STATUS_TYPE = "reservation.status";
+    private static final String COUPON_VERIFIED_TYPE = "coupon.verified";
 
     private final ReservationMapper reservationMapper;
     private final TradeMapper tradeMapper;
@@ -82,7 +83,30 @@ public class MerchantFulfillmentService {
         ) == 0) {
             throw new IllegalArgumentException("券码当前不可核销");
         }
-        return couponMap(tradeMapper.selectMerchantCoupon(normalizedCode, merchant.merchantId(), region()));
+        CouponRow verified = tradeMapper.selectMerchantCoupon(normalizedCode, merchant.merchantId(), region());
+        notifyCouponVerified(verified);
+        return couponMap(verified);
+    }
+
+    private void notifyCouponVerified(CouponRow coupon) {
+        if (coupon == null || coupon.getUserId() == null) {
+            return;
+        }
+        String dealTitle = blankToDefault(coupon.getDealTitle(), "团购券");
+        String shopName = blankToDefault(coupon.getShopName(), "门店");
+        String content = dealTitle + " · " + shopName + " · 券码 " + coupon.getCode() + " 已核销成功";
+        String linkUrl = "/user/coupons/" + coupon.getCode();
+        String region = coupon.getRegion() == null || coupon.getRegion().isBlank()
+                ? RegionContext.getRegion().name()
+                : coupon.getRegion();
+        notificationService.create(
+                coupon.getUserId(),
+                region,
+                COUPON_VERIFIED_TYPE,
+                "券码已核销",
+                content,
+                linkUrl
+        );
     }
 
     private Map<String, Object> changeReservationStatus(

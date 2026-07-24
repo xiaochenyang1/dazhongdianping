@@ -346,4 +346,40 @@ describe('NotificationsView', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/community/posts/88')
     app.unmount()
   })
+
+  it('routes coupon verified notifications to coupon detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 24,
+          type: 'coupon.verified',
+          title: '券码已核销',
+          content: '双人套餐 · 测试火锅 · 券码 CPABC123 已核销成功',
+          linkUrl: '/user/coupons/CPABC123',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 13:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('券码已核销')
+    expect(host.textContent).toContain('券码核销')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/coupons/CPABC123')
+    app.unmount()
+  })
 })
