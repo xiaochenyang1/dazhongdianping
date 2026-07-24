@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchCoupons } from '@/services/trade'
 import type { Coupon } from '@/types/trade'
 
@@ -103,20 +103,22 @@ watch(
     <p v-else-if="coupons.length === 0" class="feedback">当前筛选下暂无券码。</p>
 
     <div v-else class="rank-grid">
-      <article
+      <RouterLink
         v-for="coupon in coupons"
         :key="coupon.id"
         class="rank-card"
         :class="{ 'is-highlight': highlightCode && highlightCode === coupon.code }"
         :data-testid="`coupon-card-${coupon.code}`"
+        :to="`/user/coupons/${encodeURIComponent(coupon.code)}`"
       >
         <img :src="coupon.coverImage" :alt="coupon.dealTitle" />
         <div class="rank-card__body">
           <h2>{{ coupon.dealTitle }}</h2>
           <strong>{{ coupon.code }}</strong>
           <span>{{ coupon.shopName }} · {{ coupon.statusText }} · 有效期至 {{ coupon.expireAt || '不限期' }}</span>
+          <span class="muted">查看二维码与使用规则</span>
         </div>
-      </article>
+      </RouterLink>
     </div>
   </section>
 </template>

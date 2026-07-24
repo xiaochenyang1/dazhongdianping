@@ -13,4 +13,5 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
  @PostMapping("/orders/{id}/refund") public ApiResponse<Map<String,Object>> refund(@PathVariable Long id,@Valid @RequestBody RefundRequest request){return ApiResponse.success(service.refund(id,request));}
  @PostMapping("/pay/notify/{channel}") public ApiResponse<Map<String,Object>> notify(@PathVariable String channel,@Valid @RequestBody PaymentNotifyRequest request){return ApiResponse.success(service.notify(channel,request));}
  @GetMapping("/coupons") public ApiResponse<PageResult<Map<String,Object>>> coupons(@RequestParam(required=false)Integer status,@RequestParam(defaultValue="1")Integer page,@RequestParam(defaultValue="12")Integer pageSize){return ApiResponse.success(service.coupons(status,page,pageSize));}
+ @GetMapping("/coupons/{code}") public ApiResponse<Map<String,Object>> couponDetail(@PathVariable String code){return ApiResponse.success(service.couponDetail(code));}
 }

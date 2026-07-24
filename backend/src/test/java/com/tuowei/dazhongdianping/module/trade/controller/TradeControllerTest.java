@@ -49,10 +49,18 @@ class TradeControllerTest {
         String notifyBody = "{\"orderNo\":\""+orderNo+"\",\"channelTxn\":\""+channelTxn+"\",\"status\":\"SUCCESS\",\"amount\":176.00,\"signature\":\""+signature+"\"}";
         for (int i=0;i<2;i++) mockMvc.perform(post("/api/c/v1/pay/notify/alipay_mock").contentType(MediaType.APPLICATION_JSON).content(notifyBody)).andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/c/v1/orders/{id}", orderId).header("Authorization", bearer(token)).header("X-Region", "CN"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.payStatus").value(1)).andExpect(jsonPath("$.data.coupons.length()").value(2));
+        MvcResult orderDetail = mockMvc.perform(get("/api/c/v1/orders/{id}", orderId).header("Authorization", bearer(token)).header("X-Region", "CN"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.payStatus").value(1)).andExpect(jsonPath("$.data.coupons.length()").value(2)).andReturn();
+        String couponCode = objectMapper.readTree(orderDetail.getResponse().getContentAsString()).at("/data/coupons/0/code").asText();
         mockMvc.perform(get("/api/c/v1/coupons").header("Authorization", bearer(token)).header("X-Region", "CN"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(2));
+        mockMvc.perform(get("/api/c/v1/coupons/{code}", couponCode).header("Authorization", bearer(token)).header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.code").value(couponCode))
+                .andExpect(jsonPath("$.data.usable").value(true))
+                .andExpect(jsonPath("$.data.qrPayload").value(couponCode))
+                .andExpect(jsonPath("$.data.qrImageUrl").value(org.hamcrest.Matchers.containsString("create-qr-code")))
+                .andExpect(jsonPath("$.data.rules").value(org.hamcrest.Matchers.containsString("周末通用")));
 
         mockMvc.perform(post("/api/c/v1/orders/{id}/refund", orderId).header("Authorization", bearer(token)).header("X-Region", "CN")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"行程有变\"}"))
@@ -66,6 +74,34 @@ class TradeControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"重复申请\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("订单已有退款申请"));
+    }
+
+    @Test
+    void shouldRejectForeignCouponDetailAccess() throws Exception {
+        String ownerToken = registerToken();
+        MvcResult created = mockMvc.perform(post("/api/c/v1/orders").header("Authorization", bearer(ownerToken)).header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"dealId\":40001,\"quantity\":1}"))
+                .andExpect(status().isOk()).andReturn();
+        JsonNode order = objectMapper.readTree(created.getResponse().getContentAsString()).path("data");
+        long orderId = order.path("id").asLong();
+        String orderNo = order.path("orderNo").asText();
+        MvcResult pay = mockMvc.perform(post("/api/c/v1/orders/{id}/pay", orderId).header("Authorization", bearer(ownerToken)).header("X-Region", "CN"))
+                .andExpect(status().isOk()).andReturn();
+        String channelTxn = objectMapper.readTree(pay.getResponse().getContentAsString()).at("/data/channelTxn").asText();
+        String signature = sign(orderNo, channelTxn, "SUCCESS", "88.00");
+        mockMvc.perform(post("/api/c/v1/pay/notify/alipay_mock").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderNo\":\""+orderNo+"\",\"channelTxn\":\""+channelTxn+"\",\"status\":\"SUCCESS\",\"amount\":88.00,\"signature\":\""+signature+"\"}"))
+                .andExpect(status().isOk());
+        String couponCode = objectMapper.readTree(mockMvc.perform(get("/api/c/v1/orders/{id}", orderId)
+                        .header("Authorization", bearer(ownerToken)).header("X-Region", "CN"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).at("/data/coupons/0/code").asText();
+
+        String otherToken = registerToken();
+        mockMvc.perform(get("/api/c/v1/coupons/{code}", couponCode).header("Authorization", bearer(otherToken)).header("X-Region", "CN"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("券码不存在"));
+        mockMvc.perform(get("/api/c/v1/coupons/{code}", "NO-SUCH-CODE").header("Authorization", bearer(ownerToken)).header("X-Region", "CN"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

@@ -88,6 +88,12 @@ public interface TradeMapper {
             @Param("offset") Integer offset
     );
 
+    CouponRow selectUserCouponByCode(
+            @Param("code") String code,
+            @Param("userId") Long userId,
+            @Param("region") String region
+    );
+
     CouponRow selectMerchantCoupon(
             @Param("code") String code,
             @Param("merchantId") Long merchantId,

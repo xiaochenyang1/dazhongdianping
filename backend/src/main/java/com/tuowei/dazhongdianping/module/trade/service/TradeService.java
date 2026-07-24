@@ -14,10 +14,32 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
  @Transactional public Map<String,Object> refund(Long id,RefundRequest req){OrderRow o=requireOrder(id);if(o.getPayStatus()!=1||o.getStatus()!=1)throw new IllegalArgumentException("订单当前不可退款");if(mapper.countUsedCoupons(id)>0)throw new IllegalArgumentException("存在已核销券，不能整单退款");if(mapper.selectRefundByOrder(id)!=null)throw new IllegalArgumentException("订单已有退款申请");mapper.insertRefund(id,o.getAmount(),req.reason().trim());return orderMap(requireOrder(id),true);}
  public PageResult<Map<String,Object>> coupons(Integer status,Integer page,Integer pageSize){int p=page==null?1:Math.max(1,page),s=pageSize==null?12:Math.min(50,Math.max(1,pageSize));UserSession u=user();// Sync any past-due coupons so the list does not keep showing stale "待使用".
  couponLifecycleService.expireDueCouponsForUser(u.userId());long total=mapper.countCoupons(u.userId(),region(),status);List<Map<String,Object>> list=mapper.selectCoupons(u.userId(),region(),status,s,(p-1)*s).stream().map(this::couponMap).toList();return new PageResult<>(list,total,p,s,(p-1)*s+list.size()<total);}
+ public Map<String,Object> couponDetail(String code){UserSession u=user();couponLifecycleService.expireDueCouponsForUser(u.userId());String normalized=code==null?"":code.trim();if(normalized.isBlank())throw new IllegalArgumentException("券码不能为空");CouponRow coupon=mapper.selectUserCouponByCode(normalized,u.userId(),region());if(coupon==null)throw new NotFoundException("券码不存在");return couponDetailMap(coupon);}
  private DealRow requireDeal(Long id){DealRow d=mapper.selectDeal(id,region());if(d==null)throw new NotFoundException("团购不存在");return d;}private OrderRow requireOrder(Long id){UserSession u=user();OrderRow o=mapper.selectUserOrder(id,u.userId(),region());if(o==null)throw new NotFoundException("订单不存在");return o;}private UserSession user(){UserSession u=UserSessionContext.get();if(u==null)throw new UnauthorizedException("用户登录状态不存在");return u;}private String region(){return RegionContext.getRegion().name();}
  private Map<String,Object> dealSummary(DealRow d){Map<String,Object>m=new LinkedHashMap<>();m.put("id",d.getId());m.put("shopId",d.getShopId());m.put("shopName",d.getShopName());m.put("title",d.getTitle());m.put("coverImage",d.getCoverImage());m.put("price",d.getPrice());m.put("originalPrice",d.getOriginalPrice());m.put("currency",d.getCurrency());m.put("stock",d.getStock());m.put("soldCount",d.getSoldCount());return m;}
  private Map<String,Object> orderMap(OrderRow o,boolean includeCoupons){Map<String,Object>m=new LinkedHashMap<>();m.put("id",o.getId());m.put("orderNo",o.getOrderNo());m.put("dealId",o.getDealId());m.put("dealTitle",o.getDealTitle());m.put("shopId",o.getShopId());m.put("shopName",o.getShopName());m.put("coverImage",o.getCoverImage());m.put("quantity",o.getQuantity());m.put("unitPrice",o.getUnitPrice());m.put("amount",o.getAmount());m.put("currency",o.getCurrency());m.put("payStatus",o.getPayStatus());m.put("payStatusText",switch(o.getPayStatus()){case 1->"已支付";case 2->"已退款";case 3->"部分退款";default->"待支付";});m.put("status",o.getStatus());RefundRow refund=mapper.selectRefundByOrder(o.getId());if(refund!=null)m.put("refund",refundMap(refund));if(includeCoupons)m.put("coupons",mapper.selectOrderCoupons(o.getId(),o.getUserId()).stream().map(this::couponMap).toList());return m;}
  private Map<String,Object> refundMap(RefundRow r){Map<String,Object>m=new LinkedHashMap<>();m.put("id",r.getId());m.put("amount",r.getAmount());m.put("reason",r.getReason());m.put("status",r.getStatus());m.put("statusText",switch(r.getStatus()){case 1->"退款成功";case 2->"已驳回";default->"申请中";});m.put("auditReason",r.getAuditReason());m.put("auditedAt",r.getAuditedAt());m.put("createdAt",r.getCreatedAt());return m;}
  private Map<String,Object> couponMap(CouponRow c){Map<String,Object>m=new LinkedHashMap<>();m.put("id",c.getId());m.put("orderId",c.getOrderId());m.put("code",c.getCode());m.put("status",c.getStatus());m.put("statusText",switch(c.getStatus()){case 2->"已使用";case 3->"已过期";case 4->"已退款";default->"待使用";});m.put("dealId",c.getDealId());m.put("dealTitle",c.getDealTitle());m.put("shopId",c.getShopId());m.put("shopName",c.getShopName());m.put("coverImage",c.getCoverImage());m.put("expireAt",c.getExpireAt());return m;}
+ private Map<String,Object> couponDetailMap(CouponRow c){
+  Map<String,Object> m=new LinkedHashMap<>(couponMap(c));
+  m.put("rules",c.getDealRules()==null?"":c.getDealRules());
+  m.put("validStart",c.getValidStart());
+  m.put("validEnd",c.getValidEnd());
+  m.put("verifyAt",c.getVerifyAt());
+  boolean usable=c.getStatus()!=null&&c.getStatus()==1
+          &&(c.getExpireAt()==null||!c.getExpireAt().isBefore(LocalDate.now()));
+  m.put("usable",usable);
+  // Merchant verify API accepts the raw coupon code; keep payload identical for scan/manual entry.
+  String qrPayload=c.getCode()==null?"":c.getCode();
+  m.put("qrPayload",qrPayload);
+  m.put("qrImageUrl",buildQrImageUrl(qrPayload));
+  m.put("verifyHint",usable?"到店后出示二维码或券码，由商户核销。":"当前券码不可核销。");
+  return m;
+ }
+ private String buildQrImageUrl(String payload){
+  if(payload==null||payload.isBlank())return "";
+  return "https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data="
+          +java.net.URLEncoder.encode(payload,StandardCharsets.UTF_8);
+ }
  private String sign(String orderNo,String txn,String status,BigDecimal amount){try{String raw=orderNo+"|"+txn+"|"+status+"|"+amount.setScale(2).toPlainString()+"|"+secret;return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
 }

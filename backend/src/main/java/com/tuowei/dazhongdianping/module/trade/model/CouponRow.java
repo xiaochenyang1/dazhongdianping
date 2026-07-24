@@ -22,4 +22,7 @@ public class CouponRow {
     private String shopName;
     private String coverImage;
     private String region;
+    private String dealRules;
+    private LocalDate validStart;
+    private LocalDate validEnd;
 }

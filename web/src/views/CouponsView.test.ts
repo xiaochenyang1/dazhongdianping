@@ -17,6 +17,10 @@ vi.mock('@/services/trade', () => tradeMocks)
 vi.mock('vue-router', () => ({
   useRoute: () => routeState,
   useRouter: () => routerMocks,
+  RouterLink: {
+    props: ['to'],
+    template: '<a :href="typeof to === \'string\' ? to : to.path" v-bind="$attrs"><slot /></a>',
+  },
 }))
 
 import CouponsView from './CouponsView.vue'
@@ -73,7 +77,10 @@ describe('CouponsView', () => {
     expect(host.textContent).toContain('双人套餐')
     expect(host.textContent).toContain('CPABC123')
     expect(host.textContent).toContain('定位券码 CPABC123')
-    expect(host.querySelector('[data-testid="coupon-card-CPABC123"]')?.className).toContain('is-highlight')
+    expect(host.textContent).toContain('查看二维码与使用规则')
+    const card = host.querySelector('[data-testid="coupon-card-CPABC123"]') as HTMLAnchorElement | null
+    expect(card?.className).toContain('is-highlight')
+    expect(card?.getAttribute('href')).toBe('/user/coupons/CPABC123')
     app.unmount()
   })
 

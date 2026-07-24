@@ -148,6 +148,13 @@ const router = createRouter({
     { path: '/user/orders', name: 'user-orders', component: () => import('@/views/OrdersView.vue'), meta: { requiresAuth: true, title: '我的订单', description: '查看团购订单及支付退款状态。' } },
     { path: '/user/orders/:id', name: 'user-order-detail', component: () => import('@/views/OrderDetailView.vue'), props: r => ({ orderId: Number(r.params.id) }), meta: { requiresAuth: true, title: '订单详情', description: '查看订单、支付和券码信息。' } },
     { path: '/user/coupons', name: 'user-coupons', component: () => import('@/views/CouponsView.vue'), meta: { requiresAuth: true, title: '我的券', description: '查看待使用、已使用、过期和退款券码。' } },
+    {
+      path: '/user/coupons/:code',
+      name: 'user-coupon-detail',
+      component: () => import('@/views/CouponDetailView.vue'),
+      props: (route) => ({ code: String(route.params.code || '') }),
+      meta: { requiresAuth: true, title: '券码详情', description: '查看券码状态、使用规则和核销二维码。' },
+    },
     { path: '/user/reservations', name: 'user-reservations', component: () => import('@/views/ReservationsView.vue'), meta: { requiresAuth: true, title: '我的预订', description: '查看预订状态和改期记录。' } },
     { path: '/user/reservations/:id', name: 'user-reservation-detail', component: () => import('@/views/ReservationDetailView.vue'), props: r => ({ reservationId: Number(r.params.id) }), meta: { requiresAuth: true, title: '预订详情', description: '查看、取消或改期预订。' } },
     {
