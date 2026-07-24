@@ -79,7 +79,12 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (35, 'audit:expert_certification:write', '处理达人认证', 'audit', 2, 1),
     (36, 'system:audit_log:read', '查看审计日志', 'system', 1, 1),
     (37, 'system:privacy_task:read', '查看隐私任务', 'system', 1, 1),
-    (38, 'data:order:read', '查看订单退款', 'data', 1, 1);
+    (38, 'data:order:read', '查看订单退款', 'data', 1, 1),
+    (49, 'data:order:write', '处置订单退款', 'data', 2, 1),
+    (45, 'system:user:read', '查看用户', 'system', 1, 1),
+    (46, 'system:user:write', '处置用户', 'system', 2, 1),
+    (47, 'audit:user_appeal:read', '查看用户封禁申诉', 'audit', 1, 1),
+    (48, 'audit:user_appeal:write', '处理用户封禁申诉', 'audit', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region) VALUES (1, 'CN'), (1, 'EU');
@@ -88,7 +93,7 @@ INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13),
     (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44),
-    (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38);
+    (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
     (1001, 'merchant_cn_hotpot@example.com', '沪上渝里餐饮', '王磊', '13800000001', 'CN', 1, 1, FALSE),

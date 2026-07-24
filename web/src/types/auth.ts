@@ -1,6 +1,17 @@
 import type { Region } from '@/types/browse'
 
-export type AuthMode = 'password' | 'code' | 'register' | 'reset'
+export type AuthMode = 'password' | 'code' | 'register' | 'reset' | 'appeal'
+
+export interface UserBanAppealStatus {
+  id: number
+  status: number
+  statusText: string
+  reason: string
+  rejectReason: string
+  banReason: string
+  submittedAt: string
+  auditedAt: string
+}
 
 export interface UserExpertCertificationBadge {
   code: string

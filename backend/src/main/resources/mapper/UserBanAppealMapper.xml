@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.auth.appeal.mapper.UserBanAppealMapper">
+
+    <sql id="appealColumns">
+        id,
+        user_id,
+        region,
+        account,
+        reason,
+        status,
+        reject_reason,
+        audit_by,
+        audited_at,
+        created_at,
+        updated_at
+    </sql>
+
+    <insert id="insertAppeal" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_ban_appeal(
+            user_id, region, account, reason, status, reject_reason, audit_by
+        ) VALUES (
+            #{userId}, #{region}, #{account}, #{reason}, #{status}, #{rejectReason}, #{auditBy}
+        )
+    </insert>
+
+    <select id="selectPendingAppealByUserIdForUpdate" resultType="com.tuowei.dazhongdianping.module.auth.appeal.model.UserBanAppealRow">
+        SELECT
+        <include refid="appealColumns"/>
+        FROM user_ban_appeal
+        WHERE user_id = #{userId}
+          AND status = 0
+        ORDER BY id DESC
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <select id="selectPendingAppealsByUserId" resultType="com.tuowei.dazhongdianping.module.auth.appeal.model.UserBanAppealRow">
+        SELECT
+        <include refid="appealColumns"/>
+        FROM user_ban_appeal
+        WHERE user_id = #{userId}
+          AND status = 0
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectPendingAppealForAudit" resultType="com.tuowei.dazhongdianping.module.auth.appeal.model.UserBanAppealRow">
+        SELECT
+        <include refid="appealColumns"/>
+        FROM user_ban_appeal
+        WHERE id = #{appealId}
+          AND region = #{region}
+          AND status = 0
+    </select>
+
+    <select id="selectAppealById" resultType="com.tuowei.dazhongdianping.module.auth.appeal.model.UserBanAppealRow">
+        SELECT
+        <include refid="appealColumns"/>
+        FROM user_ban_appeal
+        WHERE id = #{appealId}
+    </select>
+
+    <select id="selectLatestAppealByUserId" resultType="com.tuowei.dazhongdianping.module.auth.appeal.model.UserBanAppealRow">
+        SELECT
+        <include refid="appealColumns"/>
+        FROM user_ban_appeal
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <select id="countPendingAppealsByUserId" resultType="long">
+        SELECT COUNT(1)
+        FROM user_ban_appeal
+        WHERE user_id = #{userId}
+          AND status = 0
+    </select>
+
+    <update id="resolveAppeal">
+        UPDATE user_ban_appeal
+        SET status = #{status},
+            reject_reason = #{rejectReason},
+            audit_by = #{auditBy},
+            audited_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{appealId}
+          AND status = 0
+    </update>
+</mapper>

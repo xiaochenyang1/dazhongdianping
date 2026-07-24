@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.user.mapper.AdminAppUserMapper">
+
+    <sql id="userColumns">
+        u.id,
+        u.nickname,
+        u.avatar,
+        u.email,
+        u.phone,
+        u.gender,
+        u.signature,
+        u.preferred_region,
+        u.growth_value,
+        u.level,
+        u.points,
+        u.status,
+        u.is_deleted,
+        u.last_login_at,
+        u.created_at,
+        u.updated_at
+    </sql>
+
+    <sql id="userFilters">
+        <if test="query.keyword != null">
+            AND (u.nickname LIKE CONCAT('%', #{query.keyword}, '%')
+                OR u.email LIKE CONCAT('%', #{query.keyword}, '%')
+                OR u.phone LIKE CONCAT('%', #{query.keyword}, '%'))
+        </if>
+        <if test="query.userId != null">
+            AND u.id = #{query.userId}
+        </if>
+        <choose>
+            <when test="query.status != null and query.status == 3">
+                AND u.is_deleted = TRUE
+            </when>
+            <when test="query.status != null">
+                AND u.is_deleted = FALSE
+                AND u.status = #{query.status}
+            </when>
+        </choose>
+        <if test="query.preferredRegion != null">
+            AND u.preferred_region = #{query.preferredRegion}
+        </if>
+    </sql>
+
+    <select id="countUsers" resultType="long">
+        SELECT COUNT(*)
+        FROM app_user u
+        WHERE 1 = 1
+        <include refid="userFilters"/>
+    </select>
+
+    <select id="selectUsers" resultType="com.tuowei.dazhongdianping.module.admin.user.model.AdminAppUserRow">
+        SELECT
+        <include refid="userColumns"/>
+        FROM app_user u
+        WHERE 1 = 1
+        <include refid="userFilters"/>
+        ORDER BY u.id DESC
+        LIMIT #{query.pageSize} OFFSET #{query.offset}
+    </select>
+
+    <select id="selectUserById" resultType="com.tuowei.dazhongdianping.module.admin.user.model.AdminAppUserRow">
+        SELECT
+        <include refid="userColumns"/>
+        FROM app_user u
+        WHERE u.id = #{userId}
+    </select>
+
+    <update id="updateUserStatus">
+        UPDATE app_user
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+          AND status = #{expectedStatus}
+    </update>
+
+    <select id="countReviewsByUserId" resultType="long">
+        SELECT COUNT(*) FROM review WHERE user_id = #{userId} AND is_deleted = FALSE
+    </select>
+
+    <select id="countPostsByUserId" resultType="long">
+        SELECT COUNT(*) FROM post WHERE user_id = #{userId} AND is_deleted = FALSE
+    </select>
+
+    <select id="countOrdersByUserId" resultType="long">
+        SELECT COUNT(*) FROM `order` WHERE user_id = #{userId}
+    </select>
+
+    <select id="countReservationsByUserId" resultType="long">
+        SELECT COUNT(*) FROM reservation WHERE user_id = #{userId}
+    </select>
+
+    <select id="countFavoritesByUserId" resultType="long">
+        SELECT COUNT(*) FROM user_favorite WHERE user_id = #{userId}
+    </select>
+
+    <select id="countActiveSessionsByUserId" resultType="long">
+        SELECT COUNT(*) FROM user_session WHERE user_id = #{userId} AND status = 1
+    </select>
+</mapper>

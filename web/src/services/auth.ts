@@ -6,6 +6,7 @@ import type {
   AuthSessionResponse,
   PublicUserProfile,
   SocialUserSummary,
+  UserBanAppealStatus,
   UserGrowthRecord,
   UserBindPayload,
   UserExpertCertificationApplyPayload,
@@ -15,12 +16,25 @@ import type {
 } from '@/types/auth'
 
 export function sendAuthCode(payload: {
-  scene: 'login' | 'register' | 'reset' | 'bind' | 'delete'
+  scene: 'login' | 'register' | 'reset' | 'bind' | 'delete' | 'appeal'
   type: 'email' | 'phone'
   account: string
   deviceId: string
 }) {
   return apiPost<AuthSendCodeResponse>('/api/c/v1/auth/send-code', payload)
+}
+
+export function submitBanAppeal(payload: {
+  type: 'email' | 'phone'
+  account: string
+  code: string
+  reason: string
+}) {
+  return apiPost<UserBanAppealStatus>('/api/c/v1/auth/ban-appeals', payload)
+}
+
+export function queryBanAppeal(payload: { type: 'email' | 'phone'; account: string; code: string }) {
+  return apiPost<UserBanAppealStatus>('/api/c/v1/auth/ban-appeals/query', payload)
 }
 
 export function registerUser(payload: {

@@ -889,6 +889,23 @@ CREATE TABLE `user_session` (
   KEY `idx_user_session_user_status` (`user_id`, `status`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `user_ban_appeal` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  `region` VARCHAR(8) NOT NULL,
+  `account` VARCHAR(128) NOT NULL DEFAULT '',
+  `reason` VARCHAR(500) NOT NULL,
+  `status` TINYINT NOT NULL DEFAULT 0 COMMENT '0待审核 1已通过 2已驳回',
+  `reject_reason` VARCHAR(255) NOT NULL DEFAULT '',
+  `audit_by` BIGINT NOT NULL DEFAULT 0,
+  `audited_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_ban_appeal_user` (`user_id`, `status`, `id`),
+  KEY `idx_user_ban_appeal_status` (`status`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE `import_batch` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `admin_id` BIGINT NOT NULL,

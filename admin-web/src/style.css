@@ -665,6 +665,23 @@ img {
   }
 }
 
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.detail-grid dt {
+  font-size: 0.78rem;
+  color: rgba(67, 38, 21, 0.6);
+}
+
+.detail-grid dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+
 .pager {
   display: flex;
   justify-content: flex-end;

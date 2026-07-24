@@ -146,6 +146,47 @@ export interface AdminOrder {
   refundCreatedAt: string
 }
 
+export interface AdminRefundAuditPayload {
+  decision: 'approve' | 'reject'
+  reason: string
+}
+
+export interface AdminTradeReconcileResult {
+  closedOrders: number
+  restoredStockOrders: number
+  failedPayments: number
+}
+
+export interface AdminAppUser {
+  id: number
+  nickname: string
+  avatar: string
+  email: string
+  phone: string
+  preferredRegion: string
+  growthValue: number
+  level: number
+  points: number
+  status: number
+  statusText: string
+  lastLoginAt: string
+  createdAt: string
+}
+
+export interface AdminAppUserDetail extends AdminAppUser {
+  gender: number
+  signature: string
+  reviewCount: number
+  postCount: number
+  orderCount: number
+  reservationCount: number
+  favoriteCount: number
+  activeSessionCount: number
+  banReason: string
+  pendingAppealCount: number
+  latestAppealStatusText: string
+}
+
 export interface AdminBanner {
   id: number
   region: Region

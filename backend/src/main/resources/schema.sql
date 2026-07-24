@@ -888,6 +888,23 @@ CREATE TABLE IF NOT EXISTS user_session (
 CREATE UNIQUE INDEX IF NOT EXISTS uk_user_session_refresh_token_hash ON user_session(refresh_token_hash);
 CREATE INDEX IF NOT EXISTS idx_user_session_user_id ON user_session(user_id, status);
 
+CREATE TABLE IF NOT EXISTS user_ban_appeal (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL,
+    account VARCHAR(128) NOT NULL DEFAULT '',
+    reason VARCHAR(500) NOT NULL,
+    status TINYINT NOT NULL DEFAULT 0,
+    reject_reason VARCHAR(255) NOT NULL DEFAULT '',
+    audit_by BIGINT NOT NULL DEFAULT 0,
+    audited_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_ban_appeal_user ON user_ban_appeal(user_id, status, id);
+CREATE INDEX IF NOT EXISTS idx_user_ban_appeal_status ON user_ban_appeal(status, id);
+
 CREATE TABLE IF NOT EXISTS import_batch (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     admin_id BIGINT NOT NULL,

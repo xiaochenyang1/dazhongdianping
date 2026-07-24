@@ -47,4 +47,7 @@ public interface AdminAuditMapper {
                         @Param("target") String target,
                         @Param("detail") String detail,
                         @Param("ip") String ip);
+
+    String selectLatestAuditLogDetail(@Param("action") String action,
+                                      @Param("target") String target);
 }

@@ -1,6 +1,8 @@
 package com.tuowei.dazhongdianping.common.api;
 
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,9 +12,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler({
             MethodArgumentNotValidException.class,
@@ -43,6 +48,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(404, exception.getMessage(), "common.not_found"));
     }
 
+    @ExceptionHandler(UserBannedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUserBannedException(UserBannedException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(401, exception.getMessage(), "auth.user_banned"));
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnauthorizedException(UnauthorizedException exception) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -68,8 +79,15 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(429, exception.getMessage(), "common.too_many_requests"));
     }
 
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(404, "接口不存在", "common.not_found"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception exception) {
+        log.error("unexpected server error", exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(500, "服务暂时不可用", "common.server_error"));
     }

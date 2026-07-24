@@ -11,6 +11,20 @@ interface ApiEnvelope<T> {
   traceId: string
 }
 
+export class ApiError extends Error {
+  readonly status?: number
+  readonly messageKey?: string
+  readonly traceId?: string
+
+  constructor(message: string, options: { status?: number; messageKey?: string; traceId?: string } = {}) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = options.status
+    this.messageKey = options.messageKey
+    this.traceId = options.traceId
+  }
+}
+
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
   timeout: 10000,
@@ -101,7 +115,10 @@ async function request<T>(config: RetryableRequestConfig) {
     })
 
     if (response.data.code !== 0) {
-      throw new Error(enrichMessage(response.data.message || '请求失败', response.data.traceId))
+      throw new ApiError(enrichMessage(response.data.message || '请求失败', response.data.traceId), {
+        messageKey: response.data.messageKey,
+        traceId: response.data.traceId,
+      })
     }
 
     return response.data.data
@@ -127,10 +144,11 @@ async function request<T>(config: RetryableRequestConfig) {
 
       const message = typeof envelope?.message === 'string' ? envelope.message : error.message || '请求失败'
       const traceId = typeof envelope?.traceId === 'string' ? envelope.traceId : undefined
-      throw new Error(enrichMessage(message, traceId))
+      const messageKey = typeof envelope?.messageKey === 'string' ? envelope.messageKey : undefined
+      throw new ApiError(enrichMessage(message, traceId), { status, messageKey, traceId })
     }
 
-    throw new Error('请求失败')
+    throw new ApiError('请求失败')
   }
 }
 

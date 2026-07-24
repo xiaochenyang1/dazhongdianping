@@ -4,8 +4,18 @@ import { useRouter } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
 import { useUserSession } from '@/composables/useUserSession'
 import { getBrowserDeviceId } from '@/lib/device-id'
-import { fetchCurrentUser, loginWithCode, loginWithPassword, registerUser, resetPassword, sendAuthCode } from '@/services/auth'
-import type { AuthMode, AuthSessionResponse } from '@/types/auth'
+import { ApiError } from '@/lib/http'
+import {
+  fetchCurrentUser,
+  loginWithCode,
+  loginWithPassword,
+  queryBanAppeal,
+  registerUser,
+  resetPassword,
+  sendAuthCode,
+  submitBanAppeal,
+} from '@/services/auth'
+import type { AuthMode, AuthSessionResponse, UserBanAppealStatus } from '@/types/auth'
 
 const router = useRouter()
 const { state: appState } = useAppContext()
@@ -44,6 +54,17 @@ const resetForm = reactive({
   code: '',
   newPassword: '',
 })
+
+const appealForm = reactive({
+  type: 'email' as 'email' | 'phone',
+  account: '',
+  code: '',
+  reason: '',
+})
+
+const appealStatus = ref<UserBanAppealStatus | null>(null)
+const appealQuerying = ref(false)
+const bannedAccount = ref('')
 
 const accountTypeOptions = [
   { value: 'email', label: '邮箱' },
@@ -97,6 +118,7 @@ const panelTitle = computed(() => {
       code: '验证码登录',
       register: '注册新账号',
       reset: '找回密码',
+      appeal: '封禁申诉',
     } satisfies Record<AuthMode, string>
   )[state.authMode]
 })
@@ -109,9 +131,26 @@ const panelSummary = computed(() => {
   return '登录、注册、验证码和找回密码统一走同一套礼宾式入口，不再拿生硬的 tab 切来切去糊弄事。'
 })
 
-const activeModeMeta = computed(
-  () => modeOptions.find((item) => item.mode === state.authMode) ?? modeOptions[0],
-)
+const appealModeMeta = {
+  mode: 'appeal',
+  label: '封禁申诉',
+  eyebrow: '账号救济',
+  detail: '账号被封禁后从这里提交申诉，运营复核通过会自动解封并恢复登录。',
+  footer: '提交后随时可以用新的验证码查询审核进度。',
+} satisfies {
+  mode: AuthMode
+  label: string
+  eyebrow: string
+  detail: string
+  footer: string
+}
+
+const activeModeMeta = computed(() => {
+  if (state.authMode === 'appeal') {
+    return appealModeMeta
+  }
+  return modeOptions.find((item) => item.mode === state.authMode) ?? modeOptions[0]
+})
 
 const activeModeIndex = computed(() => {
   const index = modeOptions.findIndex((item) => item.mode === state.authMode)
@@ -186,6 +225,8 @@ watch(
       errorMessage.value = ''
       successMessage.value = ''
       mockCodeHint.value = ''
+      bannedAccount.value = ''
+      appealStatus.value = null
     }
   },
 )
@@ -199,9 +240,30 @@ function switchMode(mode: AuthMode) {
   errorMessage.value = ''
   successMessage.value = ''
   mockCodeHint.value = ''
+  if (mode !== 'appeal') {
+    bannedAccount.value = ''
+    appealStatus.value = null
+  }
 }
 
-function resolveCodePayload(targetMode: 'code' | 'register' | 'reset') {
+function inferAccountType(account: string): 'email' | 'phone' {
+  return account.includes('@') ? 'email' : 'phone'
+}
+
+function handleBannedLogin(account: string) {
+  bannedAccount.value = account
+  appealStatus.value = null
+}
+
+function openAppealFromBan() {
+  appealForm.account = bannedAccount.value
+  appealForm.type = inferAccountType(bannedAccount.value)
+  appealForm.code = ''
+  appealForm.reason = ''
+  switchMode('appeal')
+}
+
+function resolveCodePayload(targetMode: 'code' | 'register' | 'reset' | 'appeal') {
   if (targetMode === 'register') {
     return {
       scene: 'register' as const,
@@ -220,6 +282,15 @@ function resolveCodePayload(targetMode: 'code' | 'register' | 'reset') {
     }
   }
 
+  if (targetMode === 'appeal') {
+    return {
+      scene: 'appeal' as const,
+      type: appealForm.type,
+      account: appealForm.account.trim(),
+      deviceId: browserDeviceId,
+    }
+  }
+
   return {
     scene: 'login' as const,
     type: codeForm.type,
@@ -228,7 +299,7 @@ function resolveCodePayload(targetMode: 'code' | 'register' | 'reset') {
   }
 }
 
-async function handleSendCode(targetMode: 'code' | 'register' | 'reset') {
+async function handleSendCode(targetMode: 'code' | 'register' | 'reset' | 'appeal') {
   const payload = resolveCodePayload(targetMode)
   if (!payload.account) {
     errorMessage.value = '先把账号填上，再点发验证码。'
@@ -284,6 +355,9 @@ async function submitPasswordLogin() {
     })
     await completeAuth(session)
   } catch (error) {
+    if (error instanceof ApiError && error.messageKey === 'auth.user_banned') {
+      handleBannedLogin(passwordForm.account.trim())
+    }
     errorMessage.value = error instanceof Error ? error.message : '密码登录失败'
   } finally {
     loading.value = false
@@ -304,6 +378,9 @@ async function submitCodeLogin() {
     })
     await completeAuth(session)
   } catch (error) {
+    if (error instanceof ApiError && error.messageKey === 'auth.user_banned') {
+      handleBannedLogin(codeForm.account.trim())
+    }
     errorMessage.value = error instanceof Error ? error.message : '验证码登录失败'
   } finally {
     loading.value = false
@@ -353,6 +430,74 @@ async function submitResetPassword() {
   } finally {
     loading.value = false
   }
+}
+
+async function submitAppeal() {
+  const account = appealForm.account.trim()
+  const code = appealForm.code.trim()
+  const reason = appealForm.reason.trim()
+  if (!account || !code) {
+    errorMessage.value = '先填好账号和验证码，再提交申诉。'
+    return
+  }
+  if (reason.length < 10) {
+    errorMessage.value = '申诉理由至少写 10 个字，把误封的情况说清楚。'
+    return
+  }
+
+  loading.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    appealStatus.value = await submitBanAppeal({
+      type: appealForm.type,
+      account,
+      code,
+      reason,
+    })
+    appealForm.code = ''
+    appealForm.reason = ''
+    successMessage.value = `申诉 #${appealStatus.value.id} 已提交，运营会尽快复核，结果会同步到这里。`
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '申诉提交失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function queryAppealProgress() {
+  const account = appealForm.account.trim()
+  const code = appealForm.code.trim()
+  if (!account || !code) {
+    errorMessage.value = '查询进度也需要账号和一条新的验证码。'
+    return
+  }
+
+  appealQuerying.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    appealStatus.value = await queryBanAppeal({
+      type: appealForm.type,
+      account,
+      code,
+    })
+    appealForm.code = ''
+    successMessage.value = `已刷新申诉 #${appealStatus.value.id} 的最新进度。`
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '申诉进度查询失败'
+  } finally {
+    appealQuerying.value = false
+  }
+}
+
+function backToPasswordLogin() {
+  passwordForm.account = appealForm.account.trim()
+  passwordForm.password = ''
+  switchMode('password')
+  successMessage.value = '账号已解封，直接用密码登录即可。'
 }
 </script>
 
@@ -452,6 +597,12 @@ async function submitResetPassword() {
             </div>
 
             <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
+            <div v-if="bannedAccount && state.authMode !== 'appeal'" class="auth-ban-appeal-cta">
+              <p>
+                账号 <strong>{{ bannedAccount }}</strong> 当前处于封禁状态。如果你认为是误封，可以提交申诉，运营复核通过后会自动解封。
+              </p>
+              <button type="button" class="secondary-button" @click="openAppealFromBan">提交封禁申诉</button>
+            </div>
             <p v-if="successMessage" class="feedback is-success">{{ successMessage }}</p>
             <p v-if="mockCodeHint" class="feedback">{{ mockCodeHint }}</p>
 
@@ -579,7 +730,7 @@ async function submitResetPassword() {
                 </form>
 
                 <form
-                  v-else
+                  v-else-if="state.authMode === 'reset'"
                   key="reset"
                   class="auth-grid"
                   @submit.prevent="submitResetPassword"
@@ -623,6 +774,99 @@ async function submitResetPassword() {
                   <button type="submit" class="primary-button auth-submit-button" :disabled="loading">
                     {{ loading ? '重置中...' : '重置密码' }}
                   </button>
+                </form>
+
+                <form
+                  v-else
+                  key="appeal"
+                  class="auth-grid"
+                  @submit.prevent="submitAppeal"
+                >
+                  <div class="field">
+                    <span>账号类型</span>
+                    <div class="mode-type-switch" role="group" aria-label="账号类型">
+                      <button
+                        v-for="option in accountTypeOptions"
+                        :key="`appeal-${option.value}`"
+                        type="button"
+                        class="mode-type-switch__button"
+                        :class="{ 'is-active': appealForm.type === option.value }"
+                        :aria-pressed="appealForm.type === option.value"
+                        @click="appealForm.type = option.value"
+                      >
+                        {{ option.label }}
+                      </button>
+                    </div>
+                  </div>
+                  <label class="field">
+                    <span>被封禁的账号</span>
+                    <input v-model="appealForm.account" type="text" placeholder="被封禁的邮箱 / 手机号" />
+                  </label>
+                  <div class="inline-field inline-field--code">
+                    <label class="field">
+                      <span>验证码</span>
+                      <input v-model="appealForm.code" type="text" placeholder="输入验证码" />
+                    </label>
+                    <button type="button" class="secondary-button" :disabled="sendingCode" @click="handleSendCode('appeal')">
+                      {{ sendingCode ? '发送中...' : '发验证码' }}
+                    </button>
+                  </div>
+                  <label class="field field--full">
+                    <span>申诉理由</span>
+                    <textarea
+                      v-model="appealForm.reason"
+                      rows="4"
+                      placeholder="说明你认为误封的原因（10-500 字），运营会人工复核。"
+                    />
+                  </label>
+                  <div v-if="appealStatus" class="appeal-status-card" data-testid="appeal-status">
+                    <div class="appeal-status-card__header">
+                      <strong>申诉 #{{ appealStatus.id }}</strong>
+                      <span
+                        class="appeal-status-card__state"
+                        :class="{
+                          'is-approved': appealStatus.status === 1,
+                          'is-rejected': appealStatus.status === 2,
+                        }"
+                      >
+                        {{ appealStatus.statusText }}
+                      </span>
+                    </div>
+                    <p v-if="appealStatus.banReason">封禁原因：{{ appealStatus.banReason }}</p>
+                    <p v-if="appealStatus.reason">申诉理由：{{ appealStatus.reason }}</p>
+                    <p v-if="appealStatus.status === 2 && appealStatus.rejectReason">
+                      驳回原因：{{ appealStatus.rejectReason }}
+                    </p>
+                    <p v-if="appealStatus.status === 1">申诉已通过，账号已解封，回到密码登录即可正常进入。</p>
+                    <button
+                      v-if="appealStatus.status === 1"
+                      type="button"
+                      class="secondary-button"
+                      @click="backToPasswordLogin"
+                    >
+                      回到密码登录
+                    </button>
+                    <div class="appeal-status-card__meta">
+                      <span>提交于 {{ appealStatus.submittedAt || '--' }}</span>
+                      <span v-if="appealStatus.auditedAt">审核于 {{ appealStatus.auditedAt }}</span>
+                    </div>
+                  </div>
+                  <p class="support-copy auth-support-copy">
+                    提交和查询进度都用同一个验证码入口；审核通过后账号自动解封，直接回密码登录。
+                  </p>
+                  <div class="appeal-actions">
+                    <button type="submit" class="primary-button auth-submit-button" :disabled="loading">
+                      {{ loading ? '提交中...' : '提交申诉' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="ghost-button"
+                      :disabled="appealQuerying"
+                      @click="queryAppealProgress"
+                    >
+                      {{ appealQuerying ? '查询中...' : '查询申诉进度' }}
+                    </button>
+                  </div>
                 </form>
               </Transition>
             </div>

@@ -103,6 +103,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'audit/user-appeals',
+          name: 'audit-user-appeals',
+          component: () => import('@/views/UserAppealAuditView.vue'),
+          meta: {
+            requiresAuth: true,
+            title: '用户封禁申诉',
+            requiredPermission: 'audit:user_appeal:read',
+          },
+        },
+        {
           path: 'audit/merchant-applications',
           name: 'audit-merchant-applications',
           component: () => import('@/views/MerchantApplicationAuditView.vue'),
@@ -141,6 +151,12 @@ const router = createRouter({
           name: 'system-roles',
           component: () => import('@/views/AdminRolesView.vue'),
           meta: { requiresAuth: true, title: '角色与权限', requiredPermission: 'system:role:read' },
+        },
+        {
+          path: 'system/users',
+          name: 'system-users',
+          component: () => import('@/views/UserManagementView.vue'),
+          meta: { requiresAuth: true, title: '用户管理', requiredPermission: 'system:user:read' },
         },
         {
           path: 'system/audit-logs',

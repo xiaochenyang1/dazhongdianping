@@ -16,6 +16,7 @@ public class AdminMenuService {
                         leaf("audit.review_appeals", "商户点评申诉", "/audit/review-appeals", "audit:review_appeal:read"),
                         leaf("audit.posts", "帖子审核", "/audit/posts", "audit:post:read"),
                         leaf("audit.expert_certifications", "达人认证", "/audit/expert-certifications", "audit:expert_certification:read"),
+                        leaf("audit.user_appeals", "用户封禁申诉", "/audit/user-appeals", "audit:user_appeal:read"),
                         leaf("audit.merchant_applications", "商户资质审核", "/audit/merchant-applications", "audit:merchant_application:read")
                 )),
                 group("data", "数据管理", "/data", List.of(
@@ -36,6 +37,7 @@ public class AdminMenuService {
                 group("system", "系统管理", "/system", List.of(
                         leaf("system.admins", "管理员账号", "/system/admins", "system:admin:read"),
                         leaf("system.roles", "角色权限", "/system/roles", "system:role:read"),
+                        leaf("system.users", "用户管理", "/system/users", "system:user:read"),
                         leaf("system.audit_logs", "审计日志", "/system/audit-logs", "system:audit_log:read"),
                         leaf("system.privacy_tasks", "隐私任务", "/system/privacy-tasks", "system:privacy_task:read")
                 ))

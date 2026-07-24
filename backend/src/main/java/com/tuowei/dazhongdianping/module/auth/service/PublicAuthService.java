@@ -2,6 +2,7 @@ package com.tuowei.dazhongdianping.module.auth.service;
 
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
+import com.tuowei.dazhongdianping.common.api.UserBannedException;
 import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
@@ -129,9 +130,10 @@ public class PublicAuthService {
             throw new UnauthorizedException("登录已失效，请重新登录");
         }
         AppUserRow userRow = authCommandMapper.selectUserById(token.userId());
-        if (userRow == null || userRow.getStatus() == null || userRow.getStatus() != 1) {
+        if (userRow == null) {
             throw new UnauthorizedException("用户状态不可用");
         }
+        requireActiveUser(userRow);
         return new UserSession(userRow.getId(), sessionRow.getId());
     }
 
@@ -248,7 +250,7 @@ public class PublicAuthService {
             throw new UnauthorizedException("账号或密码错误");
         }
         if (userRow.getStatus() == null || userRow.getStatus() != 1) {
-            throw new UnauthorizedException("用户状态不可用");
+            throw new UserBannedException("账号已被封禁，暂时无法登录");
         }
         authCommandMapper.updateUserLastLogin(userRow.getId());
         return issueSession(userRow);
@@ -276,6 +278,8 @@ public class PublicAuthService {
             userRow.setStatus(1);
             userRow.setLastLoginAt(LocalDateTime.now());
             authCommandMapper.insertUser(userRow);
+        } else {
+            requireActiveUser(userRow);
         }
         authCommandMapper.updateUserLastLogin(userRow.getId());
         return issueSession(userRow);
@@ -293,9 +297,10 @@ public class PublicAuthService {
             throw new UnauthorizedException("refreshToken 已过期");
         }
         AppUserRow userRow = authCommandMapper.selectUserById(sessionRow.getUserId());
-        if (userRow == null || userRow.getStatus() == null || userRow.getStatus() != 1) {
+        if (userRow == null) {
             throw new UnauthorizedException("用户状态不可用");
         }
+        requireActiveUser(userRow);
 
         String refreshToken = randomToken();
         sessionRow.setRefreshTokenHash(sha256Hex(refreshToken));
@@ -340,7 +345,7 @@ public class PublicAuthService {
     private String normalizeScene(String scene) {
         String value = scene == null ? "" : scene.trim().toLowerCase(Locale.ROOT);
         return switch (value) {
-            case "login", "register", "bind", "reset", "delete" -> value;
+            case "login", "register", "bind", "reset", "delete", "appeal" -> value;
             default -> throw new IllegalArgumentException("scene 不支持");
         };
     }
@@ -404,6 +409,12 @@ public class PublicAuthService {
         return value.contains("@")
                 ? selectUserByAccount(1, value)
                 : selectUserByAccount(2, value);
+    }
+
+    private void requireActiveUser(AppUserRow userRow) {
+        if (userRow.getStatus() == null || userRow.getStatus() != 1) {
+            throw new UserBannedException("账号已被封禁，暂时无法登录");
+        }
     }
 
     private AppUserRow currentUserRow() {

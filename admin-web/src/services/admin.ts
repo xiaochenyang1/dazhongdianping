@@ -3,6 +3,10 @@ import type {
   AdminAuditTask,
   AdminAuditLog,
   AdminOrder,
+  AdminRefundAuditPayload,
+  AdminTradeReconcileResult,
+  AdminAppUser,
+  AdminAppUserDetail,
   AdminBanner,
   AdminBannerPayload,
   AdminHotWord,
@@ -93,6 +97,20 @@ export interface AdminOrderQuery {
   dateTo?: string
   page?: number
   pageSize?: number
+}
+
+export interface AdminAppUserQuery {
+  keyword?: string
+  userId?: number
+  status?: number
+  preferredRegion?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface AdminAppUserStatusPayload {
+  action: 'ban' | 'unban'
+  reason?: string
 }
 
 export interface AdminBannerQuery {
@@ -206,6 +224,26 @@ export function listAdminPrivacyTasks(query: AdminPrivacyTaskQuery) {
 
 export function listAdminOrders(query: AdminOrderQuery) {
   return apiGet<PageResult<AdminOrder>>('/api/admin/v1/orders', query)
+}
+
+export function auditAdminOrderRefund(orderId: number, payload: AdminRefundAuditPayload) {
+  return apiPost<AdminOrder>(`/api/admin/v1/orders/${orderId}/refund-audit`, payload)
+}
+
+export function reconcileAdminOrders() {
+  return apiPost<AdminTradeReconcileResult>('/api/admin/v1/orders/reconcile')
+}
+
+export function listAdminAppUsers(query: AdminAppUserQuery) {
+  return apiGet<PageResult<AdminAppUser>>('/api/admin/v1/users', query)
+}
+
+export function getAdminAppUser(userId: number) {
+  return apiGet<AdminAppUserDetail>(`/api/admin/v1/users/${userId}`)
+}
+
+export function updateAdminAppUserStatus(userId: number, payload: AdminAppUserStatusPayload) {
+  return apiPut<AdminAppUser>(`/api/admin/v1/users/${userId}/status`, payload)
 }
 
 export function listAdminBanners(query?: AdminBannerQuery) {
