@@ -42,12 +42,22 @@ class MerchantFulfillmentControllerTest {
                         .header("X-Region", "EU"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value(1));
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type='reservation.status' AND title='预订已确认' AND link_url LIKE ?",
+                Integer.class,
+                "%/user/reservations/" + reservationId + "%"
+        ));
 
         mockMvc.perform(post("/api/b/v1/reservations/{id}/arrive", reservationId)
                         .header("Authorization", bearer(merchant))
                         .header("X-Region", "EU"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value(2));
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type='reservation.status' AND title='已确认到店' AND link_url LIKE ?",
+                Integer.class,
+                "%/user/reservations/" + reservationId + "%"
+        ));
 
         long secondId = createReservation(user, false);
         mockMvc.perform(post("/api/b/v1/reservations/{id}/reject", secondId)
@@ -57,6 +67,11 @@ class MerchantFulfillmentControllerTest {
                         .content("{\"reason\":\"满桌\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value(4));
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type='reservation.status' AND title='预订被拒绝' AND content LIKE '%满桌%' AND link_url LIKE ?",
+                Integer.class,
+                "%/user/reservations/" + secondId + "%"
+        ));
 
         jdbc.update("INSERT INTO coupon(order_id,user_id,deal_id,shop_id,code,status,expire_at) "
                 + "VALUES(999,9001,41001,20001,'VERIFYME001',1,'2026-12-31')");
@@ -101,6 +116,11 @@ class MerchantFulfillmentControllerTest {
         );
         assertEquals(before, after);
         assertEquals(1, noShowLogs);
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type='reservation.status' AND title='预订已标记爽约' AND link_url LIKE ?",
+                Integer.class,
+                "%/user/reservations/" + reservationId + "%"
+        ));
     }
 
     @Test

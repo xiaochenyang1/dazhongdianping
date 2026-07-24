@@ -202,4 +202,40 @@ describe('NotificationsView', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/orders/88')
     app.unmount()
   })
+
+  it('routes reservation status notifications to reservation detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 15,
+          type: 'reservation.status',
+          title: '预订已确认',
+          content: '巴黎川菜馆 · 2026-07-26 18:30 · 2 人 · 商户已确认你的预订',
+          linkUrl: '/user/reservations/33?status=confirmed',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 09:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('预订已确认')
+    expect(host.textContent).toContain('预订状态')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/reservations/33')
+    app.unmount()
+  })
 })

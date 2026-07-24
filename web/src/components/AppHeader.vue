@@ -193,6 +193,9 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'order.refund.result') {
     return ' · 退款结果'
   }
+  if (item.type === 'reservation.status') {
+    return ' · 预订状态'
+  }
   return ''
 }
 

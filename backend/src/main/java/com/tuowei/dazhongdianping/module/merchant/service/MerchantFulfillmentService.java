@@ -6,12 +6,14 @@ import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSession;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSessionContext;
 import com.tuowei.dazhongdianping.module.merchant.identity.service.MerchantAuthorizationService;
+import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.reservation.mapper.ReservationMapper;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationLogRow;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationRow;
 import com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper;
 import com.tuowei.dazhongdianping.module.trade.model.CouponRow;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -20,18 +22,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MerchantFulfillmentService {
 
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final String RESERVATION_STATUS_TYPE = "reservation.status";
+
     private final ReservationMapper reservationMapper;
     private final TradeMapper tradeMapper;
     private final MerchantAuthorizationService authorizationService;
+    private final NotificationService notificationService;
 
     public MerchantFulfillmentService(
             ReservationMapper reservationMapper,
             TradeMapper tradeMapper,
-            MerchantAuthorizationService authorizationService
+            MerchantAuthorizationService authorizationService,
+            NotificationService notificationService
     ) {
         this.reservationMapper = reservationMapper;
         this.tradeMapper = tradeMapper;
         this.authorizationService = authorizationService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -112,11 +120,68 @@ public class MerchantFulfillmentService {
             reservationMapper.releaseCapacity(reservation.getSlotId(), reservation.getPeopleCount());
         }
         insertReservationLog(reservation, merchant.operatorId(), actionType, fromStatus, toStatus, remark);
-        return reservationMap(reservationMapper.selectMerchantReservation(
+        ReservationRow updated = reservationMapper.selectMerchantReservation(
                 reservationId,
                 merchant.merchantId(),
                 region()
-        ));
+        );
+        notifyReservationStatus(updated == null ? reservation : updated, toStatus, remark);
+        return reservationMap(updated);
+    }
+
+    private void notifyReservationStatus(ReservationRow reservation, int toStatus, String remark) {
+        if (reservation == null || reservation.getUserId() == null) {
+            return;
+        }
+        String shopName = blankToDefault(reservation.getShopName(), "门店");
+        String reserveTimeText = reservation.getReserveTime() == null
+                ? ""
+                : reservation.getReserveTime().format(TIME_FORMATTER);
+        String peopleText = reservation.getPeopleCount() == null ? "" : reservation.getPeopleCount() + " 人";
+        String title = switch (toStatus) {
+            case 1 -> "预订已确认";
+            case 2 -> "已确认到店";
+            case 4 -> "预订被拒绝";
+            case 5 -> "预订已标记爽约";
+            default -> "预订状态更新";
+        };
+        String actionText = switch (toStatus) {
+            case 1 -> "商户已确认你的预订";
+            case 2 -> "商户已确认你到店";
+            case 4 -> "商户已拒绝你的预订";
+            case 5 -> "商户已将本次预订标记为爽约";
+            default -> "预订状态已更新";
+        };
+        String content = shopName
+                + (reserveTimeText.isBlank() ? "" : " · " + reserveTimeText)
+                + (peopleText.isBlank() ? "" : " · " + peopleText)
+                + " · " + actionText
+                + (remark == null || remark.isBlank() || "商户确认".equals(remark) || "确认到店".equals(remark) || "标记爽约".equals(remark)
+                    ? ""
+                    : "：" + remark);
+        String statusQuery = switch (toStatus) {
+            case 1 -> "confirmed";
+            case 2 -> "arrived";
+            case 4 -> "rejected";
+            case 5 -> "no_show";
+            default -> "updated";
+        };
+        String linkUrl = "/user/reservations/" + reservation.getId() + "?status=" + statusQuery;
+        String region = reservation.getRegion() == null || reservation.getRegion().isBlank()
+                ? RegionContext.getRegion().name()
+                : reservation.getRegion();
+        notificationService.create(
+                reservation.getUserId(),
+                region,
+                RESERVATION_STATUS_TYPE,
+                title,
+                content,
+                linkUrl
+        );
+    }
+
+    private static String blankToDefault(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
     }
 
     private void insertReservationLog(

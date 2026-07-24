@@ -342,4 +342,40 @@ describe('AppHeader', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/orders/88')
     app.unmount()
   })
+
+  it('routes reservation status notifications to reservation detail page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 404,
+        type: 'reservation.status',
+        title: '预订已确认',
+        content: '巴黎川菜馆 · 2026-07-26 18:30 · 2 人 · 商户已确认你的预订',
+        linkUrl: '/user/reservations/33?status=confirmed',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-25 09:00:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('预订已确认')
+    expect(host.textContent).toContain('预订状态')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/reservations/33')
+    app.unmount()
+  })
 })
