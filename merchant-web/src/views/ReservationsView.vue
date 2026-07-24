@@ -11,12 +11,21 @@ const error = ref('')
 const items = ref<MerchantReservation[]>([])
 const rejectReasons = reactive<Record<number, string>>({})
 const canManageReservations = computed(() => props.permissions.includes('reservation:confirm'))
+const filters = reactive({
+  status: '0',
+})
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    items.value = (await fetchReservations({ page: 1, pageSize: 50 })).list
+    items.value = (
+      await fetchReservations({
+        page: 1,
+        pageSize: 50,
+        status: filters.status === '' ? undefined : Number(filters.status),
+      })
+    ).list
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '预订加载失败'
   } finally {
@@ -56,9 +65,28 @@ onMounted(load)
 <template>
   <section>
     <div class="toolbar">
-      <span class="muted">只对后端标记可操作的预订显示处理按钮。</span>
+      <div class="row-actions">
+        <label>
+          <span class="muted">状态</span>
+          <select
+            v-model="filters.status"
+            name="reservation-status-filter"
+            data-testid="reservation-status-filter"
+            @change="load"
+          >
+            <option value="">全部</option>
+            <option value="0">待确认</option>
+            <option value="1">已确认</option>
+            <option value="2">已到店</option>
+            <option value="3">用户取消</option>
+            <option value="4">商户拒绝</option>
+            <option value="5">爽约</option>
+          </select>
+        </label>
+      </div>
       <button type="button" @click="load">刷新</button>
     </div>
+    <p class="muted">默认看待确认预订；可切换状态查看历史记录。</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="loading" class="muted">加载中...</p>
     <div v-else class="card table-wrap">
@@ -85,7 +113,7 @@ onMounted(load)
               <span v-else class="muted">无需处理</span>
             </td>
           </tr>
-          <tr v-if="items.length === 0"><td colspan="5" class="feedback">当前没有预订。</td></tr>
+          <tr v-if="items.length === 0"><td colspan="5" class="feedback">当前筛选下没有预订。</td></tr>
         </tbody>
       </table>
     </div>

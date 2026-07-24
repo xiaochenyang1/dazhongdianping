@@ -63,6 +63,11 @@ describe('ReservationsView', () => {
     const { app, host } = mountView()
     await flushView()
 
+    expect(mocks.fetchReservations).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 50,
+      status: 0,
+    })
     expect(host.textContent).toContain('巴黎川味馆')
     expect(host.textContent).toContain('2026-07-22T18:30:00')
     expect(host.querySelector('[data-testid="reservation-actions-31"]')).not.toBeNull()

@@ -12,12 +12,21 @@ const auditingId = ref<number | null>(null)
 const items = ref<MerchantOrder[]>([])
 const refundReasons = reactive<Record<number, string>>({})
 const canAuditRefund = computed(() => props.permissions.includes('order:refund'))
+const filters = reactive({
+  refundStatus: '0',
+})
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    items.value = (await fetchOrders({ page: 1, pageSize: 50 })).list
+    items.value = (
+      await fetchOrders({
+        page: 1,
+        pageSize: 50,
+        refundStatus: filters.refundStatus === '' ? undefined : Number(filters.refundStatus),
+      })
+    ).list
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '订单加载失败'
   } finally {
@@ -51,9 +60,25 @@ onMounted(load)
 <template>
   <section>
     <div class="toolbar">
-      <span class="muted">仅“申请中”的退款可审核，历史决定只读展示。</span>
+      <div class="row-actions">
+        <label>
+          <span class="muted">退款状态</span>
+          <select
+            v-model="filters.refundStatus"
+            name="order-refund-status-filter"
+            data-testid="order-refund-status-filter"
+            @change="load"
+          >
+            <option value="">全部</option>
+            <option value="0">申请中</option>
+            <option value="1">退款成功</option>
+            <option value="2">已驳回</option>
+          </select>
+        </label>
+      </div>
       <button type="button" @click="load">刷新</button>
     </div>
+    <p class="muted">默认看“申请中”的退款；可切换查看历史审核结果。</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="loading" class="muted">加载中...</p>
     <div v-else class="card table-wrap">

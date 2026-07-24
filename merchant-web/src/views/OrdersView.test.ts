@@ -59,6 +59,11 @@ describe('OrdersView', () => {
     const { app, host } = mountView()
     await flushView()
 
+    expect(mocks.fetchOrders).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 50,
+      refundStatus: 0,
+    })
     expect(host.querySelector('[data-testid="refund-actions-81"]')).not.toBeNull()
     expect(host.querySelector('[data-testid="refund-actions-82"]')).toBeNull()
 
