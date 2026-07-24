@@ -13,6 +13,10 @@ export function ackNotification(id: number) {
   return apiPost<UserNotification>(`/api/c/v1/notifications/${id}/ack`)
 }
 
+export function markAllNotificationsRead() {
+  return apiPost<{ updated: number; count: number }>('/api/c/v1/notifications/read-all')
+}
+
 export function issueWebSocketTicket() {
   return apiPost<{ ticket: string; expiresInSeconds: number }>('/api/c/v1/ws/ticket')
 }

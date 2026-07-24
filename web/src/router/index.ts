@@ -128,6 +128,12 @@ const router = createRouter({
       },
     },
     {
+      path: '/user/notifications',
+      name: 'user-notifications',
+      component: () => import('@/views/NotificationsView.vue'),
+      meta: { requiresAuth: true, title: '消息中心', description: '查看站内通知并标记已读。' },
+    },
+    {
       path: '/user/favorites',
       name: 'user-favorites',
       component: () => import('@/views/FavoritesView.vue'),

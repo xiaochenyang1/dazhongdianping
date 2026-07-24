@@ -1,5 +1,11 @@
 import { reactive } from 'vue'
-import { ackNotification, fetchNotifications, fetchUnreadNotificationCount, issueWebSocketTicket } from '@/services/notification'
+import {
+  ackNotification,
+  fetchNotifications,
+  fetchUnreadNotificationCount,
+  issueWebSocketTicket,
+  markAllNotificationsRead,
+} from '@/services/notification'
 import type { UserNotification } from '@/types/notification'
 
 const state = reactive({ items: [] as UserNotification[], unreadCount: 0, connected: false, loading: false })
@@ -71,4 +77,17 @@ async function markRead(notification: UserNotification) {
   }
 }
 
-export function useNotifications() { return { state, refresh, connect, disconnect, markRead } }
+async function markAllRead() {
+  const result = await markAllNotificationsRead()
+  state.items = state.items.map((item) => ({
+    ...item,
+    read: true,
+    readAt: item.readAt || new Date().toISOString().slice(0, 19).replace('T', ' '),
+  }))
+  state.unreadCount = result.count
+  return result
+}
+
+export function useNotifications() {
+  return { state, refresh, connect, disconnect, markRead, markAllRead }
+}

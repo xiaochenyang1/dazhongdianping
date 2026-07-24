@@ -84,6 +84,39 @@ class NotificationControllerTest {
                 .andExpect(jsonPath("$.data.expiresInSeconds").value(60));
     }
 
+    @Test
+    void shouldMarkAllNotificationsRead() throws Exception {
+        RegisteredUser user = registerUser();
+        jdbcTemplate.update("""
+                INSERT INTO user_notification(user_id, region, type, title, content, link_url, is_read, aggregate_count)
+                VALUES (?, 'CN', 'review.like', '有人点赞了你的点评', '赞了你', '/reviews/1', FALSE, 2)
+                """, user.userId());
+        jdbcTemplate.update("""
+                INSERT INTO user_notification(user_id, region, type, title, content, link_url, is_read, aggregate_count)
+                VALUES (?, 'CN', 'reservation.reminder', '预订提醒', '即将到店', '/user/reservations/1', FALSE, 1)
+                """, user.userId());
+
+        mockMvc.perform(get("/api/c/v1/notifications/unread-count")
+                        .header("Authorization", bearer(user.accessToken()))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(3));
+
+        mockMvc.perform(post("/api/c/v1/notifications/read-all")
+                        .header("Authorization", bearer(user.accessToken()))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.updated").value(2))
+                .andExpect(jsonPath("$.data.count").value(0));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(user.accessToken()))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].read").value(true))
+                .andExpect(jsonPath("$.data.list[1].read").value(true));
+    }
+
     private RegisteredUser registerUser() throws Exception {
         String account = "notification-" + UUID.randomUUID() + "@example.com";
         mockMvc.perform(post("/api/c/v1/auth/send-code")

@@ -48,6 +48,15 @@ public class NotificationService {
     }
 
     @Transactional
+    public Map<String, Object> markAllRead(Long userId, String region) {
+        int updated = mapper.markAllRead(userId, region);
+        return Map.of(
+                "updated", updated,
+                "count", mapper.countUnread(userId, region)
+        );
+    }
+
+    @Transactional
     public Map<String, Object> create(Long userId, String region, String type, String title, String content, String linkUrl) {
         return create(userId, null, region, type, title, content, linkUrl);
     }

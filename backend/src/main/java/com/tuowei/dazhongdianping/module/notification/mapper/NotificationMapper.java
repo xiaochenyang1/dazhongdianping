@@ -17,5 +17,6 @@ public interface NotificationMapper {
     int bumpAggregate(@Param("id") Long id, @Param("actorUserId") Long actorUserId, @Param("title") String title,
                       @Param("content") String content, @Param("linkUrl") String linkUrl);
     int markRead(@Param("id") Long id, @Param("userId") Long userId, @Param("region") String region);
+    int markAllRead(@Param("userId") Long userId, @Param("region") String region);
     int insert(NotificationRow row);
 }

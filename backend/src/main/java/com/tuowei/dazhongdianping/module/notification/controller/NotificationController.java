@@ -41,6 +41,11 @@ public class NotificationController {
         return ApiResponse.success(notifications.ack(id, userId(), region()));
     }
 
+    @PostMapping("/notifications/read-all")
+    public ApiResponse<Map<String, Object>> markAllRead() {
+        return ApiResponse.success("全部已读", "notification.read_all", notifications.markAllRead(userId(), region()));
+    }
+
     @PostMapping("/ws/ticket")
     public ApiResponse<Map<String, Object>> ticket() {
         return ApiResponse.success(tickets.issue(userId(), region()));

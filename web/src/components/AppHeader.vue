@@ -25,7 +25,7 @@ const route = useRoute()
 const router = useRouter()
 const { state, setRegion } = useAppContext()
 const { state: sessionState, openAuthDialog, clearSession } = useUserSession()
-const { state: notificationState, refresh: refreshNotifications, connect: connectNotifications, disconnect: disconnectNotifications, markRead } = useNotifications()
+const { state: notificationState, refresh: refreshNotifications, connect: connectNotifications, disconnect: disconnectNotifications, markRead, markAllRead } = useNotifications()
 const notificationOpen = ref(false)
 const logoutLoading = ref(false)
 const searchKeyword = ref(typeof route.query.keyword === 'string' ? route.query.keyword : '')
@@ -48,6 +48,7 @@ const navItems = [
   { to: '/community', label: '华人社区', matchPrefix: '/community' },
   { to: '/user/reviews', label: '我的点评', matchPrefix: '/user/reviews' },
   { to: '/user/favorites', label: '我的收藏', matchPrefix: '/user/favorites' },
+  { to: '/user/notifications', label: '消息中心', matchPrefix: '/user/notifications' },
   { to: '/user/browse-history', label: '我的足迹', matchPrefix: '/user/browse-history' },
   { to: '/user/orders', label: '我的订单', matchPrefix: '/user/orders' },
   { to: '/user/coupons', label: '我的券', matchPrefix: '/user/coupons' },
@@ -175,6 +176,14 @@ function notificationHint(item: UserNotification) {
     return ' · 预订提醒'
   }
   return ''
+}
+
+async function handleMarkAllNotificationsRead() {
+  try {
+    await markAllRead()
+  } catch {
+    // ignore
+  }
 }
 
 async function handleNotificationClick(item: UserNotification) {
@@ -445,7 +454,14 @@ watch(
             <span v-if="notificationState.unreadCount" class="notification-badge">{{ notificationState.unreadCount }}</span>
           </button>
           <div v-if="notificationOpen" class="notification-popover">
-            <div class="notification-popover__head"><strong>消息通知</strong><span>{{ notificationState.connected ? '实时在线' : '离线补偿' }}</span></div>
+            <div class="notification-popover__head">
+              <strong>消息通知</strong>
+              <span>{{ notificationState.connected ? '实时在线' : '离线补偿' }}</span>
+              <div class="notification-popover__actions">
+                <button v-if="notificationState.unreadCount" type="button" class="ghost-button" data-testid="mark-all-notifications" @click.stop="handleMarkAllNotificationsRead">全部已读</button>
+                <RouterLink class="text-link" to="/user/notifications" @click="notificationOpen = false">查看全部</RouterLink>
+              </div>
+            </div>
             <p v-if="notificationState.loading" class="notification-empty">加载中...</p>
             <p v-else-if="notificationState.items.length === 0" class="notification-empty">暂无通知</p>
             <button v-for="item in notificationState.items" :key="item.id" type="button" class="notification-item" :class="{ unread: !item.read }" @click="handleNotificationClick(item)">

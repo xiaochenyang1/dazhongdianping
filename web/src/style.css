@@ -2442,3 +2442,16 @@ img {
   gap: 12px;
   align-items: center;
 }
+
+
+.notification-card.unread {
+  border-color: color-mix(in srgb, var(--accent, #f97316) 45%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #f97316) 20%, transparent);
+}
+
+.notification-popover__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
