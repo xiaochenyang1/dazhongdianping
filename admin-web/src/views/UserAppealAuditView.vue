@@ -13,7 +13,7 @@ const pageState = ref<PageResult<AdminAuditTask> | null>(null)
 const selectedId = ref<number | null>(null)
 const passRemark = ref('')
 const rejectReason = ref('')
-const filters = reactive({ status: '0', page: 1, pageSize: 10 })
+const filters = reactive({ status: '0', keyword: '', page: 1, pageSize: 10 })
 const selected = computed(
   () => pageState.value?.list.find((item) => item.id === selectedId.value) ?? pageState.value?.list[0] ?? null,
 )
@@ -27,6 +27,7 @@ async function load() {
       region: state.region,
       bizType: 8,
       status: filters.status === '' ? undefined : Number(filters.status),
+      keyword: filters.keyword.trim() || undefined,
       page: filters.page,
       pageSize: filters.pageSize,
     })
@@ -114,6 +115,19 @@ watch(
               <option value="2">驳回</option>
             </select>
           </label>
+          <label class="field">
+            <span>关键词</span>
+            <input
+              v-model="filters.keyword"
+              name="user-appeal-keyword-filter"
+              data-testid="user-appeal-keyword-filter"
+              placeholder="用户昵称 / 账号 / 申诉理由"
+              @keyup.enter="filters.page = 1; load()"
+            />
+          </label>
+          <div class="toolbar-actions">
+            <button type="button" class="primary-button" @click="filters.page = 1; load()">应用筛选</button>
+          </div>
         </div>
         <div class="table-shell">
           <table class="data-table">

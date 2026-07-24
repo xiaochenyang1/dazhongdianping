@@ -6,6 +6,7 @@ import type { AdminAuditTask, PageResult } from '@/types/admin'
 
 interface AuditFilters {
   status: string
+  keyword: string
   page: number
   pageSize: number
 }
@@ -23,6 +24,7 @@ const rejectReason = ref('')
 
 const filters = reactive<AuditFilters>({
   status: '0',
+  keyword: '',
   page: 1,
   pageSize: 10,
 })
@@ -46,6 +48,7 @@ async function loadTasks() {
       region: state.region,
       bizType: 3,
       status: filters.status ? Number(filters.status) : undefined,
+      keyword: filters.keyword.trim() || undefined,
       page: filters.page,
       pageSize: filters.pageSize,
     })
@@ -193,6 +196,15 @@ watch(
               <option value="1">通过</option>
               <option value="2">驳回</option>
             </select>
+          </label>
+          <label class="field">
+            <span>关键词</span>
+            <input
+              v-model="filters.keyword"
+              name="review-keyword-filter"
+              data-testid="review-keyword-filter"
+              placeholder="门店名 / 用户 / 点评内容"
+            />
           </label>
 
           <div class="toolbar-actions">

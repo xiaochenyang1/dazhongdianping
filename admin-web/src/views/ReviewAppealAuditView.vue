@@ -8,13 +8,20 @@ const { state } = useAdminSession()
 const loading = ref(false); const acting = ref(false); const error = ref(''); const success = ref('')
 const pageState = ref<PageResult<AdminAuditTask> | null>(null); const selectedId = ref<number | null>(null)
 const passRemark = ref(''); const rejectReason = ref('')
-const filters = reactive({ status: '0', page: 1, pageSize: 10 })
+const filters = reactive({ status: '0', keyword: '', page: 1, pageSize: 10 })
 const selected = computed(() => pageState.value?.list.find((item) => item.id === selectedId.value) ?? pageState.value?.list[0] ?? null)
 
 async function load() {
   loading.value = true; error.value = ''
   try {
-    pageState.value = await listAuditTasks({ region: state.region, bizType: 6, status: filters.status === '' ? undefined : Number(filters.status), page: filters.page, pageSize: filters.pageSize })
+    pageState.value = await listAuditTasks({
+      region: state.region,
+      bizType: 6,
+      status: filters.status === '' ? undefined : Number(filters.status),
+      keyword: filters.keyword.trim() || undefined,
+      page: filters.page,
+      pageSize: filters.pageSize,
+    })
     if (!pageState.value.list.some((item) => item.id === selectedId.value)) selectedId.value = pageState.value.list[0]?.id ?? null
   } catch (e) { error.value = e instanceof Error ? e.message : '申诉任务加载失败' }
   finally { loading.value = false }
@@ -46,7 +53,30 @@ watch(() => state.region, () => { filters.page = 1; selectedId.value = null; voi
     <p v-if="error" class="feedback is-error">{{ error }}</p><p v-if="success" class="feedback is-success">{{ success }}</p>
     <div class="two-column-layout">
       <section class="content-card">
-        <div class="toolbar-grid toolbar-grid--filters"><label class="field"><span>状态</span><select v-model="filters.status" @change="filters.page=1; load()"><option value="">全部</option><option value="0">待人审</option><option value="1">通过</option><option value="2">驳回</option></select></label></div>
+        <div class="toolbar-grid toolbar-grid--filters">
+          <label class="field">
+            <span>状态</span>
+            <select v-model="filters.status" @change="filters.page=1; load()">
+              <option value="">全部</option>
+              <option value="0">待人审</option>
+              <option value="1">通过</option>
+              <option value="2">驳回</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>关键词</span>
+            <input
+              v-model="filters.keyword"
+              name="review-appeal-keyword-filter"
+              data-testid="review-appeal-keyword-filter"
+              placeholder="商户名 / 门店名 / 申诉摘要"
+              @keyup.enter="filters.page=1; load()"
+            />
+          </label>
+          <div class="toolbar-actions">
+            <button type="button" class="primary-button" @click="filters.page=1; load()">应用筛选</button>
+          </div>
+        </div>
         <div class="table-shell"><table class="data-table"><thead><tr><th>任务</th><th>门店</th><th>申诉摘要</th><th>状态</th><th>操作</th></tr></thead><tbody><tr v-if="loading"><td colspan="5" class="table-empty">加载中...</td></tr><tr v-else-if="!pageState?.list.length"><td colspan="5" class="table-empty">当前没有申诉任务。</td></tr><tr v-for="task in pageState?.list" :key="task.id"><td>#{{ task.id }}<p>申诉 #{{ task.bizId }}</p></td><td>{{ task.shopName || '--' }}</td><td>{{ task.summary || '暂无摘要' }}</td><td>{{ task.statusText }}</td><td><button class="table-action" @click="selectedId=task.id">查看</button></td></tr></tbody></table></div>
         <div class="pager"><button class="ghost-button" :disabled="filters.page<=1" @click="filters.page--; load()">上一页</button><span>第 {{ filters.page }} 页 / 共 {{ pageState?.total ?? 0 }} 条</span><button class="ghost-button" :disabled="!pageState?.hasMore" @click="filters.page++; load()">下一页</button></div>
       </section>

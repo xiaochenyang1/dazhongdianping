@@ -71,11 +71,29 @@ describe('UserAppealAuditView', () => {
       region: 'CN',
       bizType: 8,
       status: 0,
+      keyword: undefined,
       page: 1,
       pageSize: 10,
     })
     expect(host.textContent).toContain('被封禁的测试用户')
     expect(host.textContent).toContain('账号被误封，我没有发布任何违规内容，请复核。')
+
+    const keyword = host.querySelector<HTMLInputElement>('[data-testid="user-appeal-keyword-filter"]')
+    if (!keyword) throw new Error('找不到关键词输入框')
+    keyword.value = '误封'
+    keyword.dispatchEvent(new Event('input'))
+    const applyButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('应用筛选'))
+    if (!applyButton) throw new Error('找不到应用筛选按钮')
+    applyButton.click()
+    await flushView()
+    expect(adminMocks.listAuditTasks).toHaveBeenLastCalledWith({
+      region: 'CN',
+      bizType: 8,
+      status: 0,
+      keyword: '误封',
+      page: 1,
+      pageSize: 10,
+    })
     app.unmount()
   })
 
