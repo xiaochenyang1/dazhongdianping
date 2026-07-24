@@ -101,6 +101,13 @@ describe('DealsView', () => {
     const { app, host } = mount()
     await flush()
 
+    expect(mocks.fetchDeals).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 50,
+      auditStatus: undefined,
+    })
+    expect(host.querySelector('[data-testid="deal-audit-status-filter"]')).not.toBeNull()
+
     host.querySelector<HTMLButtonElement>('[data-testid="deal-create-open"]')?.click()
     await nextTick()
 

@@ -29,6 +29,9 @@ const editingId = ref<number | null>(null)
 const formOpen = ref(false)
 const canEdit = computed(() => props.permissions.includes('deal:edit'))
 const defaultCurrency = computed(() => (state.region === 'EU' ? 'EUR' : 'CNY'))
+const filters = reactive({
+  auditStatus: 'pending_or_rejected',
+})
 
 const form = reactive({
   shopId: '',
@@ -169,10 +172,21 @@ async function load() {
   error.value = ''
   try {
     const [dealPage, shopPage] = await Promise.all([
-      fetchDeals({ page: 1, pageSize: 50 }),
+      fetchDeals({
+        page: 1,
+        pageSize: 50,
+        auditStatus:
+          filters.auditStatus === 'pending_or_rejected' || filters.auditStatus === ''
+            ? undefined
+            : Number(filters.auditStatus),
+      }),
       fetchShops({ page: 1, pageSize: 100 }),
     ])
-    items.value = dealPage.list
+    const list = dealPage.list
+    items.value =
+      filters.auditStatus === 'pending_or_rejected'
+        ? list.filter((item) => item.auditStatus === 0 || item.auditStatus === 2)
+        : list
     shops.value = shopPage.list.map((shop) => ({ id: Number(shop.id), name: String(shop.name || `shop:${shop.id}`) }))
     if (!form.shopId && shops.value[0]) {
       form.shopId = String(shops.value[0].id)
@@ -230,9 +244,24 @@ onMounted(load)
       <div>
         <p class="eyebrow">Deal management</p>
         <strong>团购创建与编辑</strong>
-        <p class="muted">创建/编辑后会回到待审下架；审核通过后才能上架销售。</p>
+        <p class="muted">默认看待审/被驳回；创建/编辑后会回到待审下架，审核通过后才能上架销售。</p>
       </div>
       <div class="row-actions">
+        <label>
+          <span class="muted">审核状态</span>
+          <select
+            v-model="filters.auditStatus"
+            name="deal-audit-status-filter"
+            data-testid="deal-audit-status-filter"
+            @change="load"
+          >
+            <option value="pending_or_rejected">待审/被驳回</option>
+            <option value="">全部</option>
+            <option value="0">待审</option>
+            <option value="1">已通过</option>
+            <option value="2">已驳回</option>
+          </select>
+        </label>
         <button type="button" class="secondary-action" @click="load">刷新</button>
         <button v-if="canEdit" type="button" class="primary-action" data-testid="deal-create-open" @click="openCreate">
           新建团购

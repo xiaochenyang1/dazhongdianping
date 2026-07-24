@@ -43,6 +43,9 @@ const activeDraft = ref<MerchantShopChange | null>(null)
 const canEdit = computed(() => props.permissions.includes('shop:edit'))
 const defaultCurrency = computed(() => (state.region === 'EU' ? 'EUR' : 'CNY'))
 const flatCategories = computed(() => flattenCategories(categories.value))
+const filters = reactive({
+  draftStatus: 'pending_or_rejected',
+})
 
 const form = reactive({
   categoryId: '',
@@ -137,12 +140,23 @@ async function load() {
   try {
     const [shopPage, draftPage, categoryList, cityList] = await Promise.all([
       fetchShops({ page: 1, pageSize: 50 }),
-      fetchShopChanges({ page: 1, pageSize: 50 }),
+      fetchShopChanges({
+        page: 1,
+        pageSize: 50,
+        status:
+          filters.draftStatus === 'pending_or_rejected' || filters.draftStatus === ''
+            ? undefined
+            : Number(filters.draftStatus),
+      }),
       fetchCategories(),
       fetchCities(),
     ])
     shops.value = shopPage.list
-    drafts.value = draftPage.list
+    const draftList = draftPage.list
+    drafts.value =
+      filters.draftStatus === 'pending_or_rejected'
+        ? draftList.filter((item) => item.status === 1 || item.status === 3)
+        : draftList
     categories.value = categoryList
     cities.value = cityList
     if (form.cityId) {
@@ -376,9 +390,25 @@ onMounted(load)
       <div>
         <p class="eyebrow">Shop drafts</p>
         <strong>门店与草稿审核</strong>
-        <p class="muted">先建草稿，再改基础资料/相册/菜单；提交审核前线上门店数据不会变。</p>
+        <p class="muted">默认看待审/被驳回草稿；先建草稿，再改基础资料/相册/菜单，提交审核前线上门店数据不会变。</p>
       </div>
       <div class="row-actions">
+        <label>
+          <span class="muted">草稿状态</span>
+          <select
+            v-model="filters.draftStatus"
+            name="shop-draft-status-filter"
+            data-testid="shop-draft-status-filter"
+            @change="load"
+          >
+            <option value="pending_or_rejected">待审/被驳回</option>
+            <option value="">全部</option>
+            <option value="0">草稿</option>
+            <option value="1">待审</option>
+            <option value="2">已通过</option>
+            <option value="3">已驳回</option>
+          </select>
+        </label>
         <button type="button" class="secondary-action" @click="load">刷新</button>
         <button v-if="canEdit" type="button" class="primary-action" data-testid="shop-draft-create-new" :disabled="saving" @click="createNewDraft">
           新建门店草稿

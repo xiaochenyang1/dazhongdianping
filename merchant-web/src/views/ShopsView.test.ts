@@ -102,6 +102,13 @@ describe('ShopsView', () => {
     const { app, host, vm } = mount()
     await flush()
 
+    expect(mocks.fetchShopChanges).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 50,
+      status: undefined,
+    })
+    expect(host.querySelector('[data-testid="shop-draft-status-filter"]')).not.toBeNull()
+
     host.querySelector<HTMLButtonElement>('[data-testid="shop-draft-from-20001"]')?.click()
     await flush()
 
