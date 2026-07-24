@@ -129,6 +129,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'audit/deals',
+          name: 'audit-deals',
+          component: () => import('@/views/DealAuditView.vue'),
+          meta: {
+            requiresAuth: true,
+            title: '团购审核',
+            requiredPermission: 'audit:deal:read',
+          },
+        },
+        {
           path: 'data/import',
           name: 'shop-import',
           component: () => import('@/views/ImportView.vue'),

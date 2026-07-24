@@ -18,7 +18,8 @@ public class AdminMenuService {
                         leaf("audit.expert_certifications", "达人认证", "/audit/expert-certifications", "audit:expert_certification:read"),
                         leaf("audit.user_appeals", "用户封禁申诉", "/audit/user-appeals", "audit:user_appeal:read"),
                         leaf("audit.merchant_applications", "商户资质审核", "/audit/merchant-applications", "audit:merchant_application:read"),
-                        leaf("audit.shop_changes", "门店草稿审核", "/audit/shop-changes", "audit:shop_change:read")
+                        leaf("audit.shop_changes", "门店草稿审核", "/audit/shop-changes", "audit:shop_change:read"),
+                        leaf("audit.deals", "团购审核", "/audit/deals", "audit:deal:read")
                 )),
                 group("data", "数据管理", "/data", List.of(
                         leaf("data.shops", "商户管理", "/data/shops", "data:shop:read"),
