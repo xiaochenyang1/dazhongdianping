@@ -202,6 +202,9 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'expert.certification.result') {
     return ' · 达人认证'
   }
+  if (item.type === 'post.audit.result') {
+    return ' · 帖子审核'
+  }
   return ''
 }
 

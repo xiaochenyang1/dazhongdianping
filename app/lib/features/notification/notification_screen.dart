@@ -65,8 +65,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
       widget.onUserTap?.call(userId);
       return;
     }
+    // Accept optional query markers such as ?audit=approved/rejected.
     final postMatch = RegExp(
-      r'^/community/posts/(\d+)$',
+      r'^/community/posts/(\d+)(?:\?.*)?$',
     ).firstMatch(notification.linkUrl);
     final postId = postMatch == null ? null : int.tryParse(postMatch.group(1)!);
     if (postId != null) {

@@ -5,10 +5,72 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class NotificationScreenApi implements JsonApi {
-  NotificationScreenApi({this.social = false, this.directMessage = false});
+  NotificationScreenApi({
+    this.social = false,
+    this.directMessage = false,
+    this.postAudit = false,
+  });
   final bool social;
   final bool directMessage;
+  final bool postAudit;
   String? postedPath;
+
+  Map<String, dynamic> _item({required bool read}) {
+    if (social) {
+      return {
+        'id': 1,
+        'type': 'social.follow',
+        'actorUserId': 9,
+        'actorName': '伦敦小王',
+        'title': '新增关注',
+        'content': '伦敦小王关注了你',
+        'linkUrl': '/users/9',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (directMessage) {
+      return {
+        'id': 1,
+        'type': 'message.direct',
+        'actorUserId': 9,
+        'actorName': '巴黎小陈',
+        'title': '收到私信',
+        'content': '巴黎小陈：第二条私信提醒',
+        'linkUrl': '/messages/conversations/7',
+        'aggregateCount': 2,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (postAudit) {
+      return {
+        'id': 1,
+        'type': 'post.audit.result',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '帖子已通过审核',
+        'content': '《伦敦周末早午餐避坑指南》 已公开：内容真实，可公开',
+        'linkUrl': '/community/posts/88?audit=approved',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    return {
+      'id': 1,
+      'type': 'review.reply',
+      'actorUserId': null,
+      'actorName': 'Maison Sichuan',
+      'title': '商家回复',
+      'content': '谢谢支持',
+      'linkUrl': '/reviews/1',
+      'aggregateCount': 1,
+      'read': read,
+      'createdAt': '2026-07-15 10:00:00',
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -16,28 +78,7 @@ class NotificationScreenApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     return {
-      'list': [
-        {
-          'id': 1,
-          'type': social
-              ? 'social.follow'
-              : (directMessage ? 'message.direct' : 'review.reply'),
-          'actorUserId': social || directMessage ? 9 : null,
-          'actorName': social
-              ? '伦敦小王'
-              : (directMessage ? '巴黎小陈' : 'Maison Sichuan'),
-          'title': social ? '新增关注' : (directMessage ? '收到私信' : '商家回复'),
-          'content': social
-              ? '伦敦小王关注了你'
-              : (directMessage ? '巴黎小陈：第二条私信提醒' : '谢谢支持'),
-          'linkUrl': social
-              ? '/users/9'
-              : (directMessage ? '/messages/conversations/7' : '/reviews/1'),
-          'aggregateCount': directMessage ? 2 : 1,
-          'read': false,
-          'createdAt': '2026-07-15 10:00:00',
-        },
-      ],
+      'list': [_item(read: false)],
       'total': 1,
     };
   }
@@ -45,26 +86,7 @@ class NotificationScreenApi implements JsonApi {
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postedPath = path;
-    return {
-      'id': 1,
-      'type': social
-          ? 'social.follow'
-          : (directMessage ? 'message.direct' : 'review.reply'),
-      'actorUserId': social || directMessage ? 9 : null,
-      'actorName': social
-          ? '伦敦小王'
-          : (directMessage ? '巴黎小陈' : 'Maison Sichuan'),
-      'title': social ? '新增关注' : (directMessage ? '收到私信' : '商家回复'),
-      'content': social
-          ? '伦敦小王关注了你'
-          : (directMessage ? '巴黎小陈：第二条私信提醒' : '谢谢支持'),
-      'linkUrl': social
-          ? '/users/9'
-          : (directMessage ? '/messages/conversations/7' : '/reviews/1'),
-      'aggregateCount': directMessage ? 2 : 1,
-      'read': true,
-      'createdAt': '2026-07-15 10:00:00',
-    };
+    return _item(read: true);
   }
 }
 
@@ -169,4 +191,25 @@ void main() {
     expect(openedPeerUserId, 9);
     expect(openedPeerName, '巴黎小陈');
   });
+
+  testWidgets(
+    'post audit notification acknowledges then opens the post detail',
+    (tester) async {
+      final api = NotificationScreenApi(postAudit: true);
+      int? openedPostId;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NotificationScreen(
+            repository: NotificationRepository(api),
+            onPostTap: (postId) => openedPostId = postId,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('帖子已通过审核'));
+      await tester.pumpAndSettle();
+      expect(api.postedPath, '/api/c/v1/notifications/1/ack');
+      expect(openedPostId, 88);
+    },
+  );
 }

@@ -310,4 +310,40 @@ describe('NotificationsView', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/profile')
     app.unmount()
   })
+
+  it('routes post audit notifications to community post detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 23,
+          type: 'post.audit.result',
+          title: '帖子已通过审核',
+          content: '《伦敦周末早午餐避坑指南》 已公开：内容真实，可公开',
+          linkUrl: '/community/posts/88?audit=approved',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 12:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('帖子已通过审核')
+    expect(host.textContent).toContain('帖子审核')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/community/posts/88')
+    app.unmount()
+  })
 })

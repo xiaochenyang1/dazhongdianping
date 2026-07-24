@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { fetchPost, fetchPostComments } from '@/services/community'
 import type { CommunityComment, CommunityPost } from '@/types/community'
 import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
 
 const props = defineProps<{ postId: number }>()
+const route = useRoute()
 
 const post = ref<CommunityPost | null>(null)
 const comments = ref<CommunityComment[]>([])
 const errorMessage = ref('')
 let requestSequence = 0
+
+const auditBanner = computed(() => {
+  const marker = String(route.query.audit || '')
+  if (marker === 'approved') return '平台已通过你的帖子，现已公开展示。'
+  if (marker === 'rejected') return '平台未通过你的帖子，可到 APP「我的帖子」查看驳回原因并修改重提。'
+  return ''
+})
 
 function normalizeCommunityComments(list: CommunityComment[]): CommunityComment[] {
   return list.map((comment) => ({
@@ -111,6 +120,7 @@ watch(
       </div>
     </div>
 
+    <p v-if="auditBanner" class="feedback is-success" data-testid="post-audit-banner">{{ auditBanner }}</p>
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
 
     <article class="content-card">

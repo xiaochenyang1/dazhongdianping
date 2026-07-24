@@ -450,4 +450,40 @@ describe('AppHeader', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/profile')
     app.unmount()
   })
+
+  it('routes post audit notifications to community post detail page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 707,
+        type: 'post.audit.result',
+        title: '帖子未通过审核',
+        content: '《巴黎租房避坑》 未通过审核：缺少可验证的具体信息',
+        linkUrl: '/community/posts/99?audit=rejected',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-25 12:30:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('帖子未通过审核')
+    expect(host.textContent).toContain('帖子审核')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/community/posts/99')
+    app.unmount()
+  })
 })

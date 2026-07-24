@@ -60,6 +60,7 @@ public class AdminAuditService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String REVIEW_AUDIT_RESULT_TYPE = "review.audit.result";
     private static final String EXPERT_CERT_RESULT_TYPE = "expert.certification.result";
+    private static final String POST_AUDIT_RESULT_TYPE = "post.audit.result";
 
     private final AdminAuditMapper adminAuditMapper;
     private final ReviewMapper reviewMapper;
@@ -302,19 +303,18 @@ public class AdminAuditService {
         }
         circleMapper.refreshPostCountByPostId(task.getBizId());
         topicService.refreshPostCountsByPostId(task.getBizId());
-        if (status == 1) {
-            PostRow post = communityMapper.selectPublicPost(task.getBizId(), currentRegion().name());
-            if (post != null && post.getUserId() != null) {
-                mentionNotificationService.notifyMentionedUsers(
-                        post.getUserId(),
-                        post.getRegion(),
-                        post.getContent(),
-                        "有人@了你",
-                        post.getUserName() + " 在帖子《" + preview(post.getTitle()) + "》中提到了你",
-                        "/community/posts/" + post.getId()
-                );
-            }
+        PostRow post = communityMapper.selectPostById(task.getBizId(), currentRegion().name());
+        if (status == 1 && post != null && post.getUserId() != null) {
+            mentionNotificationService.notifyMentionedUsers(
+                    post.getUserId(),
+                    post.getRegion(),
+                    post.getContent(),
+                    "有人@了你",
+                    post.getUserName() + " 在帖子《" + preview(post.getTitle()) + "》中提到了你",
+                    "/community/posts/" + post.getId()
+            );
         }
+        notifyPostAuditResult(post, status == 1, remark);
         adminAuditMapper.insertAuditLog(
                 currentAdmin().adminId(),
                 action,
@@ -323,6 +323,31 @@ public class AdminAuditService {
                 normalizeIp(requestIp)
         );
         return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
+    private void notifyPostAuditResult(PostRow post, boolean approved, String remark) {
+        if (post == null || post.getUserId() == null) {
+            return;
+        }
+        String titleText = StringUtils.hasText(post.getTitle()) ? post.getTitle() : "你的帖子";
+        String title = approved ? "帖子已通过审核" : "帖子未通过审核";
+        String content = "《" + titleText + "》"
+                + (approved ? " 已公开" : " 未通过审核")
+                + (StringUtils.hasText(remark) ? "：" + remark : "");
+        String linkUrl = approved
+                ? "/community/posts/" + post.getId() + "?audit=approved"
+                : "/community/posts/" + post.getId() + "?audit=rejected";
+        String region = StringUtils.hasText(post.getRegion())
+                ? post.getRegion()
+                : currentRegion().name();
+        notificationService.create(
+                post.getUserId(),
+                region,
+                POST_AUDIT_RESULT_TYPE,
+                title,
+                content,
+                linkUrl
+        );
     }
 
     private AdminAuditTaskResponse passShopChangeTask(

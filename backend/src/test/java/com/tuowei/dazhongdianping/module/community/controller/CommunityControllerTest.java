@@ -89,6 +89,14 @@ class CommunityControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.bizType").value(4));
 
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(userToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].type").value("post.audit.result"))
+                .andExpect(jsonPath("$.data.list[0].title").value("帖子已通过审核"))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/community/posts/" + postId + "?audit=approved"));
+
         mockMvc.perform(get("/api/c/v1/posts/{postId}", postId)
                         .header("X-Region", "EU"))
                 .andExpect(status().isOk())
@@ -121,6 +129,15 @@ class CommunityControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reason\":\"缺少可验证的具体信息\"}"))
                 .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(userToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].type").value("post.audit.result"))
+                .andExpect(jsonPath("$.data.list[0].title").value("帖子未通过审核"))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/community/posts/" + postId + "?audit=rejected"))
+                .andExpect(jsonPath("$.data.list[0].content").value(org.hamcrest.Matchers.containsString("缺少可验证的具体信息")));
 
         mockMvc.perform(get("/api/c/v1/user/posts/{postId}", postId)
                         .header("Authorization", bearer(userToken))
@@ -442,23 +459,26 @@ class CommunityControllerTest {
                         .content("{\"content\":\"这条帖子值得补一条评论提醒。\"}"))
                 .andExpect(status().isOk());
 
+        // unread-count sums aggregate_count: audit(1) + likes(2) + comment(1) = 4.
         mockMvc.perform(get("/api/c/v1/notifications/unread-count")
                         .header("Authorization", bearer(authorToken))
                         .header("X-Region", "EU"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.count").value(3));
+                .andExpect(jsonPath("$.data.count").value(4));
 
         mockMvc.perform(get("/api/c/v1/notifications")
                         .header("Authorization", bearer(authorToken))
                         .header("X-Region", "EU"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.total").value(2))
-                .andExpect(jsonPath("$.data.list[0].type").value("post.comment"))
-                .andExpect(jsonPath("$.data.list[0].aggregateCount").value(1))
-                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/community/posts/" + postId))
-                .andExpect(jsonPath("$.data.list[1].type").value("post.like"))
-                .andExpect(jsonPath("$.data.list[1].aggregateCount").value(2))
-                .andExpect(jsonPath("$.data.list[1].linkUrl").value("/community/posts/" + postId));
+                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.list[*].type").value(org.hamcrest.Matchers.hasItems(
+                        "post.comment",
+                        "post.like",
+                        "post.audit.result"
+                )))
+                .andExpect(jsonPath("$.data.list[?(@.type=='post.like')].aggregateCount").value(org.hamcrest.Matchers.hasItem(2)))
+                .andExpect(jsonPath("$.data.list[?(@.type=='post.comment')].linkUrl").value(org.hamcrest.Matchers.hasItem("/community/posts/" + postId)))
+                .andExpect(jsonPath("$.data.list[?(@.type=='post.audit.result')].title").value(org.hamcrest.Matchers.hasItem("帖子已通过审核")));
     }
 
     @Test

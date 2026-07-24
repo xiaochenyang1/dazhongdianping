@@ -24,6 +24,10 @@
         SELECT <include refid="postColumns"/> FROM post p LEFT JOIN circle c ON c.id=p.circle_id
         WHERE p.id=#{postId} AND p.user_id=#{userId} AND p.region=#{region} AND p.is_deleted=FALSE
     </select>
+    <select id="selectPostById" resultType="com.tuowei.dazhongdianping.module.community.model.PostRow">
+        SELECT <include refid="postColumns"/> FROM post p LEFT JOIN circle c ON c.id=p.circle_id
+        WHERE p.id=#{postId} AND p.region=#{region} AND p.is_deleted=FALSE
+    </select>
     <select id="selectPublicPost" resultType="com.tuowei.dazhongdianping.module.community.model.PostRow">
         SELECT <include refid="postColumns"/> FROM post p LEFT JOIN circle c ON c.id=p.circle_id
         WHERE p.id=#{postId} AND p.region=#{region} AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE

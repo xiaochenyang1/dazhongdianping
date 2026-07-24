@@ -12,6 +12,7 @@ public interface CommunityMapper {
     void insertPostImage(@Param("postId") Long postId, @Param("url") String url, @Param("sortNo") Integer sortNo);
     void insertPostTopic(@Param("postId") Long postId, @Param("topicId") Long topicId);
     PostRow selectOwnedPost(@Param("postId") Long postId, @Param("userId") Long userId, @Param("region") String region);
+    PostRow selectPostById(@Param("postId") Long postId, @Param("region") String region);
     PostRow selectPublicPost(@Param("postId") Long postId, @Param("region") String region);
     PostRow selectPublicPostForUpdate(@Param("postId") Long postId, @Param("region") String region);
     List<String> selectPostImages(@Param("postId") Long postId);
