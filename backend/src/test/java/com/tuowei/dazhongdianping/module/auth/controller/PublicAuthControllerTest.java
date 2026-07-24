@@ -619,6 +619,14 @@ class PublicAuthControllerTest {
                 .andExpect(jsonPath("$.data.bizType").value(7))
                 .andExpect(jsonPath("$.data.bizTypeText").value("达人认证"));
 
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(accessToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].type").value("expert.certification.result"))
+                .andExpect(jsonPath("$.data.list[0].title").value("达人认证已通过"))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/user/profile?expert=approved"));
+
         mockMvc.perform(get("/api/c/v1/user/me")
                         .header("Authorization", bearer(accessToken))
                         .header("X-Region", "EU"))

@@ -274,4 +274,40 @@ describe('NotificationsView', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/reviews/55')
     app.unmount()
   })
+
+  it('routes expert certification notifications to profile page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 22,
+          type: 'expert.certification.result',
+          title: '达人认证已通过',
+          content: '你的本地达人认证已通过，公开资料现可展示达人标识：公开内容稳定',
+          linkUrl: '/user/profile?expert=approved',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 11:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('达人认证已通过')
+    expect(host.textContent).toContain('达人认证')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/profile')
+    app.unmount()
+  })
 })

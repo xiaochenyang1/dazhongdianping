@@ -19,6 +19,7 @@ import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditRej
 import com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow;
 import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.merchant.review.service.MerchantReviewService;
+import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.review.service.ReviewService;
@@ -67,6 +68,9 @@ class AdminAuditServiceTest {
 
     @Mock
     private TopicService topicService;
+
+    @Mock
+    private NotificationService notificationService;
 
     @Spy
     private AdminPermissionChecker permissionChecker = new AdminPermissionChecker();
@@ -160,6 +164,14 @@ class AdminAuditServiceTest {
                 "资料完整，可授予认证",
                 "127.0.0.1"
         );
+        verify(notificationService).create(
+                9001L,
+                "CN",
+                "expert.certification.result",
+                "达人认证已通过",
+                "你的本地达人认证已通过，公开资料现可展示达人标识：资料完整，可授予认证",
+                "/user/profile?expert=approved"
+        );
     }
 
     @Test
@@ -192,6 +204,14 @@ class AdminAuditServiceTest {
                 "expert_certification:8802",
                 "公开内容不足，先补更多真实体验",
                 "127.0.0.1"
+        );
+        verify(notificationService).create(
+                9002L,
+                "CN",
+                "expert.certification.result",
+                "达人认证未通过",
+                "你的本地达人认证未通过：公开内容不足，先补更多真实体验",
+                "/user/profile?expert=rejected"
         );
     }
 

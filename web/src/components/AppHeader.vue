@@ -199,6 +199,9 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'review.audit.result') {
     return ' · 点评审核'
   }
+  if (item.type === 'expert.certification.result') {
+    return ' · 达人认证'
+  }
   return ''
 }
 

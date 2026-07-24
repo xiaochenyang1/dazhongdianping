@@ -59,6 +59,7 @@ public class AdminAuditService {
     private static final int USER_APPEAL_BIZ_TYPE = 8;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String REVIEW_AUDIT_RESULT_TYPE = "review.audit.result";
+    private static final String EXPERT_CERT_RESULT_TYPE = "expert.certification.result";
 
     private final AdminAuditMapper adminAuditMapper;
     private final ReviewMapper reviewMapper;
@@ -463,6 +464,7 @@ public class AdminAuditService {
                 remark,
                 normalizeIp(requestIp)
         );
+        notifyExpertCertificationResult(certification, true, remark);
         return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
     }
 
@@ -488,7 +490,37 @@ public class AdminAuditService {
                 reason,
                 normalizeIp(requestIp)
         );
+        notifyExpertCertificationResult(certification, false, reason);
         return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
+    private void notifyExpertCertificationResult(
+            UserExpertCertificationRow certification,
+            boolean approved,
+            String remark
+    ) {
+        if (certification == null || certification.getUserId() == null) {
+            return;
+        }
+        String title = approved ? "达人认证已通过" : "达人认证未通过";
+        String content = approved
+                ? "你的本地达人认证已通过，公开资料现可展示达人标识"
+                : "你的本地达人认证未通过";
+        if (StringUtils.hasText(remark)) {
+            content = content + "：" + remark;
+        }
+        String linkUrl = "/user/profile?expert=" + (approved ? "approved" : "rejected");
+        String region = StringUtils.hasText(certification.getRegion())
+                ? certification.getRegion()
+                : currentRegion().name();
+        notificationService.create(
+                certification.getUserId(),
+                region,
+                EXPERT_CERT_RESULT_TYPE,
+                title,
+                content,
+                linkUrl
+        );
     }
 
     private AdminAuditTaskResponse passUserAppealTask(

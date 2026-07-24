@@ -414,4 +414,40 @@ describe('AppHeader', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/reviews/55')
     app.unmount()
   })
+
+  it('routes expert certification notifications to profile page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 606,
+        type: 'expert.certification.result',
+        title: '达人认证已通过',
+        content: '你的本地达人认证已通过，公开资料现可展示达人标识',
+        linkUrl: '/user/profile?expert=approved',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-25 11:00:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('达人认证已通过')
+    expect(host.textContent).toContain('达人认证')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/profile')
+    app.unmount()
+  })
 })

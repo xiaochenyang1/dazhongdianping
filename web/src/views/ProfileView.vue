@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useUserSession } from '@/composables/useUserSession'
 import { getBrowserDeviceId } from '@/lib/device-id'
 import {
@@ -12,6 +13,7 @@ import {
 } from '@/services/auth'
 
 const { state, setCurrentUser } = useUserSession()
+const route = useRoute()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -31,6 +33,12 @@ const passwordSuccessMessage = ref('')
 const expertApplying = ref(false)
 const expertErrorMessage = ref('')
 const expertSuccessMessage = ref('')
+const expertBanner = computed(() => {
+  const marker = String(route.query.expert || '')
+  if (marker === 'approved') return '平台已通过你的本地达人认证，公开资料现可展示达人标识。'
+  if (marker === 'rejected') return '平台未通过你的本地达人认证，请查看驳回原因后重新申请。'
+  return ''
+})
 
 const form = reactive({
   nickname: '',
@@ -478,6 +486,7 @@ void bootstrap()
             <span :class="expertStatusClass">{{ expertCertification?.statusText || '未申请' }}</span>
           </div>
 
+          <p v-if="expertBanner" class="feedback is-success" data-testid="expert-audit-banner">{{ expertBanner }}</p>
           <p v-if="expertErrorMessage" class="feedback is-error">{{ expertErrorMessage }}</p>
           <p v-if="expertSuccessMessage" class="feedback is-success">{{ expertSuccessMessage }}</p>
 
