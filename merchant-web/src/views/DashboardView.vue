@@ -54,9 +54,9 @@ const todos = computed(() => [
     show: canViewReservations.value,
   },
   {
-    key: 'orders',
-    label: '订单退款',
-    value: number('paidOrders') || number('paidOrderCount'),
+    key: 'pendingRefunds',
+    label: '待处理退款',
+    value: number('pendingRefunds'),
     to: '/orders',
     show: canViewOrders.value,
   },

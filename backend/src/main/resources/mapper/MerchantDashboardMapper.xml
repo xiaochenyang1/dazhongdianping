@@ -12,6 +12,7 @@
         COALESCE((SELECT COUNT(1) FROM `order` WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND pay_status=1 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS paid_orders,
         COALESCE((SELECT SUM(amount) FROM `order` WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND pay_status=1 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS paid_amount,
         COALESCE((SELECT COUNT(1) FROM coupon WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=2 AND verify_at&gt;=#{startAt} AND verify_at&lt;#{endAt}),0) AS verified_coupons,
+        COALESCE((SELECT COUNT(1) FROM refund r JOIN `order` o ON o.id=r.order_id WHERE o.shop_id IN (<include refid="dashboardShopIds"/>) AND r.status=0),0) AS pending_refunds,
         COALESCE((SELECT COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS reservations_total,
         COALESCE((SELECT COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=0 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS pending_reservations,
         COALESCE((SELECT COUNT(1) FROM reservation WHERE shop_id IN (<include refid="dashboardShopIds"/>) AND status=1 AND created_at&gt;=#{startAt} AND created_at&lt;#{endAt}),0) AS confirmed_reservations,

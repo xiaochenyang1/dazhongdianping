@@ -42,6 +42,7 @@ describe('DashboardView', () => {
       paidOrders: 3,
       paidAmount: 188.5,
       verifiedCoupons: 2,
+      pendingRefunds: 4,
       reservations: {
         total: 5,
         pending: 2,
@@ -63,6 +64,8 @@ describe('DashboardView', () => {
     expect(host.textContent).toContain('支付金额')
     expect(host.textContent).toContain('188.5')
     expect(host.textContent).toContain('待确认预订')
+    expect(host.textContent).toContain('待处理退款')
+    expect(host.textContent).toContain('4')
     expect(host.textContent).toContain('待办与状态')
     expect(host.textContent).toContain('券码核销')
     expect(host.textContent).toContain('团购管理')

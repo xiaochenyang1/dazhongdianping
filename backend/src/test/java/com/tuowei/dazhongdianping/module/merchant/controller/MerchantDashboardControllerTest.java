@@ -47,6 +47,9 @@ class MerchantDashboardControllerTest {
         jdbc.update("INSERT INTO coupon(order_id,user_id,deal_id,shop_id,code,status,verify_at,verify_by,expire_at) "
                 + "VALUES(?,9001,41001,20001,?,2,CURRENT_TIMESTAMP,12001,'2026-12-31')",
                 orderId, "DASH" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        jdbc.update("INSERT INTO refund(order_id, coupon_id, amount, reason, status, audit_by, audit_reason, created_at, updated_at) "
+                + "VALUES(?, 0, 32.00, '行程变动', 0, 0, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                orderId);
         jdbc.update("INSERT INTO reservation(reservation_no,user_id,shop_id,slot_id,region,reserve_time,people_count,contact_name,contact_phone,remark,status) "
                 + "VALUES(?,9001,20001,0,'EU',CURRENT_TIMESTAMP,2,'Lina','+33123456789','',0)",
                 "DASHRS" + UUID.randomUUID().toString().replace("-", "").substring(0, 16));
@@ -62,6 +65,7 @@ class MerchantDashboardControllerTest {
                 .andExpect(jsonPath("$.data.paidOrders").value(1))
                 .andExpect(jsonPath("$.data.paidAmount").value(32.0))
                 .andExpect(jsonPath("$.data.verifiedCoupons").value(1))
+                .andExpect(jsonPath("$.data.pendingRefunds").value(1))
                 .andExpect(jsonPath("$.data.reservations.total").value(1))
                 .andExpect(jsonPath("$.data.reservations.pending").value(1))
                 .andExpect(jsonPath("$.data.rating.score").value(4.6))

@@ -9,6 +9,7 @@ public class MerchantDashboardTotalsRow {
     private Long paidOrders;
     private BigDecimal paidAmount;
     private Long verifiedCoupons;
+    private Long pendingRefunds;
     private Long reservationsTotal;
     private Long pendingReservations;
     private Long confirmedReservations;
