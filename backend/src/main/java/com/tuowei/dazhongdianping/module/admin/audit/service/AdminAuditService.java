@@ -30,6 +30,7 @@ import com.tuowei.dazhongdianping.module.circle.mapper.CircleMapper;
 import com.tuowei.dazhongdianping.module.community.mapper.CommunityMapper;
 import com.tuowei.dazhongdianping.module.community.model.PostRow;
 import com.tuowei.dazhongdianping.module.notification.service.MentionNotificationService;
+import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
 import com.tuowei.dazhongdianping.module.merchant.shop.model.ShopChangeRow;
 import com.tuowei.dazhongdianping.module.merchant.shop.service.MerchantShopChangeService;
@@ -57,6 +58,7 @@ public class AdminAuditService {
     private static final int EXPERT_CERTIFICATION_BIZ_TYPE = 7;
     private static final int USER_APPEAL_BIZ_TYPE = 8;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String REVIEW_AUDIT_RESULT_TYPE = "review.audit.result";
 
     private final AdminAuditMapper adminAuditMapper;
     private final ReviewMapper reviewMapper;
@@ -72,6 +74,7 @@ public class AdminAuditService {
     private final CommunityMapper communityMapper;
     private final TopicService topicService;
     private final MentionNotificationService mentionNotificationService;
+    private final NotificationService notificationService;
     private final AdminPermissionChecker permissionChecker;
 
     public AdminAuditService(AdminAuditMapper adminAuditMapper,
@@ -88,6 +91,7 @@ public class AdminAuditService {
                              CommunityMapper communityMapper,
                              TopicService topicService,
                              MentionNotificationService mentionNotificationService,
+                             NotificationService notificationService,
                              AdminPermissionChecker permissionChecker) {
         this.adminAuditMapper = adminAuditMapper;
         this.reviewMapper = reviewMapper;
@@ -103,6 +107,7 @@ public class AdminAuditService {
         this.communityMapper = communityMapper;
         this.topicService = topicService;
         this.mentionNotificationService = mentionNotificationService;
+        this.notificationService = notificationService;
         this.permissionChecker = permissionChecker;
     }
 
@@ -181,6 +186,7 @@ public class AdminAuditService {
                 normalizeRemark(request.getRemark()),
                 normalizeIp(requestIp)
         );
+        notifyReviewAuditResult(review, true, normalizeRemark(request.getRemark()));
 
         return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(taskId));
     }
@@ -231,8 +237,32 @@ public class AdminAuditService {
                 request.getReason().trim(),
                 normalizeIp(requestIp)
         );
+        notifyReviewAuditResult(review, false, request.getReason().trim());
 
         return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(taskId));
+    }
+
+    private void notifyReviewAuditResult(ReviewRow review, boolean approved, String remark) {
+        if (review == null || review.getUserId() == null) {
+            return;
+        }
+        String shopName = StringUtils.hasText(review.getShopName()) ? review.getShopName() : "门店";
+        String title = approved ? "点评已通过审核" : "点评未通过审核";
+        String content = shopName
+                + (approved ? " · 你的点评已公开展示" : " · 你的点评未通过审核")
+                + (StringUtils.hasText(remark) ? "：" + remark : "");
+        String linkUrl = "/user/reviews/" + review.getId() + "?audit=" + (approved ? "approved" : "rejected");
+        String region = StringUtils.hasText(review.getRegion())
+                ? review.getRegion()
+                : currentRegion().name();
+        notificationService.create(
+                review.getUserId(),
+                region,
+                REVIEW_AUDIT_RESULT_TYPE,
+                title,
+                content,
+                linkUrl
+        );
     }
 
     private AdminAuditTaskResponse passDealTask(

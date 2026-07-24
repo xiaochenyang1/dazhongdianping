@@ -34,6 +34,13 @@ const commentsErrorMessage = ref('')
 const interactionMessage = ref('')
 const interactionErrorMessage = ref('')
 const review = ref<ReviewDetail | null>(null)
+const auditBanner = computed(() => {
+  if (!props.owned) return ''
+  const marker = String(route.query.audit || '')
+  if (marker === 'approved') return '平台已通过你的点评，现可公开展示。'
+  if (marker === 'rejected') return '平台未通过你的点评，请查看驳回原因后修改重提。'
+  return ''
+})
 const comments = ref<ReviewComment[]>([])
 const commentContent = ref('')
 const activeReplyTarget = ref<ReviewComment | null>(null)
@@ -350,6 +357,7 @@ watch(
       <div class="detail-hero__body">
         <p class="eyebrow">{{ owned ? '我的点评详情' : '公开点评详情' }}</p>
         <h1>{{ review.shopName }}</h1>
+        <p v-if="auditBanner" class="feedback is-success" data-testid="review-audit-banner">{{ auditBanner }}</p>
         <p class="detail-hero__summary">
           <span class="name-with-badge">
             <RouterLink v-if="review.userId > 0" :to="`/users/${review.userId}`" class="inline-link">

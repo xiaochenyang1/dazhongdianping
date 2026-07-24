@@ -196,6 +196,9 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'reservation.status') {
     return ' · 预订状态'
   }
+  if (item.type === 'review.audit.result') {
+    return ' · 点评审核'
+  }
   return ''
 }
 

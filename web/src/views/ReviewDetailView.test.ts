@@ -13,6 +13,10 @@ const sessionMocks = vi.hoisted(() => ({
   state: { accessToken: undefined as string | undefined },
   openAuthDialog: vi.fn(),
 }))
+const routeState = vi.hoisted(() => ({
+  fullPath: '/reviews/301',
+  query: {} as Record<string, string>,
+}))
 
 vi.mock('@/services/review', () => reviewMocks)
 vi.mock('@/composables/useUserSession', () => ({
@@ -22,7 +26,7 @@ vi.mock('vue-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('vue-router')>()
   return {
     ...actual,
-    useRoute: () => ({ fullPath: '/reviews/301' }),
+    useRoute: () => routeState,
   }
 })
 
@@ -44,6 +48,8 @@ describe('ReviewDetailView', () => {
     Object.values(reviewMocks).forEach((mock) => mock.mockReset())
     sessionMocks.state.accessToken = undefined
     sessionMocks.openAuthDialog.mockReset()
+    routeState.fullPath = '/reviews/301'
+    routeState.query = {}
   })
 
   it('renders a GBP review cost from the response currency', async () => {
@@ -84,6 +90,49 @@ describe('ReviewDetailView', () => {
     expect(host.textContent).toContain('£42.00 GBP')
     expect(host.textContent).not.toContain('¥42.00')
     expect(host.textContent).not.toContain('€42.00')
+    app.unmount()
+  })
+
+  it('shows owned audit result banner from notification query', async () => {
+    routeState.fullPath = '/user/reviews/55?audit=approved'
+    routeState.query = { audit: 'approved' }
+    reviewMocks.fetchOwnedReviewDetail.mockResolvedValue({
+      id: 55,
+      shopId: 10001,
+      shopName: '沪上渝里',
+      userId: 9,
+      userName: '我',
+      content: '很好吃',
+      scoreOverall: 4.8,
+      scoreTaste: 5,
+      scoreEnv: 4.5,
+      scoreService: 4.8,
+      cost: 128,
+      currency: 'CNY',
+      likeCount: 0,
+      commentCount: 0,
+      likedByCurrentUser: false,
+      auditStatus: 1,
+      auditStatusText: '已通过',
+      auditRemark: '',
+      status: 1,
+      statusText: '公开',
+      tags: [],
+      images: [],
+      createdAt: '2026-07-25 10:00',
+      updatedAt: '2026-07-25 10:00',
+    })
+
+    const host = document.createElement('div')
+    const app = createApp(ReviewDetailView, { reviewId: 55, owned: true })
+    app.component('RouterLink', RouterLinkStub)
+    app.mount(host)
+    await flushView()
+
+    expect(reviewMocks.fetchOwnedReviewDetail).toHaveBeenCalledWith(55)
+    expect(host.querySelector('[data-testid="review-audit-banner"]')?.textContent).toContain(
+      '平台已通过你的点评',
+    )
     app.unmount()
   })
 

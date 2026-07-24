@@ -127,6 +127,12 @@ class ReviewControllerTest {
                 .andExpect(jsonPath("$.data.status").value(1))
                 .andExpect(jsonPath("$.data.bizId").value(reviewId));
 
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type='review.audit.result' AND title='点评已通过审核' AND link_url LIKE ?",
+                Long.class,
+                "%/user/reviews/" + reviewId + "%"
+        )).isEqualTo(1L);
+
         mockMvc.perform(get("/api/c/v1/reviews/{reviewId}", reviewId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(reviewId))
@@ -309,6 +315,12 @@ class ReviewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.status").value(2));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type='review.audit.result' AND title='点评未通过审核' AND content LIKE '%内容太敷衍%' AND link_url LIKE ?",
+                Long.class,
+                "%/user/reviews/" + reviewId + "%"
+        )).isEqualTo(1L);
 
         mockMvc.perform(get("/api/c/v1/user/reviews")
                         .header("Authorization", bearer(userToken)))
@@ -574,21 +586,24 @@ class ReviewControllerTest {
                                 """))
                 .andExpect(status().isOk());
 
+        // unread-count sums aggregate_count: audit(1) + likes(2) + comment(1) = 4.
         mockMvc.perform(get("/api/c/v1/notifications/unread-count")
                         .header("Authorization", bearer(authorToken)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.count").value(3));
+                .andExpect(jsonPath("$.data.count").value(4));
 
         mockMvc.perform(get("/api/c/v1/notifications")
                         .header("Authorization", bearer(authorToken)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.total").value(2))
-                .andExpect(jsonPath("$.data.list[0].type").value("review.comment"))
-                .andExpect(jsonPath("$.data.list[0].aggregateCount").value(1))
-                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/reviews/" + reviewId))
-                .andExpect(jsonPath("$.data.list[1].type").value("review.like"))
-                .andExpect(jsonPath("$.data.list[1].aggregateCount").value(2))
-                .andExpect(jsonPath("$.data.list[1].linkUrl").value("/reviews/" + reviewId));
+                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.list[*].type").value(org.hamcrest.Matchers.hasItems(
+                        "review.comment",
+                        "review.like",
+                        "review.audit.result"
+                )))
+                .andExpect(jsonPath("$.data.list[?(@.type=='review.like')].aggregateCount").value(org.hamcrest.Matchers.hasItem(2)))
+                .andExpect(jsonPath("$.data.list[?(@.type=='review.comment')].linkUrl").value(org.hamcrest.Matchers.hasItem("/reviews/" + reviewId)))
+                .andExpect(jsonPath("$.data.list[?(@.type=='review.audit.result')].title").value(org.hamcrest.Matchers.hasItem("点评已通过审核")));
     }
 
     @Test

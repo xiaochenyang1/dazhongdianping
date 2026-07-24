@@ -238,4 +238,40 @@ describe('NotificationsView', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/reservations/33')
     app.unmount()
   })
+
+  it('routes review audit notifications to my review detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 21,
+          type: 'review.audit.result',
+          title: '点评已通过审核',
+          content: '沪上渝里 · 你的点评已公开展示：内容正常，允许展示',
+          linkUrl: '/user/reviews/55?audit=approved',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 10:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('点评已通过审核')
+    expect(host.textContent).toContain('点评审核')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/reviews/55')
+    app.unmount()
+  })
 })

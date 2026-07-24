@@ -378,4 +378,40 @@ describe('AppHeader', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/reservations/33')
     app.unmount()
   })
+
+  it('routes review audit notifications to my review detail page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 505,
+        type: 'review.audit.result',
+        title: '点评未通过审核',
+        content: '沪上渝里 · 你的点评未通过审核：内容太敷衍',
+        linkUrl: '/user/reviews/55?audit=rejected',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-25 10:30:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('点评未通过审核')
+    expect(host.textContent).toContain('点评审核')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/reviews/55')
+    app.unmount()
+  })
 })
