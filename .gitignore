@@ -22,8 +22,8 @@ Thumbs.db
 app/build/
 app/.dart_tool/
 
-# Local storage
-local-storage/uploads/
+# Local storage(后端运行时产物:上传、隐私导出、导入错误明细,目录由代码自动创建)
+backend/local-storage/
 
 # Agents
 .agents/
