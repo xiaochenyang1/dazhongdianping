@@ -43,6 +43,10 @@ describe('DashboardView', () => {
       paidAmount: 188.5,
       verifiedCoupons: 2,
       pendingRefunds: 4,
+      pendingDeals: 3,
+      rejectedDeals: 1,
+      pendingShopChanges: 2,
+      rejectedShopChanges: 5,
       reservations: {
         total: 5,
         pending: 2,
@@ -65,11 +69,13 @@ describe('DashboardView', () => {
     expect(host.textContent).toContain('188.5')
     expect(host.textContent).toContain('待确认预订')
     expect(host.textContent).toContain('待处理退款')
+    expect(host.textContent).toContain('待审团购')
+    expect(host.textContent).toContain('被驳回门店草稿')
     expect(host.textContent).toContain('4')
     expect(host.textContent).toContain('待办与状态')
     expect(host.textContent).toContain('券码核销')
     expect(host.textContent).toContain('团购管理')
-    expect(host.querySelectorAll('[data-testid="merchant-todo-card"]').length).toBeGreaterThanOrEqual(2)
+    expect(host.querySelectorAll('[data-testid="merchant-todo-card"]').length).toBeGreaterThanOrEqual(5)
     expect(host.querySelectorAll('[data-testid="merchant-quick-link"]').length).toBeGreaterThanOrEqual(4)
 
     app.unmount()

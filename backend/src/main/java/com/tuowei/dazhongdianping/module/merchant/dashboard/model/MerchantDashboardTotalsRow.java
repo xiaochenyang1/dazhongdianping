@@ -10,6 +10,10 @@ public class MerchantDashboardTotalsRow {
     private BigDecimal paidAmount;
     private Long verifiedCoupons;
     private Long pendingRefunds;
+    private Long pendingDeals;
+    private Long rejectedDeals;
+    private Long pendingShopChanges;
+    private Long rejectedShopChanges;
     private Long reservationsTotal;
     private Long pendingReservations;
     private Long confirmedReservations;

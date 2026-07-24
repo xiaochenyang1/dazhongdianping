@@ -60,6 +60,34 @@ const todos = computed(() => [
     to: '/orders',
     show: canViewOrders.value,
   },
+  {
+    key: 'pendingDeals',
+    label: '待审团购',
+    value: number('pendingDeals'),
+    to: '/deals',
+    show: canEditDeals.value,
+  },
+  {
+    key: 'rejectedDeals',
+    label: '被驳回团购',
+    value: number('rejectedDeals'),
+    to: '/deals',
+    show: canEditDeals.value,
+  },
+  {
+    key: 'pendingShopChanges',
+    label: '待审门店草稿',
+    value: number('pendingShopChanges'),
+    to: '/shops',
+    show: canEditShops.value,
+  },
+  {
+    key: 'rejectedShopChanges',
+    label: '被驳回门店草稿',
+    value: number('rejectedShopChanges'),
+    to: '/shops',
+    show: canEditShops.value,
+  },
 ])
 
 const quickLinks = computed(() => {

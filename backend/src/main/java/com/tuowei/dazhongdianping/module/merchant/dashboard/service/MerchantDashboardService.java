@@ -48,6 +48,10 @@ public class MerchantDashboardService {
         Map<String,Object> result=new LinkedHashMap<>(); result.put("dateFrom",start);result.put("dateTo",end);result.put("views",totals.getViews());
         result.put("paidOrders",totals.getPaidOrders());result.put("paidAmount",totals.getPaidAmount());result.put("verifiedCoupons",totals.getVerifiedCoupons());
         result.put("pendingRefunds", totals.getPendingRefunds() == null ? 0L : totals.getPendingRefunds());
+        result.put("pendingDeals", totals.getPendingDeals() == null ? 0L : totals.getPendingDeals());
+        result.put("rejectedDeals", totals.getRejectedDeals() == null ? 0L : totals.getRejectedDeals());
+        result.put("pendingShopChanges", totals.getPendingShopChanges() == null ? 0L : totals.getPendingShopChanges());
+        result.put("rejectedShopChanges", totals.getRejectedShopChanges() == null ? 0L : totals.getRejectedShopChanges());
         result.put("reservations",Map.of("total",totals.getReservationsTotal(),"pending",totals.getPendingReservations(),"confirmed",totals.getConfirmedReservations(),"arrived",totals.getArrivedReservations(),"rejected",totals.getRejectedReservations(),"noShow",totals.getNoShowReservations()));
         result.put("rating",Map.of("score",totals.getScore(),"reviewCount",totals.getReviewCount())); result.put("trend",trend); return result;
     }
