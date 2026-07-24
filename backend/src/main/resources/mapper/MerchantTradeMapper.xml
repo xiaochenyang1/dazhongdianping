@@ -38,6 +38,12 @@
         WHERE d.id=#{dealId} AND d.merchant_id=#{merchantId} AND d.region=#{region} AND d.is_deleted=FALSE
     </select>
 
+    <select id="selectDealForAdmin" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">
+        SELECT <include refid="dealColumns"/>
+        FROM deal d JOIN shop s ON s.id=d.shop_id
+        WHERE d.id=#{dealId} AND d.region=#{region} AND d.is_deleted=FALSE
+    </select>
+
     <select id="selectDealItems" resultType="com.tuowei.dazhongdianping.module.trade.model.DealItemRow">
         SELECT id,deal_id,name,quantity,price,sort FROM deal_item WHERE deal_id=#{dealId} ORDER BY sort,id
     </select>

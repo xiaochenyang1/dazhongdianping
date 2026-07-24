@@ -44,6 +44,12 @@
         FOR UPDATE
     </select>
 
+    <select id="selectChangeForAdmin" resultType="com.tuowei.dazhongdianping.module.merchant.shop.model.ShopChangeRow">
+        SELECT <include refid="changeColumns"/>
+        FROM merchant_shop_change c JOIN merchant m ON m.id=c.merchant_id
+        WHERE c.id=#{changeId} AND c.region=#{region}
+    </select>
+
     <sql id="changeWhere">
         WHERE c.merchant_id=#{merchantId} AND c.region=#{region}
         <if test="shopId != null">AND c.target_shop_id=#{shopId}</if>

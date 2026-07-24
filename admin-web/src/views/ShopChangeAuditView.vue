@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
-import { listAuditTasks, passAuditTask, rejectAuditTask } from '@/services/admin'
-import type { AdminAuditTask, PageResult } from '@/types/admin'
+import { getAdminShopChangeDetail, listAuditTasks, passAuditTask, rejectAuditTask } from '@/services/admin'
+import type { AdminAuditTask, AdminShopChangeDetail, PageResult } from '@/types/admin'
 
 const { state } = useAdminSession()
 const loading = ref(false)
+const detailLoading = ref(false)
 const acting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const pageState = ref<PageResult<AdminAuditTask> | null>(null)
 const selectedTaskId = ref<number | null>(null)
+const shopChangeDetail = ref<AdminShopChangeDetail | null>(null)
 const approveRemark = ref('')
 const rejectReason = ref('')
 const filters = reactive({ status: '0', page: 1, pageSize: 10 })
@@ -22,6 +24,18 @@ const selectedTask = computed(
     null,
 )
 const canHandleSelected = computed(() => selectedTask.value?.status === 0)
+
+async function loadShopChangeDetail(changeId: number) {
+  detailLoading.value = true
+  try {
+    shopChangeDetail.value = await getAdminShopChangeDetail(changeId)
+  } catch (error) {
+    shopChangeDetail.value = null
+    errorMessage.value = error instanceof Error ? error.message : '门店草稿详情加载失败'
+  } finally {
+    detailLoading.value = false
+  }
+}
 
 async function loadTasks() {
   loading.value = true
@@ -37,6 +51,14 @@ async function loadTasks() {
     if (!pageState.value.list.some((task) => task.id === selectedTaskId.value)) {
       selectedTaskId.value = pageState.value.list[0]?.id ?? null
     }
+    if (selectedTaskId.value != null) {
+      const selected = pageState.value.list.find((task) => task.id === selectedTaskId.value)
+      if (selected) {
+        await loadShopChangeDetail(selected.bizId)
+      }
+    } else {
+      shopChangeDetail.value = null
+    }
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '门店草稿审核任务加载失败'
   } finally {
@@ -44,12 +66,16 @@ async function loadTasks() {
   }
 }
 
-function selectTask(taskId: number) {
+async function selectTask(taskId: number) {
   selectedTaskId.value = taskId
   approveRemark.value = ''
   rejectReason.value = ''
   errorMessage.value = ''
   successMessage.value = ''
+  const selected = pageState.value?.list.find((task) => task.id === taskId)
+  if (selected) {
+    await loadShopChangeDetail(selected.bizId)
+  }
 }
 
 async function handlePass() {
@@ -274,6 +300,76 @@ watch(
             <strong>门店摘要</strong>
             <p>{{ selectedTask.summary || '暂无摘要' }}</p>
           </div>
+
+          <div v-if="detailLoading" class="inline-note">门店草稿详情加载中...</div>
+          <template v-else-if="shopChangeDetail">
+            <div class="meta-grid">
+              <div>
+                <span>类型</span>
+                <strong>{{ shopChangeDetail.changeType === 1 ? '新门店' : '修改门店' }}</strong>
+              </div>
+              <div>
+                <span>电话</span>
+                <strong>{{ shopChangeDetail.phone || '-' }}</strong>
+              </div>
+              <div>
+                <span>人均</span>
+                <strong>{{ shopChangeDetail.pricePerCapita }} {{ shopChangeDetail.currency }}</strong>
+              </div>
+              <div>
+                <span>营业时间</span>
+                <strong>{{ shopChangeDetail.businessHours || '-' }}</strong>
+              </div>
+              <div>
+                <span>地址</span>
+                <strong>{{ shopChangeDetail.address || '-' }}</strong>
+              </div>
+              <div>
+                <span>标签</span>
+                <strong>{{ (shopChangeDetail.tags || []).join(', ') || '-' }}</strong>
+              </div>
+            </div>
+            <div class="hint-card">
+              <strong>相册</strong>
+              <div class="application-photos">
+                <a
+                  v-for="(photo, index) in shopChangeDetail.photos || []"
+                  :key="`${photo.imageUrl}-${index}`"
+                  :href="photo.imageUrl"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img :src="photo.imageUrl" :alt="`门店图片 ${index + 1}`" />
+                </a>
+                <p v-if="!(shopChangeDetail.photos && shopChangeDetail.photos.length)" class="inline-note">暂无相册</p>
+              </div>
+            </div>
+            <div class="hint-card">
+              <strong>菜单</strong>
+              <div class="table-shell">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>菜品</th>
+                      <th>价格</th>
+                      <th>推荐理由</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(dish, index) in shopChangeDetail.dishes || []" :key="`${dish.name}-${index}`">
+                      <td>{{ dish.name }}</td>
+                      <td>{{ dish.price }}</td>
+                      <td>{{ dish.recommendReason || '-' }}</td>
+                    </tr>
+                    <tr v-if="!(shopChangeDetail.dishes && shopChangeDetail.dishes.length)">
+                      <td colspan="3" class="table-empty">暂无菜单</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
+
           <label class="field field--full">
             <span>通过备注</span>
             <textarea

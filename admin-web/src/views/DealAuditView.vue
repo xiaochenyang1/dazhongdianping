@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
-import { listAuditTasks, passAuditTask, rejectAuditTask } from '@/services/admin'
-import type { AdminAuditTask, PageResult } from '@/types/admin'
+import { getAdminDealDetail, listAuditTasks, passAuditTask, rejectAuditTask } from '@/services/admin'
+import type { AdminAuditTask, AdminDealDetail, PageResult } from '@/types/admin'
 
 const { state } = useAdminSession()
 const loading = ref(false)
+const detailLoading = ref(false)
 const acting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const pageState = ref<PageResult<AdminAuditTask> | null>(null)
 const selectedTaskId = ref<number | null>(null)
+const dealDetail = ref<AdminDealDetail | null>(null)
 const approveRemark = ref('')
 const rejectReason = ref('')
 const filters = reactive({ status: '0', page: 1, pageSize: 10 })
@@ -22,6 +24,18 @@ const selectedTask = computed(
     null,
 )
 const canHandleSelected = computed(() => selectedTask.value?.status === 0)
+
+async function loadDealDetail(dealId: number) {
+  detailLoading.value = true
+  try {
+    dealDetail.value = await getAdminDealDetail(dealId)
+  } catch (error) {
+    dealDetail.value = null
+    errorMessage.value = error instanceof Error ? error.message : '团购详情加载失败'
+  } finally {
+    detailLoading.value = false
+  }
+}
 
 async function loadTasks() {
   loading.value = true
@@ -37,6 +51,14 @@ async function loadTasks() {
     if (!pageState.value.list.some((task) => task.id === selectedTaskId.value)) {
       selectedTaskId.value = pageState.value.list[0]?.id ?? null
     }
+    if (selectedTaskId.value != null) {
+      const selected = pageState.value.list.find((task) => task.id === selectedTaskId.value)
+      if (selected) {
+        await loadDealDetail(selected.bizId)
+      }
+    } else {
+      dealDetail.value = null
+    }
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '团购审核任务加载失败'
   } finally {
@@ -44,12 +66,16 @@ async function loadTasks() {
   }
 }
 
-function selectTask(taskId: number) {
+async function selectTask(taskId: number) {
   selectedTaskId.value = taskId
   approveRemark.value = ''
   rejectReason.value = ''
   errorMessage.value = ''
   successMessage.value = ''
+  const selected = pageState.value?.list.find((task) => task.id === taskId)
+  if (selected) {
+    await loadDealDetail(selected.bizId)
+  }
 }
 
 async function handlePass() {
@@ -273,6 +299,62 @@ watch(
             <strong>团购标题</strong>
             <p>{{ selectedTask.summary || '暂无标题' }}</p>
           </div>
+
+          <div v-if="detailLoading" class="inline-note">团购详情加载中...</div>
+          <template v-else-if="dealDetail">
+            <div class="meta-grid">
+              <div>
+                <span>售价</span>
+                <strong>{{ dealDetail.price }} {{ dealDetail.currency }}</strong>
+              </div>
+              <div>
+                <span>原价</span>
+                <strong>{{ dealDetail.originalPrice }} {{ dealDetail.currency }}</strong>
+              </div>
+              <div>
+                <span>库存</span>
+                <strong>{{ dealDetail.stock }}</strong>
+              </div>
+              <div>
+                <span>有效期</span>
+                <strong>{{ dealDetail.validStart || '不限' }} ~ {{ dealDetail.validEnd || '不限' }}</strong>
+              </div>
+            </div>
+            <div class="hint-card">
+              <strong>使用规则</strong>
+              <p>{{ dealDetail.rules || '暂无规则' }}</p>
+            </div>
+            <div class="hint-card">
+              <strong>套餐明细</strong>
+              <div class="table-shell">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>项目</th>
+                      <th>数量</th>
+                      <th>价格</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(item, index) in dealDetail.items || []" :key="`${item.name}-${index}`">
+                      <td>{{ item.name }}</td>
+                      <td>{{ item.quantity }}</td>
+                      <td>{{ item.price }}</td>
+                    </tr>
+                    <tr v-if="!(dealDetail.items && dealDetail.items.length)">
+                      <td colspan="3" class="table-empty">暂无套餐明细</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div v-if="dealDetail.coverImage" class="application-photos">
+              <a :href="dealDetail.coverImage" target="_blank" rel="noreferrer">
+                <img :src="dealDetail.coverImage" alt="团购封面" />
+              </a>
+            </div>
+          </template>
+
           <label class="field field--full">
             <span>通过备注</span>
             <textarea

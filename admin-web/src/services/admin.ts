@@ -2,6 +2,8 @@ import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/http'
 import type {
   AdminAuditTask,
   AdminAuditLog,
+  AdminDealDetail,
+  AdminShopChangeDetail,
   AdminOrder,
   AdminRefundAuditPayload,
   AdminTradeReconcileResult,
@@ -212,6 +214,14 @@ export function listImportBatches(query: AdminImportBatchQuery) {
 
 export function listAuditTasks(query: AdminAuditTaskQuery) {
   return apiGet<PageResult<AdminAuditTask>>('/api/admin/v1/audit/tasks', query)
+}
+
+export function getAdminShopChangeDetail(changeId: number) {
+  return apiGet<AdminShopChangeDetail>(`/api/admin/v1/audit/shop-changes/${changeId}`)
+}
+
+export function getAdminDealDetail(dealId: number) {
+  return apiGet<AdminDealDetail>(`/api/admin/v1/audit/deals/${dealId}`)
 }
 
 export function listAdminAuditLogs(query: AdminAuditLogQuery) {

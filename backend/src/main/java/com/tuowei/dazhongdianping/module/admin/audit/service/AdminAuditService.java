@@ -33,12 +33,14 @@ import com.tuowei.dazhongdianping.module.notification.service.MentionNotificatio
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
 import com.tuowei.dazhongdianping.module.merchant.shop.model.ShopChangeRow;
 import com.tuowei.dazhongdianping.module.merchant.shop.service.MerchantShopChangeService;
+import com.tuowei.dazhongdianping.module.merchant.trade.service.MerchantTradeService;
 import com.tuowei.dazhongdianping.module.merchant.review.model.MerchantReviewAppealRow;
 import com.tuowei.dazhongdianping.module.merchant.review.service.MerchantReviewService;
 import com.tuowei.dazhongdianping.module.search.event.ShopSearchIndexChangedEvent;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,6 +62,7 @@ public class AdminAuditService {
     private final ReviewMapper reviewMapper;
     private final ReviewService reviewService;
     private final MerchantShopChangeService merchantShopChangeService;
+    private final MerchantTradeService merchantTradeService;
     private final MerchantReviewService merchantReviewService;
     private final UserExpertCertificationService userExpertCertificationService;
     private final UserBanAppealService userBanAppealService;
@@ -75,6 +78,7 @@ public class AdminAuditService {
                              ReviewMapper reviewMapper,
                              ReviewService reviewService,
                              MerchantShopChangeService merchantShopChangeService,
+                             MerchantTradeService merchantTradeService,
                              MerchantReviewService merchantReviewService,
                              UserExpertCertificationService userExpertCertificationService,
                              UserBanAppealService userBanAppealService,
@@ -89,6 +93,7 @@ public class AdminAuditService {
         this.reviewMapper = reviewMapper;
         this.reviewService = reviewService;
         this.merchantShopChangeService = merchantShopChangeService;
+        this.merchantTradeService = merchantTradeService;
         this.merchantReviewService = merchantReviewService;
         this.userExpertCertificationService = userExpertCertificationService;
         this.userBanAppealService = userBanAppealService;
@@ -119,6 +124,16 @@ public class AdminAuditService {
                 .map(this::toAuditTaskResponse)
                 .toList();
         return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);
+    }
+
+    public Map<String, Object> shopChangeDetail(Long changeId) {
+        requireAuditPermission(SHOP_CHANGE_BIZ_TYPE, false);
+        return merchantShopChangeService.detailForAdmin(changeId, currentRegion().name());
+    }
+
+    public Map<String, Object> dealDetail(Long dealId) {
+        requireAuditPermission(DEAL_BIZ_TYPE, false);
+        return merchantTradeService.dealForAdmin(dealId, currentRegion().name());
     }
 
     @Transactional

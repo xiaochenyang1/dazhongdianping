@@ -114,6 +114,15 @@ class AdminShopChangeAuditControllerTest {
         );
         assertNotNull(taskId);
 
+        mockMvc.perform(get("/api/admin/v1/audit/shop-changes/{id}", changeId)
+                        .header("Authorization", bearer(adminToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(changeId))
+                .andExpect(jsonPath("$.data.name").value("Draft Bistro"))
+                .andExpect(jsonPath("$.data.photos.length()").value(2))
+                .andExpect(jsonPath("$.data.dishes[0].name").value("招牌牛肉"));
+
         mockMvc.perform(post("/api/admin/v1/audit/tasks/{id}/pass", taskId)
                         .header("Authorization", bearer(adminToken()))
                         .header("X-Region", "EU")

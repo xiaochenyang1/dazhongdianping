@@ -445,6 +445,85 @@ export interface AdminAuditTask {
   updatedAt: string
 }
 
+export interface AdminDealItem {
+  id?: number
+  dealId?: number
+  name: string
+  quantity: number
+  price: number
+  sort?: number
+}
+
+export interface AdminDealDetail {
+  id: number
+  shopId: number
+  shopName?: string
+  merchantId?: number
+  type: number
+  title: string
+  coverImage: string
+  price: number
+  originalPrice: number
+  currency: string
+  stock: number
+  soldCount?: number
+  validStart?: string
+  validEnd?: string
+  rules?: string
+  auditStatus: number
+  auditStatusText?: string
+  rejectReason?: string
+  status: number
+  statusText?: string
+  items?: AdminDealItem[]
+}
+
+export interface AdminShopChangePhoto {
+  id?: number
+  imageUrl: string
+  photoType: number
+  sort?: number
+}
+
+export interface AdminShopChangeDish {
+  id?: number
+  name: string
+  price: number
+  recommendReason?: string
+  sort?: number
+}
+
+export interface AdminShopChangeDetail {
+  id: number
+  changeType: number
+  targetShopId: number
+  merchantId?: number
+  merchantName?: string
+  region?: Region | string
+  categoryId: number
+  cityId: number
+  areaId: number
+  name: string
+  coverUrl: string
+  phone?: string
+  pricePerCapita: number
+  currency: string
+  address: string
+  latitude?: number | null
+  longitude?: number | null
+  businessHours: string
+  summary: string
+  openNow: boolean
+  tags?: string[]
+  status: number
+  statusText?: string
+  rejectReason?: string
+  submittedAt?: string
+  auditedAt?: string
+  photos?: AdminShopChangePhoto[]
+  dishes?: AdminShopChangeDish[]
+}
+
 export interface AdminMerchantApplication {
   merchantId: number
   merchantAccount: string

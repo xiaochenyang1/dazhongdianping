@@ -12,6 +12,7 @@ import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditTa
 import com.tuowei.dazhongdianping.module.admin.audit.service.AdminAuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.Map;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,6 +42,18 @@ public class AdminAuditController {
     @GetMapping("/audit/tasks")
     public ApiResponse<PageResult<AdminAuditTaskResponse>> listTasks(@Valid AdminAuditTaskQuery query) {
         return ApiResponse.success(adminAuditService.listTasks(query));
+    }
+
+    @GetMapping("/audit/shop-changes/{changeId}")
+    @AdminPermission("audit:shop_change:read")
+    public ApiResponse<Map<String, Object>> shopChangeDetail(@PathVariable Long changeId) {
+        return ApiResponse.success(adminAuditService.shopChangeDetail(changeId));
+    }
+
+    @GetMapping("/audit/deals/{dealId}")
+    @AdminPermission("audit:deal:read")
+    public ApiResponse<Map<String, Object>> dealDetail(@PathVariable Long dealId) {
+        return ApiResponse.success(adminAuditService.dealDetail(dealId));
     }
 
     @PostMapping("/audit/tasks/{taskId}/pass")

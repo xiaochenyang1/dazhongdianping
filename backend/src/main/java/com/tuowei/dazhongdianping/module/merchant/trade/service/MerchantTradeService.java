@@ -76,6 +76,16 @@ public class MerchantTradeService {
         return dealMap(existing, true);
     }
 
+    public Map<String, Object> dealForAdmin(Long dealId, String region) {
+        DealRow row = mapper.selectDealForAdmin(dealId, region);
+        if (row == null) {
+            throw new NotFoundException("团购不存在");
+        }
+        Map<String, Object> result = dealMap(row, true);
+        result.put("merchantId", row.getMerchantId());
+        return result;
+    }
+
     @Transactional
     public Map<String, Object> createDeal(MerchantDealSaveRequest request) {
         MerchantSession session = merchant();

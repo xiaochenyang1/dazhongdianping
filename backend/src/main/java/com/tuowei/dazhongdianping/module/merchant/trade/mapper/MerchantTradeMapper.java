@@ -33,6 +33,9 @@ public interface MerchantTradeMapper {
                        @Param("merchantId") Long merchantId,
                        @Param("region") String region);
 
+    DealRow selectDealForAdmin(@Param("dealId") Long dealId,
+                               @Param("region") String region);
+
     List<DealItemRow> selectDealItems(@Param("dealId") Long dealId);
 
     void insertDeal(DealRow row);

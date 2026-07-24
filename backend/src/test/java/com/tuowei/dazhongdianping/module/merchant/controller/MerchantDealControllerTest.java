@@ -118,6 +118,15 @@ class MerchantDealControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.list[0].id").value(dealId))
                 .andExpect(jsonPath("$.data.list[0].rejectReason").value("价格与规则描述不一致"));
+
+        mockMvc.perform(get("/api/admin/v1/audit/deals/{id}", dealId)
+                        .header("Authorization", bearer(adminToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(dealId))
+                .andExpect(jsonPath("$.data.title").value("待驳回套餐"))
+                .andExpect(jsonPath("$.data.items[0].name").value("主菜"))
+                .andExpect(jsonPath("$.data.rejectReason").value("价格与规则描述不一致"));
     }
 
     @Test

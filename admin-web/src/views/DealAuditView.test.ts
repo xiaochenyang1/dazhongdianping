@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const adminMocks = vi.hoisted(() => ({
   listAuditTasks: vi.fn(),
+  getAdminDealDetail: vi.fn(),
   passAuditTask: vi.fn(),
   rejectAuditTask: vi.fn(),
 }))
@@ -56,6 +57,26 @@ describe('DealAuditView', () => {
       pageSize: 10,
       hasMore: false,
     })
+    adminMocks.getAdminDealDetail.mockResolvedValue({
+      id: 501,
+      shopId: 20001,
+      shopName: '巴黎川味馆',
+      type: 1,
+      title: '双人午市套餐',
+      coverImage: 'https://files.example/deal.jpg',
+      price: 49.9,
+      originalPrice: 68,
+      currency: 'EUR',
+      stock: 20,
+      validStart: '2026-07-01',
+      validEnd: '2026-12-31',
+      rules: '周末通用',
+      auditStatus: 0,
+      auditStatusText: '待审核',
+      status: 0,
+      statusText: '已下架',
+      items: [{ name: '主菜', quantity: 1, price: 30, sort: 1 }],
+    })
   })
 
   it('loads pending deal audits and passes the selected task', async () => {
@@ -70,8 +91,11 @@ describe('DealAuditView', () => {
       page: 1,
       pageSize: 10,
     })
+    expect(adminMocks.getAdminDealDetail).toHaveBeenCalledWith(501)
     expect(host.textContent).toContain('双人午市套餐')
     expect(host.textContent).toContain('巴黎川味餐饮')
+    expect(host.textContent).toContain('主菜')
+    expect(host.textContent).toContain('周末通用')
 
     const passButton = [...host.querySelectorAll('button')].find((button) =>
       button.textContent?.includes('通过团购'),

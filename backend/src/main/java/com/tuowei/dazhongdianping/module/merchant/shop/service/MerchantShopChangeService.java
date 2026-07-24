@@ -73,6 +73,14 @@ public class MerchantShopChangeService {
         return changeMap(requireChange(changeId, session), true);
     }
 
+    public Map<String, Object> detailForAdmin(Long changeId, String region) {
+        ShopChangeRow row = mapper.selectChangeForAdmin(changeId, region);
+        if (row == null) {
+            throw new NotFoundException("门店草稿不存在");
+        }
+        return changeMap(row, true);
+    }
+
     public ShopChangeRow pendingChangeForAudit(Long changeId, String auditRegion) {
         return mapper.selectPendingChangeForAudit(changeId, auditRegion);
     }

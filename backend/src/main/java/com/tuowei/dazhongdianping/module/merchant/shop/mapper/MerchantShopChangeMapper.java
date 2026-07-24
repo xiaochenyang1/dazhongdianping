@@ -28,6 +28,9 @@ public interface MerchantShopChangeMapper {
     ShopChangeRow selectPendingChangeForAudit(@Param("changeId") Long changeId,
                                               @Param("region") String region);
 
+    ShopChangeRow selectChangeForAdmin(@Param("changeId") Long changeId,
+                                       @Param("region") String region);
+
     long countChanges(@Param("merchantId") Long merchantId,
                       @Param("region") String region,
                       @Param("shopId") Long shopId,

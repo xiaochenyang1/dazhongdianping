@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const adminMocks = vi.hoisted(() => ({
   listAuditTasks: vi.fn(),
+  getAdminShopChangeDetail: vi.fn(),
   passAuditTask: vi.fn(),
   rejectAuditTask: vi.fn(),
 }))
@@ -56,6 +57,29 @@ describe('ShopChangeAuditView', () => {
       pageSize: 10,
       hasMore: false,
     })
+    adminMocks.getAdminShopChangeDetail.mockResolvedValue({
+      id: 9001,
+      changeType: 2,
+      targetShopId: 20001,
+      merchantName: '巴黎川味餐饮',
+      categoryId: 201,
+      cityId: 101,
+      areaId: 1011,
+      name: 'Maison Sichuan Draft',
+      coverUrl: 'https://files.example/new-cover.jpg',
+      phone: '+33142345678',
+      pricePerCapita: 42,
+      currency: 'EUR',
+      address: '18 Rue du Temple, Paris',
+      businessHours: '11:30-22:30',
+      summary: '新版门店资料',
+      openNow: true,
+      tags: ['Chinese', 'Spicy'],
+      status: 1,
+      statusText: '待审核',
+      photos: [{ imageUrl: 'https://files.example/new-cover.jpg', photoType: 1, sort: 1 }],
+      dishes: [{ name: '水煮鱼', price: 28, recommendReason: '招牌', sort: 1 }],
+    })
   })
 
   it('loads pending shop-change audits and passes the selected task', async () => {
@@ -70,8 +94,11 @@ describe('ShopChangeAuditView', () => {
       page: 1,
       pageSize: 10,
     })
+    expect(adminMocks.getAdminShopChangeDetail).toHaveBeenCalledWith(9001)
     expect(host.textContent).toContain('Maison Sichuan Draft')
     expect(host.textContent).toContain('巴黎川味餐饮')
+    expect(host.textContent).toContain('水煮鱼')
+    expect(host.textContent).toContain('18 Rue du Temple, Paris')
 
     const passButton = [...host.querySelectorAll('button')].find((button) =>
       button.textContent?.includes('通过门店草稿'),
