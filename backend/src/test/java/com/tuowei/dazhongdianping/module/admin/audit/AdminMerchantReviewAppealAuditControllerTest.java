@@ -35,8 +35,12 @@ class AdminMerchantReviewAppealAuditControllerTest {
 
     @Test
     void shouldApproveMerchantReviewAppealAndHidePublicReview() throws Exception {
+        String userToken = registerUser();
+        long reviewId = createEuReview(userToken, "准备被商户申诉隐藏的公开点评正文。");
+        passReviewAudit(reviewId);
+        long userId = jdbc.queryForObject("SELECT user_id FROM review WHERE id=?", Long.class, reviewId);
         String merchantToken = merchantToken();
-        long appealId = submitAppeal(merchantToken, "点评内容包含与实际消费无关的人身攻击，请平台复核。");
+        long appealId = submitAppeal(merchantToken, reviewId, "点评内容包含与实际消费无关的人身攻击，请平台复核。");
         long taskId = pendingAppealTask(appealId);
 
         mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", taskId)
@@ -48,7 +52,7 @@ class AdminMerchantReviewAppealAuditControllerTest {
                 .andExpect(jsonPath("$.data.bizType").value(6))
                 .andExpect(jsonPath("$.data.status").value(1));
 
-        mockMvc.perform(get("/api/c/v1/reviews/3")
+        mockMvc.perform(get("/api/c/v1/reviews/{reviewId}", reviewId)
                         .header("X-Region", "EU"))
                 .andExpect(status().isNotFound());
 
@@ -58,12 +62,20 @@ class AdminMerchantReviewAppealAuditControllerTest {
                 appealId
         ));
         assertEquals(2, jdbc.queryForObject(
-                "SELECT audit_status FROM review WHERE id=3",
-                Integer.class
+                "SELECT audit_status FROM review WHERE id=?",
+                Integer.class,
+                reviewId
         ));
-        assertEquals(0, jdbc.queryForObject(
-                "SELECT review_count FROM shop WHERE id=20001",
-                Integer.class
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE user_id=? AND type='review.hidden' AND link_url=?",
+                Integer.class,
+                userId,
+                "/user/reviews/" + reviewId + "?hidden=appeal"
+        ));
+        assertEquals("点评已被隐藏", jdbc.queryForObject(
+                "SELECT title FROM user_notification WHERE user_id=? AND type='review.hidden' ORDER BY id DESC LIMIT 1",
+                String.class,
+                userId
         ));
     }
 

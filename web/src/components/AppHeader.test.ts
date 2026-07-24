@@ -522,4 +522,40 @@ describe('AppHeader', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/coupons/CPABC123')
     app.unmount()
   })
+
+  it('routes review hidden notifications to my review detail page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 909,
+        type: 'review.hidden',
+        title: '点评已被隐藏',
+        content: '巴黎川菜馆 · 商户申诉成立，你的点评已从公开展示中隐藏：申诉成立',
+        linkUrl: '/user/reviews/66?hidden=appeal',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-25 14:00:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('点评已被隐藏')
+    expect(host.textContent).toContain('点评处理')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/reviews/66')
+    app.unmount()
+  })
 })

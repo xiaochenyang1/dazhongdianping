@@ -136,6 +136,48 @@ describe('ReviewDetailView', () => {
     app.unmount()
   })
 
+  it('shows owned hidden banner when merchant appeal succeeds', async () => {
+    routeState.fullPath = '/user/reviews/66?hidden=appeal'
+    routeState.query = { hidden: 'appeal' }
+    reviewMocks.fetchOwnedReviewDetail.mockResolvedValue({
+      id: 66,
+      shopId: 20001,
+      shopName: '巴黎川菜馆',
+      userId: 9,
+      userName: '我',
+      content: '被隐藏的点评',
+      scoreOverall: 2.0,
+      scoreTaste: 2,
+      scoreEnv: 2,
+      scoreService: 2,
+      cost: 36,
+      currency: 'EUR',
+      likeCount: 0,
+      commentCount: 0,
+      likedByCurrentUser: false,
+      auditStatus: 2,
+      auditStatusText: '已驳回',
+      auditRemark: '商户申诉通过：申诉成立',
+      status: 1,
+      statusText: '公开',
+      tags: [],
+      images: [],
+      createdAt: '2026-07-25 10:00',
+      updatedAt: '2026-07-25 14:00',
+    })
+
+    const host = document.createElement('div')
+    const app = createApp(ReviewDetailView, { reviewId: 66, owned: true })
+    app.component('RouterLink', RouterLinkStub)
+    app.mount(host)
+    await flushView()
+
+    expect(host.querySelector('[data-testid="review-hidden-banner"]')?.textContent).toContain(
+      '商户申诉成立',
+    )
+    app.unmount()
+  })
+
   it('does not duplicate a comment already returned by a concurrent reload after login', async () => {
     const createdComment = {
       id: 901,

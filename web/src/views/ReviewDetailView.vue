@@ -41,6 +41,12 @@ const auditBanner = computed(() => {
   if (marker === 'rejected') return '平台未通过你的点评，请查看驳回原因后修改重提。'
   return ''
 })
+const hiddenBanner = computed(() => {
+  if (!props.owned) return ''
+  const marker = String(route.query.hidden || '')
+  if (marker === 'appeal') return '商户申诉成立，你的点评已从公开展示中隐藏。'
+  return ''
+})
 const comments = ref<ReviewComment[]>([])
 const commentContent = ref('')
 const activeReplyTarget = ref<ReviewComment | null>(null)
@@ -358,6 +364,7 @@ watch(
         <p class="eyebrow">{{ owned ? '我的点评详情' : '公开点评详情' }}</p>
         <h1>{{ review.shopName }}</h1>
         <p v-if="auditBanner" class="feedback is-success" data-testid="review-audit-banner">{{ auditBanner }}</p>
+        <p v-if="hiddenBanner" class="feedback is-error" data-testid="review-hidden-banner">{{ hiddenBanner }}</p>
         <p class="detail-hero__summary">
           <span class="name-with-badge">
             <RouterLink v-if="review.userId > 0" :to="`/users/${review.userId}`" class="inline-link">

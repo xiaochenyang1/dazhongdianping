@@ -61,6 +61,7 @@ public class AdminAuditService {
     private static final String REVIEW_AUDIT_RESULT_TYPE = "review.audit.result";
     private static final String EXPERT_CERT_RESULT_TYPE = "expert.certification.result";
     private static final String POST_AUDIT_RESULT_TYPE = "post.audit.result";
+    private static final String REVIEW_HIDDEN_TYPE = "review.hidden";
 
     private final AdminAuditMapper adminAuditMapper;
     private final ReviewMapper reviewMapper;
@@ -439,7 +440,30 @@ public class AdminAuditService {
                 remark,
                 normalizeIp(requestIp)
         );
+        ReviewRow review = reviewMapper.selectReviewById(appeal.getReviewId());
+        notifyReviewHiddenByMerchantAppeal(review, remark);
         return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
+    private void notifyReviewHiddenByMerchantAppeal(ReviewRow review, String remark) {
+        if (review == null || review.getUserId() == null || review.getUserId() <= 0) {
+            return;
+        }
+        String shopName = StringUtils.hasText(review.getShopName()) ? review.getShopName() : "门店";
+        String content = shopName + " · 商户申诉成立，你的点评已从公开展示中隐藏"
+                + (StringUtils.hasText(remark) ? "：" + remark : "");
+        String linkUrl = "/user/reviews/" + review.getId() + "?hidden=appeal";
+        String region = StringUtils.hasText(review.getRegion())
+                ? review.getRegion()
+                : currentRegion().name();
+        notificationService.create(
+                review.getUserId(),
+                region,
+                REVIEW_HIDDEN_TYPE,
+                "点评已被隐藏",
+                content,
+                linkUrl
+        );
     }
 
     private AdminAuditTaskResponse rejectReviewAppealTask(

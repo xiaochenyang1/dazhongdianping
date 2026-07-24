@@ -208,6 +208,9 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'coupon.verified') {
     return ' · 券码核销'
   }
+  if (item.type === 'review.hidden') {
+    return ' · 点评处理'
+  }
   return ''
 }
 
