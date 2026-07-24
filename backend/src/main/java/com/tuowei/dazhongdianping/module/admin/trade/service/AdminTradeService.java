@@ -1,17 +1,30 @@
 package com.tuowei.dazhongdianping.module.admin.trade.service;
 
+import com.tuowei.dazhongdianping.common.admin.AdminSession;
+import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
+import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
+import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
+import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
 import com.tuowei.dazhongdianping.module.admin.trade.mapper.AdminTradeMapper;
 import com.tuowei.dazhongdianping.module.admin.trade.model.AdminOrderQuery;
 import com.tuowei.dazhongdianping.module.admin.trade.model.AdminOrderRow;
+import com.tuowei.dazhongdianping.module.admin.trade.model.request.AdminRefundAuditRequest;
 import com.tuowei.dazhongdianping.module.admin.trade.model.response.AdminOrderResponse;
+import com.tuowei.dazhongdianping.module.admin.trade.model.response.AdminTradeReconcileResponse;
+import com.tuowei.dazhongdianping.module.trade.model.RefundRow;
+import com.tuowei.dazhongdianping.module.trade.model.TradeReconcileResult;
+import com.tuowei.dazhongdianping.module.trade.service.TradeCompensationService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class AdminTradeService {
@@ -19,9 +32,17 @@ public class AdminTradeService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final AdminTradeMapper mapper;
+    private final AdminAuditMapper adminAuditMapper;
+    private final TradeCompensationService tradeCompensationService;
 
-    public AdminTradeService(AdminTradeMapper mapper) {
+    public AdminTradeService(
+            AdminTradeMapper mapper,
+            AdminAuditMapper adminAuditMapper,
+            TradeCompensationService tradeCompensationService
+    ) {
         this.mapper = mapper;
+        this.adminAuditMapper = adminAuditMapper;
+        this.tradeCompensationService = tradeCompensationService;
     }
 
     public PageResult<AdminOrderResponse> listOrders(AdminOrderQuery query) {
@@ -40,6 +61,77 @@ public class AdminTradeService {
                 query.getPageSize(),
                 query.getOffset() + list.size() < total
         );
+    }
+
+    @Transactional
+    public AdminOrderResponse auditRefund(Long orderId, AdminRefundAuditRequest request, String requestIp) {
+        String region = RegionContext.getRegion().name();
+        AdminOrderRow order = mapper.selectOrderById(region, orderId);
+        if (order == null) {
+            throw new NotFoundException("订单不存在");
+        }
+        RefundRow refund = mapper.selectRefundByOrder(orderId);
+        if (refund == null || refund.getStatus() != 0) {
+            throw new IllegalArgumentException("订单没有待处理退款申请");
+        }
+        String decision = request.decision().trim().toLowerCase(Locale.ROOT);
+        String reason = request.reason().trim();
+        AdminSession admin = currentAdmin();
+        String action;
+        if ("approve".equals(decision)) {
+            requireAffected(mapper.approveRefund(orderId, admin.adminId(), reason));
+            requireAffected(mapper.markOrderRefunded(orderId));
+            mapper.markCouponsRefunded(orderId);
+            requireAffected(mapper.restoreDealStock(order.getDealId(), order.getQuantity()));
+            action = "refund_approve";
+        } else if ("reject".equals(decision)) {
+            requireAffected(mapper.rejectRefund(orderId, admin.adminId(), reason));
+            action = "refund_reject";
+        } else {
+            throw new IllegalArgumentException("退款审核决定只允许 approve 或 reject");
+        }
+        adminAuditMapper.insertAuditLog(
+                admin.adminId(),
+                action,
+                "order:" + orderId,
+                reason,
+                StringUtils.hasText(requestIp) ? requestIp.trim() : ""
+        );
+        return toResponse(mapper.selectOrderById(region, orderId));
+    }
+
+    @Transactional
+    public AdminTradeReconcileResponse reconcile(String requestIp) {
+        AdminSession admin = currentAdmin();
+        TradeReconcileResult result = tradeCompensationService.reconcile();
+        adminAuditMapper.insertAuditLog(
+                admin.adminId(),
+                "trade_reconcile",
+                "orders",
+                "closedOrders=" + result.closedOrders()
+                        + ",restoredStockOrders=" + result.restoredStockOrders()
+                        + ",failedPayments=" + result.failedPayments(),
+                StringUtils.hasText(requestIp) ? requestIp.trim() : ""
+        );
+        return new AdminTradeReconcileResponse(
+                result.closedOrders(),
+                result.restoredStockOrders(),
+                result.failedPayments()
+        );
+    }
+
+    private void requireAffected(int affected) {
+        if (affected != 1) {
+            throw new IllegalArgumentException("订单或退款状态已变化，请刷新后重试");
+        }
+    }
+
+    private AdminSession currentAdmin() {
+        AdminSession session = AdminSessionContext.get();
+        if (session == null) {
+            throw new UnauthorizedException("管理员登录状态不存在");
+        }
+        return session;
     }
 
     private AdminOrderResponse toResponse(AdminOrderRow row) {

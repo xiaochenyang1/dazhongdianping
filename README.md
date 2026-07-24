@@ -9,7 +9,7 @@
 - `docs/`: 需求、架构、接口、库表、实施、上线、值班等文档。
 - `backend/`: `Java 17 + Spring Boot + MyBatis` 后端骨架。
 - `web/`: `Vue 3 + TypeScript + Vite` PC Web 骨架。
-- `admin-web/`: `Vue 3 + TypeScript + Vite` 管理端运营后台，覆盖门店、Banner、搜索热词、分类/城市/商圈基础数据、审核、达人认证、榜单、成长、圈子和话题治理，以及审计日志、隐私任务、订单退款查询。
+- `admin-web/`: `Vue 3 + TypeScript + Vite` 管理端运营后台，覆盖门店、Banner、搜索热词、分类/城市/商圈基础数据、审核、达人认证、榜单、成长、圈子和话题治理，以及审计日志、隐私任务、订单退款查询/平台仲裁/对账补偿和 C 端用户治理（查询/封禁/解封/封禁申诉审核）。
 - `merchant-web/`: 独立商户工作台，覆盖注册、登录、资质、概览、门店、员工、预订、团购、订单退款、点评回复与申诉。
 - `app/`: Flutter 欧洲版工程，已覆盖浏览、搜索、登录、点评、团购、预订、社区帖子、话题广场、用户中心、通知与 GDPR 隐私中心闭环。
 
@@ -26,7 +26,7 @@
 - `Idempotency-Key` 重复提交保护已接入：写请求带同 key + 同请求体会复用首个响应，同 key + 不同请求体返回 `409`；默认走本地内存，配置 `APP_STATE_STORE_PROVIDER=redis` 后可把幂等响应缓存放到 Redis。
 - `/api/b/v1` 已从单配置账号升级为数据库账号：支持商户注册、资质提交/查询、运营审核、主账号/员工登录、数据库角色权限、指定门店范围、员工列表/创建/编辑/启停；停用 `merchant_operator` 后其旧 B 端 token 会失效。M5b1 已补预订分页/详情/改期、真实经营看板和门店范围校验；M5b2 已补团购列表/创建/编辑/审核后上下架、门店订单分页筛选和退款通过/驳回；M5b3 已补新建/修改门店完整草稿、相册/菜单快照、提交审核、通过整体应用、驳回重提和线上版本冲突保护；M5b4 已补点评列表、商家回复、点评申诉草稿/保存/提交和 `biz_type=6` 管理端申诉审核。
 - M5 商户端已补齐当前 M5a 页面闭环：`merchant-web` 覆盖注册、登录、资质状态/提交/驳回重提、概览、门店、员工角色与门店范围、预订、团购、订单退款、点评回复/申诉；管理端新增商户资质审核和商户点评申诉专页；C 端新增通知列表、未读数、WebSocket ticket、实时推送与断线 REST 补偿。
-- 管理端数据库 RBAC 基础已完成：管理员、角色、权限点、管理员-角色、角色-权限和管理员区域范围均已落库；`/auth/me` 返回实时身份、权限与 `CN/EU` 范围，菜单、路由和 API 按权限过滤。角色停用后旧 token 仍可访问 `auth/me`，但权限会在下一次请求重新计算并被收回，固定受限 API 返回 `403`，动态审核列表可返回 `200` 空结果；管理员账号停用后旧 token 才会在下一次请求返回 `401`，前端清理 `localStorage` 并回到登录页。`admin-web` 已提供管理员账号、角色权限、Banner、搜索热词、审计日志、隐私任务和订单退款查询页面。
+- 管理端数据库 RBAC 基础已完成：管理员、角色、权限点、管理员-角色、角色-权限和管理员区域范围均已落库；`/auth/me` 返回实时身份、权限与 `CN/EU` 范围，菜单、路由和 API 按权限过滤。角色停用后旧 token 仍可访问 `auth/me`，但权限会在下一次请求重新计算并被收回，固定受限 API 返回 `403`，动态审核列表可返回 `200` 空结果；管理员账号停用后旧 token 才会在下一次请求返回 `401`，前端清理 `localStorage` 并回到登录页。`admin-web` 已提供管理员账号、角色权限、Banner、搜索热词、审计日志、隐私任务和订单退款查询/平台仲裁/对账补偿页面。
 - 管理端分类、城市和商圈治理已完成：`data:geo:read/write` 同时约束菜单、`/data/meta` 路由和管理 API，支持当前区域内 CRUD、排序、启停与受保护删除。公开元数据只展示启用项，显式使用停用 ID 的门店筛选返回空结果；历史门店详情仍保留原名称。管理端门店、导入、商户门店草稿/审核落库和榜单发布都会重新校验引用数据仍处于启用状态。
 - PC Web 商户列表已接价格、评分、团购、营业状态筛选和服务端真实分页；门店点评列表支持最新/最热/评分排序、最低评分和带图/无图筛选；门店详情支持相似推荐、原生分享并带剪贴板降级；门店、公开点评、社区/圈子/话题公开页已接入客户端运行时 `canonical`、`robots`、Open Graph、Twitter Card 和 JSON-LD metadata，但尚未提供 SSR/预渲染产物。
 - M6 Flutter MVP 基线已落地：默认 EU、CN/EU 与语言切换、密码/验证码登录、安全会话、浏览/搜索/门店详情、团购下单、预订创建、用户中心、通知列表与 ACK、隐私导出/认证下载保存/删除申请/撤销；地图、真实支付和推送未配置时明确阻止冒充成功。
@@ -78,6 +78,8 @@
   - `POST /api/c/v1/auth/password/reset`
   - `POST /api/c/v1/auth/refresh`
   - `POST /api/c/v1/auth/logout`
+  - `POST /api/c/v1/auth/ban-appeals`(封禁申诉提交,免登录+`appeal` 场景验证码)
+  - `POST /api/c/v1/auth/ban-appeals/query`(封禁申诉进度查询,免登录+`appeal` 场景验证码)
   - `GET /api/c/v1/user/me`
   - `PUT /api/c/v1/user/profile`
   - `POST /api/c/v1/user/bind`
@@ -124,6 +126,9 @@
   - `GET /api/admin/v1/audit/tasks`
   - `GET /api/admin/v1/audit/logs`
   - `GET /api/admin/v1/orders`
+  - `GET /api/admin/v1/users`
+  - `GET /api/admin/v1/users/{userId}`
+  - `PUT /api/admin/v1/users/{userId}/status`
   - `GET /api/admin/v1/privacy/tasks`
   - `POST /api/admin/v1/audit/tasks/{taskId}/pass`
   - `POST /api/admin/v1/audit/tasks/{taskId}/reject`
@@ -294,6 +299,7 @@ npm run test:e2e
 - 种子导入页 + 批次结果查看
 - 数据库管理员登录与实时身份刷新(`/auth/me`)
 - 管理员账号页(`/system/admins`)和角色权限页(`/system/roles`)
+- 用户管理页(`/system/users`)：C 端用户列表筛选（关键词/ID/状态/区域）、详情内容统计、封禁（必填原因，立即吊销全部登录态）与解封，动作写入审计日志
 - 按权限过滤的系统管理菜单、路由与 API 访问；管理员区域范围按 `CN/EU` 生效
 - `CN / EU` 区域切换
 - 基于 `axios` 的管理端 API 封装
@@ -320,6 +326,9 @@ npm run build
 
 ## 已验证
 
+- `2026-07-24` 封禁申诉链路二轮优化已完成前后端联调与全量回归：申诉通过/驳回/管理员直接解封会给用户写 `account.ban_appeal` 站内通知（复用通知模块，含 WebSocket 推送与聚合逻辑），用户恢复登录后可在通知列表看到审核结果；申诉提交/查询响应带出最近一次 `user_ban` 审计日志的封禁原因，`web` 申诉面板展示"封禁原因"、申诉已通过时提供"回到密码登录"一键预填入口；管理端用户详情新增 `banReason`/`pendingAppealCount`/`latestAppealStatusText` 并支持一键跳转 `/audit/user-appeals`；全局兜底异常 handler 补错误日志，未匹配路径由兜底 `500` 修正为 `404 common.not_found`。`backend` `mvn test` 308 条通过；`web` `npm test` 78 条通过；`admin-web` `npm test` 61 条通过；三端 `vue-tsc`/`build` 通过。本地起 `h2` 后端实测：申诉响应带封禁原因、管理端详情联动字段正确、审核通过后用户登录可见"封禁申诉已通过"通知、错误路径返回 `404`。
+- `2026-07-24` 用户封禁申诉链路本轮已完成前后端联调与全量回归：后端补齐 `biz_type=8` 统一审核（列表富化、通过自动解封、驳回记录原因、管理员直接解封自动了结待审申诉并使任务失效）、`POST /api/c/v1/auth/ban-appeals/query` 申诉进度查询、密码登录封禁改抛 `auth.user_banned`（与验证码登录/刷新一致）；`web` 登录弹层新增封禁识别（`ApiError.messageKey`）与申诉面板（发 `appeal` 验证码、提交、查进度），`admin-web` 新增 `/audit/user-appeals` 审核页并接入菜单/路由/权限（`audit:user_appeal:read/write`，种子权限 47/48）。`backend` 运行 `mvn test`，`308` 条测试通过（含新增 `UserBanAppealFlowTest` 4 条）；`web` 运行 `npm test`，`27` 个测试文件、`77` 条测试通过（含新增 `AuthDialog.test.ts` 4 条）；`admin-web` 运行 `npm test`，`22` 个测试文件、`60` 条测试通过（含新增 `UserAppealAuditView.test.ts` 3 条）。本地起 `h2` 后端 + 双前端 dev 经 Vite 代理实测全链路：封禁登录 `401 auth.user_banned` → 免登录发码提交申诉 → 管理端 `biz_type=8` 列表出现申诉（含用户昵称与理由）→ 通过后用户自动解封并可重新登录 → 申诉进度查询返回"已通过"。
+- `2026-07-24` 管理端 C 端用户治理（用户查询/详情/封禁/解封）本轮已完成前后端联调与全量回归：`backend` 运行 `mvnw test`，`304` 条测试通过（含新增 `AdminAppUserControllerTest` 4 条）；`admin-web` 运行 `npm test`，`21` 个测试文件、`57` 条测试通过，`npm run build` 通过；本地起 `h2` 后端 + `admin-web` dev 通过 Vite 代理实测：封禁后旧 access token 立即 `401`、密码/验证码登录均被拦截并提示"账号已被封禁"、审计日志记录 `user_ban`/`user_unban`、解封后登录恢复。本轮同时修复 `loginWithCode` 对封禁用户的绕过问题，并给 `TopicHotRankingServiceTest` 补 `@AfterEach` 清理修复既有的测试顺序耦合。
 - `2026-07-21` 管理端订单退款查询本轮已完成全量回归：`backend` 运行 `.\mvnw.cmd -q test`，`291` 条测试通过；`admin-web` 运行 `npm test`，`17` 个测试文件、`41` 条测试通过；`admin-web` 运行 `npm run build` 通过。
 - `2026-07-21` 本轮按功能包执行了聚焦验证，而不是重跑全仓：`web` 运行 `npm test -- src/services/browse.test.ts src/views/ShopListView.test.ts src/views/ShopDetailView.test.ts src/views/ShopReviewsView.test.ts src/composables/useSeoMeta.test.ts src/views/CommunityView.test.ts src/views/ReviewDetailView.test.ts src/views/CircleViews.test.ts src/views/TopicViews.test.ts`，`9` 个测试文件、`38` 条测试通过；`npm run build` 通过。
 - `merchant-web` 运行 `npm test -- src/layouts/MerchantLayout.test.ts src/services/merchant.test.ts src/views/OrdersView.test.ts src/views/ReservationsView.test.ts src/views/ReviewsView.test.ts`，`5` 个测试文件、`14` 条测试通过；`npm run build` 通过。

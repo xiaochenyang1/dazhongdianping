@@ -50,8 +50,8 @@
         <include refid="orderWhere"/>
     </select>
 
-    <select id="selectOrders" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.AdminOrderRow">
-        SELECT o.id,
+    <sql id="orderColumns">
+        o.id,
                o.order_no,
                s.merchant_id,
                m.company_name AS merchant_name,
@@ -82,9 +82,61 @@
                r.audit_reason AS refund_audit_reason,
                r.audited_at AS refund_audited_at,
                r.created_at AS refund_created_at
+    </sql>
+
+    <select id="selectOrders" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.AdminOrderRow">
+        SELECT
+        <include refid="orderColumns"/>
         <include refid="orderFrom"/>
         <include refid="orderWhere"/>
         ORDER BY o.created_at DESC, o.id DESC
         LIMIT #{query.pageSize} OFFSET #{query.offset}
     </select>
+
+    <select id="selectOrderById" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.AdminOrderRow">
+        SELECT
+        <include refid="orderColumns"/>
+        <include refid="orderFrom"/>
+        WHERE o.id = #{id}
+          AND o.region = #{region}
+          AND s.region = #{region}
+    </select>
+
+    <select id="selectRefundByOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">
+        SELECT id, order_id, coupon_id, amount, reason, status, audit_by, audit_reason, audited_at, created_at
+        FROM refund
+        WHERE order_id = #{orderId}
+    </select>
+
+    <update id="approveRefund">
+        UPDATE refund
+        SET status = 1, audit_by = #{adminId}, audit_reason = #{reason},
+            audited_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = #{orderId} AND status = 0
+    </update>
+
+    <update id="rejectRefund">
+        UPDATE refund
+        SET status = 2, audit_by = #{adminId}, audit_reason = #{reason},
+            audited_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = #{orderId} AND status = 0
+    </update>
+
+    <update id="markOrderRefunded">
+        UPDATE `order`
+        SET pay_status = 2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{orderId} AND pay_status = 1 AND status = 1
+    </update>
+
+    <update id="markCouponsRefunded">
+        UPDATE coupon SET status = 4 WHERE order_id = #{orderId} AND status = 1
+    </update>
+
+    <update id="restoreDealStock">
+        UPDATE deal
+        SET stock = CASE WHEN stock = -1 THEN -1 ELSE stock + #{quantity} END,
+            sold_count = CASE WHEN sold_count &gt;= #{quantity} THEN sold_count - #{quantity} ELSE 0 END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{dealId}
+    </update>
 </mapper>

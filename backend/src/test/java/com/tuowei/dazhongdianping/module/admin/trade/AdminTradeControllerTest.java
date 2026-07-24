@@ -53,7 +53,15 @@ class AdminTradeControllerTest {
                 """
                 INSERT INTO refund(id, order_id, coupon_id, amount, reason, status, audit_by, audit_reason, audited_at, created_at, updated_at) VALUES
                 (9501, 9301, 0, 176.00, '行程变动', 1, 1, '审核通过', TIMESTAMP '2026-07-20 09:20:00',
-                 TIMESTAMP '2026-07-20 09:10:00', TIMESTAMP '2026-07-20 09:20:00')
+                 TIMESTAMP '2026-07-20 09:10:00', TIMESTAMP '2026-07-20 09:20:00'),
+                (9502, 9302, 0, 88.00, '临时有事', 0, 0, '', NULL,
+                 TIMESTAMP '2026-07-21 11:00:00', TIMESTAMP '2026-07-21 11:00:00')
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO coupon(id, order_id, user_id, deal_id, shop_id, code, status, expire_at) VALUES
+                (9601, 9302, 9002, 40001, 10001, 'ADMIN-COUPON-9601', 1, DATE '2026-12-31')
                 """
         );
     }
@@ -92,6 +100,109 @@ class AdminTradeControllerTest {
                 .andExpect(jsonPath("$.data.list[0].orderNo").value("ADMIN-ORDER-001"))
                 .andExpect(jsonPath("$.data.list[0].refundReason").value("行程变动"))
                 .andExpect(jsonPath("$.data.list[0].paymentStatusText").value("成功"));
+    }
+
+    @Test
+    void shouldApproveRefundAndSettleOrder() throws Exception {
+        mockMvc.perform(post("/api/admin/v1/orders/9302/refund-audit")
+                        .header("Authorization", bearer(login("admin", "admin123456")))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"decision":"approve","reason":"用户投诉属实，平台仲裁退款"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.payStatusText").value("已退款"))
+                .andExpect(jsonPath("$.data.refundStatusText").value("退款成功"))
+                .andExpect(jsonPath("$.data.refundAuditReason").value("用户投诉属实，平台仲裁退款"));
+
+        Integer couponStatus = jdbc.queryForObject("SELECT status FROM coupon WHERE id = 9601", Integer.class);
+        Integer stock = jdbc.queryForObject("SELECT stock FROM deal WHERE id = 40001", Integer.class);
+        Integer soldCount = jdbc.queryForObject("SELECT sold_count FROM deal WHERE id = 40001", Integer.class);
+        Integer auditLogs = jdbc.queryForObject(
+                "SELECT COUNT(1) FROM audit_log WHERE action = 'refund_approve' AND target = 'order:9302'",
+                Integer.class);
+        org.assertj.core.api.Assertions.assertThat(couponStatus).isEqualTo(4);
+        org.assertj.core.api.Assertions.assertThat(stock).isEqualTo(21);
+        org.assertj.core.api.Assertions.assertThat(soldCount).isEqualTo(11);
+        org.assertj.core.api.Assertions.assertThat(auditLogs).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRejectRefundAndKeepOrderPaid() throws Exception {
+        mockMvc.perform(post("/api/admin/v1/orders/9302/refund-audit")
+                        .header("Authorization", bearer(login("admin", "admin123456")))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"decision":"reject","reason":"证据不足，维持原判"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.payStatusText").value("已支付"))
+                .andExpect(jsonPath("$.data.refundStatusText").value("已驳回"))
+                .andExpect(jsonPath("$.data.refundAuditReason").value("证据不足，维持原判"));
+
+        Integer auditLogs = jdbc.queryForObject(
+                "SELECT COUNT(1) FROM audit_log WHERE action = 'refund_reject' AND target = 'order:9302'",
+                Integer.class);
+        org.assertj.core.api.Assertions.assertThat(auditLogs).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRejectRefundAuditWithoutPendingApplication() throws Exception {
+        mockMvc.perform(post("/api/admin/v1/orders/9301/refund-audit")
+                        .header("Authorization", bearer(login("admin", "admin123456")))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"decision":"approve","reason":"重复仲裁"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReconcileExpiredUnpaidOrdersAndPendingPayments() throws Exception {
+        jdbc.update(
+                """
+                INSERT INTO `order`(
+                    id, order_no, user_id, deal_id, shop_id, region, quantity,
+                    unit_price, amount, currency, pay_method, pay_status, status,
+                    paid_at, expire_at, created_at, updated_at
+                ) VALUES
+                (9303, 'ADMIN-ORDER-003', 9001, 40001, 10001, 'CN', 1, 88.00, 88.00, 'CNY', '', 0, 1,
+                 NULL, TIMESTAMP '2020-01-01 00:00:00', TIMESTAMP '2020-01-01 00:00:00', TIMESTAMP '2020-01-01 00:00:00')
+                """
+        );
+        jdbc.update(
+                """
+                INSERT INTO payment(id, order_id, order_no, channel, channel_txn, amount, currency, status, created_at, updated_at) VALUES
+                (9403, 9303, 'ADMIN-ORDER-003', 'alipay_mock', 'TX-ADMIN-003', 88.00, 'CNY', 0,
+                 TIMESTAMP '2020-01-01 00:00:00', TIMESTAMP '2020-01-01 00:00:00')
+                """
+        );
+        Integer stockBefore = jdbc.queryForObject("SELECT stock FROM deal WHERE id = 40001", Integer.class);
+        Integer soldBefore = jdbc.queryForObject("SELECT sold_count FROM deal WHERE id = 40001", Integer.class);
+
+        mockMvc.perform(post("/api/admin/v1/orders/reconcile")
+                        .header("Authorization", bearer(login("admin", "admin123456")))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.closedOrders").value(1))
+                .andExpect(jsonPath("$.data.restoredStockOrders").value(1))
+                .andExpect(jsonPath("$.data.failedPayments").value(1));
+
+        Integer orderStatus = jdbc.queryForObject("SELECT status FROM `order` WHERE id = 9303", Integer.class);
+        Integer paymentStatus = jdbc.queryForObject("SELECT status FROM payment WHERE id = 9403", Integer.class);
+        Integer stockAfter = jdbc.queryForObject("SELECT stock FROM deal WHERE id = 40001", Integer.class);
+        Integer soldAfter = jdbc.queryForObject("SELECT sold_count FROM deal WHERE id = 40001", Integer.class);
+        Integer auditLogs = jdbc.queryForObject(
+                "SELECT COUNT(1) FROM audit_log WHERE action = 'trade_reconcile' AND target = 'orders'",
+                Integer.class);
+        org.assertj.core.api.Assertions.assertThat(orderStatus).isEqualTo(2);
+        org.assertj.core.api.Assertions.assertThat(paymentStatus).isEqualTo(2);
+        org.assertj.core.api.Assertions.assertThat(stockAfter).isEqualTo(stockBefore + 1);
+        org.assertj.core.api.Assertions.assertThat(soldAfter).isEqualTo(soldBefore - 1);
+        org.assertj.core.api.Assertions.assertThat(auditLogs).isEqualTo(1);
     }
 
     private String login(String account, String password) throws Exception {

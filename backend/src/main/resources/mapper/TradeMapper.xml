@@ -1,31 +1,69 @@
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd"><mapper namespace="com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper">
-<sql id="dealCols">d.id,d.shop_id,d.merchant_id,d.region,d.type,d.title,d.cover_image,d.price,d.original_price,d.currency,d.stock,d.sold_count,d.valid_start,d.valid_end,d.rules,s.name AS shop_name</sql>
-<select id="selectShopDeals" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">SELECT <include refid="dealCols"/> FROM deal d JOIN shop s ON s.id=d.shop_id WHERE d.shop_id=#{shopId} AND d.region=#{region} AND d.audit_status=1 AND d.status=1 AND d.is_deleted=FALSE ORDER BY d.id</select>
-<select id="selectDeal" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">SELECT <include refid="dealCols"/> FROM deal d JOIN shop s ON s.id=d.shop_id WHERE d.id=#{dealId} AND d.region=#{region} AND d.audit_status=1 AND d.status=1 AND d.is_deleted=FALSE</select>
-<select id="selectDealItems" resultType="com.tuowei.dazhongdianping.module.trade.model.DealItemRow">SELECT id,deal_id,name,quantity,price,sort FROM deal_item WHERE deal_id=#{dealId} ORDER BY sort,id</select>
-<update id="decrementDealStock">UPDATE deal SET stock=CASE WHEN stock=-1 THEN -1 ELSE stock-#{quantity} END,sold_count=sold_count+#{quantity},updated_at=CURRENT_TIMESTAMP WHERE id=#{dealId} AND status=1 AND (stock=-1 OR stock&gt;=#{quantity})</update>
-<update id="restoreDealStock">UPDATE deal SET stock=CASE WHEN stock=-1 THEN -1 ELSE stock+#{quantity} END,sold_count=CASE WHEN sold_count&gt;=#{quantity} THEN sold_count-#{quantity} ELSE 0 END WHERE id=#{dealId}</update>
-<insert id="insertOrder" useGeneratedKeys="true" keyProperty="id">INSERT INTO `order`(order_no,user_id,deal_id,shop_id,region,quantity,unit_price,amount,currency,pay_status,status,expire_at) VALUES(#{orderNo},#{userId},#{dealId},#{shopId},#{region},#{quantity},#{unitPrice},#{amount},#{currency},0,1,#{expireAt})</insert>
-<sql id="orderCols">o.id,o.order_no,o.user_id,o.deal_id,o.shop_id,o.region,o.quantity,o.unit_price,o.amount,o.currency,o.pay_method,o.pay_status,o.status,o.paid_at,o.expire_at,o.created_at,d.title AS deal_title,s.name AS shop_name,d.cover_image</sql>
-<select id="selectUserOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">SELECT <include refid="orderCols"/> FROM `order` o JOIN deal d ON d.id=o.deal_id JOIN shop s ON s.id=o.shop_id WHERE o.id=#{orderId} AND o.user_id=#{userId} AND o.region=#{region}</select>
-<select id="selectOrderByNo" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">SELECT <include refid="orderCols"/> FROM `order` o JOIN deal d ON d.id=o.deal_id JOIN shop s ON s.id=o.shop_id WHERE o.order_no=#{orderNo}</select>
-<select id="countUserOrders" resultType="long">SELECT COUNT(1) FROM `order` WHERE user_id=#{userId} AND region=#{region}<if test="payStatus != null"> AND pay_status=#{payStatus}</if></select>
-<select id="selectUserOrders" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">SELECT <include refid="orderCols"/> FROM `order` o JOIN deal d ON d.id=o.deal_id JOIN shop s ON s.id=o.shop_id WHERE o.user_id=#{userId} AND o.region=#{region}<if test="payStatus != null"> AND o.pay_status=#{payStatus}</if> ORDER BY o.id DESC LIMIT #{limit} OFFSET #{offset}</select>
-<update id="closeOrder">UPDATE `order` SET status=2,updated_at=CURRENT_TIMESTAMP WHERE id=#{orderId} AND user_id=#{userId} AND pay_status=0 AND status=1</update>
-<insert id="insertPayment" useGeneratedKeys="true" keyProperty="id">INSERT INTO payment(order_id,order_no,channel,channel_txn,amount,currency,status) VALUES(#{orderId},#{orderNo},#{channel},#{channelTxn},#{amount},#{currency},0)</insert>
-<select id="selectPayment" resultType="com.tuowei.dazhongdianping.module.trade.model.PaymentRow">SELECT id,order_id,order_no,channel,channel_txn,amount,currency,status,raw_response FROM payment WHERE order_id=#{orderId} ORDER BY id DESC LIMIT 1</select>
-<select id="selectPaymentByTxn" resultType="com.tuowei.dazhongdianping.module.trade.model.PaymentRow">SELECT id,order_id,order_no,channel,channel_txn,amount,currency,status,raw_response FROM payment WHERE channel=#{channel} AND channel_txn=#{channelTxn}</select>
-<update id="markPaymentSuccess">UPDATE payment SET status=1,raw_response=#{rawResponse},updated_at=CURRENT_TIMESTAMP WHERE id=#{id} AND status=0</update><update id="markOrderPaid">UPDATE `order` SET pay_status=1,pay_method=#{channel},paid_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=#{orderId} AND pay_status=0 AND status=1</update>
-<select id="countOrderCoupons" resultType="long">SELECT COUNT(1) FROM coupon WHERE order_id=#{orderId}</select><insert id="insertCoupon">INSERT INTO coupon(order_id,user_id,deal_id,shop_id,code,status,expire_at) VALUES(#{orderId},#{userId},#{dealId},#{shopId},#{code},1,#{expireAt})</insert>
-<sql id="couponCols">c.id,c.order_id,c.user_id,c.deal_id,c.shop_id,c.code,c.status,c.verify_at,c.verify_by,c.expire_at,c.created_at,d.title AS deal_title,s.name AS shop_name,d.cover_image</sql>
-<select id="selectOrderCoupons" resultType="com.tuowei.dazhongdianping.module.trade.model.CouponRow">SELECT <include refid="couponCols"/> FROM coupon c JOIN deal d ON d.id=c.deal_id JOIN shop s ON s.id=c.shop_id WHERE c.order_id=#{orderId} AND c.user_id=#{userId} ORDER BY c.id</select>
-<select id="countCoupons" resultType="long">SELECT COUNT(1) FROM coupon c JOIN deal d ON d.id=c.deal_id WHERE c.user_id=#{userId} AND d.region=#{region}<if test="status != null"> AND c.status=#{status}</if></select>
-<select id="selectCoupons" resultType="com.tuowei.dazhongdianping.module.trade.model.CouponRow">SELECT <include refid="couponCols"/> FROM coupon c JOIN deal d ON d.id=c.deal_id JOIN shop s ON s.id=c.shop_id WHERE c.user_id=#{userId} AND d.region=#{region}<if test="status != null"> AND c.status=#{status}</if> ORDER BY c.id DESC LIMIT #{limit} OFFSET #{offset}</select>
-<select id="selectMerchantCoupon" resultType="com.tuowei.dazhongdianping.module.trade.model.CouponRow">SELECT <include refid="couponCols"/> FROM coupon c JOIN deal d ON d.id=c.deal_id JOIN shop s ON s.id=c.shop_id WHERE c.code=#{code} AND s.merchant_id=#{merchantId} AND d.region=#{region}</select>
-<update id="verifyMerchantCoupon">UPDATE coupon SET status=2,verify_at=CURRENT_TIMESTAMP,verify_by=#{operatorId} WHERE code=#{code} AND status=1 AND (expire_at IS NULL OR expire_at&gt;=CURRENT_DATE) AND EXISTS (SELECT 1 FROM deal d JOIN shop s ON s.id=d.shop_id WHERE d.id=coupon.deal_id AND s.id=coupon.shop_id AND s.merchant_id=#{merchantId} AND d.region=#{region})</update>
-<select id="countUsedCoupons" resultType="long">SELECT COUNT(1) FROM coupon WHERE order_id=#{orderId} AND status=2</select>
-<select id="selectRefundByOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">SELECT id,order_id,coupon_id,amount,reason,status,audit_by,audit_reason,audited_at,created_at,updated_at FROM refund WHERE order_id=#{orderId} ORDER BY id DESC LIMIT 1</select>
-<insert id="insertRefund">INSERT INTO refund(order_id,amount,reason,status) VALUES(#{orderId},#{amount},#{reason},0)</insert>
-<update id="markOrderRefunded">UPDATE `order` SET pay_status=2,updated_at=CURRENT_TIMESTAMP WHERE id=#{orderId} AND pay_status=1</update>
-<update id="markCouponsRefunded">UPDATE coupon SET status=4 WHERE order_id=#{orderId} AND status=1</update>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper">
+    <sql id="dealCols">d.id,d.shop_id,d.merchant_id,d.region,d.type,d.title,d.cover_image,d.price,d.original_price,d.currency,d.stock,d.sold_count,d.valid_start,d.valid_end,d.rules,s.name AS shop_name</sql>
+    <select id="selectShopDeals" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">SELECT <include refid="dealCols"/> FROM deal d JOIN shop s ON s.id=d.shop_id WHERE d.shop_id=#{shopId} AND d.region=#{region} AND d.audit_status=1 AND d.status=1 AND d.is_deleted=FALSE ORDER BY d.id</select>
+    <select id="selectDeal" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">SELECT <include refid="dealCols"/> FROM deal d JOIN shop s ON s.id=d.shop_id WHERE d.id=#{dealId} AND d.region=#{region} AND d.audit_status=1 AND d.status=1 AND d.is_deleted=FALSE</select>
+    <select id="selectDealItems" resultType="com.tuowei.dazhongdianping.module.trade.model.DealItemRow">SELECT id,deal_id,name,quantity,price,sort FROM deal_item WHERE deal_id=#{dealId} ORDER BY sort,id</select>
+    <update id="decrementDealStock">UPDATE deal SET stock=CASE WHEN stock=-1 THEN -1 ELSE stock-#{quantity} END,sold_count=sold_count+#{quantity},updated_at=CURRENT_TIMESTAMP WHERE id=#{dealId} AND status=1 AND (stock=-1 OR stock&gt;=#{quantity})</update>
+    <update id="restoreDealStock">UPDATE deal SET stock=CASE WHEN stock=-1 THEN -1 ELSE stock+#{quantity} END,sold_count=CASE WHEN sold_count&gt;=#{quantity} THEN sold_count-#{quantity} ELSE 0 END WHERE id=#{dealId}</update>
+    <insert id="insertOrder" useGeneratedKeys="true" keyProperty="id">INSERT INTO `order`(order_no,user_id,deal_id,shop_id,region,quantity,unit_price,amount,currency,pay_status,status,expire_at) VALUES(#{orderNo},#{userId},#{dealId},#{shopId},#{region},#{quantity},#{unitPrice},#{amount},#{currency},0,1,#{expireAt})</insert>
+    <sql id="orderCols">o.id,o.order_no,o.user_id,o.deal_id,o.shop_id,o.region,o.quantity,o.unit_price,o.amount,o.currency,o.pay_method,o.pay_status,o.status,o.paid_at,o.expire_at,o.created_at,d.title AS deal_title,s.name AS shop_name,d.cover_image</sql>
+    <select id="selectUserOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">SELECT <include refid="orderCols"/> FROM `order` o JOIN deal d ON d.id=o.deal_id JOIN shop s ON s.id=o.shop_id WHERE o.id=#{orderId} AND o.user_id=#{userId} AND o.region=#{region}</select>
+    <select id="selectOrderByNo" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">SELECT <include refid="orderCols"/> FROM `order` o JOIN deal d ON d.id=o.deal_id JOIN shop s ON s.id=o.shop_id WHERE o.order_no=#{orderNo}</select>
+    <select id="countUserOrders" resultType="long">SELECT COUNT(1) FROM `order` WHERE user_id=#{userId} AND region=#{region}<if test="payStatus != null"> AND pay_status=#{payStatus}</if></select>
+    <select id="selectUserOrders" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">SELECT <include refid="orderCols"/> FROM `order` o JOIN deal d ON d.id=o.deal_id JOIN shop s ON s.id=o.shop_id WHERE o.user_id=#{userId} AND o.region=#{region}<if test="payStatus != null"> AND o.pay_status=#{payStatus}</if> ORDER BY o.id DESC LIMIT #{limit} OFFSET #{offset}</select>
+    <update id="closeOrder">UPDATE `order` SET status=2,updated_at=CURRENT_TIMESTAMP WHERE id=#{orderId} AND user_id=#{userId} AND pay_status=0 AND status=1</update>
+    <select id="selectExpiredUnpaidOrders" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">
+        SELECT <include refid="orderCols"/>
+        FROM `order` o
+        JOIN deal d ON d.id=o.deal_id
+        JOIN shop s ON s.id=o.shop_id
+        WHERE o.pay_status=0
+          AND o.status=1
+          AND o.expire_at IS NOT NULL
+          AND o.expire_at &lt; CURRENT_TIMESTAMP
+        ORDER BY o.expire_at ASC, o.id ASC
+        LIMIT #{limit}
+    </select>
+    <update id="closeExpiredUnpaidOrder">
+        UPDATE `order`
+        SET status=2, updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{orderId} AND pay_status=0 AND status=1
+    </update>
+    <select id="selectStalePendingPayments" resultType="com.tuowei.dazhongdianping.module.trade.model.PaymentRow">
+        SELECT p.id, p.order_id, p.order_no, p.channel, p.channel_txn, p.amount, p.currency, p.status, p.raw_response
+        FROM payment p
+        JOIN `order` o ON o.id = p.order_id
+        WHERE p.status = 0
+          AND (
+                o.status = 2
+             OR (o.pay_status = 0 AND o.expire_at IS NOT NULL AND o.expire_at &lt; CURRENT_TIMESTAMP)
+          )
+        ORDER BY p.id ASC
+        LIMIT #{limit}
+    </select>
+    <update id="markPaymentFailed">
+        UPDATE payment
+        SET status=2, raw_response=#{rawResponse}, updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{paymentId} AND status=0
+    </update>
+    <insert id="insertPayment" useGeneratedKeys="true" keyProperty="id">INSERT INTO payment(order_id,order_no,channel,channel_txn,amount,currency,status) VALUES(#{orderId},#{orderNo},#{channel},#{channelTxn},#{amount},#{currency},0)</insert>
+    <select id="selectPayment" resultType="com.tuowei.dazhongdianping.module.trade.model.PaymentRow">SELECT id,order_id,order_no,channel,channel_txn,amount,currency,status,raw_response FROM payment WHERE order_id=#{orderId} ORDER BY id DESC LIMIT 1</select>
+    <select id="selectPaymentByTxn" resultType="com.tuowei.dazhongdianping.module.trade.model.PaymentRow">SELECT id,order_id,order_no,channel,channel_txn,amount,currency,status,raw_response FROM payment WHERE channel=#{channel} AND channel_txn=#{channelTxn}</select>
+    <update id="markPaymentSuccess">UPDATE payment SET status=1,raw_response=#{rawResponse},updated_at=CURRENT_TIMESTAMP WHERE id=#{id} AND status=0</update>
+    <update id="markOrderPaid">UPDATE `order` SET pay_status=1,pay_method=#{channel},paid_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=#{orderId} AND pay_status=0 AND status=1</update>
+    <select id="countOrderCoupons" resultType="long">SELECT COUNT(1) FROM coupon WHERE order_id=#{orderId}</select>
+    <insert id="insertCoupon">INSERT INTO coupon(order_id,user_id,deal_id,shop_id,code,status,expire_at) VALUES(#{orderId},#{userId},#{dealId},#{shopId},#{code},1,#{expireAt})</insert>
+    <sql id="couponCols">c.id,c.order_id,c.user_id,c.deal_id,c.shop_id,c.code,c.status,c.verify_at,c.verify_by,c.expire_at,c.created_at,d.title AS deal_title,s.name AS shop_name,d.cover_image</sql>
+    <select id="selectOrderCoupons" resultType="com.tuowei.dazhongdianping.module.trade.model.CouponRow">SELECT <include refid="couponCols"/> FROM coupon c JOIN deal d ON d.id=c.deal_id JOIN shop s ON s.id=c.shop_id WHERE c.order_id=#{orderId} AND c.user_id=#{userId} ORDER BY c.id</select>
+    <select id="countCoupons" resultType="long">SELECT COUNT(1) FROM coupon c JOIN deal d ON d.id=c.deal_id WHERE c.user_id=#{userId} AND d.region=#{region}<if test="status != null"> AND c.status=#{status}</if></select>
+    <select id="selectCoupons" resultType="com.tuowei.dazhongdianping.module.trade.model.CouponRow">SELECT <include refid="couponCols"/> FROM coupon c JOIN deal d ON d.id=c.deal_id JOIN shop s ON s.id=c.shop_id WHERE c.user_id=#{userId} AND d.region=#{region}<if test="status != null"> AND c.status=#{status}</if> ORDER BY c.id DESC LIMIT #{limit} OFFSET #{offset}</select>
+    <select id="selectMerchantCoupon" resultType="com.tuowei.dazhongdianping.module.trade.model.CouponRow">SELECT <include refid="couponCols"/> FROM coupon c JOIN deal d ON d.id=c.deal_id JOIN shop s ON s.id=c.shop_id WHERE c.code=#{code} AND s.merchant_id=#{merchantId} AND d.region=#{region}</select>
+    <update id="verifyMerchantCoupon">UPDATE coupon SET status=2,verify_at=CURRENT_TIMESTAMP,verify_by=#{operatorId} WHERE code=#{code} AND status=1 AND (expire_at IS NULL OR expire_at&gt;=CURRENT_DATE) AND EXISTS (SELECT 1 FROM deal d JOIN shop s ON s.id=d.shop_id WHERE d.id=coupon.deal_id AND s.id=coupon.shop_id AND s.merchant_id=#{merchantId} AND d.region=#{region})</update>
+    <select id="countUsedCoupons" resultType="long">SELECT COUNT(1) FROM coupon WHERE order_id=#{orderId} AND status=2</select>
+    <select id="selectRefundByOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">SELECT id,order_id,coupon_id,amount,reason,status,audit_by,audit_reason,audited_at,created_at,updated_at FROM refund WHERE order_id=#{orderId} ORDER BY id DESC LIMIT 1</select>
+    <insert id="insertRefund">INSERT INTO refund(order_id,amount,reason,status) VALUES(#{orderId},#{amount},#{reason},0)</insert>
+    <update id="markOrderRefunded">UPDATE `order` SET pay_status=2,updated_at=CURRENT_TIMESTAMP WHERE id=#{orderId} AND pay_status=1</update>
+    <update id="markCouponsRefunded">UPDATE coupon SET status=4 WHERE order_id=#{orderId} AND status=1</update>
 </mapper>

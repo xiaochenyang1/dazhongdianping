@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,7 @@ class TopicHotRankingServiceTest {
     @Autowired private ObjectMapper objectMapper;
 
     @BeforeEach
+    @AfterEach
     void cleanTopicFixtures() {
         jdbcTemplate.update("DELETE FROM topic_hot_snapshot");
         jdbcTemplate.update("DELETE FROM topic_follow");

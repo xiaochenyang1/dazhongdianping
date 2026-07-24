@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
-import { listAdminOrders } from '@/services/admin'
+import { auditAdminOrderRefund, listAdminOrders, reconcileAdminOrders } from '@/services/admin'
 import type { AdminOrder, PageResult } from '@/types/admin'
 
-const { state } = useAdminSession()
+const { state, hasPermission } = useAdminSession()
+const canAuditRefund = hasPermission('data:order:write')
 const pageSize = 20
 const loading = ref(false)
 const errorMessage = ref('')
 const pageState = ref<PageResult<AdminOrder> | null>(null)
+const auditingOrderId = ref<number | null>(null)
+const auditReason = ref('')
+const auditSubmitting = ref(false)
+const auditError = ref('')
+const auditNotice = ref('')
+const reconcileSubmitting = ref(false)
 const filters = reactive({
   merchantId: '',
   shopId: '',
@@ -84,6 +91,63 @@ async function goPage(nextPage: number) {
   await load()
 }
 
+function openAudit(item: AdminOrder) {
+  auditingOrderId.value = item.id
+  auditReason.value = ''
+  auditError.value = ''
+  auditNotice.value = ''
+}
+
+function closeAudit() {
+  auditingOrderId.value = null
+  auditReason.value = ''
+  auditError.value = ''
+}
+
+async function submitAudit(decision: 'approve' | 'reject') {
+  if (auditingOrderId.value === null) {
+    return
+  }
+  const reason = auditReason.value.trim()
+  if (!reason) {
+    auditError.value = '退款仲裁必须填写原因'
+    return
+  }
+  auditSubmitting.value = true
+  auditError.value = ''
+  try {
+    const updated = await auditAdminOrderRefund(auditingOrderId.value, { decision, reason })
+    if (pageState.value) {
+      pageState.value = {
+        ...pageState.value,
+        list: pageState.value.list.map((item) => (item.id === updated.id ? updated : item)),
+      }
+    }
+    auditNotice.value = `订单 ${updated.orderNo} 退款已${decision === 'approve' ? '通过' : '驳回'}`
+    closeAudit()
+  } catch (error) {
+    auditError.value = error instanceof Error ? error.message : '退款仲裁提交失败'
+  } finally {
+    auditSubmitting.value = false
+  }
+}
+
+async function runReconcile() {
+  reconcileSubmitting.value = true
+  errorMessage.value = ''
+  try {
+    const result = await reconcileAdminOrders()
+    auditNotice.value =
+      `对账补偿完成：关闭超时未支付订单 ${result.closedOrders} 笔，` +
+      `恢复库存 ${result.restoredStockOrders} 笔，标记失败支付流水 ${result.failedPayments} 笔`
+    await load()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '对账补偿执行失败'
+  } finally {
+    reconcileSubmitting.value = false
+  }
+}
+
 onMounted(() => {
   void load()
 })
@@ -95,11 +159,17 @@ onMounted(() => {
       <div>
         <p class="eyebrow">Orders & Reconciliation</p>
         <h1>订单退款</h1>
-        <p>当前区域 {{ state.region }}。先把订单、支付流水和退款状态看明白，再谈什么对账补偿。</p>
+        <p>当前区域 {{ state.region }}。支持平台退款仲裁、超时未支付关单与待回调支付流水补偿。</p>
+      </div>
+      <div v-if="canAuditRefund" class="toolbar-actions">
+        <button type="button" class="primary-button" :disabled="reconcileSubmitting" @click="runReconcile">
+          {{ reconcileSubmitting ? '补偿执行中...' : '执行对账补偿' }}
+        </button>
       </div>
     </header>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
+    <p v-if="auditNotice" class="feedback is-success">{{ auditNotice }}</p>
 
     <article class="content-card system-table-card">
       <div class="system-table-card__meta">
@@ -167,14 +237,15 @@ onMounted(() => {
               <th>金额</th>
               <th>支付</th>
               <th>退款</th>
+              <th v-if="canAuditRefund">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="7" class="table-empty">订单数据加载中...</td>
+              <td :colspan="canAuditRefund ? 8 : 7" class="table-empty">订单数据加载中...</td>
             </tr>
             <tr v-else-if="!(pageState?.list.length)">
-              <td colspan="7" class="table-empty">当前筛选下没有订单，条件别拧得太邪乎。</td>
+              <td :colspan="canAuditRefund ? 8 : 7" class="table-empty">当前筛选下没有订单，条件别拧得太邪乎。</td>
             </tr>
             <tr v-for="item in pageState?.list" :key="item.id">
               <td class="numeric-cell">{{ item.createdAt }}</td>
@@ -207,6 +278,37 @@ onMounted(() => {
                 </span>
                 <p class="inline-note">{{ refundSummary(item) }}</p>
                 <p class="inline-note" v-if="item.refundAuditReason">审核备注：{{ item.refundAuditReason }}</p>
+              </td>
+              <td v-if="canAuditRefund">
+                <template v-if="item.refundId && item.refundStatus === 0">
+                  <button
+                    v-if="auditingOrderId !== item.id"
+                    type="button"
+                    class="ghost-button"
+                    @click="openAudit(item)"
+                  >
+                    退款仲裁
+                  </button>
+                  <div v-else class="field">
+                    <textarea
+                      name="admin-refund-audit-reason"
+                      v-model="auditReason"
+                      rows="2"
+                      placeholder="填写仲裁原因（必填）"
+                    ></textarea>
+                    <p v-if="auditError" class="feedback is-error">{{ auditError }}</p>
+                    <div class="toolbar-actions">
+                      <button type="button" class="primary-button" :disabled="auditSubmitting" @click="submitAudit('approve')">
+                        通过退款
+                      </button>
+                      <button type="button" class="ghost-button" :disabled="auditSubmitting" @click="submitAudit('reject')">
+                        驳回退款
+                      </button>
+                      <button type="button" class="ghost-button" :disabled="auditSubmitting" @click="closeAudit">取消</button>
+                    </div>
+                  </div>
+                </template>
+                <span v-else class="inline-note">无待处理退款</span>
               </td>
             </tr>
           </tbody>

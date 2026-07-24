@@ -50,6 +50,14 @@ public interface TradeMapper {
 
     int closeOrder(@Param("orderId") Long orderId, @Param("userId") Long userId);
 
+    List<OrderRow> selectExpiredUnpaidOrders(@Param("limit") Integer limit);
+
+    int closeExpiredUnpaidOrder(@Param("orderId") Long orderId);
+
+    List<PaymentRow> selectStalePendingPayments(@Param("limit") Integer limit);
+
+    int markPaymentFailed(@Param("paymentId") Long paymentId, @Param("rawResponse") String rawResponse);
+
     void insertPayment(PaymentRow row);
 
     PaymentRow selectPayment(@Param("orderId") Long orderId);

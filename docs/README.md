@@ -20,7 +20,7 @@
 
 - `backend`: `Java 17 + Spring Boot 3.3.5 + MyBatis`,默认运行配置指向 `MySQL`,`H2` 保留为 profile / 测试环境,本地全量 `291` 条测试已通过。
 - `web`: 首页 / 商户列表 / 商户详情 / 独立门店点评列表 / 登录弹层 / 写点评 / 我的点评 / 成长值流水 / 点评详情互动 / 图片上传 / 我的资料 / 账号绑定 / 改密码 / 公开用户主页 / 隐私中心已接上当前接口,头部已补登录用户搜索历史面板 / 清空和 `CN / EU` 区域切换,切区后会按当前区域重拉热词 / 搜索历史 / 联想面板;`npm test`(`36` 条测试)、`npm run build`、`npm run test:e2e`(`6` 条 Playwright 冒烟) 和 `npm run test:e2e:real`(`4` 条真实后端关键链路 E2E) 已通过。
-- `admin-web`: 管理员登录、门店 CRUD、点评审核、达人认证审核、审计日志查询、隐私任务查询、订单退款查询、种子导入、导入批次查询已接通,`npm test`(`41` 条测试) 与 `npm run build` 已通过。
+- `admin-web`: 管理员登录、门店 CRUD、点评审核、达人认证审核、审计日志查询、隐私任务查询、订单退款查询/平台仲裁/对账补偿、种子导入、导入批次查询已接通。
 - `merchant-web`: 独立商户工作台已落地，`npm test` 与 `npm run build` 已通过。
 - `app`: M6 Flutter MVP 基线已落地，覆盖默认 EU、CN/EU 与语言切换、登录与安全会话、浏览/搜索/门店详情、团购、预订、用户中心、通知列表与 ACK、GDPR 导出/下载保存/删除申请/撤销；`flutter test` 43 条、`flutter analyze`、`flutter build web --no-wasm-dry-run` 已通过。点评完整业务化、地图、推送和真实支付仍在继续实施。
 
@@ -38,9 +38,9 @@
 - M7 本地达人认证已落地：`web` 资料页支持查询、提交和驳回后重提；管理端新增 `/audit/expert-certifications` 审核页；公开用户主页、点评和帖子作者在“已通过且有效”时显示 `local_expert / 本地达人` 标识。
 - 管理端审计日志查询已落地：后端新增 `GET /api/admin/v1/audit/logs`，支持按 `adminId/action/target/keyword` 分页筛选；`admin-web` 新增 `/system/audit-logs` 页面，权限码为 `system:audit_log:read`。
 - 管理端隐私任务查询已落地：后端新增 `GET /api/admin/v1/privacy/tasks`，统一分页查询 `privacy_export_task` 与 `privacy_delete_task`；`admin-web` 新增 `/system/privacy-tasks` 页面，权限码为 `system:privacy_task:read`。
-- 管理端订单/退款/对账查询已落地：后端新增 `GET /api/admin/v1/orders`，支持按商户、门店、用户、支付状态、退款状态、订单号和日期范围分页查询；`admin-web` 新增 `/data/orders` 页面，权限码为 `data:order:read`。
+- 管理端订单/退款/对账已落地：`GET /api/admin/v1/orders` 查询、`POST /api/admin/v1/orders/:id/refund-audit` 平台仲裁、`POST /api/admin/v1/orders/reconcile` 与定时任务补偿超时未支付订单/失败支付流水；`admin-web` `/data/orders` 页面权限码为 `data:order:read/write`。
 - M6 Flutter 已完成通知基础链路与隐私中心主闭环；第三方能力未配置时只展示明确不可用状态，不使用 mock 冒充真实联调。
-- MySQL 初始化脚本已整理到 `sql/mysql/00_all_in_one.sql`、`sql/mysql/01_schema.sql` 和 `sql/mysql/02_seed_data.sql`,并带可直接密码登录的演示账号、点赞/评论演示数据、点评互动相关表、成长值积分流水表、搜索历史表，以及 `user_expert_certification` 表、达人认证审核权限种子、`system:audit_log:read`、`system:privacy_task:read` 和 `data:order:read` 权限种子；`data_operator` 默认获授 `data:order:read`。
+- MySQL 初始化脚本已整理到 `sql/mysql/00_all_in_one.sql`、`sql/mysql/01_schema.sql` 和 `sql/mysql/02_seed_data.sql`,并带可直接密码登录的演示账号、点赞/评论演示数据、点评互动相关表、成长值积分流水表、搜索历史表，以及 `user_expert_certification` 表、达人认证审核权限种子、`system:audit_log:read`、`system:privacy_task:read` 和 `data:order:read/write` 权限种子；`data_operator` 默认获授 `data:order:read` 与 `data:order:write`。
 
 还没做完的别硬吹:
 
