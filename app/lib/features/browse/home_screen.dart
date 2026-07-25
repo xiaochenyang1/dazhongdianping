@@ -1,9 +1,13 @@
+import 'package:dazhongdianping_app/features/activity/activity_list_screen.dart';
+import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/search_screen.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_feed_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
+import 'package:dazhongdianping_app/features/rank/rank_list_screen.dart';
+import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
@@ -34,6 +38,8 @@ class HomeScreen extends StatefulWidget {
     this.onCommunityUserTap,
     this.circleRepository,
     this.topicRepository,
+    this.rankRepository,
+    this.activityRepository,
     this.onCommunityLoginRequired,
   });
   final BrowseRepository repository;
@@ -54,6 +60,8 @@ class HomeScreen extends StatefulWidget {
   final void Function(BuildContext, int)? onCommunityUserTap;
   final CircleRepository? circleRepository;
   final TopicRepository? topicRepository;
+  final RankRepository? rankRepository;
+  final ActivityRepository? activityRepository;
   final ValueChanged<BuildContext>? onCommunityLoginRequired;
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -173,6 +181,49 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (widget.rankRepository != null)
+                  ActionChip(
+                    key: const Key('home-ranks-entry'),
+                    avatar: const Icon(Icons.emoji_events_outlined, size: 18),
+                    label: const Text('城市榜单'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => RankListScreen(
+                          repository: widget.rankRepository!,
+                          browseRepository: widget.repository,
+                          tradeRepository: widget.tradeRepository,
+                          reservationRepository: widget.reservationRepository,
+                          reviewRepository: widget.reviewRepository,
+                          thirdPartyConfig: widget.thirdPartyConfig,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (widget.activityRepository != null)
+                  ActionChip(
+                    key: const Key('home-activities-entry'),
+                    avatar: const Icon(Icons.campaign_outlined, size: 18),
+                    label: const Text('运营活动'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ActivityListScreen(
+                          repository: widget.activityRepository!,
+                          browseRepository: widget.repository,
+                          tradeRepository: widget.tradeRepository,
+                          reservationRepository: widget.reservationRepository,
+                          reviewRepository: widget.reviewRepository,
+                          thirdPartyConfig: widget.thirdPartyConfig,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 20),
             Text(

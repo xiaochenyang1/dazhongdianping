@@ -6,6 +6,7 @@ import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/auth/login_screen.dart';
+import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/home_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
@@ -18,6 +19,7 @@ import 'package:dazhongdianping_app/features/notification/notification_repositor
 import 'package:dazhongdianping_app/features/notification/notification_screen.dart';
 import 'package:dazhongdianping_app/features/message/conversation_list_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
+import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_center_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_collection_screen.dart';
@@ -122,6 +124,8 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
             communityRepository: communityRepository,
             circleRepository: CircleRepository(apiClient),
             topicRepository: TopicRepository(apiClient),
+            rankRepository: RankRepository(apiClient),
+            activityRepository: ActivityRepository(apiClient),
             onCommunityLoginRequired: (screenContext) {
               Navigator.of(screenContext).push(
                 MaterialPageRoute(

@@ -1,7 +1,9 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/home_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
+import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -54,13 +56,20 @@ void main() {
   testWidgets('EU home shows region and featured shop', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: HomeScreen(repository: FakeBrowseRepository(), localeTag: 'en'),
+        home: HomeScreen(
+          repository: FakeBrowseRepository(),
+          localeTag: 'en',
+          rankRepository: RankRepository(HomeCommunityApi()),
+          activityRepository: ActivityRepository(HomeCommunityApi()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
     expect(find.text('Europe · Local life'), findsOneWidget);
     expect(find.text('London Hotpot'), findsOneWidget);
     expect(find.text('GBP 35'), findsOneWidget);
+    expect(find.text('城市榜单'), findsOneWidget);
+    expect(find.text('运营活动'), findsOneWidget);
   });
 
   testWidgets('retry refreshes featured shops without an async setState error', (tester) async {
