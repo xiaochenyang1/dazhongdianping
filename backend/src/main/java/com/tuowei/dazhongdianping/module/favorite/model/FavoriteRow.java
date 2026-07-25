@@ -11,6 +11,7 @@ public class FavoriteRow {
     private Integer targetType;
     private Long targetId;
     private LocalDateTime createdAt;
+    private Long merchantId;
     private String targetName;
     private String coverUrl;
     private BigDecimal score;

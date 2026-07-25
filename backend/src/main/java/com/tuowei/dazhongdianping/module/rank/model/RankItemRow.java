@@ -9,6 +9,7 @@ public class RankItemRow {
     private BigDecimal rankScore;
     private String reason;
     private Long shopId;
+    private Long merchantId;
     private String shopName;
     private String coverUrl;
     private BigDecimal score;

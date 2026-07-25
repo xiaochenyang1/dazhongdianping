@@ -525,7 +525,7 @@
     </select>
     <select id="selectShopBrowseHistory" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow">
         SELECT h.id, h.user_id, h.shop_id, h.region, h.view_count, h.last_viewed_at, h.created_at,
-               s.name AS shop_name, s.cover_url, s.score, s.price_per_capita, s.currency, s.address,
+               s.merchant_id, s.name AS shop_name, s.cover_url, s.score, s.price_per_capita, s.currency, s.address,
                c.name AS city_name, a.name AS area_name, s.has_deal, s.open_now, s.tags
         FROM user_shop_browse_history h
         JOIN shop s ON s.id = h.shop_id AND s.region = h.region AND s.is_deleted = FALSE AND s.status = 1

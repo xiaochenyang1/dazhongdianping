@@ -41,7 +41,12 @@ onMounted(async () => {
           <img :src="item.shop.coverUrl" :alt="item.shop.name" />
           <div class="rank-item__body">
             <div class="shop-card__heading">
-              <RouterLink :to="`/shops/${item.shop.id}`"><h2>{{ item.shop.name }}</h2></RouterLink>
+              <RouterLink :to="`/shops/${item.shop.id}`" class="name-with-badge">
+                <h2>{{ item.shop.name }}</h2>
+                <span v-if="item.shop.merchantCertification" class="verified-badge verified-badge--compact">
+                  {{ item.shop.merchantCertification.label }}
+                </span>
+              </RouterLink>
               <span class="shop-card__score">{{ item.shop.score.toFixed(1) }}</span>
             </div>
             <p>{{ item.shop.cityName }} · {{ item.shop.areaName }} · 人均 {{ formatMoney(item.shop.pricePerCapita, item.shop.currency) }}</p>

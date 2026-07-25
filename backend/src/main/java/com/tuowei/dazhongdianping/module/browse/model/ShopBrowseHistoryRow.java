@@ -9,6 +9,7 @@ public class ShopBrowseHistoryRow {
     private Long id;
     private Long userId;
     private Long shopId;
+    private Long merchantId;
     private String region;
     private Integer viewCount;
     private LocalDateTime lastViewedAt;

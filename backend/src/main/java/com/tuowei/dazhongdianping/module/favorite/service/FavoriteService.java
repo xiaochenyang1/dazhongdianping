@@ -12,9 +12,12 @@ import com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow;
 import com.tuowei.dazhongdianping.module.favorite.model.request.FavoriteSaveRequest;
 import com.tuowei.dazhongdianping.module.favorite.model.response.FavoriteResponse;
 import com.tuowei.dazhongdianping.module.favorite.model.response.FavoriteTargetResponse;
+import com.tuowei.dazhongdianping.module.merchant.verification.model.response.MerchantVerificationBadgeResponse;
+import com.tuowei.dazhongdianping.module.merchant.verification.service.MerchantVerificationService;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,18 +27,34 @@ import org.springframework.util.StringUtils;
 public class FavoriteService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final FavoriteMapper favoriteMapper;
-    public FavoriteService(FavoriteMapper favoriteMapper) { this.favoriteMapper = favoriteMapper; }
+    private final MerchantVerificationService merchantVerificationService;
+
+    public FavoriteService(FavoriteMapper favoriteMapper,
+                           MerchantVerificationService merchantVerificationService) {
+        this.favoriteMapper = favoriteMapper;
+        this.merchantVerificationService = merchantVerificationService;
+    }
 
     @Transactional
     public FavoriteResponse add(FavoriteSaveRequest request) {
         UserSession session = currentUser();
         requireTarget(request.targetType(), request.targetId());
-        FavoriteRow existing = favoriteMapper.selectFavorite(session.userId(), request.targetType(), request.targetId(), RegionContext.getRegion().name());
-        if (existing != null) return toResponse(existing);
+        FavoriteRow existing = favoriteMapper.selectFavorite(
+                session.userId(), request.targetType(), request.targetId(), RegionContext.getRegion().name());
+        if (existing != null) {
+            return toResponse(existing, badgesFor(List.of(existing)));
+        }
         FavoriteRow row = new FavoriteRow();
-        row.setUserId(session.userId()); row.setTargetType(request.targetType()); row.setTargetId(request.targetId());
-        try { favoriteMapper.insertFavorite(row); } catch (DuplicateKeyException ignored) { }
-        return toResponse(favoriteMapper.selectFavorite(session.userId(), request.targetType(), request.targetId(), RegionContext.getRegion().name()));
+        row.setUserId(session.userId());
+        row.setTargetType(request.targetType());
+        row.setTargetId(request.targetId());
+        try {
+            favoriteMapper.insertFavorite(row);
+        } catch (DuplicateKeyException ignored) {
+        }
+        FavoriteRow stored = favoriteMapper.selectFavorite(
+                session.userId(), request.targetType(), request.targetId(), RegionContext.getRegion().name());
+        return toResponse(stored, badgesFor(List.of(stored)));
     }
 
     @Transactional
@@ -45,11 +64,25 @@ public class FavoriteService {
     }
 
     public PageResult<FavoriteResponse> list(FavoriteQuery query) {
-        query.normalize(); validateType(query.getTargetType());
-        query.setUserId(currentUser().userId()); query.setRegion(RegionContext.getRegion().name());
+        query.normalize();
+        validateType(query.getTargetType());
+        query.setUserId(currentUser().userId());
+        query.setRegion(RegionContext.getRegion().name());
         long total = favoriteMapper.countFavorites(query);
-        List<FavoriteResponse> list = favoriteMapper.selectFavorites(query).stream().map(this::toResponse).toList();
+        List<FavoriteRow> rows = favoriteMapper.selectFavorites(query);
+        Map<Long, MerchantVerificationBadgeResponse> badges = badgesFor(rows);
+        List<FavoriteResponse> list = rows.stream().map(row -> toResponse(row, badges)).toList();
         return new PageResult<>(list, total, query.getPage(), query.getPageSize(), query.getOffset() + list.size() < total);
+    }
+
+    private Map<Long, MerchantVerificationBadgeResponse> badgesFor(List<FavoriteRow> rows) {
+        return merchantVerificationService.approvedBadges(
+                rows.stream()
+                        .filter(row -> row != null && row.getTargetType() != null && row.getTargetType() == 1)
+                        .map(FavoriteRow::getMerchantId)
+                        .toList(),
+                RegionContext.getRegion().name()
+        );
     }
 
     private void requireTarget(Integer type, Long id) {
@@ -57,13 +90,58 @@ public class FavoriteService {
         boolean missing = type == 2
                 ? favoriteMapper.selectPostTarget(id, RegionContext.getRegion().name()) == null
                 : favoriteMapper.selectShopTarget(id, RegionContext.getRegion().name()) == null;
-        if (missing) throw new NotFoundException(type == 2 ? "帖子不存在" : "门店不存在");
+        if (missing) {
+            throw new NotFoundException(type == 2 ? "帖子不存在" : "门店不存在");
+        }
     }
-    private void validateType(Integer type) { if (type != null && type != 1 && type != 2) throw new IllegalArgumentException("targetType 只支持 1店铺 2帖子"); }
-    private UserSession currentUser() { UserSession session = UserSessionContext.get(); if (session == null) throw new UnauthorizedException("用户登录状态不存在"); return session; }
-    private FavoriteResponse toResponse(FavoriteRow row) {
-        FavoriteTargetResponse target = new FavoriteTargetResponse(row.getTargetId(), row.getTargetName(), row.getCoverUrl(), row.getScore(), row.getPricePerCapita(), row.getCurrency(), row.getAddress(), row.getCityName(), row.getAreaName(), row.getHasDeal(), row.getOpenNow(), split(row.getTags()));
-        return new FavoriteResponse(row.getId(), row.getTargetType(), row.getTargetType() == 1 ? "店铺" : "帖子", row.getTargetId(), target, row.getCreatedAt() == null ? "" : row.getCreatedAt().format(FORMATTER));
+
+    private void validateType(Integer type) {
+        if (type != null && type != 1 && type != 2) {
+            throw new IllegalArgumentException("targetType 只支持 1店铺 2帖子");
+        }
     }
-    private List<String> split(String tags) { return StringUtils.hasText(tags) ? Arrays.stream(tags.split(",")).map(String::trim).filter(StringUtils::hasText).toList() : List.of(); }
+
+    private UserSession currentUser() {
+        UserSession session = UserSessionContext.get();
+        if (session == null) {
+            throw new UnauthorizedException("用户登录状态不存在");
+        }
+        return session;
+    }
+
+    private FavoriteResponse toResponse(FavoriteRow row, Map<Long, MerchantVerificationBadgeResponse> badges) {
+        MerchantVerificationBadgeResponse badge = row.getTargetType() != null && row.getTargetType() == 1
+                ? badges.get(row.getMerchantId())
+                : null;
+        FavoriteTargetResponse target = new FavoriteTargetResponse(
+                row.getTargetId(),
+                row.getMerchantId(),
+                row.getTargetName(),
+                row.getCoverUrl(),
+                row.getScore(),
+                row.getPricePerCapita(),
+                row.getCurrency(),
+                row.getAddress(),
+                row.getCityName(),
+                row.getAreaName(),
+                row.getHasDeal(),
+                row.getOpenNow(),
+                split(row.getTags()),
+                badge
+        );
+        return new FavoriteResponse(
+                row.getId(),
+                row.getTargetType(),
+                row.getTargetType() == 1 ? "店铺" : "帖子",
+                row.getTargetId(),
+                target,
+                row.getCreatedAt() == null ? "" : row.getCreatedAt().format(FORMATTER)
+        );
+    }
+
+    private List<String> split(String tags) {
+        return StringUtils.hasText(tags)
+                ? Arrays.stream(tags.split(",")).map(String::trim).filter(StringUtils::hasText).toList()
+                : List.of();
+    }
 }

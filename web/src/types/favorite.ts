@@ -2,6 +2,7 @@ import type { PageResult } from './browse'
 
 export interface FavoriteTarget {
   id: number
+  merchantId?: number | null
   name: string
   coverUrl: string
   score: number
@@ -13,6 +14,7 @@ export interface FavoriteTarget {
   hasDeal: boolean
   openNow: boolean
   tags: string[]
+  merchantCertification?: { code: string; label: string } | null
 }
 
 export interface FavoriteItem {

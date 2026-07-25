@@ -92,7 +92,12 @@ watch(() => state.region, load, { immediate: true })
         <img :src="item.coverUrl" :alt="item.shopName" class="shop-card__cover" />
         <div class="shop-card__body">
           <div class="shop-card__heading">
-            <RouterLink :to="`/shops/${item.shopId}`"><h3>{{ item.shopName }}</h3></RouterLink>
+            <RouterLink :to="`/shops/${item.shopId}`" class="name-with-badge">
+              <h3>{{ item.shopName }}</h3>
+              <span v-if="item.merchantCertification" class="verified-badge verified-badge--compact">
+                {{ item.merchantCertification.label }}
+              </span>
+            </RouterLink>
             <span class="shop-card__score">{{ Number(item.score || 0).toFixed(1) }}</span>
           </div>
           <p>{{ item.cityName }} · {{ item.areaName }} · 人均 {{ formatMoney(item.pricePerCapita, item.currency) }}</p>

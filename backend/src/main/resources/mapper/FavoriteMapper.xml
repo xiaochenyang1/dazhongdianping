@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.tuowei.dazhongdianping.module.favorite.mapper.FavoriteMapper">
-    <sql id="targetColumns">s.name AS target_name, s.cover_url, s.score, s.price_per_capita, s.currency, s.address, c.name AS city_name, a.name AS area_name, s.has_deal, s.open_now, s.tags</sql>
+    <sql id="targetColumns">s.merchant_id, s.name AS target_name, s.cover_url, s.score, s.price_per_capita, s.currency, s.address, c.name AS city_name, a.name AS area_name, s.has_deal, s.open_now, s.tags</sql>
     <select id="selectShopTarget" resultType="com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow">
         SELECT s.id AS target_id, <include refid="targetColumns"/> FROM shop s LEFT JOIN city c ON c.id=s.city_id LEFT JOIN area a ON a.id=s.area_id
         WHERE s.id=#{targetId} AND s.region=#{region} AND s.is_deleted=FALSE AND s.status=1
@@ -15,7 +15,7 @@
         SELECT f.id, f.user_id, f.target_type, f.target_id, f.created_at,
                CASE WHEN f.target_type=2 THEN p.title ELSE s.name END AS target_name,
                CASE WHEN f.target_type=2 THEN (SELECT pi.url FROM post_image pi WHERE pi.post_id=p.id ORDER BY pi.sort_no,pi.id LIMIT 1) ELSE s.cover_url END AS cover_url,
-               s.score,s.price_per_capita,s.currency,s.address,c.name AS city_name,a.name AS area_name,s.has_deal,s.open_now,s.tags
+               s.merchant_id,s.score,s.price_per_capita,s.currency,s.address,c.name AS city_name,a.name AS area_name,s.has_deal,s.open_now,s.tags
         FROM user_favorite f LEFT JOIN shop s ON f.target_type=1 AND s.id=f.target_id AND s.region=#{region} AND s.is_deleted=FALSE
         LEFT JOIN post p ON f.target_type=2 AND p.id=f.target_id AND p.region=#{region} AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE
         LEFT JOIN city c ON c.id=s.city_id LEFT JOIN area a ON a.id=s.area_id
@@ -28,7 +28,7 @@
         SELECT f.id, f.user_id, f.target_type, f.target_id, f.created_at,
                CASE WHEN f.target_type=2 THEN p.title ELSE s.name END AS target_name,
                CASE WHEN f.target_type=2 THEN (SELECT pi.url FROM post_image pi WHERE pi.post_id=p.id ORDER BY pi.sort_no,pi.id LIMIT 1) ELSE s.cover_url END AS cover_url,
-               s.score,s.price_per_capita,s.currency,s.address,c.name AS city_name,a.name AS area_name,s.has_deal,s.open_now,s.tags
+               s.merchant_id,s.score,s.price_per_capita,s.currency,s.address,c.name AS city_name,a.name AS area_name,s.has_deal,s.open_now,s.tags
         FROM user_favorite f LEFT JOIN shop s ON f.target_type=1 AND s.id=f.target_id AND s.region=#{region} AND s.is_deleted=FALSE
         LEFT JOIN post p ON f.target_type=2 AND p.id=f.target_id AND p.region=#{region} AND p.audit_status=1 AND p.status=1 AND p.is_deleted=FALSE
         LEFT JOIN city c ON c.id=s.city_id LEFT JOIN area a ON a.id=s.area_id

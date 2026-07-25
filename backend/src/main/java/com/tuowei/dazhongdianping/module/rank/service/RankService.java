@@ -2,6 +2,8 @@ package com.tuowei.dazhongdianping.module.rank.service;
 
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.region.Region;
+import com.tuowei.dazhongdianping.module.merchant.verification.model.response.MerchantVerificationBadgeResponse;
+import com.tuowei.dazhongdianping.module.merchant.verification.service.MerchantVerificationService;
 import com.tuowei.dazhongdianping.module.rank.mapper.RankMapper;
 import com.tuowei.dazhongdianping.module.rank.model.RankItemRow;
 import com.tuowei.dazhongdianping.module.rank.model.RankSummaryRow;
@@ -12,6 +14,7 @@ import com.tuowei.dazhongdianping.module.rank.model.response.RankSummaryResponse
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -19,9 +22,11 @@ import org.springframework.util.StringUtils;
 public class RankService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final RankMapper rankMapper;
+    private final MerchantVerificationService merchantVerificationService;
 
-    public RankService(RankMapper rankMapper) {
+    public RankService(RankMapper rankMapper, MerchantVerificationService merchantVerificationService) {
         this.rankMapper = rankMapper;
+        this.merchantVerificationService = merchantVerificationService;
     }
 
     public List<RankSummaryResponse> list(Region region, Long cityId, Long categoryId, Integer type) {
@@ -34,8 +39,13 @@ public class RankService {
         if (rank == null) {
             throw new NotFoundException("榜单不存在");
         }
-        List<RankItemResponse> items = rankMapper.selectRankItems(rankId, region.name()).stream()
-                .map(this::toItem)
+        List<RankItemRow> rows = rankMapper.selectRankItems(rankId, region.name());
+        Map<Long, MerchantVerificationBadgeResponse> badges = merchantVerificationService.approvedBadges(
+                rows.stream().map(RankItemRow::getMerchantId).toList(),
+                region.name()
+        );
+        List<RankItemResponse> items = rows.stream()
+                .map(row -> toItem(row, badges.get(row.getMerchantId())))
                 .toList();
         return new RankDetailResponse(
                 rank.getId(), rank.getName(), rank.getType(), typeText(rank.getType()), rank.getRegion(),
@@ -52,11 +62,22 @@ public class RankService {
         );
     }
 
-    private RankItemResponse toItem(RankItemRow row) {
+    private RankItemResponse toItem(RankItemRow row, MerchantVerificationBadgeResponse badge) {
         RankShopResponse shop = new RankShopResponse(
-                row.getShopId(), row.getShopName(), row.getCoverUrl(), row.getScore(), row.getPricePerCapita(),
-                row.getCurrency(), row.getAddress(), row.getCityName(), row.getAreaName(), row.getHasDeal(),
-                row.getOpenNow(), splitTags(row.getTags())
+                row.getShopId(),
+                row.getMerchantId(),
+                row.getShopName(),
+                row.getCoverUrl(),
+                row.getScore(),
+                row.getPricePerCapita(),
+                row.getCurrency(),
+                row.getAddress(),
+                row.getCityName(),
+                row.getAreaName(),
+                row.getHasDeal(),
+                row.getOpenNow(),
+                splitTags(row.getTags()),
+                badge
         );
         return new RankItemResponse(row.getPosition(), row.getRankScore(), row.getReason(), shop);
     }

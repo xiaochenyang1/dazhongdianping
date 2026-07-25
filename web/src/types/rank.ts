@@ -17,6 +17,7 @@ export interface RankSummary {
 
 export interface RankShop {
   id: number
+  merchantId?: number | null
   name: string
   coverUrl: string
   score: number
@@ -28,6 +29,7 @@ export interface RankShop {
   hasDeal: boolean
   openNow: boolean
   tags: string[]
+  merchantCertification?: { code: string; label: string } | null
 }
 
 export interface RankItem {

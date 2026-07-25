@@ -3,6 +3,7 @@ import type { PageResult } from './browse'
 export interface ShopBrowseHistoryItem {
   id: number
   shopId: number
+  merchantId?: number | null
   shopName: string
   coverUrl: string
   score: number
@@ -16,6 +17,7 @@ export interface ShopBrowseHistoryItem {
   tags: string[]
   viewCount: number
   lastViewedAt: string
+  merchantCertification?: { code: string; label: string } | null
 }
 
 export type ShopBrowseHistoryPage = PageResult<ShopBrowseHistoryItem>

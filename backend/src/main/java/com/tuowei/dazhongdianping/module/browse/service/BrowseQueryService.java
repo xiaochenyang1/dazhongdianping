@@ -272,15 +272,18 @@ public class BrowseQueryService {
         int normalizedPage = Math.max(page, 1);
         int normalizedSize = Math.min(Math.max(pageSize, 1), 50);
         long total = browseQueryMapper.countShopBrowseHistory(userSession.userId(), region.name());
-        List<ShopBrowseHistoryResponse> items = browseQueryMapper
-                .selectShopBrowseHistory(
-                        userSession.userId(),
-                        region.name(),
-                        normalizedSize,
-                        (normalizedPage - 1) * normalizedSize
-                )
-                .stream()
-                .map(this::toShopBrowseHistoryResponse)
+        List<ShopBrowseHistoryRow> rows = browseQueryMapper.selectShopBrowseHistory(
+                userSession.userId(),
+                region.name(),
+                normalizedSize,
+                (normalizedPage - 1) * normalizedSize
+        );
+        Map<Long, MerchantVerificationBadgeResponse> badges = merchantVerificationService.approvedBadges(
+                rows.stream().map(ShopBrowseHistoryRow::getMerchantId).toList(),
+                region.name()
+        );
+        List<ShopBrowseHistoryResponse> items = rows.stream()
+                .map(row -> toShopBrowseHistoryResponse(row, badges.get(row.getMerchantId())))
                 .toList();
         return new PageResult<>(
                 items,
@@ -535,10 +538,14 @@ public class BrowseQueryService {
         }
     }
 
-    private ShopBrowseHistoryResponse toShopBrowseHistoryResponse(ShopBrowseHistoryRow row) {
+    private ShopBrowseHistoryResponse toShopBrowseHistoryResponse(
+            ShopBrowseHistoryRow row,
+            MerchantVerificationBadgeResponse badge
+    ) {
         return new ShopBrowseHistoryResponse(
                 row.getId(),
                 row.getShopId(),
+                row.getMerchantId(),
                 row.getShopName(),
                 row.getCoverUrl(),
                 row.getScore(),
@@ -551,7 +558,8 @@ public class BrowseQueryService {
                 row.getOpenNow(),
                 splitTags(row.getTags()),
                 row.getViewCount() == null ? 1 : row.getViewCount(),
-                row.getLastViewedAt() == null ? "" : row.getLastViewedAt().format(REVIEW_TIME_FORMATTER)
+                row.getLastViewedAt() == null ? "" : row.getLastViewedAt().format(REVIEW_TIME_FORMATTER),
+                badge
         );
     }
 

@@ -82,26 +82,28 @@ onMounted(load)
     <p v-if="success" class="feedback is-success">{{ success }}</p>
 
     <template v-if="status && !loading">
-      <article v-if="status.status === 2 && status.badge" class="card status-card status-card--success">
-        <p class="eyebrow">已认证</p>
+      <article v-if="status.status === 2 && status.badge" class="card status-card status-card--success" data-testid="verified-result-approved">
+        <p class="eyebrow">审核结果 · 已通过</p>
         <h2>
           当前门店可展示
           <span class="verified-badge">{{ status.badge.label }}</span>
         </h2>
-        <p>通过时间：{{ status.auditedAt || '—' }}。公开门店详情会同步挂标。</p>
+        <p>通过时间：{{ status.auditedAt || '—' }}。公开门店详情、列表与搜索结果会同步挂标。</p>
+        <p v-if="status.effectiveStartAt" class="muted">生效开始：{{ status.effectiveStartAt }}</p>
       </article>
 
-      <article v-else-if="status.status === 1" class="card status-card">
+      <article v-else-if="status.status === 1" class="card status-card" data-testid="verified-result-pending">
         <p class="eyebrow">审核中</p>
         <h2>认证申请已进入审核队列</h2>
         <p>提交时间：{{ status.submittedAt || '刚刚提交' }}。通过后会在门店详情公开挂标。</p>
         <p v-if="status.reason"><strong>申请理由：</strong>{{ status.reason }}</p>
       </article>
 
-      <article v-else-if="status.status === 3" class="card status-card">
-        <p class="eyebrow">已驳回</p>
-        <h2>可修改材料后重新提交</h2>
+      <article v-else-if="status.status === 3" class="card status-card" data-testid="verified-result-rejected">
+        <p class="eyebrow">审核结果 · 已驳回</p>
+        <h2>请根据驳回原因修改后重提</h2>
         <p><strong>驳回原因：</strong>{{ status.rejectReason || '未填写' }}</p>
+        <p v-if="status.auditedAt" class="muted">审核时间：{{ status.auditedAt }}</p>
       </article>
 
       <article v-if="canApply" class="card">

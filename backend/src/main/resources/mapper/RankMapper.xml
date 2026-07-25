@@ -33,7 +33,7 @@
 
     <select id="selectRankItems" resultType="com.tuowei.dazhongdianping.module.rank.model.RankItemRow">
         SELECT ri.position, ri.score AS rank_score, ri.reason,
-               s.id AS shop_id, s.name AS shop_name, s.cover_url, s.score,
+               s.id AS shop_id, s.merchant_id, s.name AS shop_name, s.cover_url, s.score,
                s.price_per_capita, s.currency, s.address,
                c.name AS city_name, a.name AS area_name,
                s.has_deal, s.open_now, s.tags

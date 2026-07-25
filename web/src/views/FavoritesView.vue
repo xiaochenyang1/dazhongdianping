@@ -36,7 +36,15 @@ watch(() => state.region, load, { immediate: true })
       <article v-for="item in items" :key="item.id" class="shop-card">
         <img :src="item.target.coverUrl" :alt="item.target.name" class="shop-card__cover" />
         <div class="shop-card__body">
-          <div class="shop-card__heading"><RouterLink :to="`/shops/${item.targetId}`"><h3>{{ item.target.name }}</h3></RouterLink><span class="shop-card__score">{{ item.target.score.toFixed(1) }}</span></div>
+          <div class="shop-card__heading">
+            <RouterLink :to="`/shops/${item.targetId}`" class="name-with-badge">
+              <h3>{{ item.target.name }}</h3>
+              <span v-if="item.target.merchantCertification" class="verified-badge verified-badge--compact">
+                {{ item.target.merchantCertification.label }}
+              </span>
+            </RouterLink>
+            <span class="shop-card__score">{{ item.target.score.toFixed(1) }}</span>
+          </div>
           <p>{{ item.target.cityName }} · {{ item.target.areaName }} · 人均 {{ formatMoney(item.target.pricePerCapita, item.target.currency) }}</p>
           <p>{{ item.target.address }}</p>
           <div class="hero-actions"><RouterLink :to="`/shops/${item.targetId}`" class="primary-link">查看门店</RouterLink><button type="button" class="secondary-button" @click="remove(item)">取消收藏</button></div>
