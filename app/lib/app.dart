@@ -333,6 +333,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                     builder: (_) => UserCenterScreen(
                       repository: UserRepository(apiClient),
                       authController: authController,
+                      browseRepository: ApiBrowseRepository(apiClient),
                       onMessages: () => Navigator.of(screenContext).push(
                         MaterialPageRoute(
                           builder: (_) => ConversationListScreen(

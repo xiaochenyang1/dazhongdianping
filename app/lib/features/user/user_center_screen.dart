@@ -1,4 +1,6 @@
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
+import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
+import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/privacy_overview_screen.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
@@ -11,12 +13,14 @@ class UserCenterScreen extends StatelessWidget {
     super.key,
     required this.repository,
     required this.authController,
+    this.browseRepository,
     this.onLoggedOut,
     this.onMessages,
     this.onCircles,
   });
   final UserRepository repository;
   final AuthController authController;
+  final BrowseRepository? browseRepository;
   final VoidCallback? onLoggedOut;
   final VoidCallback? onMessages;
   final VoidCallback? onCircles;
@@ -114,6 +118,19 @@ class UserCenterScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (browseRepository != null)
+                ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text('我的足迹'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => BrowseHistoryScreen(
+                        repository: browseRepository!,
+                      ),
+                    ),
+                  ),
+                ),
               ListTile(
                 title: const Text('隐私中心'),
                 trailing: const Icon(Icons.chevron_right),

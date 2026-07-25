@@ -57,6 +57,29 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
         'hasMore': false,
       };
     }
+    if (path == '/api/c/v1/user/browse-history') {
+      return {
+        'list': [
+          {
+            'id': 1,
+            'shopId': 10001,
+            'shopName': 'London Hotpot',
+            'score': 4.8,
+            'currency': 'GBP',
+            'pricePerCapita': 35,
+            'address': 'Chinatown',
+            'cityName': 'London',
+            'areaName': 'Soho',
+            'viewCount': 2,
+            'lastViewedAt': '2026-07-25 18:00',
+          },
+        ],
+        'total': 1,
+        'page': 1,
+        'pageSize': 20,
+        'hasMore': false,
+      };
+    }
     return {
       'list': [
         {
@@ -124,5 +147,22 @@ void main() {
 
     final history = await repository.loadSearchHistory();
     expect(history, isEmpty);
+  });
+
+  test('loads browse history and supports delete paths', () async {
+    final api = FakeJsonApi();
+    final repository = ApiBrowseRepository(api);
+
+    final history = await repository.loadBrowseHistory(page: 1, pageSize: 20);
+    expect(api.path, '/api/c/v1/user/browse-history');
+    expect(history.single.shopName, 'London Hotpot');
+    expect(history.single.viewCount, 2);
+
+    await repository.removeBrowseHistoryItem(10001);
+    await repository.clearBrowseHistory();
+    expect(api.deletedPaths, [
+      '/api/c/v1/user/browse-history/10001',
+      '/api/c/v1/user/browse-history',
+    ]);
   });
 }

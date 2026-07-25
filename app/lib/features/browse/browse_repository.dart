@@ -74,6 +74,61 @@ class SearchHistoryItem {
   }
 }
 
+class ShopBrowseHistoryItem {
+  const ShopBrowseHistoryItem({
+    required this.id,
+    required this.shopId,
+    required this.shopName,
+    required this.score,
+    required this.currency,
+    required this.pricePerCapita,
+    required this.address,
+    required this.cityName,
+    required this.areaName,
+    required this.viewCount,
+    required this.lastViewedAt,
+    this.merchantCertificationLabel,
+  });
+
+  final int id;
+  final int shopId;
+  final String shopName;
+  final double score;
+  final String currency;
+  final num pricePerCapita;
+  final String address;
+  final String cityName;
+  final String areaName;
+  final int viewCount;
+  final String lastViewedAt;
+  final String? merchantCertificationLabel;
+
+  factory ShopBrowseHistoryItem.fromJson(Map<String, dynamic> json) {
+    final certification = json['merchantCertification'];
+    String? label;
+    if (certification is Map<String, dynamic>) {
+      final value = certification['label'];
+      if (value is String && value.trim().isNotEmpty) {
+        label = value.trim();
+      }
+    }
+    return ShopBrowseHistoryItem(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      shopId: (json['shopId'] as num?)?.toInt() ?? 0,
+      shopName: json['shopName'] as String? ?? '',
+      score: (json['score'] as num? ?? 0).toDouble(),
+      currency: json['currency'] as String? ?? 'EUR',
+      pricePerCapita: json['pricePerCapita'] as num? ?? 0,
+      address: json['address'] as String? ?? '',
+      cityName: json['cityName'] as String? ?? '',
+      areaName: json['areaName'] as String? ?? '',
+      viewCount: (json['viewCount'] as num?)?.toInt() ?? 1,
+      lastViewedAt: json['lastViewedAt'] as String? ?? '',
+      merchantCertificationLabel: label,
+    );
+  }
+}
+
 class ShopDetail {
   const ShopDetail({
     required this.id,
@@ -144,6 +199,13 @@ abstract class BrowseRepository {
   }) => throw UnimplementedError();
   Future<void> clearSearchHistory() => throw UnimplementedError();
   Future<void> removeSearchHistoryItem(int historyId) =>
+      throw UnimplementedError();
+  Future<List<ShopBrowseHistoryItem>> loadBrowseHistory({
+    int page = 1,
+    int pageSize = 20,
+  }) => throw UnimplementedError();
+  Future<void> clearBrowseHistory() => throw UnimplementedError();
+  Future<void> removeBrowseHistoryItem(int shopId) =>
       throw UnimplementedError();
 }
 
@@ -235,5 +297,42 @@ class ApiBrowseRepository implements BrowseRepository {
             'JsonDeleteApi is required for removeSearchHistoryItem',
           );
     await deleteApi.deleteJson('/api/c/v1/search/history/$historyId');
+  }
+
+  @override
+  Future<List<ShopBrowseHistoryItem>> loadBrowseHistory({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final result = await client.getJson(
+      '/api/c/v1/user/browse-history',
+      query: {'page': page, 'pageSize': pageSize},
+    );
+    final list = result['list'] as List<dynamic>? ?? const [];
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map(ShopBrowseHistoryItem.fromJson)
+        .where((item) => item.shopId > 0)
+        .toList();
+  }
+
+  @override
+  Future<void> clearBrowseHistory() async {
+    final deleteApi = client is JsonDeleteApi
+        ? client as JsonDeleteApi
+        : throw UnsupportedError(
+            'JsonDeleteApi is required for clearBrowseHistory',
+          );
+    await deleteApi.deleteJson('/api/c/v1/user/browse-history');
+  }
+
+  @override
+  Future<void> removeBrowseHistoryItem(int shopId) async {
+    final deleteApi = client is JsonDeleteApi
+        ? client as JsonDeleteApi
+        : throw UnsupportedError(
+            'JsonDeleteApi is required for removeBrowseHistoryItem',
+          );
+    await deleteApi.deleteJson('/api/c/v1/user/browse-history/$shopId');
   }
 }

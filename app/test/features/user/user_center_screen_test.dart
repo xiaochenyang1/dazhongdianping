@@ -2,6 +2,7 @@ import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
+import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_center_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,11 @@ class CenterFakeApi implements JsonApi {
       {};
 }
 
+class CenterBrowseRepository extends BrowseRepository {
+  @override
+  Future<List<ShopSummary>> loadFeaturedShops() async => const [];
+}
+
 void main() {
   testWidgets('user center exposes core account destinations', (tester) async {
     final api = CenterFakeApi();
@@ -39,6 +45,7 @@ void main() {
         home: UserCenterScreen(
           repository: UserRepository(api),
           authController: auth,
+          browseRepository: CenterBrowseRepository(),
           onCircles: () {},
         ),
       ),
@@ -52,6 +59,7 @@ void main() {
     expect(find.text('我的券'), findsOneWidget);
     expect(find.text('我的预订'), findsOneWidget);
     expect(find.text('我的圈子'), findsOneWidget);
+    expect(find.text('我的足迹'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('隐私中心'), 200);
     expect(find.text('隐私中心'), findsOneWidget);
   });
