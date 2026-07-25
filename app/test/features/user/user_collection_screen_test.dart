@@ -323,7 +323,7 @@ void main() {
     expect(find.byKey(const Key('coupon-detail-code')), findsOneWidget);
   });
 
-  testWidgets('reservation collection opens reservation detail', (
+  testWidgets('reservation collection opens filtered reservations list', (
     tester,
   ) async {
     final api = CollectionApi();
@@ -337,7 +337,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('RS-11'));
+    expect(find.text('我的预订'), findsOneWidget);
+    expect(find.byKey(const Key('reservation-tab-all')), findsOneWidget);
+    expect(find.byKey(const Key('reservation-card-11')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('reservation-card-11')));
     await tester.pumpAndSettle();
 
     expect(find.text('预订详情'), findsOneWidget);

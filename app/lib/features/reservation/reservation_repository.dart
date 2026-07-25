@@ -128,6 +128,39 @@ class ReservationResult {
       );
 }
 
+class ReservationSummary {
+  const ReservationSummary({
+    required this.id,
+    required this.reservationNo,
+    required this.shopName,
+    required this.reserveTime,
+    required this.peopleCount,
+    required this.status,
+    required this.statusText,
+  });
+
+  final int id;
+  final String reservationNo;
+  final String shopName;
+  final String reserveTime;
+  final int peopleCount;
+  final int status;
+  final String statusText;
+
+  factory ReservationSummary.fromJson(Map<String, dynamic> json) {
+    final shop = json['shop'] as Map<String, dynamic>? ?? const {};
+    return ReservationSummary(
+      id: json['id'] as int,
+      reservationNo: json['reservationNo'] as String? ?? '',
+      shopName: shop['name'] as String? ?? '',
+      reserveTime: json['reserveTime'] as String? ?? '',
+      peopleCount: json['peopleCount'] as int? ?? 0,
+      status: json['status'] as int? ?? 0,
+      statusText: json['statusText'] as String? ?? '',
+    );
+  }
+}
+
 class ReservationRepository {
   ReservationRepository(this.api);
   final JsonApi api;
@@ -168,6 +201,25 @@ class ReservationRepository {
       },
     );
     return ReservationResult.fromJson(result);
+  }
+
+  Future<List<ReservationSummary>> loadReservations({
+    int? status,
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    final result = await api.getJson(
+      '/api/c/v1/reservations',
+      query: {
+        'page': page,
+        'pageSize': pageSize,
+        if (status != null) 'status': status,
+      },
+    );
+    return (result['list'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(ReservationSummary.fromJson)
+        .toList();
   }
 
   Future<ReservationDetail> loadReservation(int reservationId) async {

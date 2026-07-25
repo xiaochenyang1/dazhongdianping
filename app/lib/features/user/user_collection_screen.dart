@@ -7,8 +7,8 @@ import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:dazhongdianping_app/features/community/post_editor_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
-import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
+import 'package:dazhongdianping_app/features/reservation/reservations_list_screen.dart';
 import 'package:dazhongdianping_app/features/trade/coupons_screen.dart';
 import 'package:dazhongdianping_app/features/trade/orders_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
@@ -24,6 +24,7 @@ class UserCollectionScreen extends StatelessWidget {
     this.couponStatus,
     this.highlightCouponCode,
     this.orderPayStatus,
+    this.reservationStatus,
   });
   final UserRepository repository;
   final UserCollection collection;
@@ -31,6 +32,7 @@ class UserCollectionScreen extends StatelessWidget {
   final int? couponStatus;
   final String? highlightCouponCode;
   final int? orderPayStatus;
+  final int? reservationStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +47,12 @@ class UserCollectionScreen extends StatelessWidget {
       return OrdersScreen(
         repository: TradeRepository(repository.api),
         initialPayStatus: orderPayStatus,
+      );
+    }
+    if (collection == UserCollection.reservations) {
+      return ReservationsListScreen(
+        repository: ReservationRepository(repository.api),
+        initialStatus: reservationStatus,
       );
     }
     return Scaffold(
@@ -139,10 +147,6 @@ class UserCollectionScreen extends StatelessWidget {
           owned: true,
           canInteract: false,
         ),
-      UserCollection.reservations => ReservationDetailScreen(
-        repository: ReservationRepository(repository.api),
-        reservationId: id,
-      ),
       UserCollection.posts => _postDestination(id, item),
       _ => null,
     };

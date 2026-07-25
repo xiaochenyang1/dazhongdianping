@@ -12,6 +12,28 @@ class ReservationFakeApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     this.path = path;
+    this.query = query;
+    if (path == '/api/c/v1/reservations') {
+      return {
+        'list': [
+          {
+            'id': 11,
+            'reservationNo': 'R11',
+            'shop': {
+              'id': 2,
+              'name': 'EU Shop',
+              'coverImage': '',
+              'address': 'Berlin Mitte',
+            },
+            'reserveTime': '2026-07-16T18:00:00',
+            'peopleCount': 2,
+            'status': 1,
+            'statusText': '已确认',
+          },
+        ],
+        'total': 1,
+      };
+    }
     if (path == '/api/c/v1/reservations/11') {
       return {
         'id': 11,
@@ -147,4 +169,16 @@ void main() {
       expect(rescheduled.rescheduleCount, 1);
     },
   );
+
+  test('reservation repository lists reservations with status filter', () async {
+    final api = ReservationFakeApi();
+    final repository = ReservationRepository(api);
+
+    final list = await repository.loadReservations(status: 1);
+    expect(api.path, '/api/c/v1/reservations');
+    expect(api.query?['status'], 1);
+    expect(list.single.reservationNo, 'R11');
+    expect(list.single.shopName, 'EU Shop');
+  });
+
 }
