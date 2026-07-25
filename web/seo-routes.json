@@ -1,0 +1,58 @@
+[
+  {
+    "path": "/",
+    "title": "首页",
+    "description": "大众点评仿站首页，浏览本地生活推荐、精选门店和城市频道。",
+    "heading": "发现值得专程去的本地生活",
+    "summary": "从城市、分类、榜单和社区内容进入当前区域的公开浏览链路。",
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/shops",
+    "title": "商户列表",
+    "description": "按城市、分类、商圈、价格、评分和营业状态筛选本地生活商户。",
+    "heading": "按真实条件筛选本地商户",
+    "summary": "浏览当前区域的门店列表，并按城市、分类、商圈、价格、评分、团购和营业状态缩小范围。",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/ranks",
+    "title": "城市榜单",
+    "description": "浏览按城市和分类发布的必吃榜、好评榜与热门榜。",
+    "heading": "查看可追溯版本的城市榜单",
+    "summary": "榜单使用已发布快照展示门店排名、榜单周期和规则版本。",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/activities",
+    "title": "运营活动",
+    "description": "浏览当前区域上线中的运营专题与活动资源。",
+    "heading": "浏览当前上线的运营活动",
+    "summary": "查看管理端已发布且处于有效期内的专题、门店、团购和榜单资源。",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/community",
+    "title": "华人社区",
+    "description": "只读浏览欧洲华人攻略、探店和生活经验。",
+    "heading": "阅读欧洲华人的公开生活经验",
+    "summary": "PC 端提供社区帖子只读浏览，互动、发布和私信能力保留在 APP。",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/groups",
+    "title": "官方圈子",
+    "description": "只读浏览当前区域官方社区圈子。",
+    "heading": "浏览当前区域的官方圈子",
+    "summary": "查看圈子介绍、成员规模和公开帖子，加入与发帖能力保留在 APP。",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/topics",
+    "title": "话题广场",
+    "description": "浏览当前区域推荐话题与最近 7 天热榜。",
+    "heading": "浏览话题广场与 7 天热榜",
+    "summary": "查看推荐话题、公开帖子和可解释的最近 7 天热度快照。",
+    "schemaType": "CollectionPage"
+  }
+]

@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "test": "vitest run --environment jsdom --exclude \"e2e/**\"",
+    "test:prerender": "vitest run --environment node scripts/prerender.test.mjs",
     "test:e2e": "pwsh -NoProfile -File ../scripts/ci/browser-smoke.ps1",
     "test:e2e:real": "pwsh -NoProfile -File ../scripts/ci/browser-e2e.ps1",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vue-tsc --noEmit && vite build && node scripts/prerender.mjs",
+    "prerender": "node scripts/prerender.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
