@@ -372,6 +372,61 @@ class PublicBrowseControllerTest {
                 .andExpect(jsonPath("$.data.total").value(0));
     }
 
+    @Test
+    void shouldCapSearchHistoryPerUserAndRegionAtTwenty() throws Exception {
+        String accessToken = loginDemoUser();
+        Long userId = jdbcTemplate.queryForObject(
+                "SELECT id FROM app_user WHERE email = ?",
+                Long.class,
+                "demo.cn@example.com"
+        );
+
+        // Seed 25 unique keywords; retention should keep only the newest 20.
+        for (int i = 1; i <= 25; i++) {
+            mockMvc.perform(get("/api/c/v1/shops")
+                            .header("Authorization", bearer(accessToken))
+                            .param("keyword", "保留词" + i))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0));
+        }
+
+        mockMvc.perform(get("/api/c/v1/search/history")
+                        .header("Authorization", bearer(accessToken))
+                        .param("page", "1")
+                        .param("pageSize", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(20))
+                .andExpect(jsonPath("$.data.list[0].keyword").value("保留词25"))
+                .andExpect(jsonPath("$.data.list[19].keyword").value("保留词6"));
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM search_history WHERE user_id = ? AND region = 'CN'",
+                Integer.class,
+                userId
+        );
+        org.assertj.core.api.Assertions.assertThat(count).isEqualTo(20);
+        Integer oldestGone = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM search_history WHERE user_id = ? AND region = 'CN' AND keyword = '保留词1'",
+                Integer.class,
+                userId
+        );
+        org.assertj.core.api.Assertions.assertThat(oldestGone).isZero();
+
+        // Re-search an older kept keyword should bubble it to the front without exceeding the cap.
+        mockMvc.perform(get("/api/c/v1/shops")
+                        .header("Authorization", bearer(accessToken))
+                        .param("keyword", "保留词6"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/search/history")
+                        .header("Authorization", bearer(accessToken))
+                        .param("page", "1")
+                        .param("pageSize", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(20))
+                .andExpect(jsonPath("$.data.list[0].keyword").value("保留词6"));
+    }
+
     private String loginDemoUser() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/c/v1/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)

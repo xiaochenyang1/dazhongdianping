@@ -498,6 +498,22 @@
           AND region = #{region}
     </delete>
 
+    <delete id="deleteExcessSearchHistory">
+        DELETE FROM search_history
+        WHERE user_id = #{userId}
+          AND region = #{region}
+          AND id NOT IN (
+            SELECT id FROM (
+              SELECT id
+              FROM search_history
+              WHERE user_id = #{userId}
+                AND region = #{region}
+              ORDER BY updated_at DESC, id DESC
+              LIMIT #{keep}
+            ) kept
+          )
+    </delete>
+
     <insert id="incrementShopView">
         INSERT INTO shop_view_daily(shop_id, biz_date, view_count)
         VALUES(#{shopId}, #{bizDate}, 1)

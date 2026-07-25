@@ -96,6 +96,10 @@ public interface BrowseQueryMapper {
 
     int deleteSearchHistory(@Param("userId") Long userId, @Param("region") String region);
 
+    int deleteExcessSearchHistory(@Param("userId") Long userId,
+                                  @Param("region") String region,
+                                  @Param("keep") int keep);
+
     void incrementShopView(@Param("shopId") Long shopId, @Param("bizDate") java.time.LocalDate bizDate);
 
     int touchShopBrowseHistory(@Param("userId") Long userId,

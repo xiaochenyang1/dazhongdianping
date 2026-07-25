@@ -59,6 +59,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class BrowseQueryService {
 
     private static final DateTimeFormatter REVIEW_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    /** 每个登录用户在同一区域最多保留的搜索历史条数。 */
+    private static final int SEARCH_HISTORY_LIMIT = 20;
 
     private final BrowseQueryMapper browseQueryMapper;
     private final UserExpertCertificationService userExpertCertificationService;
@@ -498,6 +500,7 @@ public class BrowseQueryService {
         return counter;
     }
 
+    /** 登录用户搜索历史：同词刷新时间，超限按最近使用裁剪。 */
     private void recordSearchHistoryIfNeeded(Region region, String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return;
@@ -514,6 +517,7 @@ public class BrowseQueryService {
         );
         if (existing != null) {
             browseQueryMapper.touchSearchHistory(existing.getId());
+            browseQueryMapper.deleteExcessSearchHistory(userSession.userId(), region.name(), SEARCH_HISTORY_LIMIT);
             return;
         }
         SearchHistoryRow row = new SearchHistoryRow();
@@ -522,6 +526,7 @@ public class BrowseQueryService {
         row.setKeyword(normalizedKeyword);
         row.setSearchType(1);
         browseQueryMapper.insertSearchHistory(row);
+        browseQueryMapper.deleteExcessSearchHistory(userSession.userId(), region.name(), SEARCH_HISTORY_LIMIT);
     }
 
     private void recordShopBrowseHistoryIfNeeded(Region region, Long shopId) {
