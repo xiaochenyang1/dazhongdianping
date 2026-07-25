@@ -137,7 +137,7 @@ const router = createRouter({
       path: '/user/favorites',
       name: 'user-favorites',
       component: () => import('@/views/FavoritesView.vue'),
-      meta: { requiresAuth: true, title: '我的收藏', description: '查看和管理当前用户收藏的门店。' },
+      meta: { requiresAuth: true, title: '我的收藏', description: '查看和管理当前用户收藏的门店与帖子。' },
     },
     {
       path: '/user/browse-history',
