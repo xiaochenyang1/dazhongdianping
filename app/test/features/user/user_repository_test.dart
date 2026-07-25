@@ -41,6 +41,10 @@ class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         'followerCount': 12,
         'followingCount': 7,
         'followedByCurrentUser': false,
+        'expertCertification': {
+          'code': 'local_expert',
+          'label': '本地达人',
+        },
       };
     }
     if (path.endsWith('/followers') || path.endsWith('/following')) {
@@ -292,6 +296,7 @@ void main() {
       final followers = await repository.loadRelationships(9, followers: true);
       expect(profile.followerCount, 12);
       expect(profile.followingCount, 7);
+      expect(profile.expertCertificationLabel, '本地达人');
       expect(followers.items.single.nickname, '巴黎小李');
     },
   );

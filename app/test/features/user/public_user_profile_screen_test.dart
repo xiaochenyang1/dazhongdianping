@@ -23,6 +23,10 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       'followerCount': 12,
       'followingCount': 7,
       'followedByCurrentUser': false,
+      'expertCertification': {
+        'code': 'local_expert',
+        'label': '本地达人',
+      },
     };
   }
 
@@ -57,6 +61,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.text('本地达人'), findsOneWidget);
       expect(find.text('粉丝 12'), findsOneWidget);
       expect(find.text('关注'), findsOneWidget);
       expect(find.text('发私信'), findsOneWidget);

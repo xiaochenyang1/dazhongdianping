@@ -193,6 +193,7 @@ class PublicUserProfile {
     required this.followerCount,
     required this.followingCount,
     required this.followedByCurrentUser,
+    this.expertCertificationLabel,
   });
   final int id;
   final String nickname;
@@ -203,18 +204,29 @@ class PublicUserProfile {
   final int followerCount;
   final int followingCount;
   final bool followedByCurrentUser;
-  factory PublicUserProfile.fromJson(Map<String, dynamic> json) =>
-      PublicUserProfile(
-        id: json['id'] as int,
-        nickname: json['nickname'] as String? ?? '',
-        avatar: json['avatar'] as String? ?? '',
-        signature: json['signature'] as String? ?? '',
-        level: json['level'] as int? ?? 1,
-        reviewCount: json['reviewCount'] as int? ?? 0,
-        followerCount: json['followerCount'] as int? ?? 0,
-        followingCount: json['followingCount'] as int? ?? 0,
-        followedByCurrentUser: json['followedByCurrentUser'] as bool? ?? false,
-      );
+  final String? expertCertificationLabel;
+  factory PublicUserProfile.fromJson(Map<String, dynamic> json) {
+    final certification = json['expertCertification'];
+    String? expertLabel;
+    if (certification is Map<String, dynamic>) {
+      final value = certification['label'];
+      if (value is String && value.trim().isNotEmpty) {
+        expertLabel = value.trim();
+      }
+    }
+    return PublicUserProfile(
+      id: json['id'] as int,
+      nickname: json['nickname'] as String? ?? '',
+      avatar: json['avatar'] as String? ?? '',
+      signature: json['signature'] as String? ?? '',
+      level: json['level'] as int? ?? 1,
+      reviewCount: json['reviewCount'] as int? ?? 0,
+      followerCount: json['followerCount'] as int? ?? 0,
+      followingCount: json['followingCount'] as int? ?? 0,
+      followedByCurrentUser: json['followedByCurrentUser'] as bool? ?? false,
+      expertCertificationLabel: expertLabel,
+    );
+  }
   PublicUserProfile withFollow({
     required bool following,
     required int followers,
@@ -228,6 +240,7 @@ class PublicUserProfile {
     followerCount: followers,
     followingCount: followingCount,
     followedByCurrentUser: following,
+    expertCertificationLabel: expertCertificationLabel,
   );
 }
 

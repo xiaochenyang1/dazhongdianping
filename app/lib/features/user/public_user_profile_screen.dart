@@ -106,6 +106,15 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
             ),
+            if (profile.expertCertificationLabel != null) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: Chip(
+                  avatar: const Icon(Icons.verified, size: 16),
+                  label: Text(profile.expertCertificationLabel!),
+                ),
+              ),
+            ],
             Text(
               profile.signature.isEmpty ? '暂未填写签名' : profile.signature,
               textAlign: TextAlign.center,
