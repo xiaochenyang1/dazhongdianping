@@ -255,6 +255,9 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'post.repost') {
     return ' · 帖子转发'
   }
+  if (item.type === 'social.follow') {
+    return ' · 新增关注'
+  }
   return ''
 }
 

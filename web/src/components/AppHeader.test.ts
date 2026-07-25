@@ -715,4 +715,40 @@ describe('AppHeader', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/reviews/66')
     app.unmount()
   })
+
+  it('routes follow notifications to public user profile page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 1001,
+        type: 'social.follow',
+        title: '新增关注',
+        content: '伦敦小王 关注了你',
+        linkUrl: '/users/9',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-25 15:00:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('新增关注')
+    expect(host.textContent).toContain('新增关注')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/users/9')
+    app.unmount()
+  })
 })

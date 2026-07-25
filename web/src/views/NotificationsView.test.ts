@@ -598,4 +598,40 @@ describe('NotificationsView', () => {
     expect(routerMocks.push).toHaveBeenCalledWith('/user/reviews/66')
     app.unmount()
   })
+
+  it('routes follow notifications to public user profile page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 33,
+          type: 'social.follow',
+          title: '新增关注',
+          content: '伦敦小王 关注了你',
+          linkUrl: '/users/9',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 15:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('新增关注')
+    expect(host.textContent).toContain('伦敦小王 关注了你')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/users/9')
+    app.unmount()
+  })
 })
