@@ -139,12 +139,25 @@ class UserCollectionScreen extends StatelessWidget {
         repository: ReservationRepository(repository.api),
         reservationId: id,
       ),
-      UserCollection.posts => PostEditorScreen(
-        repository: CommunityRepository(repository.api),
-        postId: id,
-      ),
+      UserCollection.posts => _postDestination(id, item),
       _ => null,
     };
+  }
+
+  Widget _postDestination(int id, Map<String, dynamic> item) {
+    final communityRepository = CommunityRepository(repository.api);
+    final auditStatus = item['auditStatus'] as int? ?? 0;
+    if (auditStatus == 1) {
+      return PostDetailScreen(
+        repository: communityRepository,
+        postId: id,
+        canInteract: true,
+      );
+    }
+    return PostEditorScreen(
+      repository: communityRepository,
+      postId: id,
+    );
   }
 
   String _subtitle(Map<String, dynamic> item) {

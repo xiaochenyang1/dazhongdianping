@@ -28,11 +28,13 @@ class CollectionApi implements JsonApi {
     }
     if (path == '/api/c/v1/user/posts') {
       return {
-        'list': [communityPost],
-        'total': 1,
+        'list': [communityPost, approvedPost],
+        'total': 2,
       };
     }
     if (path == '/api/c/v1/user/posts/7') return communityPost;
+    if (path == '/api/c/v1/posts/8') return approvedPost;
+    if (path == '/api/c/v1/posts/8/comments') return {'list': const [], 'total': 0};
     if (path == '/api/c/v1/orders') {
       return {
         'list': [order],
@@ -182,6 +184,8 @@ class CollectionApi implements JsonApi {
     'contentType': 1,
     'likeCount': 3,
     'commentCount': 1,
+    'repostCount': 0,
+    'repostedByCurrentUser': false,
     'auditStatus': 2,
     'auditStatusText': '审核驳回',
     'auditRemark': '请补充具体地址',
@@ -189,6 +193,26 @@ class CollectionApi implements JsonApi {
     'images': const [],
     'topics': ['伦敦生活'],
     'createdAt': '2026-07-16 10:00:00',
+  };
+
+  Map<String, dynamic> get approvedPost => {
+    'id': 8,
+    'userId': 9,
+    'userName': '伦敦小王',
+    'title': '柏林早午餐清单',
+    'content': 'Mitte 几家稳定的中文友好店。',
+    'contentType': 1,
+    'likeCount': 5,
+    'commentCount': 2,
+    'repostCount': 0,
+    'repostedByCurrentUser': false,
+    'auditStatus': 1,
+    'auditStatusText': '审核通过',
+    'auditRemark': '',
+    'status': 1,
+    'images': const [],
+    'topics': ['柏林生活'],
+    'createdAt': '2026-07-18 10:00:00',
   };
 
   Map<String, dynamic> get coupon => {
@@ -317,7 +341,7 @@ void main() {
     expect(find.text('Berlin Mitte'), findsOneWidget);
   });
 
-  testWidgets('owned post collection opens the post editor', (tester) async {
+  testWidgets('owned post collection routes by audit status', (tester) async {
     final api = CollectionApi();
     await tester.pumpWidget(
       MaterialApp(
@@ -331,9 +355,16 @@ void main() {
 
     await tester.tap(find.text('伦敦周末市场指南'));
     await tester.pumpAndSettle();
-
     expect(find.text('编辑帖子'), findsOneWidget);
     expect(find.text('请补充具体地址'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('柏林早午餐清单'));
+    await tester.pumpAndSettle();
+    expect(find.text('帖子详情'), findsOneWidget);
+    expect(find.text('Mitte 几家稳定的中文友好店。'), findsOneWidget);
   });
 
   testWidgets('favorites collection shows shop and post titles', (tester) async {
