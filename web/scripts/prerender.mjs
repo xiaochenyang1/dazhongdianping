@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -68,7 +68,8 @@ function removeGeneratedSeo(html) {
 
 function renderFallback(route, routes) {
   const links = routes
-    .filter((item) => item.path !== route.path)
+    .filter((item) => item.path !== route.path && item.path.split('/').filter(Boolean).length <= 1)
+    .slice(0, 12)
     .map((item) => `<a href="${escapeHtml(item.path)}">${escapeHtml(item.title)}</a>`)
     .join(' · ')
 
@@ -76,6 +77,7 @@ function renderFallback(route, routes) {
     `<main data-prerendered="true" data-prerender-route="${escapeHtml(route.path)}">`,
     `<h1>${escapeHtml(route.heading)}</h1>`,
     `<p>${escapeHtml(route.summary)}</p>`,
+    route.contentHtml || '',
     links ? `<nav aria-label="公开页面入口">${links}</nav>` : '',
     '</main>',
   ].join('')
@@ -160,6 +162,15 @@ async function loadRoutes(routeManifestPath, extraRouteManifestPath) {
   return [...uniqueRoutes.values()]
 }
 
+async function fileExists(filePath) {
+  try {
+    await access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function writeSitemap(distDir, routes, siteUrl) {
   if (!siteUrl) return false
   const urls = routes
@@ -176,7 +187,10 @@ export async function prerender(options = {}) {
   const distDir = path.resolve(options.distDir || defaultDistDir)
   const routeManifestPath = path.resolve(options.routeManifestPath || defaultRouteManifestPath)
   const siteUrl = parseSiteUrl(options.siteUrl ?? process.env.PUBLIC_SITE_URL)
-  const extraRouteManifestPath = options.extraRouteManifestPath ?? process.env.PRERENDER_ROUTE_MANIFEST
+  const configuredExtraRouteManifestPath = options.extraRouteManifestPath ?? process.env.PRERENDER_ROUTE_MANIFEST
+  const defaultExtraRouteManifestPath = path.join(distDir, 'prerender-routes.json')
+  const extraRouteManifestPath = configuredExtraRouteManifestPath
+    || (await fileExists(defaultExtraRouteManifestPath) ? defaultExtraRouteManifestPath : undefined)
   const routes = await loadRoutes(routeManifestPath, extraRouteManifestPath)
   const indexPath = path.join(distDir, 'index.html')
   const template = await readFile(indexPath, 'utf8')

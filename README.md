@@ -28,7 +28,7 @@
 - M5 商户端已补齐当前 M5a 页面闭环：`merchant-web` 覆盖注册、登录、资质状态/提交/驳回重提、概览、门店、员工角色与门店范围、预订、团购、订单退款、点评回复/申诉；管理端新增商户资质审核和商户点评申诉专页；C 端新增通知列表、未读数、WebSocket ticket、实时推送与断线 REST 补偿。
 - 管理端数据库 RBAC 基础已完成：管理员、角色、权限点、管理员-角色、角色-权限和管理员区域范围均已落库；`/auth/me` 返回实时身份、权限与 `CN/EU` 范围，菜单、路由和 API 按权限过滤。角色停用后旧 token 仍可访问 `auth/me`，但权限会在下一次请求重新计算并被收回，固定受限 API 返回 `403`，动态审核列表可返回 `200` 空结果；管理员账号停用后旧 token 才会在下一次请求返回 `401`，前端清理 `localStorage` 并回到登录页。`admin-web` 已提供管理员账号、角色权限、Banner、搜索热词、审计日志、隐私任务和订单退款查询/平台仲裁/对账补偿页面。
 - 管理端分类、城市和商圈治理已完成：`data:geo:read/write` 同时约束菜单、`/data/meta` 路由和管理 API，支持当前区域内 CRUD、排序、启停与受保护删除。公开元数据只展示启用项，显式使用停用 ID 的门店筛选返回空结果；历史门店详情仍保留原名称。管理端门店、导入、商户门店草稿/审核落库和榜单发布都会重新校验引用数据仍处于启用状态。
-- PC Web 商户列表已接价格、评分、团购、营业状态筛选和服务端真实分页；门店点评列表支持最新/最热/评分排序、最低评分和带图/无图筛选；门店详情支持相似推荐、原生分享并带剪贴板降级；门店、公开点评、社区/圈子/话题公开页已接入客户端运行时 `canonical`、`robots`、Open Graph、Twitter Card 和 JSON-LD metadata。`npm run build` 现会额外为首页、商户、榜单、活动、社区、圈子和话题入口生成可抓取 HTML、JSON-LD、`prerender-manifest.json`，配置 `PUBLIC_SITE_URL` 时同时生成绝对 canonical、`sitemap.xml` 和 `robots.txt`；动态详情页的数据快照预渲染/SSR 仍待补齐。
+- PC Web 商户列表已接价格、评分、团购、营业状态筛选和服务端真实分页；门店点评列表支持最新/最热/评分排序、最低评分和带图/无图筛选；门店详情支持相似推荐、原生分享并带剪贴板降级；门店、公开点评、社区/圈子/话题公开页已接入客户端运行时 `canonical`、`robots`、Open Graph、Twitter Card 和 JSON-LD metadata。`npm run build` 现会额外为首页、商户、榜单、活动、社区、圈子和话题入口生成可抓取 HTML、JSON-LD、`prerender-manifest.json`，配置 `PUBLIC_SITE_URL` 时同时生成绝对 canonical、`sitemap.xml` 和 `robots.txt`；提供 `PRERENDER_API_BASE_URL` 时，`npm run build:prerender:data` 还会按 `X-Region` 抓取真实门店、点评、帖子、榜单、活动、圈子和话题详情快照。常驻 SSR 服务和目标环境自动接入仍待补齐。
 - M6 Flutter MVP 基线已落地：默认 EU、CN/EU 与语言切换、密码/验证码登录、安全会话、浏览/搜索/门店详情、团购下单、预订创建、用户中心、通知列表与 ACK、隐私导出/认证下载保存/删除申请/撤销；地图、真实支付和推送未配置时明确阻止冒充成功。
 - M7 帖子、本地达人认证、转发、关注、私信、官方圈子和话题链路已落地：用户可在资料页提交/重提本地达人申请，管理端 `/audit/expert-certifications` 可按区域审核；公开用户主页、点评和帖子作者只有在“已通过且有效”时才展示 `code=local_expert,label=本地达人`。话题按 CN/EU 隔离，Flutter 提供推荐/热榜/已关注三 Tab 与关注写操作，帖子支持转发/取消转发，PC Web 仅提供推荐/热榜/详情只读页面，管理端支持筛选、改名、推荐、置顶、屏蔽、不可逆合并和手动重算。
 - M4 团购交易已完成环境安全的模拟闭环：团购详情、有限库存原子扣减、下单、`alipay_mock`/`stripe_mock` 支付、SHA-256 回调验签与幂等、按数量发券、订单/券列表、取消和退款；真实支付 SDK 留在 M6 区域化阶段。
@@ -279,6 +279,17 @@ npm run build
 
 动态公开详情可通过 `PRERENDER_ROUTE_MANIFEST` 指向额外 JSON 路由快照；未提供真实数据快照时不会生成虚假的详情页。
 
+如果后端已经启动，可直接生成真实公开详情快照（示例使用 CN 区域）：
+
+```powershell
+$env:PRERENDER_API_BASE_URL = "http://localhost:8080"
+$env:PRERENDER_REGION = "CN"
+$env:PUBLIC_SITE_URL = "https://www.example.com"
+npm run build:prerender:data
+```
+
+数据快照构建默认严格校验任一公开接口失败并终止；只有明确接受部分快照时才设置 `PRERENDER_STRICT=0`，构建日志会逐项输出跳过原因。
+
 浏览器冒烟:
 
 ```powershell
@@ -335,7 +346,7 @@ npm run build
 
 ## 已验证
 
-- `2026-07-25` PC Web 静态公开入口预渲染与隐私导出模块对齐已完成聚焦验证：新增 `web/scripts/prerender.mjs`，构建后为 7 个公开入口生成独立 HTML、canonical、Open Graph、Twitter Card、JSON-LD、制品清单，并在配置 `PUBLIC_SITE_URL` 时生成 sitemap/robots；PC 隐私中心补齐后端已支持的 `browse_history/messages/circles/topics` 类型与勾选入口。`npm test -- src/views/PrivacyCenterView.test.ts scripts/prerender.test.mjs` 共 `7` 条测试通过，`PUBLIC_SITE_URL=https://www.dianping-demo.example npm run build` 通过并生成 `7` 个预渲染路由。动态详情数据预渲染和真实部署域名验收仍未完成。
+- `2026-07-25` PC Web SEO 预渲染与隐私导出模块对齐已完成聚焦验证：新增静态入口预渲染和 API 快照导出脚本，构建后可生成独立 HTML、canonical、Open Graph、Twitter Card、JSON-LD、制品清单，并在配置 `PUBLIC_SITE_URL` 时生成 sitemap/robots；带本地 H2 后端、`PRERENDER_REGION=CN` 的 `npm run build:prerender:data` 实测生成 15 个路由（7 个静态入口 + 8 个真实详情快照）。PC 隐私中心补齐后端已支持的 `browse_history/messages/circles/topics` 类型与勾选入口；SEO 快照脚本测试 5 条、Web 全量测试 117 条均通过。常驻 SSR、真实部署域名和目标环境联调仍未完成。
 - `2026-07-24` 封禁申诉链路二轮优化已完成前后端联调与全量回归：申诉通过/驳回/管理员直接解封会给用户写 `account.ban_appeal` 站内通知（复用通知模块，含 WebSocket 推送与聚合逻辑），用户恢复登录后可在通知列表看到审核结果；申诉提交/查询响应带出最近一次 `user_ban` 审计日志的封禁原因，`web` 申诉面板展示"封禁原因"、申诉已通过时提供"回到密码登录"一键预填入口；管理端用户详情新增 `banReason`/`pendingAppealCount`/`latestAppealStatusText` 并支持一键跳转 `/audit/user-appeals`；全局兜底异常 handler 补错误日志，未匹配路径由兜底 `500` 修正为 `404 common.not_found`。`backend` `mvn test` 308 条通过；`web` `npm test` 78 条通过；`admin-web` `npm test` 61 条通过；三端 `vue-tsc`/`build` 通过。本地起 `h2` 后端实测：申诉响应带封禁原因、管理端详情联动字段正确、审核通过后用户登录可见"封禁申诉已通过"通知、错误路径返回 `404`。
 - `2026-07-24` 用户封禁申诉链路本轮已完成前后端联调与全量回归：后端补齐 `biz_type=8` 统一审核（列表富化、通过自动解封、驳回记录原因、管理员直接解封自动了结待审申诉并使任务失效）、`POST /api/c/v1/auth/ban-appeals/query` 申诉进度查询、密码登录封禁改抛 `auth.user_banned`（与验证码登录/刷新一致）；`web` 登录弹层新增封禁识别（`ApiError.messageKey`）与申诉面板（发 `appeal` 验证码、提交、查进度），`admin-web` 新增 `/audit/user-appeals` 审核页并接入菜单/路由/权限（`audit:user_appeal:read/write`，种子权限 47/48）。`backend` 运行 `mvn test`，`308` 条测试通过（含新增 `UserBanAppealFlowTest` 4 条）；`web` 运行 `npm test`，`27` 个测试文件、`77` 条测试通过（含新增 `AuthDialog.test.ts` 4 条）；`admin-web` 运行 `npm test`，`22` 个测试文件、`60` 条测试通过（含新增 `UserAppealAuditView.test.ts` 3 条）。本地起 `h2` 后端 + 双前端 dev 经 Vite 代理实测全链路：封禁登录 `401 auth.user_banned` → 免登录发码提交申诉 → 管理端 `biz_type=8` 列表出现申诉（含用户昵称与理由）→ 通过后用户自动解封并可重新登录 → 申诉进度查询返回"已通过"。
 - `2026-07-24` 管理端 C 端用户治理（用户查询/详情/封禁/解封）本轮已完成前后端联调与全量回归：`backend` 运行 `mvnw test`，`304` 条测试通过（含新增 `AdminAppUserControllerTest` 4 条）；`admin-web` 运行 `npm test`，`21` 个测试文件、`57` 条测试通过，`npm run build` 通过；本地起 `h2` 后端 + `admin-web` dev 通过 Vite 代理实测：封禁后旧 access token 立即 `401`、密码/验证码登录均被拦截并提示"账号已被封禁"、审计日志记录 `user_ban`/`user_unban`、解封后登录恢复。本轮同时修复 `loginWithCode` 对封禁用户的绕过问题，并给 `TopicHotRankingServiceTest` 补 `@AfterEach` 清理修复既有的测试顺序耦合。
@@ -387,4 +398,4 @@ npm run build
 1. `scripts/ci/mysql-smoke.ps1` 已于 `2026-07-12` 用临时 `MySQL 8` 实例 (`127.0.0.1:13306`) 实跑通过；宿主机 `MySQL80` 那套现成 root 凭证仍然不可用，但这已经不是仓库侧阻塞。后面如果你非要复用宿主机服务，先把凭证收拾明白。
 2. 给目标环境的 `MySQL / Redis / S3` 和部署目标机补齐真实环境凭证、SSH secrets，并把现有发布 / 回滚流水线真正跑到目标环境上。
 3. 继续做真实移动推送、认证商户号，并推进真实第三方/目标环境联调；本地达人认证、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、关注流、私信、官方圈子和话题广场/热榜已经落地。
-4. PC Web 已有静态入口预渲染；下一步接真实公开数据快照，把门店、点评、帖子、圈子和话题详情页纳入构建制品，再评估是否需要常驻 SSR 服务。
+4. PC Web 已支持按区域抓取真实公开数据快照；下一步把快照生成接入发布流水线并补真实域名/缓存策略，再评估是否需要常驻 SSR 服务。
