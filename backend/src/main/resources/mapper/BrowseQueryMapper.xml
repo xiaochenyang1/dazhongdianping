@@ -563,6 +563,21 @@
           AND shop_id = #{shopId}
           AND region = #{region}
     </delete>
+    <delete id="deleteExcessShopBrowseHistory">
+        DELETE FROM user_shop_browse_history
+        WHERE user_id = #{userId}
+          AND region = #{region}
+          AND id NOT IN (
+            SELECT id FROM (
+              SELECT id
+              FROM user_shop_browse_history
+              WHERE user_id = #{userId}
+                AND region = #{region}
+              ORDER BY last_viewed_at DESC, id DESC
+              LIMIT #{keep}
+            ) kept
+          )
+    </delete>
     <select id="selectShopBrowseHistoryByUserId" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow">
         SELECT h.id, h.user_id, h.shop_id, h.region, h.view_count, h.last_viewed_at, h.created_at,
                s.name AS shop_name, s.cover_url, s.score, s.price_per_capita, s.currency, s.address,

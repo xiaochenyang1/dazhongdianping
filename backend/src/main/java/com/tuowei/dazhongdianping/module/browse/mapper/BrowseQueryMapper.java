@@ -123,6 +123,10 @@ public interface BrowseQueryMapper {
                                     @Param("shopId") Long shopId,
                                     @Param("region") String region);
 
+    int deleteExcessShopBrowseHistory(@Param("userId") Long userId,
+                                      @Param("region") String region,
+                                      @Param("keep") int keep);
+
     java.util.List<ShopBrowseHistoryRow> selectShopBrowseHistoryByUserId(@Param("userId") Long userId);
 
 }

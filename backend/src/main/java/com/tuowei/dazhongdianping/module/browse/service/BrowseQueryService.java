@@ -61,6 +61,8 @@ public class BrowseQueryService {
     private static final DateTimeFormatter REVIEW_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     /** 每个登录用户在同一区域最多保留的搜索历史条数。 */
     private static final int SEARCH_HISTORY_LIMIT = 20;
+    /** 每个登录用户在同一区域最多保留的门店浏览足迹条数。 */
+    private static final int BROWSE_HISTORY_LIMIT = 50;
 
     private final BrowseQueryMapper browseQueryMapper;
     private final UserExpertCertificationService userExpertCertificationService;
@@ -529,6 +531,7 @@ public class BrowseQueryService {
         browseQueryMapper.deleteExcessSearchHistory(userSession.userId(), region.name(), SEARCH_HISTORY_LIMIT);
     }
 
+    /** 登录用户门店足迹：同店刷新时间，超限按最近浏览裁剪。 */
     private void recordShopBrowseHistoryIfNeeded(Region region, Long shopId) {
         UserSession userSession = UserSessionContext.get();
         if (userSession == null || shopId == null) {
@@ -541,6 +544,11 @@ public class BrowseQueryService {
                 browseQueryMapper.touchShopBrowseHistory(userSession.userId(), shopId, region.name());
             }
         }
+        browseQueryMapper.deleteExcessShopBrowseHistory(
+                userSession.userId(),
+                region.name(),
+                BROWSE_HISTORY_LIMIT
+        );
     }
 
     private ShopBrowseHistoryResponse toShopBrowseHistoryResponse(

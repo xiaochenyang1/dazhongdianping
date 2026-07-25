@@ -101,6 +101,54 @@ class ShopBrowseHistoryControllerTest {
                 .andExpect(jsonPath("$.data.total").value(0));
     }
 
+    @Test
+    void shouldCapBrowseHistoryPerUserAndRegionAtFifty() throws Exception {
+        String token = registerUser();
+        Long userId = jdbcTemplate.queryForObject(
+                "SELECT id FROM app_user ORDER BY id DESC LIMIT 1",
+                Long.class
+        );
+
+        // Seed 55 raw history rows with older timestamps so the next real shop view is newest.
+        for (int i = 1; i <= 55; i++) {
+            jdbcTemplate.update("""
+                            INSERT INTO user_shop_browse_history(user_id, shop_id, region, view_count, last_viewed_at)
+                            VALUES (?, ?, 'CN', 1, DATEADD('SECOND', ?, CURRENT_TIMESTAMP))
+                            """,
+                    userId,
+                    900000 + i,
+                    -i
+            );
+        }
+
+        mockMvc.perform(get("/api/c/v1/shops/10001")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk());
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM user_shop_browse_history WHERE user_id = ? AND region = 'CN'",
+                Integer.class,
+                userId
+        );
+        org.assertj.core.api.Assertions.assertThat(count).isEqualTo(50);
+
+        Integer newestKept = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM user_shop_browse_history WHERE user_id = ? AND region = 'CN' AND shop_id = 10001",
+                Integer.class,
+                userId
+        );
+        org.assertj.core.api.Assertions.assertThat(newestKept).isEqualTo(1);
+
+        // Seed offsets use -i, so shop 900055 is the oldest and should be pruned first.
+        Integer oldestGone = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM user_shop_browse_history WHERE user_id = ? AND region = 'CN' AND shop_id = 900055",
+                Integer.class,
+                userId
+        );
+        org.assertj.core.api.Assertions.assertThat(oldestGone).isZero();
+    }
+
     private String registerUser() throws Exception {
         String account = "browse-history-" + UUID.randomUUID() + "@example.com";
         mockMvc.perform(post("/api/c/v1/auth/send-code")
