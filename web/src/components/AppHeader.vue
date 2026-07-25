@@ -4,7 +4,13 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
 import { useUserSession } from '@/composables/useUserSession'
 import { logoutUser } from '@/services/auth'
-import { clearSearchHistory, fetchHotSearchWords, fetchSearchHistory, fetchSearchSuggestions } from '@/services/browse'
+import {
+  clearSearchHistory,
+  fetchHotSearchWords,
+  fetchSearchHistory,
+  fetchSearchSuggestions,
+  removeSearchHistoryItem,
+} from '@/services/browse'
 import type { SearchHistoryItem, SearchHotWord, SearchSuggestion } from '@/types/browse'
 import { useNotifications } from '@/composables/useNotifications'
 import type { UserNotification } from '@/types/notification'
@@ -13,6 +19,7 @@ interface SearchPanelItem {
   key: string
   term: string
   meta: string
+  historyId?: number
 }
 
 interface SearchPanelSection {
@@ -83,6 +90,7 @@ const searchPanelSections = computed<SearchPanelSection[]>(() => {
         key: `history-${item.id}`,
         term: item.keyword,
         meta: item.updatedAt,
+        historyId: item.id,
       })),
     })
   }
@@ -341,6 +349,15 @@ async function handleClearSearchHistory() {
   }
 }
 
+async function handleRemoveSearchHistoryItem(historyId: number) {
+  try {
+    await removeSearchHistoryItem(historyId)
+    searchHistory.value = searchHistory.value.filter((item) => item.id !== historyId)
+  } catch {
+    // 单条删除失败不阻塞面板，用户可刷新后重试。
+  }
+}
+
 async function loadSuggestions(keyword: string) {
   const normalized = keyword.trim()
   suggestions.value = []
@@ -475,16 +492,30 @@ watch(
                 {{ clearingSearchHistory ? '清空中...' : section.actionLabel }}
               </button>
             </div>
-            <button
+            <div
               v-for="item in section.items"
               :key="item.key"
-              type="button"
-              class="search-popover__item"
-              @mousedown.prevent="runSearch(item.term)"
+              class="search-popover__item-row"
             >
-              <span>{{ item.term }}</span>
-              <small>{{ item.meta }}</small>
-            </button>
+              <button
+                type="button"
+                class="search-popover__item"
+                @mousedown.prevent="runSearch(item.term)"
+              >
+                <span>{{ item.term }}</span>
+                <small>{{ item.meta }}</small>
+              </button>
+              <button
+                v-if="item.historyId"
+                type="button"
+                class="search-popover__remove"
+                aria-label="删除这条搜索历史"
+                @mousedown.prevent
+                @click="handleRemoveSearchHistoryItem(item.historyId)"
+              >
+                ×
+              </button>
+            </div>
           </template>
           <p v-if="searchHistoryLoading" class="search-popover__loading">搜索历史加载中...</p>
           <p v-if="searchLoading" class="search-popover__loading">搜索中...</p>

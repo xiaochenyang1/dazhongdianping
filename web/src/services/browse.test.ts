@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiDelete, apiGet } from '@/lib/http'
-import { clearSearchHistory, fetchSearchHistory, fetchSimilarShops, fetchShopReviews, fetchShops } from './browse'
+import {
+  clearSearchHistory,
+  fetchSearchHistory,
+  fetchSimilarShops,
+  fetchShopReviews,
+  fetchShops,
+  removeSearchHistoryItem,
+} from './browse'
 
 vi.mock('@/lib/http', () => ({
   apiDelete: vi.fn(),
@@ -77,5 +84,11 @@ describe('fetchShopReviews', () => {
     clearSearchHistory()
 
     expect(apiDelete).toHaveBeenCalledWith('/api/c/v1/search/history')
+  })
+
+  it('removes a single search history item', () => {
+    removeSearchHistoryItem(42)
+
+    expect(apiDelete).toHaveBeenCalledWith('/api/c/v1/search/history/42')
   })
 })

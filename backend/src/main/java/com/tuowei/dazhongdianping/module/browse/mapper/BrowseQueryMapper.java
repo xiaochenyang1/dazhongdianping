@@ -96,6 +96,10 @@ public interface BrowseQueryMapper {
 
     int deleteSearchHistory(@Param("userId") Long userId, @Param("region") String region);
 
+    int deleteSearchHistoryById(@Param("id") Long id,
+                                @Param("userId") Long userId,
+                                @Param("region") String region);
+
     int deleteExcessSearchHistory(@Param("userId") Long userId,
                                   @Param("region") String region,
                                   @Param("keep") int keep);

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const browseMocks = vi.hoisted(() => ({
   clearSearchHistory: vi.fn(),
+  removeSearchHistoryItem: vi.fn(),
   fetchHotSearchWords: vi.fn(),
   fetchSearchHistory: vi.fn(),
   fetchSearchSuggestions: vi.fn(),
@@ -151,6 +152,55 @@ describe('AppHeader', () => {
     expect(host.textContent).toContain('Cafe')
     expect(host.textContent).not.toContain('火锅')
     expect(host.textContent).not.toContain('川菜')
+    app.unmount()
+  })
+
+  it('removes a single search history item from the header panel', async () => {
+    browseMocks.fetchHotSearchWords.mockResolvedValueOnce([])
+    browseMocks.fetchSearchHistory.mockResolvedValueOnce({
+      list: [
+        {
+          id: 11,
+          keyword: '火锅',
+          region: 'CN',
+          searchType: 1,
+          updatedAt: '2026-07-25 10:00:00',
+        },
+        {
+          id: 12,
+          keyword: '烧烤',
+          region: 'CN',
+          searchType: 1,
+          updatedAt: '2026-07-25 10:01:00',
+        },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 6,
+      hasMore: false,
+    })
+    browseMocks.removeSearchHistoryItem.mockResolvedValueOnce(undefined)
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const searchInput = host.querySelector('input[type="search"]')
+    searchInput?.dispatchEvent(new FocusEvent('focus'))
+    await flushView()
+
+    expect(host.textContent).toContain('火锅')
+    expect(host.textContent).toContain('烧烤')
+
+    const removeButtons = [...host.querySelectorAll('.search-popover__remove')] as HTMLButtonElement[]
+    expect(removeButtons.length).toBe(2)
+    removeButtons[0]?.click()
+    await flushView()
+
+    expect(browseMocks.removeSearchHistoryItem).toHaveBeenCalledWith(11)
+    expect(host.textContent).not.toContain('火锅')
+    expect(host.textContent).toContain('烧烤')
     app.unmount()
   })
 

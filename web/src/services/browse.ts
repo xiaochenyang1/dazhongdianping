@@ -92,3 +92,7 @@ export function fetchSearchHistory(page = 1, pageSize = 10) {
 export function clearSearchHistory() {
   return apiDelete<void>('/api/c/v1/search/history')
 }
+
+export function removeSearchHistoryItem(historyId: number) {
+  return apiDelete<void>(`/api/c/v1/search/history/${historyId}`)
+}

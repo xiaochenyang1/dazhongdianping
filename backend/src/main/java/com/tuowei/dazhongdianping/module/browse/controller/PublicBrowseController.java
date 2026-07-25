@@ -124,6 +124,12 @@ public class PublicBrowseController {
         return ApiResponse.success("搜索历史已清空", "search.history_cleared", null);
     }
 
+    @DeleteMapping("/search/history/{historyId}")
+    public ApiResponse<Void> removeSearchHistoryItem(@PathVariable Long historyId) {
+        browseQueryService.removeSearchHistoryItem(currentRegion(), historyId);
+        return ApiResponse.success("搜索历史已删除", "search.history_item_removed", null);
+    }
+
     @GetMapping("/user/browse-history")
     public ApiResponse<PageResult<ShopBrowseHistoryResponse>> listShopBrowseHistory(
             @RequestParam(defaultValue = "1") Integer page,

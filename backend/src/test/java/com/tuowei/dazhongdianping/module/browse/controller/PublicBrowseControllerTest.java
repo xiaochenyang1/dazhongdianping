@@ -361,6 +361,32 @@ class PublicBrowseControllerTest {
                 .andExpect(jsonPath("$.data.list[0].region").value("CN"))
                 .andExpect(jsonPath("$.data.total").value(1));
 
+        long historyId = jdbcTemplate.queryForObject(
+                "SELECT id FROM search_history WHERE keyword = ? ORDER BY id DESC LIMIT 1",
+                Long.class,
+                "火锅"
+        );
+
+        mockMvc.perform(get("/api/c/v1/shops")
+                        .header("Authorization", bearer(accessToken))
+                        .param("keyword", "烧烤"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/c/v1/search/history/{historyId}", historyId)
+                        .header("Authorization", bearer(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        mockMvc.perform(get("/api/c/v1/search/history")
+                        .header("Authorization", bearer(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].keyword").value("烧烤"));
+
+        mockMvc.perform(delete("/api/c/v1/search/history/{historyId}", historyId)
+                        .header("Authorization", bearer(accessToken)))
+                .andExpect(status().isNotFound());
+
         mockMvc.perform(delete("/api/c/v1/search/history")
                         .header("Authorization", bearer(accessToken)))
                 .andExpect(status().isOk())

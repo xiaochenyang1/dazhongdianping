@@ -271,6 +271,17 @@ public class BrowseQueryService {
         browseQueryMapper.deleteSearchHistory(userSession.userId(), region.name());
     }
 
+    @Transactional
+    public void removeSearchHistoryItem(Region region, Long historyId) {
+        if (historyId == null || historyId <= 0) {
+            throw new IllegalArgumentException("搜索历史不存在");
+        }
+        UserSession userSession = requireUserSession();
+        if (browseQueryMapper.deleteSearchHistoryById(historyId, userSession.userId(), region.name()) == 0) {
+            throw new NotFoundException("搜索历史不存在");
+        }
+    }
+
     public PageResult<ShopBrowseHistoryResponse> listShopBrowseHistory(Region region, int page, int pageSize) {
         UserSession userSession = requireUserSession();
         int normalizedPage = Math.max(page, 1);

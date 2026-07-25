@@ -498,6 +498,13 @@
           AND region = #{region}
     </delete>
 
+    <delete id="deleteSearchHistoryById">
+        DELETE FROM search_history
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND region = #{region}
+    </delete>
+
     <delete id="deleteExcessSearchHistory">
         DELETE FROM search_history
         WHERE user_id = #{userId}
