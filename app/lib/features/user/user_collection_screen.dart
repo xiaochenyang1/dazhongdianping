@@ -10,7 +10,7 @@ import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/trade/coupons_screen.dart';
-import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
+import 'package:dazhongdianping_app/features/trade/orders_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
@@ -23,12 +23,14 @@ class UserCollectionScreen extends StatelessWidget {
     this.reviewRepository,
     this.couponStatus,
     this.highlightCouponCode,
+    this.orderPayStatus,
   });
   final UserRepository repository;
   final UserCollection collection;
   final ReviewRepository? reviewRepository;
   final int? couponStatus;
   final String? highlightCouponCode;
+  final int? orderPayStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +39,12 @@ class UserCollectionScreen extends StatelessWidget {
         repository: TradeRepository(repository.api),
         initialStatus: couponStatus,
         highlightCode: highlightCouponCode,
+      );
+    }
+    if (collection == UserCollection.orders) {
+      return OrdersScreen(
+        repository: TradeRepository(repository.api),
+        initialPayStatus: orderPayStatus,
       );
     }
     return Scaffold(
@@ -131,10 +139,6 @@ class UserCollectionScreen extends StatelessWidget {
           owned: true,
           canInteract: false,
         ),
-      UserCollection.orders => OrderDetailScreen(
-        repository: TradeRepository(repository.api),
-        orderId: id,
-      ),
       UserCollection.reservations => ReservationDetailScreen(
         repository: ReservationRepository(repository.api),
         reservationId: id,

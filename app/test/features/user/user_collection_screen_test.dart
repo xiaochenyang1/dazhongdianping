@@ -277,7 +277,7 @@ void main() {
     expect(find.text('编辑'), findsOneWidget);
   });
 
-  testWidgets('order collection opens business order detail', (tester) async {
+  testWidgets('order collection opens filtered orders list', (tester) async {
     final api = CollectionApi();
     await tester.pumpWidget(
       MaterialApp(
@@ -289,7 +289,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('OD-10'));
+    expect(find.text('我的订单'), findsOneWidget);
+    expect(find.byKey(const Key('order-tab-all')), findsOneWidget);
+    expect(find.byKey(const Key('order-card-10')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('order-card-10')));
     await tester.pumpAndSettle();
 
     expect(find.text('订单详情'), findsOneWidget);

@@ -286,6 +286,25 @@ class TradeRepository {
         .toList();
   }
 
+  Future<List<TradeOrder>> loadOrders({
+    int? payStatus,
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    final result = await api.getJson(
+      '/api/c/v1/orders',
+      query: {
+        'page': page,
+        'pageSize': pageSize,
+        if (payStatus != null) 'payStatus': payStatus,
+      },
+    );
+    return (result['list'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(TradeOrder.fromJson)
+        .toList();
+  }
+
   Future<CouponDetail> loadCouponDetail(String code) async {
     final result = await api.getJson(
       '/api/c/v1/coupons/${Uri.encodeComponent(code)}',

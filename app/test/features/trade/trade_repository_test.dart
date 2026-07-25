@@ -87,6 +87,12 @@ class TradeManagementFakeApi implements JsonApi {
   }) async {
     this.path = path;
     this.query = query;
+    if (path == '/api/c/v1/orders') {
+      return {
+        'list': [order],
+        'total': 1,
+      };
+    }
     if (path == '/api/c/v1/coupons') {
       return {
         'list': [coupon],
@@ -145,6 +151,11 @@ void main() {
     expect(api.path, '/api/c/v1/coupons');
     expect(api.query?['status'], 1);
     expect(coupons.single.expireAt, '2026-12-31');
+
+    final orders = await repository.loadOrders(payStatus: 1);
+    expect(api.path, '/api/c/v1/orders');
+    expect(api.query?['payStatus'], 1);
+    expect(orders.single.orderNo, 'O10');
 
     final detail = await repository.loadCouponDetail('CP-DEMO');
     expect(api.path, '/api/c/v1/coupons/CP-DEMO');
