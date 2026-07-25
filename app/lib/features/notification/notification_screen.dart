@@ -13,6 +13,7 @@ class NotificationScreen extends StatefulWidget {
     this.onReviewTap,
     this.onCouponListTap,
     this.onCouponDetailTap,
+    this.onExpertCertificationTap,
   });
 
   final NotificationRepository repository;
@@ -25,6 +26,7 @@ class NotificationScreen extends StatefulWidget {
   final void Function(int reviewId, {required bool owned})? onReviewTap;
   final void Function({int? status, String? code})? onCouponListTap;
   final ValueChanged<String>? onCouponDetailTap;
+  final ValueChanged<String?>? onExpertCertificationTap;
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -132,6 +134,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
       final statusRaw = query['status'];
       final status = statusRaw == null ? null : int.tryParse(statusRaw);
       widget.onCouponListTap?.call(status: status, code: query['code']);
+      return;
+    }
+    final expertMatch = RegExp(
+      r'^/user/profile(?:\?(.*))?$',
+    ).firstMatch(notification.linkUrl);
+    if (expertMatch != null ||
+        notification.type == 'expert.certification.result') {
+      final query = Uri.splitQueryString(expertMatch?.group(1) ?? '');
+      widget.onExpertCertificationTap?.call(query['expert']);
       return;
     }
     final reservationMatch = RegExp(

@@ -287,4 +287,18 @@ void main() {
     expect(find.text('Berlin Tea · 点评'), findsOneWidget);
     expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
   });
+
+  testWidgets('shop detail can copy share text', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(repository: DetailFakeRepository(), shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('shop-share-button')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('shop-share-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('分享文案已复制'), findsOneWidget);
+  });
 }

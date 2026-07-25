@@ -13,6 +13,7 @@ class NotificationScreenApi implements JsonApi {
     this.reservationCreated = false,
     this.couponReminder = false,
     this.couponVerified = false,
+    this.expertResult = false,
   });
   final bool social;
   final bool directMessage;
@@ -21,6 +22,7 @@ class NotificationScreenApi implements JsonApi {
   final bool reservationCreated;
   final bool couponReminder;
   final bool couponVerified;
+  final bool expertResult;
   String? postedPath;
 
   Map<String, dynamic> _item({required bool read}) {
@@ -117,6 +119,20 @@ class NotificationScreenApi implements JsonApi {
         'title': '券码已核销',
         'content': 'CP-DEMO 已在柏林茶馆核销',
         'linkUrl': '/user/coupons/CP-DEMO',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (expertResult) {
+      return {
+        'id': 1,
+        'type': 'expert.certification.result',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '本地达人认证已通过',
+        'content': '你的本地达人认证已审核通过',
+        'linkUrl': '/user/profile?expert=approved',
         'aggregateCount': 1,
         'read': read,
         'createdAt': '2026-07-15 10:00:00',
@@ -390,6 +406,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.postedPath, '/api/c/v1/notifications/1/ack');
       expect(openedCode, 'CP-DEMO');
+    },
+  );
+
+  testWidgets(
+    'expert certification notification opens expert certification page',
+    (tester) async {
+      final api = NotificationScreenApi(expertResult: true);
+      String? openedResult;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NotificationScreen(
+            repository: NotificationRepository(api),
+            onExpertCertificationTap: (result) => openedResult = result,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('本地达人认证已通过'));
+      await tester.pumpAndSettle();
+      expect(api.postedPath, '/api/c/v1/notifications/1/ack');
+      expect(openedResult, 'approved');
     },
   );
 }

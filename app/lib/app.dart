@@ -22,6 +22,7 @@ import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
+import 'package:dazhongdianping_app/features/user/expert_certification_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_center_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_collection_screen.dart';
 import 'package:dazhongdianping_app/features/user/device_lifecycle.dart';
@@ -360,6 +361,30 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                           ),
                         ),
                       );
+                    },
+                    onExpertCertificationTap: (result) {
+                      Navigator.of(screenContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => ExpertCertificationScreen(
+                            repository: UserRepository(apiClient),
+                          ),
+                        ),
+                      );
+                      if (result != null && result.isNotEmpty) {
+                        final message = result == 'approved'
+                            ? '本地达人认证已通过'
+                            : result == 'rejected'
+                            ? '本地达人认证未通过，可查看原因后重提'
+                            : '本地达人认证状态已更新';
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final messenger = ScaffoldMessenger.maybeOf(
+                            screenContext,
+                          );
+                          messenger?.showSnackBar(
+                            SnackBar(content: Text(message)),
+                          );
+                        });
+                      }
                     },
                   ),
                 ),

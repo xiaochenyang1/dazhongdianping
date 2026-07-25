@@ -9,6 +9,7 @@ import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/deals_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ShopDetailScreen extends StatefulWidget {
   const ShopDetailScreen({
@@ -93,6 +94,17 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
     } finally {
       if (mounted) setState(() => _favoriteSaving = false);
     }
+  }
+
+  Future<void> _shareShop(ShopDetail shop) async {
+    final shareUrl = 'https://local.life/shops/${shop.id}';
+    final shareText =
+        '${shop.name} · ★ ${shop.score.toStringAsFixed(1)} · $shareUrl';
+    await Clipboard.setData(ClipboardData(text: shareText));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('分享文案已复制')),
+    );
   }
 
   @override
@@ -198,6 +210,16 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
+              FilledButton.tonalIcon(
+                key: const Key('shop-share-button'),
+                onPressed: () => _shareShop(shop),
+                icon: const Icon(Icons.share_outlined),
+                label: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('分享门店'),
+                ),
+              ),
+              const SizedBox(height: 12),
               if (widget.reviewRepository != null &&
                   widget.canInteractReviews) ...[
                 FilledButton.tonalIcon(
