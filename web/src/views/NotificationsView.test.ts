@@ -203,6 +203,78 @@ describe('NotificationsView', () => {
     app.unmount()
   })
 
+  it('routes payment success notifications to order detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 13,
+          type: 'order.paid',
+          title: '支付成功',
+          content: '双人套餐 · 订单 OD456 · 88.00 CNY · 券码已发放，可在我的券查看',
+          linkUrl: '/user/orders/99?paid=1',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 10:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('支付成功')
+    expect(host.textContent).toContain('支付成功')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/orders/99')
+    app.unmount()
+  })
+
+  it('routes reservation created notifications to reservation detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 14,
+          type: 'reservation.created',
+          title: '预订已自动确认',
+          content: '巴黎川菜馆 · 2026-07-26 18:00 · 2 人 · 系统已自动确认你的预订',
+          linkUrl: '/user/reservations/44?status=confirmed',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 11:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('预订已自动确认')
+    expect(host.textContent).toContain('预订创建')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/user/reservations/44')
+    app.unmount()
+  })
+
   it('routes reservation status notifications to reservation detail page', async () => {
     notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
       list: [

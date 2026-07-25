@@ -25,7 +25,9 @@ import 'package:dazhongdianping_app/features/user/device_lifecycle.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:dazhongdianping_app/features/user/public_user_profile_screen.dart';
+import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
+import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -296,6 +298,26 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                               unreadCount: 0,
                             ),
                             currentUserId: authController.currentUser!.id,
+                          ),
+                        ),
+                      );
+                    },
+                    onOrderTap: (orderId) {
+                      Navigator.of(screenContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => OrderDetailScreen(
+                            repository: TradeRepository(apiClient),
+                            orderId: orderId,
+                          ),
+                        ),
+                      );
+                    },
+                    onReservationTap: (reservationId) {
+                      Navigator.of(screenContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => ReservationDetailScreen(
+                            repository: ReservationRepository(apiClient),
+                            reservationId: reservationId,
                           ),
                         ),
                       );

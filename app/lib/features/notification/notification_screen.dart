@@ -8,6 +8,8 @@ class NotificationScreen extends StatefulWidget {
     this.onUserTap,
     this.onPostTap,
     this.onConversationTap,
+    this.onOrderTap,
+    this.onReservationTap,
   });
 
   final NotificationRepository repository;
@@ -15,6 +17,8 @@ class NotificationScreen extends StatefulWidget {
   final ValueChanged<int>? onPostTap;
   final void Function(int conversationId, int? peerUserId, String peerName)?
   onConversationTap;
+  final ValueChanged<int>? onOrderTap;
+  final ValueChanged<int>? onReservationTap;
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -72,6 +76,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final postId = postMatch == null ? null : int.tryParse(postMatch.group(1)!);
     if (postId != null) {
       widget.onPostTap?.call(postId);
+      return;
+    }
+    final orderMatch = RegExp(
+      r'^/user/orders/(\d+)(?:\?.*)?$',
+    ).firstMatch(notification.linkUrl);
+    final orderId = orderMatch == null
+        ? null
+        : int.tryParse(orderMatch.group(1)!);
+    if (orderId != null) {
+      widget.onOrderTap?.call(orderId);
+      return;
+    }
+    final reservationMatch = RegExp(
+      r'^/user/reservations/(\d+)(?:\?.*)?$',
+    ).firstMatch(notification.linkUrl);
+    final reservationId = reservationMatch == null
+        ? null
+        : int.tryParse(reservationMatch.group(1)!);
+    if (reservationId != null) {
+      widget.onReservationTap?.call(reservationId);
       return;
     }
     final conversationMatch = RegExp(

@@ -142,6 +142,47 @@ class TradeControllerTest {
         )).isEqualTo(4);
     }
 
+    @Test
+    void shouldNotifyUserOnceWhenPaymentSucceeds() throws Exception {
+        String token = registerToken();
+        MvcResult created = mockMvc.perform(post("/api/c/v1/orders").header("Authorization", bearer(token)).header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"dealId\":40001,\"quantity\":1}"))
+                .andExpect(status().isOk()).andReturn();
+        JsonNode order = objectMapper.readTree(created.getResponse().getContentAsString()).path("data");
+        long orderId = order.path("id").asLong();
+        String orderNo = order.path("orderNo").asText();
+
+        MvcResult pay = mockMvc.perform(post("/api/c/v1/orders/{id}/pay", orderId).header("Authorization", bearer(token)).header("X-Region", "CN"))
+                .andExpect(status().isOk()).andReturn();
+        String channelTxn = objectMapper.readTree(pay.getResponse().getContentAsString()).at("/data/channelTxn").asText();
+        String signature = sign(orderNo, channelTxn, "SUCCESS", "88.00");
+        String notifyBody = "{\"orderNo\":\"" + orderNo + "\",\"channelTxn\":\"" + channelTxn
+                + "\",\"status\":\"SUCCESS\",\"amount\":88.00,\"signature\":\"" + signature + "\"}";
+
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(post("/api/c/v1/pay/notify/alipay_mock")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(notifyBody))
+                    .andExpect(status().isOk());
+        }
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[?(@.type=='order.paid')].title").value(org.hamcrest.Matchers.hasItem("支付成功")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='order.paid')].linkUrl")
+                        .value(org.hamcrest.Matchers.hasItem("/user/orders/" + orderId + "?paid=1")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='order.paid')].content")
+                        .value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString(orderNo))));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type = 'order.paid' AND link_url = ?",
+                Long.class,
+                "/user/orders/" + orderId + "?paid=1"
+        )).isEqualTo(1L);
+    }
+
     private String registerToken() throws Exception { return registerToken("trade-"+UUID.randomUUID()+"@example.com"); }
     private String registerToken(String account) throws Exception { mockMvc.perform(post("/api/c/v1/auth/send-code").contentType(MediaType.APPLICATION_JSON).content("{\"scene\":\"register\",\"type\":\"email\",\"account\":\""+account+"\",\"deviceId\":\"trade-test\"}")).andExpect(status().isOk()); MvcResult r=mockMvc.perform(post("/api/c/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"email\",\"account\":\""+account+"\",\"code\":\"123456\",\"password\":\"Passw0rd!\"}")).andExpect(status().isOk()).andReturn(); return objectMapper.readTree(r.getResponse().getContentAsString()).at("/data/accessToken").asText(); }
     private String sign(String orderNo,String txn,String status,String amount) throws Exception { String raw=orderNo+"|"+txn+"|"+status+"|"+amount+"|local-payment-notify-secret"; return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8))); }

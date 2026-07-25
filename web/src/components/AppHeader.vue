@@ -190,8 +190,14 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'coupon.expired') {
     return ' · 券码已过期'
   }
+  if (item.type === 'order.paid') {
+    return ' · 支付成功'
+  }
   if (item.type === 'order.refund.result') {
     return ' · 退款结果'
+  }
+  if (item.type === 'reservation.created') {
+    return ' · 预订创建'
   }
   if (item.type === 'reservation.status') {
     return ' · 预订状态'

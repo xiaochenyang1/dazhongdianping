@@ -9,10 +9,14 @@ class NotificationScreenApi implements JsonApi {
     this.social = false,
     this.directMessage = false,
     this.postAudit = false,
+    this.orderPaid = false,
+    this.reservationCreated = false,
   });
   final bool social;
   final bool directMessage;
   final bool postAudit;
+  final bool orderPaid;
+  final bool reservationCreated;
   String? postedPath;
 
   Map<String, dynamic> _item({required bool read}) {
@@ -53,6 +57,34 @@ class NotificationScreenApi implements JsonApi {
         'title': '帖子已通过审核',
         'content': '《伦敦周末早午餐避坑指南》 已公开：内容真实，可公开',
         'linkUrl': '/community/posts/88?audit=approved',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (orderPaid) {
+      return {
+        'id': 1,
+        'type': 'order.paid',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '支付成功',
+        'content': '双人套餐 · 订单 OD456 · 88.00 CNY · 券码已发放，可在我的券查看',
+        'linkUrl': '/user/orders/99?paid=1',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (reservationCreated) {
+      return {
+        'id': 1,
+        'type': 'reservation.created',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '预订已自动确认',
+        'content': '巴黎川菜馆 · 2026-07-26 18:00 · 2 人 · 系统已自动确认你的预订',
+        'linkUrl': '/user/reservations/44?status=confirmed',
         'aggregateCount': 1,
         'read': read,
         'createdAt': '2026-07-15 10:00:00',
@@ -210,6 +242,49 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.postedPath, '/api/c/v1/notifications/1/ack');
       expect(openedPostId, 88);
+    },
+  );
+
+  testWidgets(
+    'payment success notification acknowledges then opens the order detail',
+    (tester) async {
+      final api = NotificationScreenApi(orderPaid: true);
+      int? openedOrderId;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NotificationScreen(
+            repository: NotificationRepository(api),
+            onOrderTap: (orderId) => openedOrderId = orderId,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('支付成功'));
+      await tester.pumpAndSettle();
+      expect(api.postedPath, '/api/c/v1/notifications/1/ack');
+      expect(openedOrderId, 99);
+    },
+  );
+
+  testWidgets(
+    'reservation created notification acknowledges then opens the reservation detail',
+    (tester) async {
+      final api = NotificationScreenApi(reservationCreated: true);
+      int? openedReservationId;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NotificationScreen(
+            repository: NotificationRepository(api),
+            onReservationTap: (reservationId) =>
+                openedReservationId = reservationId,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('预订已自动确认'));
+      await tester.pumpAndSettle();
+      expect(api.postedPath, '/api/c/v1/notifications/1/ack');
+      expect(openedReservationId, 44);
     },
   );
 }

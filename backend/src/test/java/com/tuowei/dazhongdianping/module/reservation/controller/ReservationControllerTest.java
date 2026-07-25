@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.module.reservation.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -93,6 +94,43 @@ class ReservationControllerTest {
                         .param("peopleCount", "4"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.list[0].remainingCount").value(10));
+    }
+
+    @Test
+    void shouldNotifyUserWhenReservationIsCreated() throws Exception {
+        LocalDate reserveDate = LocalDate.now().plusDays(2);
+        jdbc.update("UPDATE reservation_slot SET biz_date=? WHERE id=?",
+                java.sql.Date.valueOf(reserveDate), 50001L);
+        String reserveTime = reserveDate + " 18:00:00";
+        String token = register();
+
+        MvcResult created = mockMvc.perform(post("/api/c/v1/reservations")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"shopId\":10001,\"slotId\":50001,\"reserveTime\":\"" + reserveTime
+                                + "\",\"peopleCount\":2,\"contactName\":\"李四\",\"contactPhone\":\"+8613911111111\",\"remark\":\"创建通知\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value(1))
+                .andReturn();
+        long reservationId = objectMapper.readTree(created.getResponse().getContentAsString()).at("/data/id").asLong();
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[?(@.type=='reservation.created')].title")
+                        .value(org.hamcrest.Matchers.hasItem("预订已自动确认")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='reservation.created')].linkUrl")
+                        .value(org.hamcrest.Matchers.hasItem("/user/reservations/" + reservationId + "?status=confirmed")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='reservation.created')].content")
+                        .value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("系统已自动确认你的预订"))));
+
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(1) FROM user_notification WHERE type = 'reservation.created' AND link_url = ?",
+                Long.class,
+                "/user/reservations/" + reservationId + "?status=confirmed"
+        )).isEqualTo(1L);
     }
 
     private String register() throws Exception {
