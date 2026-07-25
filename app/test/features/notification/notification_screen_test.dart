@@ -166,6 +166,9 @@ class NotificationScreenApi implements JsonApi {
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postedPath = path;
+    if (path == '/api/c/v1/notifications/read-all') {
+      return {'updated': 1, 'count': 0};
+    }
     return _item(read: true);
   }
 }
@@ -429,4 +432,24 @@ void main() {
       expect(openedResult, 'approved');
     },
   );
+
+  testWidgets('notification screen can mark all notifications read', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('未读'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('notifications-mark-all')));
+    await tester.pumpAndSettle();
+
+    expect(api.postedPath, '/api/c/v1/notifications/read-all');
+    expect(find.text('未读'), findsNothing);
+    expect(find.text('全部通知已标记为已读'), findsOneWidget);
+  });
 }

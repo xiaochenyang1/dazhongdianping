@@ -62,4 +62,12 @@ class NotificationRepository {
     final result = await api.postJson('/api/c/v1/notifications/$id/ack');
     return AppNotification.fromJson(result);
   }
+
+  Future<({int updated, int count})> markAllRead() async {
+    final result = await api.postJson('/api/c/v1/notifications/read-all');
+    return (
+      updated: (result['updated'] as num?)?.toInt() ?? 0,
+      count: (result['count'] as num?)?.toInt() ?? 0,
+    );
+  }
 }

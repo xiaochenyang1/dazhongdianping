@@ -32,6 +32,9 @@ class NotificationFakeApi implements JsonApi {
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     this.path = path;
+    if (path == '/api/c/v1/notifications/read-all') {
+      return {'updated': 2, 'count': 0};
+    }
     return {
       'id': 1,
       'type': 'review.reply',
@@ -60,5 +63,14 @@ void main() {
     expect(api.path, '/api/c/v1/notifications/1/ack');
     expect(read.read, isTrue);
     expect(read.aggregateCount, 3);
+  });
+
+  test('notification repository marks all notifications read', () async {
+    final api = NotificationFakeApi();
+    final repository = NotificationRepository(api);
+    final result = await repository.markAllRead();
+    expect(api.path, '/api/c/v1/notifications/read-all');
+    expect(result.updated, 2);
+    expect(result.count, 0);
   });
 }

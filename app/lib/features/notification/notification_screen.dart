@@ -34,6 +34,7 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   late Future<List<AppNotification>> _notifications;
+  bool _markingAll = false;
 
   @override
   void initState() {
@@ -61,6 +62,48 @@ class _NotificationScreenState extends State<NotificationScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('标记已读失败：$error')));
       }
+    }
+  }
+
+  Future<void> _markAllRead(List<AppNotification> notifications) async {
+    if (_markingAll) return;
+    final hasUnread = notifications.any((item) => !item.read);
+    if (!hasUnread) return;
+    setState(() => _markingAll = true);
+    try {
+      await widget.repository.markAllRead();
+      if (!mounted) return;
+      setState(() {
+        _notifications = Future.value(
+          notifications
+              .map(
+                (item) => AppNotification(
+                  id: item.id,
+                  type: item.type,
+                  actorUserId: item.actorUserId,
+                  actorName: item.actorName,
+                  title: item.title,
+                  content: item.content,
+                  linkUrl: item.linkUrl,
+                  aggregateCount: item.aggregateCount,
+                  read: true,
+                  createdAt: item.createdAt,
+                ),
+              )
+              .toList(),
+        );
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('全部通知已标记为已读')));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('全部已读失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _markingAll = false);
     }
   }
 
@@ -173,7 +216,31 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('消息通知')),
+      appBar: AppBar(
+        title: const Text('消息通知'),
+        actions: [
+          FutureBuilder<List<AppNotification>>(
+            future: _notifications,
+            builder: (context, snapshot) {
+              final notifications = snapshot.data ?? const [];
+              final unread = notifications.where((item) => !item.read).length;
+              return TextButton(
+                key: const Key('notifications-mark-all'),
+                onPressed: unread == 0 || _markingAll
+                    ? null
+                    : () => _markAllRead(notifications),
+                child: Text(
+                  _markingAll
+                      ? '处理中...'
+                      : unread == 0
+                      ? '全部已读'
+                      : '全部已读（$unread）',
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<List<AppNotification>>(
         future: _notifications,
         builder: (context, snapshot) {
