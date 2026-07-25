@@ -10,6 +10,7 @@ class NotificationScreen extends StatefulWidget {
     this.onConversationTap,
     this.onOrderTap,
     this.onReservationTap,
+    this.onReviewTap,
   });
 
   final NotificationRepository repository;
@@ -19,6 +20,7 @@ class NotificationScreen extends StatefulWidget {
   onConversationTap;
   final ValueChanged<int>? onOrderTap;
   final ValueChanged<int>? onReservationTap;
+  final void Function(int reviewId, {required bool owned})? onReviewTap;
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -86,6 +88,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
         : int.tryParse(orderMatch.group(1)!);
     if (orderId != null) {
       widget.onOrderTap?.call(orderId);
+      return;
+    }
+    final ownedReviewMatch = RegExp(
+      r'^/user/reviews/(\d+)(?:\?.*)?$',
+    ).firstMatch(notification.linkUrl);
+    final ownedReviewId = ownedReviewMatch == null
+        ? null
+        : int.tryParse(ownedReviewMatch.group(1)!);
+    if (ownedReviewId != null) {
+      widget.onReviewTap?.call(ownedReviewId, owned: true);
+      return;
+    }
+    final publicReviewMatch = RegExp(
+      r'^/reviews/(\d+)(?:\?.*)?$',
+    ).firstMatch(notification.linkUrl);
+    final publicReviewId = publicReviewMatch == null
+        ? null
+        : int.tryParse(publicReviewMatch.group(1)!);
+    if (publicReviewId != null) {
+      widget.onReviewTap?.call(publicReviewId, owned: false);
       return;
     }
     final reservationMatch = RegExp(

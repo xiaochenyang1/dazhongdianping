@@ -18,6 +18,8 @@ class UserCenterScreen extends StatelessWidget {
     required this.repository,
     required this.authController,
     this.browseRepository,
+    this.reviewRepository,
+    this.canInteractReviews = false,
     this.onLoggedOut,
     this.onMessages,
     this.onCircles,
@@ -25,6 +27,8 @@ class UserCenterScreen extends StatelessWidget {
   final UserRepository repository;
   final AuthController authController;
   final BrowseRepository? browseRepository;
+  final ReviewRepository? reviewRepository;
+  final bool canInteractReviews;
   final VoidCallback? onLoggedOut;
   final VoidCallback? onMessages;
   final VoidCallback? onCircles;
@@ -180,6 +184,8 @@ class UserCenterScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) => BrowseHistoryScreen(
                         repository: browseRepository!,
+                        reviewRepository: reviewRepository,
+                        canInteractReviews: canInteractReviews,
                       ),
                     ),
                   ),

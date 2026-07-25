@@ -20,6 +20,7 @@ class ActivityDetailScreen extends StatefulWidget {
     this.tradeRepository,
     this.reservationRepository,
     this.reviewRepository,
+    this.canInteractReviews = false,
     this.thirdPartyConfig = const ThirdPartyConfig(),
   });
 
@@ -29,6 +30,7 @@ class ActivityDetailScreen extends StatefulWidget {
   final TradeRepository? tradeRepository;
   final ReservationRepository? reservationRepository;
   final ReviewRepository? reviewRepository;
+  final bool canInteractReviews;
   final ThirdPartyConfig thirdPartyConfig;
 
   @override
@@ -57,6 +59,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
             tradeRepository: widget.tradeRepository,
             reservationRepository: widget.reservationRepository,
             reviewRepository: widget.reviewRepository,
+            canInteractReviews: widget.canInteractReviews,
             thirdPartyConfig: widget.thirdPartyConfig,
           ),
         ),
@@ -85,6 +88,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
             tradeRepository: widget.tradeRepository,
             reservationRepository: widget.reservationRepository,
             reviewRepository: widget.reviewRepository,
+            canInteractReviews: widget.canInteractReviews,
             thirdPartyConfig: widget.thirdPartyConfig,
           ),
         ),

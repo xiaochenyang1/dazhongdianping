@@ -33,6 +33,7 @@ class HomeScreen extends StatefulWidget {
     this.tradeRepository,
     this.reservationRepository,
     this.reviewRepository,
+    this.canInteractReviews = false,
     this.communityRepository,
     this.canCommunityInteract = false,
     this.onCommunityUserTap,
@@ -55,6 +56,7 @@ class HomeScreen extends StatefulWidget {
   final TradeRepository? tradeRepository;
   final ReservationRepository? reservationRepository;
   final ReviewRepository? reviewRepository;
+  final bool canInteractReviews;
   final CommunityRepository? communityRepository;
   final bool canCommunityInteract;
   final void Function(BuildContext, int)? onCommunityUserTap;
@@ -167,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     tradeRepository: widget.tradeRepository,
                     reservationRepository: widget.reservationRepository,
                     reviewRepository: widget.reviewRepository,
+                    canInteractReviews: widget.canInteractReviews,
                     thirdPartyConfig: widget.thirdPartyConfig,
                   ),
                 ),
@@ -200,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           tradeRepository: widget.tradeRepository,
                           reservationRepository: widget.reservationRepository,
                           reviewRepository: widget.reviewRepository,
+                          canInteractReviews: widget.canInteractReviews,
                           thirdPartyConfig: widget.thirdPartyConfig,
                         ),
                       ),
@@ -218,6 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           tradeRepository: widget.tradeRepository,
                           reservationRepository: widget.reservationRepository,
                           reviewRepository: widget.reviewRepository,
+                          canInteractReviews: widget.canInteractReviews,
                           thirdPartyConfig: widget.thirdPartyConfig,
                         ),
                       ),
@@ -298,6 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     reservationRepository:
                                         widget.reservationRepository,
                                     reviewRepository: widget.reviewRepository,
+                                    canInteractReviews: widget.canInteractReviews,
                                     thirdPartyConfig: widget.thirdPartyConfig,
                                   ),
                                 ),

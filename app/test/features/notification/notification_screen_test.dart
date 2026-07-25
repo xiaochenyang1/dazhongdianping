@@ -287,4 +287,30 @@ void main() {
       expect(openedReservationId, 44);
     },
   );
+
+  testWidgets(
+    'merchant reply notification acknowledges then opens public review detail',
+    (tester) async {
+      final api = NotificationScreenApi();
+      int? openedReviewId;
+      bool? openedOwned;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NotificationScreen(
+            repository: NotificationRepository(api),
+            onReviewTap: (reviewId, {required owned}) {
+              openedReviewId = reviewId;
+              openedOwned = owned;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('商家回复'));
+      await tester.pumpAndSettle();
+      expect(api.postedPath, '/api/c/v1/notifications/1/ack');
+      expect(openedReviewId, 1);
+      expect(openedOwned, isFalse);
+    },
+  );
 }

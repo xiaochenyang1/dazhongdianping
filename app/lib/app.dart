@@ -20,6 +20,7 @@ import 'package:dazhongdianping_app/features/notification/notification_screen.da
 import 'package:dazhongdianping_app/features/message/conversation_list_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
+import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_center_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_collection_screen.dart';
@@ -83,9 +84,8 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
         final tradeRepository = TradeRepository(apiClient);
         final reservationRepository = ReservationRepository(apiClient);
         final communityRepository = CommunityRepository(apiClient);
-        final reviewRepository = authController.currentUser == null
-            ? null
-            : ReviewRepository(apiClient);
+        final reviewRepository = ReviewRepository(apiClient);
+        final canInteract = authController.currentUser != null;
         return MaterialApp(
           title: 'Local Life EU',
           debugShowCheckedModeBanner: false,
@@ -121,6 +121,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
             tradeRepository: tradeRepository,
             reservationRepository: reservationRepository,
             reviewRepository: reviewRepository,
+            canInteractReviews: canInteract,
             communityRepository: communityRepository,
             circleRepository: CircleRepository(apiClient),
             topicRepository: TopicRepository(apiClient),
@@ -136,7 +137,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                 ),
               );
             },
-            canCommunityInteract: authController.currentUser != null,
+            canCommunityInteract: canInteract,
             onCommunityUserTap: (screenContext, userId) {
               Navigator.of(screenContext).push(
                 MaterialPageRoute(
@@ -326,6 +327,18 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                         ),
                       );
                     },
+                    onReviewTap: (reviewId, {required owned}) {
+                      Navigator.of(screenContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => ReviewDetailScreen(
+                            repository: reviewRepository,
+                            reviewId: reviewId,
+                            owned: owned,
+                            canInteract: !owned && canInteract,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               );
@@ -338,6 +351,8 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                       repository: UserRepository(apiClient),
                       authController: authController,
                       browseRepository: ApiBrowseRepository(apiClient),
+                      reviewRepository: reviewRepository,
+                      canInteractReviews: canInteract,
                       onMessages: () => Navigator.of(screenContext).push(
                         MaterialPageRoute(
                           builder: (_) => ConversationListScreen(

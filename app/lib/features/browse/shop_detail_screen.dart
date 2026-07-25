@@ -2,6 +2,7 @@ import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_screen.dart';
+import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/deals_screen.dart';
@@ -18,6 +19,7 @@ class ShopDetailScreen extends StatefulWidget {
     this.reviewRepository,
     this.thirdPartyConfig = const ThirdPartyConfig(),
     this.enableFavorite = true,
+    this.canInteractReviews = false,
   });
   final BrowseRepository repository;
   final int shopId;
@@ -26,6 +28,7 @@ class ShopDetailScreen extends StatefulWidget {
   final ReviewRepository? reviewRepository;
   final ThirdPartyConfig thirdPartyConfig;
   final bool enableFavorite;
+  final bool canInteractReviews;
 
   @override
   State<ShopDetailScreen> createState() => _ShopDetailScreenState();
@@ -194,7 +197,8 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-              if (widget.reviewRepository != null) ...[
+              if (widget.reviewRepository != null &&
+                  widget.canInteractReviews) ...[
                 FilledButton.tonalIcon(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -309,6 +313,22 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                                   ],
                                 ),
                                 isThreeLine: true,
+                                trailing: widget.reviewRepository == null
+                                    ? null
+                                    : const Icon(Icons.chevron_right),
+                                onTap: widget.reviewRepository == null
+                                    ? null
+                                    : () => Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => ReviewDetailScreen(
+                                            repository:
+                                                widget.reviewRepository!,
+                                            reviewId: item.id,
+                                            canInteract:
+                                                widget.canInteractReviews,
+                                          ),
+                                        ),
+                                      ),
                               ),
                             ),
                           )
@@ -364,6 +384,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                                       reservationRepository:
                                           widget.reservationRepository,
                                       reviewRepository: widget.reviewRepository,
+                                      canInteractReviews: widget.canInteractReviews,
                                       thirdPartyConfig: widget.thirdPartyConfig,
                                       enableFavorite: widget.enableFavorite,
                                     ),

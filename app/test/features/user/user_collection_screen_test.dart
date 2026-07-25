@@ -99,6 +99,34 @@ class CollectionApi implements JsonApi {
       };
     }
     if (path == '/api/c/v1/posts/7') return communityPost;
+    if (path == '/api/c/v1/user/reviews/12') {
+      return {
+        'id': 12,
+        'shopId': 7,
+        'shopName': '柏林茶馆',
+        'userId': 1,
+        'userName': '我',
+        'content': '原来的体验记录',
+        'scoreOverall': 4,
+        'scoreTaste': 5,
+        'scoreEnv': 4,
+        'scoreService': 4,
+        'cost': 18,
+        'currency': 'EUR',
+        'likeCount': 0,
+        'commentCount': 0,
+        'likedByCurrentUser': false,
+        'auditStatus': 0,
+        'auditStatusText': '待审核',
+        'auditRemark': '',
+        'status': 1,
+        'statusText': '正常',
+        'tags': ['中文服务'],
+        'images': const [],
+        'createdAt': '2026-07-25 10:00:00',
+        'updatedAt': '2026-07-25 10:00:00',
+      };
+    }
     return {
       'id': 12,
       'shopId': 7,
@@ -189,7 +217,7 @@ class CollectionApi implements JsonApi {
 }
 
 void main() {
-  testWidgets('owned review collection opens the review editor', (
+  testWidgets('owned review collection opens the review detail', (
     tester,
   ) async {
     final api = CollectionApi();
@@ -208,8 +236,8 @@ void main() {
     await tester.tap(find.text('柏林茶馆'));
     await tester.pumpAndSettle();
 
-    expect(find.text('编辑点评'), findsOneWidget);
-    expect(find.byKey(const Key('review-content')), findsOneWidget);
+    expect(find.text('我的点评详情'), findsOneWidget);
+    expect(find.text('编辑'), findsOneWidget);
   });
 
   testWidgets('order collection opens business order detail', (tester) async {

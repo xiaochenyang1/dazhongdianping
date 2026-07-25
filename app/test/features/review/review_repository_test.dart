@@ -8,12 +8,13 @@ class ReviewFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
   String? method;
   String? path;
   Object? body;
+  Map<String, Object?>? query;
   String? fieldName;
   Uint8List? uploadedBytes;
   String? fileName;
   String? contentType;
 
-  Map<String, dynamic> get detail => {
+  Map<String, dynamic> get editorDetail => {
     'id': 12,
     'shopId': 7,
     'shopName': '柏林茶馆',
@@ -33,6 +34,42 @@ class ReviewFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     ],
   };
 
+  Map<String, dynamic> get publicDetail => {
+    'id': 12,
+    'shopId': 7,
+    'shopName': '柏林茶馆',
+    'userId': 9,
+    'userName': '阿遥',
+    'content': '茶香很足，服务也利落。',
+    'scoreOverall': 4.5,
+    'scoreTaste': 5,
+    'scoreEnv': 4,
+    'scoreService': 4.5,
+    'cost': 18.5,
+    'currency': 'EUR',
+    'likeCount': 3,
+    'commentCount': 1,
+    'likedByCurrentUser': false,
+    'auditStatus': 1,
+    'auditStatusText': '审核通过',
+    'auditRemark': '',
+    'status': 1,
+    'statusText': '正常',
+    'authorCertification': {'code': 'local_expert', 'label': '本地达人'},
+    'tags': ['适合朋友聚会', '中文服务'],
+    'images': [
+      {'id': 1, 'url': '/uploads/tea-1.png'},
+    ],
+    'merchantReply': {
+      'merchantName': '柏林茶馆',
+      'content': '谢谢支持',
+      'repliedAt': '2026-07-20 12:00:00',
+      'updatedAt': '2026-07-20 12:00:00',
+    },
+    'createdAt': '2026-07-19 18:00:00',
+    'updatedAt': '2026-07-19 18:00:00',
+  };
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
@@ -40,7 +77,51 @@ class ReviewFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
   }) async {
     method = 'GET';
     this.path = path;
-    return detail;
+    this.query = query;
+    if (path.endsWith('/comments')) {
+      return {
+        'list': [
+          {
+            'id': 81,
+            'reviewId': 12,
+            'userId': 2,
+            'userName': '小李',
+            'content': '说得对',
+            'parentId': 0,
+            'replyTo': null,
+            'replies': [
+              {
+                'id': 82,
+                'reviewId': 12,
+                'userId': 3,
+                'userName': '小王',
+                'content': '我也这么觉得',
+                'parentId': 81,
+                'replyTo': {
+                  'id': 81,
+                  'userId': 2,
+                  'userName': '小李',
+                  'content': '说得对',
+                },
+                'replies': const [],
+                'mine': false,
+                'createdAt': '2026-07-19 19:10:00',
+              },
+            ],
+            'mine': false,
+            'createdAt': '2026-07-19 19:00:00',
+          },
+        ],
+        'total': 1,
+      };
+    }
+    if (path.startsWith('/api/c/v1/user/reviews/')) {
+      return publicDetail;
+    }
+    if (path.startsWith('/api/c/v1/reviews/')) {
+      return publicDetail;
+    }
+    return editorDetail;
   }
 
   @override
@@ -48,7 +129,34 @@ class ReviewFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     method = 'POST';
     this.path = path;
     this.body = body;
-    return detail;
+    if (path.endsWith('/like')) {
+      return {'reviewId': 12, 'liked': true, 'likeCount': 4};
+    }
+    if (path.endsWith('/comments')) {
+      return {
+        'id': 90,
+        'reviewId': 12,
+        'userId': 1,
+        'userName': '我',
+        'content': (body as Map)['content'],
+        'parentId': 0,
+        'replyTo': null,
+        'replies': const [],
+        'mine': true,
+        'createdAt': '2026-07-25 12:00:00',
+      };
+    }
+    if (path.endsWith('/report')) {
+      return {
+        'id': 1,
+        'reviewId': 12,
+        'reason': (body as Map)['reason'],
+        'status': 0,
+        'statusText': '待处理',
+        'createdAt': '2026-07-25 12:00:00',
+      };
+    }
+    return editorDetail;
   }
 
   @override
@@ -56,7 +164,7 @@ class ReviewFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     method = 'PUT';
     this.path = path;
     this.body = body;
-    return detail;
+    return editorDetail;
   }
 
   @override
@@ -103,6 +211,20 @@ void main() {
     expect(detail.images, ['/uploads/tea-1.png', '/uploads/tea-2.png']);
   });
 
+  test('review repository loads public detail with merchant reply and badge', () async {
+    final api = ReviewFakeApi();
+    final repository = ReviewRepository(api);
+
+    final detail = await repository.loadPublicReview(12);
+
+    expect(api.path, '/api/c/v1/reviews/12');
+    expect(detail.userName, '阿遥');
+    expect(detail.likeCount, 3);
+    expect(detail.authorCertificationLabel, '本地达人');
+    expect(detail.merchantReply, '柏林茶馆：谢谢支持');
+    expect(detail.canInteract, isTrue);
+  });
+
   test('review repository creates a review with the backend payload', () async {
     final api = ReviewFakeApi();
     final repository = ReviewRepository(api);
@@ -133,6 +255,35 @@ void main() {
 
     expect(api.method, 'PUT');
     expect(api.path, '/api/c/v1/reviews/12');
+  });
+
+  test('review repository toggles like and loads nested comments', () async {
+    final api = ReviewFakeApi();
+    final repository = ReviewRepository(api);
+
+    final like = await repository.toggleLike(12);
+    expect(api.path, '/api/c/v1/reviews/12/like');
+    expect(like.liked, isTrue);
+    expect(like.likeCount, 4);
+
+    final comments = await repository.loadComments(12);
+    expect(api.path, '/api/c/v1/reviews/12/comments');
+    expect(comments, hasLength(1));
+    expect(comments.first.replies, hasLength(1));
+    expect(comments.first.replies.first.replyTo?.userName, '小李');
+  });
+
+  test('review repository creates comment and report payloads', () async {
+    final api = ReviewFakeApi();
+    final repository = ReviewRepository(api);
+
+    await repository.createComment(12, '不错', replyTo: 81);
+    expect(api.path, '/api/c/v1/reviews/12/comments');
+    expect(api.body, {'content': '不错', 'replyTo': 81});
+
+    final report = await repository.reportReview(12, '广告');
+    expect(api.path, '/api/c/v1/reviews/12/report');
+    expect(report.reason, '广告');
   });
 
   test('review repository uploads image bytes and returns the url', () async {

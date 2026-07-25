@@ -14,6 +14,7 @@ class SearchScreen extends StatefulWidget {
     this.tradeRepository,
     this.reservationRepository,
     this.reviewRepository,
+    this.canInteractReviews = false,
     this.thirdPartyConfig = const ThirdPartyConfig(),
   });
   final BrowseRepository repository;
@@ -21,6 +22,7 @@ class SearchScreen extends StatefulWidget {
   final TradeRepository? tradeRepository;
   final ReservationRepository? reservationRepository;
   final ReviewRepository? reviewRepository;
+  final bool canInteractReviews;
   final ThirdPartyConfig thirdPartyConfig;
 
   @override
@@ -229,6 +231,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                       reservationRepository:
                                           widget.reservationRepository,
                                       reviewRepository: widget.reviewRepository,
+                                      canInteractReviews: widget.canInteractReviews,
                                       thirdPartyConfig: widget.thirdPartyConfig,
                                     ),
                                   ),
@@ -291,6 +294,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                     reservationRepository:
                                         widget.reservationRepository,
                                     reviewRepository: widget.reviewRepository,
+                                    canInteractReviews: widget.canInteractReviews,
                                     thirdPartyConfig: widget.thirdPartyConfig,
                                   ),
                                 ),

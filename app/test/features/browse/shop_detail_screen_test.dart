@@ -92,15 +92,60 @@ class DetailFakeRepository extends BrowseRepository {
 }
 
 class DetailReviewApi implements JsonApi {
+  final List<String> paths = <String>[];
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
-  }) async => const {};
+  }) async {
+    paths.add(path);
+    if (path == '/api/c/v1/reviews/501') {
+      return {
+        'id': 501,
+        'shopId': 7,
+        'shopName': 'Berlin Tea',
+        'userId': 9,
+        'userName': '阿遥',
+        'content': '茶底干净，服务也稳。',
+        'scoreOverall': 4.8,
+        'scoreTaste': 5,
+        'scoreEnv': 4,
+        'scoreService': 5,
+        'cost': 12,
+        'currency': 'EUR',
+        'likeCount': 2,
+        'commentCount': 1,
+        'likedByCurrentUser': false,
+        'auditStatus': 1,
+        'auditStatusText': '审核通过',
+        'auditRemark': '',
+        'status': 1,
+        'statusText': '正常',
+        'authorCertification': {'code': 'local_expert', 'label': '本地达人'},
+        'tags': const [],
+        'images': const [],
+        'merchantReply': {
+          'merchantName': '柏林茶馆',
+          'content': '谢谢支持。',
+          'repliedAt': '2026-07-01 19:00:00',
+          'updatedAt': '2026-07-01 19:00:00',
+        },
+        'createdAt': '2026-07-01 18:30',
+        'updatedAt': '2026-07-01 18:30',
+      };
+    }
+    if (path == '/api/c/v1/reviews/501/comments') {
+      return {'list': const [], 'total': 0};
+    }
+    return const {};
+  }
 
   @override
-  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
-      const {};
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    paths.add(path);
+    return const {};
+  }
 }
 
 void main() {
@@ -125,6 +170,7 @@ void main() {
           repository: DetailFakeRepository(),
           shopId: 7,
           reviewRepository: ReviewRepository(DetailReviewApi()),
+          canInteractReviews: true,
         ),
       ),
     );
@@ -175,19 +221,28 @@ void main() {
     expect(find.text('Berlin Dumplings'), findsOneWidget);
   });
 
-  testWidgets('shop detail shows public reviews preview', (tester) async {
+  testWidgets('shop detail opens public review detail from preview', (
+    tester,
+  ) async {
     final repository = DetailFakeRepository();
+    final api = DetailReviewApi();
     await tester.pumpWidget(
       MaterialApp(
-        home: ShopDetailScreen(repository: repository, shopId: 7),
+        home: ShopDetailScreen(
+          repository: repository,
+          shopId: 7,
+          reviewRepository: ReviewRepository(api),
+          canInteractReviews: true,
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(repository.reviewRequests, contains(7));
-    expect(find.text('门店点评'), findsOneWidget);
-    expect(find.textContaining('阿遥'), findsOneWidget);
     expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
-    expect(find.textContaining('商家回复：柏林茶馆：谢谢支持。'), findsOneWidget);
+    await tester.tap(find.text('茶底干净，服务也稳。'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('点评详情'), findsOneWidget);
+    expect(api.paths, contains('/api/c/v1/reviews/501'));
   });
 }

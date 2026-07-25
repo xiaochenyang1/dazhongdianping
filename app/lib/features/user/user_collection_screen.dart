@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
-import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:dazhongdianping_app/features/community/post_editor_screen.dart';
+import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
@@ -58,11 +58,7 @@ class UserCollectionScreen extends StatelessWidget {
                   ),
                   trailing: destination == null
                       ? null
-                      : Icon(
-                          collection == UserCollection.reviews
-                              ? Icons.edit_outlined
-                              : Icons.chevron_right,
-                        ),
+                      : const Icon(Icons.chevron_right),
                   onTap: destination == null
                       ? null
                       : () => Navigator.of(
@@ -116,14 +112,12 @@ class UserCollectionScreen extends StatelessWidget {
     final id = item['id'];
     if (id is! int) return null;
     return switch (collection) {
-      UserCollection.reviews
-          when reviewRepository != null && item['shopId'] is int =>
-        ReviewEditorScreen(
+      UserCollection.reviews when reviewRepository != null =>
+        ReviewDetailScreen(
           repository: reviewRepository!,
           reviewId: id,
-          shopId: item['shopId'] as int,
-          shopName: item['shopName'] as String? ?? '',
-          currency: item['currency'] as String? ?? 'CNY',
+          owned: true,
+          canInteract: false,
         ),
       UserCollection.orders => OrderDetailScreen(
         repository: TradeRepository(repository.api),
