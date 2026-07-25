@@ -20,6 +20,7 @@ const router = createRouter({
         { path: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { requiresAuth: true, title: '订单退款' } },
         { path: 'coupons', component: () => import('@/views/CouponsView.vue'), meta: { requiresAuth: true, title: '券码核销' } },
       { path: 'reviews', component: () => import('@/views/ReviewsView.vue'), meta: { requiresAuth: true, title: '点评经营' } },
+        { path: 'verified', component: () => import('@/views/VerifiedCertificationView.vue'), meta: { requiresAuth: true, title: '认证商户' } },
       { path: 'staffs', component: () => import('@/views/StaffsView.vue'), meta: { requiresAuth: true, title: '员工管理' } },
       ],
     },

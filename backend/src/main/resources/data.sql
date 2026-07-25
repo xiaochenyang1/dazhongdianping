@@ -31,7 +31,7 @@ INSERT INTO admin_user (id, account, password_hash, name, status) VALUES
 INSERT INTO admin_role (id, code, name, description, status, built_in) VALUES
     (1, 'super_admin', '超级管理员', '维护管理员、角色和全站运营能力', 1, TRUE),
     (2, 'content_auditor', '内容审核员', '审核点评、帖子和商户点评申诉', 1, TRUE),
-    (3, 'merchant_auditor', '商户审核员', '审核商户资质、团购和门店变更', 1, TRUE),
+    (3, 'merchant_auditor', '商户审核员', '审核商户资质、团购、门店变更和认证商户', 1, TRUE),
     (4, 'operations_manager', '运营管理员', '维护 Banner、热词、运营活动、榜单、成长、圈子和话题', 1, TRUE),
     (5, 'data_operator', '数据管理员', '维护基础数据、门店、导入批次、订单退款查询和搜索索引', 1, TRUE);
 
@@ -88,14 +88,16 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (50, 'operations:sensitive_word:read', '查看敏感词库', 'operations', 1, 1),
     (51, 'operations:sensitive_word:write', '维护敏感词库', 'operations', 2, 1),
     (52, 'audit:report:read', '查看内容举报', 'audit', 1, 1),
-    (53, 'audit:report:write', '处理内容举报', 'audit', 2, 1);
+    (53, 'audit:report:write', '处理内容举报', 'audit', 2, 1),
+    (54, 'audit:merchant_verification:read', '查看认证商户', 'audit', 1, 1),
+    (55, 'audit:merchant_verification:write', '处理认证商户', 'audit', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region) VALUES (1, 'CN'), (1, 'EU');
 INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM admin_permission;
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
-    (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13),
+    (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55),
     (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49);
 
@@ -115,7 +117,7 @@ INSERT INTO merchant_application (
     (20002, 2002, 'https://cdn.example.com/licenses/merchant-2002.png', 'Noah', '["https://cdn.example.com/shops/2002/front.jpg"]', 1, '', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO merchant_role (id, code, name, permissions, status) VALUES
-    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view', 1),
+    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,merchant:verify', 1),
     (11, 'store_manager', '店长', 'shop:view,shop:edit,deal:edit,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view', 1),
     (12, 'coupon_operator', '核销员', 'coupon:verify,shop:view,reservation:view,reservation:arrive', 1),
     (13, 'service_operator', '客服运营', 'shop:view,order:view,review:reply,review:appeal,reservation:view,reservation:confirm', 1);

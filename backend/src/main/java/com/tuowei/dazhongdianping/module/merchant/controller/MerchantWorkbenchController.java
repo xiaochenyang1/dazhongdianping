@@ -27,6 +27,9 @@ import com.tuowei.dazhongdianping.module.merchant.service.MerchantWorkbenchServi
 import com.tuowei.dazhongdianping.module.merchant.service.MerchantReservationService;
 import com.tuowei.dazhongdianping.module.merchant.identity.service.MerchantIdentityService;
 import com.tuowei.dazhongdianping.module.merchant.identity.service.MerchantStaffService;
+import com.tuowei.dazhongdianping.module.merchant.verification.model.request.MerchantVerificationApplyRequest;
+import com.tuowei.dazhongdianping.module.merchant.verification.model.response.MerchantVerificationStatusResponse;
+import com.tuowei.dazhongdianping.module.merchant.verification.service.MerchantVerificationService;
 import com.tuowei.dazhongdianping.module.reservation.model.request.ReservationRescheduleRequest;
 import com.tuowei.dazhongdianping.module.merchant.dashboard.service.MerchantDashboardService;
 import jakarta.validation.Valid;
@@ -52,6 +55,7 @@ public class MerchantWorkbenchController {
     private final MerchantStaffService merchantStaffService;
     private final MerchantReservationService merchantReservationService;
     private final MerchantDashboardService merchantDashboardService;
+    private final MerchantVerificationService merchantVerificationService;
 
     public MerchantWorkbenchController(MerchantWorkbenchService merchantWorkbenchService,
                                        MerchantAuthService merchantAuthService,
@@ -59,7 +63,8 @@ public class MerchantWorkbenchController {
                                        MerchantIdentityService merchantIdentityService,
                                        MerchantStaffService merchantStaffService,
                                        MerchantReservationService merchantReservationService,
-                                       MerchantDashboardService merchantDashboardService) {
+                                       MerchantDashboardService merchantDashboardService,
+                                       MerchantVerificationService merchantVerificationService) {
         this.merchantWorkbenchService = merchantWorkbenchService;
         this.merchantAuthService = merchantAuthService;
         this.merchantFulfillmentService = merchantFulfillmentService;
@@ -67,6 +72,7 @@ public class MerchantWorkbenchController {
         this.merchantStaffService = merchantStaffService;
         this.merchantReservationService = merchantReservationService;
         this.merchantDashboardService = merchantDashboardService;
+        this.merchantVerificationService = merchantVerificationService;
     }
 
     @GetMapping("/health")
@@ -104,6 +110,22 @@ public class MerchantWorkbenchController {
     @GetMapping("/settle/status")
     public ApiResponse<Map<String, Object>> settlementStatus() {
         return ApiResponse.success(merchantIdentityService.status());
+    }
+
+    @GetMapping("/verified-certification")
+    public ApiResponse<MerchantVerificationStatusResponse> verifiedCertificationStatus() {
+        return ApiResponse.success(merchantVerificationService.currentMerchantStatus());
+    }
+
+    @PostMapping("/verified-certification/apply")
+    public ApiResponse<MerchantVerificationStatusResponse> applyVerifiedCertification(
+            @Valid @RequestBody MerchantVerificationApplyRequest request
+    ) {
+        return ApiResponse.success(
+                "认证商户申请已提交",
+                "merchant.verified_certification_submitted",
+                merchantVerificationService.applyCurrentMerchant(request)
+        );
     }
 
     @PostMapping("/staffs")

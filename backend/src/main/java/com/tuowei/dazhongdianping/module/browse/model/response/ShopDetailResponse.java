@@ -1,10 +1,12 @@
 package com.tuowei.dazhongdianping.module.browse.model.response;
 
+import com.tuowei.dazhongdianping.module.merchant.verification.model.response.MerchantVerificationBadgeResponse;
 import java.math.BigDecimal;
 import java.util.List;
 
 public record ShopDetailResponse(
         Long id,
+        Long merchantId,
         String name,
         String coverUrl,
         BigDecimal score,
@@ -24,6 +26,7 @@ public record ShopDetailResponse(
         Boolean openNow,
         List<String> tags,
         List<PhotoResponse> photos,
-        List<DishResponse> recommendedDishes
+        List<DishResponse> recommendedDishes,
+        MerchantVerificationBadgeResponse merchantCertification
 ) {
 }

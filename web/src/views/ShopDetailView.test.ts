@@ -69,6 +69,7 @@ describe('ShopDetailView', () => {
       recommendedDishes: [
         { id: 1, name: 'Mapo tofu', price: 14, recommendReason: 'Spicy' },
       ],
+      merchantCertification: { code: 'verified_merchant', label: '认证商户' },
     })
     browseMocks.fetchShopReviews.mockResolvedValue({
       list: [],
@@ -87,6 +88,7 @@ describe('ShopDetailView', () => {
     expect(host.textContent).toContain('€36 EUR')
     expect(host.textContent).toContain('€14 EUR')
     expect(host.textContent).toContain('+33142345678')
+    expect(host.textContent).toContain('认证商户')
     expect(host.textContent).not.toContain('¥')
     app.unmount()
   })
@@ -286,3 +288,49 @@ describe('ShopDetailView', () => {
     app.unmount()
   })
 })
+
+
+  it('shows verified merchant badge next to the shop name', async () => {
+    browseMocks.fetchShopDetail.mockResolvedValue({
+      id: 20001,
+      merchantId: 2001,
+      name: 'Maison Sichuan Paris',
+      coverUrl: '/shop.jpg',
+      score: 4.6,
+      tasteScore: 4.7,
+      envScore: 4.4,
+      serviceScore: 4.5,
+      pricePerCapita: 36,
+      currency: 'EUR',
+      address: '12 Rue du Temple, Paris',
+      phone: '+33142345678',
+      businessHours: '11:30-22:30',
+      summary: '川味馆子',
+      categoryName: 'Chinese',
+      cityName: 'Paris',
+      areaName: 'Le Marais',
+      hasDeal: true,
+      openNow: true,
+      tags: ['Spicy'],
+      photos: [],
+      recommendedDishes: [],
+      merchantCertification: { code: 'verified_merchant', label: '认证商户' },
+    })
+    browseMocks.fetchShopReviews.mockResolvedValue({
+      list: [],
+      total: 0,
+      page: 1,
+      pageSize: 3,
+      hasMore: false,
+    })
+
+    const host = document.createElement('div')
+    const app = createApp(ShopDetailView)
+    app.component('RouterLink', RouterLinkStub)
+    app.mount(host)
+    await flushView()
+
+    expect(host.textContent).toContain('Maison Sichuan Paris')
+    expect(host.textContent).toContain('认证商户')
+    app.unmount()
+  })

@@ -16,6 +16,7 @@ const baseLinks = [
   { path: '/orders', label: '订单退款', permission: 'order:view' },
   { path: '/coupons', label: '券码核销', permission: 'coupon:verify' },
   { path: '/reviews', label: '点评经营', permission: 'shop:view' },
+  { path: '/verified', label: '认证商户', permission: 'merchant:verify' },
   { path: '/staffs', label: '员工管理', permission: 'staff:manage' },
 ]
 const links = computed(() => baseLinks.filter((link) => permissions.value.includes(link.permission)))

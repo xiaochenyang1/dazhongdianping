@@ -9,6 +9,7 @@ import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
 import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.browse.mapper.BrowseQueryMapper;
+import com.tuowei.dazhongdianping.module.merchant.verification.service.MerchantVerificationService;
 import com.tuowei.dazhongdianping.module.browse.model.AreaRow;
 import com.tuowei.dazhongdianping.module.browse.model.BannerRow;
 import com.tuowei.dazhongdianping.module.browse.model.CategoryRow;
@@ -60,11 +61,14 @@ public class BrowseQueryService {
 
     private final BrowseQueryMapper browseQueryMapper;
     private final UserExpertCertificationService userExpertCertificationService;
+    private final MerchantVerificationService merchantVerificationService;
 
     public BrowseQueryService(BrowseQueryMapper browseQueryMapper,
-                              UserExpertCertificationService userExpertCertificationService) {
+                              UserExpertCertificationService userExpertCertificationService,
+                              MerchantVerificationService merchantVerificationService) {
         this.browseQueryMapper = browseQueryMapper;
         this.userExpertCertificationService = userExpertCertificationService;
+        this.merchantVerificationService = merchantVerificationService;
     }
 
     public List<CategoryNodeResponse> listCategories(Region region) {
@@ -130,6 +134,7 @@ public class BrowseQueryService {
                 .toList();
         return new ShopDetailResponse(
                 row.getId(),
+                row.getMerchantId(),
                 row.getName(),
                 row.getCoverUrl(),
                 row.getScore(),
@@ -149,7 +154,8 @@ public class BrowseQueryService {
                 row.getOpenNow(),
                 splitTags(row.getTags()),
                 photos,
-                dishes
+                dishes,
+                merchantVerificationService.approvedBadge(row.getMerchantId(), region.name())
         );
     }
 

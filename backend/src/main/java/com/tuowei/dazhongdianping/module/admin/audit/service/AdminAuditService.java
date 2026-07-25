@@ -23,6 +23,8 @@ import com.tuowei.dazhongdianping.module.auth.appeal.model.UserBanAppealRow;
 import com.tuowei.dazhongdianping.module.auth.appeal.service.UserBanAppealService;
 import com.tuowei.dazhongdianping.module.auth.certification.model.UserExpertCertificationRow;
 import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
+import com.tuowei.dazhongdianping.module.merchant.verification.model.MerchantVerificationRow;
+import com.tuowei.dazhongdianping.module.merchant.verification.service.MerchantVerificationService;
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.service.ReviewService;
@@ -57,6 +59,7 @@ public class AdminAuditService {
     private static final int REVIEW_APPEAL_BIZ_TYPE = 6;
     private static final int EXPERT_CERTIFICATION_BIZ_TYPE = 7;
     private static final int USER_APPEAL_BIZ_TYPE = 8;
+    private static final int MERCHANT_VERIFICATION_BIZ_TYPE = 9;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String REVIEW_AUDIT_RESULT_TYPE = "review.audit.result";
     private static final String EXPERT_CERT_RESULT_TYPE = "expert.certification.result";
@@ -70,6 +73,7 @@ public class AdminAuditService {
     private final MerchantTradeService merchantTradeService;
     private final MerchantReviewService merchantReviewService;
     private final UserExpertCertificationService userExpertCertificationService;
+    private final MerchantVerificationService merchantVerificationService;
     private final UserBanAppealService userBanAppealService;
     private final AdminAppUserMapper adminAppUserMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
@@ -87,6 +91,7 @@ public class AdminAuditService {
                              MerchantTradeService merchantTradeService,
                              MerchantReviewService merchantReviewService,
                              UserExpertCertificationService userExpertCertificationService,
+                             MerchantVerificationService merchantVerificationService,
                              UserBanAppealService userBanAppealService,
                              AdminAppUserMapper adminAppUserMapper,
                              ApplicationEventPublisher applicationEventPublisher,
@@ -103,6 +108,7 @@ public class AdminAuditService {
         this.merchantTradeService = merchantTradeService;
         this.merchantReviewService = merchantReviewService;
         this.userExpertCertificationService = userExpertCertificationService;
+        this.merchantVerificationService = merchantVerificationService;
         this.userBanAppealService = userBanAppealService;
         this.adminAppUserMapper = adminAppUserMapper;
         this.applicationEventPublisher = applicationEventPublisher;
@@ -160,6 +166,9 @@ public class AdminAuditService {
         if (task.getBizType() == EXPERT_CERTIFICATION_BIZ_TYPE) {
             return passExpertCertificationTask(task, request, requestIp);
         }
+        if (task.getBizType() == MERCHANT_VERIFICATION_BIZ_TYPE) {
+            return passMerchantVerificationTask(task, request, requestIp);
+        }
         if (task.getBizType() == USER_APPEAL_BIZ_TYPE) {
             return passUserAppealTask(task, request, requestIp);
         }
@@ -209,6 +218,9 @@ public class AdminAuditService {
         }
         if (task.getBizType() == EXPERT_CERTIFICATION_BIZ_TYPE) {
             return rejectExpertCertificationTask(task, request, requestIp);
+        }
+        if (task.getBizType() == MERCHANT_VERIFICATION_BIZ_TYPE) {
+            return rejectMerchantVerificationTask(task, request, requestIp);
         }
         if (task.getBizType() == USER_APPEAL_BIZ_TYPE) {
             return rejectUserAppealTask(task, request, requestIp);
@@ -572,6 +584,56 @@ public class AdminAuditService {
         );
     }
 
+    private AdminAuditTaskResponse passMerchantVerificationTask(
+            AuditTaskRow task,
+            AdminAuditPassRequest request,
+            String requestIp
+    ) {
+        MerchantVerificationRow verification = merchantVerificationService.pendingVerificationForAudit(
+                task.getBizId(), currentRegion().name());
+        if (verification == null) {
+            throw new NotFoundException("认证商户申请不存在或已重新提交");
+        }
+        String remark = normalizeRemark(request.getRemark());
+        if (adminAuditMapper.updateAuditTaskDecision(task.getId(), 1, currentAdmin().adminId(), remark) == 0) {
+            throw new IllegalArgumentException("审核任务状态已变更");
+        }
+        merchantVerificationService.approveVerification(verification, currentAdmin().adminId(), remark);
+        adminAuditMapper.insertAuditLog(
+                currentAdmin().adminId(),
+                "audit_merchant_verification_pass",
+                "merchant_verification:" + verification.getId(),
+                remark,
+                normalizeIp(requestIp)
+        );
+        return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
+    private AdminAuditTaskResponse rejectMerchantVerificationTask(
+            AuditTaskRow task,
+            AdminAuditRejectRequest request,
+            String requestIp
+    ) {
+        MerchantVerificationRow verification = merchantVerificationService.pendingVerificationForAudit(
+                task.getBizId(), currentRegion().name());
+        if (verification == null) {
+            throw new NotFoundException("认证商户申请不存在或已重新提交");
+        }
+        String reason = request.getReason().trim();
+        if (adminAuditMapper.updateAuditTaskDecision(task.getId(), 2, currentAdmin().adminId(), reason) == 0) {
+            throw new IllegalArgumentException("审核任务状态已变更");
+        }
+        merchantVerificationService.rejectVerification(verification, currentAdmin().adminId(), reason);
+        adminAuditMapper.insertAuditLog(
+                currentAdmin().adminId(),
+                "audit_merchant_verification_reject",
+                "merchant_verification:" + verification.getId(),
+                reason,
+                normalizeIp(requestIp)
+        );
+        return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
     private AdminAuditTaskResponse passUserAppealTask(
             AuditTaskRow task,
             AdminAuditPassRequest request,
@@ -663,7 +725,8 @@ public class AdminAuditService {
                 && row.getBizType() != SHOP_CHANGE_BIZ_TYPE
                 && row.getBizType() != REVIEW_APPEAL_BIZ_TYPE
                 && row.getBizType() != EXPERT_CERTIFICATION_BIZ_TYPE
-                && row.getBizType() != USER_APPEAL_BIZ_TYPE)) {
+                && row.getBizType() != USER_APPEAL_BIZ_TYPE
+                && row.getBizType() != MERCHANT_VERIFICATION_BIZ_TYPE)) {
             throw new IllegalArgumentException("当前不支持此审核任务");
         }
         if (row.getStatus() == null || row.getStatus() != 0) {
@@ -681,7 +744,8 @@ public class AdminAuditService {
                         SHOP_CHANGE_BIZ_TYPE,
                         REVIEW_APPEAL_BIZ_TYPE,
                         EXPERT_CERTIFICATION_BIZ_TYPE,
-                        USER_APPEAL_BIZ_TYPE
+                        USER_APPEAL_BIZ_TYPE,
+                        MERCHANT_VERIFICATION_BIZ_TYPE
                 )
                 .stream()
                 .filter(bizType -> session.permissions().contains(permissionFor(bizType, write)))
@@ -702,6 +766,7 @@ public class AdminAuditService {
             case REVIEW_APPEAL_BIZ_TYPE -> "audit:review_appeal:" + action;
             case EXPERT_CERTIFICATION_BIZ_TYPE -> "audit:expert_certification:" + action;
             case USER_APPEAL_BIZ_TYPE -> "audit:user_appeal:" + action;
+            case MERCHANT_VERIFICATION_BIZ_TYPE -> "audit:merchant_verification:" + action;
             default -> throw new IllegalArgumentException("不支持的审核类型");
         };
     }
@@ -735,6 +800,7 @@ public class AdminAuditService {
             case 6 -> "商户点评申诉";
             case 7 -> "达人认证";
             case 8 -> "用户封禁申诉";
+            case 9 -> "认证商户";
             default -> "未知";
         };
     }

@@ -211,6 +211,7 @@
 
     <select id="selectShopDetail" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopDetailRow">
         SELECT s.id,
+               s.merchant_id,
                s.category_id,
                s.city_id,
                s.area_id,

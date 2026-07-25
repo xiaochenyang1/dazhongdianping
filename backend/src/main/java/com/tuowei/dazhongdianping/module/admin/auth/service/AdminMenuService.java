@@ -19,6 +19,7 @@ public class AdminMenuService {
                         leaf("audit.user_appeals", "用户封禁申诉", "/audit/user-appeals", "audit:user_appeal:read"),
                         leaf("audit.reports", "内容举报", "/audit/reports", "audit:report:read"),
                         leaf("audit.merchant_applications", "商户资质审核", "/audit/merchant-applications", "audit:merchant_application:read"),
+                        leaf("audit.merchant_verifications", "认证商户", "/audit/verified-merchants", "audit:merchant_verification:read"),
                         leaf("audit.shop_changes", "门店草稿审核", "/audit/shop-changes", "audit:shop_change:read"),
                         leaf("audit.deals", "团购审核", "/audit/deals", "audit:deal:read")
                 )),

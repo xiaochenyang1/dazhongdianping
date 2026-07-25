@@ -64,6 +64,9 @@ class AdminAuditServiceTest {
     private UserExpertCertificationService userExpertCertificationService;
 
     @Mock
+    private com.tuowei.dazhongdianping.module.merchant.verification.service.MerchantVerificationService merchantVerificationService;
+
+    @Mock
     private ApplicationEventPublisher applicationEventPublisher;
 
     @Mock

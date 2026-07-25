@@ -96,6 +96,7 @@ export interface ReviewPreview {
 
 export interface ShopDetail {
   id: number
+  merchantId?: number | null
   name: string
   coverUrl: string
   score: number
@@ -116,6 +117,7 @@ export interface ShopDetail {
   tags: string[]
   photos: Photo[]
   recommendedDishes: Dish[]
+  merchantCertification?: UserExpertCertificationBadge | null
 }
 
 export interface PageResult<T> {

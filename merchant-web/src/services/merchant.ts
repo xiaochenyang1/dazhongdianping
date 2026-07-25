@@ -21,6 +21,27 @@ export interface SettlementStatus extends SettlementPayload {
   submittedAt?: string
   auditedAt?: string
 }
+export interface MerchantVerifiedBadge {
+  code: string
+  label: string
+}
+export interface MerchantVerifiedCertificationStatus {
+  id: number | null
+  status: 0 | 1 | 2 | 3
+  statusText: string
+  reason: string
+  evidenceUrls: string[]
+  rejectReason: string
+  badge: MerchantVerifiedBadge | null
+  submittedAt: string
+  auditedAt: string
+  effectiveStartAt: string
+  effectiveEndAt: string
+}
+export interface MerchantVerifiedCertificationPayload {
+  reason: string
+  evidenceUrls?: string[]
+}
 export interface MerchantRole { id: number; code: string; name: string; permissions: string[] }
 export interface MerchantAccount {
   merchant: { id: number; companyName: string; region: MerchantRegion }
@@ -255,6 +276,12 @@ export function loginMerchant(payload: { account: string; password: string }) { 
 export function registerMerchant(payload: MerchantRegistrationPayload) { return apiPost<MerchantRegistrationResult>('/api/b/v1/auth/register', payload) }
 export function fetchSettlementStatus() { return apiGet<SettlementStatus>('/api/b/v1/settle/status') }
 export function submitSettlement(payload: SettlementPayload) { return apiPost<SettlementStatus>('/api/b/v1/settle/apply', payload) }
+export function fetchVerifiedCertification() {
+  return apiGet<MerchantVerifiedCertificationStatus>('/api/b/v1/verified-certification')
+}
+export function applyVerifiedCertification(payload: MerchantVerifiedCertificationPayload) {
+  return apiPost<MerchantVerifiedCertificationStatus>('/api/b/v1/verified-certification/apply', payload)
+}
 export function fetchAccount() { return apiGet<MerchantAccount>('/api/b/v1/account/me') }
 export function fetchRoles() { return apiGet<{ list: MerchantRole[] }>('/api/b/v1/roles') }
 export function fetchDashboard(params?: { shopId?: number; dateFrom?: string; dateTo?: string }) { return apiGet<Record<string, unknown>>('/api/b/v1/dashboard', params) }

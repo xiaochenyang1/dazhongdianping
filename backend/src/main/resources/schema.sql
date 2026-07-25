@@ -776,6 +776,29 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_user_expert_certification_user_region
 CREATE INDEX IF NOT EXISTS idx_user_expert_certification_region_status
     ON user_expert_certification(region, status, user_id);
 
+CREATE TABLE IF NOT EXISTS merchant_verification (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    merchant_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL,
+    reason VARCHAR(500) NOT NULL DEFAULT '',
+    evidence_urls VARCHAR(2000) NOT NULL DEFAULT '',
+    status TINYINT NOT NULL DEFAULT 1,
+    reject_reason VARCHAR(255) NOT NULL DEFAULT '',
+    audit_by BIGINT NOT NULL DEFAULT 0,
+    submitted_by BIGINT NOT NULL DEFAULT 0,
+    submitted_at TIMESTAMP NULL,
+    audited_at TIMESTAMP NULL,
+    effective_start_at TIMESTAMP NULL,
+    effective_end_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_merchant_verification_merchant
+    ON merchant_verification(merchant_id);
+CREATE INDEX IF NOT EXISTS idx_merchant_verification_region_status
+    ON merchant_verification(region, status, merchant_id);
+
 CREATE TABLE IF NOT EXISTS user_follow (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     follower_user_id BIGINT NOT NULL,

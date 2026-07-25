@@ -46,7 +46,7 @@ describe('MerchantLayout', () => {
     const { app, host } = await render(['shop:view', 'reservation:view', 'review:reply', 'coupon:verify'])
     const paths = [...host.querySelectorAll('a')].map((link) => link.getAttribute('data-to'))
 
-    expect(paths).toEqual(['/shops', '/reservations', '/coupons', '/reviews'])
+    expect(paths).toEqual(['/shops', '/reservations', '/reservation-slots', '/coupons', '/reviews'])
     expect(host.querySelector('[data-testid="router-view"]')?.textContent)
       .toBe('shop:view,reservation:view,review:reply,coupon:verify')
     app.unmount()

@@ -24,6 +24,7 @@ DROP TABLE IF EXISTS `user_policy_accept_log`;
 DROP TABLE IF EXISTS `privacy_delete_task`;
 DROP TABLE IF EXISTS `privacy_export_task`;
 DROP TABLE IF EXISTS `user_expert_certification`;
+DROP TABLE IF EXISTS `merchant_verification`;
 DROP TABLE IF EXISTS `app_user`;
 DROP TABLE IF EXISTS `audit_log`;
 DROP TABLE IF EXISTS `audit_task`;
@@ -845,6 +846,27 @@ CREATE TABLE `user_expert_certification` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_user_expert_certification_user_region` (`user_id`,`region`),
   KEY `idx_user_expert_certification_region_status` (`region`,`status`,`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `merchant_verification` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `merchant_id` BIGINT NOT NULL,
+  `region` VARCHAR(8) NOT NULL,
+  `reason` VARCHAR(500) NOT NULL DEFAULT '',
+  `evidence_urls` VARCHAR(2000) NOT NULL DEFAULT '',
+  `status` TINYINT NOT NULL DEFAULT 1,
+  `reject_reason` VARCHAR(255) NOT NULL DEFAULT '',
+  `audit_by` BIGINT NOT NULL DEFAULT 0,
+  `submitted_by` BIGINT NOT NULL DEFAULT 0,
+  `submitted_at` DATETIME DEFAULT NULL,
+  `audited_at` DATETIME DEFAULT NULL,
+  `effective_start_at` DATETIME DEFAULT NULL,
+  `effective_end_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_merchant_verification_merchant` (`merchant_id`),
+  KEY `idx_merchant_verification_region_status` (`region`,`status`,`merchant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `user_follow` (

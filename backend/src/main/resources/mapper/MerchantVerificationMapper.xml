@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.merchant.verification.mapper.MerchantVerificationMapper">
+
+    <sql id="verificationColumns">
+        id,
+        merchant_id,
+        region,
+        reason,
+        evidence_urls,
+        status,
+        reject_reason,
+        audit_by,
+        submitted_by,
+        submitted_at,
+        audited_at,
+        effective_start_at,
+        effective_end_at,
+        created_at,
+        updated_at
+    </sql>
+
+    <select id="selectByMerchantId" resultType="com.tuowei.dazhongdianping.module.merchant.verification.model.MerchantVerificationRow">
+        SELECT <include refid="verificationColumns"/>
+        FROM merchant_verification
+        WHERE merchant_id = #{merchantId}
+        LIMIT 1
+    </select>
+
+    <select id="selectByMerchantIdForUpdate" resultType="com.tuowei.dazhongdianping.module.merchant.verification.model.MerchantVerificationRow">
+        SELECT <include refid="verificationColumns"/>
+        FROM merchant_verification
+        WHERE merchant_id = #{merchantId}
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <insert id="insertVerification" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO merchant_verification(
+            merchant_id,
+            region,
+            reason,
+            evidence_urls,
+            status,
+            reject_reason,
+            audit_by,
+            submitted_by,
+            submitted_at,
+            audited_at,
+            effective_start_at,
+            effective_end_at
+        )
+        VALUES (
+            #{merchantId},
+            #{region},
+            #{reason},
+            #{evidenceUrls},
+            #{status},
+            #{rejectReason},
+            #{auditBy},
+            #{submittedBy},
+            #{submittedAt},
+            #{auditedAt},
+            #{effectiveStartAt},
+            #{effectiveEndAt}
+        )
+    </insert>
+
+    <update id="resubmitVerification">
+        UPDATE merchant_verification
+        SET reason = #{reason},
+            evidence_urls = #{evidenceUrls},
+            status = 1,
+            reject_reason = '',
+            audit_by = 0,
+            submitted_by = #{submittedBy},
+            submitted_at = CURRENT_TIMESTAMP,
+            audited_at = NULL,
+            effective_start_at = NULL,
+            effective_end_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND merchant_id = #{merchantId}
+          AND region = #{region}
+    </update>
+
+    <select id="selectPendingVerificationForAudit" resultType="com.tuowei.dazhongdianping.module.merchant.verification.model.MerchantVerificationRow">
+        SELECT mv.id,
+               mv.merchant_id,
+               mv.region,
+               mv.reason,
+               mv.evidence_urls,
+               mv.status,
+               mv.reject_reason,
+               mv.audit_by,
+               mv.submitted_by,
+               mv.submitted_at,
+               mv.audited_at,
+               mv.effective_start_at,
+               mv.effective_end_at,
+               mv.created_at,
+               mv.updated_at,
+               m.company_name AS company_name
+        FROM merchant_verification mv
+        JOIN merchant m ON m.id = mv.merchant_id
+        WHERE mv.id = #{verificationId}
+          AND mv.region = #{region}
+          AND mv.status = 1
+        LIMIT 1
+    </select>
+
+    <update id="approveVerification">
+        UPDATE merchant_verification
+        SET status = 2,
+            reject_reason = '',
+            audit_by = #{auditBy},
+            audited_at = CURRENT_TIMESTAMP,
+            effective_start_at = CURRENT_TIMESTAMP,
+            effective_end_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND status = 1
+    </update>
+
+    <update id="rejectVerification">
+        UPDATE merchant_verification
+        SET status = 3,
+            reject_reason = #{rejectReason},
+            audit_by = #{auditBy},
+            audited_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND status = 1
+    </update>
+
+    <select id="selectApprovedVerification" resultType="com.tuowei.dazhongdianping.module.merchant.verification.model.MerchantVerificationRow">
+        SELECT <include refid="verificationColumns"/>
+        FROM merchant_verification
+        WHERE merchant_id = #{merchantId}
+          AND region = #{region}
+          AND status = 2
+          AND (effective_start_at IS NULL OR effective_start_at <![CDATA[<=]]> CURRENT_TIMESTAMP)
+          AND (effective_end_at IS NULL OR effective_end_at <![CDATA[>]]> CURRENT_TIMESTAMP)
+        LIMIT 1
+    </select>
+
+    <select id="selectApprovedVerifications" resultType="com.tuowei.dazhongdianping.module.merchant.verification.model.MerchantVerificationRow">
+        SELECT <include refid="verificationColumns"/>
+        FROM merchant_verification
+        WHERE region = #{region}
+          AND status = 2
+          AND (effective_start_at IS NULL OR effective_start_at <![CDATA[<=]]> CURRENT_TIMESTAMP)
+          AND (effective_end_at IS NULL OR effective_end_at <![CDATA[>]]> CURRENT_TIMESTAMP)
+          AND merchant_id IN
+        <foreach collection="merchantIds" item="merchantId" open="(" separator="," close=")">
+            #{merchantId}
+        </foreach>
+    </select>
+</mapper>

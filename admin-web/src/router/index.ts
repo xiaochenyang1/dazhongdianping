@@ -103,6 +103,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'audit/verified-merchants',
+          name: 'audit-verified-merchants',
+          component: () => import('@/views/VerifiedMerchantAuditView.vue'),
+          meta: {
+            requiresAuth: true,
+            title: '认证商户',
+            requiredPermission: 'audit:merchant_verification:read',
+          },
+        },
+        {
           path: 'audit/reports',
           name: 'audit-reports',
           component: () => import('@/views/ReportManagementView.vue'),

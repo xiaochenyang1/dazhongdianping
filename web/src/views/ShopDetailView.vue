@@ -178,7 +178,10 @@ watch(
       <img :src="shop.coverUrl" :alt="shop.name" class="detail-hero__image" />
       <div class="detail-hero__body">
         <p class="eyebrow">{{ shop.cityName }} · {{ shop.areaName }} · {{ shop.categoryName }}</p>
-        <h1>{{ shop.name }}</h1>
+        <h1 class="name-with-badge">
+          {{ shop.name }}
+          <span v-if="shop.merchantCertification" class="verified-badge">{{ shop.merchantCertification.label }}</span>
+        </h1>
         <p class="detail-hero__summary">{{ shop.summary }}</p>
         <div class="detail-hero__stats">
           <div>

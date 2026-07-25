@@ -69,6 +69,13 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              if (shop.merchantCertificationLabel != null) ...[
+                const SizedBox(height: 8),
+                Chip(
+                  avatar: const Icon(Icons.verified, size: 16),
+                  label: Text(shop.merchantCertificationLabel!),
+                ),
+              ],
               const SizedBox(height: 8),
               Text(
                 '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${shop.currency} ${shop.pricePerCapita}',

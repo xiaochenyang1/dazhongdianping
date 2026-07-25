@@ -83,6 +83,7 @@ const auditRouteByBizType: Record<number, string> = {
   6: '/audit/review-appeals',
   7: '/audit/expert-certifications',
   8: '/audit/user-appeals',
+  9: '/audit/verified-merchants',
 }
 
 const quickLinks = computed(() => {

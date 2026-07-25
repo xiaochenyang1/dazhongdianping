@@ -82,6 +82,8 @@
         LEFT JOIN app_user au ON au.id = uc.user_id AND t.biz_type = 7
         LEFT JOIN user_ban_appeal ba ON ba.id = t.biz_id AND t.biz_type = 8
         LEFT JOIN app_user bau ON bau.id = ba.user_id AND t.biz_type = 8
+        LEFT JOIN merchant_verification mv ON mv.id = t.biz_id AND t.biz_type = 9
+        LEFT JOIN merchant mvm ON mvm.id = mv.merchant_id AND t.biz_type = 9
         LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
         LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
         LEFT JOIN merchant m ON m.id = d.merchant_id
@@ -119,10 +121,12 @@
                 OR COALESCE(m.company_name, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(sm.company_name, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(ram.company_name, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(mvm.company_name, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(s.name, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(sc.name, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(d.title, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(sc.summary, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(mv.reason, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(p.content, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(r.content, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(au.nickname, '') LIKE CONCAT('%', #{keyword}, '%')
@@ -148,10 +152,10 @@
                t.status,
                t.auditor_id,
                t.remark,
-               CASE WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
-               CASE WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
-               CASE WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
-               CASE WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
+               CASE WHEN t.biz_type = 9 THEN NULL WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
+               CASE WHEN t.biz_type = 9 THEN '' WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
+               CASE WHEN t.biz_type = 9 THEN mvm.company_name WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
+               CASE WHEN t.biz_type = 9 THEN mv.reason WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
                t.created_at,
                t.updated_at
         FROM audit_task t
@@ -170,10 +174,10 @@
                t.status,
                t.auditor_id,
                t.remark,
-               CASE WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
-               CASE WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
-               CASE WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
-               CASE WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
+               CASE WHEN t.biz_type = 9 THEN NULL WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
+               CASE WHEN t.biz_type = 9 THEN '' WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
+               CASE WHEN t.biz_type = 9 THEN mvm.company_name WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
+               CASE WHEN t.biz_type = 9 THEN mv.reason WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
                t.created_at,
                t.updated_at
         FROM audit_task t
@@ -186,6 +190,8 @@
         LEFT JOIN app_user au ON au.id = uc.user_id AND t.biz_type = 7
         LEFT JOIN user_ban_appeal ba ON ba.id = t.biz_id AND t.biz_type = 8
         LEFT JOIN app_user bau ON bau.id = ba.user_id AND t.biz_type = 8
+        LEFT JOIN merchant_verification mv ON mv.id = t.biz_id AND t.biz_type = 9
+        LEFT JOIN merchant mvm ON mvm.id = mv.merchant_id AND t.biz_type = 9
         LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
         LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
         LEFT JOIN merchant m ON m.id = d.merchant_id
@@ -203,10 +209,10 @@
                t.status,
                t.auditor_id,
                t.remark,
-               CASE WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
-               CASE WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
-               CASE WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
-               CASE WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
+               CASE WHEN t.biz_type = 9 THEN NULL WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
+               CASE WHEN t.biz_type = 9 THEN '' WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
+               CASE WHEN t.biz_type = 9 THEN mvm.company_name WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
+               CASE WHEN t.biz_type = 9 THEN mv.reason WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
                t.created_at,
                t.updated_at
         FROM audit_task t
@@ -219,6 +225,8 @@
         LEFT JOIN app_user au ON au.id = uc.user_id AND t.biz_type = 7
         LEFT JOIN user_ban_appeal ba ON ba.id = t.biz_id AND t.biz_type = 8
         LEFT JOIN app_user bau ON bau.id = ba.user_id AND t.biz_type = 8
+        LEFT JOIN merchant_verification mv ON mv.id = t.biz_id AND t.biz_type = 9
+        LEFT JOIN merchant mvm ON mvm.id = mv.merchant_id AND t.biz_type = 9
         LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
         LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
         LEFT JOIN merchant m ON m.id = d.merchant_id

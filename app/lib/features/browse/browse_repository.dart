@@ -39,6 +39,7 @@ class ShopDetail {
     required this.businessHours,
     required this.summary,
     required this.tags,
+    this.merchantCertificationLabel,
   });
 
   final int id;
@@ -52,22 +53,34 @@ class ShopDetail {
   final String businessHours;
   final String summary;
   final List<String> tags;
+  final String? merchantCertificationLabel;
 
-  factory ShopDetail.fromJson(Map<String, dynamic> json) => ShopDetail(
-    id: json['id'] as int,
-    name: json['name'] as String? ?? '',
-    category: json['categoryName'] as String? ?? '',
-    score: (json['score'] as num? ?? 0).toDouble(),
-    currency: json['currency'] as String? ?? 'EUR',
-    pricePerCapita: json['pricePerCapita'] as num? ?? 0,
-    address: json['address'] as String? ?? '',
-    phone: json['phone'] as String? ?? '',
-    businessHours: json['businessHours'] as String? ?? '',
-    summary: json['summary'] as String? ?? '',
-    tags: (json['tags'] as List<dynamic>? ?? const [])
-        .map((item) => '$item')
-        .toList(),
-  );
+  factory ShopDetail.fromJson(Map<String, dynamic> json) {
+    final certification = json['merchantCertification'];
+    String? label;
+    if (certification is Map<String, dynamic>) {
+      final value = certification['label'];
+      if (value is String && value.trim().isNotEmpty) {
+        label = value.trim();
+      }
+    }
+    return ShopDetail(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      category: json['categoryName'] as String? ?? '',
+      score: (json['score'] as num? ?? 0).toDouble(),
+      currency: json['currency'] as String? ?? 'EUR',
+      pricePerCapita: json['pricePerCapita'] as num? ?? 0,
+      address: json['address'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      businessHours: json['businessHours'] as String? ?? '',
+      summary: json['summary'] as String? ?? '',
+      tags: (json['tags'] as List<dynamic>? ?? const [])
+          .map((item) => '$item')
+          .toList(),
+      merchantCertificationLabel: label,
+    );
+  }
 }
 
 abstract class BrowseRepository {
