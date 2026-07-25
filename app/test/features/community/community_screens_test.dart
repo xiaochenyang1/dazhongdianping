@@ -447,4 +447,25 @@ void main() {
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
     expect(find.textContaining('周六上午'), findsOneWidget);
   });
+
+  testWidgets('post editor can delete an owned post', (tester) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostEditorScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('post-delete-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('post-delete-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(api.deletedPaths, contains('/api/c/v1/posts/7'));
+    expect(find.text('编辑帖子'), findsNothing);
+  });
 }

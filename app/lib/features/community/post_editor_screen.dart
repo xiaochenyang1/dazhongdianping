@@ -58,6 +58,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   final List<String> _images = [];
   bool _busy = false;
   bool _loading = false;
+  bool _deleting = false;
   String _auditStatus = '';
   String _auditRemark = '';
 
@@ -140,9 +141,59 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
     }
   }
 
+  Future<void> _delete() async {
+    final postId = widget.postId;
+    if (postId == null || _deleting || _busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('删除帖子'),
+        content: const Text('删除后不可恢复，确认删除这条帖子吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            key: const Key('post-delete-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('确认删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _deleting = true);
+    try {
+      await widget.repository.deletePost(postId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('帖子已删除')));
+      if (Navigator.of(context).canPop()) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('删除失败：$error')));
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.postId == null ? '发布帖子' : '编辑帖子')),
+    appBar: AppBar(
+      title: Text(widget.postId == null ? '发布帖子' : '编辑帖子'),
+      actions: [
+        if (widget.postId != null)
+          TextButton(
+            key: const Key('post-delete-button'),
+            onPressed: _deleting || _busy || _loading ? null : _delete,
+            child: Text(_deleting ? '删除中...' : '删除'),
+          ),
+      ],
+    ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
         : Form(
