@@ -60,6 +60,40 @@ class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         'total': 1,
       };
     }
+    if (path == '/api/c/v1/user/growth/records') {
+      return {
+        'list': [
+          {
+            'id': 1,
+            'type': 1,
+            'typeText': '成长值',
+            'action': 'review_create',
+            'actionText': '发布点评',
+            'bizId': 12,
+            'changeAmount': 10,
+            'balanceAfter': 230,
+            'remark': '发点评奖励',
+            'createdAt': '2026-07-25 18:00:00',
+          },
+          {
+            'id': 2,
+            'type': 2,
+            'typeText': '积分',
+            'action': 'review_create',
+            'actionText': '发布点评',
+            'bizId': 12,
+            'changeAmount': 5,
+            'balanceAfter': 95,
+            'remark': '发点评奖励',
+            'createdAt': '2026-07-25 18:00:00',
+          },
+        ],
+        'total': 2,
+        'page': 1,
+        'pageSize': 20,
+        'hasMore': false,
+      };
+    }
     return {
       'list': [
         {'id': 1, 'title': 'Example'},
@@ -242,5 +276,16 @@ void main() {
     expect(api.path, '/api/c/v1/follow/9');
     final unfollowed = await repository.unfollow(9);
     expect(unfollowed.following, isFalse);
+  });
+
+  test('user repository loads growth records', () async {
+    final api = UserFakeApi();
+    final repository = UserRepository(api);
+
+    final page = await repository.loadGrowthRecords(page: 1, pageSize: 20);
+    expect(page.total, 2);
+    expect(page.items.first.actionText, '发布点评');
+    expect(page.items.first.changeAmount, 10);
+    expect(page.items.last.typeText, '积分');
   });
 }

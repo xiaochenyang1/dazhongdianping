@@ -73,6 +73,64 @@ class UserCollectionPage {
   final int total;
 }
 
+class UserGrowthRecord {
+  const UserGrowthRecord({
+    required this.id,
+    required this.type,
+    required this.typeText,
+    required this.action,
+    required this.actionText,
+    required this.changeAmount,
+    required this.balanceAfter,
+    required this.remark,
+    required this.createdAt,
+    this.bizId,
+  });
+
+  final int id;
+  final int type;
+  final String typeText;
+  final String action;
+  final String actionText;
+  final int changeAmount;
+  final int balanceAfter;
+  final String remark;
+  final String createdAt;
+  final int? bizId;
+
+  factory UserGrowthRecord.fromJson(Map<String, dynamic> json) {
+    final bizId = json['bizId'];
+    return UserGrowthRecord(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      type: (json['type'] as num?)?.toInt() ?? 0,
+      typeText: json['typeText'] as String? ?? '',
+      action: json['action'] as String? ?? '',
+      actionText: json['actionText'] as String? ?? '',
+      changeAmount: (json['changeAmount'] as num?)?.toInt() ?? 0,
+      balanceAfter: (json['balanceAfter'] as num?)?.toInt() ?? 0,
+      remark: json['remark'] as String? ?? '',
+      createdAt: json['createdAt'] as String? ?? '',
+      bizId: bizId is num ? bizId.toInt() : null,
+    );
+  }
+}
+
+class UserGrowthRecordPage {
+  const UserGrowthRecordPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+    required this.hasMore,
+  });
+
+  final List<UserGrowthRecord> items;
+  final int total;
+  final int page;
+  final int pageSize;
+  final bool hasMore;
+}
+
 class PublicUserProfile {
   const PublicUserProfile({
     required this.id,
@@ -269,6 +327,27 @@ class UserRepository {
     return UserCollectionPage(
       items: list,
       total: result['total'] as int? ?? list.length,
+    );
+  }
+
+  Future<UserGrowthRecordPage> loadGrowthRecords({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final result = await api.getJson(
+      '/api/c/v1/user/growth/records',
+      query: {'page': page, 'pageSize': pageSize},
+    );
+    final list = (result['list'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(UserGrowthRecord.fromJson)
+        .toList();
+    return UserGrowthRecordPage(
+      items: list,
+      total: (result['total'] as num?)?.toInt() ?? list.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+      hasMore: result['hasMore'] as bool? ?? false,
     );
   }
 
