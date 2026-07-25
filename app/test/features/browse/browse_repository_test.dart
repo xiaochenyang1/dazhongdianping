@@ -284,4 +284,26 @@ void main() {
     expect(reviews.single.authorCertificationLabel, '本地达人');
     expect(reviews.single.merchantReply, '渝里火锅：谢谢光临，欢迎再来。');
   });
+
+  test('loads shop review page with sort and filters', () async {
+    final api = FakeJsonApi();
+    final repository = ApiBrowseRepository(api);
+
+    final page = await repository.loadShopReviewPage(
+      10001,
+      page: 2,
+      pageSize: 20,
+      sort: 'popular',
+      minScore: 4,
+      hasImages: true,
+    );
+    expect(api.path, '/api/c/v1/shops/10001/reviews');
+    expect(api.query?['page'], 2);
+    expect(api.query?['pageSize'], 20);
+    expect(api.query?['sort'], 'popular');
+    expect(api.query?['minScore'], 4);
+    expect(api.query?['hasImages'], true);
+    expect(page.total, 1);
+    expect(page.items.single.userName, '阿遥');
+  });
 }

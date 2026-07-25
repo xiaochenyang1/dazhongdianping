@@ -2,6 +2,7 @@ import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_screen.dart';
+import 'package:dazhongdianping_app/features/browse/shop_reviews_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -258,9 +259,33 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               ),
               if (_reviews != null) ...[
                 const SizedBox(height: 28),
-                const Text(
-                  '门店点评',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '门店点评',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      key: const Key('shop-reviews-view-all'),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ShopReviewsScreen(
+                            repository: widget.repository,
+                            shopId: widget.shopId,
+                            shopName: shop.name,
+                            reviewRepository: widget.reviewRepository,
+                            canInteractReviews: widget.canInteractReviews,
+                          ),
+                        ),
+                      ),
+                      child: const Text('查看全部'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 FutureBuilder<List<ShopReviewPreview>>(

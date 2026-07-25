@@ -10,8 +10,37 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     String path, {
     Map<String, Object?>? query,
   }) async {
-    if (path.endsWith('/followers') || path.endsWith('/following')) {
+    if (path.endsWith('/followers')) {
+      return {
+        'list': [
+          {
+            'id': 21,
+            'nickname': '巴黎小陈',
+            'avatar': '',
+            'signature': '周末探店',
+            'level': 3,
+            'followerCount': 4,
+            'followedAt': '2026-07-20 10:00:00',
+          },
+        ],
+        'total': 1,
+      };
+    }
+    if (path.endsWith('/following')) {
       return {'list': const [], 'total': 0};
+    }
+    if (path == '/api/c/v1/user/21') {
+      return {
+        'id': 21,
+        'nickname': '巴黎小陈',
+        'avatar': '',
+        'signature': '周末探店',
+        'level': 3,
+        'reviewCount': 2,
+        'followerCount': 4,
+        'followingCount': 1,
+        'followedByCurrentUser': false,
+      };
     }
     return {
       'id': 9,
@@ -71,4 +100,28 @@ void main() {
       expect(find.text('已关注'), findsOneWidget);
     },
   );
+
+  testWidgets('relationship list opens nested public profile', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PublicUserProfileScreen(
+          repository: UserRepository(SocialProfileApi()),
+          userId: 9,
+          canFollow: true,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('粉丝 12'));
+    await tester.pumpAndSettle();
+    expect(find.text('粉丝'), findsWidgets);
+    expect(find.text('巴黎小陈'), findsOneWidget);
+
+    await tester.tap(find.text('巴黎小陈'));
+    await tester.pumpAndSettle();
+    expect(find.text('周末探店'), findsOneWidget);
+    expect(find.text('粉丝 4'), findsOneWidget);
+  });
 }

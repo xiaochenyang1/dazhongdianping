@@ -1,0 +1,277 @@
+import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
+import 'package:dazhongdianping_app/features/review/review_repository.dart';
+import 'package:flutter/material.dart';
+
+class ShopReviewsScreen extends StatefulWidget {
+  const ShopReviewsScreen({
+    super.key,
+    required this.repository,
+    required this.shopId,
+    this.shopName = '',
+    this.reviewRepository,
+    this.canInteractReviews = false,
+  });
+
+  final BrowseRepository repository;
+  final int shopId;
+  final String shopName;
+  final ReviewRepository? reviewRepository;
+  final bool canInteractReviews;
+
+  @override
+  State<ShopReviewsScreen> createState() => _ShopReviewsScreenState();
+}
+
+class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
+  static const _pageSize = 20;
+  String _sort = 'latest';
+  double? _minScore;
+  bool? _hasImages;
+  late Future<ShopReviewPage> _page;
+  final List<ShopReviewPreview> _items = <ShopReviewPreview>[];
+  int _currentPage = 1;
+  bool _hasMore = false;
+  bool _loadingMore = false;
+  String? _loadMoreError;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() {
+    final future = widget.repository.loadShopReviewPage(
+      widget.shopId,
+      page: 1,
+      pageSize: _pageSize,
+      sort: _sort,
+      minScore: _minScore,
+      hasImages: _hasImages,
+    );
+    setState(() {
+      _page = future;
+      _items.clear();
+      _currentPage = 1;
+      _hasMore = false;
+      _loadMoreError = null;
+    });
+    future
+        .then((result) {
+          if (!mounted) return;
+          setState(() {
+            _items
+              ..clear()
+              ..addAll(result.items);
+            _currentPage = result.page;
+            _hasMore = result.hasMore;
+          });
+        })
+        .catchError((_) {});
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() {
+      _loadingMore = true;
+      _loadMoreError = null;
+    });
+    try {
+      final result = await widget.repository.loadShopReviewPage(
+        widget.shopId,
+        page: _currentPage + 1,
+        pageSize: _pageSize,
+        sort: _sort,
+        minScore: _minScore,
+        hasImages: _hasImages,
+      );
+      if (!mounted) return;
+      setState(() {
+        _items.addAll(result.items);
+        _currentPage = result.page;
+        _hasMore = result.hasMore;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _loadMoreError = '$error');
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  void _openReview(ShopReviewPreview item) {
+    final reviewRepository = widget.reviewRepository;
+    if (reviewRepository == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReviewDetailScreen(
+          repository: reviewRepository,
+          reviewId: item.id,
+          canInteract: widget.canInteractReviews,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.shopName.isEmpty ? '门店点评' : '${widget.shopName} · 点评';
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      key: const Key('shop-reviews-sort-latest'),
+                      label: const Text('最新'),
+                      selected: _sort == 'latest',
+                      onSelected: (_) {
+                        if (_sort == 'latest') return;
+                        setState(() => _sort = 'latest');
+                        _reload();
+                      },
+                    ),
+                    ChoiceChip(
+                      key: const Key('shop-reviews-sort-popular'),
+                      label: const Text('最热'),
+                      selected: _sort == 'popular',
+                      onSelected: (_) {
+                        if (_sort == 'popular') return;
+                        setState(() => _sort = 'popular');
+                        _reload();
+                      },
+                    ),
+                    ChoiceChip(
+                      key: const Key('shop-reviews-sort-score'),
+                      label: const Text('好评优先'),
+                      selected: _sort == 'score',
+                      onSelected: (_) {
+                        if (_sort == 'score') return;
+                        setState(() => _sort = 'score');
+                        _reload();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    FilterChip(
+                      key: const Key('shop-reviews-filter-score4'),
+                      label: const Text('4 分以上'),
+                      selected: _minScore == 4,
+                      onSelected: (selected) {
+                        setState(() => _minScore = selected ? 4 : null);
+                        _reload();
+                      },
+                    ),
+                    FilterChip(
+                      key: const Key('shop-reviews-filter-images'),
+                      label: const Text('只看带图'),
+                      selected: _hasImages == true,
+                      onSelected: (selected) {
+                        setState(() => _hasImages = selected ? true : null);
+                        _reload();
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<ShopReviewPage>(
+              future: _page,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done &&
+                    _items.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError && _items.isEmpty) {
+                  return Center(child: Text('门店点评加载失败：${snapshot.error}'));
+                }
+                if (_items.isEmpty) {
+                  return const Center(child: Text('暂无公开点评'));
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  itemCount: _items.length + 1,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    if (index == _items.length) {
+                      if (_loadMoreError != null) {
+                        return Text('加载更多失败：$_loadMoreError');
+                      }
+                      if (!_hasMore) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(child: Text('已经到底了')),
+                        );
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Center(
+                          child: FilledButton.tonal(
+                            key: const Key('shop-reviews-load-more'),
+                            onPressed: _loadingMore ? null : _loadMore,
+                            child: Text(_loadingMore ? '加载中...' : '加载更多'),
+                          ),
+                        ),
+                      );
+                    }
+                    final item = _items[index];
+                    return Card(
+                      child: ListTile(
+                        title: Text(
+                          item.authorCertificationLabel == null
+                              ? '${item.userName} · ★ ${item.score.toStringAsFixed(1)}'
+                              : '${item.userName} · ${item.authorCertificationLabel} · ★ ${item.score.toStringAsFixed(1)}',
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 6),
+                            Text(item.content),
+                            if (item.merchantReply != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                '商家回复：${item.merchantReply}',
+                                style: const TextStyle(color: Color(0xFF4B5563)),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Text(
+                              '点赞 ${item.likedCount} · 评论 ${item.commentCount}'
+                              '${item.createdAt.isEmpty ? '' : ' · ${item.createdAt}'}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        isThreeLine: true,
+                        trailing: widget.reviewRepository == null
+                            ? null
+                            : const Icon(Icons.chevron_right),
+                        onTap: widget.reviewRepository == null
+                            ? null
+                            : () => _openReview(item),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

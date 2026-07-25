@@ -71,6 +71,9 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
         repository: widget.repository,
         userId: widget.userId,
         followers: followers,
+        canFollow: widget.canFollow,
+        currentUserId: widget.currentUserId,
+        onMessage: widget.onMessage,
       ),
     ),
   );
@@ -205,10 +208,16 @@ class UserRelationshipsScreen extends StatelessWidget {
     required this.repository,
     required this.userId,
     required this.followers,
+    this.canFollow = false,
+    this.currentUserId,
+    this.onMessage,
   });
   final UserRepository repository;
   final int userId;
   final bool followers;
+  final bool canFollow;
+  final int? currentUserId;
+  final ValueChanged<int>? onMessage;
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(followers ? '粉丝' : '关注')),
@@ -220,12 +229,16 @@ class UserRelationshipsScreen extends StatelessWidget {
               ? Center(child: Text('关系列表加载失败：${snapshot.error}'))
               : const Center(child: CircularProgressIndicator());
         }
+        final items = snapshot.data!.items;
+        if (items.isEmpty) {
+          return Center(child: Text(followers ? '暂无粉丝' : '暂无关注'));
+        }
         return ListView.separated(
           padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.items.length,
+          itemCount: items.length,
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
-            final user = snapshot.data!.items[index];
+            final user = items[index];
             return Card(
               child: ListTile(
                 title: Text(user.nickname),
@@ -235,6 +248,17 @@ class UserRelationshipsScreen extends StatelessWidget {
                       : user.signature,
                 ),
                 trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => PublicUserProfileScreen(
+                      repository: repository,
+                      userId: user.id,
+                      canFollow: canFollow,
+                      currentUserId: currentUserId,
+                      onMessage: onMessage,
+                    ),
+                  ),
+                ),
               ),
             );
           },

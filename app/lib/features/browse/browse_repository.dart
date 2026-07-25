@@ -129,6 +129,42 @@ class ShopReviewPreview {
   }
 }
 
+class ShopReviewPage {
+  const ShopReviewPage({
+    required this.items,
+    required this.page,
+    required this.pageSize,
+    required this.total,
+    required this.hasMore,
+  });
+
+  final List<ShopReviewPreview> items;
+  final int page;
+  final int pageSize;
+  final int total;
+  final bool hasMore;
+
+  factory ShopReviewPage.fromJson(Map<String, dynamic> json) {
+    final list = json['list'] as List<dynamic>? ?? const [];
+    final items = list
+        .whereType<Map<String, dynamic>>()
+        .map(ShopReviewPreview.fromJson)
+        .where((item) => item.id > 0)
+        .toList();
+    final page = (json['page'] as num?)?.toInt() ?? 1;
+    final pageSize = (json['pageSize'] as num?)?.toInt() ?? items.length;
+    final total = (json['total'] as num?)?.toInt() ?? items.length;
+    final hasMore = json['hasMore'] as bool? ?? (page * pageSize < total);
+    return ShopReviewPage(
+      items: items,
+      page: page,
+      pageSize: pageSize,
+      total: total,
+      hasMore: hasMore,
+    );
+  }
+}
+
 class SearchHistoryItem {
   const SearchHistoryItem({
     required this.id,
@@ -298,6 +334,16 @@ abstract class BrowseRepository {
     int page = 1,
     int pageSize = 5,
     String sort = 'latest',
+    double? minScore,
+    bool? hasImages,
+  }) => throw UnimplementedError();
+  Future<ShopReviewPage> loadShopReviewPage(
+    int shopId, {
+    int page = 1,
+    int pageSize = 20,
+    String sort = 'latest',
+    double? minScore,
+    bool? hasImages,
   }) => throw UnimplementedError();
 }
 
@@ -523,6 +569,28 @@ class ApiBrowseRepository implements BrowseRepository {
     int page = 1,
     int pageSize = 5,
     String sort = 'latest',
+    double? minScore,
+    bool? hasImages,
+  }) async {
+    final pageResult = await loadShopReviewPage(
+      shopId,
+      page: page,
+      pageSize: pageSize,
+      sort: sort,
+      minScore: minScore,
+      hasImages: hasImages,
+    );
+    return pageResult.items;
+  }
+
+  @override
+  Future<ShopReviewPage> loadShopReviewPage(
+    int shopId, {
+    int page = 1,
+    int pageSize = 20,
+    String sort = 'latest',
+    double? minScore,
+    bool? hasImages,
   }) async {
     final result = await client.getJson(
       '/api/c/v1/shops/$shopId/reviews',
@@ -530,13 +598,10 @@ class ApiBrowseRepository implements BrowseRepository {
         'page': page,
         'pageSize': pageSize,
         'sort': sort,
+        if (minScore != null) 'minScore': minScore,
+        if (hasImages != null) 'hasImages': hasImages,
       },
     );
-    final list = result['list'] as List<dynamic>? ?? const [];
-    return list
-        .whereType<Map<String, dynamic>>()
-        .map(ShopReviewPreview.fromJson)
-        .where((item) => item.id > 0)
-        .toList();
+    return ShopReviewPage.fromJson(result);
   }
 }

@@ -85,9 +85,30 @@ class DetailFakeRepository extends BrowseRepository {
     int page = 1,
     int pageSize = 5,
     String sort = 'latest',
+    double? minScore,
+    bool? hasImages,
   }) async {
     reviewRequests.add(shopId);
     return reviews;
+  }
+
+  @override
+  Future<ShopReviewPage> loadShopReviewPage(
+    int shopId, {
+    int page = 1,
+    int pageSize = 20,
+    String sort = 'latest',
+    double? minScore,
+    bool? hasImages,
+  }) async {
+    reviewRequests.add(shopId);
+    return ShopReviewPage(
+      items: reviews,
+      page: page,
+      pageSize: pageSize,
+      total: reviews.length,
+      hasMore: false,
+    );
   }
 }
 
@@ -244,5 +265,26 @@ void main() {
 
     expect(find.text('点评详情'), findsOneWidget);
     expect(api.paths, contains('/api/c/v1/reviews/501'));
+  });
+
+  testWidgets('shop detail opens full shop reviews list', (tester) async {
+    final repository = DetailFakeRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(
+          repository: repository,
+          shopId: 7,
+          reviewRepository: ReviewRepository(DetailReviewApi()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('shop-reviews-view-all')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('shop-reviews-view-all')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Berlin Tea · 点评'), findsOneWidget);
+    expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
   });
 }
