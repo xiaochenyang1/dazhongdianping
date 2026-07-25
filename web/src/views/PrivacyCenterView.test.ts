@@ -133,7 +133,10 @@ describe('PrivacyCenterView', () => {
     expect(host.textContent).toContain('收藏数据')
     expect(host.textContent).toContain('帖子数据')
     expect(host.textContent).toContain('关注关系')
-    expect(host.textContent).not.toContain('私信数据')
+    expect(host.textContent).toContain('浏览足迹')
+    expect(host.textContent).toContain('私信数据')
+    expect(host.textContent).toContain('圈子关系')
+    expect(host.textContent).toContain('话题关系')
     expect(host.textContent).toContain('协议留痕')
     expect(host.textContent).toContain('Chrome/126')
     expect(host.textContent).toContain('设备管理')
@@ -143,7 +146,19 @@ describe('PrivacyCenterView', () => {
     await flushView()
 
     expect(privacyMocks.createPrivacyExportTask).toHaveBeenCalledWith({
-      modules: ['account', 'reviews', 'orders', 'posts', 'reservations', 'favorites', 'browse_history', 'follows'],
+      modules: [
+        'account',
+        'reviews',
+        'orders',
+        'posts',
+        'reservations',
+        'favorites',
+        'browse_history',
+        'follows',
+        'messages',
+        'circles',
+        'topics',
+      ],
       format: 'zip',
     })
     expect(privacyMocks.fetchPrivacyOverview).toHaveBeenCalledTimes(2)

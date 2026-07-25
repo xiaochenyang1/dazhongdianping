@@ -51,6 +51,9 @@ const exportModules = reactive<Record<PrivacyExportModule, boolean>>({
   favorites: true,
   browse_history: true,
   follows: true,
+  messages: true,
+  circles: true,
+  topics: true,
 })
 
 const deleteForm = reactive({
@@ -382,7 +385,27 @@ void bootstrap()
                 <small>我关注的人、关注我的人和关系建立时间。</small>
               </span>
             </label>
-            <p class="support-copy">私信业务尚未落地，因此暂不开放对应导出项，不拿空数组装完成。</p>
+            <label class="privacy-module-card">
+              <input v-model="exportModules.messages" type="checkbox" />
+              <span>
+                <strong>私信数据</strong>
+                <small>会话成员、文本消息、已读时间、举报和拉黑关系。</small>
+              </span>
+            </label>
+            <label class="privacy-module-card">
+              <input v-model="exportModules.circles" type="checkbox" />
+              <span>
+                <strong>圈子关系</strong>
+                <small>已加入的官方圈子、成员身份和加入时间。</small>
+              </span>
+            </label>
+            <label class="privacy-module-card">
+              <input v-model="exportModules.topics" type="checkbox" />
+              <span>
+                <strong>话题关系</strong>
+                <small>已关注的话题、关注时间和当前公开状态。</small>
+              </span>
+            </label>
             <button type="submit" class="primary-button" :disabled="exportCreating">
               {{ exportCreating ? '创建中...' : '创建导出任务' }}
             </button>

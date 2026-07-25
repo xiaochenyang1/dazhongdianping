@@ -7,7 +7,11 @@ export type PrivacyExportModule =
   | 'posts'
   | 'reservations'
   | 'favorites'
+  | 'browse_history'
   | 'follows'
+  | 'messages'
+  | 'circles'
+  | 'topics'
 
 export interface PrivacyExportRule {
   dailyLimit: number
