@@ -93,6 +93,57 @@ describe('ReviewDetailView', () => {
     app.unmount()
   })
 
+  it('shares a public review with the native share contract', async () => {
+    reviewMocks.fetchReviewDetail.mockResolvedValue({
+      id: 301,
+      shopId: 20001,
+      shopName: 'London Dumplings',
+      userId: 9,
+      userName: 'Aya',
+      content: 'Soup was clean and hot.',
+      scoreOverall: 4.5,
+      scoreTaste: 4.6,
+      scoreEnv: 4.3,
+      scoreService: 4.4,
+      cost: 42,
+      currency: 'GBP',
+      likeCount: 2,
+      commentCount: 0,
+      likedByCurrentUser: false,
+      auditStatus: 1,
+      auditStatusText: 'Approved',
+      auditRemark: '',
+      status: 1,
+      statusText: 'Public',
+      tags: [],
+      images: [],
+      createdAt: '2026-07-10 12:00',
+      updatedAt: '2026-07-10 12:00',
+    })
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { configurable: true, value: share })
+
+    const host = document.createElement('div')
+    const app = createApp(ReviewDetailView, { reviewId: 301 })
+    app.component('RouterLink', RouterLinkStub)
+    app.mount(host)
+    await flushView()
+    host.querySelector<HTMLButtonElement>('[data-testid="share-review"]')?.click()
+    await flushView()
+
+    expect(share).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'London Dumplings点评 - Aya',
+        url: expect.any(String),
+      }),
+    )
+    expect(host.querySelector('[data-testid="share-review-message"]')?.textContent).toContain(
+      '分享链接已准备好',
+    )
+    app.unmount()
+    Reflect.deleteProperty(navigator, 'share')
+  })
+
   it('shows owned audit result banner from notification query', async () => {
     routeState.fullPath = '/user/reviews/55?audit=approved'
     routeState.query = { audit: 'approved' }

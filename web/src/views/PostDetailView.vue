@@ -11,6 +11,7 @@ const route = useRoute()
 const post = ref<CommunityPost | null>(null)
 const comments = ref<CommunityComment[]>([])
 const errorMessage = ref('')
+const shareMessage = ref('')
 let requestSequence = 0
 
 const auditBanner = computed(() => {
@@ -19,6 +20,37 @@ const auditBanner = computed(() => {
   if (marker === 'rejected') return '平台未通过你的帖子，可到 APP「我的帖子」查看驳回原因并修改重提。'
   return ''
 })
+
+async function sharePost() {
+  if (!post.value) return
+  shareMessage.value = ''
+  const payload = {
+    title: post.value.title,
+    text: `${post.value.title} · ${post.value.userName}`,
+    url: window.location.href,
+  }
+  try {
+    if (typeof navigator.share === 'function') {
+      await navigator.share(payload)
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(payload.url)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = payload.url
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      textarea.remove()
+    }
+    shareMessage.value = '分享链接已准备好'
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    shareMessage.value = error instanceof Error ? error.message : '分享失败，请稍后重试'
+  }
+}
 
 function normalizeCommunityComments(list: CommunityComment[]): CommunityComment[] {
   return list.map((comment) => ({
@@ -118,9 +150,20 @@ watch(
           <span v-for="topic in post.topics" :key="topic">#{{ topic }}</span>
         </div>
       </div>
+      <div class="hero-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          data-testid="share-post"
+          @click="sharePost"
+        >
+          分享
+        </button>
+      </div>
     </div>
 
     <p v-if="auditBanner" class="feedback is-success" data-testid="post-audit-banner">{{ auditBanner }}</p>
+    <p v-if="shareMessage" class="feedback" role="status" data-testid="share-post-message">{{ shareMessage }}</p>
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
 
     <article class="content-card">

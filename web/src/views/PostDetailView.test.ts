@@ -67,4 +67,26 @@ describe('PostDetailView', () => {
     )
     app.unmount()
   })
+
+  it('uses the native share contract when the browser provides it', async () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { configurable: true, value: share })
+
+    const { app, host } = mount()
+    await flush()
+    host.querySelector<HTMLButtonElement>('[data-testid="share-post"]')?.click()
+    await flush()
+
+    expect(share).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: '伦敦周末早午餐避坑指南',
+        url: expect.any(String),
+      }),
+    )
+    expect(host.querySelector('[data-testid="share-post-message"]')?.textContent).toContain(
+      '分享链接已准备好',
+    )
+    app.unmount()
+    Reflect.deleteProperty(navigator, 'share')
+  })
 })

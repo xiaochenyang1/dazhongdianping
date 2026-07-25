@@ -52,6 +52,7 @@ const commentContent = ref('')
 const activeReplyTarget = ref<ReviewComment | null>(null)
 const reportReason = ref('')
 const reportPanelOpen = ref(false)
+const shareMessage = ref('')
 let reviewRequestId = 0
 let commentsRequestId = 0
 
@@ -60,6 +61,37 @@ function normalizeReviewComments(list: ReviewComment[]): ReviewComment[] {
     ...comment,
     replies: Array.isArray(comment.replies) ? normalizeReviewComments(comment.replies) : [],
   }))
+}
+
+async function shareReview() {
+  if (!review.value) return
+  shareMessage.value = ''
+  const payload = {
+    title: `${review.value.shopName}点评 - ${review.value.userName}`,
+    text: `${review.value.shopName} · ${review.value.userName} · ★ ${review.value.scoreOverall}`,
+    url: window.location.href,
+  }
+  try {
+    if (typeof navigator.share === 'function') {
+      await navigator.share(payload)
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(payload.url)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = payload.url
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      textarea.remove()
+    }
+    shareMessage.value = '分享链接已准备好'
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    shareMessage.value = error instanceof Error ? error.message : '分享失败，请稍后重试'
+  }
 }
 
 useSeoMeta(() => {
@@ -398,11 +430,28 @@ watch(
 
         <div class="hero-actions">
           <RouterLink :to="`/shops/${review.shopId}`" class="secondary-button">回到门店</RouterLink>
+          <button
+            v-if="!owned"
+            type="button"
+            class="secondary-button"
+            data-testid="share-review"
+            @click="shareReview"
+          >
+            分享
+          </button>
           <RouterLink v-if="owned" :to="`/reviews/${review.id}/edit`" class="primary-link">继续编辑</RouterLink>
           <RouterLink v-if="owned && review.auditStatus === 1" :to="`/reviews/${review.id}`" class="ghost-button">
             看公开页
           </RouterLink>
         </div>
+        <p
+          v-if="shareMessage"
+          class="feedback"
+          role="status"
+          data-testid="share-review-message"
+        >
+          {{ shareMessage }}
+        </p>
       </div>
 
       <div class="hero-aside">
