@@ -4,6 +4,7 @@ import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
+import 'package:dazhongdianping_app/features/user/expert_certification_screen.dart';
 import 'package:dazhongdianping_app/features/user/growth_records_screen.dart';
 import 'package:dazhongdianping_app/features/user/privacy_overview_screen.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
@@ -110,6 +111,18 @@ class UserCenterScreen extends StatelessWidget {
                         );
                       },
                     ),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.verified_outlined),
+                title: const Text('本地达人认证'),
+                subtitle: const Text('提交或重提本地达人申请'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ExpertCertificationScreen(repository: repository),
                   ),
                 ),
               ),

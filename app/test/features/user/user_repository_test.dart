@@ -94,6 +94,20 @@ class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         'hasMore': false,
       };
     }
+    if (path == '/api/c/v1/user/expert-certification') {
+      return {
+        'id': 0,
+        'status': 0,
+        'statusText': '未申请',
+        'reason': '',
+        'rejectReason': '',
+        'badge': null,
+        'submittedAt': '',
+        'reviewedAt': '',
+        'effectiveStartAt': '',
+        'effectiveEndAt': '',
+      };
+    }
     return {
       'list': [
         {'id': 1, 'title': 'Example'},
@@ -106,6 +120,20 @@ class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     this.path = path;
     this.body = body;
+    if (path == '/api/c/v1/user/expert-certification/apply') {
+      return {
+        'id': 8801,
+        'status': 1,
+        'statusText': '待审核',
+        'reason': (body as Map)['reason'] ?? '',
+        'rejectReason': '',
+        'badge': null,
+        'submittedAt': '2026-07-25 19:00:00',
+        'reviewedAt': '',
+        'effectiveStartAt': '',
+        'effectiveEndAt': '',
+      };
+    }
     if (path == '/api/c/v1/auth/send-code') {
       return {
         'sent': true,
@@ -287,5 +315,22 @@ void main() {
     expect(page.items.first.actionText, '发布点评');
     expect(page.items.first.changeAmount, 10);
     expect(page.items.last.typeText, '积分');
+  });
+
+  test('user repository loads and applies expert certification', () async {
+    final api = UserFakeApi();
+    final repository = UserRepository(api);
+
+    final status = await repository.loadExpertCertification();
+    expect(status.status, 0);
+    expect(status.canApply, isTrue);
+
+    final applied = await repository.applyExpertCertification(
+      '长期在巴黎写探店内容。',
+    );
+    expect(api.path, '/api/c/v1/user/expert-certification/apply');
+    expect(applied.status, 1);
+    expect(applied.statusText, '待审核');
+    expect(applied.reason, '长期在巴黎写探店内容。');
   });
 }

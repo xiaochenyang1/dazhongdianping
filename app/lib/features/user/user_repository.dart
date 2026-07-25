@@ -131,6 +131,57 @@ class UserGrowthRecordPage {
   final bool hasMore;
 }
 
+class ExpertCertificationStatus {
+  const ExpertCertificationStatus({
+    required this.id,
+    required this.status,
+    required this.statusText,
+    required this.reason,
+    required this.rejectReason,
+    required this.badgeLabel,
+    required this.submittedAt,
+    required this.reviewedAt,
+    required this.effectiveStartAt,
+    required this.effectiveEndAt,
+  });
+
+  final int id;
+  final int status;
+  final String statusText;
+  final String reason;
+  final String rejectReason;
+  final String badgeLabel;
+  final String submittedAt;
+  final String reviewedAt;
+  final String effectiveStartAt;
+  final String effectiveEndAt;
+
+  bool get canApply => status == 0 || status == 3;
+  bool get isPending => status == 1;
+  bool get isApproved => status == 2;
+
+  factory ExpertCertificationStatus.fromJson(Map<String, dynamic> json) {
+    final badge = json['badge'];
+    String badgeLabel = '';
+    if (badge is Map<String, dynamic>) {
+      final value = badge['label'];
+      if (value is String) badgeLabel = value;
+    }
+    return ExpertCertificationStatus(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      status: (json['status'] as num?)?.toInt() ?? 0,
+      statusText: json['statusText'] as String? ?? '未申请',
+      reason: json['reason'] as String? ?? '',
+      rejectReason: json['rejectReason'] as String? ?? '',
+      badgeLabel: badgeLabel,
+      submittedAt: json['submittedAt'] as String? ?? '',
+      reviewedAt: json['reviewedAt'] as String? ?? json['auditedAt'] as String? ?? '',
+      effectiveStartAt: json['effectiveStartAt'] as String? ?? '',
+      effectiveEndAt: json['effectiveEndAt'] as String? ?? '',
+    );
+  }
+}
+
 class PublicUserProfile {
   const PublicUserProfile({
     required this.id,
@@ -349,6 +400,21 @@ class UserRepository {
       pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
       hasMore: result['hasMore'] as bool? ?? false,
     );
+  }
+
+  Future<ExpertCertificationStatus> loadExpertCertification() async {
+    final result = await api.getJson('/api/c/v1/user/expert-certification');
+    return ExpertCertificationStatus.fromJson(result);
+  }
+
+  Future<ExpertCertificationStatus> applyExpertCertification(
+    String reason,
+  ) async {
+    final result = await api.postJson(
+      '/api/c/v1/user/expert-certification/apply',
+      body: {'reason': reason},
+    );
+    return ExpertCertificationStatus.fromJson(result);
   }
 
   JsonMutationApi get _mutationApi {
