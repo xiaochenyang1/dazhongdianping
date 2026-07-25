@@ -207,6 +207,9 @@ abstract class BrowseRepository {
   Future<void> clearBrowseHistory() => throw UnimplementedError();
   Future<void> removeBrowseHistoryItem(int shopId) =>
       throw UnimplementedError();
+  Future<bool> isShopFavorited(int shopId) => throw UnimplementedError();
+  Future<void> favoriteShop(int shopId) => throw UnimplementedError();
+  Future<void> unfavoriteShop(int shopId) => throw UnimplementedError();
 }
 
 class ApiBrowseRepository implements BrowseRepository {
@@ -334,5 +337,46 @@ class ApiBrowseRepository implements BrowseRepository {
             'JsonDeleteApi is required for removeBrowseHistoryItem',
           );
     await deleteApi.deleteJson('/api/c/v1/user/browse-history/$shopId');
+  }
+
+  @override
+  Future<bool> isShopFavorited(int shopId) async {
+    try {
+      final result = await client.getJson(
+        '/api/c/v1/favorites',
+        query: {'targetType': 1, 'page': 1, 'pageSize': 50},
+      );
+      final list = result['list'] as List<dynamic>? ?? const [];
+      return list.whereType<Map<String, dynamic>>().any((item) {
+        final targetId = item['targetId'];
+        return targetId is num && targetId.toInt() == shopId;
+      });
+    } on ApiException catch (error) {
+      // Guest sessions cannot read favorites.
+      if (error.statusCode == 401) {
+        return false;
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> favoriteShop(int shopId) async {
+    await client.postJson(
+      '/api/c/v1/favorites',
+      body: {'targetType': 1, 'targetId': shopId},
+    );
+  }
+
+  @override
+  Future<void> unfavoriteShop(int shopId) async {
+    final deleteApi = client is JsonDeleteApi
+        ? client as JsonDeleteApi
+        : throw UnsupportedError(
+            'JsonDeleteApi is required for unfavoriteShop',
+          );
+    await deleteApi.deleteJson(
+      '/api/c/v1/favorites?targetType=1&targetId=$shopId',
+    );
   }
 }

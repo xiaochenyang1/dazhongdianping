@@ -53,6 +53,52 @@ class CollectionApi implements JsonApi {
       };
     }
     if (path == '/api/c/v1/reservations/11') return reservation;
+    if (path == '/api/c/v1/favorites') {
+      return {
+        'list': [
+          {
+            'id': 31,
+            'targetType': 1,
+            'targetId': 7,
+            'createdAt': '2026-07-25 18:00:00',
+            'target': {
+              'id': 7,
+              'name': '柏林茶馆',
+              'cityName': 'Berlin',
+              'areaName': 'Mitte',
+              'score': 4.5,
+            },
+          },
+          {
+            'id': 32,
+            'targetType': 2,
+            'targetId': 7,
+            'createdAt': '2026-07-25 18:10:00',
+            'target': {
+              'id': 7,
+              'name': '伦敦周末市场指南',
+            },
+          },
+        ],
+        'total': 2,
+      };
+    }
+    if (path == '/api/c/v1/shops/7') {
+      return {
+        'id': 7,
+        'name': '柏林茶馆',
+        'categoryName': 'Tea',
+        'score': 4.5,
+        'currency': 'EUR',
+        'pricePerCapita': 12,
+        'address': 'Alexanderplatz',
+        'phone': '+493000000',
+        'businessHours': '09:00-21:00',
+        'summary': 'Tea and snacks',
+        'tags': ['Chinese-friendly'],
+      };
+    }
+    if (path == '/api/c/v1/posts/7') return communityPost;
     return {
       'id': 12,
       'shopId': 7,
@@ -242,5 +288,23 @@ void main() {
 
     expect(find.text('编辑帖子'), findsOneWidget);
     expect(find.text('请补充具体地址'), findsOneWidget);
+  });
+
+  testWidgets('favorites collection shows shop and post titles', (tester) async {
+    final api = CollectionApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserCollectionScreen(
+          repository: UserRepository(api),
+          collection: UserCollection.favorites,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('柏林茶馆'), findsOneWidget);
+    expect(find.text('伦敦周末市场指南'), findsOneWidget);
+    expect(find.textContaining('门店'), findsOneWidget);
+    expect(find.textContaining('帖子'), findsOneWidget);
   });
 }

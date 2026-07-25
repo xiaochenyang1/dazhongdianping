@@ -17,6 +17,7 @@ class ShopDetailScreen extends StatefulWidget {
     this.reservationRepository,
     this.reviewRepository,
     this.thirdPartyConfig = const ThirdPartyConfig(),
+    this.enableFavorite = true,
   });
   final BrowseRepository repository;
   final int shopId;
@@ -24,6 +25,7 @@ class ShopDetailScreen extends StatefulWidget {
   final ReservationRepository? reservationRepository;
   final ReviewRepository? reviewRepository;
   final ThirdPartyConfig thirdPartyConfig;
+  final bool enableFavorite;
 
   @override
   State<ShopDetailScreen> createState() => _ShopDetailScreenState();
@@ -31,17 +33,74 @@ class ShopDetailScreen extends StatefulWidget {
 
 class _ShopDetailScreenState extends State<ShopDetailScreen> {
   late Future<ShopDetail> _detail;
+  bool _favorited = false;
+  bool _favoriteLoading = false;
+  bool _favoriteSaving = false;
 
   @override
   void initState() {
     super.initState();
     _detail = widget.repository.loadShopDetail(widget.shopId);
+    if (widget.enableFavorite) {
+      _loadFavoriteState();
+    }
+  }
+
+  Future<void> _loadFavoriteState() async {
+    setState(() => _favoriteLoading = true);
+    try {
+      final favorited = await widget.repository.isShopFavorited(widget.shopId);
+      if (!mounted) return;
+      setState(() {
+        _favorited = favorited;
+        _favoriteLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _favoriteLoading = false);
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_favoriteSaving) return;
+    setState(() => _favoriteSaving = true);
+    try {
+      if (_favorited) {
+        await widget.repository.unfavoriteShop(widget.shopId);
+      } else {
+        await widget.repository.favoriteShop(widget.shopId);
+      }
+      if (!mounted) return;
+      setState(() => _favorited = !_favorited);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('收藏操作失败：$error')),
+      );
+    } finally {
+      if (mounted) setState(() => _favoriteSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Place details')),
+      appBar: AppBar(
+        title: const Text('Place details'),
+        actions: [
+          if (widget.enableFavorite)
+            IconButton(
+              tooltip: _favorited ? '取消收藏' : '收藏门店',
+              onPressed: (_favoriteLoading || _favoriteSaving)
+                  ? null
+                  : _toggleFavorite,
+              icon: Icon(
+                _favorited ? Icons.favorite : Icons.favorite_border,
+                color: _favorited ? Colors.redAccent : null,
+              ),
+            ),
+        ],
+      ),
       body: FutureBuilder<ShopDetail>(
         future: _detail,
         builder: (context, snapshot) {
@@ -107,6 +166,25 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     .toList(),
               ),
               const SizedBox(height: 24),
+              if (widget.enableFavorite) ...[
+                FilledButton.tonalIcon(
+                  onPressed: (_favoriteLoading || _favoriteSaving)
+                      ? null
+                      : _toggleFavorite,
+                  icon: Icon(
+                    _favorited ? Icons.favorite : Icons.favorite_border,
+                  ),
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      _favoriteLoading
+                          ? '收藏状态加载中...'
+                          : (_favorited ? '取消收藏' : '收藏门店'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               if (widget.reviewRepository != null) ...[
                 FilledButton.tonalIcon(
                   onPressed: () => Navigator.of(context).push(

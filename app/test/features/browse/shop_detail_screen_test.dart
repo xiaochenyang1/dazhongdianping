@@ -6,6 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class DetailFakeRepository extends BrowseRepository {
+  DetailFakeRepository({this.favorited = false});
+
+  bool favorited;
+  final List<String> favoriteCalls = <String>[];
+
   @override
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
 
@@ -23,6 +28,21 @@ class DetailFakeRepository extends BrowseRepository {
     summary: 'Tea and snacks',
     tags: ['Chinese-friendly'],
   );
+
+  @override
+  Future<bool> isShopFavorited(int shopId) async => favorited;
+
+  @override
+  Future<void> favoriteShop(int shopId) async {
+    favoriteCalls.add('favorite:$shopId');
+    favorited = true;
+  }
+
+  @override
+  Future<void> unfavoriteShop(int shopId) async {
+    favoriteCalls.add('unfavorite:$shopId');
+    favorited = false;
+  }
 }
 
 class DetailReviewApi implements JsonApi {
@@ -70,5 +90,28 @@ void main() {
 
     expect(find.text('Berlin Tea'), findsOneWidget);
     expect(find.byKey(const Key('review-content')), findsOneWidget);
+  });
+
+  testWidgets('shop detail can favorite and unfavorite a shop', (tester) async {
+    final repository = DetailFakeRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(repository: repository, shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('收藏门店'), findsOneWidget);
+    await tester.tap(find.text('收藏门店'));
+    await tester.pumpAndSettle();
+
+    expect(repository.favoriteCalls, contains('favorite:7'));
+    expect(find.text('取消收藏'), findsOneWidget);
+
+    await tester.tap(find.text('取消收藏'));
+    await tester.pumpAndSettle();
+
+    expect(repository.favoriteCalls, contains('unfavorite:7'));
+    expect(find.text('收藏门店'), findsOneWidget);
   });
 }

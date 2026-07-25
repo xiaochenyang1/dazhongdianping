@@ -1,7 +1,10 @@
 import 'dart:convert';
 
+import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
+import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:dazhongdianping_app/features/community/post_editor_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
@@ -43,19 +46,11 @@ class UserCollectionScreen extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final item = page.items[index];
-              final title =
-                  item['title'] ??
-                  item['name'] ??
-                  item['orderNo'] ??
-                  item['reservationNo'] ??
-                  item['code'] ??
-                  item['shopName'] ??
-                  item['content'] ??
-                  '记录 #${item['id'] ?? index + 1}';
+              final title = _title(item, index);
               final destination = _destination(item);
               return Card(
                 child: ListTile(
-                  title: Text('$title'),
+                  title: Text(title),
                   subtitle: Text(
                     _subtitle(item),
                     maxLines: 3,
@@ -82,7 +77,42 @@ class UserCollectionScreen extends StatelessWidget {
     );
   }
 
+  String _title(Map<String, dynamic> item, int index) {
+    if (collection == UserCollection.favorites) {
+      final target = item['target'];
+      if (target is Map<String, dynamic>) {
+        final name = target['name'] as String?;
+        if (name != null && name.isNotEmpty) return name;
+      }
+      final targetType = item['targetType'];
+      final targetId = item['targetId'];
+      if (targetType == 1) return '门店 #$targetId';
+      if (targetType == 2) return '帖子 #$targetId';
+    }
+    return '${item['title'] ?? item['name'] ?? item['orderNo'] ?? item['reservationNo'] ?? item['code'] ?? item['shopName'] ?? item['content'] ?? '记录 #${item['id'] ?? index + 1}'}';
+  }
+
   Widget? _destination(Map<String, dynamic> item) {
+    if (collection == UserCollection.favorites) {
+      final targetType = item['targetType'];
+      final targetId = item['targetId'];
+      if (targetId is! num) return null;
+      if (targetType == 1) {
+        return ShopDetailScreen(
+          repository: ApiBrowseRepository(repository.api),
+          shopId: targetId.toInt(),
+        );
+      }
+      if (targetType == 2) {
+        return PostDetailScreen(
+          repository: CommunityRepository(repository.api),
+          postId: targetId.toInt(),
+          canInteract: true,
+        );
+      }
+      return null;
+    }
+
     final id = item['id'];
     if (id is! int) return null;
     return switch (collection) {
@@ -126,7 +156,34 @@ class UserCollectionScreen extends StatelessWidget {
         '${item['dealTitle'] ?? ''} · ${item['shopName'] ?? ''} · ${item['statusText'] ?? ''} · ${item['expireAt'] ?? ''}',
       UserCollection.reservations =>
         '${(item['shop'] as Map<String, dynamic>?)?['name'] ?? ''} · ${item['reserveTime'] ?? ''} · ${item['statusText'] ?? ''}',
+      UserCollection.favorites => _favoriteSubtitle(item),
       _ => jsonEncode(item),
     };
+  }
+
+  String _favoriteSubtitle(Map<String, dynamic> item) {
+    final targetType = item['targetType'];
+    final createdAt = item['createdAt'] ?? '';
+    final target = item['target'];
+    if (targetType == 1 && target is Map<String, dynamic>) {
+      final location = [
+        target['cityName'],
+        target['areaName'],
+      ].whereType<String>().where((part) => part.isNotEmpty).join(' · ');
+      final score = target['score'];
+      return [
+        '门店',
+        if (location.isNotEmpty) location,
+        if (score != null) '★ $score',
+        if ('$createdAt'.isNotEmpty) '收藏于 $createdAt',
+      ].join(' · ');
+    }
+    if (targetType == 2) {
+      return [
+        '帖子',
+        if ('$createdAt'.isNotEmpty) '收藏于 $createdAt',
+      ].join(' · ');
+    }
+    return jsonEncode(item);
   }
 }

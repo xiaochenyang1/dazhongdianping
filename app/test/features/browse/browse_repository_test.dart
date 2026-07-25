@@ -80,6 +80,22 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
         'hasMore': false,
       };
     }
+    if (path == '/api/c/v1/favorites') {
+      return {
+        'list': [
+          {
+            'id': 8,
+            'targetType': 1,
+            'targetId': 10001,
+            'target': {'id': 10001, 'name': 'London Hotpot'},
+          },
+        ],
+        'total': 1,
+        'page': 1,
+        'pageSize': 50,
+        'hasMore': false,
+      };
+    }
     return {
       'list': [
         {
@@ -95,8 +111,10 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
   }
 
   @override
-  Future<Map<String, dynamic>> postJson(String path, {Object? body}) =>
-      throw UnimplementedError();
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    this.path = path;
+    return const {};
+  }
 
   @override
   Future<Map<String, dynamic>> deleteJson(String path) async {
@@ -164,5 +182,22 @@ void main() {
       '/api/c/v1/user/browse-history/10001',
       '/api/c/v1/user/browse-history',
     ]);
+  });
+
+  test('checks and mutates shop favorite state', () async {
+    final api = FakeJsonApi();
+    final repository = ApiBrowseRepository(api);
+
+    expect(await repository.isShopFavorited(10001), isTrue);
+    expect(await repository.isShopFavorited(20002), isFalse);
+
+    await repository.favoriteShop(20002);
+    expect(api.path, '/api/c/v1/favorites');
+
+    await repository.unfavoriteShop(20002);
+    expect(
+      api.deletedPaths,
+      contains('/api/c/v1/favorites?targetType=1&targetId=20002'),
+    );
   });
 }
