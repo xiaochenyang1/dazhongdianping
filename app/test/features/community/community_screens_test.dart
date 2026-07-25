@@ -465,7 +465,7 @@ void main() {
     await tester.tap(find.byKey(const Key('post-delete-confirm')));
     await tester.pumpAndSettle();
 
-    expect(api.deletedPaths, contains('/api/c/v1/posts/7'));
+    expect(api.deletePath, '/api/c/v1/posts/7');
     expect(find.text('编辑帖子'), findsNothing);
   });
 }
