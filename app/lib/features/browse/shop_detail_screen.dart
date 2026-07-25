@@ -33,6 +33,7 @@ class ShopDetailScreen extends StatefulWidget {
 
 class _ShopDetailScreenState extends State<ShopDetailScreen> {
   late Future<ShopDetail> _detail;
+  Future<List<ShopSummary>>? _similar;
   bool _favorited = false;
   bool _favoriteLoading = false;
   bool _favoriteSaving = false;
@@ -41,6 +42,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   void initState() {
     super.initState();
     _detail = widget.repository.loadShopDetail(widget.shopId);
+    _similar = widget.repository.loadSimilarShops(widget.shopId, limit: 6);
     if (widget.enableFavorite) {
       _loadFavoriteState();
     }
@@ -243,6 +245,66 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     ),
                 ],
               ),
+              if (_similar != null) ...[
+                const SizedBox(height: 28),
+                const Text(
+                  '相似门店',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                FutureBuilder<List<ShopSummary>>(
+                  future: _similar,
+                  builder: (context, similarSnapshot) {
+                    if (similarSnapshot.connectionState !=
+                        ConnectionState.done) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (similarSnapshot.hasError) {
+                      return Text('相似门店加载失败：${similarSnapshot.error}');
+                    }
+                    final items = similarSnapshot.data ?? const [];
+                    if (items.isEmpty) {
+                      return const Text('暂无相似门店');
+                    }
+                    return Column(
+                      children: items
+                          .map(
+                            (item) => Card(
+                              child: ListTile(
+                                title: Text(item.name),
+                                subtitle: Text(
+                                  item.merchantCertificationLabel == null
+                                      ? '${item.category} · ★ ${item.score.toStringAsFixed(1)}'
+                                      : '${item.category} · ★ ${item.score.toStringAsFixed(1)} · ${item.merchantCertificationLabel}',
+                                ),
+                                trailing: Text(
+                                  '${item.currency} ${item.pricePerCapita}',
+                                ),
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ShopDetailScreen(
+                                      repository: widget.repository,
+                                      shopId: item.id,
+                                      tradeRepository: widget.tradeRepository,
+                                      reservationRepository:
+                                          widget.reservationRepository,
+                                      reviewRepository: widget.reviewRepository,
+                                      thirdPartyConfig: widget.thirdPartyConfig,
+                                      enableFavorite: widget.enableFavorite,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
+                ),
+              ],
             ],
           );
         },

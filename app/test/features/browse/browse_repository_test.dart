@@ -38,6 +38,29 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
         ],
       };
     }
+    if (path == '/api/c/v1/search/suggest') {
+      return {
+        'value': [
+          {'term': '火锅', 'type': 'category', 'refId': 102},
+          {'term': '渝里火锅徐汇店', 'type': 'shop', 'refId': 10001},
+        ],
+      };
+    }
+    if (path.endsWith('/similar')) {
+      return {
+        'value': [
+          {
+            'id': 10002,
+            'name': '徐汇小馆',
+            'cityName': '上海',
+            'areaName': '徐汇',
+            'score': 4.6,
+            'currency': 'CNY',
+            'pricePerCapita': 88,
+          },
+        ],
+      };
+    }
     if (path == '/api/c/v1/search/history') {
       if (throwUnauthorizedOnHistory) {
         throw const ApiException('login required', statusCode: 401);
@@ -199,5 +222,22 @@ void main() {
       api.deletedPaths,
       contains('/api/c/v1/favorites?targetType=1&targetId=20002'),
     );
+  });
+
+  test('loads search suggestions and similar shops', () async {
+    final api = FakeJsonApi();
+    final repository = ApiBrowseRepository(api);
+
+    final suggestions = await repository.loadSearchSuggestions('火', limit: 6);
+    expect(api.path, '/api/c/v1/search/suggest');
+    expect(api.query?['kw'], '火');
+    expect(suggestions.map((item) => item.term), ['火锅', '渝里火锅徐汇店']);
+    expect(suggestions.first.type, 'category');
+
+    final similar = await repository.loadSimilarShops(10001, limit: 4);
+    expect(api.path, '/api/c/v1/shops/10001/similar');
+    expect(api.query?['limit'], 4);
+    expect(similar.single.name, '徐汇小馆');
+    expect(similar.single.category, '上海 · 徐汇');
   });
 }

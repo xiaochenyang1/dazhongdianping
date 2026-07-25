@@ -7,11 +7,14 @@ class SearchFakeRepository extends BrowseRepository {
   SearchFakeRepository({
     this.hotWords = const [],
     this.history = const [],
+    this.suggestions = const [],
   });
 
   final List<SearchHotWord> hotWords;
   List<SearchHistoryItem> history;
+  final List<SearchSuggestion> suggestions;
   final List<String> searchedKeywords = <String>[];
+  final List<String> suggestionKeywords = <String>[];
   int clearCalls = 0;
   final List<int> removedHistoryIds = <int>[];
 
@@ -52,6 +55,15 @@ class SearchFakeRepository extends BrowseRepository {
   Future<void> removeSearchHistoryItem(int historyId) async {
     removedHistoryIds.add(historyId);
     history = history.where((item) => item.id != historyId).toList();
+  }
+
+  @override
+  Future<List<SearchSuggestion>> loadSearchSuggestions(
+    String keyword, {
+    int limit = 8,
+  }) async {
+    suggestionKeywords.add(keyword);
+    return suggestions;
   }
 }
 
@@ -154,5 +166,32 @@ void main() {
     expect(repository.clearCalls, 1);
     expect(find.text('cafe'), findsNothing);
     expect(find.text('最近搜过'), findsNothing);
+  });
+
+  testWidgets('shows live search suggestions while typing', (tester) async {
+    final repository = SearchFakeRepository(
+      suggestions: const [
+        SearchSuggestion(term: '火锅', type: 'category', refId: 102),
+        SearchSuggestion(term: '渝里火锅', type: 'shop', refId: 10001),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: SearchScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '火');
+    await tester.pumpAndSettle();
+
+    expect(repository.suggestionKeywords, contains('火'));
+    expect(find.text('搜索联想'), findsOneWidget);
+    expect(find.text('火锅 · category'), findsOneWidget);
+
+    await tester.tap(find.text('火锅 · category'));
+    await tester.pumpAndSettle();
+
+    expect(repository.searchedKeywords, contains('火锅'));
+    expect(find.text('Berlin Tea'), findsOneWidget);
   });
 }

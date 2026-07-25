@@ -32,17 +32,58 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<List<ShopSummary>>? _results;
   List<SearchHotWord> _hotWords = const [];
   List<SearchHistoryItem> _history = const [];
+  List<SearchSuggestion> _suggestions = const [];
   bool _panelLoading = false;
   bool _clearingHistory = false;
+  bool _suggestLoading = false;
+  int _suggestRequestId = 0;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialKeyword);
+    _controller.addListener(_onKeywordChanged);
     if (widget.initialKeyword.trim().isNotEmpty) {
       _search(widget.initialKeyword);
     } else {
       _loadPanel();
+    }
+  }
+
+  void _onKeywordChanged() {
+    final keyword = _controller.text.trim();
+    if (keyword.isEmpty) {
+      if (_suggestions.isNotEmpty || _suggestLoading) {
+        setState(() {
+          _suggestions = const [];
+          _suggestLoading = false;
+        });
+      }
+      return;
+    }
+    // Keep showing live suggestions while typing; results only appear after submit.
+    _loadSuggestions(keyword);
+  }
+
+  Future<void> _loadSuggestions(String keyword) async {
+    final requestId = ++_suggestRequestId;
+    setState(() => _suggestLoading = true);
+    try {
+      final suggestions = await widget.repository.loadSearchSuggestions(
+        keyword,
+        limit: 8,
+      );
+      if (!mounted || requestId != _suggestRequestId) return;
+      setState(() {
+        _suggestions = suggestions;
+        _suggestLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _suggestRequestId) return;
+      setState(() {
+        _suggestions = const [];
+        _suggestLoading = false;
+      });
     }
   }
 
@@ -73,6 +114,7 @@ class _SearchScreenState extends State<SearchScreen> {
     if (keyword.isEmpty) return;
     setState(() {
       _results = widget.repository.searchShops(keyword);
+      _suggestions = const [];
     });
     // Refresh history after a successful search so the new keyword appears.
     try {
@@ -123,6 +165,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   void dispose() {
+    _controller.removeListener(_onKeywordChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -150,6 +193,57 @@ class _SearchScreenState extends State<SearchScreen> {
                 border: const OutlineInputBorder(),
               ),
             ),
+            if (_suggestions.isNotEmpty || _suggestLoading) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _suggestLoading ? '联想加载中...' : '搜索联想',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_suggestions.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _suggestions
+                        .map(
+                          (item) => ActionChip(
+                            key: ValueKey('suggest-${item.type}-${item.term}'),
+                            label: Text(
+                              item.type.isEmpty
+                                  ? item.term
+                                  : '${item.term} · ${item.type}',
+                            ),
+                            onPressed: () {
+                              if (item.type == 'shop' && item.refId != null) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ShopDetailScreen(
+                                      repository: widget.repository,
+                                      shopId: item.refId!,
+                                      tradeRepository: widget.tradeRepository,
+                                      reservationRepository:
+                                          widget.reservationRepository,
+                                      reviewRepository: widget.reviewRepository,
+                                      thirdPartyConfig: widget.thirdPartyConfig,
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              _controller.text = item.term;
+                              _search(item.term);
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+            ],
             const SizedBox(height: 16),
             Expanded(
               child: _results == null

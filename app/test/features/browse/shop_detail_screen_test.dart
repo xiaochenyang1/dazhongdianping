@@ -6,10 +6,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class DetailFakeRepository extends BrowseRepository {
-  DetailFakeRepository({this.favorited = false});
+  DetailFakeRepository({
+    this.favorited = false,
+    this.similar = const [
+      ShopSummary(
+        id: 8,
+        name: 'Berlin Dumplings',
+        category: 'Chinese',
+        score: 4.4,
+        currency: 'EUR',
+        pricePerCapita: 15,
+      ),
+    ],
+  });
 
   bool favorited;
+  final List<ShopSummary> similar;
   final List<String> favoriteCalls = <String>[];
+  final List<int> similarRequests = <int>[];
 
   @override
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
@@ -42,6 +56,12 @@ class DetailFakeRepository extends BrowseRepository {
   Future<void> unfavoriteShop(int shopId) async {
     favoriteCalls.add('unfavorite:$shopId');
     favorited = false;
+  }
+
+  @override
+  Future<List<ShopSummary>> loadSimilarShops(int shopId, {int limit = 6}) async {
+    similarRequests.add(shopId);
+    return similar;
   }
 }
 
@@ -113,5 +133,19 @@ void main() {
 
     expect(repository.favoriteCalls, contains('unfavorite:7'));
     expect(find.text('收藏门店'), findsOneWidget);
+  });
+
+  testWidgets('shop detail shows similar shops', (tester) async {
+    final repository = DetailFakeRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(repository: repository, shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.similarRequests, contains(7));
+    expect(find.text('相似门店'), findsOneWidget);
+    expect(find.text('Berlin Dumplings'), findsOneWidget);
   });
 }

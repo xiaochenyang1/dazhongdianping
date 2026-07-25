@@ -52,6 +52,26 @@ class SearchHotWord {
   }
 }
 
+class SearchSuggestion {
+  const SearchSuggestion({
+    required this.term,
+    required this.type,
+    this.refId,
+  });
+  final String term;
+  final String type;
+  final int? refId;
+
+  factory SearchSuggestion.fromJson(Map<String, dynamic> json) {
+    final ref = json['refId'];
+    return SearchSuggestion(
+      term: json['term'] as String? ?? '',
+      type: json['type'] as String? ?? '',
+      refId: ref is num ? ref.toInt() : null,
+    );
+  }
+}
+
 class SearchHistoryItem {
   const SearchHistoryItem({
     required this.id,
@@ -210,6 +230,12 @@ abstract class BrowseRepository {
   Future<bool> isShopFavorited(int shopId) => throw UnimplementedError();
   Future<void> favoriteShop(int shopId) => throw UnimplementedError();
   Future<void> unfavoriteShop(int shopId) => throw UnimplementedError();
+  Future<List<SearchSuggestion>> loadSearchSuggestions(
+    String keyword, {
+    int limit = 8,
+  }) => throw UnimplementedError();
+  Future<List<ShopSummary>> loadSimilarShops(int shopId, {int limit = 6}) =>
+      throw UnimplementedError();
 }
 
 class ApiBrowseRepository implements BrowseRepository {
@@ -378,5 +404,53 @@ class ApiBrowseRepository implements BrowseRepository {
     await deleteApi.deleteJson(
       '/api/c/v1/favorites?targetType=1&targetId=$shopId',
     );
+  }
+
+  @override
+  Future<List<SearchSuggestion>> loadSearchSuggestions(
+    String keyword, {
+    int limit = 8,
+  }) async {
+    final normalized = keyword.trim();
+    if (normalized.isEmpty) return const [];
+    final result = await client.getJson(
+      '/api/c/v1/search/suggest',
+      query: {'kw': normalized, 'limit': limit},
+    );
+    // ApiClient wraps bare list payloads as {'value': [...]}.
+    final raw = result['value'] ?? result['list'];
+    if (raw is List) {
+      return raw
+          .whereType<Map<String, dynamic>>()
+          .map(SearchSuggestion.fromJson)
+          .where((item) => item.term.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  @override
+  Future<List<ShopSummary>> loadSimilarShops(int shopId, {int limit = 6}) async {
+    final result = await client.getJson(
+      '/api/c/v1/shops/$shopId/similar',
+      query: {'limit': limit},
+    );
+    final raw = result['value'] ?? result['list'];
+    if (raw is! List) return const [];
+    return raw.whereType<Map<String, dynamic>>().map((json) {
+      // similar shops reuse list-item fields; fall back when categoryName is absent
+      final mapped = <String, dynamic>{
+        ...json,
+        'categoryName':
+            json['categoryName'] ??
+            [
+              if ((json['cityName'] as String?)?.isNotEmpty == true)
+                json['cityName'],
+              if ((json['areaName'] as String?)?.isNotEmpty == true)
+                json['areaName'],
+            ].join(' · '),
+      };
+      return ShopSummary.fromJson(mapped);
+    }).toList();
   }
 }
