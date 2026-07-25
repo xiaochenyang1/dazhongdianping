@@ -1,7 +1,9 @@
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
+import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
+import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
 import 'package:dazhongdianping_app/features/user/growth_records_screen.dart';
 import 'package:dazhongdianping_app/features/user/privacy_overview_screen.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
@@ -88,6 +90,29 @@ class UserCenterScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.manage_accounts_outlined),
+                title: const Text('账户设置'),
+                subtitle: const Text('资料、绑定账号、修改密码'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AccountSettingsScreen(
+                      repository: repository,
+                      onProfileChanged: (updated) {
+                        authController.replaceCurrentUser(
+                          AuthUser(
+                            id: updated.id,
+                            nickname: updated.nickname,
+                            avatar: updated.avatar,
+                            preferredRegion: updated.preferredRegion,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
               ListTile(
                 leading: const Icon(Icons.trending_up),
                 title: const Text('成长值流水'),

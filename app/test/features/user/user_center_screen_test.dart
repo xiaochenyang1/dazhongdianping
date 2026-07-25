@@ -53,6 +53,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Center User'), findsOneWidget);
+    expect(find.text('账户设置'), findsOneWidget);
     expect(find.text('成长值流水'), findsOneWidget);
     expect(find.text('我的点评'), findsOneWidget);
     expect(find.text('我的收藏'), findsOneWidget);
