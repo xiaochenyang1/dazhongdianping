@@ -46,6 +46,7 @@ class TradeFakeApi implements JsonApi {
 class TradeManagementFakeApi implements JsonApi {
   String? path;
   Object? body;
+  Map<String, Object?>? query;
 
   Map<String, dynamic> get order => {
     'id': 10,
@@ -85,10 +86,24 @@ class TradeManagementFakeApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     this.path = path;
+    this.query = query;
     if (path == '/api/c/v1/coupons') {
       return {
         'list': [coupon],
         'total': 1,
+      };
+    }
+    if (path == '/api/c/v1/coupons/CP-DEMO') {
+      return {
+        ...coupon,
+        'rules': '周末通用',
+        'validStart': '2026-01-01',
+        'validEnd': '2026-12-31',
+        'verifyAt': '',
+        'usable': true,
+        'qrPayload': 'CP-DEMO',
+        'qrImageUrl': 'https://example.com/qr.png',
+        'verifyHint': '到店后出示二维码或券码，由商户核销。',
       };
     }
     return order;
@@ -126,9 +141,16 @@ void main() {
     expect(order.payStatusText, '已支付');
     expect(order.coupons.single.code, 'CP-DEMO');
 
-    final coupons = await repository.loadCoupons();
+    final coupons = await repository.loadCoupons(status: 1);
     expect(api.path, '/api/c/v1/coupons');
+    expect(api.query?['status'], 1);
     expect(coupons.single.expireAt, '2026-12-31');
+
+    final detail = await repository.loadCouponDetail('CP-DEMO');
+    expect(api.path, '/api/c/v1/coupons/CP-DEMO');
+    expect(detail.usable, isTrue);
+    expect(detail.qrImageUrl, 'https://example.com/qr.png');
+    expect(detail.rules, '周末通用');
   });
 
   test('trade repository cancels and refunds an order', () async {

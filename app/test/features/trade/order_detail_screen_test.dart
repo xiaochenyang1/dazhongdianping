@@ -29,6 +29,26 @@ class OrderDetailApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     this.path = path;
+    if (path.startsWith('/api/c/v1/coupons/')) {
+      return {
+        'id': 21,
+        'orderId': 10,
+        'code': 'CP-DEMO-2026',
+        'status': 1,
+        'statusText': '待使用',
+        'dealTitle': '双人晚餐套餐',
+        'shopName': '柏林茶馆',
+        'expireAt': '2026-12-31',
+        'rules': '周末通用',
+        'validStart': '2026-01-01',
+        'validEnd': '2026-12-31',
+        'verifyAt': '',
+        'usable': true,
+        'qrPayload': 'CP-DEMO-2026',
+        'qrImageUrl': '',
+        'verifyHint': '到店后出示二维码或券码，由商户核销。',
+      };
+    }
     return order();
   }
 
@@ -71,6 +91,7 @@ void main() {
   testWidgets('coupon detail shows code, status and merchant boundary', (
     tester,
   ) async {
+    final api = OrderDetailApi();
     const coupon = Coupon(
       id: 21,
       orderId: 10,
@@ -82,11 +103,18 @@ void main() {
       expireAt: '2026-12-31',
     );
     await tester.pumpWidget(
-      const MaterialApp(home: CouponDetailScreen(coupon: coupon)),
+      MaterialApp(
+        home: CouponDetailScreen(
+          repository: TradeRepository(api),
+          code: coupon.code,
+          initialCoupon: coupon,
+        ),
+      ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('CP-DEMO-2026'), findsOneWidget);
-    expect(find.text('待使用'), findsOneWidget);
+    expect(find.textContaining('待使用'), findsOneWidget);
     expect(find.textContaining('由商户核销'), findsOneWidget);
   });
 }

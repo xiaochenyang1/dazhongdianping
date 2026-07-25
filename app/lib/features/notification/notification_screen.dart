@@ -11,6 +11,8 @@ class NotificationScreen extends StatefulWidget {
     this.onOrderTap,
     this.onReservationTap,
     this.onReviewTap,
+    this.onCouponListTap,
+    this.onCouponDetailTap,
   });
 
   final NotificationRepository repository;
@@ -21,6 +23,8 @@ class NotificationScreen extends StatefulWidget {
   final ValueChanged<int>? onOrderTap;
   final ValueChanged<int>? onReservationTap;
   final void Function(int reviewId, {required bool owned})? onReviewTap;
+  final void Function({int? status, String? code})? onCouponListTap;
+  final ValueChanged<String>? onCouponDetailTap;
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -108,6 +112,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
         : int.tryParse(publicReviewMatch.group(1)!);
     if (publicReviewId != null) {
       widget.onReviewTap?.call(publicReviewId, owned: false);
+      return;
+    }
+    final couponDetailMatch = RegExp(
+      r'^/user/coupons/([^?]+)$',
+    ).firstMatch(notification.linkUrl);
+    if (couponDetailMatch != null) {
+      final code = Uri.decodeComponent(couponDetailMatch.group(1)!);
+      if (code.isNotEmpty && code != 'coupons') {
+        widget.onCouponDetailTap?.call(code);
+        return;
+      }
+    }
+    final couponListMatch = RegExp(
+      r'^/user/coupons(?:\?(.*))?$',
+    ).firstMatch(notification.linkUrl);
+    if (couponListMatch != null) {
+      final query = Uri.splitQueryString(couponListMatch.group(1) ?? '');
+      final statusRaw = query['status'];
+      final status = statusRaw == null ? null : int.tryParse(statusRaw);
+      widget.onCouponListTap?.call(status: status, code: query['code']);
       return;
     }
     final reservationMatch = RegExp(

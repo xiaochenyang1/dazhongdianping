@@ -97,6 +97,9 @@ class Coupon {
     required this.dealTitle,
     required this.shopName,
     required this.expireAt,
+    this.dealId = 0,
+    this.shopId = 0,
+    this.coverImage = '',
   });
   final int id;
   final int orderId;
@@ -106,6 +109,9 @@ class Coupon {
   final String dealTitle;
   final String shopName;
   final String expireAt;
+  final int dealId;
+  final int shopId;
+  final String coverImage;
 
   factory Coupon.fromJson(Map<String, dynamic> json) => Coupon(
     id: json['id'] as int,
@@ -116,6 +122,64 @@ class Coupon {
     dealTitle: json['dealTitle'] as String? ?? '',
     shopName: json['shopName'] as String? ?? '',
     expireAt: json['expireAt'] as String? ?? '',
+    dealId: json['dealId'] as int? ?? 0,
+    shopId: json['shopId'] as int? ?? 0,
+    coverImage: json['coverImage'] as String? ?? '',
+  );
+}
+
+class CouponDetail extends Coupon {
+  const CouponDetail({
+    required super.id,
+    required super.orderId,
+    required super.code,
+    required super.status,
+    required super.statusText,
+    required super.dealTitle,
+    required super.shopName,
+    required super.expireAt,
+    super.dealId,
+    super.shopId,
+    super.coverImage,
+    required this.rules,
+    required this.validStart,
+    required this.validEnd,
+    required this.verifyAt,
+    required this.usable,
+    required this.qrPayload,
+    required this.qrImageUrl,
+    required this.verifyHint,
+  });
+
+  final String rules;
+  final String validStart;
+  final String validEnd;
+  final String verifyAt;
+  final bool usable;
+  final String qrPayload;
+  final String qrImageUrl;
+  final String verifyHint;
+
+  factory CouponDetail.fromJson(Map<String, dynamic> json) => CouponDetail(
+    id: json['id'] as int,
+    orderId: json['orderId'] as int? ?? 0,
+    code: json['code'] as String? ?? '',
+    status: json['status'] as int? ?? 1,
+    statusText: json['statusText'] as String? ?? '',
+    dealTitle: json['dealTitle'] as String? ?? '',
+    shopName: json['shopName'] as String? ?? '',
+    expireAt: json['expireAt'] as String? ?? '',
+    dealId: json['dealId'] as int? ?? 0,
+    shopId: json['shopId'] as int? ?? 0,
+    coverImage: json['coverImage'] as String? ?? '',
+    rules: json['rules'] as String? ?? '',
+    validStart: json['validStart'] as String? ?? '',
+    validEnd: json['validEnd'] as String? ?? '',
+    verifyAt: json['verifyAt'] as String? ?? '',
+    usable: json['usable'] as bool? ?? false,
+    qrPayload: json['qrPayload'] as String? ?? json['code'] as String? ?? '',
+    qrImageUrl: json['qrImageUrl'] as String? ?? '',
+    verifyHint: json['verifyHint'] as String? ?? '',
   );
 }
 
@@ -203,14 +267,29 @@ class TradeRepository {
     );
   }
 
-  Future<List<Coupon>> loadCoupons() async {
+  Future<List<Coupon>> loadCoupons({
+    int? status,
+    int page = 1,
+    int pageSize = 30,
+  }) async {
     final result = await api.getJson(
       '/api/c/v1/coupons',
-      query: const {'page': 1, 'pageSize': 30},
+      query: {
+        'page': page,
+        'pageSize': pageSize,
+        if (status != null) 'status': status,
+      },
     );
     return (result['list'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>()
         .map(Coupon.fromJson)
         .toList();
+  }
+
+  Future<CouponDetail> loadCouponDetail(String code) async {
+    final result = await api.getJson(
+      '/api/c/v1/coupons/${Uri.encodeComponent(code)}',
+    );
+    return CouponDetail.fromJson(result);
   }
 }

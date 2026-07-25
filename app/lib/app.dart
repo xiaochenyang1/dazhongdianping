@@ -28,6 +28,7 @@ import 'package:dazhongdianping_app/features/user/device_lifecycle.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:dazhongdianping_app/features/user/public_user_profile_screen.dart';
+import 'package:dazhongdianping_app/features/trade/coupons_screen.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
@@ -335,6 +336,27 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                             reviewId: reviewId,
                             owned: owned,
                             canInteract: !owned && canInteract,
+                          ),
+                        ),
+                      );
+                    },
+                    onCouponListTap: ({status, code}) {
+                      Navigator.of(screenContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => CouponsScreen(
+                            repository: TradeRepository(apiClient),
+                            initialStatus: status,
+                            highlightCode: code,
+                          ),
+                        ),
+                      );
+                    },
+                    onCouponDetailTap: (code) {
+                      Navigator.of(screenContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => CouponDetailScreen(
+                            repository: TradeRepository(apiClient),
+                            code: code,
                           ),
                         ),
                       );

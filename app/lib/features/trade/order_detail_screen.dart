@@ -264,9 +264,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               child: ListTile(
                 title: Text(coupon.code),
                 subtitle: Text('${coupon.statusText} · ${coupon.expireAt}'),
+                trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => CouponDetailScreen(coupon: coupon),
+                    builder: (_) => CouponDetailScreen(
+                      repository: widget.repository,
+                      code: coupon.code,
+                      initialCoupon: coupon,
+                    ),
                   ),
                 ),
               ),
@@ -278,67 +283,160 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 }
 
-class CouponDetailScreen extends StatelessWidget {
-  const CouponDetailScreen({super.key, required this.coupon});
-  final Coupon coupon;
+class CouponDetailScreen extends StatefulWidget {
+  const CouponDetailScreen({
+    super.key,
+    required this.repository,
+    required this.code,
+    this.initialCoupon,
+  });
+
+  final TradeRepository repository;
+  final String code;
+  final Coupon? initialCoupon;
+
+  @override
+  State<CouponDetailScreen> createState() => _CouponDetailScreenState();
+}
+
+class _CouponDetailScreenState extends State<CouponDetailScreen> {
+  late Future<CouponDetail> _detail;
+
+  @override
+  void initState() {
+    super.initState();
+    _detail = widget.repository.loadCouponDetail(widget.code);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('券详情')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Card(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Text(coupon.statusText),
-                  const SizedBox(height: 12),
-                  SelectableText(
-                    coupon.code,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
+      body: FutureBuilder<CouponDetail>(
+        future: _detail,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done &&
+              widget.initialCoupon == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError && widget.initialCoupon == null) {
+            return Center(child: Text('券码详情加载失败：${snapshot.error}'));
+          }
+          final detail = snapshot.data;
+          final coupon = detail ?? widget.initialCoupon!;
+          final usable = detail?.usable;
+          final verifyHint = detail?.verifyHint ??
+              '券码由商户核销；用户端不提供自助核销，避免误操作。';
+          final qrImageUrl = detail?.qrImageUrl ?? '';
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Card(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Text(
+                        usable == null
+                            ? coupon.statusText
+                            : '${coupon.statusText} · ${usable ? '可核销' : '不可核销'}',
+                      ),
+                      const SizedBox(height: 12),
+                      SelectableText(
+                        coupon.code,
+                        key: const Key('coupon-detail-code'),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
+                      if (qrImageUrl.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Image.network(
+                          qrImageUrl,
+                          key: const Key('coupon-qr-image'),
+                          width: 220,
+                          height: 220,
+                          errorBuilder: (_, _, _) => const Text('二维码加载失败'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        coupon.dealTitle,
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(coupon.shopName),
+                      Text(
+                        '有效期至 ${coupon.expireAt.isEmpty ? '不限期' : coupon.expireAt}',
+                      ),
+                      if (detail != null &&
+                          (detail.validStart.isNotEmpty ||
+                              detail.validEnd.isNotEmpty))
+                        Text(
+                          '团购有效期 ${detail.validStart.isEmpty ? '—' : detail.validStart} ~ ${detail.validEnd.isEmpty ? '—' : detail.validEnd}',
+                        ),
+                      if (detail != null && detail.verifyAt.isNotEmpty)
+                        Text('核销时间 ${detail.verifyAt}'),
+                    ],
+                  ),
+                ),
+              ),
+              if (detail != null) ...[
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '使用规则',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          detail.rules.isEmpty ? '暂无补充规则' : detail.rules,
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
+              ],
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.verified_user_outlined),
+                  title: const Text('请向商户出示券码'),
+                  subtitle: Text(verifyHint),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    coupon.dealTitle,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                    ),
+              if (snapshot.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    '详情刷新失败：${snapshot.error}',
+                    style: const TextStyle(color: Color(0xFFB45309)),
                   ),
-                  const SizedBox(height: 6),
-                  Text(coupon.shopName),
-                  Text('有效期至 ${coupon.expireAt}'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Card(
-            child: ListTile(
-              leading: Icon(Icons.verified_user_outlined),
-              title: Text('请向商户出示券码'),
-              subtitle: Text('券码由商户核销；用户端不提供自助核销，避免误操作。'),
-            ),
-          ),
-        ],
+                ),
+            ],
+          );
+        },
       ),
     );
   }

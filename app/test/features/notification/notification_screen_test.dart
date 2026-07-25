@@ -11,12 +11,16 @@ class NotificationScreenApi implements JsonApi {
     this.postAudit = false,
     this.orderPaid = false,
     this.reservationCreated = false,
+    this.couponReminder = false,
+    this.couponVerified = false,
   });
   final bool social;
   final bool directMessage;
   final bool postAudit;
   final bool orderPaid;
   final bool reservationCreated;
+  final bool couponReminder;
+  final bool couponVerified;
   String? postedPath;
 
   Map<String, dynamic> _item({required bool read}) {
@@ -85,6 +89,34 @@ class NotificationScreenApi implements JsonApi {
         'title': '预订已自动确认',
         'content': '巴黎川菜馆 · 2026-07-26 18:00 · 2 人 · 系统已自动确认你的预订',
         'linkUrl': '/user/reservations/44?status=confirmed',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (couponReminder) {
+      return {
+        'id': 1,
+        'type': 'coupon.reminder',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '券码即将到期',
+        'content': 'CP-DEMO 将在 1 天后过期',
+        'linkUrl': '/user/coupons?status=1&code=CP-DEMO&remind=1',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (couponVerified) {
+      return {
+        'id': 1,
+        'type': 'coupon.verified',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '券码已核销',
+        'content': 'CP-DEMO 已在柏林茶馆核销',
+        'linkUrl': '/user/coupons/CP-DEMO',
         'aggregateCount': 1,
         'read': read,
         'createdAt': '2026-07-15 10:00:00',
@@ -311,6 +343,53 @@ void main() {
       expect(api.postedPath, '/api/c/v1/notifications/1/ack');
       expect(openedReviewId, 1);
       expect(openedOwned, isFalse);
+    },
+  );
+
+  testWidgets(
+    'coupon reminder notification opens coupon list with status and code',
+    (tester) async {
+      final api = NotificationScreenApi(couponReminder: true);
+      int? openedStatus;
+      String? openedCode;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NotificationScreen(
+            repository: NotificationRepository(api),
+            onCouponListTap: ({status, code}) {
+              openedStatus = status;
+              openedCode = code;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('券码即将到期'));
+      await tester.pumpAndSettle();
+      expect(api.postedPath, '/api/c/v1/notifications/1/ack');
+      expect(openedStatus, 1);
+      expect(openedCode, 'CP-DEMO');
+    },
+  );
+
+  testWidgets(
+    'coupon verified notification opens coupon detail by code',
+    (tester) async {
+      final api = NotificationScreenApi(couponVerified: true);
+      String? openedCode;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NotificationScreen(
+            repository: NotificationRepository(api),
+            onCouponDetailTap: (code) => openedCode = code,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('券码已核销'));
+      await tester.pumpAndSettle();
+      expect(api.postedPath, '/api/c/v1/notifications/1/ack');
+      expect(openedCode, 'CP-DEMO');
     },
   );
 }

@@ -46,6 +46,19 @@ class CollectionApi implements JsonApi {
         'total': 1,
       };
     }
+    if (path == '/api/c/v1/coupons/CP-DEMO') {
+      return {
+        ...coupon,
+        'rules': '周末通用',
+        'validStart': '2026-01-01',
+        'validEnd': '2026-12-31',
+        'verifyAt': '',
+        'usable': true,
+        'qrPayload': 'CP-DEMO',
+        'qrImageUrl': '',
+        'verifyHint': '到店后出示二维码或券码，由商户核销。',
+      };
+    }
     if (path == '/api/c/v1/reservations') {
       return {
         'list': [reservation],
@@ -259,7 +272,9 @@ void main() {
     expect(find.text('双人晚餐套餐'), findsOneWidget);
   });
 
-  testWidgets('coupon collection opens coupon detail', (tester) async {
+  testWidgets('coupon collection opens coupon list with status filters', (
+    tester,
+  ) async {
     final api = CollectionApi();
     await tester.pumpWidget(
       MaterialApp(
@@ -271,11 +286,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('CP-DEMO'));
+    expect(find.text('我的券'), findsOneWidget);
+    expect(find.byKey(const Key('coupon-tab-all')), findsOneWidget);
+    expect(find.byKey(const Key('coupon-card-CP-DEMO')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('coupon-card-CP-DEMO')));
     await tester.pumpAndSettle();
 
     expect(find.text('券详情'), findsOneWidget);
-    expect(find.textContaining('由商户核销'), findsOneWidget);
+    expect(find.byKey(const Key('coupon-detail-code')), findsOneWidget);
   });
 
   testWidgets('reservation collection opens reservation detail', (
