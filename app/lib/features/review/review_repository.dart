@@ -465,6 +465,10 @@ class ReviewRepository {
     return ReviewReportResult.fromJson(result);
   }
 
+  Future<void> deleteReview(int reviewId) async {
+    await _deleteApi.deleteJson('/api/c/v1/reviews/$reviewId');
+  }
+
   Future<String> uploadImage(ReviewImageUpload image) async {
     final result = await _fileUploadApi.uploadBytes(
       '/api/c/v1/files/upload',
@@ -481,6 +485,13 @@ class ReviewRepository {
       throw StateError('当前 API 客户端不支持 PUT 请求');
     }
     return api as JsonMutationApi;
+  }
+
+  JsonDeleteApi get _deleteApi {
+    if (api is! JsonDeleteApi) {
+      throw StateError('当前 API 客户端不支持 DELETE 请求');
+    }
+    return api as JsonDeleteApi;
   }
 
   FileUploadApi get _fileUploadApi {

@@ -29,6 +29,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   ReviewComment? _replyTarget;
   bool _likeSaving = false;
   bool _commentSaving = false;
+  bool _deleteSaving = false;
 
   @override
   void initState() {
@@ -191,6 +192,45 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
         });
   }
 
+  Future<void> _deleteOwnedReview() async {
+    if (!widget.owned || _deleteSaving) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('删除点评'),
+        content: const Text('删除后不可恢复，确认删除这条点评吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            key: const Key('review-delete-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('确认删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _deleteSaving = true);
+    try {
+      await widget.repository.deleteReview(widget.reviewId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('点评已删除')));
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('删除失败：$error')));
+    } finally {
+      if (mounted) setState(() => _deleteSaving = false);
+    }
+  }
+
   Widget _buildCommentItem(ReviewComment comment, {double indent = 0}) =>
       Padding(
         padding: EdgeInsets.only(left: indent),
@@ -248,13 +288,19 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     appBar: AppBar(
       title: Text(widget.owned ? '我的点评详情' : '点评详情'),
       actions: [
-        if (widget.owned)
+        if (widget.owned) ...[
           TextButton(
-            onPressed: _visibleReview == null
+            onPressed: _visibleReview == null || _deleteSaving
                 ? null
                 : () => _openEditor(_visibleReview!),
             child: const Text('编辑'),
           ),
+          TextButton(
+            key: const Key('review-delete-button'),
+            onPressed: _deleteSaving ? null : _deleteOwnedReview,
+            child: Text(_deleteSaving ? '删除中...' : '删除'),
+          ),
+        ],
       ],
     ),
     body: FutureBuilder<ReviewDetail>(

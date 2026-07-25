@@ -4,7 +4,7 @@ import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class ReviewFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
+class ReviewFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi, FileUploadApi {
   String? method;
   String? path;
   Object? body;
@@ -168,6 +168,13 @@ class ReviewFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
   }
 
   @override
+  Future<Map<String, dynamic>> deleteJson(String path) async {
+    method = 'DELETE';
+    this.path = path;
+    return const {};
+  }
+
+  @override
   Future<Map<String, dynamic>> uploadBytes(
     String path, {
     required String fieldName,
@@ -284,6 +291,16 @@ void main() {
     final report = await repository.reportReview(12, '广告');
     expect(api.path, '/api/c/v1/reviews/12/report');
     expect(report.reason, '广告');
+  });
+
+  test('review repository deletes an owned review', () async {
+    final api = ReviewFakeApi();
+    final repository = ReviewRepository(api);
+
+    await repository.deleteReview(12);
+
+    expect(api.method, 'DELETE');
+    expect(api.path, '/api/c/v1/reviews/12');
   });
 
   test('review repository uploads image bytes and returns the url', () async {

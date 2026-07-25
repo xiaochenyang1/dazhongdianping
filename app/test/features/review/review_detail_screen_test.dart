@@ -4,8 +4,9 @@ import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class DetailFakeApi implements JsonApi {
+class DetailFakeApi implements JsonApi, JsonDeleteApi {
   final List<String> posts = <String>[];
+  final List<String> deletedPaths = <String>[];
   bool liked = false;
   int likeCount = 3;
   final List<Map<String, dynamic>> comments = [
@@ -74,6 +75,12 @@ class DetailFakeApi implements JsonApi {
       return detail();
     }
     throw StateError('unexpected path $path');
+  }
+
+  @override
+  Future<Map<String, dynamic>> deleteJson(String path) async {
+    deletedPaths.add(path);
+    return const {};
   }
 
   @override
@@ -200,5 +207,28 @@ void main() {
     expect(find.textContaining('审核备注：请补充菜品细节'), findsOneWidget);
     expect(find.text('编辑'), findsOneWidget);
     expect(find.byKey(const Key('review-like-button')), findsNothing);
+  });
+
+  testWidgets('owned review detail can delete the review', (tester) async {
+    final api = DetailFakeApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+          owned: true,
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('review-delete-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('review-delete-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(api.deletedPaths, contains('/api/c/v1/reviews/12'));
+    expect(find.text('我的点评详情'), findsNothing);
   });
 }
