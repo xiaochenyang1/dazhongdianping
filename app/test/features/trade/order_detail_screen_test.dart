@@ -116,5 +116,9 @@ void main() {
     expect(find.text('CP-DEMO-2026'), findsOneWidget);
     expect(find.textContaining('待使用'), findsOneWidget);
     expect(find.textContaining('由商户核销'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('copy-coupon-code')));
+    await tester.pumpAndSettle();
+    expect(find.text('券码已复制'), findsOneWidget);
   });
 }

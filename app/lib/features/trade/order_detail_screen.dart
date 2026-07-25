@@ -2,6 +2,7 @@ import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({
@@ -351,6 +352,21 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.4,
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        key: const Key('copy-coupon-code'),
+                        onPressed: () async {
+                          await Clipboard.setData(
+                            ClipboardData(text: coupon.code),
+                          );
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('券码已复制')),
+                          );
+                        },
+                        icon: const Icon(Icons.copy_outlined),
+                        label: const Text('复制券码'),
                       ),
                       if (qrImageUrl.isNotEmpty) ...[
                         const SizedBox(height: 16),
