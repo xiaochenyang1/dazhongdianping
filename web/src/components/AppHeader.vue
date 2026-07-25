@@ -217,6 +217,12 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'review.hidden') {
     return ' · 点评处理'
   }
+  if (item.type === 'topic.update') {
+    return ' · 话题更新'
+  }
+  if (item.type === 'social.mention') {
+    return ' · @提醒'
+  }
   return ''
 }
 

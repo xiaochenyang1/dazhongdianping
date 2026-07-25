@@ -48,6 +48,7 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'coupon.verified') return '券码核销'
   if (item.type === 'review.hidden') return '点评处理'
   if (item.type === 'social.mention') return '@提醒'
+  if (item.type === 'topic.update') return '话题更新'
   return item.type
 }
 

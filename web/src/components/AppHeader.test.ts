@@ -558,6 +558,42 @@ describe('AppHeader', () => {
     app.unmount()
   })
 
+  it('routes topic update notifications to community post detail page', async () => {
+    notificationMocks.state.items = [
+      {
+        id: 717,
+        type: 'topic.update',
+        title: '关注的话题有新内容',
+        content: '话题作者 在 #话题更新通知 发布了《周末探店合集》',
+        linkUrl: '/community/posts/120',
+        aggregateCount: 1,
+        read: false,
+        createdAt: '2026-07-25 13:30:00',
+      },
+    ]
+    notificationMocks.state.unreadCount = 1
+
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    const trigger = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes('通知'))
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(host.textContent).toContain('关注的话题有新内容')
+    expect(host.textContent).toContain('话题更新')
+
+    const item = host.querySelector('.notification-item') as HTMLButtonElement | null
+    item?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushView()
+
+    expect(notificationMocks.markRead).toHaveBeenCalledTimes(1)
+    expect(routerMocks.push).toHaveBeenCalledWith('/community/posts/120')
+    app.unmount()
+  })
+
   it('routes coupon verified notifications to coupon detail page', async () => {
     notificationMocks.state.items = [
       {

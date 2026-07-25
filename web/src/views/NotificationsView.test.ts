@@ -419,6 +419,42 @@ describe('NotificationsView', () => {
     app.unmount()
   })
 
+  it('routes topic update notifications to community post detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 25,
+          type: 'topic.update',
+          title: '关注的话题有新内容',
+          content: '话题作者 在 #话题更新通知 发布了《周末探店合集》',
+          linkUrl: '/community/posts/99',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 13:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('关注的话题有新内容')
+    expect(host.textContent).toContain('话题更新')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/community/posts/99')
+    app.unmount()
+  })
+
   it('routes coupon verified notifications to coupon detail page', async () => {
     notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
       list: [

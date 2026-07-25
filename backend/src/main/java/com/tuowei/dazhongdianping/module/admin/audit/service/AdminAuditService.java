@@ -33,6 +33,7 @@ import com.tuowei.dazhongdianping.module.community.mapper.CommunityMapper;
 import com.tuowei.dazhongdianping.module.community.model.PostRow;
 import com.tuowei.dazhongdianping.module.notification.service.MentionNotificationService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
+import com.tuowei.dazhongdianping.module.notification.service.TopicUpdateNotificationService;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
 import com.tuowei.dazhongdianping.module.merchant.shop.model.ShopChangeRow;
 import com.tuowei.dazhongdianping.module.merchant.shop.service.MerchantShopChangeService;
@@ -81,6 +82,7 @@ public class AdminAuditService {
     private final CommunityMapper communityMapper;
     private final TopicService topicService;
     private final MentionNotificationService mentionNotificationService;
+    private final TopicUpdateNotificationService topicUpdateNotificationService;
     private final NotificationService notificationService;
     private final AdminPermissionChecker permissionChecker;
 
@@ -99,6 +101,7 @@ public class AdminAuditService {
                              CommunityMapper communityMapper,
                              TopicService topicService,
                              MentionNotificationService mentionNotificationService,
+                             TopicUpdateNotificationService topicUpdateNotificationService,
                              NotificationService notificationService,
                              AdminPermissionChecker permissionChecker) {
         this.adminAuditMapper = adminAuditMapper;
@@ -116,6 +119,7 @@ public class AdminAuditService {
         this.communityMapper = communityMapper;
         this.topicService = topicService;
         this.mentionNotificationService = mentionNotificationService;
+        this.topicUpdateNotificationService = topicUpdateNotificationService;
         this.notificationService = notificationService;
         this.permissionChecker = permissionChecker;
     }
@@ -326,6 +330,7 @@ public class AdminAuditService {
                     post.getUserName() + " 在帖子《" + preview(post.getTitle()) + "》中提到了你",
                     "/community/posts/" + post.getId()
             );
+            topicUpdateNotificationService.notifyTopicFollowers(post);
         }
         notifyPostAuditResult(post, status == 1, remark);
         adminAuditMapper.insertAuditLog(

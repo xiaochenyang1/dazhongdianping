@@ -529,6 +529,139 @@ class CommunityControllerTest {
     }
 
     @Test
+    void shouldNotifyTopicFollowersWhenApprovedPostGoesPublic() throws Exception {
+        RegisteredUser author = registerUser("话题作者");
+        RegisteredUser follower = registerUser("话题关注者");
+        RegisteredUser multiTopicFollower = registerUser("多话题关注者");
+        RegisteredUser unrelated = registerUser("路人甲");
+
+        // Seed the topic first so followers can subscribe before the post is approved.
+        MvcResult seed = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(author.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "种子帖",
+                                  "content": "只用来创建话题，不触发本轮断言。",
+                                  "contentType": 1,
+                                  "images": [],
+                                  "topics": ["话题更新通知", "欧洲周末"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        long seedPostId = readLong(seed, "/data/id");
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(seedPostId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        long topicA = jdbcTemplate.queryForObject(
+                "SELECT id FROM topic WHERE region='EU' AND name='话题更新通知'",
+                Long.class
+        );
+        long topicB = jdbcTemplate.queryForObject(
+                "SELECT id FROM topic WHERE region='EU' AND name='欧洲周末'",
+                Long.class
+        );
+
+        mockMvc.perform(put("/api/c/v1/topics/{id}/follow", topicA)
+                        .header("Authorization", bearer(follower.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.followed").value(true));
+        mockMvc.perform(put("/api/c/v1/topics/{id}/follow", topicA)
+                        .header("Authorization", bearer(multiTopicFollower.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk());
+        mockMvc.perform(put("/api/c/v1/topics/{id}/follow", topicB)
+                        .header("Authorization", bearer(multiTopicFollower.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk());
+        // Author following own topics should not receive a self-notification.
+        mockMvc.perform(put("/api/c/v1/topics/{id}/follow", topicA)
+                        .header("Authorization", bearer(author.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk());
+
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(author.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "周末探店合集",
+                                  "content": "审核通过后应提醒话题关注者。",
+                                  "contentType": 1,
+                                  "images": [],
+                                  "topics": ["话题更新通知", "欧洲周末"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        long postId = readLong(created, "/data/id");
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(follower.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(postId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/notifications/unread-count")
+                        .header("Authorization", bearer(follower.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(1));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(follower.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].type").value("topic.update"))
+                .andExpect(jsonPath("$.data.list[0].actorUserId").value(author.userId()))
+                .andExpect(jsonPath("$.data.list[0].actorName").value("话题作者"))
+                .andExpect(jsonPath("$.data.list[0].title").value("关注的话题有新内容"))
+                .andExpect(jsonPath("$.data.list[0].content").value("话题作者 在 #话题更新通知 发布了《周末探店合集》"))
+                .andExpect(jsonPath("$.data.list[0].aggregateCount").value(1))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/community/posts/" + postId));
+
+        // Multi-topic follower still receives a single notification for the same post.
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(multiTopicFollower.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].type").value("topic.update"))
+                .andExpect(jsonPath("$.data.list[0].linkUrl").value("/community/posts/" + postId));
+
+        // Author only gets the audit result notification, not topic.update for self-follow.
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(author.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[?(@.type=='topic.update')]").value(org.hamcrest.Matchers.empty()))
+                .andExpect(jsonPath("$.data.list[?(@.type=='post.audit.result')].title")
+                        .value(org.hamcrest.Matchers.hasItem("帖子已通过审核")));
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(unrelated.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
     void shouldNotifyCommentMentionsAndSkipInvalidTargets() throws Exception {
         RegisteredUser author = registerUser("原帖作者");
         MvcResult created = mockMvc.perform(post("/api/c/v1/posts")

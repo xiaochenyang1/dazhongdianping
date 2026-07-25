@@ -73,6 +73,12 @@ class AdminAuditServiceTest {
     private TopicService topicService;
 
     @Mock
+    private com.tuowei.dazhongdianping.module.notification.service.MentionNotificationService mentionNotificationService;
+
+    @Mock
+    private com.tuowei.dazhongdianping.module.notification.service.TopicUpdateNotificationService topicUpdateNotificationService;
+
+    @Mock
     private NotificationService notificationService;
 
     @Spy

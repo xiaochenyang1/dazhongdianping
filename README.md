@@ -110,7 +110,7 @@
   - `POST /api/admin/v1/topics/{id}/merge`
   - `POST /api/admin/v1/topics/recalculate-hot`
 
-话题热榜使用数据库快照，不依赖 Redis：统计最近 7 天公开帖子，固定公式为 `post_count_7d * 20 + like_count_7d * 3 + comment_count_7d * 5 + (recommended ? 100 : 0)`。置顶话题优先，普通话题再按分数、关注数、ID 排序；CN/EU 每小时独立增量重算，首次读取无快照时同步兜底，替换失败会回滚并保留旧快照。当前没有独立话题 Feed，也没有话题更新通知。
+话题热榜使用数据库快照，不依赖 Redis：统计最近 7 天公开帖子，固定公式为 `post_count_7d * 20 + like_count_7d * 3 + comment_count_7d * 5 + (recommended ? 100 : 0)`。置顶话题优先，普通话题再按分数、关注数、ID 排序；CN/EU 每小时独立增量重算，首次读取无快照时同步兜底，替换失败会回滚并保留旧快照。当前没有独立话题 Feed；帖子审核通过后会向关联话题关注者发送 `topic.update` 站内通知（作者本人跳过、同帖多话题去重）。
 - `POST /api/c/v1/auth/send-code` 当前已按 `scene + account`、`deviceId`、`IP` 做限流，超限返回 `429` 并带 `Retry-After`；默认走本地内存计数，`APP_STATE_STORE_PROVIDER=redis` 时走 Redis。
 - `M2` 已完成本地点评 / 审核 / 互动最小接口:
   - `POST /api/c/v1/reviews`
