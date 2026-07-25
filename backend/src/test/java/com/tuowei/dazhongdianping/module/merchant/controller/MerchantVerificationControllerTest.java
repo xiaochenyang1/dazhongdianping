@@ -136,6 +136,23 @@ class MerchantVerificationControllerTest {
                 .andExpect(jsonPath("$.data.merchantId").value(1001))
                 .andExpect(jsonPath("$.data.merchantCertification.code").value("verified_merchant"))
                 .andExpect(jsonPath("$.data.merchantCertification.label").value("认证商户"));
+
+        mockMvc.perform(get("/api/c/v1/shops")
+                        .header("X-Region", "CN")
+                        .param("page", "1")
+                        .param("pageSize", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[?(@.id==10001)].merchantCertification.label")
+                        .value(org.hamcrest.Matchers.hasItem("认证商户")));
+
+        mockMvc.perform(get("/api/c/v1/search/shops")
+                        .header("X-Region", "CN")
+                        .param("keyword", "火")
+                        .param("page", "1")
+                        .param("pageSize", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[?(@.id==10001)].merchantCertification.label")
+                        .value(org.hamcrest.Matchers.hasItem("认证商户")));
     }
 
     @Test

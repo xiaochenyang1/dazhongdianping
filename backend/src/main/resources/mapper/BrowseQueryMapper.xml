@@ -177,6 +177,7 @@
 
     <select id="selectShops" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopListRow">
         SELECT s.id,
+               s.merchant_id,
                s.name,
                s.cover_url,
                s.score,
@@ -245,8 +246,22 @@
           AND s.id = #{shopId}
     </select>
 
+    <select id="selectShopMerchantIds" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopListRow">
+        SELECT s.id,
+               s.merchant_id
+        FROM shop s
+        WHERE s.region = #{region}
+          AND s.status = 1
+          AND s.is_deleted = FALSE
+          AND s.id IN
+        <foreach collection="shopIds" item="shopId" open="(" separator="," close=")">
+            #{shopId}
+        </foreach>
+    </select>
+
     <select id="selectSimilarShops" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopListRow">
         SELECT s.id,
+               s.merchant_id,
                s.category_id,
                s.city_id,
                s.area_id,

@@ -106,7 +106,9 @@ class _SearchScreenState extends State<SearchScreen> {
                             return ListTile(
                               title: Text(shop.name),
                               subtitle: Text(
-                                '${shop.category} · ★ ${shop.score.toStringAsFixed(1)}',
+                                shop.merchantCertificationLabel == null
+                                    ? '${shop.category} · ★ ${shop.score.toStringAsFixed(1)}'
+                                    : '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${shop.merchantCertificationLabel}',
                               ),
                               trailing: Text(
                                 '${shop.currency} ${shop.pricePerCapita}',

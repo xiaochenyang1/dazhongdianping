@@ -54,4 +54,32 @@ describe('ShopCard', () => {
     expect(host.textContent).not.toContain('€')
     app.unmount()
   })
+
+  it('renders verified merchant badge next to the shop name', () => {
+    const host = document.createElement('div')
+    const app = createApp(ShopCard, {
+      shop: {
+        id: 20001,
+        name: 'Maison Sichuan Paris',
+        coverUrl: '/shop.jpg',
+        score: 4.6,
+        pricePerCapita: 36,
+        currency: 'EUR',
+        address: '12 Rue du Temple, Paris',
+        areaName: 'Le Marais',
+        cityName: 'Paris',
+        hasDeal: true,
+        openNow: true,
+        tags: ['Chinese'],
+        distanceMeters: null,
+        merchantCertification: { code: 'verified_merchant', label: '认证商户' },
+      },
+    })
+
+    app.mount(host)
+
+    expect(host.textContent).toContain('Maison Sichuan Paris')
+    expect(host.textContent).toContain('认证商户')
+    app.unmount()
+  })
 })

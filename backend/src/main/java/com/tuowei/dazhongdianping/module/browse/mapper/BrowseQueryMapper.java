@@ -39,6 +39,9 @@ public interface BrowseQueryMapper {
 
     ShopDetailRow selectShopDetail(@Param("region") String region, @Param("shopId") Long shopId);
 
+    List<ShopListRow> selectShopMerchantIds(@Param("region") String region,
+                                           @Param("shopIds") List<Long> shopIds);
+
     List<ShopListRow> selectSimilarShops(@Param("region") String region,
                                          @Param("shopId") Long shopId,
                                          @Param("categoryId") Long categoryId,

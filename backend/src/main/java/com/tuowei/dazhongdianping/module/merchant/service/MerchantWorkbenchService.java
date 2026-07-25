@@ -96,16 +96,20 @@ public class MerchantWorkbenchService {
     private ShopListItemResponse toShopListItemResponse(ShopListRow row) {
         return new ShopListItemResponse(
                 row.getId(),
+                row.getMerchantId(),
                 row.getName(),
                 row.getCoverUrl(),
                 row.getScore(),
                 row.getPricePerCapita(),
+                row.getCurrency(),
                 row.getAddress(),
                 row.getAreaName(),
                 row.getCityName(),
                 row.getHasDeal(),
                 row.getOpenNow(),
-                splitTags(row.getTags())
+                splitTags(row.getTags()),
+                null,
+                null
         );
     }
 

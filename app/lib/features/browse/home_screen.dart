@@ -228,7 +228,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               subtitle: Text(
-                                '${shop.category} · ★ ${shop.score.toStringAsFixed(1)}',
+                                shop.merchantCertificationLabel == null
+                                    ? '${shop.category} · ★ ${shop.score.toStringAsFixed(1)}'
+                                    : '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${shop.merchantCertificationLabel}',
                               ),
                               trailing: Text(
                                 '${shop.currency} ${shop.pricePerCapita}',

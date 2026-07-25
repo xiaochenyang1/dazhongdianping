@@ -66,6 +66,7 @@
 
     <select id="selectMerchantShops" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopListRow">
         SELECT s.id,
+               s.merchant_id,
                s.name,
                s.cover_url,
                s.score,

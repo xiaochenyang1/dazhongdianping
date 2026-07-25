@@ -38,6 +38,7 @@ export interface HomeFeedItem {
 
 export interface ShopListItem {
   id: number
+  merchantId?: number | null
   name: string
   coverUrl: string
   score: number
@@ -50,6 +51,7 @@ export interface ShopListItem {
   openNow: boolean
   tags: string[]
   distanceMeters: number | null
+  merchantCertification?: UserExpertCertificationBadge | null
 }
 
 export interface SearchSuggestion {

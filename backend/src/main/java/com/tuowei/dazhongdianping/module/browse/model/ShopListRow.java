@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class ShopListRow {
     private Long id;
+    private Long merchantId;
     private Long categoryId;
     private Long cityId;
     private Long areaId;

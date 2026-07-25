@@ -10,6 +10,7 @@ import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.config.SearchProperties;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopListItemResponse;
+import com.tuowei.dazhongdianping.module.browse.service.BrowseQueryService;
 import com.tuowei.dazhongdianping.module.search.gateway.ShopSearchGateway;
 import com.tuowei.dazhongdianping.module.search.model.ShopSearchQuery;
 import java.util.List;
@@ -33,13 +34,15 @@ class ShopSearchServiceTest {
         properties.setProvider(SearchProperties.Provider.ELASTICSEARCH);
         ShopSearchGateway mysqlGateway = mock(ShopSearchGateway.class);
         ShopSearchGateway elasticsearchGateway = mock(ShopSearchGateway.class);
+        BrowseQueryService browseQueryService = mock(BrowseQueryService.class);
         ShopSearchQuery query = new ShopSearchQuery();
         PageResult<ShopListItemResponse> expected = emptyPage();
         when(elasticsearchGateway.search(Region.CN, query)).thenReturn(expected);
+        when(browseQueryService.attachMerchantCertifications(expected.list(), "CN")).thenReturn(expected.list());
 
-        ShopSearchService service = new ShopSearchService(properties, mysqlGateway, elasticsearchGateway);
+        ShopSearchService service = new ShopSearchService(properties, mysqlGateway, elasticsearchGateway, browseQueryService);
 
-        assertThat(service.search(Region.CN, query)).isSameAs(expected);
+        assertThat(service.search(Region.CN, query).list()).isEqualTo(expected.list());
         verify(elasticsearchGateway).search(Region.CN, query);
     }
 
@@ -50,14 +53,16 @@ class ShopSearchServiceTest {
         properties.setFallbackOnError(true);
         ShopSearchGateway mysqlGateway = mock(ShopSearchGateway.class);
         ShopSearchGateway elasticsearchGateway = mock(ShopSearchGateway.class);
+        BrowseQueryService browseQueryService = mock(BrowseQueryService.class);
         ShopSearchQuery query = new ShopSearchQuery();
         PageResult<ShopListItemResponse> expected = emptyPage();
         when(elasticsearchGateway.search(Region.EU, query)).thenThrow(new IllegalStateException("ES unavailable"));
         when(mysqlGateway.search(Region.EU, query)).thenReturn(expected);
+        when(browseQueryService.attachMerchantCertifications(expected.list(), "EU")).thenReturn(expected.list());
 
-        ShopSearchService service = new ShopSearchService(properties, mysqlGateway, elasticsearchGateway);
+        ShopSearchService service = new ShopSearchService(properties, mysqlGateway, elasticsearchGateway, browseQueryService);
 
-        assertThat(service.search(Region.EU, query)).isSameAs(expected);
+        assertThat(service.search(Region.EU, query).list()).isEqualTo(expected.list());
         verify(mysqlGateway).search(Region.EU, query);
     }
 

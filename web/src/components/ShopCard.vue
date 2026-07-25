@@ -19,7 +19,12 @@ function formatDistance(distanceMeters: number) {
     <img :src="shop.coverUrl" :alt="shop.name" class="shop-card__cover" />
     <div class="shop-card__body">
       <div class="shop-card__heading">
-        <h3>{{ shop.name }}</h3>
+        <h3 class="name-with-badge">
+          {{ shop.name }}
+          <span v-if="shop.merchantCertification" class="verified-badge verified-badge--compact">
+            {{ shop.merchantCertification.label }}
+          </span>
+        </h3>
         <span class="shop-card__score">{{ shop.score.toFixed(1) }}</span>
       </div>
       <p class="shop-card__meta">

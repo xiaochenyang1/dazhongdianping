@@ -9,6 +9,7 @@ import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
 import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.browse.mapper.BrowseQueryMapper;
+import com.tuowei.dazhongdianping.module.merchant.verification.model.response.MerchantVerificationBadgeResponse;
 import com.tuowei.dazhongdianping.module.merchant.verification.service.MerchantVerificationService;
 import com.tuowei.dazhongdianping.module.browse.model.AreaRow;
 import com.tuowei.dazhongdianping.module.browse.model.BannerRow;
@@ -112,9 +113,8 @@ public class BrowseQueryService {
         query.normalize();
         recordSearchHistoryIfNeeded(region, query.getKeyword());
         long total = browseQueryMapper.countShops(query);
-        List<ShopListItemResponse> items = browseQueryMapper.selectShops(query).stream()
-                .map(this::toShopListItemResponse)
-                .toList();
+        List<ShopListRow> rows = browseQueryMapper.selectShops(query);
+        List<ShopListItemResponse> items = toShopListItemResponses(rows, region.name(), null);
         return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);
     }
 
@@ -164,7 +164,7 @@ public class BrowseQueryService {
         if (source == null) {
             throw new NotFoundException("商户不存在");
         }
-        return browseQueryMapper.selectSimilarShops(
+        List<ShopListRow> rows = browseQueryMapper.selectSimilarShops(
                         region.name(),
                         shopId,
                         source.getCategoryId(),
@@ -173,8 +173,8 @@ public class BrowseQueryService {
                 ).stream()
                 .sorted(similarShopComparator(source))
                 .limit(limit)
-                .map(row -> toShopListItemResponse(row, distanceMeters(source, row)))
                 .toList();
+        return toShopListItemResponses(rows, region.name(), source);
     }
 
     public PageResult<ReviewPreviewResponse> listShopReviews(Region region,
@@ -329,12 +329,64 @@ public class BrowseQueryService {
     }
 
     private ShopListItemResponse toShopListItemResponse(ShopListRow row) {
-        return toShopListItemResponse(row, null);
+        return toShopListItemResponse(row, null, null);
     }
 
-    private ShopListItemResponse toShopListItemResponse(ShopListRow row, Double distanceMeters) {
+    private List<ShopListItemResponse> toShopListItemResponses(List<ShopListRow> rows,
+                                                              String region,
+                                                              ShopDetailRow distanceSource) {
+        if (rows == null || rows.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, MerchantVerificationBadgeResponse> badges =
+                merchantVerificationService.approvedBadges(
+                        rows.stream().map(ShopListRow::getMerchantId).toList(),
+                        region
+                );
+        return rows.stream()
+                .map(row -> toShopListItemResponse(
+                        row,
+                        distanceSource == null ? null : distanceMeters(distanceSource, row),
+                        badges.get(row.getMerchantId())
+                ))
+                .toList();
+    }
+
+    public List<ShopListItemResponse> attachMerchantCertifications(List<ShopListItemResponse> items, String region) {
+        if (items == null || items.isEmpty()) {
+            return List.of();
+        }
+        List<Long> shopIds = items.stream()
+                .map(ShopListItemResponse::id)
+                .filter(Objects::nonNull)
+                .filter(id -> id > 0)
+                .distinct()
+                .toList();
+        if (shopIds.isEmpty()) {
+            return items;
+        }
+        Map<Long, Long> merchantIdsByShop = new LinkedHashMap<>();
+        for (ShopListRow row : browseQueryMapper.selectShopMerchantIds(region, shopIds)) {
+            if (row.getId() != null && row.getMerchantId() != null) {
+                merchantIdsByShop.put(row.getId(), row.getMerchantId());
+            }
+        }
+        Map<Long, MerchantVerificationBadgeResponse> badges =
+                merchantVerificationService.approvedBadges(List.copyOf(merchantIdsByShop.values()), region);
+        return items.stream()
+                .map(item -> {
+                    Long merchantId = item.merchantId() != null ? item.merchantId() : merchantIdsByShop.get(item.id());
+                    return item.withMerchantCertification(merchantId, badges.get(merchantId));
+                })
+                .toList();
+    }
+
+    private ShopListItemResponse toShopListItemResponse(ShopListRow row,
+                                                        Double distanceMeters,
+                                                        MerchantVerificationBadgeResponse badge) {
         return new ShopListItemResponse(
                 row.getId(),
+                row.getMerchantId(),
                 row.getName(),
                 row.getCoverUrl(),
                 row.getScore(),
@@ -346,8 +398,13 @@ public class BrowseQueryService {
                 row.getHasDeal(),
                 row.getOpenNow(),
                 splitTags(row.getTags()),
-                distanceMeters
+                distanceMeters,
+                badge
         );
+    }
+
+    private ShopListItemResponse toShopListItemResponse(ShopListRow row, Double distanceMeters) {
+        return toShopListItemResponse(row, distanceMeters, null);
     }
 
     private Comparator<ShopListRow> similarShopComparator(ShopDetailRow source) {

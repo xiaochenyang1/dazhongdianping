@@ -8,6 +8,7 @@ class ShopSummary {
     required this.score,
     required this.currency,
     required this.pricePerCapita,
+    this.merchantCertificationLabel,
   });
   final int id;
   final String name;
@@ -15,15 +16,27 @@ class ShopSummary {
   final double score;
   final String currency;
   final num pricePerCapita;
+  final String? merchantCertificationLabel;
 
-  factory ShopSummary.fromJson(Map<String, dynamic> json) => ShopSummary(
-    id: json['id'] as int,
-    name: json['name'] as String? ?? '',
-    category: json['categoryName'] as String? ?? '',
-    score: (json['score'] as num? ?? 0).toDouble(),
-    currency: json['currency'] as String? ?? 'EUR',
-    pricePerCapita: json['pricePerCapita'] as num? ?? 0,
-  );
+  factory ShopSummary.fromJson(Map<String, dynamic> json) {
+    final certification = json['merchantCertification'];
+    String? label;
+    if (certification is Map<String, dynamic>) {
+      final value = certification['label'];
+      if (value is String && value.trim().isNotEmpty) {
+        label = value.trim();
+      }
+    }
+    return ShopSummary(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      category: json['categoryName'] as String? ?? '',
+      score: (json['score'] as num? ?? 0).toDouble(),
+      currency: json['currency'] as String? ?? 'EUR',
+      pricePerCapita: json['pricePerCapita'] as num? ?? 0,
+      merchantCertificationLabel: label,
+    );
+  }
 }
 
 class ShopDetail {
