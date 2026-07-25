@@ -256,11 +256,38 @@ public class CommunityService {
         communityMapper.insertPostComment(row);
         communityMapper.refreshPostCommentCount(postId);
         topicService.touchTopicsByPostId(postId);
-        if (post.getUserId() != null && !user.userId().equals(post.getUserId())) {
-            notificationService.create(post.getUserId(), user.userId(), post.getRegion(), "post.comment", "帖子新评论",
+
+        Long postAuthorId = post.getUserId();
+        Long replyTargetUserId = threadTarget.replyTo() == null ? null : threadTarget.replyTo().userId();
+        boolean notifiedAuthor = false;
+        if (postAuthorId != null && !user.userId().equals(postAuthorId)) {
+            notificationService.create(
+                    postAuthorId,
+                    user.userId(),
+                    post.getRegion(),
+                    "post.comment",
+                    "帖子新评论",
                     row.getUserName() + " 评论了你的帖子：" + preview(row.getContent()),
-                    "/community/posts/" + postId);
+                    "/community/posts/" + postId
+            );
+            notifiedAuthor = true;
         }
+        // 盖楼回复时额外提醒被回复者；若被回复者就是帖子作者，上面已发 post.comment，避免重复。
+        if (replyTargetUserId != null
+                && replyTargetUserId > 0
+                && !user.userId().equals(replyTargetUserId)
+                && !(notifiedAuthor && replyTargetUserId.equals(postAuthorId))) {
+            notificationService.create(
+                    replyTargetUserId,
+                    user.userId(),
+                    post.getRegion(),
+                    "post.comment.reply",
+                    "评论被回复",
+                    row.getUserName() + " 回复了你：" + preview(row.getContent()),
+                    "/community/posts/" + postId
+            );
+        }
+
         mentionNotificationService.notifyMentionedUsers(
                 user.userId(),
                 post.getRegion(),

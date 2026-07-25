@@ -362,6 +362,74 @@ class CommunityControllerTest {
     }
 
     @Test
+    void shouldNotifyReplyTargetWhenPostCommentIsReplied() throws Exception {
+        RegisteredUser author = registerUser("帖子楼主");
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(author.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload("评论回复通知帖", "盖楼回复应提醒被回复者。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long postId = readLong(created, "/data/id");
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(postId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        RegisteredUser parent = registerUser("被回复评论人");
+        RegisteredUser replier = registerUser("盖楼回复人");
+
+        MvcResult parentResult = mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", postId)
+                        .header("Authorization", bearer(parent.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "我先开一楼。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        long parentCommentId = readLong(parentResult, "/data/id");
+
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", postId)
+                        .header("Authorization", bearer(replier.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "接着你的楼补一句。",
+                                  "replyTo": %d
+                                }
+                                """.formatted(parentCommentId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(parent.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[?(@.type=='post.comment.reply')].title")
+                        .value(org.hamcrest.Matchers.hasItem("评论被回复")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='post.comment.reply')].content")
+                        .value(org.hamcrest.Matchers.hasItem("盖楼回复人 回复了你：接着你的楼补一句。")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='post.comment.reply')].linkUrl")
+                        .value(org.hamcrest.Matchers.hasItem("/community/posts/" + postId)));
+
+        // Post author gets post.comment for the reply, not post.comment.reply.
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(author.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[?(@.type=='post.comment')].title")
+                        .value(org.hamcrest.Matchers.hasItem("帖子新评论")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='post.comment.reply')]")
+                        .value(org.hamcrest.Matchers.empty()));
+    }
+
+    @Test
     void shouldRejectReplyingToCommentFromAnotherPost() throws Exception {
         String authorToken = registerUser();
         MvcResult firstPostResult = mockMvc.perform(post("/api/c/v1/posts")

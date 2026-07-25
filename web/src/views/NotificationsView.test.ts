@@ -491,6 +491,42 @@ describe('NotificationsView', () => {
     app.unmount()
   })
 
+  it('routes post comment reply notifications to community post detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 32,
+          type: 'post.comment.reply',
+          title: '评论被回复',
+          content: '盖楼回复人 回复了你：接着你的楼补一句。',
+          linkUrl: '/community/posts/77',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 14:30:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('评论被回复')
+    expect(host.textContent).toContain('帖子评论回复')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/community/posts/77')
+    app.unmount()
+  })
+
   it('routes coupon verified notifications to coupon detail page', async () => {
     notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
       list: [

@@ -53,6 +53,10 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'review.comment') return '点评评论'
   if (item.type === 'review.comment.reply') return '评论回复'
   if (item.type === 'review.reply') return '商家回复'
+  if (item.type === 'post.comment') return '帖子评论'
+  if (item.type === 'post.comment.reply') return '帖子评论回复'
+  if (item.type === 'post.like') return '帖子获赞'
+  if (item.type === 'post.repost') return '帖子转发'
   return item.type
 }
 
