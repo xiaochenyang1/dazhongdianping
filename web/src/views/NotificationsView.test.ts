@@ -455,6 +455,42 @@ describe('NotificationsView', () => {
     app.unmount()
   })
 
+  it('routes review comment reply notifications to review detail page', async () => {
+    notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
+      list: [
+        {
+          id: 31,
+          type: 'review.comment.reply',
+          title: '评论被回复',
+          content: '盖楼回复人 回复了你：接着你的楼补一句。',
+          linkUrl: '/reviews/55',
+          aggregateCount: 1,
+          read: false,
+          readAt: '',
+          createdAt: '2026-07-25 14:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('评论被回复')
+    expect(host.textContent).toContain('评论回复')
+
+    const button = [...host.querySelectorAll('button')].find((el) => el.textContent?.includes('查看详情'))
+    button?.click()
+    await flush()
+
+    expect(notificationStateMocks.markRead).toHaveBeenCalled()
+    expect(routerMocks.push).toHaveBeenCalledWith('/reviews/55')
+    app.unmount()
+  })
+
   it('routes coupon verified notifications to coupon detail page', async () => {
     notificationServiceMocks.fetchNotifications.mockResolvedValueOnce({
       list: [

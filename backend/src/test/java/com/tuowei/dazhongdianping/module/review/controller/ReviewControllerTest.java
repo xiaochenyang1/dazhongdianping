@@ -607,6 +607,63 @@ class ReviewControllerTest {
     }
 
     @Test
+    void shouldNotifyReplyTargetWhenReviewCommentIsReplied() throws Exception {
+        String authorToken = registerUser("review-reply-author@example.com", "点评楼主");
+        long reviewId = createReview(authorToken, 10001L, "这条点评用来验证评论回复通知。", 5, 5, 5, 5, 99.00);
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingAuditTaskId(reviewId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        String parentToken = registerUser("review-reply-parent@example.com", "被回复评论人");
+        String replierToken = registerUser("review-reply-actor@example.com", "盖楼回复人");
+
+        MvcResult parentComment = mockMvc.perform(post("/api/c/v1/reviews/{reviewId}/comments", reviewId)
+                        .header("Authorization", bearer(parentToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "我先留一条评论，等别人盖楼。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        long parentCommentId = readLong(parentComment, "/data/id");
+
+        mockMvc.perform(post("/api/c/v1/reviews/{reviewId}/comments", reviewId)
+                        .header("Authorization", bearer(replierToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "接着你的楼补一句。",
+                                  "replyTo": %d
+                                }
+                                """.formatted(parentCommentId)))
+                .andExpect(status().isOk());
+
+        // Parent commenter receives a reply notification (not the plain review.comment type).
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(parentToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[?(@.type=='review.comment.reply')].title")
+                        .value(org.hamcrest.Matchers.hasItem("评论被回复")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='review.comment.reply')].content")
+                        .value(org.hamcrest.Matchers.hasItem("盖楼回复人 回复了你：接着你的楼补一句。")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='review.comment.reply')].linkUrl")
+                        .value(org.hamcrest.Matchers.hasItem("/reviews/" + reviewId)));
+
+        // Review author still only gets the top-level review.comment for the reply, not review.comment.reply.
+        mockMvc.perform(get("/api/c/v1/notifications")
+                        .header("Authorization", bearer(authorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[?(@.type=='review.comment')].title")
+                        .value(org.hamcrest.Matchers.hasItem("点评新评论")))
+                .andExpect(jsonPath("$.data.list[?(@.type=='review.comment.reply')]")
+                        .value(org.hamcrest.Matchers.empty()));
+    }
+
+    @Test
     void shouldRejectCrossRegionReviewAccessAndInteractions() throws Exception {
         String userToken = registerUser("review-region@example.com", "区域用户");
 

@@ -49,6 +49,10 @@ function notificationHint(item: UserNotification) {
   if (item.type === 'review.hidden') return '点评处理'
   if (item.type === 'social.mention') return '@提醒'
   if (item.type === 'topic.update') return '话题更新'
+  if (item.type === 'review.like') return '点评获赞'
+  if (item.type === 'review.comment') return '点评评论'
+  if (item.type === 'review.comment.reply') return '评论回复'
+  if (item.type === 'review.reply') return '商家回复'
   return item.type
 }
 

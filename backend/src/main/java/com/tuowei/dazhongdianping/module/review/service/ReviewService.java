@@ -186,12 +186,36 @@ public class ReviewService {
         row.setCreatedAt(LocalDateTime.now());
         reviewMapper.insertReviewComment(row);
         refreshInteractionCounts(reviewId);
-        if (review.getUserId() != null
-                && review.getUserId() > 0
-                && !currentUser.getId().equals(review.getUserId())) {
-            notificationService.create(review.getUserId(), currentUser.getId(), review.getRegion(), "review.comment", "点评新评论",
+
+        Long reviewAuthorId = review.getUserId() != null && review.getUserId() > 0 ? review.getUserId() : null;
+        Long replyTargetUserId = threadTarget.replyTo() == null ? null : threadTarget.replyTo().userId();
+        boolean notifiedAuthor = false;
+        if (reviewAuthorId != null && !currentUser.getId().equals(reviewAuthorId)) {
+            notificationService.create(
+                    reviewAuthorId,
+                    currentUser.getId(),
+                    review.getRegion(),
+                    "review.comment",
+                    "点评新评论",
                     row.getUserName() + " 评论了你的点评：" + preview(row.getContent()),
-                    "/reviews/" + reviewId);
+                    "/reviews/" + reviewId
+            );
+            notifiedAuthor = true;
+        }
+        // 盖楼回复时额外提醒被回复者；若被回复者就是点评作者，上面已发 review.comment，避免重复。
+        if (replyTargetUserId != null
+                && replyTargetUserId > 0
+                && !currentUser.getId().equals(replyTargetUserId)
+                && !(notifiedAuthor && replyTargetUserId.equals(reviewAuthorId))) {
+            notificationService.create(
+                    replyTargetUserId,
+                    currentUser.getId(),
+                    review.getRegion(),
+                    "review.comment.reply",
+                    "评论被回复",
+                    row.getUserName() + " 回复了你：" + preview(row.getContent()),
+                    "/reviews/" + reviewId
+            );
         }
 
         return toReviewCommentResponse(row, currentUser.getId(), threadTarget.replyTo(), List.of());
