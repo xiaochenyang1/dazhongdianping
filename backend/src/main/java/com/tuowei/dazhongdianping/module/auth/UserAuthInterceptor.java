@@ -23,6 +23,7 @@ public class UserAuthInterceptor implements HandlerInterceptor {
         String authorization = request.getHeader("Authorization");
         if (isPublicReviewReadRequest(request) || isPublicPostReadRequest(request)
                 || isPublicUserProfileReadRequest(request) || isPublicShopReadRequest(request)
+                || isPublicSearchReadRequest(request)
                 || isPublicCircleReadRequest(request) || isPublicTopicReadRequest(request)) {
             if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
                 UserSessionContext.set(publicAuthService.authenticate(authorization.substring(7)));
@@ -61,6 +62,13 @@ public class UserAuthInterceptor implements HandlerInterceptor {
                 && request.getRequestURI() != null
                 && (request.getRequestURI().equals("/api/c/v1/shops")
                 || request.getRequestURI().startsWith("/api/c/v1/shops/"));
+    }
+
+    private boolean isPublicSearchReadRequest(HttpServletRequest request) {
+        // 公开搜索允许游客读；登录态注入后可写当前区域搜索历史。
+        return "GET".equalsIgnoreCase(request.getMethod())
+                && request.getRequestURI() != null
+                && request.getRequestURI().equals("/api/c/v1/search/shops");
     }
 
     private boolean isPublicCircleReadRequest(HttpServletRequest request) {

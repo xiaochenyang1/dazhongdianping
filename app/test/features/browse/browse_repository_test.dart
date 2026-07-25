@@ -2,9 +2,11 @@ import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class FakeJsonApi implements JsonApi {
+class FakeJsonApi implements JsonApi, JsonDeleteApi {
   String? path;
   Map<String, Object?>? query;
+  final List<String> deletedPaths = <String>[];
+  bool throwUnauthorizedOnHistory = false;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -28,6 +30,33 @@ class FakeJsonApi implements JsonApi {
         'tags': ['Noodles'],
       };
     }
+    if (path == '/api/c/v1/search/hot') {
+      return {
+        'value': [
+          {'term': 'Brunch', 'score': 12},
+          {'term': 'Hotpot', 'score': 9},
+        ],
+      };
+    }
+    if (path == '/api/c/v1/search/history') {
+      if (throwUnauthorizedOnHistory) {
+        throw const ApiException('login required', statusCode: 401);
+      }
+      return {
+        'list': [
+          {
+            'id': 3,
+            'keyword': 'noodles',
+            'region': 'EU',
+            'updatedAt': '2026-07-25 10:00:00',
+          },
+        ],
+        'total': 1,
+        'page': 1,
+        'pageSize': 8,
+        'hasMore': false,
+      };
+    }
     return {
       'list': [
         {
@@ -45,6 +74,12 @@ class FakeJsonApi implements JsonApi {
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) =>
       throw UnimplementedError();
+
+  @override
+  Future<Map<String, dynamic>> deleteJson(String path) async {
+    deletedPaths.add(path);
+    return const {};
+  }
 }
 
 void main() {
@@ -60,5 +95,34 @@ void main() {
     final detail = await repository.loadShopDetail(99);
     expect(api.path, '/api/c/v1/shops/99');
     expect(detail.address, 'Rue de Lyon');
+  });
+
+  test('loads hot words and search history, and supports delete paths', () async {
+    final api = FakeJsonApi();
+    final repository = ApiBrowseRepository(api);
+
+    final hotWords = await repository.loadHotWords(limit: 6);
+    expect(api.path, '/api/c/v1/search/hot');
+    expect(api.query?['limit'], 6);
+    expect(hotWords.map((item) => item.term), ['Brunch', 'Hotpot']);
+
+    final history = await repository.loadSearchHistory(page: 1, pageSize: 8);
+    expect(api.path, '/api/c/v1/search/history');
+    expect(history.single.keyword, 'noodles');
+
+    await repository.removeSearchHistoryItem(3);
+    await repository.clearSearchHistory();
+    expect(api.deletedPaths, [
+      '/api/c/v1/search/history/3',
+      '/api/c/v1/search/history',
+    ]);
+  });
+
+  test('treats unauthorized search history as empty for guests', () async {
+    final api = FakeJsonApi()..throwUnauthorizedOnHistory = true;
+    final repository = ApiBrowseRepository(api);
+
+    final history = await repository.loadSearchHistory();
+    expect(history, isEmpty);
   });
 }

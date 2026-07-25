@@ -35,6 +35,8 @@ public class ShopSearchService {
 
     public PageResult<ShopListItemResponse> search(Region region, ShopSearchQuery query) {
         query.normalize();
+        // Record before provider fan-out so ES path also keeps search history.
+        browseQueryService.recordSearchHistoryIfNeeded(region, query.getKeyword());
         PageResult<ShopListItemResponse> page;
         if (searchProperties.getProvider() == SearchProperties.Provider.MYSQL) {
             page = mysqlGateway.search(region, query);

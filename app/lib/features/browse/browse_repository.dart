@@ -39,6 +39,41 @@ class ShopSummary {
   }
 }
 
+class SearchHotWord {
+  const SearchHotWord({required this.term, required this.score});
+  final String term;
+  final int score;
+
+  factory SearchHotWord.fromJson(Map<String, dynamic> json) {
+    return SearchHotWord(
+      term: json['term'] as String? ?? '',
+      score: (json['score'] as num? ?? 0).toInt(),
+    );
+  }
+}
+
+class SearchHistoryItem {
+  const SearchHistoryItem({
+    required this.id,
+    required this.keyword,
+    required this.region,
+    required this.updatedAt,
+  });
+  final int id;
+  final String keyword;
+  final String region;
+  final String updatedAt;
+
+  factory SearchHistoryItem.fromJson(Map<String, dynamic> json) {
+    return SearchHistoryItem(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      keyword: json['keyword'] as String? ?? '',
+      region: json['region'] as String? ?? '',
+      updatedAt: json['updatedAt'] as String? ?? '',
+    );
+  }
+}
+
 class ShopDetail {
   const ShopDetail({
     required this.id,
@@ -101,6 +136,15 @@ abstract class BrowseRepository {
   Future<List<ShopSummary>> searchShops(String keyword) =>
       throw UnimplementedError();
   Future<ShopDetail> loadShopDetail(int shopId) => throw UnimplementedError();
+  Future<List<SearchHotWord>> loadHotWords({int limit = 8}) =>
+      throw UnimplementedError();
+  Future<List<SearchHistoryItem>> loadSearchHistory({
+    int page = 1,
+    int pageSize = 8,
+  }) => throw UnimplementedError();
+  Future<void> clearSearchHistory() => throw UnimplementedError();
+  Future<void> removeSearchHistoryItem(int historyId) =>
+      throw UnimplementedError();
 }
 
 class ApiBrowseRepository implements BrowseRepository {
@@ -130,5 +174,66 @@ class ApiBrowseRepository implements BrowseRepository {
   Future<ShopDetail> loadShopDetail(int shopId) async {
     final result = await client.getJson('/api/c/v1/shops/$shopId');
     return ShopDetail.fromJson(result);
+  }
+
+  @override
+  Future<List<SearchHotWord>> loadHotWords({int limit = 8}) async {
+    final result = await client.getJson(
+      '/api/c/v1/search/hot',
+      query: {'limit': limit},
+    );
+    // ApiClient wraps bare list payloads as {'value': [...]}.
+    final raw = result['value'] ?? result['list'];
+    if (raw is List) {
+      return raw
+          .whereType<Map<String, dynamic>>()
+          .map(SearchHotWord.fromJson)
+          .where((item) => item.term.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  @override
+  Future<List<SearchHistoryItem>> loadSearchHistory({
+    int page = 1,
+    int pageSize = 8,
+  }) async {
+    try {
+      final result = await client.getJson(
+        '/api/c/v1/search/history',
+        query: {'page': page, 'pageSize': pageSize},
+      );
+      final list = result['list'] as List<dynamic>? ?? const [];
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(SearchHistoryItem.fromJson)
+          .where((item) => item.keyword.isNotEmpty)
+          .toList();
+    } on ApiException catch (error) {
+      // Guest sessions cannot read history; treat as empty instead of failing the panel.
+      if (error.statusCode == 401) {
+        return const [];
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> clearSearchHistory() async {
+    final deleteApi = client is JsonDeleteApi
+        ? client as JsonDeleteApi
+        : throw UnsupportedError('JsonDeleteApi is required for clearSearchHistory');
+    await deleteApi.deleteJson('/api/c/v1/search/history');
+  }
+
+  @override
+  Future<void> removeSearchHistoryItem(int historyId) async {
+    final deleteApi = client is JsonDeleteApi
+        ? client as JsonDeleteApi
+        : throw UnsupportedError(
+            'JsonDeleteApi is required for removeSearchHistoryItem',
+          );
+    await deleteApi.deleteJson('/api/c/v1/search/history/$historyId');
   }
 }

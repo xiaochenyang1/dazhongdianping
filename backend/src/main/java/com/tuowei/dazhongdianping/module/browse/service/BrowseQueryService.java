@@ -513,8 +513,8 @@ public class BrowseQueryService {
         return counter;
     }
 
-    /** 登录用户搜索历史：同词刷新时间，超限按最近使用裁剪。 */
-    private void recordSearchHistoryIfNeeded(Region region, String keyword) {
+    /** 登录用户搜索历史：同词刷新时间，超限按最近使用裁剪。搜索列表与 `/search/shops` 共用。 */
+    public void recordSearchHistoryIfNeeded(Region region, String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return;
         }

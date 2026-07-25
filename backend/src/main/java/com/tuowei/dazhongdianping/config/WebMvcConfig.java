@@ -51,6 +51,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/c/v1/files/upload",
                         "/api/c/v1/shops",
                         "/api/c/v1/shops/**",
+                        "/api/c/v1/search/shops",
                         "/api/c/v1/search/history",
                         "/api/c/v1/search/history/**"
                         ,"/api/c/v1/favorites"
