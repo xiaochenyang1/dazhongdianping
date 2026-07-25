@@ -34,6 +34,7 @@ class ShopDetailScreen extends StatefulWidget {
 class _ShopDetailScreenState extends State<ShopDetailScreen> {
   late Future<ShopDetail> _detail;
   Future<List<ShopSummary>>? _similar;
+  Future<List<ShopReviewPreview>>? _reviews;
   bool _favorited = false;
   bool _favoriteLoading = false;
   bool _favoriteSaving = false;
@@ -43,6 +44,12 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
     super.initState();
     _detail = widget.repository.loadShopDetail(widget.shopId);
     _similar = widget.repository.loadSimilarShops(widget.shopId, limit: 6);
+    _reviews = widget.repository.loadShopReviews(
+      widget.shopId,
+      page: 1,
+      pageSize: 5,
+      sort: 'latest',
+    );
     if (widget.enableFavorite) {
       _loadFavoriteState();
     }
@@ -245,6 +252,71 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     ),
                 ],
               ),
+              if (_reviews != null) ...[
+                const SizedBox(height: 28),
+                const Text(
+                  '门店点评',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                FutureBuilder<List<ShopReviewPreview>>(
+                  future: _reviews,
+                  builder: (context, reviewSnapshot) {
+                    if (reviewSnapshot.connectionState !=
+                        ConnectionState.done) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (reviewSnapshot.hasError) {
+                      return Text('门店点评加载失败：${reviewSnapshot.error}');
+                    }
+                    final items = reviewSnapshot.data ?? const [];
+                    if (items.isEmpty) {
+                      return const Text('暂无公开点评');
+                    }
+                    return Column(
+                      children: items
+                          .map(
+                            (item) => Card(
+                              child: ListTile(
+                                title: Text(
+                                  item.authorCertificationLabel == null
+                                      ? '${item.userName} · ★ ${item.score.toStringAsFixed(1)}'
+                                      : '${item.userName} · ${item.authorCertificationLabel} · ★ ${item.score.toStringAsFixed(1)}',
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 6),
+                                    Text(item.content),
+                                    if (item.merchantReply != null) ...[
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '商家回复：${item.merchantReply}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF4B5563),
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '点赞 ${item.likedCount} · 评论 ${item.commentCount}'
+                                      '${item.createdAt.isEmpty ? '' : ' · ${item.createdAt}'}',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                                isThreeLine: true,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
+                ),
+              ],
               if (_similar != null) ...[
                 const SizedBox(height: 28),
                 const Text(

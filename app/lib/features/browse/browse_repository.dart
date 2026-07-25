@@ -72,6 +72,63 @@ class SearchSuggestion {
   }
 }
 
+class ShopReviewPreview {
+  const ShopReviewPreview({
+    required this.id,
+    required this.userName,
+    required this.score,
+    required this.content,
+    required this.likedCount,
+    required this.commentCount,
+    required this.createdAt,
+    this.authorCertificationLabel,
+    this.merchantReply,
+  });
+
+  final int id;
+  final String userName;
+  final double score;
+  final String content;
+  final int likedCount;
+  final int commentCount;
+  final String createdAt;
+  final String? authorCertificationLabel;
+  final String? merchantReply;
+
+  factory ShopReviewPreview.fromJson(Map<String, dynamic> json) {
+    final author = json['authorCertification'];
+    String? authorLabel;
+    if (author is Map<String, dynamic>) {
+      final value = author['label'];
+      if (value is String && value.trim().isNotEmpty) {
+        authorLabel = value.trim();
+      }
+    }
+    final reply = json['merchantReply'];
+    String? merchantReply;
+    if (reply is Map<String, dynamic>) {
+      final merchantName = reply['merchantName'] as String? ?? '';
+      final content = reply['content'] as String? ?? '';
+      if (content.trim().isNotEmpty) {
+        merchantReply = merchantName.isEmpty
+            ? content.trim()
+            : '$merchantName：$content';
+      }
+    }
+    return ShopReviewPreview(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      userName: json['userName'] as String? ?? '匿名用户',
+      score: (json['score'] as num? ?? 0).toDouble(),
+      content: json['content'] as String? ?? '',
+      likedCount: (json['likedCount'] as num?)?.toInt() ?? 0,
+      commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
+      createdAt: json['createdAt'] as String? ?? '',
+      authorCertificationLabel: authorLabel,
+      merchantReply: merchantReply,
+    );
+  }
+}
+
 class SearchHistoryItem {
   const SearchHistoryItem({
     required this.id,
@@ -236,6 +293,12 @@ abstract class BrowseRepository {
   }) => throw UnimplementedError();
   Future<List<ShopSummary>> loadSimilarShops(int shopId, {int limit = 6}) =>
       throw UnimplementedError();
+  Future<List<ShopReviewPreview>> loadShopReviews(
+    int shopId, {
+    int page = 1,
+    int pageSize = 5,
+    String sort = 'latest',
+  }) => throw UnimplementedError();
 }
 
 class ApiBrowseRepository implements BrowseRepository {
@@ -452,5 +515,28 @@ class ApiBrowseRepository implements BrowseRepository {
       };
       return ShopSummary.fromJson(mapped);
     }).toList();
+  }
+
+  @override
+  Future<List<ShopReviewPreview>> loadShopReviews(
+    int shopId, {
+    int page = 1,
+    int pageSize = 5,
+    String sort = 'latest',
+  }) async {
+    final result = await client.getJson(
+      '/api/c/v1/shops/$shopId/reviews',
+      query: {
+        'page': page,
+        'pageSize': pageSize,
+        'sort': sort,
+      },
+    );
+    final list = result['list'] as List<dynamic>? ?? const [];
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map(ShopReviewPreview.fromJson)
+        .where((item) => item.id > 0)
+        .toList();
   }
 }

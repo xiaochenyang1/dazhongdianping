@@ -61,6 +61,32 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
         ],
       };
     }
+    if (path.endsWith('/reviews')) {
+      return {
+        'list': [
+          {
+            'id': 501,
+            'userName': '阿遥',
+            'score': 4.8,
+            'content': '锅底香但不燥，毛肚很稳。',
+            'likedCount': 2,
+            'commentCount': 1,
+            'createdAt': '2026-07-01 18:30',
+            'authorCertification': {'code': 'local_expert', 'label': '本地达人'},
+            'merchantReply': {
+              'merchantName': '渝里火锅',
+              'content': '谢谢光临，欢迎再来。',
+              'repliedAt': '2026-07-01 19:00',
+              'updatedAt': '2026-07-01 19:00',
+            },
+          },
+        ],
+        'total': 1,
+        'page': 1,
+        'pageSize': 5,
+        'hasMore': false,
+      };
+    }
     if (path == '/api/c/v1/search/history') {
       if (throwUnauthorizedOnHistory) {
         throw const ApiException('login required', statusCode: 401);
@@ -239,5 +265,23 @@ void main() {
     expect(api.query?['limit'], 4);
     expect(similar.single.name, '徐汇小馆');
     expect(similar.single.category, '上海 · 徐汇');
+  });
+
+  test('loads public shop reviews preview list', () async {
+    final api = FakeJsonApi();
+    final repository = ApiBrowseRepository(api);
+
+    final reviews = await repository.loadShopReviews(
+      10001,
+      page: 1,
+      pageSize: 5,
+      sort: 'latest',
+    );
+    expect(api.path, '/api/c/v1/shops/10001/reviews');
+    expect(api.query?['pageSize'], 5);
+    expect(api.query?['sort'], 'latest');
+    expect(reviews.single.userName, '阿遥');
+    expect(reviews.single.authorCertificationLabel, '本地达人');
+    expect(reviews.single.merchantReply, '渝里火锅：谢谢光临，欢迎再来。');
   });
 }

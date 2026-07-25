@@ -18,12 +18,27 @@ class DetailFakeRepository extends BrowseRepository {
         pricePerCapita: 15,
       ),
     ],
+    this.reviews = const [
+      ShopReviewPreview(
+        id: 501,
+        userName: '阿遥',
+        score: 4.8,
+        content: '茶底干净，服务也稳。',
+        likedCount: 2,
+        commentCount: 1,
+        createdAt: '2026-07-01 18:30',
+        authorCertificationLabel: '本地达人',
+        merchantReply: '柏林茶馆：谢谢支持。',
+      ),
+    ],
   });
 
   bool favorited;
   final List<ShopSummary> similar;
+  final List<ShopReviewPreview> reviews;
   final List<String> favoriteCalls = <String>[];
   final List<int> similarRequests = <int>[];
+  final List<int> reviewRequests = <int>[];
 
   @override
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
@@ -62,6 +77,17 @@ class DetailFakeRepository extends BrowseRepository {
   Future<List<ShopSummary>> loadSimilarShops(int shopId, {int limit = 6}) async {
     similarRequests.add(shopId);
     return similar;
+  }
+
+  @override
+  Future<List<ShopReviewPreview>> loadShopReviews(
+    int shopId, {
+    int page = 1,
+    int pageSize = 5,
+    String sort = 'latest',
+  }) async {
+    reviewRequests.add(shopId);
+    return reviews;
   }
 }
 
@@ -147,5 +173,21 @@ void main() {
     expect(repository.similarRequests, contains(7));
     expect(find.text('相似门店'), findsOneWidget);
     expect(find.text('Berlin Dumplings'), findsOneWidget);
+  });
+
+  testWidgets('shop detail shows public reviews preview', (tester) async {
+    final repository = DetailFakeRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(repository: repository, shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.reviewRequests, contains(7));
+    expect(find.text('门店点评'), findsOneWidget);
+    expect(find.textContaining('阿遥'), findsOneWidget);
+    expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
+    expect(find.textContaining('商家回复：柏林茶馆：谢谢支持。'), findsOneWidget);
   });
 }
