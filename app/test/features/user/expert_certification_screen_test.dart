@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/user/expert_certification_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
@@ -9,6 +11,8 @@ class ExpertCertApi implements JsonApi {
   Object? body;
   int status = 0;
   String reason = '';
+  int failLoads = 0;
+  Completer<void>? loadGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -16,6 +20,11 @@ class ExpertCertApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     this.path = path;
+    if (failLoads > 0) {
+      failLoads--;
+      throw StateError('certification unavailable');
+    }
+    await loadGate?.future;
     return {
       'id': status == 0 ? 0 : 8801,
       'status': status,
@@ -27,9 +36,7 @@ class ExpertCertApi implements JsonApi {
       },
       'reason': reason,
       'rejectReason': status == 3 ? '内容贡献不足' : '',
-      'badge': status == 2
-          ? {'code': 'local_expert', 'label': '本地达人'}
-          : null,
+      'badge': status == 2 ? {'code': 'local_expert', 'label': '本地达人'} : null,
       'submittedAt': status == 0 ? '' : '2026-07-25 19:00:00',
       'reviewedAt': status == 2 || status == 3 ? '2026-07-26 10:00:00' : '',
       'effectiveStartAt': status == 2 ? '2026-07-26 10:00:00' : '',
@@ -65,9 +72,7 @@ void main() {
     final api = ExpertCertApi();
     await tester.pumpWidget(
       MaterialApp(
-        home: ExpertCertificationScreen(
-          repository: UserRepository(api),
-        ),
+        home: ExpertCertificationScreen(repository: UserRepository(api)),
       ),
     );
     await tester.pumpAndSettle();
@@ -85,5 +90,46 @@ void main() {
     expect(api.path, '/api/c/v1/user/expert-certification/apply');
     expect(find.text('待审核'), findsOneWidget);
     expect(find.text('申请审核中，请耐心等待结果。'), findsOneWidget);
+  });
+
+  testWidgets('expert certification retries an initial load failure', (
+    tester,
+  ) async {
+    final api = ExpertCertApi()..failLoads = 1;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ExpertCertificationScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('认证状态加载失败'), findsOneWidget);
+
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('未申请'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('expert certification ignores a load completed after disposal', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = ExpertCertApi()
+      ..reason = '已有的申请理由'
+      ..loadGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ExpertCertificationScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pump();
+
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
   });
 }

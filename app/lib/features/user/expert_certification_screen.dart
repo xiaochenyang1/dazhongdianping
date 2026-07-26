@@ -25,18 +25,17 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
 
   Future<ExpertCertificationStatus> _load() async {
     final status = await widget.repository.loadExpertCertification();
-    if (status.reason.isNotEmpty && _reasonController.text.isEmpty) {
+    if (mounted && status.reason.isNotEmpty && _reasonController.text.isEmpty) {
       _reasonController.text = status.reason;
     }
     return status;
   }
 
-  Future<void> _reload() async {
+  void _reload() {
     setState(() {
       _error = null;
       _statusFuture = _load();
     });
-    await _statusFuture;
   }
 
   Future<void> _submit(ExpertCertificationStatus current) async {
@@ -62,9 +61,9 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
         _statusFuture = Future.value(updated);
         _submitting = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('达人认证申请已提交')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('达人认证申请已提交')));
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -185,10 +184,7 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 8),
-                Text(
-                  _error!,
-                  style: const TextStyle(color: Color(0xFFB91C1C)),
-                ),
+                Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C))),
               ],
               const SizedBox(height: 12),
               if (status.canApply)
