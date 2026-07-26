@@ -21,6 +21,8 @@ class CommunityScreenApi
   bool paginateFeed = false;
   final List<int> requestedFeedPages = <int>[];
   bool paginateComments = false;
+  bool failNextPost = false;
+  int postRequests = 0;
   final List<int> requestedCommentPages = <int>[];
 
   Map<String, dynamic> get post => {
@@ -104,6 +106,13 @@ class CommunityScreenApi
         'page': page,
         'pageSize': paginateFeed ? 1 : 30,
       };
+    }
+    if (path == '/api/c/v1/posts/7') {
+      postRequests++;
+      if (failNextPost) {
+        failNextPost = false;
+        throw StateError('network unavailable');
+      }
     }
     return post;
   }
@@ -214,6 +223,28 @@ class CommunityTopicApi extends CommunityScreenApi {
 }
 
 void main() {
+  testWidgets('post detail retries an initial load failure', (tester) async {
+    final api = CommunityScreenApi()..failNextPost = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('帖子加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('post-detail-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.postRequests, 2);
+    expect(api.requestedCommentPages, [1, 1]);
+    expect(find.text('伦敦周末市场指南'), findsOneWidget);
+  });
+
   testWidgets('post detail loads later comment pages', (tester) async {
     final api = CommunityScreenApi()..paginateComments = true;
     await tester.pumpWidget(

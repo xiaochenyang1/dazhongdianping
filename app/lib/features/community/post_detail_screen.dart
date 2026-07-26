@@ -32,8 +32,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _post = widget.repository.loadPost(widget.postId);
-    _comments = widget.repository.loadCommentPage(widget.postId);
+    _loadInitial();
+  }
+
+  void _loadInitial() {
+    final post = widget.repository.loadPost(widget.postId);
+    final comments = widget.repository.loadCommentPage(widget.postId);
+    setState(() {
+      _post = post;
+      _comments = comments;
+      _replyTarget = null;
+      _loadingMoreComments = false;
+    });
   }
 
   @override
@@ -271,7 +281,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('帖子加载失败：${snapshot.error}'));
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('帖子加载失败：${snapshot.error}'),
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  key: const Key('post-detail-retry'),
+                  onPressed: _loadInitial,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          );
         }
         final post = snapshot.data!;
         return ListView(
