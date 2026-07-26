@@ -162,10 +162,7 @@ class UserCollectionScreen extends StatelessWidget {
         canInteract: true,
       );
     }
-    return PostEditorScreen(
-      repository: communityRepository,
-      postId: id,
-    );
+    return PostEditorScreen(repository: communityRepository, postId: id);
   }
 
   String _subtitle(Map<String, dynamic> item) {
@@ -181,7 +178,6 @@ class UserCollectionScreen extends StatelessWidget {
       UserCollection.reservations =>
         '${(item['shop'] as Map<String, dynamic>?)?['name'] ?? ''} · ${item['reserveTime'] ?? ''} · ${item['statusText'] ?? ''}',
       UserCollection.favorites => _favoriteSubtitle(item),
-      _ => jsonEncode(item),
     };
   }
 
@@ -203,10 +199,7 @@ class UserCollectionScreen extends StatelessWidget {
       ].join(' · ');
     }
     if (targetType == 2) {
-      return [
-        '帖子',
-        if ('$createdAt'.isNotEmpty) '收藏于 $createdAt',
-      ].join(' · ');
+      return ['帖子', if ('$createdAt'.isNotEmpty) '收藏于 $createdAt'].join(' · ');
     }
     return jsonEncode(item);
   }

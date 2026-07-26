@@ -108,7 +108,7 @@ class CommunityScreenApi
         'userId': 9,
         'userName': '当前用户',
         'content': (body as Map)['content'],
-        'parentId': (body as Map)['replyTo'] ?? 0,
+        'parentId': body['replyTo'] ?? 0,
         'replyTo': body['replyTo'] == null
             ? null
             : {
@@ -452,10 +452,7 @@ void main() {
     final api = CommunityScreenApi();
     await tester.pumpWidget(
       MaterialApp(
-        home: PostEditorScreen(
-          repository: CommunityRepository(api),
-          postId: 7,
-        ),
+        home: PostEditorScreen(repository: CommunityRepository(api), postId: 7),
       ),
     );
     await tester.pumpAndSettle();

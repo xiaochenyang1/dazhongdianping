@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 class ReservationFakeApi implements JsonApi {
   String? path;
   Object? body;
+  Map<String, Object?>? query;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -170,15 +171,17 @@ void main() {
     },
   );
 
-  test('reservation repository lists reservations with status filter', () async {
-    final api = ReservationFakeApi();
-    final repository = ReservationRepository(api);
+  test(
+    'reservation repository lists reservations with status filter',
+    () async {
+      final api = ReservationFakeApi();
+      final repository = ReservationRepository(api);
 
-    final list = await repository.loadReservations(status: 1);
-    expect(api.path, '/api/c/v1/reservations');
-    expect(api.query?['status'], 1);
-    expect(list.single.reservationNo, 'R11');
-    expect(list.single.shopName, 'EU Shop');
-  });
-
+      final list = await repository.loadReservations(status: 1);
+      expect(api.path, '/api/c/v1/reservations');
+      expect(api.query?['status'], 1);
+      expect(list.single.reservationNo, 'R11');
+      expect(list.single.shopName, 'EU Shop');
+    },
+  );
 }

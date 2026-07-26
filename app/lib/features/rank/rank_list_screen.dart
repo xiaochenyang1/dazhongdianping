@@ -41,8 +41,11 @@ class _RankListScreenState extends State<RankListScreen> {
   }
 
   Future<void> _reload() async {
-    setState(() => _ranks = widget.repository.loadRanks());
-    await _ranks;
+    final future = widget.repository.loadRanks();
+    setState(() {
+      _ranks = future;
+    });
+    await future;
   }
 
   @override

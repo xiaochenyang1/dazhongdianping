@@ -34,12 +34,14 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
   void initState() {
     super.initState();
     _status = widget.initialStatus;
-    _reload();
+    _reservations = widget.repository.loadReservations(status: _status);
   }
 
   void _reload() {
     final future = widget.repository.loadReservations(status: _status);
-    setState(() => _reservations = future);
+    setState(() {
+      _reservations = future;
+    });
   }
 
   void _selectStatus(int? status) {

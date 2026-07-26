@@ -346,6 +346,7 @@ npm run build
 
 ## 已验证
 
+- `2026-07-26` Flutter 静态分析与列表刷新基线已修复：预订仓储测试 fake 补齐查询参数，移除不可达 switch 分支和多余类型转换；订单、券、预订、榜单、活动五个列表不再让 `setState` 回调意外返回 `Future`，初始化也不再触发多余状态更新。`flutter analyze` 零问题，相关页面/仓储聚焦测试 `22` 条通过；单并发全量测试剩余 `10` 条旧断言/fixture/导航问题继续收口。
 - `2026-07-26` Flutter 封禁申诉入口已补齐：API 错误保留 `messageKey`，密码登录识别 `auth.user_banned` 后展示申诉引导；登录页也提供常驻入口。用户可免登录发送 `appeal` 场景验证码、提交 10-500 字申诉、查询最新审核进度并查看封禁原因/驳回说明，通过后可返回登录。相关 Dart 静态分析无问题，API、仓储、登录页与申诉页聚焦测试 `18` 条通过。
 - `2026-07-25` PC Web SEO 预渲染与隐私导出模块对齐已完成聚焦验证：新增静态入口预渲染和 API 快照导出脚本，构建后可生成独立 HTML、canonical、Open Graph、Twitter Card、JSON-LD、制品清单，并在配置 `PUBLIC_SITE_URL` 时生成 sitemap/robots；带本地 H2 后端、`PRERENDER_REGION=CN` 的 `npm run build:prerender:data` 实测生成 15 个路由（7 个静态入口 + 8 个真实详情快照）。PC 隐私中心补齐后端已支持的 `browse_history/messages/circles/topics` 类型与勾选入口；SEO 快照脚本测试 5 条、Web 全量测试 117 条均通过。常驻 SSR、真实部署域名和目标环境联调仍未完成。
 - `2026-07-24` 封禁申诉链路二轮优化已完成前后端联调与全量回归：申诉通过/驳回/管理员直接解封会给用户写 `account.ban_appeal` 站内通知（复用通知模块，含 WebSocket 推送与聚合逻辑），用户恢复登录后可在通知列表看到审核结果；申诉提交/查询响应带出最近一次 `user_ban` 审计日志的封禁原因，`web` 申诉面板展示"封禁原因"、申诉已通过时提供"回到密码登录"一键预填入口；管理端用户详情新增 `banReason`/`pendingAppealCount`/`latestAppealStatusText` 并支持一键跳转 `/audit/user-appeals`；全局兜底异常 handler 补错误日志，未匹配路径由兜底 `500` 修正为 `404 common.not_found`。`backend` `mvn test` 308 条通过；`web` `npm test` 78 条通过；`admin-web` `npm test` 61 条通过；三端 `vue-tsc`/`build` 通过。本地起 `h2` 后端实测：申诉响应带封禁原因、管理端详情联动字段正确、审核通过后用户登录可见"封禁申诉已通过"通知、错误路径返回 `404`。

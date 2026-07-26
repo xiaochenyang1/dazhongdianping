@@ -41,8 +41,11 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
   }
 
   Future<void> _reload() async {
-    setState(() => _activities = widget.repository.loadActivities());
-    await _activities;
+    final future = widget.repository.loadActivities();
+    setState(() {
+      _activities = future;
+    });
+    await future;
   }
 
   @override
@@ -93,9 +96,10 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                   child: ListTile(
                     title: Text(item.name),
                     subtitle: Text(
-                      [meta, if (period.isNotEmpty) period]
-                          .where((part) => part.isNotEmpty)
-                          .join('\n'),
+                      [
+                        meta,
+                        if (period.isNotEmpty) period,
+                      ].where((part) => part.isNotEmpty).join('\n'),
                     ),
                     isThreeLine: period.isNotEmpty,
                     trailing: const Icon(Icons.chevron_right),

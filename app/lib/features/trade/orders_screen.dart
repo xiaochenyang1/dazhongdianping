@@ -32,12 +32,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
   void initState() {
     super.initState();
     _payStatus = widget.initialPayStatus;
-    _reload();
+    _orders = widget.repository.loadOrders(payStatus: _payStatus);
   }
 
   void _reload() {
     final future = widget.repository.loadOrders(payStatus: _payStatus);
-    setState(() => _orders = future);
+    setState(() {
+      _orders = future;
+    });
   }
 
   void _selectPayStatus(int? payStatus) {

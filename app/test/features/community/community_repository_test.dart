@@ -106,7 +106,7 @@ class CommunityFakeApi
         'userId': 9,
         'userName': '伦敦小王',
         'content': (body as Map)['content'],
-        'parentId': (body as Map)['replyTo'] ?? 0,
+        'parentId': body['replyTo'] ?? 0,
         'replyTo': body['replyTo'] == null
             ? null
             : {
@@ -247,17 +247,20 @@ void main() {
     expect(api.body, {'reason': '信息过期'});
   });
 
-  test('community repository sends replyTo when creating a threaded reply', () async {
-    final api = CommunityFakeApi();
-    final repository = CommunityRepository(api);
+  test(
+    'community repository sends replyTo when creating a threaded reply',
+    () async {
+      final api = CommunityFakeApi();
+      final repository = CommunityRepository(api);
 
-    final reply = await repository.createComment(7, '楼中回复', replyTo: 11);
+      final reply = await repository.createComment(7, '楼中回复', replyTo: 11);
 
-    expect(api.path, '/api/c/v1/posts/7/comments');
-    expect(api.body, {'content': '楼中回复', 'replyTo': 11});
-    expect(reply.replyTo?.id, 11);
-    expect(reply.parentId, 11);
-  });
+      expect(api.path, '/api/c/v1/posts/7/comments');
+      expect(api.body, {'content': '楼中回复', 'replyTo': 11});
+      expect(reply.replyTo?.id, 11);
+      expect(reply.parentId, 11);
+    },
+  );
 
   test('community repository reposts and removes a repost', () async {
     final api = CommunityFakeApi();

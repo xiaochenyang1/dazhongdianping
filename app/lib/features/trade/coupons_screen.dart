@@ -34,12 +34,14 @@ class _CouponsScreenState extends State<CouponsScreen> {
   void initState() {
     super.initState();
     _status = widget.initialStatus;
-    _reload();
+    _coupons = widget.repository.loadCoupons(status: _status);
   }
 
   void _reload() {
     final future = widget.repository.loadCoupons(status: _status);
-    setState(() => _coupons = future);
+    setState(() {
+      _coupons = future;
+    });
   }
 
   void _selectStatus(int? status) {
@@ -113,9 +115,11 @@ class _CouponsScreenState extends State<CouponsScreen> {
                           ? Theme.of(context).colorScheme.primaryContainer
                           : null,
                       child: ListTile(
-                        title: Text(coupon.dealTitle.isEmpty
-                            ? coupon.code
-                            : coupon.dealTitle),
+                        title: Text(
+                          coupon.dealTitle.isEmpty
+                              ? coupon.code
+                              : coupon.dealTitle,
+                        ),
                         subtitle: Text(
                           '${coupon.code}\n${coupon.shopName} · ${coupon.statusText} · 有效期至 ${coupon.expireAt.isEmpty ? '不限期' : coupon.expireAt}',
                         ),
