@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/home_screen.dart';
@@ -39,6 +40,19 @@ class RetryBrowseRepository extends BrowseRepository {
         pricePerCapita: 12,
       ),
     ];
+  }
+}
+
+class NamedBrowseRepository extends BrowseRepository {
+  NamedBrowseRepository(this.shop);
+
+  final ShopSummary shop;
+  int calls = 0;
+
+  @override
+  Future<List<ShopSummary>> loadFeaturedShops() async {
+    calls += 1;
+    return [shop];
   }
 }
 
@@ -94,19 +108,76 @@ void main() {
     expect(find.text('运营活动'), findsOneWidget);
   });
 
-  testWidgets('retry refreshes featured shops without an async setState error', (tester) async {
-    final repository = RetryBrowseRepository();
+  testWidgets(
+    'retry refreshes featured shops without an async setState error',
+    (tester) async {
+      final repository = RetryBrowseRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(repository: repository, localeTag: 'en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Retry'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Retry Cafe'), findsOneWidget);
+      expect(repository.calls, 2);
+    },
+  );
+
+  testWidgets('region change reloads featured shops from the new repository', (
+    tester,
+  ) async {
+    final euRepository = NamedBrowseRepository(
+      const ShopSummary(
+        id: 1,
+        name: 'Europe Bistro',
+        category: 'Bistro',
+        score: 4.5,
+        currency: 'EUR',
+        pricePerCapita: 20,
+      ),
+    );
+    final cnRepository = NamedBrowseRepository(
+      const ShopSummary(
+        id: 2,
+        name: 'China Noodles',
+        category: 'Noodles',
+        score: 4.6,
+        currency: 'CNY',
+        pricePerCapita: 30,
+      ),
+    );
+    late StateSetter updateHost;
+    var region = AppRegion.eu;
+    var repository = euRepository;
+
     await tester.pumpWidget(
-      MaterialApp(home: HomeScreen(repository: repository, localeTag: 'en')),
+      StatefulBuilder(
+        builder: (context, setState) {
+          updateHost = setState;
+          return MaterialApp(
+            home: HomeScreen(repository: repository, region: region),
+          );
+        },
+      ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Europe Bistro'), findsOneWidget);
 
-    await tester.tap(find.text('Retry'));
+    updateHost(() {
+      region = AppRegion.cn;
+      repository = cnRepository;
+    });
     await tester.pumpAndSettle();
 
-    expect(find.text('Retry Cafe'), findsOneWidget);
-    expect(repository.calls, 2);
+    expect(find.text('China Noodles'), findsOneWidget);
+    expect(find.text('Europe Bistro'), findsNothing);
+    expect(euRepository.calls, 1);
+    expect(cnRepository.calls, 1);
   });
 
   testWidgets('profile action delegates to authentication flow', (
@@ -145,30 +216,31 @@ void main() {
     expect(opened, isTrue);
   });
 
-  testWidgets('notification badge loads and refreshes after notification flow', (
-    tester,
-  ) async {
-    final api = HomeNotificationApi(120);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: HomeScreen(
-          repository: FakeBrowseRepository(),
-          notificationRepository: NotificationRepository(api),
-          onNotificationTap: (_) async => api.unreadCount = 0,
+  testWidgets(
+    'notification badge loads and refreshes after notification flow',
+    (tester) async {
+      final api = HomeNotificationApi(120);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomeScreen(
+            repository: FakeBrowseRepository(),
+            notificationRepository: NotificationRepository(api),
+            onNotificationTap: (_) async => api.unreadCount = 0,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('99+'), findsOneWidget);
-    expect(api.calls, 1);
+      expect(find.text('99+'), findsOneWidget);
+      expect(api.calls, 1);
 
-    await tester.tap(find.byKey(const Key('home-notification-action')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('home-notification-action')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('99+'), findsNothing);
-    expect(api.calls, 2);
-  });
+      expect(find.text('99+'), findsNothing);
+      expect(api.calls, 2);
+    },
+  );
 
   testWidgets('orders and profile bottom destinations delegate to real flows', (
     tester,

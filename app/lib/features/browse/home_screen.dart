@@ -87,16 +87,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.repository != widget.repository ||
+        oldWidget.region != widget.region) {
+      _reloadShops();
+    }
     if (oldWidget.notificationRepository != widget.notificationRepository) {
       _refreshUnreadCount();
     }
   }
 
-  void _retry() {
+  void _reloadShops() {
     final future = widget.repository.loadFeaturedShops();
     setState(() {
       _shops = future;
     });
+  }
+
+  void _retry() {
+    _reloadShops();
     _refreshUnreadCount();
   }
 
@@ -351,7 +359,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     reservationRepository:
                                         widget.reservationRepository,
                                     reviewRepository: widget.reviewRepository,
-                                    canInteractReviews: widget.canInteractReviews,
+                                    canInteractReviews:
+                                        widget.canInteractReviews,
                                     thirdPartyConfig: widget.thirdPartyConfig,
                                   ),
                                 ),
