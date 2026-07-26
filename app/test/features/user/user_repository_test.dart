@@ -41,10 +41,7 @@ class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         'followerCount': 12,
         'followingCount': 7,
         'followedByCurrentUser': false,
-        'expertCertification': {
-          'code': 'local_expert',
-          'label': '本地达人',
-        },
+        'expertCertification': {'code': 'local_expert', 'label': '本地达人'},
       };
     }
     if (path.endsWith('/followers') || path.endsWith('/following')) {
@@ -200,6 +197,8 @@ void main() {
     final repository = UserRepository(UserFakeApi());
     final profile = await repository.loadProfile();
     final orders = await repository.loadCollection(UserCollection.orders);
+    expect(orders.page, 1);
+    expect(orders.pageSize, 30);
 
     expect(profile.nickname, 'EU User');
     expect(profile.email, 'eu@example.com');
@@ -330,9 +329,7 @@ void main() {
     expect(status.status, 0);
     expect(status.canApply, isTrue);
 
-    final applied = await repository.applyExpertCertification(
-      '长期在巴黎写探店内容。',
-    );
+    final applied = await repository.applyExpertCertification('长期在巴黎写探店内容。');
     expect(api.path, '/api/c/v1/user/expert-certification/apply');
     expect(applied.status, 1);
     expect(applied.statusText, '待审核');

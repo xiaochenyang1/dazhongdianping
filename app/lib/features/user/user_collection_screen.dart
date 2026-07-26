@@ -57,44 +57,29 @@ class UserCollectionScreen extends StatelessWidget {
     }
     return Scaffold(
       appBar: AppBar(title: Text(collection.label)),
-      body: FutureBuilder<UserCollectionPage>(
-        future: repository.loadCollection(collection),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('加载失败：${snapshot.error}'));
-          }
-          final page = snapshot.data!;
-          if (page.items.isEmpty) return const Center(child: Text('暂无数据'));
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: page.items.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final item = page.items[index];
-              final title = _title(item, index);
-              final destination = _destination(item);
-              return Card(
-                child: ListTile(
-                  title: Text(title),
-                  subtitle: Text(
-                    _subtitle(item),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: destination == null
-                      ? null
-                      : const Icon(Icons.chevron_right),
-                  onTap: destination == null
-                      ? null
-                      : () => Navigator.of(
-                          context,
-                        ).push(MaterialPageRoute(builder: (_) => destination)),
-                ),
-              );
-            },
+      body: _PaginatedCollectionBody(
+        repository: repository,
+        collection: collection,
+        itemBuilder: (context, item, index) {
+          final title = _title(item, index);
+          final destination = _destination(item);
+          return Card(
+            child: ListTile(
+              title: Text(title),
+              subtitle: Text(
+                _subtitle(item),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: destination == null
+                  ? null
+                  : const Icon(Icons.chevron_right),
+              onTap: destination == null
+                  ? null
+                  : () => Navigator.of(
+                      context,
+                    ).push(MaterialPageRoute(builder: (_) => destination)),
+            ),
           );
         },
       ),
@@ -202,5 +187,108 @@ class UserCollectionScreen extends StatelessWidget {
       return ['帖子', if ('$createdAt'.isNotEmpty) '收藏于 $createdAt'].join(' · ');
     }
     return jsonEncode(item);
+  }
+}
+
+class _PaginatedCollectionBody extends StatefulWidget {
+  const _PaginatedCollectionBody({
+    required this.repository,
+    required this.collection,
+    required this.itemBuilder,
+  });
+
+  final UserRepository repository;
+  final UserCollection collection;
+  final Widget Function(BuildContext, Map<String, dynamic>, int) itemBuilder;
+
+  @override
+  State<_PaginatedCollectionBody> createState() =>
+      _PaginatedCollectionBodyState();
+}
+
+class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
+  late Future<UserCollectionPage> _page;
+  bool _loadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _page = widget.repository.loadCollection(widget.collection);
+  }
+
+  Future<void> _loadMore(UserCollectionPage current) async {
+    if (_loadingMore || !current.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.loadCollection(
+        widget.collection,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((item) => item['id']).toSet();
+      final items = [
+        ...current.items,
+        ...next.items.where((item) => knownIds.add(item['id'])),
+      ];
+      setState(() {
+        _page = Future.value(
+          UserCollectionPage(
+            items: items,
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<UserCollectionPage>(
+      future: _page,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('加载失败：${snapshot.error}'));
+        }
+        final page = snapshot.data!;
+        if (page.items.isEmpty) return const Center(child: Text('暂无数据'));
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: page.items.length + (page.hasMore ? 1 : 0),
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            if (index == page.items.length) {
+              return Center(
+                child: OutlinedButton.icon(
+                  key: const Key('user-collection-load-more'),
+                  onPressed: _loadingMore ? null : () => _loadMore(page),
+                  icon: _loadingMore
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.expand_more),
+                  label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                ),
+              );
+            }
+            return widget.itemBuilder(context, page.items[index], index);
+          },
+        );
+      },
+    );
   }
 }

@@ -68,9 +68,18 @@ class UserProfile {
 }
 
 class UserCollectionPage {
-  const UserCollectionPage({required this.items, required this.total});
+  const UserCollectionPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
   final List<Map<String, dynamic>> items;
   final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
 }
 
 class UserGrowthRecord {
@@ -175,7 +184,8 @@ class ExpertCertificationStatus {
       rejectReason: json['rejectReason'] as String? ?? '',
       badgeLabel: badgeLabel,
       submittedAt: json['submittedAt'] as String? ?? '',
-      reviewedAt: json['reviewedAt'] as String? ?? json['auditedAt'] as String? ?? '',
+      reviewedAt:
+          json['reviewedAt'] as String? ?? json['auditedAt'] as String? ?? '',
       effectiveStartAt: json['effectiveStartAt'] as String? ?? '',
       effectiveEndAt: json['effectiveEndAt'] as String? ?? '',
     );
@@ -381,16 +391,22 @@ class UserRepository {
     );
   }
 
-  Future<UserCollectionPage> loadCollection(UserCollection collection) async {
+  Future<UserCollectionPage> loadCollection(
+    UserCollection collection, {
+    int page = 1,
+    int pageSize = 30,
+  }) async {
     final result = await api.getJson(
       collection.path,
-      query: const {'page': 1, 'pageSize': 30},
+      query: {'page': page, 'pageSize': pageSize},
     );
     final list = (result['list'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>();
     return UserCollectionPage(
       items: list,
-      total: result['total'] as int? ?? list.length,
+      total: (result['total'] as num?)?.toInt() ?? list.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
     );
   }
 

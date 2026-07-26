@@ -6,24 +6,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CollectionApi implements JsonApi {
+  CollectionApi({this.paginatedReviews = false});
+
+  final bool paginatedReviews;
+  final List<int> requestedReviewPages = <int>[];
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
   }) async {
     if (path == '/api/c/v1/user/reviews') {
+      final page = query?['page'] as int? ?? 1;
+      requestedReviewPages.add(page);
       return {
         'list': [
           {
-            'id': 12,
+            'id': paginatedReviews ? 11 + page : 12,
             'shopId': 7,
-            'shopName': '柏林茶馆',
-            'content': '原来的体验记录',
+            'shopName': page == 1 ? '柏林茶馆' : '巴黎面馆',
+            'content': page == 1 ? '原来的体验记录' : '更早的体验记录',
             'scoreOverall': 4,
             'auditStatusText': '待审核',
           },
         ],
-        'total': 1,
+        'total': paginatedReviews ? 2 : 1,
+        'page': page,
+        'pageSize': paginatedReviews ? 1 : 30,
       };
     }
     if (path == '/api/c/v1/user/posts') {
@@ -34,7 +43,9 @@ class CollectionApi implements JsonApi {
     }
     if (path == '/api/c/v1/user/posts/7') return communityPost;
     if (path == '/api/c/v1/posts/8') return approvedPost;
-    if (path == '/api/c/v1/posts/8/comments') return {'list': const [], 'total': 0};
+    if (path == '/api/c/v1/posts/8/comments') {
+      return {'list': const [], 'total': 0};
+    }
     if (path == '/api/c/v1/orders') {
       return {
         'list': [order],
@@ -89,10 +100,7 @@ class CollectionApi implements JsonApi {
             'targetType': 2,
             'targetId': 7,
             'createdAt': '2026-07-25 18:10:00',
-            'target': {
-              'id': 7,
-              'name': '伦敦周末市场指南',
-            },
+            'target': {'id': 7, 'name': '伦敦周末市场指南'},
           },
         ],
         'total': 2,
@@ -254,6 +262,28 @@ class CollectionApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('owned review collection loads later pages', (tester) async {
+    final api = CollectionApi(paginatedReviews: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserCollectionScreen(
+          repository: UserRepository(api),
+          collection: UserCollection.reviews,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('柏林茶馆'), findsOneWidget);
+    expect(find.byKey(const Key('user-collection-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('user-collection-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedReviewPages, [1, 2]);
+    expect(find.text('巴黎面馆'), findsOneWidget);
+    expect(find.byKey(const Key('user-collection-load-more')), findsNothing);
+  });
+
   testWidgets('owned review collection opens the review detail', (
     tester,
   ) async {
@@ -373,7 +403,9 @@ void main() {
     expect(find.text('Mitte 几家稳定的中文友好店。'), findsOneWidget);
   });
 
-  testWidgets('favorites collection shows shop and post titles', (tester) async {
+  testWidgets('favorites collection shows shop and post titles', (
+    tester,
+  ) async {
     final api = CollectionApi();
     await tester.pumpWidget(
       MaterialApp(
