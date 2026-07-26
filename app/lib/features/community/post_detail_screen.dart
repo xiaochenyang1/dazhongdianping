@@ -69,7 +69,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _like() async {
+  Future<void> _like(CommunityPost post) async {
     if (_likeSaving) return;
     setState(() => _likeSaving = true);
     try {
@@ -78,8 +78,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(result.liked ? '已点赞' : '已取消点赞')));
-      final refreshedPost = widget.repository.loadPost(widget.postId);
-      setState(() => _post = refreshedPost);
+      setState(
+        () => _post = Future.value(post.copyWith(likeCount: result.likeCount)),
+      );
     } catch (error) {
       if (mounted) _showMessage('点赞失败：$error');
     } finally {
@@ -191,9 +192,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ? await widget.repository.removeRepost(widget.postId)
           : await widget.repository.repostPost(widget.postId);
       if (mounted) {
-        final refreshedPost = widget.repository.loadPost(widget.postId);
         setState(() {
-          _post = refreshedPost;
+          _post = Future.value(
+            post.copyWith(
+              repostCount: result.repostCount,
+              repostedByCurrentUser: result.reposted,
+            ),
+          );
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result.reposted ? '已转发' : '已取消转发')),
@@ -409,7 +414,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 children: [
                   OutlinedButton.icon(
                     key: const Key('post-like-button'),
-                    onPressed: _likeSaving ? null : _like,
+                    onPressed: _likeSaving ? null : () => _like(post),
                     icon: const Icon(Icons.favorite_border),
                     label: Text('点赞 ${post.likeCount}'),
                   ),

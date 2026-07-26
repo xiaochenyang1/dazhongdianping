@@ -597,6 +597,36 @@ void main() {
     expect(api.body, {'content': '失败后保留的评论'});
   });
 
+  testWidgets('post detail updates like and repost without reloading itself', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('post-like-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('点赞 4'), findsOneWidget);
+    expect(api.postRequests, 1);
+    ScaffoldMessenger.of(
+      tester.element(find.byType(PostDetailScreen)),
+    ).clearSnackBars();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('转发 2'));
+    await tester.pumpAndSettle();
+    expect(find.text('取消转发 3'), findsOneWidget);
+    expect(api.postRequests, 1);
+  });
+
   testWidgets('post detail preserves a failed report reason for retry', (
     tester,
   ) async {

@@ -66,6 +66,33 @@ class CommunityPost {
     topics: (json['topics'] as List<dynamic>? ?? const []).cast<String>(),
     createdAt: json['createdAt'] as String? ?? '',
   );
+
+  CommunityPost copyWith({
+    int? likeCount,
+    int? commentCount,
+    int? repostCount,
+    bool? repostedByCurrentUser,
+  }) => CommunityPost(
+    id: id,
+    userId: userId,
+    userName: userName,
+    title: title,
+    content: content,
+    contentType: contentType,
+    shopId: shopId,
+    dealId: dealId,
+    circleId: circleId,
+    likeCount: likeCount ?? this.likeCount,
+    commentCount: commentCount ?? this.commentCount,
+    repostCount: repostCount ?? this.repostCount,
+    repostedByCurrentUser: repostedByCurrentUser ?? this.repostedByCurrentUser,
+    auditStatus: auditStatus,
+    auditStatusText: auditStatusText,
+    auditRemark: auditRemark,
+    images: images,
+    topics: topics,
+    createdAt: createdAt,
+  );
 }
 
 class CommunityPostInput {
