@@ -59,6 +59,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   bool _busy = false;
   bool _loading = false;
   bool _deleting = false;
+  bool _deleteDialogOpen = false;
   String? _loadError;
   String _auditStatus = '';
   String _auditRemark = '';
@@ -103,7 +104,13 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   }
 
   Future<void> _pick() async {
-    if (_busy || _loading || _deleting || _images.length >= 9) return;
+    if (_busy ||
+        _loading ||
+        _deleting ||
+        _deleteDialogOpen ||
+        _images.length >= 9) {
+      return;
+    }
     setState(() => _busy = true);
     CommunityImageUpload? image;
     try {
@@ -127,7 +134,13 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   }
 
   Future<void> _submit() async {
-    if (_busy || _loading || _deleting || _loadError != null) return;
+    if (_busy ||
+        _loading ||
+        _deleting ||
+        _deleteDialogOpen ||
+        _loadError != null) {
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     final input = CommunityPostInput(
       title: _title.text.trim(),
@@ -168,25 +181,31 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
 
   Future<void> _delete() async {
     final postId = widget.postId;
-    if (postId == null || _deleting || _busy) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('删除帖子'),
-        content: const Text('删除后不可恢复，确认删除这条帖子吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            key: const Key('post-delete-confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('确认删除'),
-          ),
-        ],
-      ),
-    );
+    if (postId == null || _deleting || _busy || _deleteDialogOpen) return;
+    setState(() => _deleteDialogOpen = true);
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('删除帖子'),
+          content: const Text('删除后不可恢复，确认删除这条帖子吗？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              key: const Key('post-delete-confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('确认删除'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _deleteDialogOpen = false);
+    }
     if (confirmed != true) return;
     setState(() => _deleting = true);
     try {
@@ -214,7 +233,12 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         if (widget.postId != null)
           TextButton(
             key: const Key('post-delete-button'),
-            onPressed: _deleting || _busy || _loading || _loadError != null
+            onPressed:
+                _deleting ||
+                    _deleteDialogOpen ||
+                    _busy ||
+                    _loading ||
+                    _loadError != null
                 ? null
                 : _delete,
             child: Text(_deleting ? '删除中...' : '删除'),
@@ -294,14 +318,16 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                 Text('已上传 ${_images.length}/9'),
                 OutlinedButton.icon(
                   key: const Key('post-add-image'),
-                  onPressed: _busy || _images.length >= 9 ? null : _pick,
+                  onPressed: _busy || _deleteDialogOpen || _images.length >= 9
+                      ? null
+                      : _pick,
                   icon: const Icon(Icons.add_photo_alternate_outlined),
                   label: const Text('添加图片'),
                 ),
                 const SizedBox(height: 18),
                 FilledButton(
                   key: const Key('post-submit'),
-                  onPressed: _busy ? null : _submit,
+                  onPressed: _busy || _deleteDialogOpen ? null : _submit,
                   child: const Padding(
                     padding: EdgeInsets.all(14),
                     child: Text('提交审核'),

@@ -1026,4 +1026,26 @@ void main() {
     expect(find.text('编辑帖子'), findsNothing);
     expect(find.byKey(const Key('open-post-editor')), findsOneWidget);
   });
+
+  testWidgets('post editor guards duplicate delete dialogs', (tester) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostEditorScreen(repository: CommunityRepository(api), postId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final delete = find.byKey(const Key('post-delete-button'));
+    final deleteAction = tester.widget<TextButton>(delete).onPressed!;
+    deleteAction();
+    deleteAction();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('删除帖子'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(api.deletePath, isNull);
+  });
 }
