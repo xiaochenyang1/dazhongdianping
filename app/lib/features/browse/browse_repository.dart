@@ -198,6 +198,20 @@ class SearchHistoryItem {
   }
 }
 
+class SearchHistoryPage {
+  const SearchHistoryPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<SearchHistoryItem> items;
+  final int total, page, pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class ShopBrowseHistoryItem {
   const ShopBrowseHistoryItem({
     required this.id,
@@ -351,6 +365,19 @@ abstract class BrowseRepository {
     int page = 1,
     int pageSize = 8,
   }) => throw UnimplementedError();
+  Future<SearchHistoryPage> loadSearchHistoryPage({
+    int page = 1,
+    int pageSize = 8,
+  }) async {
+    final items = await loadSearchHistory(page: page, pageSize: pageSize);
+    return SearchHistoryPage(
+      items: items,
+      total: items.length,
+      page: page,
+      pageSize: pageSize,
+    );
+  }
+
   Future<void> clearSearchHistory() => throw UnimplementedError();
   Future<void> removeSearchHistoryItem(int historyId) =>
       throw UnimplementedError();
@@ -469,6 +496,13 @@ class ApiBrowseRepository implements BrowseRepository {
   Future<List<SearchHistoryItem>> loadSearchHistory({
     int page = 1,
     int pageSize = 8,
+  }) async =>
+      (await loadSearchHistoryPage(page: page, pageSize: pageSize)).items;
+
+  @override
+  Future<SearchHistoryPage> loadSearchHistoryPage({
+    int page = 1,
+    int pageSize = 8,
   }) async {
     try {
       final result = await client.getJson(
@@ -476,15 +510,26 @@ class ApiBrowseRepository implements BrowseRepository {
         query: {'page': page, 'pageSize': pageSize},
       );
       final list = result['list'] as List<dynamic>? ?? const [];
-      return list
+      final items = list
           .whereType<Map<String, dynamic>>()
           .map(SearchHistoryItem.fromJson)
           .where((item) => item.keyword.isNotEmpty)
           .toList();
+      return SearchHistoryPage(
+        items: items,
+        total: (result['total'] as num?)?.toInt() ?? items.length,
+        page: (result['page'] as num?)?.toInt() ?? page,
+        pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+      );
     } on ApiException catch (error) {
       // Guest sessions cannot read history; treat as empty instead of failing the panel.
       if (error.statusCode == 401) {
-        return const [];
+        return SearchHistoryPage(
+          items: const [],
+          total: 0,
+          page: page,
+          pageSize: pageSize,
+        );
       }
       rethrow;
     }

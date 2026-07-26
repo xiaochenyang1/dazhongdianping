@@ -36,9 +36,11 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _loadingMore = false;
   List<SearchHotWord> _hotWords = const [];
   List<SearchHistoryItem> _history = const [];
+  SearchHistoryPage? _historyPage;
   List<SearchSuggestion> _suggestions = const [];
   bool _panelLoading = false;
   bool _clearingHistory = false;
+  bool _loadingMoreHistory = false;
   bool _suggestLoading = false;
   int _suggestRequestId = 0;
 
@@ -95,16 +97,17 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() => _panelLoading = true);
     try {
       final hotFuture = widget.repository.loadHotWords(limit: 8);
-      final historyFuture = widget.repository.loadSearchHistory(
+      final historyFuture = widget.repository.loadSearchHistoryPage(
         page: 1,
         pageSize: 8,
       );
       final hot = await hotFuture;
-      final history = await historyFuture;
+      final historyPage = await historyFuture;
       if (!mounted) return;
       setState(() {
         _hotWords = hot;
-        _history = history;
+        _historyPage = historyPage;
+        _history = historyPage.items;
         _panelLoading = false;
       });
     } catch (_) {
@@ -125,12 +128,15 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       await _results;
       if (!mounted) return;
-      final history = await widget.repository.loadSearchHistory(
+      final historyPage = await widget.repository.loadSearchHistoryPage(
         page: 1,
         pageSize: 8,
       );
       if (!mounted) return;
-      setState(() => _history = history);
+      setState(() {
+        _historyPage = historyPage;
+        _history = historyPage.items;
+      });
     } catch (_) {
       // Search failure is already rendered by FutureBuilder; history refresh is best-effort.
     }
@@ -177,7 +183,10 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       await widget.repository.clearSearchHistory();
       if (!mounted) return;
-      setState(() => _history = const []);
+      setState(() {
+        _history = const [];
+        _historyPage = null;
+      });
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -194,12 +203,57 @@ class _SearchScreenState extends State<SearchScreen> {
       if (!mounted) return;
       setState(() {
         _history = _history.where((row) => row.id != item.id).toList();
+        final page = _historyPage;
+        if (page != null) {
+          _historyPage = SearchHistoryPage(
+            items: _history,
+            total: page.total > 0 ? page.total - 1 : 0,
+            page: page.page,
+            pageSize: page.pageSize,
+          );
+        }
       });
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('删除搜索历史失败：$error')));
+    }
+  }
+
+  Future<void> _loadMoreHistory() async {
+    final current = _historyPage;
+    if (current == null || _loadingMoreHistory || !current.hasMore) return;
+    setState(() => _loadingMoreHistory = true);
+    try {
+      final next = await widget.repository.loadSearchHistoryPage(
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      final knownIds = _history.map((item) => item.id).toSet();
+      final merged = [
+        ..._history,
+        ...next.items.where((item) => knownIds.add(item.id)),
+      ];
+      if (mounted) {
+        setState(() {
+          _history = merged;
+          _historyPage = SearchHistoryPage(
+            items: merged,
+            total: next.total,
+            page: next.page,
+            pageSize: next.pageSize,
+          );
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多搜索历史失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMoreHistory = false);
     }
   }
 
@@ -413,6 +467,23 @@ class _SearchScreenState extends State<SearchScreen> {
                 )
                 .toList(),
           ),
+          if (_historyPage?.hasMore ?? false) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('search-history-load-more'),
+                onPressed: _loadingMoreHistory ? null : _loadMoreHistory,
+                icon: _loadingMoreHistory
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.expand_more),
+                label: Text(_loadingMoreHistory ? '加载中...' : '更多历史'),
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
         ],
         if (_hotWords.isNotEmpty) ...[

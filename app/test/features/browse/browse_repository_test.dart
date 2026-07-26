@@ -210,6 +210,15 @@ void main() {
       final history = await repository.loadSearchHistory(page: 1, pageSize: 8);
       expect(api.path, '/api/c/v1/search/history');
       expect(history.single.keyword, 'noodles');
+      final historyPage = await repository.loadSearchHistoryPage(
+        page: 2,
+        pageSize: 6,
+      );
+      expect(api.query, {'page': 2, 'pageSize': 6});
+      expect(historyPage.total, 1);
+      expect(historyPage.page, 1);
+      expect(historyPage.pageSize, 8);
+      expect(historyPage.hasMore, isFalse);
 
       await repository.removeSearchHistoryItem(3);
       await repository.clearSearchHistory();
@@ -226,6 +235,7 @@ void main() {
 
     final history = await repository.loadSearchHistory();
     expect(history, isEmpty);
+    expect((await repository.loadSearchHistoryPage()).total, 0);
   });
 
   test('loads browse history and supports delete paths', () async {

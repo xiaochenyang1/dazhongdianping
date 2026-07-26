@@ -9,13 +9,16 @@ class SearchFakeRepository extends BrowseRepository {
     this.history = const [],
     this.suggestions = const [],
     this.paginated = false,
+    this.paginatedHistory = false,
   });
 
   final List<SearchHotWord> hotWords;
   List<SearchHistoryItem> history;
   final List<SearchSuggestion> suggestions;
   final bool paginated;
+  final bool paginatedHistory;
   final List<int> requestedPages = <int>[];
+  final List<int> requestedHistoryPages = <int>[];
   final List<String> searchedKeywords = <String>[];
   final List<String> suggestionKeywords = <String>[];
   int clearCalls = 0;
@@ -71,6 +74,30 @@ class SearchFakeRepository extends BrowseRepository {
     int page = 1,
     int pageSize = 8,
   }) async => history;
+
+  @override
+  Future<SearchHistoryPage> loadSearchHistoryPage({
+    int page = 1,
+    int pageSize = 8,
+  }) async {
+    requestedHistoryPages.add(page);
+    final items = paginatedHistory
+        ? [
+            SearchHistoryItem(
+              id: page,
+              keyword: page == 1 ? 'noodles' : 'cafe',
+              region: 'EU',
+              updatedAt: '2026-07-25 10:00:00',
+            ),
+          ]
+        : history;
+    return SearchHistoryPage(
+      items: items,
+      total: paginatedHistory ? 2 : items.length,
+      page: page,
+      pageSize: paginatedHistory ? 1 : pageSize,
+    );
+  }
 
   @override
   Future<void> clearSearchHistory() async {
@@ -168,6 +195,26 @@ void main() {
 
     expect(repository.searchedKeywords, contains('Brunch'));
     expect(find.text('Berlin Tea'), findsOneWidget);
+  });
+
+  testWidgets('loads and merges later search history pages', (tester) async {
+    final repository = SearchFakeRepository(
+      hotWords: const [SearchHotWord(term: 'Brunch', score: 12)],
+      paginatedHistory: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: SearchScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('noodles'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('search-history-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedHistoryPages, [1, 2]);
+    expect(find.text('noodles'), findsOneWidget);
+    expect(find.text('cafe'), findsOneWidget);
+    expect(find.byKey(const Key('search-history-load-more')), findsNothing);
   });
 
   testWidgets('can remove one history item and clear all history', (
