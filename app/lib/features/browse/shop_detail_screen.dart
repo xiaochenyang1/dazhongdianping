@@ -48,16 +48,42 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   void initState() {
     super.initState();
     _detail = widget.repository.loadShopDetail(widget.shopId);
-    _similar = widget.repository.loadSimilarShops(widget.shopId, limit: 6);
-    _reviews = widget.repository.loadShopReviews(
+    _similar = _loadSimilar();
+    _reviews = _loadReviewPreviews();
+    if (widget.enableFavorite) {
+      _loadFavoriteState();
+    }
+  }
+
+  Future<List<ShopSummary>> _loadSimilar() {
+    final future = widget.repository.loadSimilarShops(widget.shopId, limit: 6);
+    future.ignore();
+    return future;
+  }
+
+  Future<List<ShopReviewPreview>> _loadReviewPreviews() {
+    final future = widget.repository.loadShopReviews(
       widget.shopId,
       page: 1,
       pageSize: 5,
       sort: 'latest',
     );
-    if (widget.enableFavorite) {
-      _loadFavoriteState();
-    }
+    future.ignore();
+    return future;
+  }
+
+  void _reloadSimilar() {
+    final future = _loadSimilar();
+    setState(() {
+      _similar = future;
+    });
+  }
+
+  void _reloadReviewPreviews() {
+    final future = _loadReviewPreviews();
+    setState(() {
+      _reviews = future;
+    });
   }
 
   void _reloadDetail() {
@@ -334,7 +360,19 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       );
                     }
                     if (reviewSnapshot.hasError) {
-                      return Text('门店点评加载失败：${reviewSnapshot.error}');
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('门店点评加载失败：${reviewSnapshot.error}'),
+                          const SizedBox(height: 8),
+                          FilledButton.tonalIcon(
+                            key: const Key('shop-review-previews-retry'),
+                            onPressed: _reloadReviewPreviews,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('重试点评'),
+                          ),
+                        ],
+                      );
                     }
                     final items = reviewSnapshot.data ?? const [];
                     if (items.isEmpty) {
@@ -415,7 +453,19 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       );
                     }
                     if (similarSnapshot.hasError) {
-                      return Text('相似门店加载失败：${similarSnapshot.error}');
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('相似门店加载失败：${similarSnapshot.error}'),
+                          const SizedBox(height: 8),
+                          FilledButton.tonalIcon(
+                            key: const Key('similar-shops-retry'),
+                            onPressed: _reloadSimilar,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('重试推荐'),
+                          ),
+                        ],
+                      );
                     }
                     final items = similarSnapshot.data ?? const [];
                     if (items.isEmpty) {

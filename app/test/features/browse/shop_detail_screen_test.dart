@@ -10,6 +10,8 @@ class DetailFakeRepository extends BrowseRepository {
   DetailFakeRepository({
     this.favorited = false,
     this.failFirstDetail = false,
+    this.failFirstSimilar = false,
+    this.failFirstReviews = false,
     this.similar = const [
       ShopSummary(
         id: 8,
@@ -37,6 +39,8 @@ class DetailFakeRepository extends BrowseRepository {
 
   bool favorited;
   final bool failFirstDetail;
+  final bool failFirstSimilar;
+  final bool failFirstReviews;
   int detailRequests = 0;
   final List<ShopSummary> similar;
   final List<ShopReviewPreview> reviews;
@@ -89,6 +93,9 @@ class DetailFakeRepository extends BrowseRepository {
     int limit = 6,
   }) async {
     similarRequests.add(shopId);
+    if (failFirstSimilar && similarRequests.length == 1) {
+      throw StateError('similar network unavailable');
+    }
     return similar;
   }
 
@@ -102,6 +109,9 @@ class DetailFakeRepository extends BrowseRepository {
     bool? hasImages,
   }) async {
     reviewRequests.add(shopId);
+    if (failFirstReviews && reviewRequests.length == 1) {
+      throw StateError('review network unavailable');
+    }
     return reviews;
   }
 
@@ -183,6 +193,48 @@ class DetailReviewApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('shop detail retries failed review previews locally', (
+    tester,
+  ) async {
+    final repository = DetailFakeRepository(failFirstReviews: true);
+    await tester.pumpWidget(
+      MaterialApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('shop-review-previews-retry')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.tap(find.byKey(const Key('shop-review-previews-retry')));
+    await tester.pumpAndSettle();
+    expect(repository.reviewRequests, [7, 7]);
+    expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
+    expect(repository.detailRequests, 1);
+  });
+
+  testWidgets('shop detail retries failed similar shops locally', (
+    tester,
+  ) async {
+    final repository = DetailFakeRepository(failFirstSimilar: true);
+    await tester.pumpWidget(
+      MaterialApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('similar-shops-retry')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.tap(find.byKey(const Key('similar-shops-retry')));
+    await tester.pumpAndSettle();
+    expect(repository.similarRequests, [7, 7]);
+    expect(find.text('Berlin Dumplings'), findsOneWidget);
+    expect(repository.detailRequests, 1);
+  });
+
   testWidgets('shop detail retries an initial load failure safely', (
     tester,
   ) async {
