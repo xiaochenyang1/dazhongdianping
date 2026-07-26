@@ -33,6 +33,7 @@ class RankListScreen extends StatefulWidget {
 
 class _RankListScreenState extends State<RankListScreen> {
   late Future<List<RankSummary>> _ranks;
+  bool _reloading = false;
 
   @override
   void initState() {
@@ -41,6 +42,8 @@ class _RankListScreenState extends State<RankListScreen> {
   }
 
   Future<void> _reload() async {
+    if (_reloading) return;
+    setState(() => _reloading = true);
     try {
       final ranks = await widget.repository.loadRanks();
       if (mounted) {
@@ -54,6 +57,8 @@ class _RankListScreenState extends State<RankListScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('刷新榜单失败：$error')));
       }
+    } finally {
+      if (mounted) setState(() => _reloading = false);
     }
   }
 
@@ -76,8 +81,8 @@ class _RankListScreenState extends State<RankListScreen> {
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('rank-list-retry'),
-                    onPressed: _reload,
-                    child: const Text('重试'),
+                    onPressed: _reloading ? null : _reload,
+                    child: Text(_reloading ? '处理中...' : '重试'),
                   ),
                 ],
               ),

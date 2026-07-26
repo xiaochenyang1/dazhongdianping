@@ -15,6 +15,7 @@ class RankScreenApi implements JsonApi {
   bool failNextLoad = false;
   bool failNextDetail = false;
   int detailLoadCount = 0;
+  Completer<void>? loadGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -23,6 +24,7 @@ class RankScreenApi implements JsonApi {
   }) async {
     if (path == '/api/c/v1/ranks') {
       loadCount += 1;
+      await loadGate?.future;
       if (failNextLoad) {
         failNextLoad = false;
         throw const ApiException('rank network unavailable');
@@ -213,6 +215,29 @@ void main() {
     expect(find.text('上海必吃榜'), findsOneWidget);
     expect(find.textContaining('刷新榜单失败'), findsOneWidget);
     expect(find.textContaining('榜单加载失败'), findsNothing);
+  });
+
+  testWidgets('rank list guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = RankScreenApi()..failNextLoad = true;
+    await tester.pumpWidget(
+      MaterialApp(home: RankListScreen(repository: RankRepository(api))),
+    );
+    await tester.pumpAndSettle();
+    api.loadGate = gate;
+
+    final retry = find.byKey(const Key('rank-list-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry);
+    await tester.pump();
+
+    expect(api.loadCount, 2);
+    expect(find.text('处理中...'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.loadCount, 2);
+    expect(find.text('上海必吃榜'), findsOneWidget);
   });
 
   testWidgets('activity list opens detail', (tester) async {
