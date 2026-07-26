@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
@@ -16,6 +18,8 @@ class OrderDetailApi implements JsonApi {
   Object? body;
   bool failNextRefund = false;
   int refundRequests = 0;
+  Completer<void>? paymentGate;
+  int paymentRequests = 0;
 
   Map<String, dynamic> order({int status = 1, bool refunded = false}) => {
     'id': 10,
@@ -76,6 +80,16 @@ class OrderDetailApi implements JsonApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     this.path = path;
     this.body = body;
+    if (path.endsWith('/pay')) {
+      paymentRequests += 1;
+      await paymentGate?.future;
+      return {
+        'channel': 'stripe',
+        'orderNo': 'OD-10',
+        'amount': 29.9,
+        'currency': 'EUR',
+      };
+    }
     if (path.endsWith('/refund')) {
       refundRequests += 1;
       if (failNextRefund) {
@@ -216,6 +230,32 @@ void main() {
     expect(api.refundRequests, 2);
     expect(api.body, {'reason': '需要保留的退款原因'});
     expect(find.text('退款：待审核'), findsOneWidget);
+  });
+
+  testWidgets('order detail blocks duplicate payment requests', (tester) async {
+    final gate = Completer<void>();
+    final api = OrderDetailApi()..paymentGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OrderDetailScreen(
+          repository: TradeRepository(api),
+          orderId: 10,
+          thirdPartyConfig: const ThirdPartyConfig(
+            stripePublishableKey: 'pk_test_widget',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('order-pay-button')));
+    await tester.tap(find.byKey(const Key('order-pay-button')));
+    expect(api.paymentRequests, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.paymentRequests, 1);
+    expect(find.textContaining('已创建 stripe 支付请求'), findsOneWidget);
   });
 
   testWidgets('coupon fallback can retry loading the complete detail', (

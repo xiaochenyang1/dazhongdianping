@@ -113,6 +113,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _pay() async {
+    if (_acting) return;
     final reason = widget.thirdPartyConfig.unavailableReason(
       ThirdPartyFeature.payment,
     );
@@ -135,6 +136,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     Future<TradeOrder> Function() action,
     String successMessage,
   ) async {
+    if (_acting) return false;
     setState(() => _acting = true);
     try {
       final order = await action();
@@ -236,6 +238,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
           const SizedBox(height: 10),
           FilledButton.icon(
+            key: const Key('order-pay-button'),
             onPressed: _acting ? null : _pay,
             icon: const Icon(Icons.payments_outlined),
             label: const Text('发起支付'),
