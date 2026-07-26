@@ -25,13 +25,49 @@ class TopicDetailScreen extends StatefulWidget {
 
 class _TopicDetailScreenState extends State<TopicDetailScreen> {
   late TopicSummary topic = widget.initial;
-  late Future<List<CommunityPost>> posts;
+  late Future<CommunityPostPage> posts;
   bool saving = false;
+  bool loadingMore = false;
 
   @override
   void initState() {
     super.initState();
-    posts = widget.repository.loadPosts(topic.id);
+    posts = widget.repository.loadPostPage(topic.id);
+  }
+
+  Future<void> loadMore(CommunityPostPage current) async {
+    if (loadingMore || !current.hasMore) return;
+    setState(() => loadingMore = true);
+    try {
+      final next = await widget.repository.loadPostPage(
+        topic.id,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((post) => post.id).toSet();
+      setState(() {
+        posts = Future.value(
+          CommunityPostPage(
+            items: [
+              ...current.items,
+              ...next.items.where((post) => knownIds.add(post.id)),
+            ],
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多帖子失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => loadingMore = false);
+    }
   }
 
   Future<void> toggleFollow() async {
@@ -42,17 +78,26 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
     final before = topic;
     setState(() {
       saving = true;
-      topic = topic.withFollow(!topic.followed, topic.followerCount + (topic.followed ? -1 : 1));
+      topic = topic.withFollow(
+        !topic.followed,
+        topic.followerCount + (topic.followed ? -1 : 1),
+      );
     });
     try {
       final result = before.followed
           ? await widget.repository.unfollow(topic.id)
           : await widget.repository.follow(topic.id);
-      if (mounted) setState(() => topic = topic.withFollow(result.followed, result.followerCount));
+      if (mounted) {
+        setState(
+          () => topic = topic.withFollow(result.followed, result.followerCount),
+        );
+      }
     } catch (error) {
       if (mounted) {
         setState(() => topic = before);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('关注状态更新失败：$error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('关注状态更新失败：$error')));
       }
     } finally {
       if (mounted) setState(() => saving = false);
@@ -70,15 +115,35 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFFFFE7DA),
             borderRadius: BorderRadius.circular(28),
-            boxShadow: const [BoxShadow(color: Color(0x16000000), blurRadius: 24, offset: Offset(0, 10))],
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x16000000),
+                blurRadius: 24,
+                offset: Offset(0, 10),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(topic.name, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
+              Text(
+                topic.name,
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               const SizedBox(height: 10),
-              Text('热度 ${topic.hotScore}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-              Text('7 天：${topic.postCount7d} 帖 · ${topic.likeCount7d} 赞 · ${topic.commentCount7d} 评论'),
+              Text(
+                '热度 ${topic.hotScore}',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                '7 天：${topic.postCount7d} 帖 · ${topic.likeCount7d} 赞 · ${topic.commentCount7d} 评论',
+              ),
               const SizedBox(height: 14),
               Text('${topic.followerCount} 人关注'),
               const SizedBox(height: 14),
@@ -86,7 +151,11 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: saving ? null : toggleFollow,
-                  icon: Icon(topic.followed ? Icons.bookmark_added : Icons.bookmark_add_outlined),
+                  icon: Icon(
+                    topic.followed
+                        ? Icons.bookmark_added
+                        : Icons.bookmark_add_outlined,
+                  ),
                   label: Text(topic.followed ? '已关注' : '关注话题'),
                 ),
               ),
@@ -94,34 +163,74 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
           ),
         ),
         const SizedBox(height: 22),
-        const Text('公开帖子', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+        const Text(
+          '公开帖子',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+        ),
         const SizedBox(height: 10),
-        FutureBuilder<List<CommunityPost>>(
+        FutureBuilder<CommunityPostPage>(
           future: posts,
           builder: (_, snapshot) {
-            if (snapshot.hasError) return Text('帖子加载失败：${snapshot.error}');
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-            if (snapshot.data!.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('这里还没有公开帖子。')));
+            if (snapshot.hasError) {
+              return Text('帖子加载失败：${snapshot.error}');
+            }
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final page = snapshot.data!;
+            if (page.items.isEmpty) {
+              return const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(18),
+                  child: Text('这里还没有公开帖子。'),
+                ),
+              );
+            }
             return Column(
-              children: snapshot.data!.map((post) => Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  title: Text(post.title, style: const TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: Text(post.content, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  trailing: Text('❤ ${post.likeCount}'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => PostDetailScreen(
-                        repository: CommunityRepository(widget.repository.api),
-                        postId: post.id,
-                        canInteract: widget.canInteract,
-                        onUserTap: widget.onUserTap,
+              children: [
+                ...page.items.map(
+                  (post) => Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      title: Text(
+                        post.title,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(
+                        post.content,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Text('❤ ${post.likeCount}'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => PostDetailScreen(
+                            repository: CommunityRepository(
+                              widget.repository.api,
+                            ),
+                            postId: post.id,
+                            canInteract: widget.canInteract,
+                            onUserTap: widget.onUserTap,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              )).toList(),
+                if (page.hasMore)
+                  OutlinedButton.icon(
+                    key: const Key('topic-posts-load-more'),
+                    onPressed: loadingMore ? null : () => loadMore(page),
+                    icon: loadingMore
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.expand_more),
+                    label: Text(loadingMore ? '加载中...' : '加载更多'),
+                  ),
+              ],
             );
           },
         ),

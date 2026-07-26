@@ -74,6 +74,10 @@ void main() {
     expect(api.path, '/api/c/v1/topics/following');
     expect((await repository.loadDetail(31)).followerCount, 88);
     expect(await repository.loadPosts(31), isEmpty);
+    final postPage = await repository.loadPostPage(31, page: 2, pageSize: 12);
+    expect(api.query, {'page': 2, 'pageSize': 12});
+    expect(postPage.page, 2);
+    expect(postPage.pageSize, 12);
     expect((await repository.follow(31)).followerCount, 89);
     expect(api.path, '/api/c/v1/topics/31/follow');
     expect((await repository.unfollow(31)).followed, isFalse);

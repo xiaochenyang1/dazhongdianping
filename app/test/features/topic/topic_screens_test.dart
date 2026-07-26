@@ -10,6 +10,8 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failFollow = false;
   bool paginateTopics = false;
   final List<int> requestedTopicPages = <int>[];
+  bool paginatePosts = false;
+  final List<int> requestedPostPages = <int>[];
 
   Map<String, dynamic> topic({bool followed = false, int count = 88}) => {
     'id': 31,
@@ -61,9 +63,18 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path.endsWith('/posts')) {
+      final page = query?['page'] as int? ?? 1;
+      requestedPostPages.add(page);
       return {
-        'list': [post],
-        'total': 1,
+        'list': [
+          if (!paginatePosts || page == 1)
+            post
+          else
+            {...post, 'id': 8, 'title': '更早的话题帖子'},
+        ],
+        'total': paginatePosts ? 2 : 1,
+        'page': page,
+        'pageSize': paginatePosts ? 1 : 30,
       };
     }
     if (path == '/api/c/v1/topics/31') return topic();
@@ -101,6 +112,28 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('topic detail loads later posts', (tester) async {
+    final api = TopicScreenApi()..paginatePosts = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicDetailScreen(
+          repository: TopicRepository(api),
+          initial: TopicSummary.fromJson(api.topic()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('topic-posts-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('topic-posts-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedPostPages, [1, 2]);
+    expect(find.text('更早的话题帖子'), findsOneWidget);
+    expect(find.byKey(const Key('topic-posts-load-more')), findsNothing);
+  });
+
   testWidgets('topic plaza loads later recommended topics', (tester) async {
     final api = TopicScreenApi()..paginateTopics = true;
     await tester.pumpWidget(
