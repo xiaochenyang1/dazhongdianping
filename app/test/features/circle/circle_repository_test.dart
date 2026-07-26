@@ -72,6 +72,11 @@ void main() {
       expect((await repo.loadCircles()).single.name, '伦敦生活圈');
       expect((await repo.loadMyCircles()).single.id, 3);
       expect(api.query?['joined'], true);
+      final page = await repo.loadCirclePage(page: 2, pageSize: 12);
+      expect(api.query, {'page': 2, 'pageSize': 12});
+      expect(page.page, 2);
+      expect(page.pageSize, 12);
+      expect(page.total, 1);
       expect((await repo.loadDetail(3)).memberCount, 12);
       expect((await repo.loadMembers(3)).single.nickname, '伦敦小王');
       expect(await repo.loadPosts(3), isEmpty);

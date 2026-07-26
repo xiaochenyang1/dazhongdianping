@@ -3,7 +3,7 @@ import 'package:dazhongdianping_app/features/community/community_repository.dart
 import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:flutter/material.dart';
 
-class CircleSquareScreen extends StatelessWidget {
+class CircleSquareScreen extends StatefulWidget {
   const CircleSquareScreen({
     super.key,
     required this.repository,
@@ -20,12 +20,59 @@ class CircleSquareScreen extends StatelessWidget {
   final bool showJoinedOnly;
 
   @override
+  State<CircleSquareScreen> createState() => _CircleSquareScreenState();
+}
+
+class _CircleSquareScreenState extends State<CircleSquareScreen> {
+  late Future<CirclePage> page;
+  bool loadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    page = widget.repository.loadCirclePage(joinedOnly: widget.showJoinedOnly);
+  }
+
+  Future<void> loadMore(CirclePage current) async {
+    if (loadingMore || !current.hasMore) return;
+    setState(() => loadingMore = true);
+    try {
+      final next = await widget.repository.loadCirclePage(
+        joinedOnly: widget.showJoinedOnly,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((circle) => circle.id).toSet();
+      setState(() {
+        page = Future.value(
+          CirclePage(
+            items: [
+              ...current.items,
+              ...next.items.where((circle) => knownIds.add(circle.id)),
+            ],
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多圈子失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => loadingMore = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('同城圈子')),
-    body: FutureBuilder<List<AppCircle>>(
-      future: showJoinedOnly
-          ? repository.loadMyCircles()
-          : repository.loadCircles(),
+    body: FutureBuilder<CirclePage>(
+      future: page,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(child: Text('圈子加载失败：${snapshot.error}'));
@@ -33,25 +80,43 @@ class CircleSquareScreen extends StatelessWidget {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
+        final current = snapshot.data!;
         return ListView.separated(
           padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.length,
+          itemCount: current.items.length + (current.hasMore ? 1 : 0),
           separatorBuilder: (_, _) => const SizedBox(height: 14),
-          itemBuilder: (_, index) => _CircleCard(
-            circle: snapshot.data![index],
-            colors: _colors(index),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => CircleDetailScreen(
-                  repository: repository,
-                  initial: snapshot.data![index],
-                  canInteract: canInteract,
-                  onLoginRequired: onLoginRequired,
-                  onCreatePost: onCreatePost,
+          itemBuilder: (_, index) {
+            if (index == current.items.length) {
+              return Center(
+                child: OutlinedButton.icon(
+                  key: const Key('circle-square-load-more'),
+                  onPressed: loadingMore ? null : () => loadMore(current),
+                  icon: loadingMore
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.expand_more),
+                  label: Text(loadingMore ? '加载中...' : '加载更多'),
+                ),
+              );
+            }
+            return _CircleCard(
+              circle: current.items[index],
+              colors: _colors(index),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CircleDetailScreen(
+                    repository: widget.repository,
+                    initial: current.items[index],
+                    canInteract: widget.canInteract,
+                    onLoginRequired: widget.onLoginRequired,
+                    onCreatePost: widget.onCreatePost,
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     ),

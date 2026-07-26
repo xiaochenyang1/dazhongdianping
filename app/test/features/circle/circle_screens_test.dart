@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
+  bool paginateCircles = false;
+  final List<int> requestedCirclePages = <int>[];
   Map<String, dynamic> circle({bool joined = false, int count = 12}) => {
     'id': 3,
     'region': 'EU',
@@ -52,9 +54,18 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path.endsWith('/3')) return circle();
+    final page = query?['page'] as int? ?? 1;
+    requestedCirclePages.add(page);
     return {
-      'list': [circle()],
-      'total': 1,
+      'list': [
+        if (!paginateCircles || page == 1)
+          circle()
+        else
+          {...circle(), 'id': 4, 'name': '巴黎生活圈'},
+      ],
+      'total': paginateCircles ? 2 : 1,
+      'page': page,
+      'pageSize': paginateCircles ? 1 : 30,
     };
   }
 
@@ -76,6 +87,27 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('circle square loads later circles', (tester) async {
+    final api = CircleScreenApi()..paginateCircles = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleSquareScreen(
+          repository: CircleRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('circle-square-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('circle-square-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedCirclePages, [1, 2]);
+    expect(find.text('巴黎生活圈'), findsOneWidget);
+    expect(find.byKey(const Key('circle-square-load-more')), findsNothing);
+  });
+
   testWidgets('circle square opens detail and joins optimistically', (
     tester,
   ) async {

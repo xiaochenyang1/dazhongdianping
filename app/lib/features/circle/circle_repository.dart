@@ -70,23 +70,56 @@ class CircleMembership {
   final int memberCount;
 }
 
+class CirclePage {
+  const CirclePage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+  final List<AppCircle> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class CircleRepository {
   CircleRepository(this.api);
   final JsonApi api;
-  Future<List<AppCircle>> loadCircles() => _circles('/api/c/v1/groups');
-  Future<List<AppCircle>> loadMyCircles() => _circles(
+  Future<List<AppCircle>> loadCircles() async => (await loadCirclePage()).items;
+  Future<List<AppCircle>> loadMyCircles() async =>
+      (await loadCirclePage(joinedOnly: true)).items;
+  Future<CirclePage> loadCirclePage({
+    bool joinedOnly = false,
+    int page = 1,
+    int pageSize = 30,
+  }) => _circles(
     '/api/c/v1/groups',
-    query: const {'joined': true, 'page': 1, 'pageSize': 30},
+    query: {if (joinedOnly) 'joined': true, 'page': page, 'pageSize': pageSize},
+    page: page,
+    pageSize: pageSize,
   );
-  Future<List<AppCircle>> _circles(
+  Future<CirclePage> _circles(
     String path, {
-    Map<String, Object?> query = const {'page': 1, 'pageSize': 30},
-  }) async =>
-      ((await api.getJson(path, query: query))['list'] as List<dynamic>? ??
-              const [])
-          .cast<Map<String, dynamic>>()
-          .map(AppCircle.fromJson)
-          .toList();
+    required Map<String, Object?> query,
+    required int page,
+    required int pageSize,
+  }) async {
+    final result = await api.getJson(path, query: query);
+    final items = (result['list'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(AppCircle.fromJson)
+        .toList();
+    return CirclePage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
+  }
+
   Future<AppCircle> loadDetail(int id) async =>
       AppCircle.fromJson(await api.getJson('/api/c/v1/groups/$id'));
   Future<List<CircleMember>> loadMembers(int id) async =>
