@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -32,6 +33,10 @@ class CommunityScreenApi
   bool failNextReport = false;
   int postRequests = 0;
   int reportRequests = 0;
+  int saveRequests = 0;
+  int uploadRequests = 0;
+  Completer<void>? saveGate;
+  Completer<void>? uploadGate;
   final List<int> requestedCommentPages = <int>[];
 
   Map<String, dynamic> get post => {
@@ -148,6 +153,10 @@ class CommunityScreenApi
       failNextSave = false;
       throw StateError('save unavailable');
     }
+    if (path == '/api/c/v1/posts') {
+      saveRequests++;
+      await saveGate?.future;
+    }
     if (path.endsWith('/like')) {
       if (failNextLike) {
         failNextLike = false;
@@ -215,6 +224,8 @@ class CommunityScreenApi
     required String contentType,
   }) async {
     this.path = path;
+    uploadRequests++;
+    await uploadGate?.future;
     if (failNextUpload) {
       failNextUpload = false;
       throw StateError('upload unavailable');
@@ -238,6 +249,22 @@ class FailingCommunityImagePicker implements CommunityImagePicker {
   @override
   Future<CommunityImageUpload?> pickImage() async {
     throw StateError('picker unavailable');
+  }
+}
+
+class GatedCommunityImagePicker implements CommunityImagePicker {
+  final gate = Completer<void>();
+  int calls = 0;
+
+  @override
+  Future<CommunityImageUpload?> pickImage() async {
+    calls++;
+    await gate.future;
+    return CommunityImageUpload(
+      bytes: Uint8List.fromList([1]),
+      fileName: 'gated.png',
+      contentType: 'image/png',
+    );
   }
 }
 
@@ -789,6 +816,48 @@ void main() {
 
     expect(api.path, '/api/c/v1/posts');
     expect(api.body, containsPair('images', ['/uploads/market.png']));
+  });
+
+  testWidgets('post editor guards duplicate image picking', (tester) async {
+    final api = CommunityScreenApi();
+    final picker = GatedCommunityImagePicker();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostEditorScreen(
+          repository: CommunityRepository(api),
+          imagePicker: picker,
+        ),
+      ),
+    );
+
+    final addImage = find.byKey(const Key('post-add-image'));
+    await tester.ensureVisible(addImage);
+    await tester.tap(addImage);
+    await tester.tap(addImage);
+
+    expect(picker.calls, 1);
+    picker.gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.uploadRequests, 1);
+    expect(find.text('已上传 1/9'), findsOneWidget);
+  });
+
+  testWidgets('post editor guards duplicate submission', (tester) async {
+    final api = CommunityScreenApi()..saveGate = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(home: PostEditorScreen(repository: CommunityRepository(api))),
+    );
+
+    await tester.enterText(find.byKey(const Key('post-title')), '待提交标题');
+    await tester.enterText(find.byKey(const Key('post-content')), '待提交正文');
+    final submit = find.byKey(const Key('post-submit'));
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.tap(submit);
+
+    expect(api.saveRequests, 1);
+    api.saveGate!.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('post editor reports upload failure and remains usable', (

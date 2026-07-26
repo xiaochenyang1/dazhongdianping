@@ -103,27 +103,31 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   }
 
   Future<void> _pick() async {
+    if (_busy || _loading || _deleting || _images.length >= 9) return;
+    setState(() => _busy = true);
     CommunityImageUpload? image;
     try {
-      image = await (widget.imagePicker ?? const SystemCommunityImagePicker())
-          .pickImage();
-    } catch (error) {
-      if (mounted) _showMessage('图片选择失败：$error');
-      return;
-    }
-    if (image == null) return;
-    setState(() => _busy = true);
-    try {
-      final url = await widget.repository.uploadImage(image);
-      if (mounted) setState(() => _images.add(url));
-    } catch (error) {
-      if (mounted) _showMessage('图片上传失败：$error');
+      try {
+        image = await (widget.imagePicker ?? const SystemCommunityImagePicker())
+            .pickImage();
+      } catch (error) {
+        if (mounted) _showMessage('图片选择失败：$error');
+        return;
+      }
+      if (image == null) return;
+      try {
+        final url = await widget.repository.uploadImage(image);
+        if (mounted) setState(() => _images.add(url));
+      } catch (error) {
+        if (mounted) _showMessage('图片上传失败：$error');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _submit() async {
+    if (_busy || _loading || _deleting || _loadError != null) return;
     if (!_formKey.currentState!.validate()) return;
     final input = CommunityPostInput(
       title: _title.text.trim(),
