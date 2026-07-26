@@ -17,12 +17,13 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
   int _page = 1;
   bool _hasMore = false;
   bool _loadingMore = false;
+  int _pageRevision = 0;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _pageFuture = _load(reset: true);
+    _pageFuture = _load(reset: true, revision: _pageRevision);
     _loadProfile();
   }
 
@@ -36,13 +37,16 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
     }
   }
 
-  Future<UserGrowthRecordPage> _load({required bool reset}) async {
+  Future<UserGrowthRecordPage> _load({
+    required bool reset,
+    required int revision,
+  }) async {
     final nextPage = reset ? 1 : _page + 1;
     final page = await widget.repository.loadGrowthRecords(
       page: nextPage,
       pageSize: 20,
     );
-    if (!mounted) return page;
+    if (!mounted || revision != _pageRevision) return page;
     setState(() {
       if (reset) {
         _items
@@ -62,20 +66,25 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
   }
 
   Future<void> _reload() async {
+    final revision = ++_pageRevision;
+    if (_loadingMore) setState(() => _loadingMore = false);
     try {
-      await _load(reset: true);
+      await _load(reset: true, revision: revision);
     } catch (error) {
-      if (mounted) setState(() => _error = '刷新流水失败：$error');
+      if (mounted && revision == _pageRevision) {
+        setState(() => _error = '刷新流水失败：$error');
+      }
     }
   }
 
   Future<void> _loadMore() async {
     if (_loadingMore || !_hasMore) return;
+    final revision = _pageRevision;
     setState(() => _loadingMore = true);
     try {
-      await _load(reset: false);
+      await _load(reset: false, revision: revision);
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || revision != _pageRevision) return;
       setState(() {
         _loadingMore = false;
         _error = '加载更多失败：$error';

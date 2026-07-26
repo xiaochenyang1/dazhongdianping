@@ -328,6 +328,7 @@
 - `backend` 已执行 `PublicBrowseControllerTest`、`UserPrivacyControllerTest`、`CommunityControllerTest`、`NotificationControllerTest` 和 `AdminAuditServiceTest` 聚焦测试；其中帖子正文/评论 `@提醒` 覆盖了审核通过后发通知、评论即时通知、同文去重以及跳过自己/不存在/重名用户。`app` 已执行社区、圈子、话题、首页和消息相关 `flutter test`；`scripts/ci/test-browser-e2e.ps1` 契约通过。
 - Flutter 通知中心以页面版本隔离迟到的刷新/翻页响应，并基于最新页面合并并发单条已读和全部已读结果，避免旧快照恢复未读状态。
 - Flutter 私信会话列表按请求版本应用刷新和翻页结果，刷新会使挂起的旧翻页失效，避免旧会话快照覆盖新列表。
+- Flutter 成长值流水按请求版本合并刷新和翻页结果，迟到的旧分页响应及错误不会覆盖刷新后的流水。
 - 上述结果只覆盖本轮拆分提交的功能包，不替代全仓回归、真实 MySQL smoke、目标环境凭证联调或上线演练。
 
 还没做的验证:

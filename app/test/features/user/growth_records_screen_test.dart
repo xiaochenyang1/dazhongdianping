@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/user/growth_records_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
@@ -10,6 +12,7 @@ class GrowthRecordsApi implements JsonApi {
   final bool paginated;
   bool failNextRecordsLoad = false;
   final List<int> requestedPages = [];
+  final requestGates = <int, Completer<void>>{};
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -35,6 +38,7 @@ class GrowthRecordsApi implements JsonApi {
     if (path == '/api/c/v1/user/growth/records') {
       final page = query?['page'] as int? ?? 1;
       requestedPages.add(page);
+      await requestGates[requestedPages.length]?.future;
       if (failNextRecordsLoad) {
         failNextRecordsLoad = false;
         throw const ApiException('growth records network unavailable');
@@ -168,5 +172,32 @@ void main() {
     expect(find.text('发布点评'), findsNWidgets(2));
     expect(find.textContaining('刷新流水失败'), findsOneWidget);
     expect(api.requestedPages, [1, 1]);
+  });
+
+  testWidgets('growth records refresh invalidates a pending next page', (
+    tester,
+  ) async {
+    final loadMoreGate = Completer<void>();
+    final api = GrowthRecordsApi(paginated: true)
+      ..requestGates[2] = loadMoreGate;
+    await tester.pumpWidget(
+      MaterialApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('加载更多'));
+    await tester.pump();
+    expect(api.requestedPages, [1, 2]);
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+    expect(api.requestedPages, [1, 2, 1]);
+
+    loadMoreGate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('发布点评'), findsOneWidget);
+    expect(find.text('完善资料'), findsNothing);
+    expect(find.text('加载更多'), findsOneWidget);
   });
 }
