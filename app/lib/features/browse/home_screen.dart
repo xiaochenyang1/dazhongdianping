@@ -76,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<List<ShopSummary>> _shops;
   int _notificationUnreadCount = 0;
   int _unreadRequestGeneration = 0;
+  bool _openingNotifications = false;
 
   @override
   void initState() {
@@ -127,8 +128,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openNotifications() async {
-    await widget.onNotificationTap?.call(context);
-    if (mounted) await _refreshUnreadCount();
+    if (_openingNotifications) return;
+    setState(() => _openingNotifications = true);
+    try {
+      await widget.onNotificationTap?.call(context);
+      if (mounted) await _refreshUnreadCount();
+    } finally {
+      if (mounted) setState(() => _openingNotifications = false);
+    }
   }
 
   @override
@@ -186,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             key: const Key('home-notification-action'),
-            onPressed: _openNotifications,
+            onPressed: _openingNotifications ? null : _openNotifications,
             icon: Badge(
               key: const Key('home-notification-badge'),
               isLabelVisible: _notificationUnreadCount > 0,

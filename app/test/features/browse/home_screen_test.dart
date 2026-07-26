@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
@@ -241,6 +243,33 @@ void main() {
       expect(api.calls, 2);
     },
   );
+
+  testWidgets('notification action guards duplicate opens', (tester) async {
+    final gate = Completer<void>();
+    var opened = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          repository: FakeBrowseRepository(),
+          onNotificationTap: (_) async {
+            opened += 1;
+            await gate.future;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final action = find.byKey(const Key('home-notification-action'));
+    await tester.tap(action);
+    await tester.tap(action);
+    await tester.pump();
+    expect(opened, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(opened, 1);
+  });
 
   testWidgets('orders and profile bottom destinations delegate to real flows', (
     tester,
