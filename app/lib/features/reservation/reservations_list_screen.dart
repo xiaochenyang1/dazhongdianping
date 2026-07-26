@@ -28,20 +28,57 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
   ];
 
   late int? _status;
-  late Future<List<ReservationSummary>> _reservations;
+  late Future<ReservationPage> _reservations;
+  bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
     _status = widget.initialStatus;
-    _reservations = widget.repository.loadReservations(status: _status);
+    _reservations = widget.repository.loadReservationPage(status: _status);
   }
 
   void _reload() {
-    final future = widget.repository.loadReservations(status: _status);
+    final future = widget.repository.loadReservationPage(status: _status);
     setState(() {
       _reservations = future;
     });
+  }
+
+  Future<void> _loadMore(ReservationPage current) async {
+    if (_loadingMore || !current.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.loadReservationPage(
+        status: _status,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((item) => item.id).toSet();
+      final items = [
+        ...current.items,
+        ...next.items.where((item) => knownIds.add(item.id)),
+      ];
+      setState(() {
+        _reservations = Future.value(
+          ReservationPage(
+            items: items,
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多预订失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   void _selectStatus(int? status) {
@@ -76,7 +113,7 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<ReservationSummary>>(
+            child: FutureBuilder<ReservationPage>(
               future: _reservations,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
@@ -85,15 +122,35 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                 if (snapshot.hasError) {
                   return Center(child: Text('预订加载失败：${snapshot.error}'));
                 }
-                final items = snapshot.data ?? const [];
+                final page = snapshot.data!;
+                final items = page.items;
                 if (items.isEmpty) {
                   return const Center(child: Text('当前筛选下暂无预订'));
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  itemCount: items.length,
+                  itemCount: items.length + (page.hasMore ? 1 : 0),
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
+                    if (index == items.length) {
+                      return Center(
+                        child: OutlinedButton.icon(
+                          key: const Key('reservations-load-more'),
+                          onPressed: _loadingMore
+                              ? null
+                              : () => _loadMore(page),
+                          icon: _loadingMore
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.expand_more),
+                          label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                        ),
+                      );
+                    }
                     final item = items[index];
                     return Card(
                       key: Key('reservation-card-${item.id}'),

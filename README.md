@@ -346,6 +346,7 @@ npm run build
 
 ## 已验证
 
+- `2026-07-26` Flutter 预订历史已接后端分页：仓储新增带 `page/pageSize/total` 的预订页模型，同时保留原列表 API；我的预订可按当前状态加载更早记录、合并时按预订 ID 去重，切换筛选会重新从第一页开始，加载失败保留已有结果并提示。预订仓储/列表页聚焦测试 `5` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `191` 条通过。
 - `2026-07-26` Flutter 券历史已接后端分页：仓储新增带 `page/pageSize/total` 的券页模型，同时保留原列表 API；我的券可按当前状态加载更早记录、合并时按券 ID 去重，切换筛选会重新从第一页开始，加载失败保留已有结果并提示。交易仓储/券列表聚焦测试 `5` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `190` 条通过。
 - `2026-07-26` Flutter 订单历史已接后端分页：仓储新增带 `page/pageSize/total` 的订单页模型，同时保留原列表 API；订单页可按当前支付状态加载更早记录、合并时按订单 ID 去重，切换筛选会重新从第一页开始，加载失败保留已有结果并提示。交易仓储/订单页聚焦测试 `5` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `189` 条通过。
 - `2026-07-26` Flutter 通知中心已接后端分页：仓储保留 `page/pageSize/total`，列表按需加载更早通知并按 ID 去重；“只看未读”在当前页没有结果但后端仍有下一页时，可继续翻页查找未读消息，加载失败不会清空已加载内容。通知仓储与页面聚焦测试 `22` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `188` 条通过。

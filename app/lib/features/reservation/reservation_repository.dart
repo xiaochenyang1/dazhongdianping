@@ -161,6 +161,22 @@ class ReservationSummary {
   }
 }
 
+class ReservationPage {
+  const ReservationPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<ReservationSummary> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class ReservationRepository {
   ReservationRepository(this.api);
   final JsonApi api;
@@ -207,6 +223,16 @@ class ReservationRepository {
     int? status,
     int page = 1,
     int pageSize = 30,
+  }) async => (await loadReservationPage(
+    status: status,
+    page: page,
+    pageSize: pageSize,
+  )).items;
+
+  Future<ReservationPage> loadReservationPage({
+    int? status,
+    int page = 1,
+    int pageSize = 30,
   }) async {
     final result = await api.getJson(
       '/api/c/v1/reservations',
@@ -216,10 +242,16 @@ class ReservationRepository {
         if (status != null) 'status': status,
       },
     );
-    return (result['list'] as List<dynamic>? ?? const [])
+    final items = (result['list'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>()
         .map(ReservationSummary.fromJson)
         .toList();
+    return ReservationPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: page,
+      pageSize: pageSize,
+    );
   }
 
   Future<ReservationDetail> loadReservation(int reservationId) async {

@@ -182,6 +182,17 @@ void main() {
       expect(api.query?['status'], 1);
       expect(list.single.reservationNo, 'R11');
       expect(list.single.shopName, 'EU Shop');
+
+      final page = await repository.loadReservationPage(
+        status: 1,
+        page: 2,
+        pageSize: 12,
+      );
+      expect(api.query, {'page': 2, 'pageSize': 12, 'status': 1});
+      expect(page.page, 2);
+      expect(page.pageSize, 12);
+      expect(page.total, 1);
+      expect(page.hasMore, isFalse);
     },
   );
 }

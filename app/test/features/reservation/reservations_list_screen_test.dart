@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ReservationsApi implements JsonApi {
+  ReservationsApi({this.paginated = false});
+
+  final bool paginated;
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
+  final List<int> requestedPages = <int>[];
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -16,14 +20,16 @@ class ReservationsApi implements JsonApi {
     paths.add(path);
     lastQuery = query;
     if (path == '/api/c/v1/reservations') {
+      final page = query?['page'] as int? ?? 1;
+      requestedPages.add(page);
       return {
         'list': [
           {
-            'id': 11,
-            'reservationNo': 'RS-11',
+            'id': paginated ? 10 + page : 11,
+            'reservationNo': paginated ? 'RS-PAGE-$page' : 'RS-11',
             'shop': {
               'id': 2,
-              'name': '柏林茶馆',
+              'name': page == 1 ? '柏林茶馆' : '更早的预订',
               'coverImage': '',
               'address': 'Berlin Mitte',
             },
@@ -33,7 +39,7 @@ class ReservationsApi implements JsonApi {
             'statusText': '已确认',
           },
         ],
-        'total': 1,
+        'total': paginated ? 2 : 1,
       };
     }
     if (path == '/api/c/v1/reservations/11') {
@@ -71,6 +77,29 @@ class ReservationsApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('reservations list loads later filtered pages', (tester) async {
+    final api = ReservationsApi(paginated: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationsListScreen(
+          repository: ReservationRepository(api),
+          initialStatus: 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('reservation-card-11')), findsOneWidget);
+    expect(find.byKey(const Key('reservations-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('reservations-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedPages, [1, 2]);
+    expect(api.lastQuery?['status'], 1);
+    expect(find.byKey(const Key('reservation-card-12')), findsOneWidget);
+    expect(find.byKey(const Key('reservations-load-more')), findsNothing);
+  });
+
   testWidgets('reservations list filters by status and opens detail', (
     tester,
   ) async {
