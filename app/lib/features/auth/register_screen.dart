@@ -39,6 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> sendCode() async {
+    if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
       setState(() => errorMessage = '先输入邮箱或手机号');
@@ -69,6 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> submit() async {
+    if (submitting) return;
     final account = accountController.text.trim();
     final code = codeController.text.trim();
     final password = passwordController.text;
