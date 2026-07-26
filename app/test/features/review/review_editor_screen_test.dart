@@ -84,6 +84,13 @@ class FakeReviewImagePicker implements ReviewImagePicker {
   );
 }
 
+class FailingReviewImagePicker implements ReviewImagePicker {
+  @override
+  Future<ReviewImageUpload?> pickImage() async {
+    throw StateError('picker unavailable');
+  }
+}
+
 Widget buildEditor({
   required EditorFakeApi api,
   int? reviewId,
@@ -142,13 +149,12 @@ void main() {
     expect(api.path, '/api/c/v1/reviews');
     expect(api.body, containsPair('shopId', 7));
     expect(api.body, containsPair('cost', 22.5));
-    expect(
-      api.body,
-      containsPair('tags', ['适合朋友聚会', '中文服务']),
-    );
+    expect(api.body, containsPair('tags', ['适合朋友聚会', '中文服务']));
   });
 
-  testWidgets('review editor loads and updates an owned review', (tester) async {
+  testWidgets('review editor loads and updates an owned review', (
+    tester,
+  ) async {
     final api = EditorFakeApi();
     await tester.pumpWidget(buildEditor(api: api, reviewId: 12));
     await tester.pumpAndSettle();
@@ -185,6 +191,21 @@ void main() {
     expect(api.path, '/api/c/v1/files/upload');
     expect(api.uploadedFileName, 'tea.png');
     expect(find.text('已上传 1/9'), findsOneWidget);
+  });
+
+  testWidgets('review editor reports image picker failure', (tester) async {
+    final api = EditorFakeApi();
+    await tester.pumpWidget(
+      buildEditor(api: api, imagePicker: FailingReviewImagePicker()),
+    );
+
+    await scrollTo(tester, find.byKey(const Key('review-add-image')));
+    await tester.tap(find.byKey(const Key('review-add-image')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('图片选择失败'), findsOneWidget);
+    expect(find.text('已上传 0/9'), findsOneWidget);
+    expect(api.method, isNull);
   });
 
   testWidgets('review editor rejects empty content and invalid cost', (

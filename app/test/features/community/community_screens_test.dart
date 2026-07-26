@@ -210,6 +210,13 @@ class FakeCommunityImagePicker implements CommunityImagePicker {
   );
 }
 
+class FailingCommunityImagePicker implements CommunityImagePicker {
+  @override
+  Future<CommunityImageUpload?> pickImage() async {
+    throw StateError('picker unavailable');
+  }
+}
+
 class CommunityTopicApi extends CommunityScreenApi {
   @override
   Future<Map<String, dynamic>> getJson(
@@ -589,6 +596,26 @@ void main() {
     expect(find.textContaining('图片上传失败'), findsOneWidget);
     expect(find.text('已上传 0/9'), findsOneWidget);
     expect(find.byKey(const Key('post-add-image')), findsOneWidget);
+  });
+
+  testWidgets('post editor reports image picker failure', (tester) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostEditorScreen(
+          repository: CommunityRepository(api),
+          imagePicker: FailingCommunityImagePicker(),
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('post-add-image')));
+    await tester.tap(find.byKey(const Key('post-add-image')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('图片选择失败'), findsOneWidget);
+    expect(find.text('已上传 0/9'), findsOneWidget);
+    expect(api.path, isNull);
   });
 
   testWidgets('post editor reports save failure and preserves form data', (

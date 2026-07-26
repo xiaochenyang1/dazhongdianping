@@ -103,9 +103,14 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   }
 
   Future<void> _pick() async {
-    final image =
-        await (widget.imagePicker ?? const SystemCommunityImagePicker())
-            .pickImage();
+    CommunityImageUpload? image;
+    try {
+      image = await (widget.imagePicker ?? const SystemCommunityImagePicker())
+          .pickImage();
+    } catch (error) {
+      if (mounted) _showMessage('图片选择失败：$error');
+      return;
+    }
     if (image == null) return;
     setState(() => _busy = true);
     try {
