@@ -21,6 +21,7 @@ class OrderDetailScreen extends StatefulWidget {
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  final _refundReasonController = TextEditingController(text: '行程有变');
   TradeOrder? _order;
   String? _error;
   bool _loading = true;
@@ -30,6 +31,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _refundReasonController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -73,13 +80,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _refund() async {
-    final controller = TextEditingController(text: '行程有变');
+    if (_acting) return;
     final reason = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('申请退款'),
         content: TextField(
-          controller: controller,
+          key: const Key('order-refund-reason'),
+          controller: _refundReasonController,
           autofocus: true,
           decoration: const InputDecoration(labelText: '退款原因'),
         ),
@@ -89,18 +97,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            onPressed: () =>
+                Navigator.of(context).pop(_refundReasonController.text.trim()),
             child: const Text('提交申请'),
           ),
         ],
       ),
     );
-    controller.dispose();
     if (reason == null || reason.isEmpty || !mounted) return;
-    await _runAction(
+    final succeeded = await _runAction(
       () => widget.repository.refundOrder(widget.orderId, reason: reason),
       '退款申请已提交',
     );
+    if (succeeded) _refundReasonController.text = '行程有变';
   }
 
   Future<void> _pay() async {
@@ -122,18 +131,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
-  Future<void> _runAction(
+  Future<bool> _runAction(
     Future<TradeOrder> Function() action,
     String successMessage,
   ) async {
     setState(() => _acting = true);
     try {
       final order = await action();
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _order = order);
       _showMessage(successMessage);
+      return true;
     } catch (error) {
       if (mounted) _showMessage('操作失败：$error');
+      return false;
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -239,6 +250,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             order.refund == null) ...[
           const SizedBox(height: 14),
           OutlinedButton.icon(
+            key: const Key('order-refund-button'),
             onPressed: _acting ? null : _refund,
             icon: const Icon(Icons.currency_exchange),
             label: const Text('申请退款'),

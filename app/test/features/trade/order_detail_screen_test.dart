@@ -7,13 +7,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class OrderDetailApi implements JsonApi {
-  OrderDetailApi({this.failFirstCoupon = false});
+  OrderDetailApi({this.failFirstCoupon = false, this.paid = false});
 
   final bool failFirstCoupon;
+  final bool paid;
   int couponRequests = 0;
   String? path;
+  Object? body;
+  bool failNextRefund = false;
+  int refundRequests = 0;
 
-  Map<String, dynamic> order({int status = 1}) => {
+  Map<String, dynamic> order({int status = 1, bool refunded = false}) => {
     'id': 10,
     'orderNo': 'OD-10',
     'dealTitle': '双人晚餐套餐',
@@ -22,10 +26,17 @@ class OrderDetailApi implements JsonApi {
     'unitPrice': 29.9,
     'amount': 29.9,
     'currency': 'EUR',
-    'payStatus': 0,
-    'payStatusText': '待支付',
+    'payStatus': paid ? 1 : 0,
+    'payStatusText': paid ? '已支付' : '待支付',
     'status': status,
     'coupons': const [],
+    if (refunded)
+      'refund': {
+        'id': 91,
+        'status': 0,
+        'statusText': '待审核',
+        'reason': (body as Map<String, Object?>)['reason'],
+      },
   };
 
   @override
@@ -64,6 +75,15 @@ class OrderDetailApi implements JsonApi {
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     this.path = path;
+    this.body = body;
+    if (path.endsWith('/refund')) {
+      refundRequests += 1;
+      if (failNextRefund) {
+        failNextRefund = false;
+        throw StateError('refund unavailable');
+      }
+      return order(refunded: true);
+    }
     return order(status: 2);
   }
 }
@@ -160,6 +180,42 @@ void main() {
     await tester.tap(find.byKey(const Key('copy-coupon-code')));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('券码已复制'), findsOneWidget);
+  });
+
+  testWidgets('order detail preserves a failed refund reason for retry', (
+    tester,
+  ) async {
+    final api = OrderDetailApi(paid: true)..failNextRefund = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('order-refund-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('order-refund-reason')),
+      '需要保留的退款原因',
+    );
+    await tester.tap(find.text('提交申请'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('操作失败'), findsOneWidget);
+
+    ScaffoldMessenger.of(
+      tester.element(find.byType(OrderDetailScreen)),
+    ).clearSnackBars();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('order-refund-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('需要保留的退款原因'), findsOneWidget);
+    await tester.tap(find.text('提交申请'));
+    await tester.pumpAndSettle();
+
+    expect(api.refundRequests, 2);
+    expect(api.body, {'reason': '需要保留的退款原因'});
+    expect(find.text('退款：待审核'), findsOneWidget);
   });
 
   testWidgets('coupon fallback can retry loading the complete detail', (
