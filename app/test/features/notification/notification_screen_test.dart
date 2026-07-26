@@ -14,6 +14,9 @@ class NotificationScreenApi implements JsonApi {
     this.couponReminder = false,
     this.couponVerified = false,
     this.expertResult = false,
+    this.failFirstLoad = false,
+    this.mixedRead = false,
+    this.empty = false,
   });
   final bool social;
   final bool directMessage;
@@ -23,7 +26,11 @@ class NotificationScreenApi implements JsonApi {
   final bool couponReminder;
   final bool couponVerified;
   final bool expertResult;
+  final bool failFirstLoad;
+  final bool mixedRead;
+  final bool empty;
   String? postedPath;
+  int loadCount = 0;
 
   Map<String, dynamic> _item({required bool read}) {
     if (social) {
@@ -157,6 +164,22 @@ class NotificationScreenApi implements JsonApi {
     String path, {
     Map<String, Object?>? query,
   }) async {
+    loadCount += 1;
+    if (failFirstLoad && loadCount == 1) {
+      throw const ApiException('网络暂时不可用');
+    }
+    if (empty) {
+      return {'list': const [], 'total': 0};
+    }
+    if (mixedRead) {
+      return {
+        'list': [
+          _item(read: false),
+          {..._item(read: true), 'id': 2, 'title': '已读通知'},
+        ],
+        'total': 2,
+      };
+    }
     return {
       'list': [_item(read: false)],
       'total': 1,
@@ -174,6 +197,82 @@ class NotificationScreenApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('notification screen filters unread messages locally', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi(mixedRead: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('商家回复'), findsOneWidget);
+    expect(find.text('已读通知'), findsOneWidget);
+
+    await tester.tap(find.text('只看未读'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('商家回复'), findsOneWidget);
+    expect(find.text('已读通知'), findsNothing);
+  });
+
+  testWidgets('notification screen retries after an initial load failure', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi(failFirstLoad: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('网络暂时不可用'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('notifications-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.loadCount, 2);
+    expect(find.text('商家回复'), findsOneWidget);
+  });
+
+  testWidgets('pull to refresh reloads notifications', (tester) async {
+    final api = NotificationScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.fling(
+      find.byKey(const Key('notification-list')),
+      const Offset(0, 300),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.loadCount, 2);
+    expect(find.text('商家回复'), findsOneWidget);
+  });
+
+  testWidgets('empty notification state can refresh', (tester) async {
+    final api = NotificationScreenApi(empty: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('暂无消息'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('notifications-empty-refresh')));
+    await tester.pumpAndSettle();
+
+    expect(api.loadCount, 2);
+  });
+
   testWidgets('notification screen renders an unread message', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -391,26 +490,25 @@ void main() {
     },
   );
 
-  testWidgets(
-    'coupon verified notification opens coupon detail by code',
-    (tester) async {
-      final api = NotificationScreenApi(couponVerified: true);
-      String? openedCode;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: NotificationScreen(
-            repository: NotificationRepository(api),
-            onCouponDetailTap: (code) => openedCode = code,
-          ),
+  testWidgets('coupon verified notification opens coupon detail by code', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi(couponVerified: true);
+    String? openedCode;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(
+          repository: NotificationRepository(api),
+          onCouponDetailTap: (code) => openedCode = code,
         ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('券码已核销'));
-      await tester.pumpAndSettle();
-      expect(api.postedPath, '/api/c/v1/notifications/1/ack');
-      expect(openedCode, 'CP-DEMO');
-    },
-  );
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('券码已核销'));
+    await tester.pumpAndSettle();
+    expect(api.postedPath, '/api/c/v1/notifications/1/ack');
+    expect(openedCode, 'CP-DEMO');
+  });
 
   testWidgets(
     'expert certification notification opens expert certification page',

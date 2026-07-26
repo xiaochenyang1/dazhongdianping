@@ -35,11 +35,20 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   late Future<List<AppNotification>> _notifications;
   bool _markingAll = false;
+  bool _showUnreadOnly = false;
 
   @override
   void initState() {
     super.initState();
     _notifications = widget.repository.load();
+  }
+
+  Future<void> _reload() async {
+    final future = widget.repository.load();
+    setState(() {
+      _notifications = future;
+    });
+    await future;
   }
 
   Future<void> _ack(
@@ -241,92 +250,152 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<List<AppNotification>>(
-        future: _notifications,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('消息加载失败：${snapshot.error}'));
-          }
-          final notifications = snapshot.data ?? const [];
-          if (notifications.isEmpty) {
-            return const Center(child: Text('暂无消息'));
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: notifications.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final notification = notifications[index];
-              return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFFFFE4D5),
-                    foregroundColor: const Color(0xFFB83D16),
-                    child: const Icon(Icons.notifications_outlined),
-                  ),
-                  title: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notification.title,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      if (notification.aggregateCount > 1)
-                        Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFE7DE),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            'x${notification.aggregateCount}',
-                            style: const TextStyle(
-                              color: Color(0xFFB83D16),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      if (!notification.read)
-                        const Text(
-                          '未读',
-                          style: TextStyle(
-                            color: Color(0xFFE85D2A),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                    ],
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 8),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: SegmentedButton<bool>(
+              key: const Key('notification-read-filter'),
+              segments: const [
+                ButtonSegment(value: false, label: Text('全部')),
+                ButtonSegment(value: true, label: Text('只看未读')),
+              ],
+              selected: {_showUnreadOnly},
+              onSelectionChanged: (selection) {
+                setState(() => _showUnreadOnly = selection.first);
+              },
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<AppNotification>>(
+              future: _notifications,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(notification.content),
-                        const SizedBox(height: 8),
-                        Text(
-                          notification.createdAt,
-                          style: Theme.of(context).textTheme.bodySmall,
+                        Text('消息加载失败：${snapshot.error}'),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          key: const Key('notifications-retry'),
+                          onPressed: _reload,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('重新加载'),
                         ),
                       ],
                     ),
+                  );
+                }
+                final notifications = snapshot.data ?? const [];
+                final visible = _showUnreadOnly
+                    ? notifications.where((item) => !item.read).toList()
+                    : notifications;
+                if (visible.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_showUnreadOnly ? '暂无未读消息' : '暂无消息'),
+                        if (!_showUnreadOnly) ...[
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            key: const Key('notifications-empty-refresh'),
+                            onPressed: _reload,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('刷新'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: _reload,
+                  child: ListView.separated(
+                    key: const Key('notification-list'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: visible.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final notification = visible[index];
+                      return Card(
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFFFFE4D5),
+                            foregroundColor: const Color(0xFFB83D16),
+                            child: const Icon(Icons.notifications_outlined),
+                          ),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  notification.title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              if (notification.aggregateCount > 1)
+                                Container(
+                                  margin: const EdgeInsets.only(right: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFE7DE),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    'x${notification.aggregateCount}',
+                                    style: const TextStyle(
+                                      color: Color(0xFFB83D16),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              if (!notification.read)
+                                const Text(
+                                  '未读',
+                                  style: TextStyle(
+                                    color: Color(0xFFE85D2A),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(notification.content),
+                                const SizedBox(height: 8),
+                                Text(
+                                  notification.createdAt,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          onTap: () => _handleTap(notification, notifications),
+                        ),
+                      );
+                    },
                   ),
-                  onTap: () => _handleTap(notification, notifications),
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
