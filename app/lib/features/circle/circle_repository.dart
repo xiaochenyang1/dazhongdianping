@@ -133,15 +133,28 @@ class CircleRepository {
           .map(CircleMember.fromJson)
           .toList();
   Future<List<CommunityPost>> loadPosts(int id) async =>
-      ((await api.getJson(
-                    '/api/c/v1/groups/$id/posts',
-                    query: const {'page': 1, 'pageSize': 30},
-                  ))['list']
-                  as List<dynamic>? ??
-              const [])
-          .cast<Map<String, dynamic>>()
-          .map(CommunityPost.fromJson)
-          .toList();
+      (await loadPostPage(id)).items;
+  Future<CommunityPostPage> loadPostPage(
+    int id, {
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    final result = await api.getJson(
+      '/api/c/v1/groups/$id/posts',
+      query: {'page': page, 'pageSize': pageSize},
+    );
+    final items = (result['list'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(CommunityPost.fromJson)
+        .toList();
+    return CommunityPostPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
+  }
+
   Future<CircleMembership> join(int id) async {
     final d = await (api as JsonMutationApi).putJson(
       '/api/c/v1/groups/$id/membership',

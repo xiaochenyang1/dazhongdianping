@@ -80,6 +80,10 @@ void main() {
       expect((await repo.loadDetail(3)).memberCount, 12);
       expect((await repo.loadMembers(3)).single.nickname, '伦敦小王');
       expect(await repo.loadPosts(3), isEmpty);
+      final postPage = await repo.loadPostPage(3, page: 2, pageSize: 12);
+      expect(api.query, {'page': 2, 'pageSize': 12});
+      expect(postPage.page, 2);
+      expect(postPage.pageSize, 12);
       expect((await repo.join(3)).memberCount, 13);
       expect((await repo.leave(3)).joined, isFalse);
     },

@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool paginateCircles = false;
   final List<int> requestedCirclePages = <int>[];
+  bool paginatePosts = false;
+  final List<int> requestedPostPages = <int>[];
   Map<String, dynamic> circle({bool joined = false, int count = 12}) => {
     'id': 3,
     'region': 'EU',
@@ -48,9 +50,18 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     }
     if (path.endsWith('/members')) return {'list': const [], 'total': 0};
     if (path.endsWith('/posts')) {
+      final page = query?['page'] as int? ?? 1;
+      requestedPostPages.add(page);
       return {
-        'list': [post],
-        'total': 1,
+        'list': [
+          if (!paginatePosts || page == 1)
+            post
+          else
+            {...post, 'id': 8, 'title': '更早的圈子帖子'},
+        ],
+        'total': paginatePosts ? 2 : 1,
+        'page': page,
+        'pageSize': paginatePosts ? 1 : 30,
       };
     }
     if (path.endsWith('/3')) return circle();
@@ -87,6 +98,28 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('circle detail loads later posts', (tester) async {
+    final api = CircleScreenApi()..paginatePosts = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleDetailScreen(
+          repository: CircleRepository(api),
+          initial: AppCircle.fromJson(api.circle()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('circle-posts-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('circle-posts-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedPostPages, [1, 2]);
+    expect(find.text('更早的圈子帖子'), findsOneWidget);
+    expect(find.byKey(const Key('circle-posts-load-more')), findsNothing);
+  });
+
   testWidgets('circle square loads later circles', (tester) async {
     final api = CircleScreenApi()..paginateCircles = true;
     await tester.pumpWidget(

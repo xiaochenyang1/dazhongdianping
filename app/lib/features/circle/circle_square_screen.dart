@@ -223,13 +223,49 @@ class CircleDetailScreen extends StatefulWidget {
 
 class _CircleDetailScreenState extends State<CircleDetailScreen> {
   late AppCircle circle = widget.initial;
-  late Future<List<CommunityPost>> posts;
+  late Future<CommunityPostPage> posts;
   bool saving = false;
+  bool loadingMorePosts = false;
 
   @override
   void initState() {
     super.initState();
-    posts = widget.repository.loadPosts(circle.id);
+    posts = widget.repository.loadPostPage(circle.id);
+  }
+
+  Future<void> loadMorePosts(CommunityPostPage current) async {
+    if (loadingMorePosts || !current.hasMore) return;
+    setState(() => loadingMorePosts = true);
+    try {
+      final next = await widget.repository.loadPostPage(
+        circle.id,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((post) => post.id).toSet();
+      setState(() {
+        posts = Future.value(
+          CommunityPostPage(
+            items: [
+              ...current.items,
+              ...next.items.where((post) => knownIds.add(post.id)),
+            ],
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多帖子失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => loadingMorePosts = false);
+    }
   }
 
   Future<void> toggle() async {
@@ -343,7 +379,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
           style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 10),
-        FutureBuilder<List<CommunityPost>>(
+        FutureBuilder<CommunityPostPage>(
           future: posts,
           builder: (_, snapshot) {
             if (!snapshot.hasData) {
@@ -351,7 +387,8 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                   ? Text('帖子加载失败：${snapshot.error}')
                   : const Center(child: CircularProgressIndicator());
             }
-            if (snapshot.data!.isEmpty) {
+            final page = snapshot.data!;
+            if (page.items.isEmpty) {
               return const Card(
                 child: Padding(
                   padding: EdgeInsets.all(18),
@@ -360,37 +397,51 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
               );
             }
             return Column(
-              children: snapshot.data!
-                  .map(
-                    (post) => Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        title: Text(
-                          post.title,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        subtitle: Text(
-                          post.content,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Text('❤ ${post.likeCount}'),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => PostDetailScreen(
-                              repository: CommunityRepository(
-                                widget.repository.api,
-                              ),
-                              postId: post.id,
-                              canInteract: widget.canInteract,
+              children: [
+                ...page.items.map(
+                  (post) => Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      title: Text(
+                        post.title,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(
+                        post.content,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Text('❤ ${post.likeCount}'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => PostDetailScreen(
+                            repository: CommunityRepository(
+                              widget.repository.api,
                             ),
+                            postId: post.id,
+                            canInteract: widget.canInteract,
                           ),
                         ),
                       ),
                     ),
-                  )
-                  .toList(),
+                  ),
+                ),
+                if (page.hasMore)
+                  OutlinedButton.icon(
+                    key: const Key('circle-posts-load-more'),
+                    onPressed: loadingMorePosts
+                        ? null
+                        : () => loadMorePosts(page),
+                    icon: loadingMorePosts
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.expand_more),
+                    label: Text(loadingMorePosts ? '加载中...' : '加载更多'),
+                  ),
+              ],
             );
           },
         ),
