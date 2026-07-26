@@ -33,6 +33,7 @@ class ActivityListScreen extends StatefulWidget {
 
 class _ActivityListScreenState extends State<ActivityListScreen> {
   late Future<List<ActivitySummary>> _activities;
+  bool _reloading = false;
 
   @override
   void initState() {
@@ -41,6 +42,8 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
   }
 
   Future<void> _reload() async {
+    if (_reloading) return;
+    setState(() => _reloading = true);
     try {
       final activities = await widget.repository.loadActivities();
       if (mounted) {
@@ -54,6 +57,8 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('刷新活动失败：$error')));
       }
+    } finally {
+      if (mounted) setState(() => _reloading = false);
     }
   }
 
@@ -76,8 +81,8 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('activity-list-retry'),
-                    onPressed: _reload,
-                    child: const Text('重试'),
+                    onPressed: _reloading ? null : _reload,
+                    child: Text(_reloading ? '处理中...' : '重试'),
                   ),
                 ],
               ),

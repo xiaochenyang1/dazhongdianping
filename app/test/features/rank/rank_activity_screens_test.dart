@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/activity/activity_list_screen.dart';
 import 'package:dazhongdianping_app/features/activity/activity_detail_screen.dart';
@@ -71,6 +73,7 @@ class ActivityScreenApi implements JsonApi {
   bool failNextLoad = false;
   int detailLoadCount = 0;
   bool failNextDetail = false;
+  Completer<void>? loadGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -79,6 +82,7 @@ class ActivityScreenApi implements JsonApi {
   }) async {
     if (path == '/api/c/v1/activities') {
       loadCount += 1;
+      await loadGate?.future;
       if (failNextLoad) {
         failNextLoad = false;
         throw const ApiException('activity network unavailable');
@@ -240,6 +244,31 @@ void main() {
     await tester.tap(find.byKey(const Key('activity-list-retry')));
     await tester.pumpAndSettle();
 
+    expect(api.loadCount, 2);
+    expect(find.text('暑期火锅节'), findsOneWidget);
+  });
+
+  testWidgets('activity list guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = ActivityScreenApi()..failNextLoad = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ActivityListScreen(repository: ActivityRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.loadGate = gate;
+
+    final retry = find.byKey(const Key('activity-list-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry);
+    await tester.pump();
+
+    expect(api.loadCount, 2);
+    expect(find.text('处理中...'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(api.loadCount, 2);
     expect(find.text('暑期火锅节'), findsOneWidget);
   });
