@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
@@ -410,6 +412,45 @@ void main() {
     expect(find.byKey(const Key('shop-share-button')), findsOneWidget);
     await tester.tap(find.byKey(const Key('shop-share-button')));
     await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('分享文案已复制'), findsOneWidget);
+  });
+
+  testWidgets('shop detail guards duplicate share copies', (tester) async {
+    final gate = Completer<void>();
+    var clipboardWrites = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          clipboardWrites += 1;
+          await gate.future;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(repository: DetailFakeRepository(), shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final share = find.byKey(const Key('shop-share-button'));
+    await tester.tap(share);
+    await tester.tap(share);
+    await tester.pump();
+    expect(clipboardWrites, 1);
+    expect(find.text('分享中...'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(clipboardWrites, 1);
     expect(find.text('分享文案已复制'), findsOneWidget);
   });
 }

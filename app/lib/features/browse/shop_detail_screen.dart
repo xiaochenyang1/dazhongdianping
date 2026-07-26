@@ -43,6 +43,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   bool _favorited = false;
   bool _favoriteLoading = false;
   bool _favoriteSaving = false;
+  bool _sharing = false;
 
   @override
   void initState() {
@@ -130,14 +131,20 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   }
 
   Future<void> _shareShop(ShopDetail shop) async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
     final shareUrl = 'https://local.life/shops/${shop.id}';
     final shareText =
         '${shop.name} · ★ ${shop.score.toStringAsFixed(1)} · $shareUrl';
-    await Clipboard.setData(ClipboardData(text: shareText));
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('分享文案已复制')));
+    try {
+      await Clipboard.setData(ClipboardData(text: shareText));
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('分享文案已复制')));
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
   }
 
   @override
@@ -251,11 +258,11 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               ],
               FilledButton.tonalIcon(
                 key: const Key('shop-share-button'),
-                onPressed: () => _shareShop(shop),
+                onPressed: _sharing ? null : () => _shareShop(shop),
                 icon: const Icon(Icons.share_outlined),
-                label: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('分享门店'),
+                label: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(_sharing ? '分享中...' : '分享门店'),
                 ),
               ),
               const SizedBox(height: 12),
