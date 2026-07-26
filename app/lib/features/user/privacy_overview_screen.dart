@@ -38,8 +38,8 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   bool _cancellingDelete = false;
   bool _submittingDelete = false;
   bool _sendingDeleteCode = false;
-  int? _acceptingPolicyType;
-  int? _loggingOutDeviceId;
+  final Set<int> _acceptingPolicyTypes = <int>{};
+  final Set<int> _loggingOutDeviceIds = <int>{};
   String _codeHint = '';
   String _verifyType = 'code';
   String? _selectedAccount;
@@ -122,7 +122,8 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   }
 
   Future<void> _acceptPolicy(int policyType) async {
-    setState(() => _acceptingPolicyType = policyType);
+    if (_acceptingPolicyTypes.contains(policyType)) return;
+    setState(() => _acceptingPolicyTypes.add(policyType));
     try {
       await widget.repository.acceptPolicy(
         policyType: policyType,
@@ -143,12 +144,15 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ).showSnackBar(SnackBar(content: Text('协议留痕失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _acceptingPolicyType = null);
+      if (mounted) {
+        setState(() => _acceptingPolicyTypes.remove(policyType));
+      }
     }
   }
 
   Future<void> _logoutDevice(UserDevice device) async {
-    setState(() => _loggingOutDeviceId = device.id);
+    if (_loggingOutDeviceIds.contains(device.id)) return;
+    setState(() => _loggingOutDeviceIds.add(device.id));
     try {
       await widget.repository.logoutDevice(device.id);
       if (!mounted) return;
@@ -165,7 +169,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ).showSnackBar(SnackBar(content: Text('停用设备失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loggingOutDeviceId = null);
+      if (mounted) {
+        setState(() => _loggingOutDeviceIds.remove(device.id));
+      }
     }
   }
 
@@ -531,19 +537,21 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 runSpacing: 8,
                 children: [
                   OutlinedButton(
-                    onPressed: _acceptingPolicyType == null
+                    key: const Key('privacy-accept-policy-1'),
+                    onPressed: !_acceptingPolicyTypes.contains(1)
                         ? () => _acceptPolicy(1)
                         : null,
                     child: Text(
-                      _acceptingPolicyType == 1 ? '记录中...' : '确认隐私政策',
+                      _acceptingPolicyTypes.contains(1) ? '记录中...' : '确认隐私政策',
                     ),
                   ),
                   OutlinedButton(
-                    onPressed: _acceptingPolicyType == null
+                    key: const Key('privacy-accept-policy-2'),
+                    onPressed: !_acceptingPolicyTypes.contains(2)
                         ? () => _acceptPolicy(2)
                         : null,
                     child: Text(
-                      _acceptingPolicyType == 2 ? '记录中...' : '确认用户协议',
+                      _acceptingPolicyTypes.contains(2) ? '记录中...' : '确认用户协议',
                     ),
                   ),
                 ],
@@ -587,11 +595,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                     isThreeLine: true,
                     trailing: device.active
                         ? TextButton(
-                            onPressed: _loggingOutDeviceId == null
+                            key: Key('privacy-logout-device-${device.id}'),
+                            onPressed: !_loggingOutDeviceIds.contains(device.id)
                                 ? () => _logoutDevice(device)
                                 : null,
                             child: Text(
-                              _loggingOutDeviceId == device.id
+                              _loggingOutDeviceIds.contains(device.id)
                                   ? '停用中...'
                                   : '停用此设备',
                             ),

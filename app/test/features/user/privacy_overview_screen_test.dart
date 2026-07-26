@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
@@ -8,17 +9,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
-  PrivacyScreenApi({this.deleteStatus = 1, this.failFirstOverview = false});
+  PrivacyScreenApi({
+    this.deleteStatus = 1,
+    this.failFirstOverview = false,
+    this.includeSecondDevice = false,
+  });
 
   String? postedPath;
   Object? postedBody;
   bool exportCreated = false;
   int? deleteStatus;
   final bool failFirstOverview;
+  final bool includeSecondDevice;
   int overviewRequests = 0;
   bool deviceLoggedOut = false;
   bool paginateExports = false;
   final List<int> requestedExportPages = <int>[];
+  final Map<int, Completer<void>> policyAcceptGates = {};
+  final Map<int, int> policyAcceptRequests = {};
+  final Map<int, Completer<void>> deviceLogoutGates = {};
+  final Map<int, int> deviceLogoutRequests = {};
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -62,6 +72,19 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
             'createdAt': '2026-07-16 09:00:00',
             'updatedAt': '2026-07-16 10:00:00',
           },
+          if (includeSecondDevice)
+            {
+              'id': 8,
+              'deviceUid': 'ios-002',
+              'platform': 3,
+              'pushChannel': 0,
+              'pushTokenSet': false,
+              'appVersion': '1.0.0',
+              'status': 1,
+              'lastActiveAt': '2026-07-16 10:00:00',
+              'createdAt': '2026-07-16 09:00:00',
+              'updatedAt': '2026-07-16 10:00:00',
+            },
         ],
       };
     }
@@ -114,9 +137,16 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
       };
     }
     if (path == '/api/c/v1/privacy/policies/accept') {
+      final policyType = (body! as Map<String, dynamic>)['policyType'] as int;
+      policyAcceptRequests.update(
+        policyType,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
+      await policyAcceptGates[policyType]?.future;
       return {
         'id': 4,
-        'policyType': 1,
+        'policyType': policyType,
         'version': '2026.07',
         'locale': 'zh-CN',
         'source': 3,
@@ -131,11 +161,18 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   @override
   Future<Map<String, dynamic>> deleteJson(String path) async {
     postedPath = path;
-    deviceLoggedOut = true;
+    final deviceId = int.parse(path.split('/').last);
+    deviceLogoutRequests.update(
+      deviceId,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
+    await deviceLogoutGates[deviceId]?.future;
+    if (deviceId == 7) deviceLoggedOut = true;
     return {
-      'id': 7,
-      'deviceUid': 'android-001',
-      'platform': 2,
+      'id': deviceId,
+      'deviceUid': deviceId == 7 ? 'android-001' : 'ios-002',
+      'platform': deviceId == 7 ? 2 : 3,
       'pushChannel': 0,
       'pushTokenSet': false,
       'appVersion': '1.0.0',
@@ -303,6 +340,70 @@ void main() {
       expect(find.text('已登出'), findsOneWidget);
     },
   );
+
+  testWidgets('privacy policy actions guard duplicates independently', (
+    tester,
+  ) async {
+    final api = PrivacyScreenApi(deleteStatus: null)
+      ..policyAcceptGates[1] = Completer<void>()
+      ..policyAcceptGates[2] = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final policy1 = find.byKey(const Key('privacy-accept-policy-1'));
+    final policy2 = find.byKey(const Key('privacy-accept-policy-2'));
+    await scrollTo(tester, policy1);
+    await tester.tap(policy1);
+    await tester.tap(policy1, warnIfMissed: false);
+    await tester.tap(policy2);
+    await tester.pump();
+
+    expect(api.policyAcceptRequests, {1: 1, 2: 1});
+    api.policyAcceptGates[1]!.complete();
+    api.policyAcceptGates[2]!.complete();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('device logout actions guard duplicates independently', (
+    tester,
+  ) async {
+    final api = PrivacyScreenApi(deleteStatus: null, includeSecondDevice: true)
+      ..deviceLogoutGates[7] = Completer<void>()
+      ..deviceLogoutGates[8] = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final device7 = find.byKey(const Key('privacy-logout-device-7'));
+    final device8 = find.byKey(
+      const Key('privacy-logout-device-8'),
+      skipOffstage: false,
+    );
+    await scrollTo(tester, device7);
+    await tester.tap(device7);
+    await tester.tap(device7, warnIfMissed: false);
+    await tester.ensureVisible(device8);
+    await tester.tap(device8);
+    await tester.pump();
+
+    expect(api.deviceLogoutRequests, {7: 1, 8: 1});
+    api.deviceLogoutGates[7]!.complete();
+    api.deviceLogoutGates[8]!.complete();
+    await tester.pumpAndSettle();
+  });
 
   testWidgets('privacy center downloads and saves a ready export', (
     tester,
