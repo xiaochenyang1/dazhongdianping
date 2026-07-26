@@ -10,6 +10,8 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   bool liked = false;
   int likeCount = 3;
   bool paginateComments = false;
+  bool failNextDetail = false;
+  int detailRequests = 0;
   final List<int> requestedCommentPages = <int>[];
   final List<Map<String, dynamic>> comments = [
     {
@@ -99,6 +101,11 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
       };
     }
     if (path == '/api/c/v1/reviews/12') {
+      detailRequests++;
+      if (failNextDetail) {
+        failNextDetail = false;
+        throw StateError('network unavailable');
+      }
       return detail();
     }
     throw StateError('unexpected path $path');
@@ -149,6 +156,29 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('public review detail retries an initial load failure', (
+    tester,
+  ) async {
+    final api = DetailFakeApi()..failNextDetail = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('点评详情加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('review-detail-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.detailRequests, 2);
+    expect(find.text('柏林茶馆'), findsOneWidget);
+    expect(api.requestedCommentPages, [1]);
+  });
+
   testWidgets('public review detail loads later comment pages', (tester) async {
     final api = DetailFakeApi()..paginateComments = true;
     await tester.pumpWidget(

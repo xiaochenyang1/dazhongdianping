@@ -31,6 +31,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   bool _commentSaving = false;
   bool _deleteSaving = false;
   bool _loadingMoreComments = false;
+  int _reviewRequestId = 0;
 
   @override
   void initState() {
@@ -50,6 +51,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       : widget.repository.loadPublicReview(widget.reviewId);
 
   void _reloadReview() {
+    final requestId = ++_reviewRequestId;
     final future = _loadReview();
     setState(() {
       _review = future;
@@ -59,7 +61,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     });
     future
         .then((detail) {
-          if (!mounted) return;
+          if (!mounted || requestId != _reviewRequestId) return;
           setState(() {
             _visibleReview = detail;
             if (_shouldShowComments(detail)) {
@@ -345,7 +347,21 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('点评详情加载失败：${snapshot.error}'));
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('点评详情加载失败：${snapshot.error}'),
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  key: const Key('review-detail-retry'),
+                  onPressed: _reloadReview,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          );
         }
         final review = _visibleReview ?? snapshot.data!;
         final showInteraction = _interactionAllowed(review);
