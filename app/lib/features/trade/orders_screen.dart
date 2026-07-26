@@ -28,6 +28,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   late int? _payStatus;
   late Future<TradeOrderPage> _orders;
   bool _loadingMore = false;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -37,14 +38,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   void _reload() {
+    _requestId++;
     final future = widget.repository.loadOrderPage(payStatus: _payStatus);
     setState(() {
       _orders = future;
+      _loadingMore = false;
     });
   }
 
   Future<void> _loadMore(TradeOrderPage current) async {
     if (_loadingMore || !current.hasMore) return;
+    final requestId = _requestId;
     setState(() => _loadingMore = true);
     try {
       final next = await widget.repository.loadOrderPage(
@@ -52,7 +56,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
       final knownIds = current.items.map((item) => item.id).toSet();
       final items = [
         ...current.items,
@@ -69,13 +73,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && requestId == _requestId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多订单失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && requestId == _requestId) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
@@ -118,7 +124,21 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Center(child: Text('订单加载失败：${snapshot.error}'));
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('订单加载失败：${snapshot.error}'),
+                        const SizedBox(height: 12),
+                        FilledButton.tonalIcon(
+                          key: const Key('orders-retry'),
+                          onPressed: _reload,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('重试'),
+                        ),
+                      ],
+                    ),
+                  );
                 }
                 final page = snapshot.data!;
                 final items = page.items;

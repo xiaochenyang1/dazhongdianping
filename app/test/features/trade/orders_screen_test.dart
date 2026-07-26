@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class OrdersApi implements JsonApi {
-  OrdersApi({this.paginated = false});
+  OrdersApi({this.paginated = false, this.failFirst = false});
 
   final bool paginated;
+  final bool failFirst;
+  int orderListRequests = 0;
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
   final List<int> requestedPages = <int>[];
@@ -20,6 +22,10 @@ class OrdersApi implements JsonApi {
     paths.add(path);
     lastQuery = query;
     if (path == '/api/c/v1/orders') {
+      orderListRequests++;
+      if (failFirst && orderListRequests == 1) {
+        throw StateError('network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedPages.add(page);
       return {
@@ -67,6 +73,21 @@ class OrdersApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('orders screen retries an initial load failure', (tester) async {
+    final api = OrdersApi(failFirst: true);
+    await tester.pumpWidget(
+      MaterialApp(home: OrdersScreen(repository: TradeRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('订单加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('orders-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.orderListRequests, 2);
+    expect(find.byKey(const Key('order-card-10')), findsOneWidget);
+  });
+
   testWidgets('orders screen loads later filtered pages', (tester) async {
     final api = OrdersApi(paginated: true);
     await tester.pumpWidget(
