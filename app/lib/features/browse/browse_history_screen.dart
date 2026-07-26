@@ -32,7 +32,9 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
   late Future<ShopBrowseHistoryPage> _history;
   bool _clearing = false;
   bool _loadingMore = false;
+  bool _refreshing = false;
   final Set<int> _removingShopIds = <int>{};
+  int _historyRevision = 0;
 
   @override
   void initState() {
@@ -41,19 +43,24 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
   }
 
   Future<void> _reload() async {
+    if (_refreshing) return;
+    final revision = _historyRevision;
+    _refreshing = true;
     try {
       final page = await widget.repository.loadBrowseHistoryPage();
-      if (mounted) {
+      if (mounted && revision == _historyRevision) {
         setState(() {
           _history = Future.value(page);
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _historyRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('刷新足迹失败：$error')));
       }
+    } finally {
+      if (revision == _historyRevision) _refreshing = false;
     }
   }
 
@@ -65,13 +72,14 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
 
   Future<void> _loadMore(ShopBrowseHistoryPage current) async {
     if (_loadingMore || !current.hasMore) return;
+    final revision = _historyRevision;
     setState(() => _loadingMore = true);
     try {
       final next = await widget.repository.loadBrowseHistoryPage(
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || revision != _historyRevision) return;
       final knownShopIds = current.items.map((item) => item.shopId).toSet();
       final items = [
         ...current.items,
@@ -88,19 +96,26 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _historyRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多足迹失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && revision == _historyRevision) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
   Future<void> _clearAll() async {
     if (_clearing || _removingShopIds.isNotEmpty) return;
-    setState(() => _clearing = true);
+    _historyRevision++;
+    _refreshing = false;
+    setState(() {
+      _clearing = true;
+      _loadingMore = false;
+    });
     try {
       await widget.repository.clearBrowseHistory();
       if (!mounted) return;
@@ -126,7 +141,12 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
 
   Future<void> _removeItem(ShopBrowseHistoryItem item) async {
     if (_clearing || _removingShopIds.contains(item.shopId)) return;
-    setState(() => _removingShopIds.add(item.shopId));
+    _historyRevision++;
+    _refreshing = false;
+    setState(() {
+      _removingShopIds.add(item.shopId);
+      _loadingMore = false;
+    });
     try {
       await widget.repository.removeBrowseHistoryItem(item.shopId);
       if (!mounted) return;
@@ -209,7 +229,12 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
                   return Center(
                     child: OutlinedButton.icon(
                       key: const Key('browse-history-load-more'),
-                      onPressed: _loadingMore ? null : () => _loadMore(page),
+                      onPressed:
+                          _loadingMore ||
+                              _clearing ||
+                              _removingShopIds.isNotEmpty
+                          ? null
+                          : () => _loadMore(page),
                       icon: _loadingMore
                           ? const SizedBox.square(
                               dimension: 18,

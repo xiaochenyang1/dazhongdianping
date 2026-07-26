@@ -49,6 +49,7 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
   bool failNextLoad = false;
   Completer<void>? clearGate;
   final Map<int, Completer<void>> removeGates = {};
+  final Map<int, Completer<void>> pageGates = {};
 
   @override
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
@@ -65,6 +66,7 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
     int pageSize = 20,
   }) async {
     requestedPages.add(page);
+    await pageGates[page]?.future;
     if (failNextLoad) {
       failNextLoad = false;
       throw Exception('browse history network unavailable');
@@ -211,6 +213,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('当前区域还没有浏览足迹'), findsOneWidget);
+  });
+
+  testWidgets('clear invalidates an in-flight browse history page', (
+    tester,
+  ) async {
+    final repository = BrowseHistoryFakeRepository(paginated: true);
+    await tester.pumpWidget(
+      MaterialApp(home: BrowseHistoryScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+    repository.pageGates[2] = Completer<void>();
+
+    await tester.tap(find.byKey(const Key('browse-history-load-more')));
+    await tester.tap(find.byKey(const Key('browse-history-clear')));
+    await tester.pumpAndSettle();
+
+    expect(repository.clearCalls, 1);
+    expect(find.text('当前区域还没有浏览足迹'), findsOneWidget);
+    repository.pageGates[2]!.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('London Hotpot'), findsNothing);
+    expect(find.text('Paris Cafe'), findsNothing);
   });
 
   testWidgets('failed browse history refresh preserves loaded items', (
