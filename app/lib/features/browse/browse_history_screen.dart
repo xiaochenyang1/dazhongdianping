@@ -40,10 +40,26 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
   }
 
   Future<void> _reload() async {
+    try {
+      final page = await widget.repository.loadBrowseHistoryPage();
+      if (mounted) {
+        setState(() {
+          _history = Future.value(page);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('刷新足迹失败：$error')));
+      }
+    }
+  }
+
+  void _retryInitialLoad() {
     setState(() {
       _history = widget.repository.loadBrowseHistoryPage();
     });
-    await _history;
   }
 
   Future<void> _loadMore(ShopBrowseHistoryPage current) async {
@@ -158,7 +174,11 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
                 children: [
                   Text('足迹加载失败：${snapshot.error}'),
                   const SizedBox(height: 12),
-                  FilledButton(onPressed: _reload, child: const Text('重试')),
+                  FilledButton(
+                    key: const Key('browse-history-retry'),
+                    onPressed: _retryInitialLoad,
+                    child: const Text('重试'),
+                  ),
                 ],
               ),
             );

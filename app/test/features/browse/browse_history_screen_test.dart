@@ -44,6 +44,7 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
   int clearCalls = 0;
   final List<int> removedShopIds = <int>[];
   final List<int> requestedPages = <int>[];
+  bool failNextLoad = false;
 
   @override
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
@@ -60,6 +61,10 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
     int pageSize = 20,
   }) async {
     requestedPages.add(page);
+    if (failNextLoad) {
+      failNextLoad = false;
+      throw Exception('browse history network unavailable');
+    }
     final effectivePageSize = paginated ? 1 : pageSize;
     final start = (page - 1) * effectivePageSize;
     final items = start >= history.length
@@ -133,5 +138,40 @@ void main() {
 
     expect(repository.clearCalls, 1);
     expect(find.text('当前区域还没有浏览足迹'), findsOneWidget);
+  });
+
+  testWidgets('browse history retries an initial load failure', (tester) async {
+    final repository = BrowseHistoryFakeRepository()..failNextLoad = true;
+    await tester.pumpWidget(
+      MaterialApp(home: BrowseHistoryScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('足迹加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('browse-history-retry')));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedPages, [1, 1]);
+    expect(find.text('London Hotpot'), findsOneWidget);
+    expect(find.textContaining('足迹加载失败'), findsNothing);
+  });
+
+  testWidgets('failed browse history refresh preserves loaded items', (
+    tester,
+  ) async {
+    final repository = BrowseHistoryFakeRepository();
+    await tester.pumpWidget(
+      MaterialApp(home: BrowseHistoryScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+    repository.failNextLoad = true;
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+
+    expect(find.text('London Hotpot'), findsOneWidget);
+    expect(find.text('Paris Cafe'), findsOneWidget);
+    expect(find.textContaining('刷新足迹失败'), findsOneWidget);
+    expect(repository.requestedPages, [1, 1]);
   });
 }
