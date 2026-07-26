@@ -45,6 +45,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
   }
 
   Future<void> sendCode() async {
+    if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
       setState(() => errorMessage = '先输入邮箱或手机号');
@@ -75,6 +76,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
   }
 
   Future<void> submitAppeal() async {
+    if (widget.controller.busy || querying) return;
     final account = accountController.text.trim();
     final code = codeController.text.trim();
     final reason = reasonController.text.trim();
@@ -110,6 +112,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
   }
 
   Future<void> queryProgress() async {
+    if (querying || widget.controller.busy) return;
     final account = accountController.text.trim();
     final code = codeController.text.trim();
     if (account.isEmpty || code.isEmpty) {

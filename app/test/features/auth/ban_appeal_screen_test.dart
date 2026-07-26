@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
@@ -11,6 +13,12 @@ class BanAppealFakeApi implements JsonApi {
   Object? body;
   int status = 0;
   String statusText = '待审核';
+  int sendCodeRequests = 0;
+  int submitRequests = 0;
+  int queryRequests = 0;
+  Completer<void>? sendCodeGate;
+  Completer<void>? submitGate;
+  Completer<void>? queryGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -23,6 +31,8 @@ class BanAppealFakeApi implements JsonApi {
     this.path = path;
     this.body = body;
     if (path.endsWith('/send-code')) {
+      sendCodeRequests++;
+      await sendCodeGate?.future;
       return {
         'sent': true,
         'expireSeconds': 300,
@@ -31,6 +41,8 @@ class BanAppealFakeApi implements JsonApi {
       };
     }
     if (path.endsWith('/auth/ban-appeals/query')) {
+      queryRequests++;
+      await queryGate?.future;
       return {
         'id': 91,
         'status': 1,
@@ -42,6 +54,8 @@ class BanAppealFakeApi implements JsonApi {
         'auditedAt': '2026-07-26 12:00:00',
       };
     }
+    submitRequests++;
+    await submitGate?.future;
     return {
       'id': 91,
       'status': status,
@@ -163,5 +177,83 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.byKey(const Key('appeal-back-login')), findsOneWidget);
+  });
+
+  testWidgets('ban appeal guards duplicate verification codes', (tester) async {
+    final api = BanAppealFakeApi()..sendCodeGate = Completer<void>();
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BanAppealScreen(
+          controller: controller,
+          initialAccount: 'banned@example.com',
+        ),
+      ),
+    );
+
+    final sendCode = find.text('发送验证码');
+    await tester.tap(sendCode);
+    await tester.tap(sendCode);
+
+    expect(api.sendCodeRequests, 1);
+    api.sendCodeGate!.complete();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('ban appeal guards duplicate submissions', (tester) async {
+    final api = BanAppealFakeApi()..submitGate = Completer<void>();
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BanAppealScreen(
+          controller: controller,
+          initialAccount: 'banned@example.com',
+        ),
+      ),
+    );
+    await tester.enterText(find.byKey(const Key('appeal-code')), '112233');
+    await tester.enterText(
+      find.byKey(const Key('appeal-reason')),
+      '这是误封，我没有违规内容。',
+    );
+    final submit = find.byKey(const Key('appeal-submit'));
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.tap(submit);
+
+    expect(api.submitRequests, 1);
+    api.submitGate!.complete();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('ban appeal guards duplicate progress queries', (tester) async {
+    final api = BanAppealFakeApi()..queryGate = Completer<void>();
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BanAppealScreen(
+          controller: controller,
+          initialAccount: 'banned@example.com',
+        ),
+      ),
+    );
+    await tester.enterText(find.byKey(const Key('appeal-code')), '998877');
+    final query = find.byKey(const Key('appeal-query'));
+    await tester.ensureVisible(query);
+    await tester.tap(query);
+    await tester.tap(query);
+
+    expect(api.queryRequests, 1);
+    api.queryGate!.complete();
+    await tester.pumpAndSettle();
   });
 }
