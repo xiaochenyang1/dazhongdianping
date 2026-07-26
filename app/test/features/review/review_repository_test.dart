@@ -285,6 +285,12 @@ void main() {
     expect(comments, hasLength(1));
     expect(comments.first.replies, hasLength(1));
     expect(comments.first.replies.first.replyTo?.userName, '小李');
+
+    final page = await repository.loadCommentPage(12, page: 2, pageSize: 12);
+    expect(api.query, {'page': 2, 'pageSize': 12});
+    expect(page.page, 2);
+    expect(page.pageSize, 12);
+    expect(page.total, 1);
   });
 
   test('review repository creates comment and report payloads', () async {

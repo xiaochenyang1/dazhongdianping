@@ -9,6 +9,8 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   final List<String> deletedPaths = <String>[];
   bool liked = false;
   int likeCount = 3;
+  bool paginateComments = false;
+  final List<int> requestedCommentPages = <int>[];
   final List<Map<String, dynamic>> comments = [
     {
       'id': 81,
@@ -69,7 +71,32 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
       return detail(owned: true);
     }
     if (path == '/api/c/v1/reviews/12/comments') {
-      return {'list': comments, 'total': comments.length};
+      final page = query?['page'] as int? ?? 1;
+      requestedCommentPages.add(page);
+      final pageComments = !paginateComments
+          ? comments
+          : page == 1
+          ? comments.take(1).toList()
+          : [
+              {
+                'id': 82,
+                'reviewId': 12,
+                'userId': 3,
+                'userName': '更早的用户',
+                'content': '更早的点评评论',
+                'parentId': 0,
+                'replyTo': null,
+                'replies': const [],
+                'mine': false,
+                'createdAt': '2026-07-18 19:00:00',
+              },
+            ];
+      return {
+        'list': pageComments,
+        'total': paginateComments ? 2 : comments.length,
+        'page': page,
+        'pageSize': paginateComments ? 1 : 50,
+      };
     }
     if (path == '/api/c/v1/reviews/12') {
       return detail();
@@ -122,6 +149,32 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('public review detail loads later comment pages', (tester) async {
+    final api = DetailFakeApi()..paginateComments = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('review-comments-load-more')),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('review-comments-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedCommentPages, [1, 2]);
+    expect(find.text('更早的点评评论'), findsOneWidget);
+    expect(find.byKey(const Key('review-comments-load-more')), findsNothing);
+  });
+
   testWidgets('public review detail supports like comment and report', (
     tester,
   ) async {

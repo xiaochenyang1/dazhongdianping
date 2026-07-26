@@ -22,7 +22,7 @@ class ReviewDetailScreen extends StatefulWidget {
 
 class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   late Future<ReviewDetail> _review;
-  Future<List<ReviewComment>>? _comments;
+  Future<ReviewCommentPage>? _comments;
   final _commentController = TextEditingController();
   final _reportController = TextEditingController();
   ReviewDetail? _visibleReview;
@@ -30,6 +30,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   bool _likeSaving = false;
   bool _commentSaving = false;
   bool _deleteSaving = false;
+  bool _loadingMoreComments = false;
 
   @override
   void initState() {
@@ -62,7 +63,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
           setState(() {
             _visibleReview = detail;
             if (_shouldShowComments(detail)) {
-              _comments = widget.repository.loadComments(widget.reviewId);
+              _comments = widget.repository.loadCommentPage(widget.reviewId);
             }
           });
         })
@@ -87,9 +88,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
           likeCount: result.likeCount,
         );
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.liked ? '已点赞' : '已取消点赞')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.liked ? '已点赞' : '已取消点赞')));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -115,10 +116,8 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       _commentController.clear();
       setState(() {
         _replyTarget = null;
-        _comments = widget.repository.loadComments(widget.reviewId);
-        _visibleReview = detail.copyWith(
-          commentCount: detail.commentCount + 1,
-        );
+        _comments = widget.repository.loadCommentPage(widget.reviewId);
+        _visibleReview = detail.copyWith(commentCount: detail.commentCount + 1);
       });
       ScaffoldMessenger.of(
         context,
@@ -130,6 +129,41 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       ).showSnackBar(SnackBar(content: Text('评论失败：$error')));
     } finally {
       if (mounted) setState(() => _commentSaving = false);
+    }
+  }
+
+  Future<void> _loadMoreComments(ReviewCommentPage current) async {
+    if (_loadingMoreComments || !current.hasMore) return;
+    setState(() => _loadingMoreComments = true);
+    try {
+      final next = await widget.repository.loadCommentPage(
+        widget.reviewId,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((comment) => comment.id).toSet();
+      setState(() {
+        _comments = Future.value(
+          ReviewCommentPage(
+            items: [
+              ...current.items,
+              ...next.items.where((comment) => knownIds.add(comment.id)),
+            ],
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多评论失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMoreComments = false);
     }
   }
 
@@ -231,57 +265,58 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     }
   }
 
-  Widget _buildCommentItem(ReviewComment comment, {double indent = 0}) =>
-      Padding(
-        padding: EdgeInsets.only(left: indent),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(comment.userName),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (comment.replyTo != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '回复 ${comment.replyTo!.userName}：${comment.replyTo!.content}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  Text(comment.content),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Text(comment.createdAt),
-                      if (widget.canInteract && !widget.owned)
-                        TextButton(
-                          key: Key('review-comment-reply-${comment.id}'),
-                          onPressed: () =>
-                              setState(() => _replyTarget = comment),
-                          child: const Text('回复'),
-                        ),
-                    ],
+  Widget _buildCommentItem(
+    ReviewComment comment, {
+    double indent = 0,
+  }) => Padding(
+    padding: EdgeInsets.only(left: indent),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(comment.userName),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (comment.replyTo != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '回复 ${comment.replyTo!.userName}：${comment.replyTo!.content}',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
+                ),
+              Text(comment.content),
+              const SizedBox(height: 4),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  Text(comment.createdAt),
+                  if (widget.canInteract && !widget.owned)
+                    TextButton(
+                      key: Key('review-comment-reply-${comment.id}'),
+                      onPressed: () => setState(() => _replyTarget = comment),
+                      child: const Text('回复'),
+                    ),
                 ],
               ),
-            ),
-            if (comment.replies.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: 20),
-                child: Column(
-                  children: comment.replies
-                      .map((reply) => _buildCommentItem(reply, indent: 8))
-                      .toList(),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
-      );
+        if (comment.replies.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Column(
+              children: comment.replies
+                  .map((reply) => _buildCommentItem(reply, indent: 8))
+                  .toList(),
+            ),
+          ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -374,7 +409,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                       (url) => Chip(
                         avatar: const Icon(Icons.image_outlined, size: 16),
                         label: Text(
-                          url.length > 24 ? '...${url.substring(url.length - 20)}' : url,
+                          url.length > 24
+                              ? '...${url.substring(url.length - 20)}'
+                              : url,
                         ),
                       ),
                     )
@@ -414,9 +451,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                             ? Icons.favorite
                             : Icons.favorite_border,
                       ),
-                      label: Text(
-                        review.likedByCurrentUser ? '已点赞' : '点赞',
-                      ),
+                      label: Text(review.likedByCurrentUser ? '已点赞' : '点赞'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -430,7 +465,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                   ),
                 ],
               ),
-            ] else if (!widget.owned && !widget.canInteract && review.canInteract)
+            ] else if (!widget.owned &&
+                !widget.canInteract &&
+                review.canInteract)
               const Padding(
                 padding: EdgeInsets.only(top: 16),
                 child: Card(
@@ -489,12 +526,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-              FutureBuilder<List<ReviewComment>>(
+              FutureBuilder<ReviewCommentPage>(
                 future: _comments,
                 builder: (context, commentSnapshot) {
                   if (_comments == null ||
-                      commentSnapshot.connectionState !=
-                          ConnectionState.done) {
+                      commentSnapshot.connectionState != ConnectionState.done) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
                       child: Center(child: CircularProgressIndicator()),
@@ -503,14 +539,33 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                   if (commentSnapshot.hasError) {
                     return Text('评论加载失败：${commentSnapshot.error}');
                   }
-                  final comments = commentSnapshot.data ?? const [];
+                  final page = commentSnapshot.data!;
+                  final comments = page.items;
                   if (comments.isEmpty) {
                     return const Text('暂无评论');
                   }
                   return Column(
-                    children: comments
-                        .map((comment) => _buildCommentItem(comment))
-                        .toList(),
+                    children: [
+                      ...comments.map((comment) => _buildCommentItem(comment)),
+                      if (page.hasMore)
+                        OutlinedButton.icon(
+                          key: const Key('review-comments-load-more'),
+                          onPressed: _loadingMoreComments
+                              ? null
+                              : () => _loadMoreComments(page),
+                          icon: _loadingMoreComments
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.expand_more),
+                          label: Text(
+                            _loadingMoreComments ? '加载中...' : '加载更多评论',
+                          ),
+                        ),
+                    ],
                   );
                 },
               ),

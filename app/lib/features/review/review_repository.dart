@@ -284,6 +284,21 @@ class ReviewCommentReplyTarget {
   ) => json == null ? null : ReviewCommentReplyTarget.fromJson(json);
 }
 
+class ReviewCommentPage {
+  const ReviewCommentPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+  final List<ReviewComment> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class ReviewLikeResult {
   const ReviewLikeResult({
     required this.reviewId,
@@ -430,16 +445,29 @@ class ReviewRepository {
     int reviewId, {
     int page = 1,
     int pageSize = 50,
+  }) async =>
+      (await loadCommentPage(reviewId, page: page, pageSize: pageSize)).items;
+
+  Future<ReviewCommentPage> loadCommentPage(
+    int reviewId, {
+    int page = 1,
+    int pageSize = 50,
   }) async {
     final result = await api.getJson(
       '/api/c/v1/reviews/$reviewId/comments',
       query: {'page': page, 'pageSize': pageSize},
     );
     final list = result['list'] as List<dynamic>? ?? const [];
-    return list
+    final items = list
         .cast<Map<String, dynamic>>()
         .map(ReviewComment.fromJson)
         .toList();
+    return ReviewCommentPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
   }
 
   Future<ReviewComment> createComment(
