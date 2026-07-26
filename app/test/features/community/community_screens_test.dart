@@ -452,9 +452,25 @@ void main() {
     final api = CommunityScreenApi();
     await tester.pumpWidget(
       MaterialApp(
-        home: PostEditorScreen(repository: CommunityRepository(api), postId: 7),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              key: const Key('open-post-editor'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PostEditorScreen(
+                    repository: CommunityRepository(api),
+                    postId: 7,
+                  ),
+                ),
+              ),
+              child: const Text('打开帖子编辑'),
+            ),
+          ),
+        ),
       ),
     );
+    await tester.tap(find.byKey(const Key('open-post-editor')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('post-delete-button')));
@@ -464,5 +480,6 @@ void main() {
 
     expect(api.deletePath, '/api/c/v1/posts/7');
     expect(find.text('编辑帖子'), findsNothing);
+    expect(find.byKey(const Key('open-post-editor')), findsOneWidget);
   });
 }

@@ -89,11 +89,7 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
     if (path == '/api/c/v1/reviews/12/like') {
       liked = !liked;
       likeCount += liked ? 1 : -1;
-      return {
-        'reviewId': 12,
-        'liked': liked,
-        'likeCount': likeCount,
-      };
+      return {'reviewId': 12, 'liked': liked, 'likeCount': likeCount};
     }
     if (path == '/api/c/v1/reviews/12/comments') {
       final content = (body as Map)['content'] as String;
@@ -143,19 +139,32 @@ void main() {
 
     expect(find.text('柏林茶馆'), findsOneWidget);
     expect(find.text('本地达人'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('说得对'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('说得对'), findsOneWidget);
     expect(find.textContaining('商家回复：柏林茶馆：谢谢支持'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('review-like-button')));
     await tester.pumpAndSettle();
     expect(api.posts, contains('/api/c/v1/reviews/12/like'));
-    expect(find.text('已点赞'), findsOneWidget);
+    expect(find.text('已点赞'), findsWidgets);
+    ScaffoldMessenger.of(
+      tester.element(find.byType(ReviewDetailScreen)),
+    ).clearSnackBars();
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('review-comment-input')), '同意');
     await tester.tap(find.byKey(const Key('review-comment-submit')));
     await tester.pumpAndSettle();
     expect(api.posts, contains('/api/c/v1/reviews/12/comments'));
     expect(find.text('同意'), findsOneWidget);
+    ScaffoldMessenger.of(
+      tester.element(find.byType(ReviewDetailScreen)),
+    ).clearSnackBars();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('review-report-button')));
     await tester.pumpAndSettle();
@@ -164,7 +173,9 @@ void main() {
       '疑似广告',
     );
     await tester.tap(find.text('提交举报'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
     expect(api.posts, contains('/api/c/v1/reviews/12/report'));
     expect(find.text('举报已提交'), findsOneWidget);
   });

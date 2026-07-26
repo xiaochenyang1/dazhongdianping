@@ -3,6 +3,7 @@ import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class OrderDetailApi implements JsonApi {
@@ -91,6 +92,16 @@ void main() {
   testWidgets('coupon detail shows code, status and merchant boundary', (
     tester,
   ) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (_) async => null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
     final api = OrderDetailApi();
     const coupon = Coupon(
       id: 21,
@@ -118,7 +129,7 @@ void main() {
     expect(find.textContaining('由商户核销'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('copy-coupon-code')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('券码已复制'), findsOneWidget);
   });
 }

@@ -3,6 +3,7 @@ import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class DetailFakeRepository extends BrowseRepository {
@@ -74,7 +75,10 @@ class DetailFakeRepository extends BrowseRepository {
   }
 
   @override
-  Future<List<ShopSummary>> loadSimilarShops(int shopId, {int limit = 6}) async {
+  Future<List<ShopSummary>> loadSimilarShops(
+    int shopId, {
+    int limit = 6,
+  }) async {
     similarRequests.add(shopId);
     return similar;
   }
@@ -197,6 +201,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('写点评'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('写点评'), findsOneWidget);
     await tester.tap(find.text('写点评'));
     await tester.pumpAndSettle();
@@ -208,9 +217,7 @@ void main() {
   testWidgets('shop detail can favorite and unfavorite a shop', (tester) async {
     final repository = DetailFakeRepository();
     await tester.pumpWidget(
-      MaterialApp(
-        home: ShopDetailScreen(repository: repository, shopId: 7),
-      ),
+      MaterialApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
     );
     await tester.pumpAndSettle();
 
@@ -231,13 +238,16 @@ void main() {
   testWidgets('shop detail shows similar shops', (tester) async {
     final repository = DetailFakeRepository();
     await tester.pumpWidget(
-      MaterialApp(
-        home: ShopDetailScreen(repository: repository, shopId: 7),
-      ),
+      MaterialApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
     );
     await tester.pumpAndSettle();
 
     expect(repository.similarRequests, contains(7));
+    await tester.scrollUntilVisible(
+      find.text('相似门店'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('相似门店'), findsOneWidget);
     expect(find.text('Berlin Dumplings'), findsOneWidget);
   });
@@ -259,6 +269,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('茶底干净，服务也稳。'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('茶底干净，服务也稳。'));
+    await tester.pumpAndSettle();
     expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
     await tester.tap(find.text('茶底干净，服务也稳。'));
     await tester.pumpAndSettle();
@@ -280,6 +297,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('shop-reviews-view-all')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const Key('shop-reviews-view-all')), findsOneWidget);
     await tester.tap(find.byKey(const Key('shop-reviews-view-all')));
     await tester.pumpAndSettle();
@@ -289,6 +311,16 @@ void main() {
   });
 
   testWidgets('shop detail can copy share text', (tester) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (_) async => null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
     await tester.pumpWidget(
       MaterialApp(
         home: ShopDetailScreen(repository: DetailFakeRepository(), shopId: 7),
@@ -298,7 +330,7 @@ void main() {
 
     expect(find.byKey(const Key('shop-share-button')), findsOneWidget);
     await tester.tap(find.byKey(const Key('shop-share-button')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('分享文案已复制'), findsOneWidget);
   });
 }

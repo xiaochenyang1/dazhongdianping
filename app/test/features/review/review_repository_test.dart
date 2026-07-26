@@ -4,7 +4,8 @@ import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class ReviewFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi, FileUploadApi {
+class ReviewFakeApi
+    implements JsonApi, JsonMutationApi, JsonDeleteApi, FileUploadApi {
   String? method;
   String? path;
   Object? body;
@@ -116,7 +117,7 @@ class ReviewFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi, FileUplo
       };
     }
     if (path.startsWith('/api/c/v1/user/reviews/')) {
-      return publicDetail;
+      return editorDetail;
     }
     if (path.startsWith('/api/c/v1/reviews/')) {
       return publicDetail;
@@ -206,31 +207,37 @@ const input = ReviewSaveInput(
 );
 
 void main() {
-  test('review repository loads owned detail and normalizes image urls', () async {
-    final api = ReviewFakeApi();
-    final repository = ReviewRepository(api);
+  test(
+    'review repository loads owned detail and normalizes image urls',
+    () async {
+      final api = ReviewFakeApi();
+      final repository = ReviewRepository(api);
 
-    final detail = await repository.loadOwnedReview(12);
+      final detail = await repository.loadOwnedReview(12);
 
-    expect(api.path, '/api/c/v1/user/reviews/12');
-    expect(detail.shopName, '柏林茶馆');
-    expect(detail.scoreOverall, 4.5);
-    expect(detail.images, ['/uploads/tea-1.png', '/uploads/tea-2.png']);
-  });
+      expect(api.path, '/api/c/v1/user/reviews/12');
+      expect(detail.shopName, '柏林茶馆');
+      expect(detail.scoreOverall, 4.5);
+      expect(detail.images, ['/uploads/tea-1.png', '/uploads/tea-2.png']);
+    },
+  );
 
-  test('review repository loads public detail with merchant reply and badge', () async {
-    final api = ReviewFakeApi();
-    final repository = ReviewRepository(api);
+  test(
+    'review repository loads public detail with merchant reply and badge',
+    () async {
+      final api = ReviewFakeApi();
+      final repository = ReviewRepository(api);
 
-    final detail = await repository.loadPublicReview(12);
+      final detail = await repository.loadPublicReview(12);
 
-    expect(api.path, '/api/c/v1/reviews/12');
-    expect(detail.userName, '阿遥');
-    expect(detail.likeCount, 3);
-    expect(detail.authorCertificationLabel, '本地达人');
-    expect(detail.merchantReply, '柏林茶馆：谢谢支持');
-    expect(detail.canInteract, isTrue);
-  });
+      expect(api.path, '/api/c/v1/reviews/12');
+      expect(detail.userName, '阿遥');
+      expect(detail.likeCount, 3);
+      expect(detail.authorCertificationLabel, '本地达人');
+      expect(detail.merchantReply, '柏林茶馆：谢谢支持');
+      expect(detail.canInteract, isTrue);
+    },
+  );
 
   test('review repository creates a review with the backend payload', () async {
     final api = ReviewFakeApi();
