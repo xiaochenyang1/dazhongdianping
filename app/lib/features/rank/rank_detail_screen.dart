@@ -42,6 +42,13 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
     _detail = widget.repository.loadRankDetail(widget.rankId);
   }
 
+  void _reload() {
+    final future = widget.repository.loadRankDetail(widget.rankId);
+    setState(() {
+      _detail = future;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,7 +60,21 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('榜单详情加载失败：${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('榜单详情加载失败：${snapshot.error}'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    key: const Key('rank-detail-retry'),
+                    onPressed: _reload,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                ],
+              ),
+            );
           }
           final detail = snapshot.data!;
           return ListView(
@@ -61,7 +82,10 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
             children: [
               Text(
                 detail.name,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -99,9 +123,7 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: Text(
-                        '${shop.currency} ${shop.pricePerCapita}',
-                      ),
+                      trailing: Text('${shop.currency} ${shop.pricePerCapita}'),
                       onTap: widget.browseRepository == null || shop.id <= 0
                           ? null
                           : () => Navigator.of(context).push(

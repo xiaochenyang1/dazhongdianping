@@ -2,6 +2,7 @@ import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/activity/activity_list_screen.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_list_screen.dart';
+import 'package:dazhongdianping_app/features/rank/rank_detail_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 class RankScreenApi implements JsonApi {
   int loadCount = 0;
   bool failNextLoad = false;
+  bool failNextDetail = false;
+  int detailLoadCount = 0;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -38,6 +41,11 @@ class RankScreenApi implements JsonApi {
       };
     }
     if (path == '/api/c/v1/ranks/30001') {
+      detailLoadCount += 1;
+      if (failNextDetail) {
+        failNextDetail = false;
+        throw const ApiException('rank detail network unavailable');
+      }
       return {
         'id': 30001,
         'name': '上海必吃榜',
@@ -110,6 +118,23 @@ class ActivityScreenApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('rank detail retries an initial load failure', (tester) async {
+    final api = RankScreenApi()..failNextDetail = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RankDetailScreen(repository: RankRepository(api), rankId: 30001),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('榜单详情加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('rank-detail-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.detailLoadCount, 2);
+    expect(find.text('上海必吃榜'), findsOneWidget);
+  });
+
   testWidgets('rank list opens detail', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
