@@ -235,7 +235,14 @@ void main() {
     expect(api.path, '/api/c/v1/privacy/export-tasks');
     expect(api.query, {'page': 1, 'pageSize': 10});
     expect(page.total, 1);
+    expect(page.page, 1);
+    expect(page.pageSize, 10);
     expect(page.items.single.modules, ['account']);
+
+    final later = await repository.loadExportTasks(page: 2, pageSize: 12);
+    expect(api.query, {'page': 2, 'pageSize': 12});
+    expect(later.page, 2);
+    expect(later.pageSize, 12);
   });
 
   test('privacy repository creates an export task', () async {

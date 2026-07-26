@@ -15,6 +15,8 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   bool exportCreated = false;
   int? deleteStatus;
   bool deviceLoggedOut = false;
+  bool paginateExports = false;
+  final List<int> requestedExportPages = <int>[];
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -56,9 +58,13 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
       };
     }
     if (path == '/api/c/v1/privacy/export-tasks') {
+      final page = query?['page'] as int? ?? 1;
+      requestedExportPages.add(page);
       return {
-        'list': [_exportTask(exportCreated ? 10 : 8)],
-        'total': 1,
+        'list': [_exportTask(page == 1 ? (exportCreated ? 10 : 8) : 7)],
+        'total': paginateExports ? 2 : 1,
+        'page': page,
+        'pageSize': paginateExports ? 1 : 10,
       };
     }
     return {
@@ -176,6 +182,28 @@ Future<void> scrollTo(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  testWidgets('privacy center loads older export tasks', (tester) async {
+    final api = PrivacyScreenApi()..paginateExports = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await scrollTo(tester, find.byKey(const Key('privacy-exports-load-more')));
+    await tester.tap(find.byKey(const Key('privacy-exports-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedExportPages, [1, 2]);
+    await scrollTo(tester, find.text('任务 #7'));
+    expect(find.text('任务 #7'), findsOneWidget);
+    expect(find.byKey(const Key('privacy-exports-load-more')), findsNothing);
+  });
+
   testWidgets('privacy center renders rules and active tasks', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -318,10 +346,7 @@ void main() {
     expect(find.text('关注关系'), findsOneWidget);
     expect(find.text('圈子关系'), findsOneWidget);
     expect(find.text('话题关注'), findsOneWidget);
-    expect(
-      find.text('帖子、关注关系、私信、圈子和话题关注均支持真实导出。'),
-      findsOneWidget,
-    );
+    expect(find.text('帖子、关注关系、私信、圈子和话题关注均支持真实导出。'), findsOneWidget);
     expect(find.text('任务 #10'), findsOneWidget);
   });
 

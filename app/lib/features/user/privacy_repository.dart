@@ -163,10 +163,19 @@ class PrivacyOverview {
 }
 
 class PrivacyExportTaskPage {
-  const PrivacyExportTaskPage({required this.items, required this.total});
+  const PrivacyExportTaskPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
 
   final List<PrivacyExportTask> items;
   final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
 }
 
 class PolicyAcceptLog {
@@ -258,10 +267,13 @@ class PrivacyRepository {
     );
   }
 
-  Future<PrivacyExportTaskPage> loadExportTasks() async {
+  Future<PrivacyExportTaskPage> loadExportTasks({
+    int page = 1,
+    int pageSize = 10,
+  }) async {
     final result = await api.getJson(
       '/api/c/v1/privacy/export-tasks',
-      query: const {'page': 1, 'pageSize': 10},
+      query: {'page': page, 'pageSize': pageSize},
     );
     final list = result['list'] as List<dynamic>? ?? const [];
     final items = list
@@ -271,6 +283,8 @@ class PrivacyRepository {
     return PrivacyExportTaskPage(
       items: items,
       total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
     );
   }
 

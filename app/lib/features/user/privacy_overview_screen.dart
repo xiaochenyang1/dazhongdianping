@@ -34,6 +34,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   bool _includeCircles = true;
   bool _includeTopics = true;
   bool _creatingExport = false;
+  bool _loadingMoreExports = false;
   bool _cancellingDelete = false;
   bool _submittingDelete = false;
   bool _sendingDeleteCode = false;
@@ -72,10 +73,44 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     ]);
     return _PrivacyData(
       overview: results[0] as PrivacyOverview,
-      exportTasks: (results[1] as PrivacyExportTaskPage).items,
+      exportTaskPage: results[1] as PrivacyExportTaskPage,
       policyLogs: results[2] as List<PolicyAcceptLog>,
       devices: results[3] as List<UserDevice>,
     );
+  }
+
+  Future<void> _loadMoreExports(_PrivacyData current) async {
+    final currentPage = current.exportTaskPage;
+    if (_loadingMoreExports || !currentPage.hasMore) return;
+    setState(() => _loadingMoreExports = true);
+    try {
+      final next = await widget.repository.loadExportTasks(
+        page: currentPage.page + 1,
+        pageSize: currentPage.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = currentPage.items.map((task) => task.id).toSet();
+      final merged = PrivacyExportTaskPage(
+        items: [
+          ...currentPage.items,
+          ...next.items.where((task) => knownIds.add(task.id)),
+        ],
+        total: next.total,
+        page: next.page,
+        pageSize: currentPage.pageSize,
+      );
+      setState(() {
+        _data = Future.value(current.withExportTaskPage(merged));
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多导出任务失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMoreExports = false);
+    }
   }
 
   Future<void> _acceptPolicy(int policyType) async {
@@ -440,6 +475,22 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               ),
               const SizedBox(height: 16),
               ...data.exportTasks.map(_buildExportTask),
+              if (data.exportTaskPage.hasMore)
+                Center(
+                  child: OutlinedButton.icon(
+                    key: const Key('privacy-exports-load-more'),
+                    onPressed: _loadingMoreExports
+                        ? null
+                        : () => _loadMoreExports(data),
+                    icon: _loadingMoreExports
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.expand_more),
+                    label: Text(_loadingMoreExports ? '加载中...' : '加载更多导出任务'),
+                  ),
+                ),
               if (data.exportTasks.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
@@ -769,15 +820,24 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
 class _PrivacyData {
   const _PrivacyData({
     required this.overview,
-    required this.exportTasks,
+    required this.exportTaskPage,
     required this.policyLogs,
     required this.devices,
   });
 
   final PrivacyOverview overview;
-  final List<PrivacyExportTask> exportTasks;
+  final PrivacyExportTaskPage exportTaskPage;
   final List<PolicyAcceptLog> policyLogs;
   final List<UserDevice> devices;
+
+  List<PrivacyExportTask> get exportTasks => exportTaskPage.items;
+
+  _PrivacyData withExportTaskPage(PrivacyExportTaskPage value) => _PrivacyData(
+    overview: overview,
+    exportTaskPage: value,
+    policyLogs: policyLogs,
+    devices: devices,
+  );
 }
 
 class _RuleCard extends StatelessWidget {
