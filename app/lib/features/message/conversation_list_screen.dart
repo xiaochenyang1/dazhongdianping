@@ -18,6 +18,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
       .loadConversationPage();
   bool _loadingMore = false;
   int _pageRevision = 0;
+  final Set<int> _openingConversationIds = {};
 
   Future<void> _reload() async {
     final revision = ++_pageRevision;
@@ -79,6 +80,27 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
     } finally {
       if (mounted && revision == _pageRevision) {
         setState(() => _loadingMore = false);
+      }
+    }
+  }
+
+  Future<void> _openConversation(ConversationSummary conversation) async {
+    if (_openingConversationIds.contains(conversation.id)) return;
+    setState(() => _openingConversationIds.add(conversation.id));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            repository: widget.repository,
+            conversation: conversation,
+            currentUserId: widget.currentUserId,
+          ),
+        ),
+      );
+      if (mounted) await _reload();
+    } finally {
+      if (mounted) {
+        setState(() => _openingConversationIds.remove(conversation.id));
       }
     }
   }
@@ -175,20 +197,9 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                           ),
                         )
                       : const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          repository: widget.repository,
-                          conversation: item,
-                          currentUserId: widget.currentUserId,
-                        ),
-                      ),
-                    );
-                    if (mounted) {
-                      await _reload();
-                    }
-                  },
+                  onTap: _openingConversationIds.contains(item.id)
+                      ? null
+                      : () => _openConversation(item),
                 ),
               );
             },

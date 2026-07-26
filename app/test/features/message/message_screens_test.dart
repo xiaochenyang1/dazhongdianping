@@ -165,6 +165,32 @@ void main() {
     },
   );
 
+  testWidgets('conversation list guards duplicate chat navigation', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversationListScreen(
+          repository: MessageRepository(api),
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tile = find.widgetWithText(ListTile, '伦敦小王');
+    final openChat = tester.widget<ListTile>(tile).onTap!;
+    openChat();
+    openChat();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChatScreen, skipOffstage: false), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('conversation list loads and merges the next page', (
     tester,
   ) async {
