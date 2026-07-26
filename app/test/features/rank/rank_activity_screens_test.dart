@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/activity/activity_list_screen.dart';
+import 'package:dazhongdianping_app/features/activity/activity_detail_screen.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_list_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_detail_screen.dart';
@@ -68,6 +69,8 @@ class RankScreenApi implements JsonApi {
 class ActivityScreenApi implements JsonApi {
   int loadCount = 0;
   bool failNextLoad = false;
+  int detailLoadCount = 0;
+  bool failNextDetail = false;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -97,6 +100,11 @@ class ActivityScreenApi implements JsonApi {
       };
     }
     if (path == '/api/c/v1/activities/9001') {
+      detailLoadCount += 1;
+      if (failNextDetail) {
+        failNextDetail = false;
+        throw const ApiException('activity detail network unavailable');
+      }
       return {
         'id': 9001,
         'name': '暑期火锅节',
@@ -118,6 +126,28 @@ class ActivityScreenApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('activity detail retries an initial load failure', (
+    tester,
+  ) async {
+    final api = ActivityScreenApi()..failNextDetail = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ActivityDetailScreen(
+          repository: ActivityRepository(api),
+          activityId: 9001,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('活动详情加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('activity-detail-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.detailLoadCount, 2);
+    expect(find.text('暑期火锅节'), findsOneWidget);
+  });
+
   testWidgets('rank detail retries an initial load failure', (tester) async {
     final api = RankScreenApi()..failNextDetail = true;
     await tester.pumpWidget(

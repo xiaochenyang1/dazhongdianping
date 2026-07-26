@@ -46,6 +46,13 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
     _detail = widget.repository.loadActivityDetail(widget.activityId);
   }
 
+  void _reload() {
+    final future = widget.repository.loadActivityDetail(widget.activityId);
+    setState(() {
+      _detail = future;
+    });
+  }
+
   void _openItem(ActivityItem item) {
     // targetType: 1 shop, 2 deal, 3 post, 4 rank (backend PublicActivityService)
     if (item.targetType == 1 &&
@@ -107,7 +114,21 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('活动详情加载失败：${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('活动详情加载失败：${snapshot.error}'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    key: const Key('activity-detail-retry'),
+                    onPressed: _reload,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                ],
+              ),
+            );
           }
           final detail = snapshot.data!;
           final period = [
@@ -119,7 +140,10 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
             children: [
               Text(
                 detail.name,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
