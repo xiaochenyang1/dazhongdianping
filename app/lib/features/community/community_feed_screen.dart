@@ -33,19 +33,25 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   Future<CommunityPostPage>? _followingPosts;
   bool _loadingMore = false;
   int _selectedTab = 0;
+  final List<int> _requestIds = [0, 0];
   @override
   void initState() {
     super.initState();
     _posts = widget.repository.loadFeedPage();
   }
 
-  void _reload() => setState(() {
-    if (_selectedTab == 0) {
-      _posts = widget.repository.loadFeedPage();
-    } else if (widget.canInteract) {
-      _followingPosts = widget.repository.loadFollowingFeedPage();
-    }
-  });
+  void _reload() {
+    final tab = _selectedTab;
+    _requestIds[tab]++;
+    setState(() {
+      _loadingMore = false;
+      if (_selectedTab == 0) {
+        _posts = widget.repository.loadFeedPage();
+      } else if (widget.canInteract) {
+        _followingPosts = widget.repository.loadFollowingFeedPage();
+      }
+    });
+  }
 
   void _selectTab(int index) {
     setState(() {
@@ -59,6 +65,8 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   Future<void> _loadMore(CommunityPostPage current) async {
     if (_loadingMore || !current.hasMore) return;
     final following = _selectedTab == 1;
+    final tab = following ? 1 : 0;
+    final requestId = _requestIds[tab];
     setState(() => _loadingMore = true);
     try {
       final next = following
@@ -70,7 +78,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
               page: current.page + 1,
               pageSize: current.pageSize,
             );
-      if (!mounted) return;
+      if (!mounted || requestId != _requestIds[tab]) return;
       final knownIds = current.items.map((post) => post.id).toSet();
       final merged = CommunityPostPage(
         items: [
@@ -89,13 +97,15 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
         }
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && requestId == _requestIds[tab]) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多帖子失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && requestId == _requestIds[tab]) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
@@ -182,7 +192,21 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    return Center(child: Text('社区加载失败：${snapshot.error}'));
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('社区加载失败：${snapshot.error}'),
+                          const SizedBox(height: 12),
+                          FilledButton.tonalIcon(
+                            key: const Key('community-feed-retry'),
+                            onPressed: _reload,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('重试'),
+                          ),
+                        ],
+                      ),
+                    );
                   }
                   final page = snapshot.data!;
                   final posts = page.items;

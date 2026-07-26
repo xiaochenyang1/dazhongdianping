@@ -19,6 +19,7 @@ class CommunityScreenApi
   bool reposted = false;
   int repostCount = 2;
   bool paginateFeed = false;
+  bool failNextFeed = false;
   final List<int> requestedFeedPages = <int>[];
   bool paginateComments = false;
   bool failNextPost = false;
@@ -93,6 +94,10 @@ class CommunityScreenApi
       };
     }
     if (path == '/api/c/v1/posts' || path == '/api/c/v1/posts/following') {
+      if (path == '/api/c/v1/posts' && failNextFeed) {
+        failNextFeed = false;
+        throw StateError('feed network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedFeedPages.add(page);
       return {
@@ -223,6 +228,26 @@ class CommunityTopicApi extends CommunityScreenApi {
 }
 
 void main() {
+  testWidgets('community feed retries an initial load failure', (tester) async {
+    final api = CommunityScreenApi()..failNextFeed = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityFeedScreen(
+          repository: CommunityRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('社区加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('community-feed-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedFeedPages, [1]);
+    expect(find.text('伦敦周末市场指南'), findsOneWidget);
+  });
+
   testWidgets('post detail retries an initial load failure', (tester) async {
     final api = CommunityScreenApi()..failNextPost = true;
     await tester.pumpWidget(
