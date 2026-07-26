@@ -9,9 +9,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class OrderDetailApi implements JsonApi {
-  OrderDetailApi({this.failFirstCoupon = false, this.paid = false});
+  OrderDetailApi({
+    this.failFirstCoupon = false,
+    this.failFirstOrder = false,
+    this.paid = false,
+  });
 
   final bool failFirstCoupon;
+  final bool failFirstOrder;
   final bool paid;
   int couponRequests = 0;
   String? path;
@@ -20,6 +25,8 @@ class OrderDetailApi implements JsonApi {
   int refundRequests = 0;
   Completer<void>? paymentGate;
   int paymentRequests = 0;
+  int orderRequests = 0;
+  Completer<void>? orderGate;
 
   Map<String, dynamic> order({int status = 1, bool refunded = false}) => {
     'id': 10,
@@ -72,6 +79,11 @@ class OrderDetailApi implements JsonApi {
         'qrImageUrl': '',
         'verifyHint': '到店后出示二维码或券码，由商户核销。',
       };
+    }
+    orderRequests += 1;
+    await orderGate?.future;
+    if (failFirstOrder && orderRequests == 1) {
+      throw StateError('order unavailable');
     }
     return order();
   }
@@ -150,6 +162,29 @@ void main() {
 
     expect(api.path, '/api/c/v1/orders/10/cancel');
     expect(find.text('订单已取消'), findsOneWidget);
+  });
+
+  testWidgets('order detail guards duplicate load retries', (tester) async {
+    final gate = Completer<void>();
+    final api = OrderDetailApi(failFirstOrder: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.orderGate = gate;
+
+    final retry = find.byKey(const Key('order-detail-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry);
+    await tester.pump();
+    expect(api.orderRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.orderRequests, 2);
+    expect(find.text('双人晚餐套餐'), findsOneWidget);
   });
 
   testWidgets('coupon detail shows code, status and merchant boundary', (

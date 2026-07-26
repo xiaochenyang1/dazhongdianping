@@ -24,7 +24,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final _refundReasonController = TextEditingController(text: '行程有变');
   TradeOrder? _order;
   String? _error;
-  bool _loading = true;
+  bool _loading = false;
   bool _acting = false;
   bool _confirmingCancel = false;
   bool _refundDialogOpen = false;
@@ -42,6 +42,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _load() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -184,6 +185,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           : _error != null
           ? Center(
               child: FilledButton(
+                key: const Key('order-detail-retry'),
                 onPressed: _load,
                 child: const Text('订单加载失败，点击重试'),
               ),
