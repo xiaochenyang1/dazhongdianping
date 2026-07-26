@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
@@ -42,6 +44,20 @@ class CenterFakeApi implements JsonApi {
 class CenterBrowseRepository extends BrowseRepository {
   @override
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
+}
+
+class GatedAuthController extends AuthController {
+  GatedAuthController({required this.gate, required JsonApi api})
+    : super(repository: AuthRepository(api), store: MemorySessionStore());
+
+  final Completer<void> gate;
+  int logoutCalls = 0;
+
+  @override
+  Future<void> logout() async {
+    logoutCalls += 1;
+    await gate.future;
+  }
 }
 
 void main() {
@@ -107,5 +123,35 @@ void main() {
     expect(find.text('我的足迹'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('隐私中心'), 200);
     expect(find.text('隐私中心'), findsOneWidget);
+  });
+
+  testWidgets('user center guards duplicate logout requests', (tester) async {
+    final gate = Completer<void>();
+    final api = CenterFakeApi();
+    final auth = GatedAuthController(gate: gate, api: api);
+    var loggedOut = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserCenterScreen(
+          repository: UserRepository(api),
+          authController: auth,
+          onLoggedOut: () => loggedOut += 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final logout = find.byKey(const Key('user-center-logout'));
+    await tester.tap(logout);
+    await tester.tap(logout);
+    await tester.pump();
+    expect(auth.logoutCalls, 1);
+    expect(loggedOut, 0);
+    expect(find.text('退出中...'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(auth.logoutCalls, 1);
+    expect(loggedOut, 1);
   });
 }

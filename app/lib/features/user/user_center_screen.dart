@@ -41,6 +41,7 @@ class UserCenterScreen extends StatefulWidget {
 
 class _UserCenterScreenState extends State<UserCenterScreen> {
   late Future<UserProfile> _profile;
+  bool _loggingOut = false;
 
   @override
   void initState() {
@@ -55,6 +56,19 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
     });
   }
 
+  Future<void> _logout() async {
+    if (_loggingOut) return;
+    setState(() => _loggingOut = true);
+    try {
+      await widget.authController.logout();
+      if (!mounted) return;
+      widget.onLoggedOut?.call();
+      Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _loggingOut = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,12 +76,9 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
         title: const Text('我的'),
         actions: [
           TextButton(
-            onPressed: () async {
-              await widget.authController.logout();
-              widget.onLoggedOut?.call();
-              if (context.mounted) Navigator.of(context).pop();
-            },
-            child: const Text('退出'),
+            key: const Key('user-center-logout'),
+            onPressed: _loggingOut ? null : _logout,
+            child: Text(_loggingOut ? '退出中...' : '退出'),
           ),
         ],
       ),
