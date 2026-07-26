@@ -250,6 +250,16 @@ void main() {
     expect(comments.single.userName, '评论用户');
     expect(comments.single.replies.single.replyTo?.userName, '评论用户');
 
+    final commentPage = await repository.loadCommentPage(
+      7,
+      page: 2,
+      pageSize: 12,
+    );
+    expect(api.query, {'page': 2, 'pageSize': 12});
+    expect(commentPage.page, 2);
+    expect(commentPage.pageSize, 12);
+    expect(commentPage.total, 1);
+
     await repository.reportPost(7, '信息过期');
     expect(api.path, '/api/c/v1/posts/7/report');
     expect(api.body, {'reason': '信息过期'});

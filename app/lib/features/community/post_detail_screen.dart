@@ -20,19 +20,20 @@ class PostDetailScreen extends StatefulWidget {
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
   late Future<CommunityPost> _post;
-  late Future<List<CommunityComment>> _comments;
+  late Future<CommunityCommentPage> _comments;
   final _commentController = TextEditingController();
   final _reportController = TextEditingController();
   CommunityComment? _replyTarget;
   bool _favoriteSaving = false;
   bool _favorited = false;
   bool _repostSaving = false;
+  bool _loadingMoreComments = false;
 
   @override
   void initState() {
     super.initState();
     _post = widget.repository.loadPost(widget.postId);
-    _comments = widget.repository.loadComments(widget.postId);
+    _comments = widget.repository.loadCommentPage(widget.postId);
   }
 
   @override
@@ -64,13 +65,48 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
     if (!mounted) return;
     _commentController.clear();
-    final refreshedComments = widget.repository.loadComments(widget.postId);
+    final refreshedComments = widget.repository.loadCommentPage(widget.postId);
     final refreshedPost = widget.repository.loadPost(widget.postId);
     setState(() {
       _post = refreshedPost;
       _comments = refreshedComments;
       _replyTarget = null;
     });
+  }
+
+  Future<void> _loadMoreComments(CommunityCommentPage current) async {
+    if (_loadingMoreComments || !current.hasMore) return;
+    setState(() => _loadingMoreComments = true);
+    try {
+      final next = await widget.repository.loadCommentPage(
+        widget.postId,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((comment) => comment.id).toSet();
+      setState(() {
+        _comments = Future.value(
+          CommunityCommentPage(
+            items: [
+              ...current.items,
+              ...next.items.where((comment) => knownIds.add(comment.id)),
+            ],
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多评论失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMoreComments = false);
+    }
   }
 
   void _selectReply(CommunityComment comment) {
@@ -172,56 +208,58 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
-  Widget _buildCommentItem(CommunityComment comment, {double indent = 0}) =>
-      Padding(
-        padding: EdgeInsets.only(left: indent),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(comment.userName),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (comment.replyTo != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '回复 ${comment.replyTo!.userName}：${comment.replyTo!.content}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  Text(comment.content),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Text(comment.createdAt),
-                      if (widget.canInteract)
-                        TextButton(
-                          key: Key('comment-reply-${comment.id}'),
-                          onPressed: () => _selectReply(comment),
-                          child: const Text('回复'),
-                        ),
-                    ],
+  Widget _buildCommentItem(
+    CommunityComment comment, {
+    double indent = 0,
+  }) => Padding(
+    padding: EdgeInsets.only(left: indent),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(comment.userName),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (comment.replyTo != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '回复 ${comment.replyTo!.userName}：${comment.replyTo!.content}',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
+                ),
+              Text(comment.content),
+              const SizedBox(height: 4),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  Text(comment.createdAt),
+                  if (widget.canInteract)
+                    TextButton(
+                      key: Key('comment-reply-${comment.id}'),
+                      onPressed: () => _selectReply(comment),
+                      child: const Text('回复'),
+                    ),
                 ],
               ),
-            ),
-            if (comment.replies.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: 20),
-                child: Column(
-                  children: comment.replies
-                      .map((reply) => _buildCommentItem(reply, indent: 8))
-                      .toList(),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
-      );
+        if (comment.replies.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Column(
+              children: comment.replies
+                  .map((reply) => _buildCommentItem(reply, indent: 8))
+                  .toList(),
+            ),
+          ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -346,9 +384,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
                     children: [
-                      Expanded(
-                        child: Text('正在回复 ${_replyTarget!.userName}'),
-                      ),
+                      Expanded(child: Text('正在回复 ${_replyTarget!.userName}')),
                       TextButton(
                         onPressed: _clearReply,
                         child: const Text('取消回复'),
@@ -368,7 +404,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 ],
               ),
             ],
-            FutureBuilder<List<CommunityComment>>(
+            FutureBuilder<CommunityCommentPage>(
               future: _comments,
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
@@ -377,10 +413,27 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
+                final page = snapshot.data!;
                 return Column(
-                  children: snapshot.data!
-                      .map((item) => _buildCommentItem(item))
-                      .toList(),
+                  children: [
+                    ...page.items.map((item) => _buildCommentItem(item)),
+                    if (page.hasMore)
+                      OutlinedButton.icon(
+                        key: const Key('post-comments-load-more'),
+                        onPressed: _loadingMoreComments
+                            ? null
+                            : () => _loadMoreComments(page),
+                        icon: _loadingMoreComments
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.expand_more),
+                        label: Text(_loadingMoreComments ? '加载中...' : '加载更多评论'),
+                      ),
+                  ],
                 );
               },
             ),

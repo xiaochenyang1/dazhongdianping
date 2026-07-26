@@ -220,6 +220,21 @@ class CommunityPostPage {
   bool get hasMore => items.length < total;
 }
 
+class CommunityCommentPage {
+  const CommunityCommentPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+  final List<CommunityComment> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class CommunityRepository {
   CommunityRepository(this.api);
   final JsonApi api;
@@ -302,15 +317,28 @@ class CommunityRepository {
         await _deleteApi.deleteJson('/api/c/v1/posts/$postId/repost'),
       );
 
-  Future<List<CommunityComment>> loadComments(int postId) async {
+  Future<List<CommunityComment>> loadComments(int postId) async =>
+      (await loadCommentPage(postId)).items;
+
+  Future<CommunityCommentPage> loadCommentPage(
+    int postId, {
+    int page = 1,
+    int pageSize = 50,
+  }) async {
     final result = await api.getJson(
       '/api/c/v1/posts/$postId/comments',
-      query: const {'page': 1, 'pageSize': 50},
+      query: {'page': page, 'pageSize': pageSize},
     );
-    return (result['list'] as List<dynamic>? ?? const [])
+    final items = (result['list'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>()
         .map(CommunityComment.fromJson)
         .toList();
+    return CommunityCommentPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
   }
 
   Future<CommunityComment> createComment(

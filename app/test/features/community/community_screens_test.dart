@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/community/community_feed_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
+import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:dazhongdianping_app/features/community/post_editor_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,8 @@ class CommunityScreenApi
   int repostCount = 2;
   bool paginateFeed = false;
   final List<int> requestedFeedPages = <int>[];
+  bool paginateComments = false;
+  final List<int> requestedCommentPages = <int>[];
 
   Map<String, dynamic> get post => {
     'id': 7,
@@ -47,14 +50,16 @@ class CommunityScreenApi
   }) async {
     this.path = path;
     if (path.endsWith('/comments')) {
+      final page = query?['page'] as int? ?? 1;
+      requestedCommentPages.add(page);
       return {
         'list': [
           {
-            'id': 11,
+            'id': page == 1 ? 11 : 13,
             'postId': 7,
             'userId': 10,
-            'userName': '评论用户',
-            'content': '收藏了。',
+            'userName': page == 1 ? '评论用户' : '更早的用户',
+            'content': page == 1 ? '收藏了。' : '更早的评论。',
             'parentId': 0,
             'replyTo': null,
             'replies': [
@@ -80,7 +85,9 @@ class CommunityScreenApi
             'createdAt': '2026-07-16 11:00:00',
           },
         ],
-        'total': 1,
+        'total': paginateComments ? 2 : 1,
+        'page': page,
+        'pageSize': paginateComments ? 1 : 50,
       };
     }
     if (path == '/api/c/v1/posts' || path == '/api/c/v1/posts/following') {
@@ -207,6 +214,33 @@ class CommunityTopicApi extends CommunityScreenApi {
 }
 
 void main() {
+  testWidgets('post detail loads later comment pages', (tester) async {
+    final api = CommunityScreenApi()..paginateComments = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('post-comments-load-more')),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byKey(const Key('post-comments-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('post-comments-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedCommentPages, [1, 2]);
+    expect(find.text('更早的评论。'), findsOneWidget);
+    expect(find.byKey(const Key('post-comments-load-more')), findsNothing);
+  });
+
   testWidgets('community feed loads later pages', (tester) async {
     final api = CommunityScreenApi()..paginateFeed = true;
     await tester.pumpWidget(
