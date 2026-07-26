@@ -36,6 +36,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   late Future<NotificationPage> _notifications;
   bool _markingAll = false;
   bool _loadingMore = false;
+  bool _reloading = false;
   bool _showUnreadOnly = false;
   int _pageRevision = 0;
   final Set<int> _handlingNotificationIds = {};
@@ -47,7 +48,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _reload() async {
+    if (_reloading) return;
     final revision = _pageRevision;
+    setState(() => _reloading = true);
     try {
       final page = await widget.repository.loadPage();
       if (mounted && revision == _pageRevision) {
@@ -61,6 +64,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('刷新消息失败：$error')));
       }
+    } finally {
+      if (mounted) setState(() => _reloading = false);
     }
   }
 
@@ -352,9 +357,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         const SizedBox(height: 12),
                         FilledButton.icon(
                           key: const Key('notifications-retry'),
-                          onPressed: _reload,
+                          onPressed: _reloading ? null : _reload,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('重新加载'),
+                          label: Text(_reloading ? '处理中...' : '重新加载'),
                         ),
                       ],
                     ),
@@ -375,9 +380,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
                             key: const Key('notifications-empty-refresh'),
-                            onPressed: _reload,
+                            onPressed: _reloading ? null : _reload,
                             icon: const Icon(Icons.refresh),
-                            label: const Text('刷新'),
+                            label: Text(_reloading ? '处理中...' : '刷新'),
                           ),
                         ],
                       ],

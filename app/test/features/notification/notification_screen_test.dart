@@ -287,6 +287,31 @@ void main() {
     expect(find.text('商家回复'), findsOneWidget);
   });
 
+  testWidgets('notification screen guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = NotificationScreenApi(failFirstLoad: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.loadGates[2] = gate;
+
+    final retry = find.byKey(const Key('notifications-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry);
+    await tester.pump();
+
+    expect(api.loadCount, 2);
+    expect(find.text('处理中...'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.loadCount, 2);
+    expect(find.text('商家回复'), findsOneWidget);
+  });
+
   testWidgets('pull to refresh reloads notifications', (tester) async {
     final api = NotificationScreenApi();
     await tester.pumpWidget(
