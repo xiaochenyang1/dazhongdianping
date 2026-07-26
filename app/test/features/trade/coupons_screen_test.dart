@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CouponsApi implements JsonApi {
-  CouponsApi({this.paginated = false});
+  CouponsApi({this.paginated = false, this.failFirst = false});
 
   final bool paginated;
+  final bool failFirst;
+  int couponListRequests = 0;
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
   final List<int> requestedPages = <int>[];
@@ -20,6 +22,10 @@ class CouponsApi implements JsonApi {
     paths.add(path);
     lastQuery = query;
     if (path == '/api/c/v1/coupons') {
+      couponListRequests++;
+      if (failFirst && couponListRequests == 1) {
+        throw StateError('network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedPages.add(page);
       return {
@@ -67,6 +73,21 @@ class CouponsApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('coupons screen retries an initial load failure', (tester) async {
+    final api = CouponsApi(failFirst: true);
+    await tester.pumpWidget(
+      MaterialApp(home: CouponsScreen(repository: TradeRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('券码加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('coupons-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.couponListRequests, 2);
+    expect(find.byKey(const Key('coupon-card-CP-DEMO')), findsOneWidget);
+  });
+
   testWidgets('coupons screen loads later filtered pages', (tester) async {
     final api = CouponsApi(paginated: true);
     await tester.pumpWidget(
