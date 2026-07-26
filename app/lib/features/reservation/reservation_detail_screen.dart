@@ -97,6 +97,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   }
 
   Future<void> _findSlots() async {
+    if (_acting) return;
     final reservation = _reservation!;
     setState(() => _acting = true);
     try {
@@ -142,6 +143,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
     Future<ReservationDetail> Function() action,
     String message,
   ) async {
+    if (_acting) return false;
     setState(() => _acting = true);
     try {
       final reservation = await action();
@@ -241,6 +243,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                 ),
               if (reservation.canReschedule)
                 FilledButton.tonal(
+                  key: const Key('reservation-find-slots'),
                   onPressed: _acting ? null : _findSlots,
                   child: const Text('查询改期时段'),
                 ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
@@ -9,6 +11,8 @@ class ReservationDetailApi implements JsonApi {
   Object? body;
   bool failNextReschedule = false;
   int rescheduleRequests = 0;
+  Completer<void>? slotGate;
+  int slotRequests = 0;
 
   Map<String, dynamic> detail({String statusText = '已确认'}) => {
     'id': 11,
@@ -51,6 +55,8 @@ class ReservationDetailApi implements JsonApi {
   }) async {
     this.path = path;
     if (path.contains('reservation-slots')) {
+      slotRequests += 1;
+      await slotGate?.future;
       return {
         'list': [
           {
@@ -174,5 +180,31 @@ void main() {
 
     expect(api.rescheduleRequests, 2);
     expect(find.textContaining('19:00'), findsNothing);
+  });
+
+  testWidgets('reservation detail blocks duplicate slot requests', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = ReservationDetailApi()..slotGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationDetailScreen(
+          repository: ReservationRepository(api),
+          reservationId: 11,
+          initialRescheduleDate: DateTime(2026, 7, 21),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('reservation-find-slots')));
+    await tester.tap(find.byKey(const Key('reservation-find-slots')));
+    expect(api.slotRequests, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.slotRequests, 1);
+    expect(find.textContaining('19:00'), findsOneWidget);
   });
 }
