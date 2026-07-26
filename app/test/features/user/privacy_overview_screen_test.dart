@@ -29,6 +29,10 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   final Map<int, int> policyAcceptRequests = {};
   final Map<int, Completer<void>> deviceLogoutGates = {};
   final Map<int, int> deviceLogoutRequests = {};
+  Completer<void>? createExportGate;
+  int createExportRequests = 0;
+  final Map<int, Completer<void>> downloadExportGates = {};
+  final Map<int, int> downloadExportRequests = {};
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -117,6 +121,8 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
     postedPath = path;
     postedBody = body;
     if (path == '/api/c/v1/privacy/export-tasks') {
+      createExportRequests++;
+      await createExportGate?.future;
       exportCreated = true;
       return _exportTask(10);
     }
@@ -185,6 +191,13 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
 
   @override
   Future<Uint8List> getBytes(String path) async {
+    final taskId = int.parse(path.split('/')[6]);
+    downloadExportRequests.update(
+      taskId,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
+    await downloadExportGates[taskId]?.future;
     return Uint8List.fromList([1, 2, 3]);
   }
 
@@ -437,6 +450,33 @@ void main() {
     expect(find.textContaining('已保存'), findsOneWidget);
   });
 
+  testWidgets('privacy center guards duplicate export downloads', (
+    tester,
+  ) async {
+    final api = PrivacyScreenApi()..downloadExportGates[8] = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+          saver: PrivacyExportSaver(
+            saveFile: (_, _) async => '/tmp/export.zip',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final download = find.byKey(const Key('privacy-download-export-8'));
+    await scrollTo(tester, download);
+    await tester.tap(download);
+    await tester.tap(download);
+
+    expect(api.downloadExportRequests, {8: 1});
+    api.downloadExportGates[8]!.complete();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('privacy center creates an export for selected modules', (
     tester,
   ) async {
@@ -479,6 +519,29 @@ void main() {
     expect(find.text('话题关注'), findsOneWidget);
     expect(find.text('帖子、关注关系、私信、圈子和话题关注均支持真实导出。'), findsOneWidget);
     expect(find.text('任务 #10'), findsOneWidget);
+  });
+
+  testWidgets('privacy center guards duplicate export creation', (
+    tester,
+  ) async {
+    final api = PrivacyScreenApi()..createExportGate = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final create = find.byKey(const Key('privacy-create-export'));
+    await tester.tap(create);
+    await tester.tap(create);
+
+    expect(api.createExportRequests, 1);
+    api.createExportGate!.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('privacy center cancels an active delete task', (tester) async {

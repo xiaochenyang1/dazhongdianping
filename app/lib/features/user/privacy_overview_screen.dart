@@ -176,6 +176,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   }
 
   Future<void> _download(PrivacyExportTask task) async {
+    if (_downloadingTaskIds.contains(task.id)) return;
     setState(() => _downloadingTaskIds.add(task.id));
     try {
       final bytes = await widget.repository.downloadExport(task.id);
@@ -199,6 +200,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   }
 
   Future<void> _createExport() async {
+    if (_creatingExport) return;
     final modules = [
       if (_includeAccount) 'account',
       if (_includeReviews) 'reviews',
@@ -497,6 +499,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               const Text('帖子、关注关系、私信、圈子和话题关注均支持真实导出。'),
               const SizedBox(height: 12),
               FilledButton.icon(
+                key: const Key('privacy-create-export'),
                 onPressed: _creatingExport ? null : _createExport,
                 icon: const Icon(Icons.archive_outlined),
                 label: Text(_creatingExport ? '创建中...' : '创建导出任务'),
@@ -692,6 +695,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               if (task.readyToDownload) ...[
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
+                  key: Key('privacy-download-export-${task.id}'),
                   onPressed: _downloadingTaskIds.contains(task.id)
                       ? null
                       : () => _download(task),
