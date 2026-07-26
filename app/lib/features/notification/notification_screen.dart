@@ -45,11 +45,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _reload() async {
-    final future = widget.repository.loadPage();
-    setState(() {
-      _notifications = future;
-    });
-    await future;
+    try {
+      final page = await widget.repository.loadPage();
+      if (mounted) {
+        setState(() {
+          _notifications = Future.value(page);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('刷新消息失败：$error')));
+      }
+    }
   }
 
   Future<void> _loadMore(NotificationPage current) async {

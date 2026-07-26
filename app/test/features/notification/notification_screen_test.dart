@@ -34,6 +34,7 @@ class NotificationScreenApi implements JsonApi {
   String? postedPath;
   int loadCount = 0;
   final requestedPages = <int>[];
+  bool failNextLoad = false;
 
   Map<String, dynamic> _item({required bool read}) {
     if (social) {
@@ -170,6 +171,10 @@ class NotificationScreenApi implements JsonApi {
     loadCount += 1;
     final page = query?['page'] as int? ?? 1;
     requestedPages.add(page);
+    if (failNextLoad) {
+      failNextLoad = false;
+      throw const ApiException('刷新网络暂时不可用');
+    }
     if (failFirstLoad && loadCount == 1) {
       throw const ApiException('网络暂时不可用');
     }
@@ -272,6 +277,31 @@ void main() {
 
     expect(api.loadCount, 2);
     expect(find.text('商家回复'), findsOneWidget);
+  });
+
+  testWidgets('failed notification refresh preserves loaded messages', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.failNextLoad = true;
+
+    await tester.fling(
+      find.byKey(const Key('notification-list')),
+      const Offset(0, 300),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.loadCount, 2);
+    expect(find.text('商家回复'), findsOneWidget);
+    expect(find.textContaining('刷新消息失败'), findsOneWidget);
+    expect(find.textContaining('消息加载失败'), findsNothing);
   });
 
   testWidgets('empty notification state can refresh', (tester) async {
