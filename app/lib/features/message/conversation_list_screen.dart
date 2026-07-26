@@ -229,23 +229,32 @@ class _ChatScreenState extends State<ChatScreen> {
       final page = widget.conversation.id == 0
           ? const MessagePage(items: [], total: 0, page: 1, pageSize: 20)
           : await widget.repository.loadMessagePage(widget.conversation.id);
-      if (widget.conversation.id != 0) {
-        await widget.repository.markRead(widget.conversation.id);
-      }
-      if (mounted) {
-        setState(() {
-          _page = page;
-          _messages = page.items.reversed.toList();
-          _loading = false;
-          _loadError = null;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _page = page;
+        _messages = page.items.reversed.toList();
+        _loading = false;
+        _loadError = null;
+      });
+      if (widget.conversation.id != 0) await _markRead();
     } catch (error) {
       if (mounted) {
         setState(() {
           _loading = false;
           _loadError = error;
         });
+      }
+    }
+  }
+
+  Future<void> _markRead() async {
+    try {
+      await widget.repository.markRead(widget.conversation.id);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('已读状态同步失败：$error')));
       }
     }
   }
