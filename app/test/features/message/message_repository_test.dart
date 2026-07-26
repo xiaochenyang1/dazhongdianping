@@ -5,12 +5,14 @@ import 'package:flutter_test/flutter_test.dart';
 class MessageFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   String path = '';
   Object? body;
+  Map<String, Object?>? query;
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
   }) async {
     this.path = path;
+    this.query = query;
     if (path.endsWith('/blocks')) return {'list': const [], 'total': 0};
     if (path.endsWith('/conversations')) {
       return {
@@ -25,7 +27,9 @@ class MessageFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
             'unreadCount': 2,
           },
         ],
-        'total': 1,
+        'total': 21,
+        'page': query?['page'] ?? 1,
+        'pageSize': query?['pageSize'] ?? 20,
       };
     }
     return {
@@ -85,6 +89,15 @@ void main() {
       final api = MessageFakeApi();
       final repository = MessageRepository(api);
       expect((await repository.loadConversations()).single.unreadCount, 2);
+      final conversationPage = await repository.loadConversationPage(
+        page: 2,
+        pageSize: 10,
+      );
+      expect(api.query, {'page': 2, 'pageSize': 10});
+      expect(conversationPage.page, 2);
+      expect(conversationPage.pageSize, 10);
+      expect(conversationPage.total, 21);
+      expect(conversationPage.hasMore, isTrue);
       expect((await repository.loadMessages(3)).single.content, '周末探店？');
       expect((await repository.send(9, '走起')).content, '走起');
       expect((await repository.markRead(3)), 2);

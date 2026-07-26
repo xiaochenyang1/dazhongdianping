@@ -346,6 +346,8 @@ npm run build
 
 ## 已验证
 
+- `2026-07-26` Flutter 私信会话列表已接后端分页：仓储保留 `page/pageSize/total`，页面可按需加载更多并按会话 ID 去重；下拉刷新回到第一页，加载更多失败不会清空已加载会话。消息仓储与页面聚焦测试 `4` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `205` 条通过。
+
 - `2026-07-26` Flutter 隐私中心导出任务补齐历史分页：导出任务页模型保留 `page/pageSize/total`，页面加载更早任务时按任务 ID 去重且不重载协议、设备和删除申请；创建新任务后仍完整刷新回第一页。隐私仓储/中心页聚焦测试 `18` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `204` 条通过。
 - `2026-07-26` Flutter 公开用户粉丝/关注列表补齐历史分页：关系页模型保留 `page/pageSize/total`，粉丝与关注页可加载更早用户、按用户 ID 去重，嵌套公开主页跳转保持不变。用户仓储/公开主页聚焦测试 `12` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `203` 条通过。
 - `2026-07-26` Flutter 点评评论区补齐历史分页：仓储新增带 `page/pageSize/total` 的评论页 API 并保留原列表 API；详情页按顶层评论 ID 合并后续页并保留楼中楼回复，发布评论后重新加载第一页。点评仓储/详情页聚焦测试 `13` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `202` 条通过。

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int conversationCalls = 0;
+  final List<int> conversationPages = [];
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -15,19 +16,23 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     if (path.endsWith('/blocks')) return {'list': const [], 'total': 0};
     if (path.endsWith('/conversations')) {
       conversationCalls += 1;
+      final page = query?['page'] as int? ?? 1;
+      conversationPages.add(page);
       return {
         'list': [
           {
-            'id': 3,
-            'peerUserId': 9,
-            'peerNickname': '伦敦小王',
+            'id': page == 1 ? 3 : 4,
+            'peerUserId': page == 1 ? 9 : 10,
+            'peerNickname': page == 1 ? '伦敦小王' : '巴黎小李',
             'peerAvatar': '',
             'lastMessagePreview': '周末探店？',
             'lastMessageAt': '10:00',
             'unreadCount': 2,
           },
         ],
-        'total': 1,
+        'total': 2,
+        'page': page,
+        'pageSize': 1,
       };
     }
     return {
@@ -93,7 +98,33 @@ void main() {
     expect(find.text('走起'), findsOneWidget);
   });
 
-  testWidgets('conversation refresh replaces the future without async setState errors', (tester) async {
+  testWidgets(
+    'conversation refresh replaces the future without async setState errors',
+    (tester) async {
+      final api = ScreenMessageApi();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ConversationListScreen(
+            repository: MessageRepository(api),
+            currentUserId: 8,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(api.conversationCalls, 1);
+
+      await tester.drag(find.byType(ListView), const Offset(0, 320));
+      await tester.pumpAndSettle();
+
+      expect(api.conversationCalls, 2);
+      expect(api.conversationPages, [1, 1]);
+      expect(find.text('伦敦小王'), findsOneWidget);
+    },
+  );
+
+  testWidgets('conversation list loads and merges the next page', (
+    tester,
+  ) async {
     final api = ScreenMessageApi();
     await tester.pumpWidget(
       MaterialApp(
@@ -104,12 +135,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(api.conversationCalls, 1);
 
-    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.text('加载更多'), findsOneWidget);
+    await tester.tap(find.text('加载更多'));
     await tester.pumpAndSettle();
 
-    expect(api.conversationCalls, 2);
+    expect(api.conversationPages, [1, 2]);
     expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.text('巴黎小李'), findsOneWidget);
+    expect(find.text('加载更多'), findsNothing);
   });
 }

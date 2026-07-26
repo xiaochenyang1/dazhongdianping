@@ -24,6 +24,20 @@ class ConversationSummary {
       );
 }
 
+class ConversationPage {
+  const ConversationPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<ConversationSummary> items;
+  final int total, page, pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class DirectMessage {
   const DirectMessage({
     required this.id,
@@ -57,10 +71,25 @@ class BlockStatus {
 class MessageRepository {
   MessageRepository(this.api);
   final JsonApi api;
-  Future<List<ConversationSummary>> loadConversations() async => _list(
-    await api.getJson('/api/c/v1/messages/conversations'),
-    ConversationSummary.fromJson,
-  );
+  Future<List<ConversationSummary>> loadConversations() async =>
+      (await loadConversationPage()).items;
+
+  Future<ConversationPage> loadConversationPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final data = await api.getJson(
+      '/api/c/v1/messages/conversations',
+      query: {'page': page, 'pageSize': pageSize},
+    );
+    return ConversationPage(
+      items: _list(data, ConversationSummary.fromJson),
+      total: data['total'] as int? ?? 0,
+      page: data['page'] as int? ?? page,
+      pageSize: data['pageSize'] as int? ?? pageSize,
+    );
+  }
+
   Future<List<DirectMessage>> loadMessages(int conversationId) async => _list(
     await api.getJson('/api/c/v1/messages/conversations/$conversationId'),
     DirectMessage.fromJson,

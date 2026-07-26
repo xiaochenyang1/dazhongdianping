@@ -14,11 +14,12 @@ class ConversationListScreen extends StatefulWidget {
 }
 
 class _ConversationListScreenState extends State<ConversationListScreen> {
-  late Future<List<ConversationSummary>> _future = widget.repository
-      .loadConversations();
+  late Future<ConversationPage> _future = widget.repository
+      .loadConversationPage();
+  bool _loadingMore = false;
 
   Future<void> _reload() async {
-    final future = widget.repository.loadConversations();
+    final future = widget.repository.loadConversationPage();
     if (!mounted) return;
     setState(() {
       _future = future;
@@ -26,10 +27,40 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
     await future;
   }
 
+  Future<void> _loadMore(ConversationPage current) async {
+    if (_loadingMore || !current.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.loadConversationPage(
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      final byId = <int, ConversationSummary>{
+        for (final item in current.items) item.id: item,
+        for (final item in next.items) item.id: item,
+      };
+      final merged = ConversationPage(
+        items: byId.values.toList(),
+        total: next.total,
+        page: next.page,
+        pageSize: next.pageSize,
+      );
+      if (mounted) setState(() => _future = Future.value(merged));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多会话失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('私信')),
-    body: FutureBuilder<List<ConversationSummary>>(
+    body: FutureBuilder<ConversationPage>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -38,17 +69,32 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (snapshot.data!.isEmpty) {
+        final page = snapshot.data!;
+        if (page.items.isEmpty) {
           return const Center(child: Text('还没有私信，去公开主页打个招呼吧。'));
         }
         return RefreshIndicator(
           onRefresh: _reload,
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.length,
+            itemCount: page.items.length + (page.hasMore ? 1 : 0),
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (_, index) {
-              final item = snapshot.data![index];
+              if (index == page.items.length) {
+                return Center(
+                  child: FilledButton.tonalIcon(
+                    onPressed: _loadingMore ? null : () => _loadMore(page),
+                    icon: _loadingMore
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.expand_more),
+                    label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                  ),
+                );
+              }
+              final item = page.items[index];
               return Card(
                 clipBehavior: Clip.antiAlias,
                 child: ListTile(
