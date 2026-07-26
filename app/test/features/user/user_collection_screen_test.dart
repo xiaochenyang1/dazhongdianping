@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CollectionApi implements JsonApi {
-  CollectionApi({this.paginatedReviews = false});
+  CollectionApi({this.paginatedReviews = false, this.failFirstReviews = false});
 
   final bool paginatedReviews;
+  final bool failFirstReviews;
+  int reviewRequests = 0;
   final List<int> requestedReviewPages = <int>[];
 
   @override
@@ -17,6 +19,10 @@ class CollectionApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     if (path == '/api/c/v1/user/reviews') {
+      reviewRequests++;
+      if (failFirstReviews && reviewRequests == 1) {
+        throw StateError('network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedReviewPages.add(page);
       return {
@@ -262,6 +268,28 @@ class CollectionApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('user collection retries an initial load failure', (
+    tester,
+  ) async {
+    final api = CollectionApi(failFirstReviews: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserCollectionScreen(
+          repository: UserRepository(api),
+          collection: UserCollection.reviews,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('user-collection-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.reviewRequests, 2);
+    expect(find.text('柏林茶馆'), findsOneWidget);
+  });
+
   testWidgets('owned review collection loads later pages', (tester) async {
     final api = CollectionApi(paginatedReviews: true);
     await tester.pumpWidget(

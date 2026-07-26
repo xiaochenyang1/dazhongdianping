@@ -209,6 +209,7 @@ class _PaginatedCollectionBody extends StatefulWidget {
 class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
   late Future<UserCollectionPage> _page;
   bool _loadingMore = false;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -216,8 +217,18 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
     _page = widget.repository.loadCollection(widget.collection);
   }
 
+  void _reload() {
+    final future = widget.repository.loadCollection(widget.collection);
+    _requestId++;
+    setState(() {
+      _page = future;
+      _loadingMore = false;
+    });
+  }
+
   Future<void> _loadMore(UserCollectionPage current) async {
     if (_loadingMore || !current.hasMore) return;
+    final requestId = _requestId;
     setState(() => _loadingMore = true);
     try {
       final next = await widget.repository.loadCollection(
@@ -225,7 +236,7 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
       final knownIds = current.items.map((item) => item['id']).toSet();
       final items = [
         ...current.items,
@@ -242,13 +253,15 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && requestId == _requestId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && requestId == _requestId) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
@@ -261,7 +274,21 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('加载失败：${snapshot.error}'));
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('加载失败：${snapshot.error}'),
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  key: const Key('user-collection-retry'),
+                  onPressed: _reload,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          );
         }
         final page = snapshot.data!;
         if (page.items.isEmpty) return const Center(child: Text('暂无数据'));
