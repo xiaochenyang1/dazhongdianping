@@ -28,6 +28,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   late Future<CommunityPostPage> posts;
   bool saving = false;
   bool loadingMore = false;
+  int postsRequestId = 0;
 
   @override
   void initState() {
@@ -35,8 +36,18 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
     posts = widget.repository.loadPostPage(topic.id);
   }
 
+  void reloadPosts() {
+    final future = widget.repository.loadPostPage(topic.id);
+    postsRequestId++;
+    setState(() {
+      posts = future;
+      loadingMore = false;
+    });
+  }
+
   Future<void> loadMore(CommunityPostPage current) async {
     if (loadingMore || !current.hasMore) return;
+    final requestId = postsRequestId;
     setState(() => loadingMore = true);
     try {
       final next = await widget.repository.loadPostPage(
@@ -44,7 +55,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != postsRequestId) return;
       final knownIds = current.items.map((post) => post.id).toSet();
       setState(() {
         posts = Future.value(
@@ -60,13 +71,15 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && requestId == postsRequestId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多帖子失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => loadingMore = false);
+      if (mounted && requestId == postsRequestId) {
+        setState(() => loadingMore = false);
+      }
     }
   }
 
@@ -172,7 +185,19 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
           future: posts,
           builder: (_, snapshot) {
             if (snapshot.hasError) {
-              return Text('帖子加载失败：${snapshot.error}');
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('帖子加载失败：${snapshot.error}'),
+                  const SizedBox(height: 8),
+                  FilledButton.tonalIcon(
+                    key: const Key('topic-posts-retry'),
+                    onPressed: reloadPosts,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                ],
+              );
             }
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());

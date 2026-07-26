@@ -12,6 +12,7 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextRecommended = false;
   final List<int> requestedTopicPages = <int>[];
   bool paginatePosts = false;
+  bool failNextPosts = false;
   final List<int> requestedPostPages = <int>[];
 
   Map<String, dynamic> topic({bool followed = false, int count = 88}) => {
@@ -64,6 +65,10 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path.endsWith('/posts')) {
+      if (failNextPosts) {
+        failNextPosts = false;
+        throw StateError('post network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedPostPages.add(page);
       return {
@@ -117,6 +122,28 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('topic detail retries an initial post failure', (tester) async {
+    final api = TopicScreenApi()..failNextPosts = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicDetailScreen(
+          repository: TopicRepository(api),
+          initial: TopicSummary.fromJson(api.topic()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('帖子加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('topic-posts-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedPostPages, [1]);
+    expect(find.text('周末咖啡地图'), findsOneWidget);
+    expect(find.text('88 人关注'), findsOneWidget);
+  });
+
   testWidgets('topic plaza retries an initial load failure', (tester) async {
     final api = TopicScreenApi()..failNextRecommended = true;
     await tester.pumpWidget(
