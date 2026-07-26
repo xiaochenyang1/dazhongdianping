@@ -26,6 +26,7 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
   Future<TopicPage>? following;
   bool loadingMore = false;
   int selected = 0;
+  final List<int> requestIds = [0, 0, 0];
 
   @override
   void initState() {
@@ -43,9 +44,26 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
     });
   }
 
+  void reload() {
+    final tab = selected;
+    final future = switch (tab) {
+      0 => widget.repository.loadRecommendedPage(),
+      1 => widget.repository.loadHotPage(),
+      _ => widget.repository.loadFollowingPage(),
+    };
+    requestIds[tab]++;
+    setState(() {
+      loadingMore = false;
+      if (tab == 0) recommended = future;
+      if (tab == 1) hot = future;
+      if (tab == 2) following = future;
+    });
+  }
+
   Future<void> loadMore(TopicPage current) async {
     if (loadingMore || !current.hasMore) return;
     final tab = selected;
+    final requestId = requestIds[tab];
     setState(() => loadingMore = true);
     try {
       final next = switch (tab) {
@@ -62,7 +80,7 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
           pageSize: current.pageSize,
         ),
       };
-      if (!mounted) return;
+      if (!mounted || requestId != requestIds[tab]) return;
       final knownIds = current.items.map((topic) => topic.id).toSet();
       final merged = TopicPage(
         items: [
@@ -79,13 +97,15 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
         if (tab == 2) following = Future.value(merged);
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && requestId == requestIds[tab]) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多话题失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => loadingMore = false);
+      if (mounted && requestId == requestIds[tab]) {
+        setState(() => loadingMore = false);
+      }
     }
   }
 
@@ -114,7 +134,21 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
                   : following,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text('话题加载失败：${snapshot.error}'));
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('话题加载失败：${snapshot.error}'),
+                        const SizedBox(height: 12),
+                        FilledButton.tonalIcon(
+                          key: const Key('topic-plaza-retry'),
+                          onPressed: reload,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('重试'),
+                        ),
+                      ],
+                    ),
+                  );
                 }
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());

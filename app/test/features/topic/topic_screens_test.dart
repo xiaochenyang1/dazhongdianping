@@ -9,6 +9,7 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int followingCalls = 0;
   bool failFollow = false;
   bool paginateTopics = false;
+  bool failNextRecommended = false;
   final List<int> requestedTopicPages = <int>[];
   bool paginatePosts = false;
   final List<int> requestedPostPages = <int>[];
@@ -78,6 +79,10 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path == '/api/c/v1/topics/31') return topic();
+    if (path == '/api/c/v1/topics' && failNextRecommended) {
+      failNextRecommended = false;
+      throw StateError('topic network unavailable');
+    }
     final page = query?['page'] as int? ?? 1;
     requestedTopicPages.add(page);
     return {
@@ -112,6 +117,26 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('topic plaza retries an initial load failure', (tester) async {
+    final api = TopicScreenApi()..failNextRecommended = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicPlazaScreen(
+          repository: TopicRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('话题加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('topic-plaza-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedTopicPages, [1]);
+    expect(find.text('伦敦咖啡'), findsOneWidget);
+  });
+
   testWidgets('topic detail loads later posts', (tester) async {
     final api = TopicScreenApi()..paginatePosts = true;
     await tester.pumpWidget(
