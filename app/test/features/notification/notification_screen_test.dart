@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/notification/notification_repository.dart';
 import 'package:dazhongdianping_app/features/notification/notification_screen.dart';
@@ -35,6 +37,8 @@ class NotificationScreenApi implements JsonApi {
   int loadCount = 0;
   final requestedPages = <int>[];
   bool failNextLoad = false;
+  Completer<void>? ackGate;
+  int ackCalls = 0;
 
   Map<String, dynamic> _item({required bool read}) {
     if (social) {
@@ -214,6 +218,8 @@ class NotificationScreenApi implements JsonApi {
     if (path == '/api/c/v1/notifications/read-all') {
       return {'updated': 1, 'count': 0};
     }
+    ackCalls += 1;
+    await ackGate?.future;
     return _item(read: true);
   }
 }
@@ -414,6 +420,34 @@ void main() {
       expect(openedUserId, 9);
     },
   );
+
+  testWidgets('notification ignores duplicate taps while ack is pending', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = NotificationScreenApi(social: true)..ackGate = gate;
+    var openedCount = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(
+          repository: NotificationRepository(api),
+          onUserTap: (_) => openedCount += 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tile = find.byKey(const Key('notification-1'));
+    await tester.tap(tile);
+    await tester.tap(tile);
+    expect(api.ackCalls, 1);
+    expect(openedCount, 0);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.ackCalls, 1);
+    expect(openedCount, 1);
+  });
 
   testWidgets('direct message notification opens the conversation callback', (
     tester,

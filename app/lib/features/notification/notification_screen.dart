@@ -37,6 +37,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   bool _markingAll = false;
   bool _loadingMore = false;
   bool _showUnreadOnly = false;
+  final Set<int> _handlingNotificationIds = {};
 
   @override
   void initState() {
@@ -166,105 +167,115 @@ class _NotificationScreenState extends State<NotificationScreen> {
     AppNotification notification,
     NotificationPage page,
   ) async {
-    if (!notification.read) {
-      await _ack(notification, page);
-    }
-    final match = RegExp(r'^/users/(\d+)$').firstMatch(notification.linkUrl);
-    final userId = match == null ? null : int.tryParse(match.group(1)!);
-    if (notification.type == 'social.follow' && userId != null) {
-      widget.onUserTap?.call(userId);
-      return;
-    }
-    // Accept optional query markers such as ?audit=approved/rejected.
-    final postMatch = RegExp(
-      r'^/community/posts/(\d+)(?:\?.*)?$',
-    ).firstMatch(notification.linkUrl);
-    final postId = postMatch == null ? null : int.tryParse(postMatch.group(1)!);
-    if (postId != null) {
-      widget.onPostTap?.call(postId);
-      return;
-    }
-    final orderMatch = RegExp(
-      r'^/user/orders/(\d+)(?:\?.*)?$',
-    ).firstMatch(notification.linkUrl);
-    final orderId = orderMatch == null
-        ? null
-        : int.tryParse(orderMatch.group(1)!);
-    if (orderId != null) {
-      widget.onOrderTap?.call(orderId);
-      return;
-    }
-    final ownedReviewMatch = RegExp(
-      r'^/user/reviews/(\d+)(?:\?.*)?$',
-    ).firstMatch(notification.linkUrl);
-    final ownedReviewId = ownedReviewMatch == null
-        ? null
-        : int.tryParse(ownedReviewMatch.group(1)!);
-    if (ownedReviewId != null) {
-      widget.onReviewTap?.call(ownedReviewId, owned: true);
-      return;
-    }
-    final publicReviewMatch = RegExp(
-      r'^/reviews/(\d+)(?:\?.*)?$',
-    ).firstMatch(notification.linkUrl);
-    final publicReviewId = publicReviewMatch == null
-        ? null
-        : int.tryParse(publicReviewMatch.group(1)!);
-    if (publicReviewId != null) {
-      widget.onReviewTap?.call(publicReviewId, owned: false);
-      return;
-    }
-    final couponDetailMatch = RegExp(
-      r'^/user/coupons/([^?]+)$',
-    ).firstMatch(notification.linkUrl);
-    if (couponDetailMatch != null) {
-      final code = Uri.decodeComponent(couponDetailMatch.group(1)!);
-      if (code.isNotEmpty && code != 'coupons') {
-        widget.onCouponDetailTap?.call(code);
+    if (_handlingNotificationIds.contains(notification.id)) return;
+    setState(() => _handlingNotificationIds.add(notification.id));
+    try {
+      if (!notification.read) {
+        await _ack(notification, page);
+      }
+      final match = RegExp(r'^/users/(\d+)$').firstMatch(notification.linkUrl);
+      final userId = match == null ? null : int.tryParse(match.group(1)!);
+      if (notification.type == 'social.follow' && userId != null) {
+        widget.onUserTap?.call(userId);
         return;
       }
-    }
-    final couponListMatch = RegExp(
-      r'^/user/coupons(?:\?(.*))?$',
-    ).firstMatch(notification.linkUrl);
-    if (couponListMatch != null) {
-      final query = Uri.splitQueryString(couponListMatch.group(1) ?? '');
-      final statusRaw = query['status'];
-      final status = statusRaw == null ? null : int.tryParse(statusRaw);
-      widget.onCouponListTap?.call(status: status, code: query['code']);
-      return;
-    }
-    final expertMatch = RegExp(
-      r'^/user/profile(?:\?(.*))?$',
-    ).firstMatch(notification.linkUrl);
-    if (expertMatch != null ||
-        notification.type == 'expert.certification.result') {
-      final query = Uri.splitQueryString(expertMatch?.group(1) ?? '');
-      widget.onExpertCertificationTap?.call(query['expert']);
-      return;
-    }
-    final reservationMatch = RegExp(
-      r'^/user/reservations/(\d+)(?:\?.*)?$',
-    ).firstMatch(notification.linkUrl);
-    final reservationId = reservationMatch == null
-        ? null
-        : int.tryParse(reservationMatch.group(1)!);
-    if (reservationId != null) {
-      widget.onReservationTap?.call(reservationId);
-      return;
-    }
-    final conversationMatch = RegExp(
-      r'^/messages/conversations/(\d+)$',
-    ).firstMatch(notification.linkUrl);
-    final conversationId = conversationMatch == null
-        ? null
-        : int.tryParse(conversationMatch.group(1)!);
-    if (notification.type == 'message.direct' && conversationId != null) {
-      widget.onConversationTap?.call(
-        conversationId,
-        notification.actorUserId,
-        notification.actorName,
-      );
+      // Accept optional query markers such as ?audit=approved/rejected.
+      final postMatch = RegExp(
+        r'^/community/posts/(\d+)(?:\?.*)?$',
+      ).firstMatch(notification.linkUrl);
+      final postId = postMatch == null
+          ? null
+          : int.tryParse(postMatch.group(1)!);
+      if (postId != null) {
+        widget.onPostTap?.call(postId);
+        return;
+      }
+      final orderMatch = RegExp(
+        r'^/user/orders/(\d+)(?:\?.*)?$',
+      ).firstMatch(notification.linkUrl);
+      final orderId = orderMatch == null
+          ? null
+          : int.tryParse(orderMatch.group(1)!);
+      if (orderId != null) {
+        widget.onOrderTap?.call(orderId);
+        return;
+      }
+      final ownedReviewMatch = RegExp(
+        r'^/user/reviews/(\d+)(?:\?.*)?$',
+      ).firstMatch(notification.linkUrl);
+      final ownedReviewId = ownedReviewMatch == null
+          ? null
+          : int.tryParse(ownedReviewMatch.group(1)!);
+      if (ownedReviewId != null) {
+        widget.onReviewTap?.call(ownedReviewId, owned: true);
+        return;
+      }
+      final publicReviewMatch = RegExp(
+        r'^/reviews/(\d+)(?:\?.*)?$',
+      ).firstMatch(notification.linkUrl);
+      final publicReviewId = publicReviewMatch == null
+          ? null
+          : int.tryParse(publicReviewMatch.group(1)!);
+      if (publicReviewId != null) {
+        widget.onReviewTap?.call(publicReviewId, owned: false);
+        return;
+      }
+      final couponDetailMatch = RegExp(
+        r'^/user/coupons/([^?]+)$',
+      ).firstMatch(notification.linkUrl);
+      if (couponDetailMatch != null) {
+        final code = Uri.decodeComponent(couponDetailMatch.group(1)!);
+        if (code.isNotEmpty && code != 'coupons') {
+          widget.onCouponDetailTap?.call(code);
+          return;
+        }
+      }
+      final couponListMatch = RegExp(
+        r'^/user/coupons(?:\?(.*))?$',
+      ).firstMatch(notification.linkUrl);
+      if (couponListMatch != null) {
+        final query = Uri.splitQueryString(couponListMatch.group(1) ?? '');
+        final statusRaw = query['status'];
+        final status = statusRaw == null ? null : int.tryParse(statusRaw);
+        widget.onCouponListTap?.call(status: status, code: query['code']);
+        return;
+      }
+      final expertMatch = RegExp(
+        r'^/user/profile(?:\?(.*))?$',
+      ).firstMatch(notification.linkUrl);
+      if (expertMatch != null ||
+          notification.type == 'expert.certification.result') {
+        final query = Uri.splitQueryString(expertMatch?.group(1) ?? '');
+        widget.onExpertCertificationTap?.call(query['expert']);
+        return;
+      }
+      final reservationMatch = RegExp(
+        r'^/user/reservations/(\d+)(?:\?.*)?$',
+      ).firstMatch(notification.linkUrl);
+      final reservationId = reservationMatch == null
+          ? null
+          : int.tryParse(reservationMatch.group(1)!);
+      if (reservationId != null) {
+        widget.onReservationTap?.call(reservationId);
+        return;
+      }
+      final conversationMatch = RegExp(
+        r'^/messages/conversations/(\d+)$',
+      ).firstMatch(notification.linkUrl);
+      final conversationId = conversationMatch == null
+          ? null
+          : int.tryParse(conversationMatch.group(1)!);
+      if (notification.type == 'message.direct' && conversationId != null) {
+        widget.onConversationTap?.call(
+          conversationId,
+          notification.actorUserId,
+          notification.actorName,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _handlingNotificationIds.remove(notification.id));
+      }
     }
   }
 
@@ -397,6 +408,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       final notification = visible[index];
                       return Card(
                         child: ListTile(
+                          key: Key('notification-${notification.id}'),
                           contentPadding: const EdgeInsets.all(16),
                           leading: CircleAvatar(
                             backgroundColor: const Color(0xFFFFE4D5),
@@ -458,7 +470,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               ],
                             ),
                           ),
-                          onTap: () => _handleTap(notification, page),
+                          onTap:
+                              _handlingNotificationIds.contains(notification.id)
+                              ? null
+                              : () => _handleTap(notification, page),
                         ),
                       );
                     },
