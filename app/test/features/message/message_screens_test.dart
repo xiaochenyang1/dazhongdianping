@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/message/conversation_list_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
@@ -12,6 +14,8 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int readCalls = 0;
   bool failNextRead = false;
   bool failNextConversationLoad = false;
+  Completer<void>? blockGate;
+  int blockCalls = 0;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -90,10 +94,12 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   }
 
   @override
-  Future<Map<String, dynamic>> putJson(String path, {Object? body}) async => {
-    'userId': 9,
-    'blocked': true,
-  };
+  Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
+    blockCalls += 1;
+    await blockGate?.future;
+    return {'userId': 9, 'blocked': true};
+  }
+
   @override
   Future<Map<String, dynamic>> deleteJson(String path) async => {
     'userId': 9,
@@ -319,5 +325,54 @@ void main() {
     expect(find.textContaining('聊天记录加载失败'), findsNothing);
     expect(api.messagePages, [1]);
     expect(api.readCalls, 1);
+  });
+
+  testWidgets('chat blocks duplicate conversation actions while pending', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = ScreenMessageApi()..blockGate = gate;
+    const conversation = ConversationSummary(
+      id: 3,
+      peerUserId: 9,
+      peerNickname: '伦敦小王',
+      peerAvatar: '',
+      lastMessagePreview: '周末探店？',
+      lastMessageAt: '10:00',
+      unreadCount: 2,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: conversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('拉黑用户'));
+    await tester.pump();
+
+    expect(api.blockCalls, 1);
+    expect(
+      tester
+          .widget<PopupMenuButton<String>>(find.byType(PopupMenuButton<String>))
+          .enabled,
+      isFalse,
+    );
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.blockCalls, 1);
+    expect(
+      tester
+          .widget<PopupMenuButton<String>>(find.byType(PopupMenuButton<String>))
+          .enabled,
+      isTrue,
+    );
   });
 }

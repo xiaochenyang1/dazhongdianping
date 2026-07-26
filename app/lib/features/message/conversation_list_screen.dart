@@ -213,6 +213,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _loading = true,
       _loadingMore = false,
       _sending = false,
+      _actionSaving = false,
       _blocked = false;
   @override
   void initState() {
@@ -318,6 +319,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _action(String value) async {
+    if (_actionSaving) return;
+    setState(() => _actionSaving = true);
     try {
       if (value == 'report') {
         if (widget.conversation.id == 0) return;
@@ -348,6 +351,8 @@ class _ChatScreenState extends State<ChatScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('操作失败：$e')));
       }
+    } finally {
+      if (mounted) setState(() => _actionSaving = false);
     }
   }
 
@@ -363,6 +368,7 @@ class _ChatScreenState extends State<ChatScreen> {
       title: Text(widget.conversation.peerNickname),
       actions: [
         PopupMenuButton<String>(
+          enabled: !_actionSaving,
           onSelected: _action,
           itemBuilder: (_) => [
             const PopupMenuItem(value: 'report', child: Text('举报会话')),
