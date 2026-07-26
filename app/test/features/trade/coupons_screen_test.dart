@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CouponsApi implements JsonApi {
+  CouponsApi({this.paginated = false});
+
+  final bool paginated;
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
+  final List<int> requestedPages = <int>[];
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -16,20 +20,22 @@ class CouponsApi implements JsonApi {
     paths.add(path);
     lastQuery = query;
     if (path == '/api/c/v1/coupons') {
+      final page = query?['page'] as int? ?? 1;
+      requestedPages.add(page);
       return {
         'list': [
           {
-            'id': 21,
+            'id': paginated ? 20 + page : 21,
             'orderId': 10,
-            'code': 'CP-DEMO',
+            'code': paginated ? 'CP-PAGE-$page' : 'CP-DEMO',
             'status': 1,
             'statusText': '待使用',
-            'dealTitle': '双人晚餐套餐',
+            'dealTitle': page == 1 ? '双人晚餐套餐' : '更早的券',
             'shopName': '柏林茶馆',
             'expireAt': '2026-12-31',
           },
         ],
-        'total': 1,
+        'total': paginated ? 2 : 1,
       };
     }
     if (path == '/api/c/v1/coupons/CP-DEMO') {
@@ -61,6 +67,26 @@ class CouponsApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('coupons screen loads later filtered pages', (tester) async {
+    final api = CouponsApi(paginated: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CouponsScreen(repository: TradeRepository(api), initialStatus: 1),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('coupon-card-CP-PAGE-1')), findsOneWidget);
+    expect(find.byKey(const Key('coupons-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('coupons-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedPages, [1, 2]);
+    expect(api.lastQuery?['status'], 1);
+    expect(find.byKey(const Key('coupon-card-CP-PAGE-2')), findsOneWidget);
+    expect(find.byKey(const Key('coupons-load-more')), findsNothing);
+  });
+
   testWidgets('coupons screen filters by status and opens detail', (
     tester,
   ) async {

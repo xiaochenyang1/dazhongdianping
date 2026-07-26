@@ -28,20 +28,57 @@ class _CouponsScreenState extends State<CouponsScreen> {
   ];
 
   late int? _status;
-  late Future<List<Coupon>> _coupons;
+  late Future<CouponPage> _coupons;
+  bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
     _status = widget.initialStatus;
-    _coupons = widget.repository.loadCoupons(status: _status);
+    _coupons = widget.repository.loadCouponPage(status: _status);
   }
 
   void _reload() {
-    final future = widget.repository.loadCoupons(status: _status);
+    final future = widget.repository.loadCouponPage(status: _status);
     setState(() {
       _coupons = future;
     });
+  }
+
+  Future<void> _loadMore(CouponPage current) async {
+    if (_loadingMore || !current.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.loadCouponPage(
+        status: _status,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((item) => item.id).toSet();
+      final items = [
+        ...current.items,
+        ...next.items.where((item) => knownIds.add(item.id)),
+      ];
+      setState(() {
+        _coupons = Future.value(
+          CouponPage(
+            items: items,
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多券码失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   void _selectStatus(int? status) {
@@ -88,7 +125,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
               ),
             ),
           Expanded(
-            child: FutureBuilder<List<Coupon>>(
+            child: FutureBuilder<CouponPage>(
               future: _coupons,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
@@ -97,15 +134,35 @@ class _CouponsScreenState extends State<CouponsScreen> {
                 if (snapshot.hasError) {
                   return Center(child: Text('券码加载失败：${snapshot.error}'));
                 }
-                final items = snapshot.data ?? const [];
+                final page = snapshot.data!;
+                final items = page.items;
                 if (items.isEmpty) {
                   return const Center(child: Text('当前筛选下暂无券码'));
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  itemCount: items.length,
+                  itemCount: items.length + (page.hasMore ? 1 : 0),
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
+                    if (index == items.length) {
+                      return Center(
+                        child: OutlinedButton.icon(
+                          key: const Key('coupons-load-more'),
+                          onPressed: _loadingMore
+                              ? null
+                              : () => _loadMore(page),
+                          icon: _loadingMore
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.expand_more),
+                          label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                        ),
+                      );
+                    }
                     final coupon = items[index];
                     final isHighlight =
                         highlight.isNotEmpty && highlight == coupon.code;

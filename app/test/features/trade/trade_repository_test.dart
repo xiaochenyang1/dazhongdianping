@@ -152,6 +152,17 @@ void main() {
     expect(api.query?['status'], 1);
     expect(coupons.single.expireAt, '2026-12-31');
 
+    final couponPage = await repository.loadCouponPage(
+      status: 1,
+      page: 2,
+      pageSize: 12,
+    );
+    expect(api.query, {'page': 2, 'pageSize': 12, 'status': 1});
+    expect(couponPage.page, 2);
+    expect(couponPage.pageSize, 12);
+    expect(couponPage.total, 1);
+    expect(couponPage.hasMore, isFalse);
+
     final orders = await repository.loadOrders(payStatus: 1);
     expect(api.path, '/api/c/v1/orders');
     expect(api.query?['payStatus'], 1);

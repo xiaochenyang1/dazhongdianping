@@ -144,6 +144,22 @@ class Coupon {
   );
 }
 
+class CouponPage {
+  const CouponPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<Coupon> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class CouponDetail extends Coupon {
   const CouponDetail({
     required super.id,
@@ -287,6 +303,16 @@ class TradeRepository {
     int? status,
     int page = 1,
     int pageSize = 30,
+  }) async => (await loadCouponPage(
+    status: status,
+    page: page,
+    pageSize: pageSize,
+  )).items;
+
+  Future<CouponPage> loadCouponPage({
+    int? status,
+    int page = 1,
+    int pageSize = 30,
   }) async {
     final result = await api.getJson(
       '/api/c/v1/coupons',
@@ -296,10 +322,16 @@ class TradeRepository {
         if (status != null) 'status': status,
       },
     );
-    return (result['list'] as List<dynamic>? ?? const [])
+    final items = (result['list'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>()
         .map(Coupon.fromJson)
         .toList();
+    return CouponPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: page,
+      pageSize: pageSize,
+    );
   }
 
   Future<List<TradeOrder>> loadOrders({
