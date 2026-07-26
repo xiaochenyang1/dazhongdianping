@@ -17,17 +17,20 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
   late Future<ConversationPage> _future = widget.repository
       .loadConversationPage();
   bool _loadingMore = false;
+  int _pageRevision = 0;
 
   Future<void> _reload() async {
+    final revision = ++_pageRevision;
+    if (_loadingMore) setState(() => _loadingMore = false);
     try {
       final page = await widget.repository.loadConversationPage();
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         setState(() {
           _future = Future.value(page);
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('刷新会话失败：$error')));
@@ -37,12 +40,15 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
 
   void _retryInitialLoad() {
     setState(() {
+      _pageRevision++;
+      _loadingMore = false;
       _future = widget.repository.loadConversationPage();
     });
   }
 
   Future<void> _loadMore(ConversationPage current) async {
     if (_loadingMore || !current.hasMore) return;
+    final revision = _pageRevision;
     setState(() => _loadingMore = true);
     try {
       final next = await widget.repository.loadConversationPage(
@@ -59,19 +65,21 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
         page: next.page,
         pageSize: next.pageSize,
       );
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         setState(() {
           _future = Future.value(merged);
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多会话失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && revision == _pageRevision) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 

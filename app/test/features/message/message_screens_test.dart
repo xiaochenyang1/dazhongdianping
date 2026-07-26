@@ -18,6 +18,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int blockCalls = 0;
   bool failNextSend = false;
   int sendCalls = 0;
+  final conversationGates = <int, Completer<void>>{};
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -29,6 +30,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       conversationCalls += 1;
       final page = query?['page'] as int? ?? 1;
       conversationPages.add(page);
+      await conversationGates[conversationCalls]?.future;
       if (failNextConversationLoad) {
         failNextConversationLoad = false;
         throw Exception('conversation network unavailable');
@@ -184,6 +186,37 @@ void main() {
     expect(find.text('伦敦小王'), findsOneWidget);
     expect(find.text('巴黎小李'), findsOneWidget);
     expect(find.text('加载更多'), findsNothing);
+  });
+
+  testWidgets('conversation refresh invalidates a pending next page', (
+    tester,
+  ) async {
+    final loadMoreGate = Completer<void>();
+    final api = ScreenMessageApi()..conversationGates[2] = loadMoreGate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversationListScreen(
+          repository: MessageRepository(api),
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('加载更多'));
+    await tester.pump();
+    expect(api.conversationPages, [1, 2]);
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+    expect(api.conversationPages, [1, 2, 1]);
+
+    loadMoreGate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.text('巴黎小李'), findsNothing);
+    expect(find.text('加载更多'), findsOneWidget);
   });
 
   testWidgets('conversation list retries an initial load failure', (
