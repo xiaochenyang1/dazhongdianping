@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
@@ -9,6 +11,10 @@ import 'package:flutter_test/flutter_test.dart';
 class ResetScreenApi implements JsonApi {
   String? path;
   Object? body;
+  int sendCodeRequests = 0;
+  int resetRequests = 0;
+  Completer<void>? sendCodeGate;
+  Completer<void>? resetGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -21,6 +27,8 @@ class ResetScreenApi implements JsonApi {
     this.path = path;
     this.body = body;
     if (path.endsWith('/send-code')) {
+      sendCodeRequests++;
+      await sendCodeGate?.future;
       return {
         'sent': true,
         'expireSeconds': 300,
@@ -28,6 +36,8 @@ class ResetScreenApi implements JsonApi {
         'mockCode': '654321',
       };
     }
+    resetRequests++;
+    await resetGate?.future;
     return {};
   }
 }
@@ -140,5 +150,71 @@ void main() {
 
     expect(api.path, isNull);
     expect(find.text('两次输入的新密码对不上'), findsOneWidget);
+  });
+
+  testWidgets('reset password guards duplicate verification codes', (
+    tester,
+  ) async {
+    final api = ResetScreenApi()..sendCodeGate = Completer<void>();
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ResetPasswordScreen(controller: controller, onReset: () {}),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const Key('reset-account')),
+      'user@example.com',
+    );
+
+    final sendCode = find.text('发送验证码');
+    await tester.tap(sendCode);
+    await tester.tap(sendCode);
+
+    expect(api.sendCodeRequests, 1);
+    api.sendCodeGate!.complete();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('reset password guards duplicate submissions', (tester) async {
+    final api = ResetScreenApi()..resetGate = Completer<void>();
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    var resetCalls = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ResetPasswordScreen(
+          controller: controller,
+          onReset: () => resetCalls++,
+        ),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const Key('reset-account')),
+      'user@example.com',
+    );
+    await tester.enterText(find.byKey(const Key('reset-code')), '654321');
+    await tester.enterText(
+      find.byKey(const Key('reset-password')),
+      'NewPass123',
+    );
+    await tester.enterText(
+      find.byKey(const Key('reset-confirm-password')),
+      'NewPass123',
+    );
+
+    final submit = find.text('重置密码');
+    await tester.tap(submit);
+    await tester.tap(submit);
+
+    expect(api.resetRequests, 1);
+    api.resetGate!.complete();
+    await tester.pumpAndSettle();
+    expect(resetCalls, 1);
   });
 }
