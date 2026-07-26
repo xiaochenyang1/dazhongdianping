@@ -22,7 +22,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   List<ReservationSlot> _slots = const [];
   ReservationSlot? _selectedSlot;
   late DateTime _date;
-  bool _loading = true;
+  bool _loading = false;
   bool _acting = false;
   bool _confirmingCancel = false;
   bool _pickingDate = false;
@@ -41,6 +41,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
       '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}';
 
   Future<void> _load() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -191,6 +192,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
           : _error != null
           ? Center(
               child: FilledButton(
+                key: const Key('reservation-detail-retry'),
                 onPressed: _load,
                 child: const Text('预订加载失败，点击重试'),
               ),

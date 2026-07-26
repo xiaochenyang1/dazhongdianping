@@ -13,6 +13,9 @@ class ReservationDetailApi implements JsonApi {
   int rescheduleRequests = 0;
   Completer<void>? slotGate;
   int slotRequests = 0;
+  bool failFirstDetail = false;
+  Completer<void>? detailGate;
+  int detailRequests = 0;
 
   Map<String, dynamic> detail({String statusText = '已确认'}) => {
     'id': 11,
@@ -71,6 +74,11 @@ class ReservationDetailApi implements JsonApi {
         ],
       };
     }
+    detailRequests += 1;
+    await detailGate?.future;
+    if (failFirstDetail && detailRequests == 1) {
+      throw StateError('reservation unavailable');
+    }
     return detail();
   }
 
@@ -88,6 +96,34 @@ class ReservationDetailApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('reservation detail guards duplicate load retries', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = ReservationDetailApi()..failFirstDetail = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationDetailScreen(
+          repository: ReservationRepository(api),
+          reservationId: 11,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.detailGate = gate;
+
+    final retry = find.byKey(const Key('reservation-detail-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry);
+    await tester.pump();
+    expect(api.detailRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.detailRequests, 2);
+    expect(find.text('柏林茶馆'), findsOneWidget);
+  });
+
   testWidgets('reservation detail cancels after confirmation', (tester) async {
     final api = ReservationDetailApi();
     await tester.pumpWidget(
