@@ -34,6 +34,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
   bool _hasMore = false;
   bool _loadingMore = false;
   String? _loadMoreError;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
   }
 
   void _reload() {
+    final requestId = ++_requestId;
     final future = widget.repository.loadShopReviewPage(
       widget.shopId,
       page: 1,
@@ -59,7 +61,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
     });
     future
         .then((result) {
-          if (!mounted) return;
+          if (!mounted || requestId != _requestId) return;
           setState(() {
             _items
               ..clear()
@@ -73,6 +75,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
 
   Future<void> _loadMore() async {
     if (_loadingMore || !_hasMore) return;
+    final requestId = _requestId;
     setState(() {
       _loadingMore = true;
       _loadMoreError = null;
@@ -86,17 +89,20 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
         minScore: _minScore,
         hasImages: _hasImages,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
       setState(() {
-        _items.addAll(result.items);
+        final knownIds = _items.map((item) => item.id).toSet();
+        _items.addAll(result.items.where((item) => knownIds.add(item.id)));
         _currentPage = result.page;
         _hasMore = result.hasMore;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
       setState(() => _loadMoreError = '$error');
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && requestId == _requestId) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
@@ -245,7 +251,9 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 '商家回复：${item.merchantReply}',
-                                style: const TextStyle(color: Color(0xFF4B5563)),
+                                style: const TextStyle(
+                                  color: Color(0xFF4B5563),
+                                ),
                               ),
                             ],
                             const SizedBox(height: 8),

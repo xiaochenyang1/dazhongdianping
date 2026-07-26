@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_reviews_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -43,6 +45,15 @@ class ReviewsFakeRepository extends BrowseRepository {
           ]
         : const [
             ShopReviewPreview(
+              id: 501,
+              userName: '阿遥',
+              score: 4.8,
+              content: '茶底干净，服务也稳。',
+              likedCount: 2,
+              commentCount: 1,
+              createdAt: '2026-07-01 18:30',
+            ),
+            ShopReviewPreview(
               id: 502,
               userName: '小林',
               score: 4.2,
@@ -59,6 +70,23 @@ class ReviewsFakeRepository extends BrowseRepository {
       total: 2,
       hasMore: page == 1,
     );
+  }
+}
+
+class DeferredReviewsRepository extends ReviewsFakeRepository {
+  final Map<String, Completer<ShopReviewPage>> responses = {};
+
+  @override
+  Future<ShopReviewPage> loadShopReviewPage(
+    int shopId, {
+    int page = 1,
+    int pageSize = 20,
+    String sort = 'latest',
+    double? minScore,
+    bool? hasImages,
+  }) {
+    requests.add({'sort': sort, 'page': page});
+    return (responses[sort] ??= Completer<ShopReviewPage>()).future;
   }
 }
 
@@ -144,11 +172,67 @@ void main() {
     await tester.tap(find.byKey(const Key('shop-reviews-load-more')));
     await tester.pumpAndSettle();
     expect(find.text('周末人有点多。'), findsOneWidget);
+    expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
     expect(repository.requests.last['page'], 2);
 
     await tester.tap(find.text('茶底干净，服务也稳。'));
     await tester.pumpAndSettle();
     expect(find.text('点评详情'), findsOneWidget);
     expect(api.paths, contains('/api/c/v1/reviews/501'));
+  });
+
+  testWidgets('shop reviews screen ignores stale filter responses', (
+    tester,
+  ) async {
+    final repository = DeferredReviewsRepository();
+    await tester.pumpWidget(
+      MaterialApp(home: ShopReviewsScreen(repository: repository, shopId: 7)),
+    );
+
+    await tester.tap(find.byKey(const Key('shop-reviews-sort-popular')));
+    await tester.pump();
+    repository.responses['popular']!.complete(
+      const ShopReviewPage(
+        items: [
+          ShopReviewPreview(
+            id: 602,
+            userName: '热门用户',
+            score: 5,
+            content: '当前筛选结果',
+            likedCount: 8,
+            commentCount: 2,
+            createdAt: '',
+          ),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        hasMore: false,
+      ),
+    );
+    await tester.pump();
+    repository.responses['latest']!.complete(
+      const ShopReviewPage(
+        items: [
+          ShopReviewPreview(
+            id: 601,
+            userName: '旧用户',
+            score: 3,
+            content: '过期筛选结果',
+            likedCount: 0,
+            commentCount: 0,
+            createdAt: '',
+          ),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        hasMore: false,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('当前筛选结果'), findsOneWidget);
+    expect(find.text('过期筛选结果'), findsNothing);
   });
 }
