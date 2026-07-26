@@ -32,6 +32,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
   late Future<ShopBrowseHistoryPage> _history;
   bool _clearing = false;
   bool _loadingMore = false;
+  final Set<int> _removingShopIds = <int>{};
 
   @override
   void initState() {
@@ -98,7 +99,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
   }
 
   Future<void> _clearAll() async {
-    if (_clearing) return;
+    if (_clearing || _removingShopIds.isNotEmpty) return;
     setState(() => _clearing = true);
     try {
       await widget.repository.clearBrowseHistory();
@@ -124,6 +125,8 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
   }
 
   Future<void> _removeItem(ShopBrowseHistoryItem item) async {
+    if (_clearing || _removingShopIds.contains(item.shopId)) return;
+    setState(() => _removingShopIds.add(item.shopId));
     try {
       await widget.repository.removeBrowseHistoryItem(item.shopId);
       if (!mounted) return;
@@ -146,6 +149,10 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('删除足迹失败：$error')));
+    } finally {
+      if (mounted) {
+        setState(() => _removingShopIds.remove(item.shopId));
+      }
     }
   }
 
@@ -156,7 +163,10 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
         title: const Text('我的足迹'),
         actions: [
           TextButton(
-            onPressed: _clearing ? null : _clearAll,
+            key: const Key('browse-history-clear'),
+            onPressed: _clearing || _removingShopIds.isNotEmpty
+                ? null
+                : _clearAll,
             child: Text(_clearing ? '清空中...' : '清空'),
           ),
         ],
@@ -231,9 +241,18 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     trailing: IconButton(
+                      key: Key('browse-history-remove-${item.shopId}'),
                       tooltip: '删除足迹',
-                      onPressed: () => _removeItem(item),
-                      icon: const Icon(Icons.close),
+                      onPressed:
+                          _clearing || _removingShopIds.contains(item.shopId)
+                          ? null
+                          : () => _removeItem(item),
+                      icon: _removingShopIds.contains(item.shopId)
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.close),
                     ),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:flutter/material.dart';
@@ -45,6 +47,8 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
   final List<int> removedShopIds = <int>[];
   final List<int> requestedPages = <int>[];
   bool failNextLoad = false;
+  Completer<void>? clearGate;
+  final Map<int, Completer<void>> removeGates = {};
 
   @override
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
@@ -81,12 +85,14 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
   @override
   Future<void> clearBrowseHistory() async {
     clearCalls += 1;
+    await clearGate?.future;
     history = const [];
   }
 
   @override
   Future<void> removeBrowseHistoryItem(int shopId) async {
     removedShopIds.add(shopId);
+    await removeGates[shopId]?.future;
     history = history.where((item) => item.shopId != shopId).toList();
   }
 }
@@ -154,6 +160,57 @@ void main() {
     expect(repository.requestedPages, [1, 1]);
     expect(find.text('London Hotpot'), findsOneWidget);
     expect(find.textContaining('足迹加载失败'), findsNothing);
+  });
+
+  testWidgets('browse history guards duplicate item removal', (tester) async {
+    final repository = BrowseHistoryFakeRepository()
+      ..removeGates[10001] = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(home: BrowseHistoryScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    final remove = find.byKey(const Key('browse-history-remove-10001'));
+    await tester.tap(remove);
+    await tester.tap(remove);
+    await tester.pump();
+
+    expect(repository.removedShopIds, [10001]);
+    expect(
+      tester
+          .widget<TextButton>(find.byKey(const Key('browse-history-clear')))
+          .onPressed,
+      isNull,
+    );
+    repository.removeGates[10001]!.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('London Hotpot'), findsNothing);
+    expect(find.text('Paris Cafe'), findsOneWidget);
+  });
+
+  testWidgets('browse history blocks item removal while clearing', (
+    tester,
+  ) async {
+    final repository = BrowseHistoryFakeRepository()
+      ..clearGate = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(home: BrowseHistoryScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    final clear = find.byKey(const Key('browse-history-clear'));
+    final remove = find.byKey(const Key('browse-history-remove-10001'));
+    await tester.tap(clear);
+    await tester.tap(clear);
+    await tester.tap(remove, warnIfMissed: false);
+
+    expect(repository.clearCalls, 1);
+    expect(repository.removedShopIds, isEmpty);
+    repository.clearGate!.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('当前区域还没有浏览足迹'), findsOneWidget);
   });
 
   testWidgets('failed browse history refresh preserves loaded items', (
