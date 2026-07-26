@@ -258,6 +258,34 @@ void main() {
     expect(find.textContaining('已创建 stripe 支付请求'), findsOneWidget);
   });
 
+  testWidgets('order detail guards duplicate cancel dialogs', (tester) async {
+    final api = OrderDetailApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cancel = find.byKey(const Key('order-cancel-button'));
+    final cancelAction = tester.widget<OutlinedButton>(cancel).onPressed!;
+    cancelAction();
+    cancelAction();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('取消订单'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('先不取消'));
+    await tester.pumpAndSettle();
+    expect(api.path, '/api/c/v1/orders/10');
+  });
+
   testWidgets('coupon fallback can retry loading the complete detail', (
     tester,
   ) async {

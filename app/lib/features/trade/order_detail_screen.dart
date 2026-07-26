@@ -26,6 +26,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   String? _error;
   bool _loading = true;
   bool _acting = false;
+  bool _confirmingCancel = false;
 
   @override
   void initState() {
@@ -55,23 +56,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _cancel() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('取消订单'),
-        content: const Text('订单取消后将释放库存，确定继续？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('先不取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('确认取消'),
-          ),
-        ],
-      ),
-    );
+    if (_acting || _confirmingCancel) return;
+    setState(() => _confirmingCancel = true);
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('取消订单'),
+          content: const Text('订单取消后将释放库存，确定继续？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('先不取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('确认取消'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _confirmingCancel = false);
+    }
     if (confirmed != true || !mounted) return;
     await _runAction(
       () => widget.repository.cancelOrder(widget.orderId),
@@ -244,7 +252,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             label: const Text('发起支付'),
           ),
           OutlinedButton(
-            onPressed: _acting ? null : _cancel,
+            key: const Key('order-cancel-button'),
+            onPressed: _acting || _confirmingCancel ? null : _cancel,
             child: const Text('取消订单'),
           ),
         ],
