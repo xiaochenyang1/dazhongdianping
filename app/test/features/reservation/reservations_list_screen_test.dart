@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ReservationsApi implements JsonApi {
-  ReservationsApi({this.paginated = false});
+  ReservationsApi({this.paginated = false, this.failFirst = false});
 
   final bool paginated;
+  final bool failFirst;
+  int reservationListRequests = 0;
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
   final List<int> requestedPages = <int>[];
@@ -20,6 +22,10 @@ class ReservationsApi implements JsonApi {
     paths.add(path);
     lastQuery = query;
     if (path == '/api/c/v1/reservations') {
+      reservationListRequests++;
+      if (failFirst && reservationListRequests == 1) {
+        throw StateError('network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedPages.add(page);
       return {
@@ -77,6 +83,25 @@ class ReservationsApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('reservations list retries an initial load failure', (
+    tester,
+  ) async {
+    final api = ReservationsApi(failFirst: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationsListScreen(repository: ReservationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('预订加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('reservations-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.reservationListRequests, 2);
+    expect(find.byKey(const Key('reservation-card-11')), findsOneWidget);
+  });
+
   testWidgets('reservations list loads later filtered pages', (tester) async {
     final api = ReservationsApi(paginated: true);
     await tester.pumpWidget(
