@@ -26,6 +26,7 @@ class CircleSquareScreen extends StatefulWidget {
 class _CircleSquareScreenState extends State<CircleSquareScreen> {
   late Future<CirclePage> page;
   bool loadingMore = false;
+  int requestId = 0;
 
   @override
   void initState() {
@@ -33,8 +34,20 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
     page = widget.repository.loadCirclePage(joinedOnly: widget.showJoinedOnly);
   }
 
+  void reload() {
+    final future = widget.repository.loadCirclePage(
+      joinedOnly: widget.showJoinedOnly,
+    );
+    requestId++;
+    setState(() {
+      page = future;
+      loadingMore = false;
+    });
+  }
+
   Future<void> loadMore(CirclePage current) async {
     if (loadingMore || !current.hasMore) return;
+    final currentRequestId = requestId;
     setState(() => loadingMore = true);
     try {
       final next = await widget.repository.loadCirclePage(
@@ -42,7 +55,7 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || currentRequestId != requestId) return;
       final knownIds = current.items.map((circle) => circle.id).toSet();
       setState(() {
         page = Future.value(
@@ -58,13 +71,15 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && currentRequestId == requestId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多圈子失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => loadingMore = false);
+      if (mounted && currentRequestId == requestId) {
+        setState(() => loadingMore = false);
+      }
     }
   }
 
@@ -75,7 +90,21 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
       future: page,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('圈子加载失败：${snapshot.error}'));
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('圈子加载失败：${snapshot.error}'),
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  key: const Key('circle-square-retry'),
+                  onPressed: reload,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          );
         }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -226,6 +255,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
   late Future<CommunityPostPage> posts;
   bool saving = false;
   bool loadingMorePosts = false;
+  int postsRequestId = 0;
 
   @override
   void initState() {
@@ -233,8 +263,18 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
     posts = widget.repository.loadPostPage(circle.id);
   }
 
+  void reloadPosts() {
+    final future = widget.repository.loadPostPage(circle.id);
+    postsRequestId++;
+    setState(() {
+      posts = future;
+      loadingMorePosts = false;
+    });
+  }
+
   Future<void> loadMorePosts(CommunityPostPage current) async {
     if (loadingMorePosts || !current.hasMore) return;
+    final requestId = postsRequestId;
     setState(() => loadingMorePosts = true);
     try {
       final next = await widget.repository.loadPostPage(
@@ -242,7 +282,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != postsRequestId) return;
       final knownIds = current.items.map((post) => post.id).toSet();
       setState(() {
         posts = Future.value(
@@ -258,13 +298,15 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && requestId == postsRequestId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多帖子失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => loadingMorePosts = false);
+      if (mounted && requestId == postsRequestId) {
+        setState(() => loadingMorePosts = false);
+      }
     }
   }
 
@@ -384,7 +426,19 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
           builder: (_, snapshot) {
             if (!snapshot.hasData) {
               return snapshot.hasError
-                  ? Text('帖子加载失败：${snapshot.error}')
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('帖子加载失败：${snapshot.error}'),
+                        const SizedBox(height: 8),
+                        FilledButton.tonalIcon(
+                          key: const Key('circle-posts-retry'),
+                          onPressed: reloadPosts,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('重试'),
+                        ),
+                      ],
+                    )
                   : const Center(child: CircularProgressIndicator());
             }
             final page = snapshot.data!;
@@ -466,6 +520,7 @@ class CircleMembersScreen extends StatefulWidget {
 class _CircleMembersScreenState extends State<CircleMembersScreen> {
   late Future<CircleMemberPage> page;
   bool loadingMore = false;
+  int requestId = 0;
 
   @override
   void initState() {
@@ -473,8 +528,18 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
     page = widget.repository.loadMemberPage(widget.circle.id);
   }
 
+  void reload() {
+    final future = widget.repository.loadMemberPage(widget.circle.id);
+    requestId++;
+    setState(() {
+      page = future;
+      loadingMore = false;
+    });
+  }
+
   Future<void> loadMore(CircleMemberPage current) async {
     if (loadingMore || !current.hasMore) return;
+    final currentRequestId = requestId;
     setState(() => loadingMore = true);
     try {
       final next = await widget.repository.loadMemberPage(
@@ -482,7 +547,7 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || currentRequestId != requestId) return;
       final knownIds = current.items.map((member) => member.id).toSet();
       setState(() {
         page = Future.value(
@@ -498,13 +563,15 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && currentRequestId == requestId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多成员失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => loadingMore = false);
+      if (mounted && currentRequestId == requestId) {
+        setState(() => loadingMore = false);
+      }
     }
   }
 
@@ -516,7 +583,21 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
       builder: (_, snapshot) {
         if (!snapshot.hasData) {
           return snapshot.hasError
-              ? Center(child: Text('成员加载失败：${snapshot.error}'))
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('成员加载失败：${snapshot.error}'),
+                      const SizedBox(height: 12),
+                      FilledButton.tonalIcon(
+                        key: const Key('circle-members-retry'),
+                        onPressed: reload,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('重试'),
+                      ),
+                    ],
+                  ),
+                )
               : const Center(child: CircularProgressIndicator());
         }
         final current = snapshot.data!;

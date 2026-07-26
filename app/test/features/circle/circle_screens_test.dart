@@ -6,10 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool paginateCircles = false;
+  bool failNextCircles = false;
   final List<int> requestedCirclePages = <int>[];
   bool paginatePosts = false;
+  bool failNextPosts = false;
   final List<int> requestedPostPages = <int>[];
   bool paginateMembers = false;
+  bool failNextMembers = false;
   final List<int> requestedMemberPages = <int>[];
   Map<String, dynamic> circle({bool joined = false, int count = 12}) => {
     'id': 3,
@@ -51,6 +54,10 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       return {'list': const [], 'total': 0};
     }
     if (path.endsWith('/members')) {
+      if (failNextMembers) {
+        failNextMembers = false;
+        throw StateError('member network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedMemberPages.add(page);
       return {
@@ -70,6 +77,10 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path.endsWith('/posts')) {
+      if (failNextPosts) {
+        failNextPosts = false;
+        throw StateError('post network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedPostPages.add(page);
       return {
@@ -85,6 +96,10 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path.endsWith('/3')) return circle();
+    if (failNextCircles) {
+      failNextCircles = false;
+      throw StateError('circle network unavailable');
+    }
     final page = query?['page'] as int? ?? 1;
     requestedCirclePages.add(page);
     return {
@@ -118,6 +133,64 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('circle square retries an initial load failure', (tester) async {
+    final api = CircleScreenApi()..failNextCircles = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleSquareScreen(
+          repository: CircleRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('圈子加载失败'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('circle-square-retry')));
+    await tester.pumpAndSettle();
+    expect(api.requestedCirclePages, [1]);
+    expect(find.text('伦敦生活圈'), findsOneWidget);
+  });
+
+  testWidgets('circle detail retries an initial post failure', (tester) async {
+    final api = CircleScreenApi()..failNextPosts = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleDetailScreen(
+          repository: CircleRepository(api),
+          initial: AppCircle.fromJson(api.circle()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('帖子加载失败'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('circle-posts-retry')));
+    await tester.pumpAndSettle();
+    expect(api.requestedPostPages, [1]);
+    expect(find.text('周末市集指南'), findsOneWidget);
+  });
+
+  testWidgets('circle members retry an initial load failure', (tester) async {
+    final api = CircleScreenApi()..failNextMembers = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleMembersScreen(
+          repository: CircleRepository(api),
+          circle: AppCircle.fromJson(api.circle()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('成员加载失败'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('circle-members-retry')));
+    await tester.pumpAndSettle();
+    expect(api.requestedMemberPages, [1]);
+    expect(find.text('伦敦小王'), findsOneWidget);
+  });
+
   testWidgets('circle members screen loads later members', (tester) async {
     final api = CircleScreenApi()..paginateMembers = true;
     await tester.pumpWidget(
