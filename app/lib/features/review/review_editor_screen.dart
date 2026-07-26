@@ -126,6 +126,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
   }
 
   Future<void> _pickImage() async {
+    if (_uploading) return;
     if (_images.length >= 9) {
       _showMessage('最多上传 9 张图片');
       return;
@@ -155,7 +156,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _uploading) return;
+    if (_saving || _uploading || !_formKey.currentState!.validate()) return;
     final tags = _tagsController.text
         .split(RegExp('[,，]'))
         .map((tag) => tag.trim())

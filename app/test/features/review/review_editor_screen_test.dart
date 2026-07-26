@@ -12,6 +12,8 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
   String? path;
   Object? body;
   String? uploadedFileName;
+  bool failNextSave = false;
+  bool failNextUpload = false;
 
   Map<String, dynamic> detail({String? content}) => {
     'id': 12,
@@ -45,6 +47,10 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     method = 'POST';
     this.path = path;
     this.body = body;
+    if (failNextSave) {
+      failNextSave = false;
+      throw StateError('save unavailable');
+    }
     final payload = body! as Map<String, Object?>;
     return detail(content: payload['content'] as String);
   }
@@ -69,6 +75,10 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     method = 'UPLOAD';
     this.path = path;
     uploadedFileName = fileName;
+    if (failNextUpload) {
+      failNextUpload = false;
+      throw StateError('upload unavailable');
+    }
     return {'url': '/uploads/$fileName'};
   }
 }
@@ -206,6 +216,53 @@ void main() {
     expect(find.textContaining('图片选择失败'), findsOneWidget);
     expect(find.text('已上传 0/9'), findsOneWidget);
     expect(api.method, isNull);
+  });
+
+  testWidgets('review editor reports upload failure and remains usable', (
+    tester,
+  ) async {
+    final api = EditorFakeApi()..failNextUpload = true;
+    await tester.pumpWidget(
+      buildEditor(api: api, imagePicker: FakeReviewImagePicker()),
+    );
+
+    await scrollTo(tester, find.byKey(const Key('review-add-image')));
+    await tester.tap(find.byKey(const Key('review-add-image')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('图片上传失败'), findsOneWidget);
+    expect(find.text('已上传 0/9'), findsOneWidget);
+    expect(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, '添加图片'))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('review editor reports save failure and preserves form data', (
+    tester,
+  ) async {
+    final api = EditorFakeApi()..failNextSave = true;
+    await tester.pumpWidget(buildEditor(api: api));
+
+    await scrollTo(tester, find.byKey(const Key('review-content')));
+    await tester.enterText(
+      find.byKey(const Key('review-content')),
+      '网络恢复后还要继续提交的点评',
+    );
+    await scrollTo(tester, find.byKey(const Key('review-submit')));
+    await tester.tap(find.byKey(const Key('review-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('保存失败'), findsOneWidget);
+    expect(find.text('网络恢复后还要继续提交的点评'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('review-submit')))
+          .onPressed,
+      isNotNull,
+    );
   });
 
   testWidgets('review editor rejects empty content and invalid cost', (
