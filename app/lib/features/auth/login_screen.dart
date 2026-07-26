@@ -27,6 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final codeController = TextEditingController();
   LoginMode mode = LoginMode.password;
   bool success = false;
+  bool sendingCode = false;
   String? localError;
   String? codeHint;
   String? bannedAccount;
@@ -46,6 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
       error is ApiException && error.messageKey == 'auth.user_banned';
 
   Future<void> submit() async {
+    if (widget.controller.busy) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
       setState(() => localError = '请输入邮箱或手机号');
@@ -84,11 +86,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> sendCode() async {
+    if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
       setState(() => localError = '先输入邮箱或手机号');
       return;
     }
+    setState(() => sendingCode = true);
     try {
       final result = await widget.controller.sendCode(
         account: account,
@@ -104,6 +108,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (error) {
       if (mounted) setState(() => localError = '$error');
+    } finally {
+      if (mounted) setState(() => sendingCode = false);
     }
   }
 
@@ -174,8 +180,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelText: '验证码',
                   border: const OutlineInputBorder(),
                   suffixIcon: TextButton(
-                    onPressed: sendCode,
-                    child: const Text('发送验证码'),
+                    onPressed: sendingCode ? null : sendCode,
+                    child: Text(sendingCode ? '发送中...' : '发送验证码'),
                   ),
                 ),
               ),

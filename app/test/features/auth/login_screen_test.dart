@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
@@ -10,6 +12,10 @@ class LoginFakeApi implements JsonApi {
   LoginFakeApi({this.banOnLogin = false});
 
   final bool banOnLogin;
+  int sendCodeRequests = 0;
+  int loginRequests = 0;
+  Completer<void>? sendCodeGate;
+  Completer<void>? loginGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -19,6 +25,18 @@ class LoginFakeApi implements JsonApi {
 
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    if (path.endsWith('/send-code')) {
+      sendCodeRequests++;
+      await sendCodeGate?.future;
+      return {
+        'sent': true,
+        'expireSeconds': 300,
+        'nextRetrySeconds': 60,
+        'mockCode': '123456',
+      };
+    }
+    loginRequests++;
+    await loginGate?.future;
     if (banOnLogin && path.endsWith('/login/password')) {
       throw const ApiException(
         '账号已被封禁',
@@ -162,5 +180,69 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(AppBar, '封禁申诉'), findsOneWidget);
+  });
+
+  testWidgets('login screen guards duplicate verification codes', (
+    tester,
+  ) async {
+    final api = LoginFakeApi()..sendCodeGate = Completer<void>();
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(controller: controller, onAuthenticated: (_) {}),
+      ),
+    );
+    await tester.tap(find.text('验证码登录'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('login-account')),
+      'demo@example.com',
+    );
+
+    final sendCode = find.text('发送验证码');
+    await tester.tap(sendCode);
+    await tester.tap(sendCode);
+
+    expect(api.sendCodeRequests, 1);
+    api.sendCodeGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.textContaining('123456'), findsOneWidget);
+  });
+
+  testWidgets('login screen guards duplicate submissions', (tester) async {
+    final api = LoginFakeApi()..loginGate = Completer<void>();
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    var authenticatedCalls = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(
+          controller: controller,
+          onAuthenticated: (_) => authenticatedCalls++,
+        ),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-account')),
+      'demo@example.com',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'Demo123456',
+    );
+
+    final login = find.text('登录');
+    await tester.tap(login);
+    await tester.tap(login);
+
+    expect(api.loginRequests, 1);
+    api.loginGate!.complete();
+    await tester.pumpAndSettle();
+    expect(authenticatedCalls, 1);
   });
 }
