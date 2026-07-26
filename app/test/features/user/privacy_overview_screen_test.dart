@@ -33,6 +33,12 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   int createExportRequests = 0;
   final Map<int, Completer<void>> downloadExportGates = {};
   final Map<int, int> downloadExportRequests = {};
+  Completer<void>? cancelDeleteGate;
+  int cancelDeleteRequests = 0;
+  Completer<void>? submitDeleteGate;
+  int submitDeleteRequests = 0;
+  Completer<void>? sendDeleteCodeGate;
+  int sendDeleteCodeRequests = 0;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -127,14 +133,20 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
       return _exportTask(10);
     }
     if (path == '/api/c/v1/privacy/delete-tasks/9/cancel') {
+      cancelDeleteRequests++;
+      await cancelDeleteGate?.future;
       deleteStatus = 4;
       return _deleteTask(4);
     }
     if (path == '/api/c/v1/privacy/delete-tasks') {
+      submitDeleteRequests++;
+      await submitDeleteGate?.future;
       deleteStatus = 1;
       return _deleteTask(1);
     }
     if (path == '/api/c/v1/auth/send-code') {
+      sendDeleteCodeRequests++;
+      await sendDeleteCodeGate?.future;
       return {
         'sent': true,
         'expireSeconds': 300,
@@ -569,6 +581,30 @@ void main() {
     expect(find.text('撤销删除申请'), findsNothing);
   });
 
+  testWidgets('privacy center guards duplicate delete cancellation', (
+    tester,
+  ) async {
+    final api = PrivacyScreenApi()..cancelDeleteGate = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cancel = find.byKey(const Key('privacy-cancel-delete-9'));
+    await scrollTo(tester, cancel);
+    await tester.tap(cancel);
+    await tester.tap(cancel);
+
+    expect(api.cancelDeleteRequests, 1);
+    api.cancelDeleteGate!.complete();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('privacy center submits a password-verified delete task', (
     tester,
   ) async {
@@ -610,6 +646,42 @@ void main() {
     });
   });
 
+  testWidgets('privacy center guards duplicate delete submission', (
+    tester,
+  ) async {
+    final api = PrivacyScreenApi(deleteStatus: null)
+      ..submitDeleteGate = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await scrollTo(tester, find.text('密码校验'));
+    await tester.tap(find.text('密码校验'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('privacy-delete-password')),
+      'secret',
+    );
+    await tester.enterText(
+      find.byKey(const Key('privacy-delete-reason')),
+      '不再使用',
+    );
+    final submit = find.byKey(const Key('privacy-delete-submit'));
+    await scrollTo(tester, submit);
+    await tester.tap(submit);
+    await tester.tap(submit);
+
+    expect(api.submitDeleteRequests, 1);
+    api.submitDeleteGate!.complete();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('privacy center sends a deletion verification code', (
     tester,
   ) async {
@@ -640,6 +712,29 @@ void main() {
       'deviceId': 'flutter-app',
     });
     expect(find.textContaining('123456'), findsOneWidget);
+  });
+
+  testWidgets('privacy center guards duplicate deletion codes', (tester) async {
+    final api = PrivacyScreenApi(deleteStatus: null)
+      ..sendDeleteCodeGate = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final send = find.byKey(const Key('privacy-send-delete-code'));
+    await scrollTo(tester, send);
+    await tester.tap(send);
+    await tester.tap(send);
+
+    expect(api.sendDeleteCodeRequests, 1);
+    api.sendDeleteCodeGate!.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('privacy center fits a mobile viewport', (tester) async {

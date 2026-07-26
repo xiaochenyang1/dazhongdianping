@@ -243,6 +243,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   }
 
   Future<void> _cancelDelete(PrivacyDeleteTask task) async {
+    if (_cancellingDelete) return;
     setState(() => _cancellingDelete = true);
     try {
       await widget.repository.cancelDeleteTask(task.id);
@@ -267,6 +268,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   }
 
   Future<void> _submitDelete() async {
+    if (_submittingDelete) return;
     final account = (_selectedAccount ?? _accountController.text).trim();
     final reason = _reasonController.text.trim();
     final code = _codeController.text.trim();
@@ -321,6 +323,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   }
 
   Future<void> _sendDeleteCode() async {
+    if (_sendingDeleteCode) return;
     final account = (_selectedAccount ?? _accountController.text).trim();
     if (account.isEmpty) {
       ScaffoldMessenger.of(
@@ -730,6 +733,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
             if (task.canCancel) ...[
               const SizedBox(height: 12),
               OutlinedButton(
+                key: Key('privacy-cancel-delete-${task.id}'),
                 onPressed: _cancellingDelete ? null : () => _cancelDelete(task),
                 child: Text(_cancellingDelete ? '撤销中...' : '撤销删除申请'),
               ),
@@ -805,6 +809,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton(
+                    key: const Key('privacy-send-delete-code'),
                     onPressed: _sendingDeleteCode ? null : _sendDeleteCode,
                     child: Text(_sendingDeleteCode ? '发送中...' : '发送注销验证码'),
                   ),
