@@ -28,6 +28,13 @@ class _DealsScreenState extends State<DealsScreen> {
     deals = widget.repository.loadShopDeals(widget.shopId);
   }
 
+  void reload() {
+    final future = widget.repository.loadShopDeals(widget.shopId);
+    setState(() {
+      deals = future;
+    });
+  }
+
   Future<void> buy(DealSummary deal) async {
     if (buying) return;
     setState(() => buying = true);
@@ -74,7 +81,21 @@ class _DealsScreenState extends State<DealsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('团购加载失败：${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('团购加载失败：${snapshot.error}'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    key: const Key('deals-retry'),
+                    onPressed: reload,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                ],
+              ),
+            );
           }
           final items = snapshot.data ?? const [];
           if (items.isEmpty) return const Center(child: Text('当前门店暂无团购'));
