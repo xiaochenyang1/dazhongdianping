@@ -18,6 +18,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int blockCalls = 0;
   bool failNextSend = false;
   int sendCalls = 0;
+  bool overlapMessagePages = false;
   final conversationGates = <int, Completer<void>>{};
   Completer<void>? messageLoadGate;
 
@@ -71,6 +72,16 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
           'read': false,
           'createdAt': '10:00',
         },
+        if (overlapMessagePages && page == 2)
+          {
+            'id': 7,
+            'conversationId': 3,
+            'fromUserId': 9,
+            'toUserId': 8,
+            'content': '过期的消息副本',
+            'read': false,
+            'createdAt': '10:00',
+          },
       ],
       'total': 2,
       'page': page,
@@ -363,6 +374,38 @@ void main() {
     expect(find.textContaining('聊天记录加载失败'), findsNothing);
     expect(api.messagePages, [1, 1]);
     expect(api.readCalls, 1);
+  });
+
+  testWidgets('chat keeps current messages when older pages overlap', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi()..overlapMessagePages = true;
+    const conversation = ConversationSummary(
+      id: 3,
+      peerUserId: 9,
+      peerNickname: '伦敦小王',
+      peerAvatar: '',
+      lastMessagePreview: '周末探店？',
+      lastMessageAt: '10:00',
+      unreadCount: 2,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: conversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('加载更早消息'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('周末探店？'), findsOneWidget);
+    expect(find.text('过期的消息副本'), findsNothing);
+    expect(find.text('上周那家也不错'), findsOneWidget);
   });
 
   testWidgets('chat guards duplicate history retries', (tester) async {

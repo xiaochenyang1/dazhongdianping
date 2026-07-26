@@ -290,11 +290,11 @@ class _ChatScreenState extends State<ChatScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      final seen = <int>{};
+      final currentIds = _messages.map((message) => message.id).toSet();
       final merged = <DirectMessage>[
-        ...next.items.reversed,
+        ...next.items.reversed.where((message) => currentIds.add(message.id)),
         ..._messages,
-      ].where((message) => seen.add(message.id)).toList();
+      ];
       if (mounted) {
         setState(() {
           _page = next;
