@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int followingCalls = 0;
   bool failFollow = false;
+  bool paginateTopics = false;
+  final List<int> requestedTopicPages = <int>[];
 
   Map<String, dynamic> topic({bool followed = false, int count = 88}) => {
     'id': 31,
@@ -65,14 +67,24 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path == '/api/c/v1/topics/31') return topic();
+    final page = query?['page'] as int? ?? 1;
+    requestedTopicPages.add(page);
     return {
-      'list': [topic()],
-      'total': 1,
+      'list': [
+        if (!paginateTopics || page == 1)
+          topic()
+        else
+          {...topic(), 'id': 32, 'name': '巴黎甜点'},
+      ],
+      'total': paginateTopics ? 2 : 1,
+      'page': page,
+      'pageSize': paginateTopics ? 1 : 30,
     };
   }
 
   @override
-  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async => {};
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
+      {};
 
   @override
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
@@ -89,6 +101,27 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('topic plaza loads later recommended topics', (tester) async {
+    final api = TopicScreenApi()..paginateTopics = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicPlazaScreen(
+          repository: TopicRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('topic-plaza-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('topic-plaza-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedTopicPages, [1, 2]);
+    expect(find.text('巴黎甜点'), findsOneWidget);
+    expect(find.byKey(const Key('topic-plaza-load-more')), findsNothing);
+  });
+
   testWidgets('topic plaza exposes three tabs and hot score composition', (
     tester,
   ) async {

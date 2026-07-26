@@ -72,34 +72,72 @@ class TopicFollowState {
       );
 }
 
+class TopicPage {
+  const TopicPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+  final List<TopicSummary> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class TopicRepository {
   TopicRepository(this.api);
   final JsonApi api;
 
-  Future<List<TopicSummary>> loadRecommended() => _load(
-    '/api/c/v1/topics',
-    query: const {'sort': 'recommended', 'page': 1, 'pageSize': 30},
-  );
+  Future<List<TopicSummary>> loadRecommended() async =>
+      (await loadRecommendedPage()).items;
+  Future<List<TopicSummary>> loadHot() async => (await loadHotPage()).items;
+  Future<List<TopicSummary>> loadFollowing() async =>
+      (await loadFollowingPage()).items;
 
-  Future<List<TopicSummary>> loadHot() => _load(
+  Future<TopicPage> loadRecommendedPage({int page = 1, int pageSize = 30}) =>
+      _load(
+        '/api/c/v1/topics',
+        query: {'sort': 'recommended', 'page': page, 'pageSize': pageSize},
+        page: page,
+        pageSize: pageSize,
+      );
+
+  Future<TopicPage> loadHotPage({int page = 1, int pageSize = 30}) => _load(
     '/api/c/v1/topics/hot',
-    query: const {'page': 1, 'pageSize': 30},
+    query: {'page': page, 'pageSize': pageSize},
+    page: page,
+    pageSize: pageSize,
   );
 
-  Future<List<TopicSummary>> loadFollowing() => _load(
-    '/api/c/v1/topics/following',
-    query: const {'page': 1, 'pageSize': 30},
-  );
+  Future<TopicPage> loadFollowingPage({int page = 1, int pageSize = 30}) =>
+      _load(
+        '/api/c/v1/topics/following',
+        query: {'page': page, 'pageSize': pageSize},
+        page: page,
+        pageSize: pageSize,
+      );
 
-  Future<List<TopicSummary>> _load(
+  Future<TopicPage> _load(
     String path, {
     required Map<String, Object?> query,
-  }) async =>
-      ((await api.getJson(path, query: query))['list'] as List<dynamic>? ??
-              const [])
-          .cast<Map<String, dynamic>>()
-          .map(TopicSummary.fromJson)
-          .toList();
+    required int page,
+    required int pageSize,
+  }) async {
+    final result = await api.getJson(path, query: query);
+    final items = (result['list'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(TopicSummary.fromJson)
+        .toList();
+    return TopicPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
+  }
 
   Future<TopicSummary> loadDetail(int id) async =>
       TopicSummary.fromJson(await api.getJson('/api/c/v1/topics/$id'));
@@ -119,10 +157,7 @@ class TopicRepository {
     await (api as JsonMutationApi).putJson('/api/c/v1/topics/$id/follow'),
   );
 
-  Future<TopicFollowState> unfollow(int id) async =>
-      TopicFollowState.fromJson(
-        await (api as JsonDeleteApi).deleteJson(
-          '/api/c/v1/topics/$id/follow',
-        ),
-      );
+  Future<TopicFollowState> unfollow(int id) async => TopicFollowState.fromJson(
+    await (api as JsonDeleteApi).deleteJson('/api/c/v1/topics/$id/follow'),
+  );
 }

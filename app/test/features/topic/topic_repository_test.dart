@@ -38,7 +38,8 @@ class TopicApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   }
 
   @override
-  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async => {};
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
+      {};
 
   @override
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
@@ -61,6 +62,11 @@ void main() {
     expect((await repository.loadRecommended()).single.name, '伦敦咖啡');
     expect(api.path, '/api/c/v1/topics');
     expect(api.query?['sort'], 'recommended');
+    final page = await repository.loadRecommendedPage(page: 2, pageSize: 12);
+    expect(api.query, {'sort': 'recommended', 'page': 2, 'pageSize': 12});
+    expect(page.page, 2);
+    expect(page.pageSize, 12);
+    expect(page.total, 1);
     expect((await repository.loadHot()).single.hotScore, 169);
     expect(api.path, '/api/c/v1/topics/hot');
     expect(api.query?['pageSize'], 30);
