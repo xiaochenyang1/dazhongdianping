@@ -143,6 +143,40 @@ void main() {
     });
   });
 
+  testWidgets('reservation detail guards duplicate cancel dialogs', (
+    tester,
+  ) async {
+    final api = ReservationDetailApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationDetailScreen(
+          repository: ReservationRepository(api),
+          reservationId: 11,
+          initialRescheduleDate: DateTime(2026, 7, 21),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cancel = find.byKey(const Key('reservation-cancel-button'));
+    final cancelAction = tester.widget<OutlinedButton>(cancel).onPressed!;
+    cancelAction();
+    cancelAction();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('取消预订'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('先不取消'));
+    await tester.pumpAndSettle();
+    expect(api.path, '/api/c/v1/reservations/11');
+  });
+
   testWidgets('failed reschedule preserves the selected slot for retry', (
     tester,
   ) async {

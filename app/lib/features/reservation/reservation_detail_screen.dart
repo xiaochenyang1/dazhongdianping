@@ -24,6 +24,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   late DateTime _date;
   bool _loading = true;
   bool _acting = false;
+  bool _confirmingCancel = false;
   String? _error;
 
   @override
@@ -56,23 +57,30 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   }
 
   Future<void> _cancel() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('取消预订'),
-        content: const Text('取消时间限制由门店规则决定，确定继续？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('先不取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('确认取消'),
-          ),
-        ],
-      ),
-    );
+    if (_acting || _confirmingCancel) return;
+    setState(() => _confirmingCancel = true);
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('取消预订'),
+          content: const Text('取消时间限制由门店规则决定，确定继续？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('先不取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('确认取消'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _confirmingCancel = false);
+    }
     if (confirmed != true || !mounted) return;
     await _runAction(
       () => widget.repository.cancelReservation(widget.reservationId),
@@ -232,7 +240,8 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
             children: [
               if (reservation.canCancel)
                 OutlinedButton(
-                  onPressed: _acting ? null : _cancel,
+                  key: const Key('reservation-cancel-button'),
+                  onPressed: _acting || _confirmingCancel ? null : _cancel,
                   child: const Text('取消预订'),
                 ),
               if (reservation.canReschedule)
