@@ -284,9 +284,18 @@ class SocialUserSummary {
 }
 
 class SocialUserPage {
-  const SocialUserPage({required this.items, required this.total});
+  const SocialUserPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
   final List<SocialUserSummary> items;
   final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
 }
 
 class FollowResult {
@@ -313,10 +322,12 @@ class UserRepository {
   Future<SocialUserPage> loadRelationships(
     int userId, {
     required bool followers,
+    int page = 1,
+    int pageSize = 50,
   }) async {
     final result = await api.getJson(
       '/api/c/v1/user/$userId/${followers ? 'followers' : 'following'}',
-      query: const {'page': 1, 'pageSize': 50},
+      query: {'page': page, 'pageSize': pageSize},
     );
     final items = (result['list'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>()
@@ -324,7 +335,9 @@ class UserRepository {
         .toList();
     return SocialUserPage(
       items: items,
-      total: result['total'] as int? ?? items.length,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
     );
   }
 

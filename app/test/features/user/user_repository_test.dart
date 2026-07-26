@@ -5,12 +5,14 @@ import 'package:flutter_test/flutter_test.dart';
 class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   String? path;
   Object? body;
+  Map<String, Object?>? query;
 
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
   }) async {
+    this.query = query;
     if (path == '/api/c/v1/user/me') {
       return {
         'id': 8,
@@ -297,6 +299,15 @@ void main() {
       expect(profile.followingCount, 7);
       expect(profile.expertCertificationLabel, '本地达人');
       expect(followers.items.single.nickname, '巴黎小李');
+      final later = await repository.loadRelationships(
+        9,
+        followers: true,
+        page: 2,
+        pageSize: 12,
+      );
+      expect(api.query, {'page': 2, 'pageSize': 12});
+      expect(later.page, 2);
+      expect(later.pageSize, 12);
     },
   );
 

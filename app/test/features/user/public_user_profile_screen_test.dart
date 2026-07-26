@@ -5,17 +5,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
+  bool paginateFollowers = false;
+  final List<int> requestedFollowerPages = <int>[];
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
   }) async {
     if (path.endsWith('/followers')) {
+      final page = query?['page'] as int? ?? 1;
+      requestedFollowerPages.add(page);
       return {
         'list': [
           {
-            'id': 21,
-            'nickname': '巴黎小陈',
+            'id': page == 1 ? 21 : 22,
+            'nickname': page == 1 ? '巴黎小陈' : '柏林小周',
             'avatar': '',
             'signature': '周末探店',
             'level': 3,
@@ -23,7 +27,9 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
             'followedAt': '2026-07-20 10:00:00',
           },
         ],
-        'total': 1,
+        'total': paginateFollowers ? 2 : 1,
+        'page': page,
+        'pageSize': paginateFollowers ? 1 : 50,
       };
     }
     if (path.endsWith('/following')) {
@@ -52,10 +58,7 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       'followerCount': 12,
       'followingCount': 7,
       'followedByCurrentUser': false,
-      'expertCertification': {
-        'code': 'local_expert',
-        'label': '本地达人',
-      },
+      'expertCertification': {'code': 'local_expert', 'label': '本地达人'},
     };
   }
 
@@ -75,6 +78,28 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('relationship list loads later users', (tester) async {
+    final api = SocialProfileApi()..paginateFollowers = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserRelationshipsScreen(
+          repository: UserRepository(api),
+          userId: 9,
+          followers: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('relationships-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('relationships-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedFollowerPages, [1, 2]);
+    expect(find.text('柏林小周'), findsOneWidget);
+    expect(find.byKey(const Key('relationships-load-more')), findsNothing);
+  });
+
   testWidgets(
     'public profile follows explicitly and updates the visible count',
     (tester) async {

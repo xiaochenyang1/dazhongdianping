@@ -202,7 +202,7 @@ class _Metric extends StatelessWidget {
   );
 }
 
-class UserRelationshipsScreen extends StatelessWidget {
+class UserRelationshipsScreen extends StatefulWidget {
   const UserRelationshipsScreen({
     super.key,
     required this.repository,
@@ -218,26 +218,97 @@ class UserRelationshipsScreen extends StatelessWidget {
   final bool canFollow;
   final int? currentUserId;
   final ValueChanged<int>? onMessage;
+
+  @override
+  State<UserRelationshipsScreen> createState() =>
+      _UserRelationshipsScreenState();
+}
+
+class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
+  late Future<SocialUserPage> page;
+  bool loadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    page = widget.repository.loadRelationships(
+      widget.userId,
+      followers: widget.followers,
+    );
+  }
+
+  Future<void> loadMore(SocialUserPage current) async {
+    if (loadingMore || !current.hasMore) return;
+    setState(() => loadingMore = true);
+    try {
+      final next = await widget.repository.loadRelationships(
+        widget.userId,
+        followers: widget.followers,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((user) => user.id).toSet();
+      setState(() {
+        page = Future.value(
+          SocialUserPage(
+            items: [
+              ...current.items,
+              ...next.items.where((user) => knownIds.add(user.id)),
+            ],
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多用户失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => loadingMore = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(followers ? '粉丝' : '关注')),
+    appBar: AppBar(title: Text(widget.followers ? '粉丝' : '关注')),
     body: FutureBuilder<SocialUserPage>(
-      future: repository.loadRelationships(userId, followers: followers),
+      future: page,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return snapshot.hasError
               ? Center(child: Text('关系列表加载失败：${snapshot.error}'))
               : const Center(child: CircularProgressIndicator());
         }
-        final items = snapshot.data!.items;
+        final current = snapshot.data!;
+        final items = current.items;
         if (items.isEmpty) {
-          return Center(child: Text(followers ? '暂无粉丝' : '暂无关注'));
+          return Center(child: Text(widget.followers ? '暂无粉丝' : '暂无关注'));
         }
         return ListView.separated(
           padding: const EdgeInsets.all(16),
-          itemCount: items.length,
+          itemCount: items.length + (current.hasMore ? 1 : 0),
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
+            if (index == items.length) {
+              return Center(
+                child: OutlinedButton.icon(
+                  key: const Key('relationships-load-more'),
+                  onPressed: loadingMore ? null : () => loadMore(current),
+                  icon: loadingMore
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.expand_more),
+                  label: Text(loadingMore ? '加载中...' : '加载更多'),
+                ),
+              );
+            }
             final user = items[index];
             return Card(
               child: ListTile(
@@ -251,11 +322,11 @@ class UserRelationshipsScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => PublicUserProfileScreen(
-                      repository: repository,
+                      repository: widget.repository,
                       userId: user.id,
-                      canFollow: canFollow,
-                      currentUserId: currentUserId,
-                      onMessage: onMessage,
+                      canFollow: widget.canFollow,
+                      currentUserId: widget.currentUserId,
+                      onMessage: widget.onMessage,
                     ),
                   ),
                 ),
