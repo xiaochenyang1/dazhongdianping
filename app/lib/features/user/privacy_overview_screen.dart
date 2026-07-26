@@ -40,6 +40,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   bool _sendingDeleteCode = false;
   final Set<int> _acceptingPolicyTypes = <int>{};
   final Set<int> _loggingOutDeviceIds = <int>{};
+  int _dataRevision = 0;
   String _codeHint = '';
   String _verifyType = 'code';
   String? _selectedAccount;
@@ -80,6 +81,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   }
 
   void _reload() {
+    _dataRevision++;
     final future = _load();
     setState(() {
       _data = future;
@@ -90,13 +92,14 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   Future<void> _loadMoreExports(_PrivacyData current) async {
     final currentPage = current.exportTaskPage;
     if (_loadingMoreExports || !currentPage.hasMore) return;
+    final revision = _dataRevision;
     setState(() => _loadingMoreExports = true);
     try {
       final next = await widget.repository.loadExportTasks(
         page: currentPage.page + 1,
         pageSize: currentPage.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || revision != _dataRevision) return;
       final knownIds = currentPage.items.map((task) => task.id).toSet();
       final merged = PrivacyExportTaskPage(
         items: [
@@ -111,13 +114,15 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         _data = Future.value(current.withExportTaskPage(merged));
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _dataRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多导出任务失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMoreExports = false);
+      if (mounted && revision == _dataRevision) {
+        setState(() => _loadingMoreExports = false);
+      }
     }
   }
 
@@ -131,9 +136,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         locale: widget.localeTag,
       );
       if (!mounted) return;
-      setState(() {
-        _data = _load();
-      });
+      _reload();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('协议同意记录已留痕')));
@@ -156,9 +159,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     try {
       await widget.repository.logoutDevice(device.id);
       if (!mounted) return;
-      setState(() {
-        _data = _load();
-      });
+      _reload();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('设备已停用并清除推送 token')));
@@ -223,9 +224,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     try {
       await widget.repository.createExportTask(modules);
       if (!mounted) return;
-      setState(() {
-        _data = _load();
-      });
+      _reload();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('导出任务已创建，准备好后可下载')));
@@ -248,9 +247,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     try {
       await widget.repository.cancelDeleteTask(task.id);
       if (!mounted) return;
-      setState(() {
-        _data = _load();
-      });
+      _reload();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('删除申请已撤销，账号会继续保留')));
@@ -303,9 +300,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       if (!mounted) return;
       _codeController.clear();
       _passwordController.clear();
-      setState(() {
-        _data = _load();
-      });
+      _reload();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('删除申请已进入冷静期，到期前可以撤销')));

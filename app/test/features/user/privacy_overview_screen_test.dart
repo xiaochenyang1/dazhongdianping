@@ -25,6 +25,7 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   bool deviceLoggedOut = false;
   bool paginateExports = false;
   final List<int> requestedExportPages = <int>[];
+  final Map<int, Completer<void>> exportPageGates = {};
   final Map<int, Completer<void>> policyAcceptGates = {};
   final Map<int, int> policyAcceptRequests = {};
   final Map<int, Completer<void>> deviceLogoutGates = {};
@@ -101,6 +102,7 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
     if (path == '/api/c/v1/privacy/export-tasks') {
       final page = query?['page'] as int? ?? 1;
       requestedExportPages.add(page);
+      await exportPageGates[page]?.future;
       return {
         'list': [_exportTask(page == 1 ? (exportCreated ? 10 : 8) : 7)],
         'total': paginateExports ? 2 : 1,
@@ -554,6 +556,38 @@ void main() {
     expect(api.createExportRequests, 1);
     api.createExportGate!.complete();
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('privacy reload discards an in-flight export page', (
+    tester,
+  ) async {
+    final api = PrivacyScreenApi()..paginateExports = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.exportPageGates[2] = Completer<void>();
+
+    final create = find.byKey(const Key('privacy-create-export'));
+    await scrollTo(tester, create);
+    final createAction = tester.widget<FilledButton>(create).onPressed!;
+    final loadMore = find.byKey(const Key('privacy-exports-load-more'));
+    await scrollTo(tester, loadMore);
+    await tester.tap(loadMore);
+    createAction();
+    await tester.pumpAndSettle();
+
+    expect(find.text('任务 #10'), findsOneWidget);
+    api.exportPageGates[2]!.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('任务 #10'), findsOneWidget);
+    expect(find.text('任务 #7'), findsNothing);
   });
 
   testWidgets('privacy center cancels an active delete task', (tester) async {
