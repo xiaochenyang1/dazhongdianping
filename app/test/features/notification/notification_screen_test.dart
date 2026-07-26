@@ -18,6 +18,7 @@ class NotificationScreenApi implements JsonApi {
     this.expertResult = false,
     this.failFirstLoad = false,
     this.mixedRead = false,
+    this.twoUnread = false,
     this.empty = false,
     this.paginated = false,
     this.paginatedFirstUnread = false,
@@ -32,6 +33,7 @@ class NotificationScreenApi implements JsonApi {
   final bool expertResult;
   final bool failFirstLoad;
   final bool mixedRead;
+  final bool twoUnread;
   final bool empty;
   final bool paginated;
   final bool paginatedFirstUnread;
@@ -40,6 +42,8 @@ class NotificationScreenApi implements JsonApi {
   final requestedPages = <int>[];
   bool failNextLoad = false;
   Completer<void>? ackGate;
+  final ackGates = <int, Completer<void>>{};
+  final loadGates = <int, Completer<void>>{};
   int ackCalls = 0;
   Completer<void>? loadMoreGate;
   int markAllCalls = 0;
@@ -179,6 +183,7 @@ class NotificationScreenApi implements JsonApi {
     loadCount += 1;
     final page = query?['page'] as int? ?? 1;
     requestedPages.add(page);
+    await loadGates[loadCount]?.future;
     if (failNextLoad) {
       failNextLoad = false;
       throw const ApiException('刷新网络暂时不可用');
@@ -211,6 +216,15 @@ class NotificationScreenApi implements JsonApi {
         'total': 2,
       };
     }
+    if (twoUnread) {
+      return {
+        'list': [
+          _item(read: false),
+          {..._item(read: false), 'id': 2, 'title': '第二条未读通知'},
+        ],
+        'total': 2,
+      };
+    }
     return {
       'list': [_item(read: false)],
       'total': 1,
@@ -225,8 +239,10 @@ class NotificationScreenApi implements JsonApi {
       return {'updated': 1, 'count': 0};
     }
     ackCalls += 1;
+    final id = int.parse(path.split('/').reversed.elementAt(1));
     await ackGate?.future;
-    return _item(read: true);
+    await ackGates[id]?.future;
+    return {..._item(read: true), 'id': id};
   }
 }
 
@@ -453,6 +469,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.ackCalls, 1);
     expect(openedCount, 1);
+  });
+
+  testWidgets('concurrent notification acknowledgements preserve both reads', (
+    tester,
+  ) async {
+    final firstGate = Completer<void>();
+    final secondGate = Completer<void>();
+    final api = NotificationScreenApi(twoUnread: true)
+      ..ackGates[1] = firstGate
+      ..ackGates[2] = secondGate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notification-1')));
+    await tester.tap(find.byKey(const Key('notification-2')));
+    expect(api.ackCalls, 2);
+
+    secondGate.complete();
+    await tester.pump();
+    firstGate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('未读'), findsNothing);
   });
 
   testWidgets('direct message notification opens the conversation callback', (
@@ -687,5 +730,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('更早未读通知'), findsOneWidget);
     expect(api.markAllCalls, 0);
+  });
+
+  testWidgets('late refresh cannot restore unread notifications', (
+    tester,
+  ) async {
+    final refreshGate = Completer<void>();
+    final api = NotificationScreenApi()..loadGates[2] = refreshGate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.fling(
+      find.byKey(const Key('notification-list')),
+      const Offset(0, 300),
+      1000,
+    );
+    for (var i = 0; i < 20 && api.loadCount == 1; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(api.loadCount, 2);
+    await tester.tap(find.byKey(const Key('notifications-mark-all')));
+    await tester.pump();
+    expect(find.text('未读'), findsNothing);
+
+    refreshGate.complete();
+    await tester.pumpAndSettle();
+
+    expect(api.loadCount, 2);
+    expect(find.text('未读'), findsNothing);
   });
 }

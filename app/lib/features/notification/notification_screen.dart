@@ -37,6 +37,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   bool _markingAll = false;
   bool _loadingMore = false;
   bool _showUnreadOnly = false;
+  int _pageRevision = 0;
   final Set<int> _handlingNotificationIds = {};
 
   @override
@@ -46,15 +47,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _reload() async {
+    final revision = _pageRevision;
     try {
       final page = await widget.repository.loadPage();
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         setState(() {
           _notifications = Future.value(page);
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('刷新消息失败：$error')));
@@ -64,13 +66,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Future<void> _loadMore(NotificationPage current) async {
     if (_loadingMore || _markingAll || !current.hasMore) return;
+    final revision = _pageRevision;
     setState(() => _loadingMore = true);
     try {
       final next = await widget.repository.loadPage(
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || revision != _pageRevision) return;
       final knownIds = current.items.map((item) => item.id).toSet();
       final combined = [
         ...current.items,
@@ -87,19 +90,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && revision == _pageRevision) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
-  Future<void> _ack(AppNotification notification, NotificationPage page) async {
+  Future<void> _ack(AppNotification notification) async {
+    setState(() {
+      _pageRevision++;
+      _loadingMore = false;
+    });
     try {
       final acknowledged = await widget.repository.ack(notification.id);
+      if (!mounted) return;
+      final page = await _notifications;
       if (!mounted) return;
       setState(() {
         _notifications = Future.value(
@@ -123,14 +134,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
     if (_markingAll || _loadingMore) return;
     final hasUnread = page.items.any((item) => !item.read);
     if (!hasUnread) return;
-    setState(() => _markingAll = true);
+    setState(() {
+      _pageRevision++;
+      _markingAll = true;
+    });
     try {
       await widget.repository.markAllRead();
       if (!mounted) return;
+      final latest = await _notifications;
+      if (!mounted) return;
       setState(() {
         _notifications = Future.value(
-          page.copyWith(
-            items: page.items
+          latest.copyWith(
+            items: latest.items
                 .map(
                   (item) => AppNotification(
                     id: item.id,
@@ -163,15 +179,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  Future<void> _handleTap(
-    AppNotification notification,
-    NotificationPage page,
-  ) async {
+  Future<void> _handleTap(AppNotification notification) async {
     if (_handlingNotificationIds.contains(notification.id)) return;
     setState(() => _handlingNotificationIds.add(notification.id));
     try {
       if (!notification.read) {
-        await _ack(notification, page);
+        await _ack(notification);
       }
       final match = RegExp(r'^/users/(\d+)$').firstMatch(notification.linkUrl);
       final userId = match == null ? null : int.tryParse(match.group(1)!);
@@ -473,7 +486,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           onTap:
                               _handlingNotificationIds.contains(notification.id)
                               ? null
-                              : () => _handleTap(notification, page),
+                              : () => _handleTap(notification),
                         ),
                       );
                     },

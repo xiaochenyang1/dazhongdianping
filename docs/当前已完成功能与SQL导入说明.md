@@ -326,6 +326,7 @@
 - `2026-07-25` `web` 运行 SEO 静态/快照脚本测试 `5` 条、全量测试 `117` 条通过；带本地 H2 后端、`PRERENDER_REGION=CN` 和 `PUBLIC_SITE_URL` 的 `npm run build:prerender:data` 实测生成 15 个路由（7 个静态入口 + 8 个真实详情快照），并生成 `prerender-manifest.json`、`sitemap.xml`、`robots.txt`。该结果不证明常驻 SSR、CN/EU 自动发布、真实域名缓存或目标环境部署已完成。
 - `2026-07-21` 本轮按功能包执行聚焦验证：`web` 的浏览/SEO 相关 `vitest` 用例 `9` 个文件、`38` 条测试通过并完成构建；`merchant-web` 的布局、订单、预订和点评经营用例 `5` 个文件、`14` 条测试通过并完成构建。
 - `backend` 已执行 `PublicBrowseControllerTest`、`UserPrivacyControllerTest`、`CommunityControllerTest`、`NotificationControllerTest` 和 `AdminAuditServiceTest` 聚焦测试；其中帖子正文/评论 `@提醒` 覆盖了审核通过后发通知、评论即时通知、同文去重以及跳过自己/不存在/重名用户。`app` 已执行社区、圈子、话题、首页和消息相关 `flutter test`；`scripts/ci/test-browser-e2e.ps1` 契约通过。
+- Flutter 通知中心以页面版本隔离迟到的刷新/翻页响应，并基于最新页面合并并发单条已读和全部已读结果，避免旧快照恢复未读状态。
 - 上述结果只覆盖本轮拆分提交的功能包，不替代全仓回归、真实 MySQL smoke、目标环境凭证联调或上线演练。
 
 还没做的验证:
