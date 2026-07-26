@@ -19,12 +19,26 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
   bool _loadingMore = false;
 
   Future<void> _reload() async {
-    final future = widget.repository.loadConversationPage();
-    if (!mounted) return;
+    try {
+      final page = await widget.repository.loadConversationPage();
+      if (mounted) {
+        setState(() {
+          _future = Future.value(page);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('刷新会话失败：$error')));
+      }
+    }
+  }
+
+  void _retryInitialLoad() {
     setState(() {
-      _future = future;
+      _future = widget.repository.loadConversationPage();
     });
-    await future;
   }
 
   Future<void> _loadMore(ConversationPage current) async {
@@ -45,7 +59,11 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
         page: next.page,
         pageSize: next.pageSize,
       );
-      if (mounted) setState(() => _future = Future.value(merged));
+      if (mounted) {
+        setState(() {
+          _future = Future.value(merged);
+        });
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -64,7 +82,21 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('会话加载失败：${snapshot.error}'));
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('会话加载失败：${snapshot.error}', textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  key: const Key('conversation-list-retry'),
+                  onPressed: _retryInitialLoad,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重新加载'),
+                ),
+              ],
+            ),
+          );
         }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());

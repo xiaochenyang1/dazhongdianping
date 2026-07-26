@@ -10,6 +10,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   final List<int> messagePages = [];
   bool failNextMessageLoad = false;
   int readCalls = 0;
+  bool failNextConversationLoad = false;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -21,6 +22,10 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       conversationCalls += 1;
       final page = query?['page'] as int? ?? 1;
       conversationPages.add(page);
+      if (failNextConversationLoad) {
+        failNextConversationLoad = false;
+        throw Exception('conversation network unavailable');
+      }
       return {
         'list': [
           {
@@ -162,6 +167,52 @@ void main() {
     expect(find.text('伦敦小王'), findsOneWidget);
     expect(find.text('巴黎小李'), findsOneWidget);
     expect(find.text('加载更多'), findsNothing);
+  });
+
+  testWidgets('conversation list retries an initial load failure', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi()..failNextConversationLoad = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversationListScreen(
+          repository: MessageRepository(api),
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('会话加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('conversation-list-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.conversationPages, [1, 1]);
+    expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.textContaining('会话加载失败'), findsNothing);
+  });
+
+  testWidgets('failed conversation refresh preserves loaded items', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversationListScreen(
+          repository: MessageRepository(api),
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.failNextConversationLoad = true;
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+
+    expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.textContaining('刷新会话失败'), findsOneWidget);
+    expect(api.conversationPages, [1, 1]);
   });
 
   testWidgets('chat loads earlier messages before the current history', (
