@@ -218,7 +218,7 @@ class _ChatScreenState extends State<ChatScreen> {
   List<DirectMessage> _messages = const [];
   MessagePage? _page;
   Object? _loadError;
-  bool _loading = true,
+  bool _loading = false,
       _loadingMore = false,
       _sending = false,
       _actionSaving = false,
@@ -230,6 +230,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _load() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
       _loadError = null;

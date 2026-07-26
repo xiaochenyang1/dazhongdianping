@@ -19,6 +19,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextSend = false;
   int sendCalls = 0;
   final conversationGates = <int, Completer<void>>{};
+  Completer<void>? messageLoadGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -54,6 +55,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     }
     final page = query?['page'] as int? ?? 1;
     messagePages.add(page);
+    await messageLoadGate?.future;
     if (failNextMessageLoad) {
       failNextMessageLoad = false;
       throw Exception('network unavailable');
@@ -335,6 +337,42 @@ void main() {
     expect(find.textContaining('聊天记录加载失败'), findsNothing);
     expect(api.messagePages, [1, 1]);
     expect(api.readCalls, 1);
+  });
+
+  testWidgets('chat guards duplicate history retries', (tester) async {
+    final gate = Completer<void>();
+    final api = ScreenMessageApi()..failNextMessageLoad = true;
+    const conversation = ConversationSummary(
+      id: 3,
+      peerUserId: 9,
+      peerNickname: '伦敦小王',
+      peerAvatar: '',
+      lastMessagePreview: '周末探店？',
+      lastMessageAt: '10:00',
+      unreadCount: 2,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: conversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.messageLoadGate = gate;
+
+    final retry = find.byKey(const Key('chat-history-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry);
+    await tester.pump();
+    expect(api.messagePages, [1, 1]);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.messagePages, [1, 1]);
+    expect(find.text('周末探店？'), findsOneWidget);
   });
 
   testWidgets('chat preserves history when marking messages read fails', (
