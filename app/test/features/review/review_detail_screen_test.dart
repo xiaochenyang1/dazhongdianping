@@ -319,6 +319,37 @@ void main() {
     expect(find.byKey(const Key('review-comment-input')), findsNothing);
   });
 
+  testWidgets('public review guards duplicate report dialogs', (tester) async {
+    final api = DetailFakeApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final report = find.byKey(const Key('review-report-button'));
+    await tester.scrollUntilVisible(
+      report,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final reportAction = tester.widget<OutlinedButton>(report).onPressed!;
+
+    reportAction();
+    reportAction();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('举报点评'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(api.reportRequests, 0);
+  });
+
   testWidgets('public review preserves a failed report reason for retry', (
     tester,
   ) async {

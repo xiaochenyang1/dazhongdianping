@@ -31,6 +31,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   bool _commentSaving = false;
   bool _deleteSaving = false;
   bool _reportSaving = false;
+  bool _reportDialogOpen = false;
   bool _loadingMoreComments = false;
   int _reviewRequestId = 0;
   int _commentRequestId = 0;
@@ -195,31 +196,38 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   }
 
   Future<void> _reportReview() async {
-    if (_reportSaving) return;
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('举报点评'),
-        content: TextField(
-          key: const Key('review-report-reason'),
-          controller: _reportController,
-          maxLength: 200,
-          maxLines: 4,
-          decoration: const InputDecoration(labelText: '举报理由'),
+    if (_reportSaving || _reportDialogOpen) return;
+    setState(() => _reportDialogOpen = true);
+    String? reason;
+    try {
+      reason = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('举报点评'),
+          content: TextField(
+            key: const Key('review-report-reason'),
+            controller: _reportController,
+            maxLength: 200,
+            maxLines: 4,
+            decoration: const InputDecoration(labelText: '举报理由'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(_reportController.text.trim()),
+              child: const Text('提交举报'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(_reportController.text.trim()),
-            child: const Text('提交举报'),
-          ),
-        ],
-      ),
-    );
+      );
+    } finally {
+      if (mounted) setState(() => _reportDialogOpen = false);
+    }
     if (reason == null || reason.isEmpty) return;
     setState(() => _reportSaving = true);
     try {
@@ -503,7 +511,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       key: const Key('review-report-button'),
-                      onPressed: _reportSaving ? null : _reportReview,
+                      onPressed: _reportSaving || _reportDialogOpen
+                          ? null
+                          : _reportReview,
                       icon: const Icon(Icons.flag_outlined),
                       label: const Text('举报'),
                     ),
