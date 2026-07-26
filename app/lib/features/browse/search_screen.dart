@@ -41,6 +41,8 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _panelLoading = false;
   bool _clearingHistory = false;
   bool _loadingMoreHistory = false;
+  final Set<int> _removingHistoryIds = <int>{};
+  int _historyRevision = 0;
   bool _suggestLoading = false;
   int _suggestRequestId = 0;
   String? _panelError;
@@ -195,8 +197,12 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _clearHistory() async {
-    if (_clearingHistory) return;
-    setState(() => _clearingHistory = true);
+    if (_clearingHistory || _removingHistoryIds.isNotEmpty) return;
+    _historyRevision++;
+    setState(() {
+      _clearingHistory = true;
+      _loadingMoreHistory = false;
+    });
     try {
       await widget.repository.clearSearchHistory();
       if (!mounted) return;
@@ -215,6 +221,12 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _removeHistoryItem(SearchHistoryItem item) async {
+    if (_clearingHistory || _removingHistoryIds.contains(item.id)) return;
+    _historyRevision++;
+    setState(() {
+      _removingHistoryIds.add(item.id);
+      _loadingMoreHistory = false;
+    });
     try {
       await widget.repository.removeSearchHistoryItem(item.id);
       if (!mounted) return;
@@ -235,12 +247,23 @@ class _SearchScreenState extends State<SearchScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('删除搜索历史失败：$error')));
+    } finally {
+      if (mounted) {
+        setState(() => _removingHistoryIds.remove(item.id));
+      }
     }
   }
 
   Future<void> _loadMoreHistory() async {
     final current = _historyPage;
-    if (current == null || _loadingMoreHistory || !current.hasMore) return;
+    if (current == null ||
+        _loadingMoreHistory ||
+        _clearingHistory ||
+        _removingHistoryIds.isNotEmpty ||
+        !current.hasMore) {
+      return;
+    }
+    final revision = _historyRevision;
     setState(() => _loadingMoreHistory = true);
     try {
       final next = await widget.repository.loadSearchHistoryPage(
@@ -252,7 +275,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ..._history,
         ...next.items.where((item) => knownIds.add(item.id)),
       ];
-      if (mounted) {
+      if (mounted && revision == _historyRevision) {
         setState(() {
           _history = merged;
           _historyPage = SearchHistoryPage(
@@ -264,13 +287,15 @@ class _SearchScreenState extends State<SearchScreen> {
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _historyRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多搜索历史失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMoreHistory = false);
+      if (mounted && revision == _historyRevision) {
+        setState(() => _loadingMoreHistory = false);
+      }
     }
   }
 
@@ -490,7 +515,10 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
               TextButton(
-                onPressed: _clearingHistory ? null : _clearHistory,
+                key: const Key('search-history-clear'),
+                onPressed: _clearingHistory || _removingHistoryIds.isNotEmpty
+                    ? null
+                    : _clearHistory,
                 child: Text(_clearingHistory ? '清空中...' : '清空'),
               ),
             ],
@@ -507,7 +535,11 @@ class _SearchScreenState extends State<SearchScreen> {
                       _controller.text = item.keyword;
                       _search(item.keyword);
                     },
-                    onDeleted: () => _removeHistoryItem(item),
+                    onDeleted:
+                        _clearingHistory ||
+                            _removingHistoryIds.contains(item.id)
+                        ? null
+                        : () => _removeHistoryItem(item),
                     deleteIcon: const Icon(Icons.close, size: 16),
                   ),
                 )
@@ -519,7 +551,12 @@ class _SearchScreenState extends State<SearchScreen> {
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 key: const Key('search-history-load-more'),
-                onPressed: _loadingMoreHistory ? null : _loadMoreHistory,
+                onPressed:
+                    _loadingMoreHistory ||
+                        _clearingHistory ||
+                        _removingHistoryIds.isNotEmpty
+                    ? null
+                    : _loadMoreHistory,
                 icon: _loadingMoreHistory
                     ? const SizedBox.square(
                         dimension: 16,

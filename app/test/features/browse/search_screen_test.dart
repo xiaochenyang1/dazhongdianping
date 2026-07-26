@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/search_screen.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +31,9 @@ class SearchFakeRepository extends BrowseRepository {
   final List<String> suggestionKeywords = <String>[];
   int clearCalls = 0;
   final List<int> removedHistoryIds = <int>[];
+  Completer<void>? clearHistoryGate;
+  final Map<int, Completer<void>> removeHistoryGates = {};
+  final Map<int, Completer<void>> historyPageGates = {};
 
   @override
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
@@ -97,6 +102,7 @@ class SearchFakeRepository extends BrowseRepository {
     int pageSize = 8,
   }) async {
     requestedHistoryPages.add(page);
+    await historyPageGates[page]?.future;
     final items = paginatedHistory
         ? [
             SearchHistoryItem(
@@ -118,12 +124,14 @@ class SearchFakeRepository extends BrowseRepository {
   @override
   Future<void> clearSearchHistory() async {
     clearCalls += 1;
+    await clearHistoryGate?.future;
     history = const [];
   }
 
   @override
   Future<void> removeSearchHistoryItem(int historyId) async {
     removedHistoryIds.add(historyId);
+    await removeHistoryGates[historyId]?.future;
     history = history.where((item) => item.id != historyId).toList();
   }
 
@@ -309,6 +317,59 @@ void main() {
     expect(repository.clearCalls, 1);
     expect(find.text('cafe'), findsNothing);
     expect(find.text('最近搜过'), findsNothing);
+  });
+
+  testWidgets('guards duplicate search history removal', (tester) async {
+    final repository = SearchFakeRepository(
+      history: const [
+        SearchHistoryItem(
+          id: 11,
+          keyword: 'noodles',
+          region: 'EU',
+          updatedAt: '2026-07-25 10:00:00',
+        ),
+      ],
+    )..removeHistoryGates[11] = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(home: SearchScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    final history = find.byKey(const ValueKey('history-11'));
+    final chip = tester.widget<InputChip>(history);
+    chip.onDeleted!();
+    chip.onDeleted!();
+
+    expect(repository.removedHistoryIds, [11]);
+    repository.removeHistoryGates[11]!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('noodles'), findsNothing);
+  });
+
+  testWidgets('clear invalidates an in-flight search history page', (
+    tester,
+  ) async {
+    final repository = SearchFakeRepository(
+      hotWords: const [SearchHotWord(term: 'Brunch', score: 12)],
+      paginatedHistory: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: SearchScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+    repository.historyPageGates[2] = Completer<void>();
+
+    await tester.tap(find.byKey(const Key('search-history-load-more')));
+    await tester.tap(find.byKey(const Key('search-history-clear')));
+    await tester.pumpAndSettle();
+
+    expect(repository.clearCalls, 1);
+    expect(find.text('noodles'), findsNothing);
+    repository.historyPageGates[2]!.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('cafe'), findsNothing);
+    expect(find.text('noodles'), findsNothing);
   });
 
   testWidgets('shows live search suggestions while typing', (tester) async {
