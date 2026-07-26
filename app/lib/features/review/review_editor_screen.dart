@@ -87,6 +87,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
   }
 
   Future<void> _loadReview() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
       _loadError = null;
@@ -216,6 +217,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
     if (_loadError != null) {
       return Center(
         child: FilledButton.icon(
+          key: const Key('review-editor-retry'),
           onPressed: _loadReview,
           icon: const Icon(Icons.refresh),
           label: const Text('点评加载失败，点击重试'),

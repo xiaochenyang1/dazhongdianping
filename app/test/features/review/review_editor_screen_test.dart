@@ -16,6 +16,9 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
   bool failNextSave = false;
   bool failNextUpload = false;
   int uploadRequests = 0;
+  bool failNextLoad = false;
+  int loadRequests = 0;
+  Completer<void>? loadGate;
 
   Map<String, dynamic> detail({String? content}) => {
     'id': 12,
@@ -41,6 +44,12 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
   }) async {
     method = 'GET';
     this.path = path;
+    loadRequests += 1;
+    await loadGate?.future;
+    if (failNextLoad) {
+      failNextLoad = false;
+      throw StateError('load unavailable');
+    }
     return detail();
   }
 
@@ -205,6 +214,25 @@ void main() {
     expect(api.method, 'PUT');
     expect(api.path, '/api/c/v1/reviews/12');
     expect(api.body, containsPair('content', '修改后的真实体验记录'));
+  });
+
+  testWidgets('review editor guards duplicate load retries', (tester) async {
+    final gate = Completer<void>();
+    final api = EditorFakeApi()..failNextLoad = true;
+    await tester.pumpWidget(buildEditor(api: api, reviewId: 12));
+    await tester.pumpAndSettle();
+    api.loadGate = gate;
+
+    final retry = find.byKey(const Key('review-editor-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry);
+    await tester.pump();
+    expect(api.loadRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.loadRequests, 2);
+    expect(find.text('原来的体验记录'), findsOneWidget);
   });
 
   testWidgets('review editor picks and uploads an image before submission', (
