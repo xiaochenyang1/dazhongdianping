@@ -7,12 +7,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class RankScreenApi implements JsonApi {
+  int loadCount = 0;
+  bool failNextLoad = false;
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
   }) async {
     if (path == '/api/c/v1/ranks') {
+      loadCount += 1;
+      if (failNextLoad) {
+        failNextLoad = false;
+        throw const ApiException('rank network unavailable');
+      }
       return {
         'value': [
           {
@@ -106,6 +114,38 @@ void main() {
     await tester.tap(find.text('上海必吃榜'));
     await tester.pumpAndSettle();
     expect(find.text('榜单详情'), findsOneWidget);
+  });
+
+  testWidgets('rank list retries an initial load failure', (tester) async {
+    final api = RankScreenApi()..failNextLoad = true;
+    await tester.pumpWidget(
+      MaterialApp(home: RankListScreen(repository: RankRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('榜单加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('rank-list-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.loadCount, 2);
+    expect(find.text('上海必吃榜'), findsOneWidget);
+  });
+
+  testWidgets('failed rank refresh preserves loaded ranks', (tester) async {
+    final api = RankScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(home: RankListScreen(repository: RankRepository(api))),
+    );
+    await tester.pumpAndSettle();
+    api.failNextLoad = true;
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+
+    expect(api.loadCount, 2);
+    expect(find.text('上海必吃榜'), findsOneWidget);
+    expect(find.textContaining('刷新榜单失败'), findsOneWidget);
+    expect(find.textContaining('榜单加载失败'), findsNothing);
   });
 
   testWidgets('activity list opens detail', (tester) async {

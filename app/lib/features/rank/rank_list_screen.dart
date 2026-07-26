@@ -41,11 +41,20 @@ class _RankListScreenState extends State<RankListScreen> {
   }
 
   Future<void> _reload() async {
-    final future = widget.repository.loadRanks();
-    setState(() {
-      _ranks = future;
-    });
-    await future;
+    try {
+      final ranks = await widget.repository.loadRanks();
+      if (mounted) {
+        setState(() {
+          _ranks = Future.value(ranks);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('刷新榜单失败：$error')));
+      }
+    }
   }
 
   @override
@@ -65,7 +74,11 @@ class _RankListScreenState extends State<RankListScreen> {
                 children: [
                   Text('榜单加载失败：${snapshot.error}'),
                   const SizedBox(height: 12),
-                  FilledButton(onPressed: _reload, child: const Text('重试')),
+                  FilledButton(
+                    key: const Key('rank-list-retry'),
+                    onPressed: _reload,
+                    child: const Text('重试'),
+                  ),
                 ],
               ),
             );
