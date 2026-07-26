@@ -17,6 +17,7 @@ class NotificationScreenApi implements JsonApi {
     this.failFirstLoad = false,
     this.mixedRead = false,
     this.empty = false,
+    this.paginated = false,
   });
   final bool social;
   final bool directMessage;
@@ -29,8 +30,10 @@ class NotificationScreenApi implements JsonApi {
   final bool failFirstLoad;
   final bool mixedRead;
   final bool empty;
+  final bool paginated;
   String? postedPath;
   int loadCount = 0;
+  final requestedPages = <int>[];
 
   Map<String, dynamic> _item({required bool read}) {
     if (social) {
@@ -165,11 +168,25 @@ class NotificationScreenApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     loadCount += 1;
+    final page = query?['page'] as int? ?? 1;
+    requestedPages.add(page);
     if (failFirstLoad && loadCount == 1) {
       throw const ApiException('网络暂时不可用');
     }
     if (empty) {
       return {'list': const [], 'total': 0};
+    }
+    if (paginated) {
+      return {
+        'list': [
+          {
+            ..._item(read: page == 1),
+            'id': page,
+            'title': page == 1 ? '已读新通知' : '更早未读通知',
+          },
+        ],
+        'total': 2,
+      };
     }
     if (mixedRead) {
       return {
@@ -271,6 +288,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.loadCount, 2);
+  });
+
+  testWidgets('unread filter can load later pages to find unread messages', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi(paginated: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('已读新通知'), findsOneWidget);
+    await tester.tap(find.text('只看未读'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已读新通知'), findsNothing);
+    expect(find.text('继续查找未读消息'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('notifications-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedPages, [1, 2]);
+    expect(find.text('更早未读通知'), findsOneWidget);
+    expect(find.byKey(const Key('notifications-load-more')), findsNothing);
   });
 
   testWidgets('notification screen renders an unread message', (tester) async {

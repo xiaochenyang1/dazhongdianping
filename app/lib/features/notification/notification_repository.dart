@@ -41,21 +41,52 @@ class AppNotification {
   }
 }
 
+class NotificationPage {
+  const NotificationPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<AppNotification> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+
+  NotificationPage copyWith({List<AppNotification>? items}) => NotificationPage(
+    items: items ?? this.items,
+    total: total,
+    page: page,
+    pageSize: pageSize,
+  );
+}
+
 class NotificationRepository {
   NotificationRepository(this.api);
 
   final JsonApi api;
 
-  Future<List<AppNotification>> load() async {
+  Future<List<AppNotification>> load() async => (await loadPage()).items;
+
+  Future<NotificationPage> loadPage({int page = 1, int pageSize = 30}) async {
     final result = await api.getJson(
       '/api/c/v1/notifications',
-      query: const {'page': 1, 'pageSize': 30},
+      query: {'page': page, 'pageSize': pageSize},
     );
     final list = result['list'] as List<dynamic>? ?? const [];
-    return list
+    final items = list
         .cast<Map<String, dynamic>>()
         .map(AppNotification.fromJson)
         .toList();
+    return NotificationPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: page,
+      pageSize: pageSize,
+    );
   }
 
   Future<int> loadUnreadCount() async {

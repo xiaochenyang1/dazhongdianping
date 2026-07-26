@@ -33,36 +33,71 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  late Future<List<AppNotification>> _notifications;
+  late Future<NotificationPage> _notifications;
   bool _markingAll = false;
+  bool _loadingMore = false;
   bool _showUnreadOnly = false;
 
   @override
   void initState() {
     super.initState();
-    _notifications = widget.repository.load();
+    _notifications = widget.repository.loadPage();
   }
 
   Future<void> _reload() async {
-    final future = widget.repository.load();
+    final future = widget.repository.loadPage();
     setState(() {
       _notifications = future;
     });
     await future;
   }
 
-  Future<void> _ack(
-    AppNotification notification,
-    List<AppNotification> notifications,
-  ) async {
+  Future<void> _loadMore(NotificationPage current) async {
+    if (_loadingMore || !current.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.loadPage(
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((item) => item.id).toSet();
+      final combined = [
+        ...current.items,
+        ...next.items.where((item) => knownIds.add(item.id)),
+      ];
+      setState(() {
+        _notifications = Future.value(
+          NotificationPage(
+            items: combined,
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  Future<void> _ack(AppNotification notification, NotificationPage page) async {
     try {
       final acknowledged = await widget.repository.ack(notification.id);
       if (!mounted) return;
       setState(() {
         _notifications = Future.value(
-          notifications
-              .map((item) => item.id == acknowledged.id ? acknowledged : item)
-              .toList(),
+          page.copyWith(
+            items: page.items
+                .map((item) => item.id == acknowledged.id ? acknowledged : item)
+                .toList(),
+          ),
         );
       });
     } catch (error) {
@@ -74,9 +109,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  Future<void> _markAllRead(List<AppNotification> notifications) async {
+  Future<void> _markAllRead(NotificationPage page) async {
     if (_markingAll) return;
-    final hasUnread = notifications.any((item) => !item.read);
+    final hasUnread = page.items.any((item) => !item.read);
     if (!hasUnread) return;
     setState(() => _markingAll = true);
     try {
@@ -84,22 +119,24 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (!mounted) return;
       setState(() {
         _notifications = Future.value(
-          notifications
-              .map(
-                (item) => AppNotification(
-                  id: item.id,
-                  type: item.type,
-                  actorUserId: item.actorUserId,
-                  actorName: item.actorName,
-                  title: item.title,
-                  content: item.content,
-                  linkUrl: item.linkUrl,
-                  aggregateCount: item.aggregateCount,
-                  read: true,
-                  createdAt: item.createdAt,
-                ),
-              )
-              .toList(),
+          page.copyWith(
+            items: page.items
+                .map(
+                  (item) => AppNotification(
+                    id: item.id,
+                    type: item.type,
+                    actorUserId: item.actorUserId,
+                    actorName: item.actorName,
+                    title: item.title,
+                    content: item.content,
+                    linkUrl: item.linkUrl,
+                    aggregateCount: item.aggregateCount,
+                    read: true,
+                    createdAt: item.createdAt,
+                  ),
+                )
+                .toList(),
+          ),
         );
       });
       ScaffoldMessenger.of(
@@ -118,10 +155,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Future<void> _handleTap(
     AppNotification notification,
-    List<AppNotification> notifications,
+    NotificationPage page,
   ) async {
     if (!notification.read) {
-      await _ack(notification, notifications);
+      await _ack(notification, page);
     }
     final match = RegExp(r'^/users/(\d+)$').firstMatch(notification.linkUrl);
     final userId = match == null ? null : int.tryParse(match.group(1)!);
@@ -228,16 +265,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
       appBar: AppBar(
         title: const Text('消息通知'),
         actions: [
-          FutureBuilder<List<AppNotification>>(
+          FutureBuilder<NotificationPage>(
             future: _notifications,
             builder: (context, snapshot) {
-              final notifications = snapshot.data ?? const [];
+              final notifications = snapshot.data?.items ?? const [];
               final unread = notifications.where((item) => !item.read).length;
               return TextButton(
                 key: const Key('notifications-mark-all'),
                 onPressed: unread == 0 || _markingAll
                     ? null
-                    : () => _markAllRead(notifications),
+                    : () => _markAllRead(snapshot.data!),
                 child: Text(
                   _markingAll
                       ? '处理中...'
@@ -267,7 +304,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<AppNotification>>(
+            child: FutureBuilder<NotificationPage>(
               future: _notifications,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
@@ -290,11 +327,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ),
                   );
                 }
-                final notifications = snapshot.data ?? const [];
+                final page = snapshot.data!;
+                final notifications = page.items;
                 final visible = _showUnreadOnly
                     ? notifications.where((item) => !item.read).toList()
                     : notifications;
-                if (visible.isEmpty) {
+                if (visible.isEmpty && !page.hasMore) {
                   return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -319,9 +357,34 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     key: const Key('notification-list'),
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
-                    itemCount: visible.length,
+                    itemCount: visible.length + (page.hasMore ? 1 : 0),
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
+                      if (index == visible.length) {
+                        return Center(
+                          child: OutlinedButton.icon(
+                            key: const Key('notifications-load-more'),
+                            onPressed: _loadingMore
+                                ? null
+                                : () => _loadMore(page),
+                            icon: _loadingMore
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.expand_more),
+                            label: Text(
+                              _loadingMore
+                                  ? '加载中...'
+                                  : _showUnreadOnly && visible.isEmpty
+                                  ? '继续查找未读消息'
+                                  : '加载更多',
+                            ),
+                          ),
+                        );
+                      }
                       final notification = visible[index];
                       return Card(
                         child: ListTile(
@@ -386,7 +449,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               ],
                             ),
                           ),
-                          onTap: () => _handleTap(notification, notifications),
+                          onTap: () => _handleTap(notification, page),
                         ),
                       );
                     },

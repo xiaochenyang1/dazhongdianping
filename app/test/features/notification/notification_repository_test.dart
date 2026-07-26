@@ -4,12 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 class NotificationFakeApi implements JsonApi {
   String? path;
+  Map<String, Object?>? query;
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
   }) async {
     this.path = path;
+    this.query = query;
     if (path == '/api/c/v1/notifications/unread-count') {
       return {'count': 4};
     }
@@ -66,6 +68,21 @@ void main() {
     expect(api.path, '/api/c/v1/notifications/1/ack');
     expect(read.read, isTrue);
     expect(read.aggregateCount, 3);
+  });
+
+  test('notification repository preserves page metadata', () async {
+    final api = NotificationFakeApi();
+    final repository = NotificationRepository(api);
+
+    final page = await repository.loadPage(page: 2, pageSize: 10);
+
+    expect(api.path, '/api/c/v1/notifications');
+    expect(api.query, {'page': 2, 'pageSize': 10});
+    expect(page.page, 2);
+    expect(page.pageSize, 10);
+    expect(page.total, 1);
+    expect(page.hasMore, isFalse);
+    expect(page.items.single.id, 1);
   });
 
   test('notification repository marks all notifications read', () async {
