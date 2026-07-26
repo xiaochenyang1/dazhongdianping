@@ -27,6 +27,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _loading = true;
   bool _acting = false;
   bool _confirmingCancel = false;
+  bool _refundDialogOpen = false;
 
   @override
   void initState() {
@@ -88,33 +89,41 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _refund() async {
-    if (_acting) return;
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('申请退款'),
-        content: TextField(
-          key: const Key('order-refund-reason'),
-          controller: _refundReasonController,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: '退款原因'),
+    if (_acting || _refundDialogOpen) return;
+    setState(() => _refundDialogOpen = true);
+    String? reason;
+    try {
+      reason = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('申请退款'),
+          content: TextField(
+            key: const Key('order-refund-reason'),
+            controller: _refundReasonController,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: '退款原因'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(
+                context,
+              ).pop(_refundReasonController.text.trim()),
+              child: const Text('提交申请'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(context).pop(_refundReasonController.text.trim()),
-            child: const Text('提交申请'),
-          ),
-        ],
-      ),
-    );
-    if (reason == null || reason.isEmpty || !mounted) return;
+      );
+    } finally {
+      if (mounted) setState(() => _refundDialogOpen = false);
+    }
+    final refundReason = reason;
+    if (refundReason == null || refundReason.isEmpty || !mounted) return;
     final succeeded = await _runAction(
-      () => widget.repository.refundOrder(widget.orderId, reason: reason),
+      () => widget.repository.refundOrder(widget.orderId, reason: refundReason),
       '退款申请已提交',
     );
     if (succeeded) _refundReasonController.text = '行程有变';
@@ -263,7 +272,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 14),
           OutlinedButton.icon(
             key: const Key('order-refund-button'),
-            onPressed: _acting ? null : _refund,
+            onPressed: _acting || _refundDialogOpen ? null : _refund,
             icon: const Icon(Icons.currency_exchange),
             label: const Text('申请退款'),
           ),

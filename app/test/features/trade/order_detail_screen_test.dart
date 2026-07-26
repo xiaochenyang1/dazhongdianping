@@ -286,6 +286,34 @@ void main() {
     expect(api.path, '/api/c/v1/orders/10');
   });
 
+  testWidgets('order detail guards duplicate refund dialogs', (tester) async {
+    final api = OrderDetailApi(paid: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final refund = find.byKey(const Key('order-refund-button'));
+    final refundAction = tester.widget<OutlinedButton>(refund).onPressed!;
+    refundAction();
+    refundAction();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('申请退款'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(api.refundRequests, 0);
+  });
+
   testWidgets('coupon fallback can retry loading the complete detail', (
     tester,
   ) async {
