@@ -9,6 +9,7 @@ class CommunityFakeApi
   String? method;
   String? path;
   Object? body;
+  Map<String, Object?>? query;
 
   Map<String, dynamic> get post => {
     'id': 7,
@@ -40,6 +41,7 @@ class CommunityFakeApi
   }) async {
     method = 'GET';
     this.path = path;
+    this.query = query;
     if (path.endsWith('/comments')) {
       return {
         'list': [
@@ -190,6 +192,12 @@ void main() {
     final feed = await repository.loadFeed();
     expect(api.path, '/api/c/v1/posts');
     expect(feed.single.title, '伦敦周末市场指南');
+
+    final page = await repository.loadFeedPage(page: 2, pageSize: 12);
+    expect(api.query, {'page': 2, 'pageSize': 12});
+    expect(page.page, 2);
+    expect(page.pageSize, 12);
+    expect(page.total, 1);
 
     final owned = await repository.loadOwnedPost(7);
     expect(api.path, '/api/c/v1/user/posts/7');

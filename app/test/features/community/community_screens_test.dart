@@ -17,6 +17,8 @@ class CommunityScreenApi
   Object? body;
   bool reposted = false;
   int repostCount = 2;
+  bool paginateFeed = false;
+  final List<int> requestedFeedPages = <int>[];
 
   Map<String, dynamic> get post => {
     'id': 7,
@@ -82,9 +84,18 @@ class CommunityScreenApi
       };
     }
     if (path == '/api/c/v1/posts' || path == '/api/c/v1/posts/following') {
+      final page = query?['page'] as int? ?? 1;
+      requestedFeedPages.add(page);
       return {
-        'list': [post],
-        'total': 1,
+        'list': [
+          if (!paginateFeed || page == 1)
+            post
+          else
+            {...post, 'id': 8, 'title': '更早的社区帖子'},
+        ],
+        'total': paginateFeed ? 2 : 1,
+        'page': page,
+        'pageSize': paginateFeed ? 1 : 30,
       };
     }
     return post;
@@ -196,6 +207,27 @@ class CommunityTopicApi extends CommunityScreenApi {
 }
 
 void main() {
+  testWidgets('community feed loads later pages', (tester) async {
+    final api = CommunityScreenApi()..paginateFeed = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityFeedScreen(
+          repository: CommunityRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('community-feed-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('community-feed-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedFeedPages, [1, 2]);
+    expect(find.text('更早的社区帖子'), findsOneWidget);
+    expect(find.byKey(const Key('community-feed-load-more')), findsNothing);
+  });
+
   testWidgets('community feed opens the topic plaza entry', (tester) async {
     final api = CommunityTopicApi();
     await tester.pumpWidget(

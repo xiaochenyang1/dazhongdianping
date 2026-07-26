@@ -205,25 +205,61 @@ class CommunityImageUpload {
   final String contentType;
 }
 
+class CommunityPostPage {
+  const CommunityPostPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+  final List<CommunityPost> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class CommunityRepository {
   CommunityRepository(this.api);
   final JsonApi api;
 
-  Future<List<CommunityPost>> loadFeed() => _loadPage('/api/c/v1/posts');
+  Future<List<CommunityPost>> loadFeed() async => (await loadFeedPage()).items;
   Future<List<CommunityPost>> loadFollowingFeed() =>
-      _loadPage('/api/c/v1/posts/following');
+      loadFollowingFeedPage().then((page) => page.items);
   Future<List<CommunityPost>> loadOwnedPosts() =>
-      _loadPage('/api/c/v1/user/posts');
+      loadOwnedPostPage().then((page) => page.items);
 
-  Future<List<CommunityPost>> _loadPage(String path) async {
+  Future<CommunityPostPage> loadFeedPage({int page = 1, int pageSize = 30}) =>
+      _loadPage('/api/c/v1/posts', page: page, pageSize: pageSize);
+  Future<CommunityPostPage> loadFollowingFeedPage({
+    int page = 1,
+    int pageSize = 30,
+  }) => _loadPage('/api/c/v1/posts/following', page: page, pageSize: pageSize);
+  Future<CommunityPostPage> loadOwnedPostPage({
+    int page = 1,
+    int pageSize = 30,
+  }) => _loadPage('/api/c/v1/user/posts', page: page, pageSize: pageSize);
+
+  Future<CommunityPostPage> _loadPage(
+    String path, {
+    required int page,
+    required int pageSize,
+  }) async {
     final result = await api.getJson(
       path,
-      query: const {'page': 1, 'pageSize': 30},
+      query: {'page': page, 'pageSize': pageSize},
     );
-    return (result['list'] as List<dynamic>? ?? const [])
+    final items = (result['list'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>()
         .map(CommunityPost.fromJson)
         .toList();
+    return CommunityPostPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
   }
 
   Future<CommunityPost> loadPost(int postId) async =>
@@ -281,16 +317,12 @@ class CommunityRepository {
     int postId,
     String content, {
     int? replyTo,
-  }) async =>
-      CommunityComment.fromJson(
-        await api.postJson(
-          '/api/c/v1/posts/$postId/comments',
-          body: {
-            'content': content,
-            if (replyTo != null) 'replyTo': replyTo,
-          },
-        ),
-      );
+  }) async => CommunityComment.fromJson(
+    await api.postJson(
+      '/api/c/v1/posts/$postId/comments',
+      body: {'content': content, if (replyTo != null) 'replyTo': replyTo},
+    ),
+  );
 
   Future<void> reportPost(int postId, String reason) async {
     await api.postJson(

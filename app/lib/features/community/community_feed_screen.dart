@@ -29,20 +29,21 @@ class CommunityFeedScreen extends StatefulWidget {
 }
 
 class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
-  late Future<List<CommunityPost>> _posts;
-  Future<List<CommunityPost>>? _followingPosts;
+  late Future<CommunityPostPage> _posts;
+  Future<CommunityPostPage>? _followingPosts;
+  bool _loadingMore = false;
   int _selectedTab = 0;
   @override
   void initState() {
     super.initState();
-    _posts = widget.repository.loadFeed();
+    _posts = widget.repository.loadFeedPage();
   }
 
   void _reload() => setState(() {
     if (_selectedTab == 0) {
-      _posts = widget.repository.loadFeed();
+      _posts = widget.repository.loadFeedPage();
     } else if (widget.canInteract) {
-      _followingPosts = widget.repository.loadFollowingFeed();
+      _followingPosts = widget.repository.loadFollowingFeedPage();
     }
   });
 
@@ -50,9 +51,52 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
     setState(() {
       _selectedTab = index;
       if (index == 1 && widget.canInteract && _followingPosts == null) {
-        _followingPosts = widget.repository.loadFollowingFeed();
+        _followingPosts = widget.repository.loadFollowingFeedPage();
       }
     });
+  }
+
+  Future<void> _loadMore(CommunityPostPage current) async {
+    if (_loadingMore || !current.hasMore) return;
+    final following = _selectedTab == 1;
+    setState(() => _loadingMore = true);
+    try {
+      final next = following
+          ? await widget.repository.loadFollowingFeedPage(
+              page: current.page + 1,
+              pageSize: current.pageSize,
+            )
+          : await widget.repository.loadFeedPage(
+              page: current.page + 1,
+              pageSize: current.pageSize,
+            );
+      if (!mounted) return;
+      final knownIds = current.items.map((post) => post.id).toSet();
+      final merged = CommunityPostPage(
+        items: [
+          ...current.items,
+          ...next.items.where((post) => knownIds.add(post.id)),
+        ],
+        total: next.total,
+        page: next.page,
+        pageSize: current.pageSize,
+      );
+      setState(() {
+        if (following) {
+          _followingPosts = Future.value(merged);
+        } else {
+          _posts = Future.value(merged);
+        }
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多帖子失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   @override
@@ -131,7 +175,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
           ? const Center(child: Text('登录后查看关注流，关注的人更新时会出现在这里。'))
           : RefreshIndicator(
               onRefresh: () async => _reload(),
-              child: FutureBuilder<List<CommunityPost>>(
+              child: FutureBuilder<CommunityPostPage>(
                 future: _selectedTab == 0 ? _posts : _followingPosts,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
@@ -140,12 +184,32 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                   if (snapshot.hasError) {
                     return Center(child: Text('社区加载失败：${snapshot.error}'));
                   }
-                  final posts = snapshot.data ?? const [];
+                  final page = snapshot.data!;
+                  final posts = page.items;
                   return ListView.separated(
                     padding: const EdgeInsets.all(16),
-                    itemCount: posts.length,
+                    itemCount: posts.length + (page.hasMore ? 1 : 0),
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
+                      if (index == posts.length) {
+                        return Center(
+                          child: OutlinedButton.icon(
+                            key: const Key('community-feed-load-more'),
+                            onPressed: _loadingMore
+                                ? null
+                                : () => _loadMore(page),
+                            icon: _loadingMore
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.expand_more),
+                            label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                          ),
+                        );
+                      }
                       final post = posts[index];
                       return Card(
                         child: InkWell(
