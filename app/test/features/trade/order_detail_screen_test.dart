@@ -7,6 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class OrderDetailApi implements JsonApi {
+  OrderDetailApi({this.failFirstCoupon = false});
+
+  final bool failFirstCoupon;
+  int couponRequests = 0;
   String? path;
 
   Map<String, dynamic> order({int status = 1}) => {
@@ -31,6 +35,10 @@ class OrderDetailApi implements JsonApi {
   }) async {
     this.path = path;
     if (path.startsWith('/api/c/v1/coupons/')) {
+      couponRequests++;
+      if (failFirstCoupon && couponRequests == 1) {
+        throw StateError('network unavailable');
+      }
       return {
         'id': 21,
         'orderId': 10,
@@ -61,6 +69,27 @@ class OrderDetailApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('coupon detail retries an initial load failure', (tester) async {
+    final api = OrderDetailApi(failFirstCoupon: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CouponDetailScreen(
+          repository: TradeRepository(api),
+          code: 'CP-DEMO-2026',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('券码详情加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('coupon-detail-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.couponRequests, 2);
+    expect(find.text('CP-DEMO-2026'), findsOneWidget);
+    expect(find.textContaining('由商户核销'), findsOneWidget);
+  });
+
   testWidgets('order detail shows honest payment state and cancels order', (
     tester,
   ) async {

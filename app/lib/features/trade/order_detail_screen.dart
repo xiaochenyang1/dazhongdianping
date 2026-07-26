@@ -309,6 +309,13 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
     _detail = widget.repository.loadCouponDetail(widget.code);
   }
 
+  void _reload() {
+    final future = widget.repository.loadCouponDetail(widget.code);
+    setState(() {
+      _detail = future;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -321,13 +328,26 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError && widget.initialCoupon == null) {
-            return Center(child: Text('券码详情加载失败：${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('券码详情加载失败：${snapshot.error}'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    key: const Key('coupon-detail-retry'),
+                    onPressed: _reload,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                ],
+              ),
+            );
           }
           final detail = snapshot.data;
           final coupon = detail ?? widget.initialCoupon!;
           final usable = detail?.usable;
-          final verifyHint = detail?.verifyHint ??
-              '券码由商户核销；用户端不提供自助核销，避免误操作。';
+          final verifyHint = detail?.verifyHint ?? '券码由商户核销；用户端不提供自助核销，避免误操作。';
           final qrImageUrl = detail?.qrImageUrl ?? '';
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -426,9 +446,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                           style: TextStyle(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          detail.rules.isEmpty ? '暂无补充规则' : detail.rules,
-                        ),
+                        Text(detail.rules.isEmpty ? '暂无补充规则' : detail.rules),
                       ],
                     ),
                   ),
