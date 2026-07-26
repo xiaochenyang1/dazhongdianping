@@ -157,6 +157,17 @@ void main() {
     expect(api.query?['payStatus'], 1);
     expect(orders.single.orderNo, 'O10');
 
+    final orderPage = await repository.loadOrderPage(
+      payStatus: 1,
+      page: 2,
+      pageSize: 12,
+    );
+    expect(api.query, {'page': 2, 'pageSize': 12, 'payStatus': 1});
+    expect(orderPage.page, 2);
+    expect(orderPage.pageSize, 12);
+    expect(orderPage.total, 1);
+    expect(orderPage.hasMore, isFalse);
+
     final detail = await repository.loadCouponDetail('CP-DEMO');
     expect(api.path, '/api/c/v1/coupons/CP-DEMO');
     expect(detail.usable, isTrue);

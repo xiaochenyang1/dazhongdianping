@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class OrdersApi implements JsonApi {
+  OrdersApi({this.paginated = false});
+
+  final bool paginated;
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
+  final List<int> requestedPages = <int>[];
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -16,12 +20,14 @@ class OrdersApi implements JsonApi {
     paths.add(path);
     lastQuery = query;
     if (path == '/api/c/v1/orders') {
+      final page = query?['page'] as int? ?? 1;
+      requestedPages.add(page);
       return {
         'list': [
           {
-            'id': 10,
-            'orderNo': 'OD-10',
-            'dealTitle': '双人晚餐套餐',
+            'id': paginated ? 9 + page : 10,
+            'orderNo': 'OD-${paginated ? 9 + page : 10}',
+            'dealTitle': page == 1 ? '双人晚餐套餐' : '更早的订单',
             'shopName': '柏林茶馆',
             'quantity': 1,
             'unitPrice': 29.9,
@@ -33,7 +39,7 @@ class OrdersApi implements JsonApi {
             'coupons': const [],
           },
         ],
-        'total': 1,
+        'total': paginated ? 2 : 1,
       };
     }
     if (path == '/api/c/v1/orders/10') {
@@ -61,6 +67,29 @@ class OrdersApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('orders screen loads later filtered pages', (tester) async {
+    final api = OrdersApi(paginated: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OrdersScreen(
+          repository: TradeRepository(api),
+          initialPayStatus: 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('order-card-10')), findsOneWidget);
+    expect(find.byKey(const Key('orders-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('orders-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedPages, [1, 2]);
+    expect(api.lastQuery?['payStatus'], 1);
+    expect(find.byKey(const Key('order-card-11')), findsOneWidget);
+    expect(find.byKey(const Key('orders-load-more')), findsNothing);
+  });
+
   testWidgets('orders screen filters by pay status and opens detail', (
     tester,
   ) async {

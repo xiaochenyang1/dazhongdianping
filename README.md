@@ -346,6 +346,7 @@ npm run build
 
 ## 已验证
 
+- `2026-07-26` Flutter 订单历史已接后端分页：仓储新增带 `page/pageSize/total` 的订单页模型，同时保留原列表 API；订单页可按当前支付状态加载更早记录、合并时按订单 ID 去重，切换筛选会重新从第一页开始，加载失败保留已有结果并提示。交易仓储/订单页聚焦测试 `5` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `189` 条通过。
 - `2026-07-26` Flutter 通知中心已接后端分页：仓储保留 `page/pageSize/total`，列表按需加载更早通知并按 ID 去重；“只看未读”在当前页没有结果但后端仍有下一页时，可继续翻页查找未读消息，加载失败不会清空已加载内容。通知仓储与页面聚焦测试 `22` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `188` 条通过。
 - `2026-07-26` Flutter 通知中心补齐主动同步与未读筛选：新增“全部 / 只看未读”分段筛选、下拉刷新、空状态刷新，以及加载失败后的明确错误和重试入口；既有通知已读、全部已读和业务详情跳转保持不变。通知页面测试增至 `17` 条，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `186` 条通过。
 - `2026-07-26` Flutter 静态分析、列表刷新和全量测试基线已修复：预订仓储测试 fake 补齐查询参数，移除不可达 switch 分支和多余类型转换；订单、券、预订、榜单、活动五个列表不再让 `setState` 回调意外返回 `Future`，初始化也不再触发多余状态更新。同步校正懒加载视口、剪贴板平台通道、SnackBar 队列、本人点评 fixture 与帖子删除导航场景的测试。`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `182` 条通过。

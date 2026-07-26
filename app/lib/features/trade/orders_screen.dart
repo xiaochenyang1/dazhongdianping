@@ -26,20 +26,57 @@ class _OrdersScreenState extends State<OrdersScreen> {
   ];
 
   late int? _payStatus;
-  late Future<List<TradeOrder>> _orders;
+  late Future<TradeOrderPage> _orders;
+  bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
     _payStatus = widget.initialPayStatus;
-    _orders = widget.repository.loadOrders(payStatus: _payStatus);
+    _orders = widget.repository.loadOrderPage(payStatus: _payStatus);
   }
 
   void _reload() {
-    final future = widget.repository.loadOrders(payStatus: _payStatus);
+    final future = widget.repository.loadOrderPage(payStatus: _payStatus);
     setState(() {
       _orders = future;
     });
+  }
+
+  Future<void> _loadMore(TradeOrderPage current) async {
+    if (_loadingMore || !current.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.loadOrderPage(
+        payStatus: _payStatus,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((item) => item.id).toSet();
+      final items = [
+        ...current.items,
+        ...next.items.where((item) => knownIds.add(item.id)),
+      ];
+      setState(() {
+        _orders = Future.value(
+          TradeOrderPage(
+            items: items,
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多订单失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   void _selectPayStatus(int? payStatus) {
@@ -74,7 +111,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<TradeOrder>>(
+            child: FutureBuilder<TradeOrderPage>(
               future: _orders,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
@@ -83,15 +120,35 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 if (snapshot.hasError) {
                   return Center(child: Text('订单加载失败：${snapshot.error}'));
                 }
-                final items = snapshot.data ?? const [];
+                final page = snapshot.data!;
+                final items = page.items;
                 if (items.isEmpty) {
                   return const Center(child: Text('当前筛选下暂无订单'));
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  itemCount: items.length,
+                  itemCount: items.length + (page.hasMore ? 1 : 0),
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
+                    if (index == items.length) {
+                      return Center(
+                        child: OutlinedButton.icon(
+                          key: const Key('orders-load-more'),
+                          onPressed: _loadingMore
+                              ? null
+                              : () => _loadMore(page),
+                          icon: _loadingMore
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.expand_more),
+                          label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                        ),
+                      );
+                    }
                     final order = items[index];
                     return Card(
                       key: Key('order-card-${order.id}'),
