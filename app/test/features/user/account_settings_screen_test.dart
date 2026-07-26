@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class AccountSettingsApi implements JsonApi, JsonMutationApi {
+  AccountSettingsApi({this.failFirst = false});
+
+  final bool failFirst;
+  int profileRequests = 0;
   String? path;
   Object? body;
   final List<String> paths = [];
@@ -34,6 +38,10 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
   }) async {
     this.path = path;
     paths.add(path);
+    profileRequests++;
+    if (failFirst && profileRequests == 1) {
+      throw StateError('network unavailable');
+    }
     return profile();
   }
 
@@ -63,6 +71,23 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
 }
 
 void main() {
+  testWidgets('account settings retries an initial profile failure', (
+    tester,
+  ) async {
+    final api = AccountSettingsApi(failFirst: true);
+    await tester.pumpWidget(
+      MaterialApp(home: AccountSettingsScreen(repository: UserRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('账户资料加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('account-settings-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.profileRequests, 2);
+    expect(find.text('基础资料'), findsOneWidget);
+  });
+
   testWidgets('account settings renders profile and security sections', (
     tester,
   ) async {

@@ -40,11 +40,19 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
   Future<UserProfile> _loadProfile() async {
     final profile = await widget.repository.loadProfile();
+    if (!mounted) return profile;
     nicknameController.text = profile.nickname;
     avatarController.text = profile.avatar;
     signatureController.text = profile.signature;
     gender = profile.gender;
     return profile;
+  }
+
+  void _reloadProfile() {
+    final future = _loadProfile();
+    setState(() {
+      _profile = future;
+    });
   }
 
   void _showMessage(String message) {
@@ -186,7 +194,21 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('账户资料加载失败：${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('账户资料加载失败：${snapshot.error}'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    key: const Key('account-settings-retry'),
+                    onPressed: _reloadProfile,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                ],
+              ),
+            );
           }
           final profile = snapshot.data!;
           return ListView(
