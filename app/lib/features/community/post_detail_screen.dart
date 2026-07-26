@@ -27,6 +27,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _favoriteSaving = false;
   bool _favorited = false;
   bool _repostSaving = false;
+  bool _likeSaving = false;
+  bool _commentSaving = false;
   bool _loadingMoreComments = false;
 
   @override
@@ -54,34 +56,55 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Future<void> _like() async {
-    final result = await widget.repository.toggleLike(widget.postId);
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(result.liked ? '已点赞' : '已取消点赞')));
-    final refreshedPost = widget.repository.loadPost(widget.postId);
-    setState(() {
-      _post = refreshedPost;
-    });
+    if (_likeSaving) return;
+    setState(() => _likeSaving = true);
+    try {
+      final result = await widget.repository.toggleLike(widget.postId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.liked ? '已点赞' : '已取消点赞')));
+      final refreshedPost = widget.repository.loadPost(widget.postId);
+      setState(() => _post = refreshedPost);
+    } catch (error) {
+      if (mounted) _showMessage('点赞失败：$error');
+    } finally {
+      if (mounted) setState(() => _likeSaving = false);
+    }
   }
 
   Future<void> _comment() async {
     final content = _commentController.text.trim();
-    if (content.isEmpty) return;
-    await widget.repository.createComment(
-      widget.postId,
-      content,
-      replyTo: _replyTarget?.id,
-    );
-    if (!mounted) return;
-    _commentController.clear();
-    final refreshedComments = widget.repository.loadCommentPage(widget.postId);
-    final refreshedPost = widget.repository.loadPost(widget.postId);
-    setState(() {
-      _post = refreshedPost;
-      _comments = refreshedComments;
-      _replyTarget = null;
-    });
+    if (content.isEmpty || _commentSaving) return;
+    setState(() => _commentSaving = true);
+    try {
+      await widget.repository.createComment(
+        widget.postId,
+        content,
+        replyTo: _replyTarget?.id,
+      );
+      if (!mounted) return;
+      _commentController.clear();
+      final refreshedComments = widget.repository.loadCommentPage(
+        widget.postId,
+      );
+      final refreshedPost = widget.repository.loadPost(widget.postId);
+      setState(() {
+        _post = refreshedPost;
+        _comments = refreshedComments;
+        _replyTarget = null;
+      });
+    } catch (error) {
+      if (mounted) _showMessage('评论失败：$error');
+    } finally {
+      if (mounted) setState(() => _commentSaving = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _loadMoreComments(CommunityCommentPage current) async {
@@ -369,7 +392,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 runSpacing: 8,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: _like,
+                    key: const Key('post-like-button'),
+                    onPressed: _likeSaving ? null : _like,
                     icon: const Icon(Icons.favorite_border),
                     label: Text('点赞 ${post.likeCount}'),
                   ),
@@ -424,7 +448,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       decoration: const InputDecoration(hintText: '说点有用的'),
                     ),
                   ),
-                  IconButton(onPressed: _comment, icon: const Icon(Icons.send)),
+                  IconButton(
+                    key: const Key('post-comment-submit'),
+                    onPressed: _commentSaving ? null : _comment,
+                    icon: _commentSaving
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send),
+                  ),
                 ],
               ),
             ],

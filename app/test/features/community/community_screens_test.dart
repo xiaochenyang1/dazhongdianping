@@ -26,6 +26,8 @@ class CommunityScreenApi
   bool failNextOwnedPost = false;
   bool failNextSave = false;
   bool failNextUpload = false;
+  bool failNextLike = false;
+  bool failNextComment = false;
   int postRequests = 0;
   final List<int> requestedCommentPages = <int>[];
 
@@ -138,13 +140,23 @@ class CommunityScreenApi
       failNextSave = false;
       throw StateError('save unavailable');
     }
-    if (path.endsWith('/like')) return {'liked': true, 'likeCount': 4};
+    if (path.endsWith('/like')) {
+      if (failNextLike) {
+        failNextLike = false;
+        throw StateError('like unavailable');
+      }
+      return {'liked': true, 'likeCount': 4};
+    }
     if (path.endsWith('/repost')) {
       reposted = true;
       repostCount = 3;
       return {'postId': 7, 'reposted': true, 'repostCount': repostCount};
     }
     if (path.endsWith('/comments')) {
+      if (failNextComment) {
+        failNextComment = false;
+        throw StateError('comment unavailable');
+      }
       return {
         'id': 12,
         'postId': 7,
@@ -489,6 +501,60 @@ void main() {
 
     expect(api.postPath, '/api/c/v1/posts/7/comments');
     expect(api.body, {'content': '楼中回复', 'replyTo': 11});
+  });
+
+  testWidgets('post detail recovers failed like and comment actions', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi()
+      ..failNextLike = true
+      ..failNextComment = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('post-like-button')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('点赞失败'), findsOneWidget);
+    expect(
+      tester
+          .widget<OutlinedButton>(find.byKey(const Key('post-like-button')))
+          .onPressed,
+      isNotNull,
+    );
+    ScaffoldMessenger.of(
+      tester.element(find.byKey(const Key('post-like-button'))),
+    ).hideCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('post-comment-submit')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(find.byType(TextField).last, '失败后保留的评论');
+    await tester.tap(find.byKey(const Key('post-comment-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('评论失败'), findsOneWidget);
+    expect(find.text('失败后保留的评论'), findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key('post-comment-submit')))
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.tap(find.byKey(const Key('post-comment-submit')));
+    await tester.pumpAndSettle();
+    expect(api.body, {'content': '失败后保留的评论'});
   });
 
   testWidgets('community author opens the public user profile callback', (
