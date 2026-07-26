@@ -627,6 +627,35 @@ void main() {
     expect(api.postRequests, 1);
   });
 
+  testWidgets('post detail updates comment count without reloading itself', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('post-comment-submit')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.enterText(find.byType(TextField).last, '新增一条评论');
+    await tester.tap(find.byKey(const Key('post-comment-submit')));
+    await tester.pumpAndSettle();
+
+    expect(api.body, {'content': '新增一条评论'});
+    expect(api.postRequests, 1);
+    expect(api.requestedCommentPages, [1, 1]);
+  });
+
   testWidgets('post detail preserves a failed report reason for retry', (
     tester,
   ) async {

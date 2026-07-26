@@ -88,7 +88,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
-  Future<void> _comment() async {
+  Future<void> _comment(CommunityPost post) async {
     final content = _commentController.text.trim();
     if (content.isEmpty || _commentSaving) return;
     setState(() => _commentSaving = true);
@@ -101,9 +101,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (!mounted) return;
       _commentController.clear();
       final refreshedComments = _loadComments();
-      final refreshedPost = widget.repository.loadPost(widget.postId);
       setState(() {
-        _post = refreshedPost;
+        _post = Future.value(
+          post.copyWith(commentCount: post.commentCount + 1),
+        );
         _comments = refreshedComments;
         _replyTarget = null;
       });
@@ -472,7 +473,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   ),
                   IconButton(
                     key: const Key('post-comment-submit'),
-                    onPressed: _commentSaving ? null : _comment,
+                    onPressed: _commentSaving ? null : () => _comment(post),
                     icon: _commentSaving
                         ? const SizedBox.square(
                             dimension: 18,
