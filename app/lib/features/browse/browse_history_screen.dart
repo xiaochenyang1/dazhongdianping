@@ -29,20 +29,56 @@ class BrowseHistoryScreen extends StatefulWidget {
 }
 
 class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
-  late Future<List<ShopBrowseHistoryItem>> _history;
+  late Future<ShopBrowseHistoryPage> _history;
   bool _clearing = false;
+  bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
-    _history = widget.repository.loadBrowseHistory();
+    _history = widget.repository.loadBrowseHistoryPage();
   }
 
   Future<void> _reload() async {
     setState(() {
-      _history = widget.repository.loadBrowseHistory();
+      _history = widget.repository.loadBrowseHistoryPage();
     });
     await _history;
+  }
+
+  Future<void> _loadMore(ShopBrowseHistoryPage current) async {
+    if (_loadingMore || !current.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.loadBrowseHistoryPage(
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownShopIds = current.items.map((item) => item.shopId).toSet();
+      final items = [
+        ...current.items,
+        ...next.items.where((item) => knownShopIds.add(item.shopId)),
+      ];
+      setState(() {
+        _history = Future.value(
+          ShopBrowseHistoryPage(
+            items: items,
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多足迹失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   Future<void> _clearAll() async {
@@ -52,13 +88,20 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       await widget.repository.clearBrowseHistory();
       if (!mounted) return;
       setState(() {
-        _history = Future.value(const []);
+        _history = Future.value(
+          const ShopBrowseHistoryPage(
+            items: [],
+            total: 0,
+            page: 1,
+            pageSize: 20,
+          ),
+        );
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('清空足迹失败：$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('清空足迹失败：$error')));
     } finally {
       if (mounted) setState(() => _clearing = false);
     }
@@ -72,14 +115,21 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       if (!mounted) return;
       setState(() {
         _history = Future.value(
-          current.where((row) => row.shopId != item.shopId).toList(),
+          ShopBrowseHistoryPage(
+            items: current.items
+                .where((row) => row.shopId != item.shopId)
+                .toList(),
+            total: current.total > 0 ? current.total - 1 : 0,
+            page: current.page,
+            pageSize: current.pageSize,
+          ),
         );
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('删除足迹失败：$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('删除足迹失败：$error')));
     }
   }
 
@@ -95,7 +145,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<List<ShopBrowseHistoryItem>>(
+      body: FutureBuilder<ShopBrowseHistoryPage>(
         future: _history,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
@@ -113,7 +163,8 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
               ),
             );
           }
-          final items = snapshot.data ?? const [];
+          final page = snapshot.data!;
+          final items = page.items;
           if (items.isEmpty) {
             return const Center(child: Text('当前区域还没有浏览足迹'));
           }
@@ -121,9 +172,24 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
             onRefresh: _reload,
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
-              itemCount: items.length,
+              itemCount: items.length + (page.hasMore ? 1 : 0),
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
+                if (index == items.length) {
+                  return Center(
+                    child: OutlinedButton.icon(
+                      key: const Key('browse-history-load-more'),
+                      onPressed: _loadingMore ? null : () => _loadMore(page),
+                      icon: _loadingMore
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.expand_more),
+                      label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                    ),
+                  );
+                }
                 final item = items[index];
                 final location = [
                   item.cityName,

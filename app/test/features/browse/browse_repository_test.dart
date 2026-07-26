@@ -124,8 +124,8 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
           },
         ],
         'total': 1,
-        'page': 1,
-        'pageSize': 20,
+        'page': query?['page'] ?? 1,
+        'pageSize': query?['pageSize'] ?? 20,
         'hasMore': false,
       };
     }
@@ -187,26 +187,29 @@ void main() {
     expect(detail.address, 'Rue de Lyon');
   });
 
-  test('loads hot words and search history, and supports delete paths', () async {
-    final api = FakeJsonApi();
-    final repository = ApiBrowseRepository(api);
+  test(
+    'loads hot words and search history, and supports delete paths',
+    () async {
+      final api = FakeJsonApi();
+      final repository = ApiBrowseRepository(api);
 
-    final hotWords = await repository.loadHotWords(limit: 6);
-    expect(api.path, '/api/c/v1/search/hot');
-    expect(api.query?['limit'], 6);
-    expect(hotWords.map((item) => item.term), ['Brunch', 'Hotpot']);
+      final hotWords = await repository.loadHotWords(limit: 6);
+      expect(api.path, '/api/c/v1/search/hot');
+      expect(api.query?['limit'], 6);
+      expect(hotWords.map((item) => item.term), ['Brunch', 'Hotpot']);
 
-    final history = await repository.loadSearchHistory(page: 1, pageSize: 8);
-    expect(api.path, '/api/c/v1/search/history');
-    expect(history.single.keyword, 'noodles');
+      final history = await repository.loadSearchHistory(page: 1, pageSize: 8);
+      expect(api.path, '/api/c/v1/search/history');
+      expect(history.single.keyword, 'noodles');
 
-    await repository.removeSearchHistoryItem(3);
-    await repository.clearSearchHistory();
-    expect(api.deletedPaths, [
-      '/api/c/v1/search/history/3',
-      '/api/c/v1/search/history',
-    ]);
-  });
+      await repository.removeSearchHistoryItem(3);
+      await repository.clearSearchHistory();
+      expect(api.deletedPaths, [
+        '/api/c/v1/search/history/3',
+        '/api/c/v1/search/history',
+      ]);
+    },
+  );
 
   test('treats unauthorized search history as empty for guests', () async {
     final api = FakeJsonApi()..throwUnauthorizedOnHistory = true;
@@ -224,6 +227,13 @@ void main() {
     expect(api.path, '/api/c/v1/user/browse-history');
     expect(history.single.shopName, 'London Hotpot');
     expect(history.single.viewCount, 2);
+
+    final page = await repository.loadBrowseHistoryPage(page: 2, pageSize: 12);
+    expect(api.query, {'page': 2, 'pageSize': 12});
+    expect(page.page, 2);
+    expect(page.pageSize, 12);
+    expect(page.total, 1);
+    expect(page.hasMore, isFalse);
 
     await repository.removeBrowseHistoryItem(10001);
     await repository.clearBrowseHistory();

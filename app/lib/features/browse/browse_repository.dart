@@ -53,11 +53,7 @@ class SearchHotWord {
 }
 
 class SearchSuggestion {
-  const SearchSuggestion({
-    required this.term,
-    required this.type,
-    this.refId,
-  });
+  const SearchSuggestion({required this.term, required this.type, this.refId});
   final String term;
   final String type;
   final int? refId;
@@ -242,6 +238,22 @@ class ShopBrowseHistoryItem {
   }
 }
 
+class ShopBrowseHistoryPage {
+  const ShopBrowseHistoryPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<ShopBrowseHistoryItem> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class ShopDetail {
   const ShopDetail({
     required this.id,
@@ -317,6 +329,19 @@ abstract class BrowseRepository {
     int page = 1,
     int pageSize = 20,
   }) => throw UnimplementedError();
+  Future<ShopBrowseHistoryPage> loadBrowseHistoryPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final items = await loadBrowseHistory(page: page, pageSize: pageSize);
+    return ShopBrowseHistoryPage(
+      items: items,
+      total: items.length,
+      page: page,
+      pageSize: pageSize,
+    );
+  }
+
   Future<void> clearBrowseHistory() => throw UnimplementedError();
   Future<void> removeBrowseHistoryItem(int shopId) =>
       throw UnimplementedError();
@@ -423,7 +448,9 @@ class ApiBrowseRepository implements BrowseRepository {
   Future<void> clearSearchHistory() async {
     final deleteApi = client is JsonDeleteApi
         ? client as JsonDeleteApi
-        : throw UnsupportedError('JsonDeleteApi is required for clearSearchHistory');
+        : throw UnsupportedError(
+            'JsonDeleteApi is required for clearSearchHistory',
+          );
     await deleteApi.deleteJson('/api/c/v1/search/history');
   }
 
@@ -441,17 +468,30 @@ class ApiBrowseRepository implements BrowseRepository {
   Future<List<ShopBrowseHistoryItem>> loadBrowseHistory({
     int page = 1,
     int pageSize = 20,
+  }) async =>
+      (await loadBrowseHistoryPage(page: page, pageSize: pageSize)).items;
+
+  @override
+  Future<ShopBrowseHistoryPage> loadBrowseHistoryPage({
+    int page = 1,
+    int pageSize = 20,
   }) async {
     final result = await client.getJson(
       '/api/c/v1/user/browse-history',
       query: {'page': page, 'pageSize': pageSize},
     );
     final list = result['list'] as List<dynamic>? ?? const [];
-    return list
+    final items = list
         .whereType<Map<String, dynamic>>()
         .map(ShopBrowseHistoryItem.fromJson)
         .where((item) => item.shopId > 0)
         .toList();
+    return ShopBrowseHistoryPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
   }
 
   @override
@@ -539,7 +579,10 @@ class ApiBrowseRepository implements BrowseRepository {
   }
 
   @override
-  Future<List<ShopSummary>> loadSimilarShops(int shopId, {int limit = 6}) async {
+  Future<List<ShopSummary>> loadSimilarShops(
+    int shopId, {
+    int limit = 6,
+  }) async {
     final result = await client.getJson(
       '/api/c/v1/shops/$shopId/similar',
       query: {'limit': limit},

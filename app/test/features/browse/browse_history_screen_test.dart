@@ -4,42 +4,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class BrowseHistoryFakeRepository extends BrowseRepository {
-  BrowseHistoryFakeRepository({List<ShopBrowseHistoryItem>? history})
-    : history = List<ShopBrowseHistoryItem>.from(
-        history ??
-            const [
-              ShopBrowseHistoryItem(
-                id: 1,
-                shopId: 10001,
-                shopName: 'London Hotpot',
-                score: 4.8,
-                currency: 'GBP',
-                pricePerCapita: 35,
-                address: 'Chinatown',
-                cityName: 'London',
-                areaName: 'Soho',
-                viewCount: 2,
-                lastViewedAt: '2026-07-25 18:00',
-              ),
-              ShopBrowseHistoryItem(
-                id: 2,
-                shopId: 10002,
-                shopName: 'Paris Cafe',
-                score: 4.5,
-                currency: 'EUR',
-                pricePerCapita: 18,
-                address: 'Marais',
-                cityName: 'Paris',
-                areaName: '3e',
-                viewCount: 1,
-                lastViewedAt: '2026-07-25 17:00',
-              ),
-            ],
-      );
+  BrowseHistoryFakeRepository({
+    List<ShopBrowseHistoryItem>? history,
+    this.paginated = false,
+  }) : history = List<ShopBrowseHistoryItem>.from(
+         history ??
+             const [
+               ShopBrowseHistoryItem(
+                 id: 1,
+                 shopId: 10001,
+                 shopName: 'London Hotpot',
+                 score: 4.8,
+                 currency: 'GBP',
+                 pricePerCapita: 35,
+                 address: 'Chinatown',
+                 cityName: 'London',
+                 areaName: 'Soho',
+                 viewCount: 2,
+                 lastViewedAt: '2026-07-25 18:00',
+               ),
+               ShopBrowseHistoryItem(
+                 id: 2,
+                 shopId: 10002,
+                 shopName: 'Paris Cafe',
+                 score: 4.5,
+                 currency: 'EUR',
+                 pricePerCapita: 18,
+                 address: 'Marais',
+                 cityName: 'Paris',
+                 areaName: '3e',
+                 viewCount: 1,
+                 lastViewedAt: '2026-07-25 17:00',
+               ),
+             ],
+       );
 
   List<ShopBrowseHistoryItem> history;
+  final bool paginated;
   int clearCalls = 0;
   final List<int> removedShopIds = <int>[];
+  final List<int> requestedPages = <int>[];
 
   @override
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
@@ -49,6 +53,25 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
     int page = 1,
     int pageSize = 20,
   }) async => history;
+
+  @override
+  Future<ShopBrowseHistoryPage> loadBrowseHistoryPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    requestedPages.add(page);
+    final effectivePageSize = paginated ? 1 : pageSize;
+    final start = (page - 1) * effectivePageSize;
+    final items = start >= history.length
+        ? const <ShopBrowseHistoryItem>[]
+        : history.skip(start).take(effectivePageSize).toList();
+    return ShopBrowseHistoryPage(
+      items: items,
+      total: history.length,
+      page: page,
+      pageSize: effectivePageSize,
+    );
+  }
 
   @override
   Future<void> clearBrowseHistory() async {
@@ -64,6 +87,25 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
 }
 
 void main() {
+  testWidgets('browse history screen loads later pages', (tester) async {
+    final repository = BrowseHistoryFakeRepository(paginated: true);
+    await tester.pumpWidget(
+      MaterialApp(home: BrowseHistoryScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('London Hotpot'), findsOneWidget);
+    expect(find.text('Paris Cafe'), findsNothing);
+    expect(find.byKey(const Key('browse-history-load-more')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('browse-history-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedPages, [1, 2]);
+    expect(find.text('Paris Cafe'), findsOneWidget);
+    expect(find.byKey(const Key('browse-history-load-more')), findsNothing);
+  });
+
   testWidgets('browse history screen lists shops and supports remove/clear', (
     tester,
   ) async {
