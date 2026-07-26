@@ -43,6 +43,9 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _loadingMoreHistory = false;
   bool _suggestLoading = false;
   int _suggestRequestId = 0;
+  String? _panelError;
+  int _panelRequestId = 0;
+  int _searchRequestId = 0;
 
   @override
   void initState() {
@@ -94,7 +97,11 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _loadPanel() async {
-    setState(() => _panelLoading = true);
+    final requestId = ++_panelRequestId;
+    setState(() {
+      _panelLoading = true;
+      _panelError = null;
+    });
     try {
       final hotFuture = widget.repository.loadHotWords(limit: 8);
       final historyFuture = widget.repository.loadSearchHistoryPage(
@@ -103,36 +110,43 @@ class _SearchScreenState extends State<SearchScreen> {
       );
       final hot = await hotFuture;
       final historyPage = await historyFuture;
-      if (!mounted) return;
+      if (!mounted || requestId != _panelRequestId) return;
       setState(() {
         _hotWords = hot;
         _historyPage = historyPage;
         _history = historyPage.items;
         _panelLoading = false;
+        _panelError = null;
       });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _panelLoading = false);
+    } catch (error) {
+      if (!mounted || requestId != _panelRequestId) return;
+      setState(() {
+        _panelLoading = false;
+        _panelError = '$error';
+      });
     }
   }
 
   Future<void> _search(String value) async {
     final keyword = value.trim();
     if (keyword.isEmpty) return;
+    final requestId = ++_searchRequestId;
+    final future = widget.repository.searchShopPage(keyword);
     setState(() {
       _searchedKeyword = keyword;
-      _results = widget.repository.searchShopPage(keyword);
+      _results = future;
       _suggestions = const [];
+      _loadingMore = false;
     });
     // Refresh history after a successful search so the new keyword appears.
     try {
-      await _results;
-      if (!mounted) return;
+      await future;
+      if (!mounted || requestId != _searchRequestId) return;
       final historyPage = await widget.repository.loadSearchHistoryPage(
         page: 1,
         pageSize: 8,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != _searchRequestId) return;
       setState(() {
         _historyPage = historyPage;
         _history = historyPage.items;
@@ -144,6 +158,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _loadMore(ShopSearchPage current) async {
     if (_loadingMore || !current.hasMore || _searchedKeyword.isEmpty) return;
+    final requestId = _searchRequestId;
     setState(() => _loadingMore = true);
     try {
       final next = await widget.repository.searchShopPage(
@@ -151,7 +166,7 @@ class _SearchScreenState extends State<SearchScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != _searchRequestId) return;
       final knownIds = current.items.map((shop) => shop.id).toSet();
       setState(() {
         _results = Future.value(
@@ -167,13 +182,15 @@ class _SearchScreenState extends State<SearchScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && requestId == _searchRequestId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多门店失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && requestId == _searchRequestId) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
@@ -354,7 +371,19 @@ class _SearchScreenState extends State<SearchScreen> {
                         }
                         if (snapshot.hasError) {
                           return Center(
-                            child: Text('Search failed: ${snapshot.error}'),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Search failed: ${snapshot.error}'),
+                                const SizedBox(height: 12),
+                                FilledButton.tonalIcon(
+                                  key: const Key('search-results-retry'),
+                                  onPressed: () => _search(_searchedKeyword),
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('重试'),
+                                ),
+                              ],
+                            ),
                           );
                         }
                         final page = snapshot.data!;
@@ -430,6 +459,23 @@ class _SearchScreenState extends State<SearchScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_hotWords.isEmpty && _history.isEmpty) {
+      if (_panelError != null) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('搜索发现加载失败：$_panelError'),
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                key: const Key('search-panel-retry'),
+                onPressed: _loadPanel,
+                icon: const Icon(Icons.refresh),
+                label: const Text('重试'),
+              ),
+            ],
+          ),
+        );
+      }
       return const Center(child: Text('Enter a keyword to search'));
     }
     return ListView(

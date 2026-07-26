@@ -10,6 +10,8 @@ class SearchFakeRepository extends BrowseRepository {
     this.suggestions = const [],
     this.paginated = false,
     this.paginatedHistory = false,
+    this.failFirstPanel = false,
+    this.failFirstSearch = false,
   });
 
   final List<SearchHotWord> hotWords;
@@ -17,6 +19,10 @@ class SearchFakeRepository extends BrowseRepository {
   final List<SearchSuggestion> suggestions;
   final bool paginated;
   final bool paginatedHistory;
+  final bool failFirstPanel;
+  final bool failFirstSearch;
+  int panelRequests = 0;
+  int searchRequests = 0;
   final List<int> requestedPages = <int>[];
   final List<int> requestedHistoryPages = <int>[];
   final List<String> searchedKeywords = <String>[];
@@ -48,6 +54,10 @@ class SearchFakeRepository extends BrowseRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
+    searchRequests++;
+    if (failFirstSearch && searchRequests == 1) {
+      throw StateError('search network unavailable');
+    }
     searchedKeywords.add(keyword);
     requestedPages.add(page);
     final shop = ShopSummary(
@@ -67,7 +77,13 @@ class SearchFakeRepository extends BrowseRepository {
   }
 
   @override
-  Future<List<SearchHotWord>> loadHotWords({int limit = 8}) async => hotWords;
+  Future<List<SearchHotWord>> loadHotWords({int limit = 8}) async {
+    panelRequests++;
+    if (failFirstPanel && panelRequests == 1) {
+      throw StateError('panel network unavailable');
+    }
+    return hotWords;
+  }
 
   @override
   Future<List<SearchHistoryItem>> loadSearchHistory({
@@ -122,6 +138,41 @@ class SearchFakeRepository extends BrowseRepository {
 }
 
 void main() {
+  testWidgets('search discovery retries an initial panel failure', (
+    tester,
+  ) async {
+    final repository = SearchFakeRepository(
+      failFirstPanel: true,
+      hotWords: const [SearchHotWord(term: 'Brunch', score: 12)],
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: SearchScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('搜索发现加载失败'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('search-panel-retry')));
+    await tester.pumpAndSettle();
+    expect(repository.panelRequests, 2);
+    expect(find.text('Brunch · 12'), findsOneWidget);
+  });
+
+  testWidgets('search results retry the current keyword', (tester) async {
+    final repository = SearchFakeRepository(failFirstSearch: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SearchScreen(repository: repository, initialKeyword: 'tea'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Search failed'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('search-results-retry')));
+    await tester.pumpAndSettle();
+    expect(repository.searchRequests, 2);
+    expect(find.text('Berlin Tea'), findsOneWidget);
+  });
+
   testWidgets('search screen loads later result pages', (tester) async {
     final repository = SearchFakeRepository(paginated: true);
     await tester.pumpWidget(
