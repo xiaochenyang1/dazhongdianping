@@ -71,6 +71,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   }
 
   Future<void> _load() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
       _loadError = null;

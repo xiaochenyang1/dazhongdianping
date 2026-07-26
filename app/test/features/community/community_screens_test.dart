@@ -35,8 +35,10 @@ class CommunityScreenApi
   int reportRequests = 0;
   int saveRequests = 0;
   int uploadRequests = 0;
+  int ownedPostRequests = 0;
   Completer<void>? saveGate;
   Completer<void>? uploadGate;
+  Completer<void>? ownedPostGate;
   final List<int> requestedCommentPages = <int>[];
 
   Map<String, dynamic> get post => {
@@ -136,9 +138,13 @@ class CommunityScreenApi
         throw StateError('network unavailable');
       }
     }
-    if (path == '/api/c/v1/user/posts/7' && failNextOwnedPost) {
-      failNextOwnedPost = false;
-      throw StateError('owned post unavailable');
+    if (path == '/api/c/v1/user/posts/7') {
+      ownedPostRequests++;
+      await ownedPostGate?.future;
+      if (failNextOwnedPost) {
+        failNextOwnedPost = false;
+        throw StateError('owned post unavailable');
+      }
     }
     return post;
   }
@@ -989,6 +995,29 @@ void main() {
 
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
     expect(find.textContaining('周六上午'), findsOneWidget);
+    expect(find.byKey(const Key('post-submit')), findsOneWidget);
+  });
+
+  testWidgets('post editor guards duplicate load retries', (tester) async {
+    final gate = Completer<void>();
+    final api = CommunityScreenApi()..failNextOwnedPost = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostEditorScreen(repository: CommunityRepository(api), postId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.ownedPostGate = gate;
+
+    final retry = find.byKey(const Key('post-editor-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry);
+    await tester.pump();
+    expect(api.ownedPostRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.ownedPostRequests, 2);
     expect(find.byKey(const Key('post-submit')), findsOneWidget);
   });
 
