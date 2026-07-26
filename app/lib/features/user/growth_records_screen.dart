@@ -49,7 +49,8 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
           ..clear()
           ..addAll(page.items);
       } else {
-        _items.addAll(page.items);
+        final knownIds = _items.map((item) => item.id).toSet();
+        _items.addAll(page.items.where((item) => knownIds.add(item.id)));
       }
       _page = page.page;
       _hasMore = page.hasMore;
@@ -61,11 +62,11 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
   }
 
   Future<void> _reload() async {
-    setState(() {
-      _error = null;
-      _pageFuture = _load(reset: true);
-    });
-    await _pageFuture;
+    try {
+      await _load(reset: true);
+    } catch (error) {
+      if (mounted) setState(() => _error = '刷新流水失败：$error');
+    }
   }
 
   Future<void> _loadMore() async {
@@ -77,7 +78,7 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
       if (!mounted) return;
       setState(() {
         _loadingMore = false;
-        _error = '$error';
+        _error = '加载更多失败：$error';
       });
     }
   }
@@ -146,7 +147,7 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
-                      '加载更多失败：$_error',
+                      _error!,
                       style: const TextStyle(color: Color(0xFFB91C1C)),
                     ),
                   ),

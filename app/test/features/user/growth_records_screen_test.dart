@@ -5,6 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class GrowthRecordsApi implements JsonApi {
+  GrowthRecordsApi({this.paginated = false});
+
+  final bool paginated;
+  bool failNextRecordsLoad = false;
+  final List<int> requestedPages = [];
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
@@ -27,6 +33,45 @@ class GrowthRecordsApi implements JsonApi {
       };
     }
     if (path == '/api/c/v1/user/growth/records') {
+      final page = query?['page'] as int? ?? 1;
+      requestedPages.add(page);
+      if (failNextRecordsLoad) {
+        failNextRecordsLoad = false;
+        throw const ApiException('growth records network unavailable');
+      }
+      if (paginated) {
+        return {
+          'list': [
+            {
+              'id': page == 1 ? 1 : 2,
+              'type': 1,
+              'typeText': '成长值',
+              'action': 'review_create',
+              'actionText': page == 1 ? '发布点评' : '完善资料',
+              'changeAmount': page == 1 ? 10 : 5,
+              'balanceAfter': 230,
+              'remark': '',
+              'createdAt': '2026-07-25 18:00:00',
+            },
+            if (page == 2)
+              {
+                'id': 1,
+                'type': 1,
+                'typeText': '成长值',
+                'action': 'review_create',
+                'actionText': '发布点评',
+                'changeAmount': 10,
+                'balanceAfter': 230,
+                'remark': '',
+                'createdAt': '2026-07-25 18:00:00',
+              },
+          ],
+          'total': 2,
+          'page': page,
+          'pageSize': 1,
+          'hasMore': page == 1,
+        };
+      }
       return {
         'list': [
           {
@@ -74,7 +119,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: GrowthRecordsScreen(repository: UserRepository(GrowthRecordsApi())),
+        home: GrowthRecordsScreen(
+          repository: UserRepository(GrowthRecordsApi()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -85,5 +132,41 @@ void main() {
     expect(find.text('发布点评'), findsNWidgets(2));
     expect(find.text('+10'), findsOneWidget);
     expect(find.text('+5'), findsOneWidget);
+  });
+
+  testWidgets('growth records load later pages without duplicate ids', (
+    tester,
+  ) async {
+    final api = GrowthRecordsApi(paginated: true);
+    await tester.pumpWidget(
+      MaterialApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('发布点评'), findsOneWidget);
+    await tester.tap(find.text('加载更多'));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedPages, [1, 2]);
+    expect(find.text('发布点评'), findsOneWidget);
+    expect(find.text('完善资料'), findsOneWidget);
+  });
+
+  testWidgets('failed growth records refresh preserves loaded entries', (
+    tester,
+  ) async {
+    final api = GrowthRecordsApi();
+    await tester.pumpWidget(
+      MaterialApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
+    );
+    await tester.pumpAndSettle();
+    api.failNextRecordsLoad = true;
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+
+    expect(find.text('发布点评'), findsNWidgets(2));
+    expect(find.textContaining('刷新流水失败'), findsOneWidget);
+    expect(api.requestedPages, [1, 1]);
   });
 }
