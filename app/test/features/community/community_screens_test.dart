@@ -519,6 +519,31 @@ void main() {
     },
   );
 
+  testWidgets('community feed guards duplicate editor navigation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityFeedScreen(
+          repository: CommunityRepository(CommunityScreenApi()),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final create = find.byKey(const Key('community-create-post'));
+    final openEditor = tester.widget<FloatingActionButton>(create).onPressed!;
+    openEditor();
+    openEditor();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PostEditorScreen, skipOffstage: false), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('community feed opens a readable post detail', (tester) async {
     final api = CommunityScreenApi();
     final repository = CommunityRepository(api);

@@ -32,6 +32,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   late Future<CommunityPostPage> _posts;
   Future<CommunityPostPage>? _followingPosts;
   bool _loadingMore = false;
+  bool _openingEditor = false;
   int _selectedTab = 0;
   final List<int> _requestIds = [0, 0];
   @override
@@ -109,6 +110,21 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
     }
   }
 
+  Future<void> _openEditor() async {
+    if (_openingEditor) return;
+    setState(() => _openingEditor = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PostEditorScreen(repository: widget.repository),
+        ),
+      );
+      if (mounted) _reload();
+    } finally {
+      if (mounted) setState(() => _openingEditor = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => DefaultTabController(
     length: 2,
@@ -167,16 +183,8 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
       ),
       floatingActionButton: widget.canInteract
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        PostEditorScreen(repository: widget.repository),
-                  ),
-                );
-                if (!mounted) return;
-                _reload();
-              },
+              key: const Key('community-create-post'),
+              onPressed: _openingEditor ? null : _openEditor,
               icon: const Icon(Icons.edit_outlined),
               label: const Text('发帖'),
             )
