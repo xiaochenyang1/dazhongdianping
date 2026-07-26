@@ -177,6 +177,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   List<DirectMessage> _messages = const [];
   MessagePage? _page;
+  Object? _loadError;
   bool _loading = true,
       _loadingMore = false,
       _sending = false,
@@ -188,6 +189,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
     try {
       final page = widget.conversation.id == 0
           ? const MessagePage(items: [], total: 0, page: 1, pageSize: 20)
@@ -200,10 +205,16 @@ class _ChatScreenState extends State<ChatScreen> {
           _page = page;
           _messages = page.items.reversed.toList();
           _loading = false;
+          _loadError = null;
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => _loading = false);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError = error;
+        });
+      }
     }
   }
 
@@ -327,6 +338,22 @@ class _ChatScreenState extends State<ChatScreen> {
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator())
+              : _loadError != null && _messages.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('聊天记录加载失败：$_loadError', textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      FilledButton.icon(
+                        key: const Key('chat-history-retry'),
+                        onPressed: _load,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('重新加载'),
+                      ),
+                    ],
+                  ),
+                )
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount:

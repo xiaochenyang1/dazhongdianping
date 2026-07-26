@@ -8,6 +8,8 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int conversationCalls = 0;
   final List<int> conversationPages = [];
   final List<int> messagePages = [];
+  bool failNextMessageLoad = false;
+  int readCalls = 0;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -38,6 +40,10 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     }
     final page = query?['page'] as int? ?? 1;
     messagePages.add(page);
+    if (failNextMessageLoad) {
+      failNextMessageLoad = false;
+      throw Exception('network unavailable');
+    }
     return {
       'list': [
         {
@@ -59,7 +65,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
       path.endsWith('/read')
-      ? {'conversationId': 3, 'markedReadCount': 2}
+      ? _readResponse()
       : {
           'id': 8,
           'conversationId': 3,
@@ -69,6 +75,12 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
           'read': false,
           'createdAt': '10:01',
         };
+
+  Map<String, dynamic> _readResponse() {
+    readCalls += 1;
+    return {'conversationId': 3, 'markedReadCount': 2};
+  }
+
   @override
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async => {
     'userId': 9,
@@ -185,5 +197,42 @@ void main() {
     expect(find.text('上周那家也不错'), findsOneWidget);
     expect(find.text('周末探店？'), findsOneWidget);
     expect(find.text('加载更早消息'), findsNothing);
+  });
+
+  testWidgets('chat exposes initial load failure and retries safely', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi()..failNextMessageLoad = true;
+    const conversation = ConversationSummary(
+      id: 3,
+      peerUserId: 9,
+      peerNickname: '伦敦小王',
+      peerAvatar: '',
+      lastMessagePreview: '周末探店？',
+      lastMessageAt: '10:00',
+      unreadCount: 2,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: conversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('聊天记录加载失败'), findsOneWidget);
+    expect(find.byKey(const Key('chat-history-retry')), findsOneWidget);
+    expect(api.readCalls, 0);
+
+    await tester.tap(find.byKey(const Key('chat-history-retry')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('周末探店？'), findsOneWidget);
+    expect(find.textContaining('聊天记录加载失败'), findsNothing);
+    expect(api.messagePages, [1, 1]);
+    expect(api.readCalls, 1);
   });
 }
