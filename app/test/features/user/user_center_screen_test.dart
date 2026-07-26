@@ -9,19 +9,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CenterFakeApi implements JsonApi {
+  CenterFakeApi({this.failFirst = false});
+
+  final bool failFirst;
+  int profileRequests = 0;
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
-  }) async => {
-    'id': 9,
-    'nickname': 'Center User',
-    'avatar': '',
-    'preferredRegion': 'EU',
-    'level': 4,
-    'points': 120,
-    'growthValue': 350,
-  };
+  }) async {
+    profileRequests++;
+    if (failFirst && profileRequests == 1) {
+      throw StateError('network unavailable');
+    }
+    return {
+      'id': 9,
+      'nickname': 'Center User',
+      'avatar': '',
+      'preferredRegion': 'EU',
+      'level': 4,
+      'points': 120,
+      'growthValue': 350,
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
@@ -34,6 +45,30 @@ class CenterBrowseRepository extends BrowseRepository {
 }
 
 void main() {
+  testWidgets('user center retries an initial profile failure', (tester) async {
+    final api = CenterFakeApi(failFirst: true);
+    final auth = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserCenterScreen(
+          repository: UserRepository(api),
+          authController: auth,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('用户资料加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('user-center-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.profileRequests, 2);
+    expect(find.text('Center User'), findsOneWidget);
+  });
+
   testWidgets('user center exposes core account destinations', (tester) async {
     final api = CenterFakeApi();
     final auth = AuthController(

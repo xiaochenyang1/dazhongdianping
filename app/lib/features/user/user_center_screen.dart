@@ -14,7 +14,7 @@ import 'package:dazhongdianping_app/features/user/user_collection_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
 
-class UserCenterScreen extends StatelessWidget {
+class UserCenterScreen extends StatefulWidget {
   const UserCenterScreen({
     super.key,
     required this.repository,
@@ -36,6 +36,26 @@ class UserCenterScreen extends StatelessWidget {
   final VoidCallback? onCircles;
 
   @override
+  State<UserCenterScreen> createState() => _UserCenterScreenState();
+}
+
+class _UserCenterScreenState extends State<UserCenterScreen> {
+  late Future<UserProfile> _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _profile = widget.repository.loadProfile();
+  }
+
+  void _reload() {
+    final future = widget.repository.loadProfile();
+    setState(() {
+      _profile = future;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -43,8 +63,8 @@ class UserCenterScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () async {
-              await authController.logout();
-              onLoggedOut?.call();
+              await widget.authController.logout();
+              widget.onLoggedOut?.call();
               if (context.mounted) Navigator.of(context).pop();
             },
             child: const Text('退出'),
@@ -52,13 +72,27 @@ class UserCenterScreen extends StatelessWidget {
         ],
       ),
       body: FutureBuilder<UserProfile>(
-        future: repository.loadProfile(),
+        future: _profile,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('用户资料加载失败：${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('用户资料加载失败：${snapshot.error}'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    key: const Key('user-center-retry'),
+                    onPressed: _reload,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                ],
+              ),
+            );
           }
           final profile = snapshot.data!;
           return ListView(
@@ -105,9 +139,9 @@ class UserCenterScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => AccountSettingsScreen(
-                      repository: repository,
+                      repository: widget.repository,
                       onProfileChanged: (updated) {
-                        authController.replaceCurrentUser(
+                        widget.authController.replaceCurrentUser(
                           AuthUser(
                             id: updated.id,
                             nickname: updated.nickname,
@@ -127,8 +161,9 @@ class UserCenterScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        ExpertCertificationScreen(repository: repository),
+                    builder: (_) => ExpertCertificationScreen(
+                      repository: widget.repository,
+                    ),
                   ),
                 ),
               ),
@@ -141,16 +176,17 @@ class UserCenterScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => GrowthRecordsScreen(repository: repository),
+                    builder: (_) =>
+                        GrowthRecordsScreen(repository: widget.repository),
                   ),
                 ),
               ),
-              if (onMessages != null)
+              if (widget.onMessages != null)
                 ListTile(
                   leading: const Icon(Icons.forum_outlined),
                   title: const Text('我的私信'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: onMessages,
+                  onTap: widget.onMessages,
                 ),
               ListTile(
                 leading: const Icon(Icons.block_outlined),
@@ -159,17 +195,17 @@ class UserCenterScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => BlockedUsersScreen(
-                      repository: MessageRepository(repository.api),
+                      repository: MessageRepository(widget.repository.api),
                     ),
                   ),
                 ),
               ),
-              if (onCircles != null)
+              if (widget.onCircles != null)
                 ListTile(
                   leading: const Icon(Icons.groups_2_outlined),
                   title: const Text('我的圈子'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: onCircles,
+                  onTap: widget.onCircles,
                 ),
               ...UserCollection.values.map(
                 (collection) => ListTile(
@@ -178,17 +214,17 @@ class UserCenterScreen extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => UserCollectionScreen(
-                        repository: repository,
+                        repository: widget.repository,
                         collection: collection,
                         reviewRepository: collection == UserCollection.reviews
-                            ? ReviewRepository(repository.api)
+                            ? ReviewRepository(widget.repository.api)
                             : null,
                       ),
                     ),
                   ),
                 ),
               ),
-              if (browseRepository != null)
+              if (widget.browseRepository != null)
                 ListTile(
                   leading: const Icon(Icons.history),
                   title: const Text('我的足迹'),
@@ -196,9 +232,9 @@ class UserCenterScreen extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => BrowseHistoryScreen(
-                        repository: browseRepository!,
-                        reviewRepository: reviewRepository,
-                        canInteractReviews: canInteractReviews,
+                        repository: widget.browseRepository!,
+                        reviewRepository: widget.reviewRepository,
+                        canInteractReviews: widget.canInteractReviews,
                       ),
                     ),
                   ),
@@ -209,7 +245,7 @@ class UserCenterScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => PrivacyOverviewScreen(
-                      repository: PrivacyRepository(repository.api),
+                      repository: PrivacyRepository(widget.repository.api),
                       accounts: [
                         profile.email,
                         profile.phone,
