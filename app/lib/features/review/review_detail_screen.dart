@@ -30,6 +30,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   bool _likeSaving = false;
   bool _commentSaving = false;
   bool _deleteSaving = false;
+  bool _reportSaving = false;
   bool _loadingMoreComments = false;
   int _reviewRequestId = 0;
   int _commentRequestId = 0;
@@ -194,7 +195,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   }
 
   Future<void> _reportReview() async {
-    _reportController.clear();
+    if (_reportSaving) return;
     final reason = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -220,9 +221,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       ),
     );
     if (reason == null || reason.isEmpty) return;
+    setState(() => _reportSaving = true);
     try {
       await widget.repository.reportReview(widget.reviewId, reason);
       if (!mounted) return;
+      _reportController.clear();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('举报已提交')));
@@ -231,6 +234,8 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('举报失败：$error')));
+    } finally {
+      if (mounted) setState(() => _reportSaving = false);
     }
   }
 
@@ -498,7 +503,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       key: const Key('review-report-button'),
-                      onPressed: _reportReview,
+                      onPressed: _reportSaving ? null : _reportReview,
                       icon: const Icon(Icons.flag_outlined),
                       label: const Text('举报'),
                     ),

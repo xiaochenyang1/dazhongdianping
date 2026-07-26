@@ -12,6 +12,8 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   bool paginateComments = false;
   bool failNextDetail = false;
   bool failNextComments = false;
+  bool failNextReport = false;
+  int reportRequests = 0;
   int detailRequests = 0;
   final List<int> requestedCommentPages = <int>[];
   final List<Map<String, dynamic>> comments = [
@@ -147,6 +149,11 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
       return comments.last;
     }
     if (path == '/api/c/v1/reviews/12/report') {
+      reportRequests++;
+      if (failNextReport) {
+        failNextReport = false;
+        throw StateError('report unavailable');
+      }
       return {
         'id': 1,
         'reviewId': 12,
@@ -310,6 +317,54 @@ void main() {
     expect(find.text('登录后可点赞、评论和举报这条点评。'), findsOneWidget);
     expect(find.byKey(const Key('review-like-button')), findsNothing);
     expect(find.byKey(const Key('review-comment-input')), findsNothing);
+  });
+
+  testWidgets('public review preserves a failed report reason for retry', (
+    tester,
+  ) async {
+    final api = DetailFakeApi()..failNextReport = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('review-report-button')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.tap(find.byKey(const Key('review-report-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('review-report-reason')),
+      '需要重试的点评举报',
+    );
+    await tester.tap(find.text('提交举报'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('举报失败'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('review-report-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('需要重试的点评举报'), findsOneWidget);
+    await tester.tap(find.text('提交举报'));
+    await tester.pumpAndSettle();
+    expect(api.reportRequests, 2);
+
+    await tester.tap(find.byKey(const Key('review-report-button')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('review-report-reason')))
+          .controller!
+          .text,
+      isEmpty,
+    );
   });
 
   testWidgets('owned review detail shows audit remark and edit entry', (
