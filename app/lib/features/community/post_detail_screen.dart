@@ -32,6 +32,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _reportSaving = false;
   bool _reportDialogOpen = false;
   bool _loadingMoreComments = false;
+  int _commentRequestId = 0;
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   void _loadInitial() {
     final post = widget.repository.loadPost(widget.postId);
+    _commentRequestId++;
     final comments = _loadComments();
     setState(() {
       _post = post;
@@ -51,6 +53,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   void _reloadComments() {
+    _commentRequestId++;
     setState(() {
       _comments = _loadComments();
       _loadingMoreComments = false;
@@ -101,6 +104,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       );
       if (!mounted) return;
       _commentController.clear();
+      _commentRequestId++;
       final refreshedComments = _loadComments();
       setState(() {
         _post = Future.value(
@@ -108,6 +112,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         );
         _comments = refreshedComments;
         _replyTarget = null;
+        _loadingMoreComments = false;
       });
     } catch (error) {
       if (mounted) _showMessage('评论失败：$error');
@@ -124,6 +129,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Future<void> _loadMoreComments(CommunityCommentPage current) async {
     if (_loadingMoreComments || !current.hasMore) return;
+    final requestId = _commentRequestId;
     setState(() => _loadingMoreComments = true);
     try {
       final next = await widget.repository.loadCommentPage(
@@ -131,7 +137,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != _commentRequestId) return;
       final knownIds = current.items.map((comment) => comment.id).toSet();
       setState(() {
         _comments = Future.value(
@@ -147,13 +153,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && requestId == _commentRequestId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多评论失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMoreComments = false);
+      if (mounted && requestId == _commentRequestId) {
+        setState(() => _loadingMoreComments = false);
+      }
     }
   }
 

@@ -40,6 +40,7 @@ class CommunityScreenApi
   Completer<void>? uploadGate;
   Completer<void>? ownedPostGate;
   final List<int> requestedCommentPages = <int>[];
+  final commentPageGates = <int, Completer<void>>{};
 
   Map<String, dynamic> get post => {
     'id': 7,
@@ -70,6 +71,7 @@ class CommunityScreenApi
     if (path.endsWith('/comments')) {
       final page = query?['page'] as int? ?? 1;
       requestedCommentPages.add(page);
+      await commentPageGates[page]?.future;
       if (failNextCommentLoad) {
         failNextCommentLoad = false;
         throw StateError('comments unavailable');
@@ -374,6 +376,44 @@ void main() {
     expect(api.requestedCommentPages, [1, 2]);
     expect(find.text('更早的评论。'), findsOneWidget);
     expect(find.byKey(const Key('post-comments-load-more')), findsNothing);
+  });
+
+  testWidgets('new comment invalidates a pending older comment page', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = CommunityScreenApi()
+      ..paginateComments = true
+      ..commentPageGates[2] = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('post-comments-load-more')),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.tap(find.byKey(const Key('post-comments-load-more')));
+    await tester.pump();
+    expect(api.requestedCommentPages, [1, 2]);
+
+    await tester.enterText(find.byType(TextField).last, '刷新评论分页');
+    await tester.tap(find.byKey(const Key('post-comment-submit')));
+    await tester.pumpAndSettle();
+    expect(api.requestedCommentPages, [1, 2, 1]);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('更早的评论。'), findsNothing);
   });
 
   testWidgets('post detail retries an initial comment failure locally', (
