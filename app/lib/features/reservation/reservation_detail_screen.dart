@@ -25,6 +25,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   bool _loading = true;
   bool _acting = false;
   bool _confirmingCancel = false;
+  bool _pickingDate = false;
   String? _error;
 
   @override
@@ -57,7 +58,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   }
 
   Future<void> _cancel() async {
-    if (_acting || _confirmingCancel) return;
+    if (_acting || _confirmingCancel || _pickingDate) return;
     setState(() => _confirmingCancel = true);
     bool? confirmed;
     try {
@@ -89,15 +90,23 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   }
 
   Future<void> _pickDate() async {
-    final next = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 180)),
-    );
-    if (next != null && mounted) {
+    if (_acting || _confirmingCancel || _pickingDate) return;
+    setState(() => _pickingDate = true);
+    DateTime? next;
+    try {
+      next = await showDatePicker(
+        context: context,
+        initialDate: _date,
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 180)),
+      );
+    } finally {
+      if (mounted) setState(() => _pickingDate = false);
+    }
+    final selectedDate = next;
+    if (selectedDate != null && mounted) {
       setState(() {
-        _date = next;
+        _date = selectedDate;
         _slots = const [];
         _selectedSlot = null;
       });
@@ -105,7 +114,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   }
 
   Future<void> _findSlots() async {
-    if (_acting) return;
+    if (_acting || _pickingDate) return;
     final reservation = _reservation!;
     setState(() => _acting = true);
     try {
@@ -129,7 +138,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
 
   Future<void> _reschedule() async {
     final slot = _selectedSlot;
-    if (slot == null || _acting) return;
+    if (slot == null || _acting || _pickingDate) return;
     final succeeded = await _runAction(
       () => widget.repository.rescheduleReservation(
         widget.reservationId,
@@ -241,19 +250,22 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
               if (reservation.canCancel)
                 OutlinedButton(
                   key: const Key('reservation-cancel-button'),
-                  onPressed: _acting || _confirmingCancel ? null : _cancel,
+                  onPressed: _acting || _confirmingCancel || _pickingDate
+                      ? null
+                      : _cancel,
                   child: const Text('取消预订'),
                 ),
               if (reservation.canReschedule)
                 OutlinedButton.icon(
-                  onPressed: _acting ? null : _pickDate,
+                  key: const Key('reservation-pick-date'),
+                  onPressed: _acting || _pickingDate ? null : _pickDate,
                   icon: const Icon(Icons.calendar_today_outlined),
                   label: Text(_dateText),
                 ),
               if (reservation.canReschedule)
                 FilledButton.tonal(
                   key: const Key('reservation-find-slots'),
-                  onPressed: _acting ? null : _findSlots,
+                  onPressed: _acting || _pickingDate ? null : _findSlots,
                   child: const Text('查询改期时段'),
                 ),
             ],
@@ -280,7 +292,9 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
           ),
           const SizedBox(height: 8),
           FilledButton(
-            onPressed: _selectedSlot == null || _acting ? null : _reschedule,
+            onPressed: _selectedSlot == null || _acting || _pickingDate
+                ? null
+                : _reschedule,
             child: const Text('确认改期'),
           ),
         ],

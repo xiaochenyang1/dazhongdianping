@@ -177,6 +177,33 @@ void main() {
     expect(api.path, '/api/c/v1/reservations/11');
   });
 
+  testWidgets('reservation detail guards duplicate date pickers', (
+    tester,
+  ) async {
+    final api = ReservationDetailApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationDetailScreen(
+          repository: ReservationRepository(api),
+          reservationId: 11,
+          initialRescheduleDate: DateTime.now().add(const Duration(days: 1)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final pickDate = find.byKey(const Key('reservation-pick-date'));
+    final pickDateAction = tester.widget<OutlinedButton>(pickDate).onPressed!;
+    pickDateAction();
+    pickDateAction();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+    Navigator.of(tester.element(find.byType(DatePickerDialog))).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(DatePickerDialog), findsNothing);
+  });
+
   testWidgets('failed reschedule preserves the selected slot for retry', (
     tester,
   ) async {
