@@ -19,6 +19,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextSend = false;
   int sendCalls = 0;
   bool overlapMessagePages = false;
+  bool overlapConversationPages = false;
   final conversationGates = <int, Completer<void>>{};
   Completer<void>? messageLoadGate;
 
@@ -48,6 +49,16 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
             'lastMessageAt': '10:00',
             'unreadCount': 2,
           },
+          if (overlapConversationPages && page == 2)
+            {
+              'id': 3,
+              'peerUserId': 9,
+              'peerNickname': '过期会话摘要',
+              'peerAvatar': '',
+              'lastMessagePreview': '过期内容',
+              'lastMessageAt': '09:00',
+              'unreadCount': 9,
+            },
         ],
         'total': 2,
         'page': page,
@@ -256,6 +267,28 @@ void main() {
     expect(find.text('伦敦小王'), findsOneWidget);
     expect(find.text('巴黎小李'), findsNothing);
     expect(find.text('加载更多'), findsOneWidget);
+  });
+
+  testWidgets('conversation pagination preserves current summaries', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi()..overlapConversationPages = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversationListScreen(
+          repository: MessageRepository(api),
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('加载更多'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.text('过期会话摘要'), findsNothing);
+    expect(find.text('巴黎小李'), findsOneWidget);
   });
 
   testWidgets('conversation list retries an initial load failure', (

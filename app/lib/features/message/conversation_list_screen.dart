@@ -56,12 +56,12 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      final byId = <int, ConversationSummary>{
-        for (final item in current.items) item.id: item,
-        for (final item in next.items) item.id: item,
-      };
+      final knownIds = current.items.map((item) => item.id).toSet();
       final merged = ConversationPage(
-        items: byId.values.toList(),
+        items: [
+          ...current.items,
+          ...next.items.where((item) => knownIds.add(item.id)),
+        ],
         total: next.total,
         page: next.page,
         pageSize: next.pageSize,
