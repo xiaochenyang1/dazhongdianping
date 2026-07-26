@@ -57,13 +57,17 @@ void main() {
     expect(find.text('本地达人认证'), findsOneWidget);
     expect(find.text('成长值流水'), findsOneWidget);
     expect(find.text('我的点评'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('我的收藏'), 200);
     expect(find.text('我的收藏'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('我的订单'), 200);
     expect(find.text('我的订单'), findsOneWidget);
     expect(find.text('我的券'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('我的预订'), 200);
     expect(find.text('我的预订'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('我的圈子'), 200);
     expect(find.text('我的圈子'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('黑名单管理'), 200);
+    expect(find.text('黑名单管理'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('我的足迹'), 200);
     expect(find.text('我的足迹'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('隐私中心'), 200);

@@ -1,0 +1,172 @@
+import 'package:dazhongdianping_app/features/message/message_repository.dart';
+import 'package:flutter/material.dart';
+
+class BlockedUsersScreen extends StatefulWidget {
+  const BlockedUsersScreen({super.key, required this.repository});
+
+  final MessageRepository repository;
+
+  @override
+  State<BlockedUsersScreen> createState() => _BlockedUsersScreenState();
+}
+
+class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
+  late Future<BlockedUserPage> _page = widget.repository.loadBlockedUserPage();
+  bool _loadingMore = false;
+  final Set<int> _unblocking = {};
+
+  Future<void> _reload() async {
+    final page = widget.repository.loadBlockedUserPage();
+    setState(() => _page = page);
+    await page;
+  }
+
+  Future<void> _loadMore(BlockedUserPage current) async {
+    if (_loadingMore || !current.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.loadBlockedUserPage(
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      final byId = <int, BlockedUser>{
+        for (final item in current.items) item.id: item,
+        for (final item in next.items) item.id: item,
+      };
+      if (mounted) {
+        setState(() {
+          _page = Future.value(
+            BlockedUserPage(
+              items: byId.values.toList(),
+              total: next.total,
+              page: next.page,
+              pageSize: next.pageSize,
+            ),
+          );
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多黑名单失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  Future<void> _unblock(BlockedUserPage current, BlockedUser user) async {
+    if (_unblocking.contains(user.id)) return;
+    setState(() => _unblocking.add(user.id));
+    try {
+      await widget.repository.unblock(user.id);
+      if (mounted) {
+        setState(() {
+          _page = Future.value(
+            BlockedUserPage(
+              items: current.items.where((item) => item.id != user.id).toList(),
+              total: current.total > 0 ? current.total - 1 : 0,
+              page: current.page,
+              pageSize: current.pageSize,
+            ),
+          );
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('已解除对 ${user.nickname} 的拉黑')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('解除拉黑失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _unblocking.remove(user.id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('黑名单管理')),
+    body: FutureBuilder<BlockedUserPage>(
+      future: _page,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: FilledButton.icon(
+              onPressed: _reload,
+              icon: const Icon(Icons.refresh),
+              label: const Text('重新加载'),
+            ),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final page = snapshot.data!;
+        return RefreshIndicator(
+          onRefresh: _reload,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: page.items.isEmpty
+                ? 1
+                : page.items.length + (page.hasMore ? 1 : 0),
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              if (page.items.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.only(top: 120),
+                  child: Center(child: Text('黑名单为空')),
+                );
+              }
+              if (index == page.items.length) {
+                return Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Center(
+                    child: FilledButton.tonalIcon(
+                      onPressed: _loadingMore ? null : () => _loadMore(page),
+                      icon: _loadingMore
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.expand_more),
+                      label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                    ),
+                  ),
+                );
+              }
+              final user = page.items[index];
+              return ListTile(
+                leading: CircleAvatar(
+                  child: Text(
+                    user.nickname.isEmpty
+                        ? 'TA'
+                        : user.nickname.substring(0, 1),
+                  ),
+                ),
+                title: Text(
+                  user.nickname.isEmpty ? '用户 ${user.id}' : user.nickname,
+                ),
+                subtitle: user.blockedAt.isEmpty
+                    ? null
+                    : Text('拉黑时间：${user.blockedAt}'),
+                trailing: TextButton(
+                  onPressed: _unblocking.contains(user.id)
+                      ? null
+                      : () => _unblock(page, user),
+                  child: Text(
+                    _unblocking.contains(user.id) ? '处理中...' : '解除拉黑',
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    ),
+  );
+}

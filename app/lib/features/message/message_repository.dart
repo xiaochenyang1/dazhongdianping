@@ -82,6 +82,39 @@ class BlockStatus {
   final bool blocked;
 }
 
+class BlockedUser {
+  const BlockedUser({
+    required this.id,
+    required this.nickname,
+    required this.avatar,
+    required this.blockedAt,
+  });
+
+  final int id;
+  final String nickname, avatar, blockedAt;
+
+  factory BlockedUser.fromJson(Map<String, dynamic> json) => BlockedUser(
+    id: json['id'] as int,
+    nickname: json['nickname'] as String? ?? '',
+    avatar: json['avatar'] as String? ?? '',
+    blockedAt: json['blockedAt'] as String? ?? '',
+  );
+}
+
+class BlockedUserPage {
+  const BlockedUserPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<BlockedUser> items;
+  final int total, page, pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class MessageRepository {
   MessageRepository(this.api);
   final JsonApi api;
@@ -156,6 +189,22 @@ class MessageRepository {
       '/api/c/v1/messages/blocks/$userId',
     );
     return BlockStatus(data['userId'] as int, data['blocked'] as bool);
+  }
+
+  Future<BlockedUserPage> loadBlockedUserPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final data = await api.getJson(
+      '/api/c/v1/messages/blocks',
+      query: {'page': page, 'pageSize': pageSize},
+    );
+    return BlockedUserPage(
+      items: _list(data, BlockedUser.fromJson),
+      total: data['total'] as int? ?? 0,
+      page: data['page'] as int? ?? page,
+      pageSize: data['pageSize'] as int? ?? pageSize,
+    );
   }
 
   List<T> _list<T>(

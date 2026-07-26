@@ -2,6 +2,8 @@ import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/message/blocked_users_screen.dart';
+import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
 import 'package:dazhongdianping_app/features/user/expert_certification_screen.dart';
@@ -139,8 +141,7 @@ class UserCenterScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        GrowthRecordsScreen(repository: repository),
+                    builder: (_) => GrowthRecordsScreen(repository: repository),
                   ),
                 ),
               ),
@@ -151,6 +152,18 @@ class UserCenterScreen extends StatelessWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: onMessages,
                 ),
+              ListTile(
+                leading: const Icon(Icons.block_outlined),
+                title: const Text('黑名单管理'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BlockedUsersScreen(
+                      repository: MessageRepository(repository.api),
+                    ),
+                  ),
+                ),
+              ),
               if (onCircles != null)
                 ListTile(
                   leading: const Icon(Icons.groups_2_outlined),

@@ -13,7 +13,21 @@ class MessageFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   }) async {
     this.path = path;
     this.query = query;
-    if (path.endsWith('/blocks')) return {'list': const [], 'total': 0};
+    if (path.endsWith('/blocks')) {
+      return {
+        'list': [
+          {
+            'id': 9,
+            'nickname': '伦敦小王',
+            'avatar': '',
+            'blockedAt': '2026-07-26 12:00:00',
+          },
+        ],
+        'total': 21,
+        'page': query?['page'] ?? 1,
+        'pageSize': query?['pageSize'] ?? 20,
+      };
+    }
     if (path.endsWith('/conversations')) {
       return {
         'list': [
@@ -115,6 +129,14 @@ void main() {
       expect(api.path, '/api/c/v1/messages/report');
       expect((await repository.block(9)).blocked, isTrue);
       expect((await repository.unblock(9)).blocked, isFalse);
+      final blockedPage = await repository.loadBlockedUserPage(
+        page: 2,
+        pageSize: 10,
+      );
+      expect(api.query, {'page': 2, 'pageSize': 10});
+      expect(blockedPage.items.single.nickname, '伦敦小王');
+      expect(blockedPage.total, 21);
+      expect(blockedPage.hasMore, isTrue);
     },
   );
 }
