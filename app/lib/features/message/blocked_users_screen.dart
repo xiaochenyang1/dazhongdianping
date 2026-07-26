@@ -14,17 +14,19 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
   late Future<BlockedUserPage> _page = widget.repository.loadBlockedUserPage();
   bool _loadingMore = false;
   final Set<int> _unblocking = {};
+  int _pageRevision = 0;
 
   Future<void> _reload() async {
+    final revision = _pageRevision;
     try {
       final page = await widget.repository.loadBlockedUserPage();
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         setState(() {
           _page = Future.value(page);
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('刷新黑名单失败：$error')));
@@ -40,6 +42,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
 
   Future<void> _loadMore(BlockedUserPage current) async {
     if (_loadingMore || !current.hasMore) return;
+    final revision = _pageRevision;
     setState(() => _loadingMore = true);
     try {
       final next = await widget.repository.loadBlockedUserPage(
@@ -50,7 +53,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
         for (final item in current.items) item.id: item,
         for (final item in next.items) item.id: item,
       };
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         setState(() {
           _page = Future.value(
             BlockedUserPage(
@@ -63,29 +66,37 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多黑名单失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && revision == _pageRevision) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
-  Future<void> _unblock(BlockedUserPage current, BlockedUser user) async {
+  Future<void> _unblock(BlockedUser user) async {
     if (_unblocking.contains(user.id)) return;
-    setState(() => _unblocking.add(user.id));
+    _pageRevision++;
+    setState(() {
+      _unblocking.add(user.id);
+      _loadingMore = false;
+    });
     try {
       await widget.repository.unblock(user.id);
       if (mounted) {
+        final latest = await _page;
+        if (!mounted) return;
         setState(() {
           _page = Future.value(
             BlockedUserPage(
-              items: current.items.where((item) => item.id != user.id).toList(),
-              total: current.total > 0 ? current.total - 1 : 0,
-              page: current.page,
-              pageSize: current.pageSize,
+              items: latest.items.where((item) => item.id != user.id).toList(),
+              total: latest.total > 0 ? latest.total - 1 : 0,
+              page: latest.page,
+              pageSize: latest.pageSize,
             ),
           );
         });
@@ -180,9 +191,10 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                     ? null
                     : Text('拉黑时间：${user.blockedAt}'),
                 trailing: TextButton(
+                  key: Key('blocked-user-unblock-${user.id}'),
                   onPressed: _unblocking.contains(user.id)
                       ? null
-                      : () => _unblock(page, user),
+                      : () => _unblock(user),
                   child: Text(
                     _unblocking.contains(user.id) ? '处理中...' : '解除拉黑',
                   ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/message/blocked_users_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
@@ -8,6 +10,7 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
   final List<int> pages = [];
   final List<int> unblockedUsers = [];
   bool failNextLoad = false;
+  final Map<int, Completer<void>> unblockGates = {};
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -43,6 +46,7 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
   Future<Map<String, dynamic>> deleteJson(String path) async {
     final userId = int.parse(path.split('/').last);
     unblockedUsers.add(userId);
+    await unblockGates[userId]?.future;
     return {'userId': userId, 'blocked': false};
   }
 }
@@ -84,6 +88,34 @@ void main() {
     expect(api.pages, [1, 1]);
     expect(find.text('伦敦小王'), findsOneWidget);
     expect(find.textContaining('黑名单加载失败'), findsNothing);
+  });
+
+  testWidgets('parallel unblocks compose from the latest page', (tester) async {
+    final api = BlockedUsersFakeApi()
+      ..unblockGates[9] = Completer<void>()
+      ..unblockGates[10] = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(home: BlockedUsersScreen(repository: MessageRepository(api))),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('加载更多'));
+    await tester.pumpAndSettle();
+
+    final unblock9 = find.byKey(const Key('blocked-user-unblock-9'));
+    final unblock10 = find.byKey(const Key('blocked-user-unblock-10'));
+    await tester.tap(unblock9);
+    await tester.tap(unblock9);
+    await tester.tap(unblock10);
+
+    expect(api.unblockedUsers, [9, 10]);
+    api.unblockGates[10]!.complete();
+    await tester.pump();
+    api.unblockGates[9]!.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('伦敦小王'), findsNothing);
+    expect(find.text('巴黎小李'), findsNothing);
+    expect(find.text('黑名单为空'), findsOneWidget);
   });
 
   testWidgets('failed blocked users refresh preserves loaded items', (
