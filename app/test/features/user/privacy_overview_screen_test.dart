@@ -8,12 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
-  PrivacyScreenApi({this.deleteStatus = 1});
+  PrivacyScreenApi({this.deleteStatus = 1, this.failFirstOverview = false});
 
   String? postedPath;
   Object? postedBody;
   bool exportCreated = false;
   int? deleteStatus;
+  final bool failFirstOverview;
+  int overviewRequests = 0;
   bool deviceLoggedOut = false;
   bool paginateExports = false;
   final List<int> requestedExportPages = <int>[];
@@ -23,6 +25,12 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
     String path, {
     Map<String, Object?>? query,
   }) async {
+    if (path == '/api/c/v1/privacy/overview') {
+      overviewRequests++;
+      if (failFirstOverview && overviewRequests == 1) {
+        throw StateError('network unavailable');
+      }
+    }
     if (path == '/api/c/v1/privacy/policies') {
       return {
         'value': [
@@ -182,6 +190,28 @@ Future<void> scrollTo(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  testWidgets('privacy center retries an initial overview failure', (
+    tester,
+  ) async {
+    final api = PrivacyScreenApi(failFirstOverview: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['eu@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('隐私数据加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('privacy-overview-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.overviewRequests, 2);
+    expect(find.text('数据导出'), findsWidgets);
+  });
+
   testWidgets('privacy center loads older export tasks', (tester) async {
     final api = PrivacyScreenApi()..paginateExports = true;
     await tester.pumpWidget(

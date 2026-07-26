@@ -79,6 +79,14 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     );
   }
 
+  void _reload() {
+    final future = _load();
+    setState(() {
+      _data = future;
+      _loadingMoreExports = false;
+    });
+  }
+
   Future<void> _loadMoreExports(_PrivacyData current) async {
     final currentPage = current.exportTaskPage;
     if (_loadingMoreExports || !currentPage.hasMore) return;
@@ -348,7 +356,21 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('隐私数据加载失败：${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('隐私数据加载失败：${snapshot.error}'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    key: const Key('privacy-overview-retry'),
+                    onPressed: _reload,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                ],
+              ),
+            );
           }
           final data = snapshot.data!;
           final overview = data.overview;
