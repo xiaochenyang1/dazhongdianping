@@ -59,6 +59,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   bool _busy = false;
   bool _loading = false;
   bool _deleting = false;
+  String? _loadError;
   String _auditStatus = '';
   String _auditRemark = '';
 
@@ -69,7 +70,10 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
     try {
       final post = await widget.repository.loadOwnedPost(widget.postId!);
       if (!mounted) return;
@@ -83,6 +87,8 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         _auditStatus = post.auditStatusText;
         _auditRemark = post.auditRemark;
       });
+    } catch (error) {
+      if (mounted) setState(() => _loadError = '$error');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -189,13 +195,31 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         if (widget.postId != null)
           TextButton(
             key: const Key('post-delete-button'),
-            onPressed: _deleting || _busy || _loading ? null : _delete,
+            onPressed: _deleting || _busy || _loading || _loadError != null
+                ? null
+                : _delete,
             child: Text(_deleting ? '删除中...' : '删除'),
           ),
       ],
     ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
+        : _loadError != null
+        ? Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('帖子编辑数据加载失败：$_loadError'),
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  key: const Key('post-editor-retry'),
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          )
         : Form(
             key: _formKey,
             child: ListView(

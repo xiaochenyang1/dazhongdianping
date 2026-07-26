@@ -23,6 +23,7 @@ class CommunityScreenApi
   final List<int> requestedFeedPages = <int>[];
   bool paginateComments = false;
   bool failNextPost = false;
+  bool failNextOwnedPost = false;
   int postRequests = 0;
   final List<int> requestedCommentPages = <int>[];
 
@@ -118,6 +119,10 @@ class CommunityScreenApi
         failNextPost = false;
         throw StateError('network unavailable');
       }
+    }
+    if (path == '/api/c/v1/user/posts/7' && failNextOwnedPost) {
+      failNextOwnedPost = false;
+      throw StateError('owned post unavailable');
     }
     return post;
   }
@@ -568,6 +573,29 @@ void main() {
     expect(find.text('编辑帖子'), findsOneWidget);
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
     expect(find.textContaining('周六上午'), findsOneWidget);
+  });
+
+  testWidgets('post editor blocks an incomplete form and retries loading', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi()..failNextOwnedPost = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostEditorScreen(repository: CommunityRepository(api), postId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('帖子编辑数据加载失败'), findsOneWidget);
+    expect(find.byKey(const Key('post-title')), findsNothing);
+    expect(find.byKey(const Key('post-submit')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('post-editor-retry')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('伦敦周末市场指南'), findsOneWidget);
+    expect(find.textContaining('周六上午'), findsOneWidget);
+    expect(find.byKey(const Key('post-submit')), findsOneWidget);
   });
 
   testWidgets('post editor can delete an owned post', (tester) async {
