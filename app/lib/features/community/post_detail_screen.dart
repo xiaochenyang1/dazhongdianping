@@ -39,13 +39,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   void _loadInitial() {
     final post = widget.repository.loadPost(widget.postId);
-    final comments = widget.repository.loadCommentPage(widget.postId);
+    final comments = _loadComments();
     setState(() {
       _post = post;
       _comments = comments;
       _replyTarget = null;
       _loadingMoreComments = false;
     });
+  }
+
+  void _reloadComments() {
+    setState(() {
+      _comments = _loadComments();
+      _loadingMoreComments = false;
+    });
+  }
+
+  Future<CommunityCommentPage> _loadComments() {
+    final comments = widget.repository.loadCommentPage(widget.postId);
+    comments.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return comments;
   }
 
   @override
@@ -85,9 +98,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       );
       if (!mounted) return;
       _commentController.clear();
-      final refreshedComments = widget.repository.loadCommentPage(
-        widget.postId,
-      );
+      final refreshedComments = _loadComments();
       final refreshedPost = widget.repository.loadPost(widget.postId);
       setState(() {
         _post = refreshedPost;
@@ -464,6 +475,23 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             FutureBuilder<CommunityCommentPage>(
               future: _comments,
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Text('评论加载失败：${snapshot.error}'),
+                        const SizedBox(height: 8),
+                        FilledButton.tonalIcon(
+                          key: const Key('post-comments-retry'),
+                          onPressed: _reloadComments,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('重试评论'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 if (!snapshot.hasData) {
                   return const Padding(
                     padding: EdgeInsets.all(20),

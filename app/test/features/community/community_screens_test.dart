@@ -28,6 +28,7 @@ class CommunityScreenApi
   bool failNextUpload = false;
   bool failNextLike = false;
   bool failNextComment = false;
+  bool failNextCommentLoad = false;
   int postRequests = 0;
   final List<int> requestedCommentPages = <int>[];
 
@@ -60,6 +61,10 @@ class CommunityScreenApi
     if (path.endsWith('/comments')) {
       final page = query?['page'] as int? ?? 1;
       requestedCommentPages.add(page);
+      if (failNextCommentLoad) {
+        failNextCommentLoad = false;
+        throw StateError('comments unavailable');
+      }
       return {
         'list': [
           {
@@ -329,6 +334,34 @@ void main() {
     expect(api.requestedCommentPages, [1, 2]);
     expect(find.text('更早的评论。'), findsOneWidget);
     expect(find.byKey(const Key('post-comments-load-more')), findsNothing);
+  });
+
+  testWidgets('post detail retries an initial comment failure locally', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi()..failNextCommentLoad = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -900));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('评论加载失败'), findsOneWidget);
+    expect(api.postRequests, 1);
+
+    await tester.tap(find.byKey(const Key('post-comments-retry')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('收藏了。'), findsOneWidget);
+    expect(api.requestedCommentPages, [1, 1]);
+    expect(api.postRequests, 1);
   });
 
   testWidgets('community feed loads later pages', (tester) async {
