@@ -20,6 +20,7 @@ class NotificationScreenApi implements JsonApi {
     this.mixedRead = false,
     this.empty = false,
     this.paginated = false,
+    this.paginatedFirstUnread = false,
   });
   final bool social;
   final bool directMessage;
@@ -33,12 +34,15 @@ class NotificationScreenApi implements JsonApi {
   final bool mixedRead;
   final bool empty;
   final bool paginated;
+  final bool paginatedFirstUnread;
   String? postedPath;
   int loadCount = 0;
   final requestedPages = <int>[];
   bool failNextLoad = false;
   Completer<void>? ackGate;
   int ackCalls = 0;
+  Completer<void>? loadMoreGate;
+  int markAllCalls = 0;
 
   Map<String, dynamic> _item({required bool read}) {
     if (social) {
@@ -186,10 +190,11 @@ class NotificationScreenApi implements JsonApi {
       return {'list': const [], 'total': 0};
     }
     if (paginated) {
+      if (page > 1) await loadMoreGate?.future;
       return {
         'list': [
           {
-            ..._item(read: page == 1),
+            ..._item(read: paginatedFirstUnread ? false : page == 1),
             'id': page,
             'title': page == 1 ? '已读新通知' : '更早未读通知',
           },
@@ -216,6 +221,7 @@ class NotificationScreenApi implements JsonApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postedPath = path;
     if (path == '/api/c/v1/notifications/read-all') {
+      markAllCalls += 1;
       return {'updated': 1, 'count': 0};
     }
     ackCalls += 1;
@@ -655,5 +661,31 @@ void main() {
     expect(api.postedPath, '/api/c/v1/notifications/read-all');
     expect(find.text('未读'), findsNothing);
     expect(find.text('全部通知已标记为已读'), findsOneWidget);
+  });
+
+  testWidgets('notification serializes pagination and mark-all actions', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = NotificationScreenApi(
+      paginated: true,
+      paginatedFirstUnread: true,
+    )..loadMoreGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notifications-load-more')));
+    await tester.tap(find.byKey(const Key('notifications-mark-all')));
+    expect(api.requestedPages, [1, 2]);
+    expect(api.markAllCalls, 0);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('更早未读通知'), findsOneWidget);
+    expect(api.markAllCalls, 0);
   });
 }

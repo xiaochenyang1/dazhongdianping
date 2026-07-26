@@ -63,7 +63,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _loadMore(NotificationPage current) async {
-    if (_loadingMore || !current.hasMore) return;
+    if (_loadingMore || _markingAll || !current.hasMore) return;
     setState(() => _loadingMore = true);
     try {
       final next = await widget.repository.loadPage(
@@ -120,7 +120,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _markAllRead(NotificationPage page) async {
-    if (_markingAll) return;
+    if (_markingAll || _loadingMore) return;
     final hasUnread = page.items.any((item) => !item.read);
     if (!hasUnread) return;
     setState(() => _markingAll = true);
@@ -292,7 +292,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               final unread = notifications.where((item) => !item.read).length;
               return TextButton(
                 key: const Key('notifications-mark-all'),
-                onPressed: unread == 0 || _markingAll
+                onPressed: unread == 0 || _markingAll || _loadingMore
                     ? null
                     : () => _markAllRead(snapshot.data!),
                 child: Text(
@@ -384,7 +384,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         return Center(
                           child: OutlinedButton.icon(
                             key: const Key('notifications-load-more'),
-                            onPressed: _loadingMore
+                            onPressed: _loadingMore || _markingAll
                                 ? null
                                 : () => _loadMore(page),
                             icon: _loadingMore
