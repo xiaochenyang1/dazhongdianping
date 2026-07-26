@@ -120,8 +120,8 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
 
   Future<void> _reschedule() async {
     final slot = _selectedSlot;
-    if (slot == null) return;
-    await _runAction(
+    if (slot == null || _acting) return;
+    final succeeded = await _runAction(
       () => widget.repository.rescheduleReservation(
         widget.reservationId,
         slotId: slot.slotId,
@@ -130,7 +130,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
       ),
       '预订已改期',
     );
-    if (mounted) {
+    if (succeeded && mounted) {
       setState(() {
         _slots = const [];
         _selectedSlot = null;
@@ -138,18 +138,20 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
     }
   }
 
-  Future<void> _runAction(
+  Future<bool> _runAction(
     Future<ReservationDetail> Function() action,
     String message,
   ) async {
     setState(() => _acting = true);
     try {
       final reservation = await action();
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _reservation = reservation);
       _showMessage(message);
+      return true;
     } catch (error) {
       if (mounted) _showMessage('操作失败：$error');
+      return false;
     } finally {
       if (mounted) setState(() => _acting = false);
     }

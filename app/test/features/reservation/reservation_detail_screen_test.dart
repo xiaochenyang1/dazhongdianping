@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 class ReservationDetailApi implements JsonApi {
   String? path;
   Object? body;
+  bool failNextReschedule = false;
+  int rescheduleRequests = 0;
 
   Map<String, dynamic> detail({String statusText = '已确认'}) => {
     'id': 11,
@@ -70,6 +72,11 @@ class ReservationDetailApi implements JsonApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     this.path = path;
     this.body = body;
+    if (path.endsWith('/reschedule')) rescheduleRequests++;
+    if (path.endsWith('/reschedule') && failNextReschedule) {
+      failNextReschedule = false;
+      throw StateError('reschedule unavailable');
+    }
     return detail(statusText: path.endsWith('/cancel') ? '用户取消' : '已确认');
   }
 }
@@ -128,5 +135,44 @@ void main() {
       'reserveTime': '2026-07-21 19:00:00',
       'reason': '用户在线改期',
     });
+  });
+
+  testWidgets('failed reschedule preserves the selected slot for retry', (
+    tester,
+  ) async {
+    final api = ReservationDetailApi()..failNextReschedule = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationDetailScreen(
+          repository: ReservationRepository(api),
+          reservationId: 11,
+          initialRescheduleDate: DateTime(2026, 7, 21),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('查询改期时段'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('19:00'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('确认改期'));
+    await tester.tap(find.text('确认改期'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('操作失败'), findsOneWidget);
+    expect(find.textContaining('19:00'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, '确认改期'))
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.tap(find.text('确认改期'));
+    await tester.pumpAndSettle();
+
+    expect(api.rescheduleRequests, 2);
+    expect(find.textContaining('19:00'), findsNothing);
   });
 }
