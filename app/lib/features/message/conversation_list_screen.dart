@@ -492,8 +492,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 6),
                 IconButton.filled(
+                  key: const Key('chat-send-button'),
                   onPressed: _sending || _blocked ? null : _send,
-                  icon: const Icon(Icons.send_rounded),
+                  icon: _sending
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send_rounded),
                   tooltip: '发送',
                 ),
               ],

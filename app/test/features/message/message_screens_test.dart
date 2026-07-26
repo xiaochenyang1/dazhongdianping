@@ -16,6 +16,8 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextConversationLoad = false;
   Completer<void>? blockGate;
   int blockCalls = 0;
+  bool failNextSend = false;
+  int sendCalls = 0;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -82,12 +84,18 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       }
       return {'conversationId': 3, 'markedReadCount': 2};
     }
+    sendCalls += 1;
+    if (failNextSend) {
+      failNextSend = false;
+      throw Exception('send unavailable');
+    }
+    final content = (body as Map<String, Object?>)['content'] as String;
     return {
       'id': 8,
       'conversationId': 3,
       'fromUserId': 8,
       'toUserId': 9,
-      'content': '走起',
+      'content': content,
       'read': false,
       'createdAt': '10:01',
     };
@@ -373,6 +381,57 @@ void main() {
           .widget<PopupMenuButton<String>>(find.byType(PopupMenuButton<String>))
           .enabled,
       isTrue,
+    );
+  });
+
+  testWidgets('chat preserves a failed message draft and retries sending', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi()..failNextSend = true;
+    const conversation = ConversationSummary(
+      id: 3,
+      peerUserId: 9,
+      peerNickname: '伦敦小王',
+      peerAvatar: '',
+      lastMessagePreview: '周末探店？',
+      lastMessageAt: '10:00',
+      unreadCount: 2,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: conversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '失败后继续发送');
+    await tester.tap(find.byKey(const Key('chat-send-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('发送失败'), findsOneWidget);
+    expect(find.text('失败后继续发送'), findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key('chat-send-button')))
+          .onPressed,
+      isNotNull,
+    );
+    ScaffoldMessenger.of(
+      tester.element(find.byType(ChatScreen)),
+    ).clearSnackBars();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('chat-send-button')));
+    await tester.pumpAndSettle();
+    expect(api.sendCalls, 2);
+    expect(find.text('失败后继续发送'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      isEmpty,
     );
   });
 }
