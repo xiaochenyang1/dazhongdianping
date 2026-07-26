@@ -8,11 +8,14 @@ class SearchFakeRepository extends BrowseRepository {
     this.hotWords = const [],
     this.history = const [],
     this.suggestions = const [],
+    this.paginated = false,
   });
 
   final List<SearchHotWord> hotWords;
   List<SearchHistoryItem> history;
   final List<SearchSuggestion> suggestions;
+  final bool paginated;
+  final List<int> requestedPages = <int>[];
   final List<String> searchedKeywords = <String>[];
   final List<String> suggestionKeywords = <String>[];
   int clearCalls = 0;
@@ -34,6 +37,30 @@ class SearchFakeRepository extends BrowseRepository {
         pricePerCapita: 12,
       ),
     ];
+  }
+
+  @override
+  Future<ShopSearchPage> searchShopPage(
+    String keyword, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    searchedKeywords.add(keyword);
+    requestedPages.add(page);
+    final shop = ShopSummary(
+      id: page == 1 ? 7 : 8,
+      name: page == 1 ? 'Berlin Tea' : 'Paris Tea',
+      category: 'Tea',
+      score: 4.5,
+      currency: 'EUR',
+      pricePerCapita: 12,
+    );
+    return ShopSearchPage(
+      items: [shop],
+      total: paginated ? 2 : 1,
+      page: page,
+      pageSize: paginated ? 1 : pageSize,
+    );
   }
 
   @override
@@ -68,6 +95,24 @@ class SearchFakeRepository extends BrowseRepository {
 }
 
 void main() {
+  testWidgets('search screen loads later result pages', (tester) async {
+    final repository = SearchFakeRepository(paginated: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SearchScreen(repository: repository, initialKeyword: 'tea'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('search-results-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('search-results-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedPages, [1, 2]);
+    expect(find.text('Paris Tea'), findsOneWidget);
+    expect(find.byKey(const Key('search-results-load-more')), findsNothing);
+  });
+
   testWidgets('search screen submits keyword and renders result', (
     tester,
   ) async {

@@ -161,6 +161,21 @@ class ShopReviewPage {
   }
 }
 
+class ShopSearchPage {
+  const ShopSearchPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+  final List<ShopSummary> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class SearchHistoryItem {
   const SearchHistoryItem({
     required this.id,
@@ -315,6 +330,20 @@ abstract class BrowseRepository {
   Future<List<ShopSummary>> loadFeaturedShops();
   Future<List<ShopSummary>> searchShops(String keyword) =>
       throw UnimplementedError();
+  Future<ShopSearchPage> searchShopPage(
+    String keyword, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final items = await searchShops(keyword);
+    return ShopSearchPage(
+      items: items,
+      total: items.length,
+      page: page,
+      pageSize: pageSize,
+    );
+  }
+
   Future<ShopDetail> loadShopDetail(int shopId) => throw UnimplementedError();
   Future<List<SearchHotWord>> loadHotWords({int limit = 8}) =>
       throw UnimplementedError();
@@ -386,13 +415,30 @@ class ApiBrowseRepository implements BrowseRepository {
   }
 
   @override
-  Future<List<ShopSummary>> searchShops(String keyword) async {
+  Future<List<ShopSummary>> searchShops(String keyword) async =>
+      (await searchShopPage(keyword)).items;
+
+  @override
+  Future<ShopSearchPage> searchShopPage(
+    String keyword, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final result = await client.getJson(
       '/api/c/v1/search/shops',
-      query: {'keyword': keyword, 'page': 1, 'pageSize': 20},
+      query: {'keyword': keyword, 'page': page, 'pageSize': pageSize},
     );
     final list = result['list'] as List<dynamic>? ?? const [];
-    return list.cast<Map<String, dynamic>>().map(ShopSummary.fromJson).toList();
+    final items = list
+        .cast<Map<String, dynamic>>()
+        .map(ShopSummary.fromJson)
+        .toList();
+    return ShopSearchPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
   }
 
   @override

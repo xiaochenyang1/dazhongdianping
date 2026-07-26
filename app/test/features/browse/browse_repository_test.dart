@@ -182,6 +182,15 @@ void main() {
     expect(api.query?['keyword'], 'noodles');
     expect(results.single.name, 'Paris Noodles');
 
+    final page = await repository.searchShopPage(
+      'noodles',
+      page: 2,
+      pageSize: 12,
+    );
+    expect(api.query, {'keyword': 'noodles', 'page': 2, 'pageSize': 12});
+    expect(page.page, 2);
+    expect(page.pageSize, 12);
+
     final detail = await repository.loadShopDetail(99);
     expect(api.path, '/api/c/v1/shops/99');
     expect(detail.address, 'Rue de Lyon');

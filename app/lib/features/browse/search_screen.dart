@@ -31,7 +31,9 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   late final TextEditingController _controller;
-  Future<List<ShopSummary>>? _results;
+  Future<ShopSearchPage>? _results;
+  String _searchedKeyword = '';
+  bool _loadingMore = false;
   List<SearchHotWord> _hotWords = const [];
   List<SearchHistoryItem> _history = const [];
   List<SearchSuggestion> _suggestions = const [];
@@ -115,7 +117,8 @@ class _SearchScreenState extends State<SearchScreen> {
     final keyword = value.trim();
     if (keyword.isEmpty) return;
     setState(() {
-      _results = widget.repository.searchShops(keyword);
+      _searchedKeyword = keyword;
+      _results = widget.repository.searchShopPage(keyword);
       _suggestions = const [];
     });
     // Refresh history after a successful search so the new keyword appears.
@@ -133,6 +136,41 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  Future<void> _loadMore(ShopSearchPage current) async {
+    if (_loadingMore || !current.hasMore || _searchedKeyword.isEmpty) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.searchShopPage(
+        _searchedKeyword,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((shop) => shop.id).toSet();
+      setState(() {
+        _results = Future.value(
+          ShopSearchPage(
+            items: [
+              ...current.items,
+              ...next.items.where((shop) => knownIds.add(shop.id)),
+            ],
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多门店失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
   Future<void> _clearHistory() async {
     if (_clearingHistory) return;
     setState(() => _clearingHistory = true);
@@ -142,9 +180,9 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() => _history = const []);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('清空搜索历史失败：$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('清空搜索历史失败：$error')));
     } finally {
       if (mounted) setState(() => _clearingHistory = false);
     }
@@ -159,9 +197,9 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('删除搜索历史失败：$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('删除搜索历史失败：$error')));
     }
   }
 
@@ -231,7 +269,8 @@ class _SearchScreenState extends State<SearchScreen> {
                                       reservationRepository:
                                           widget.reservationRepository,
                                       reviewRepository: widget.reviewRepository,
-                                      canInteractReviews: widget.canInteractReviews,
+                                      canInteractReviews:
+                                          widget.canInteractReviews,
                                       thirdPartyConfig: widget.thirdPartyConfig,
                                     ),
                                   ),
@@ -251,7 +290,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Expanded(
               child: _results == null
                   ? _buildDiscoveryPanel()
-                  : FutureBuilder<List<ShopSummary>>(
+                  : FutureBuilder<ShopSearchPage>(
                       future: _results,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState != ConnectionState.done) {
@@ -264,16 +303,36 @@ class _SearchScreenState extends State<SearchScreen> {
                             child: Text('Search failed: ${snapshot.error}'),
                           );
                         }
-                        final items = snapshot.data ?? const [];
+                        final page = snapshot.data!;
+                        final items = page.items;
                         if (items.isEmpty) {
                           return const Center(
                             child: Text('No matching places'),
                           );
                         }
                         return ListView.separated(
-                          itemCount: items.length,
+                          itemCount: items.length + (page.hasMore ? 1 : 0),
                           separatorBuilder: (_, _) => const Divider(height: 1),
                           itemBuilder: (context, index) {
+                            if (index == items.length) {
+                              return Center(
+                                child: OutlinedButton.icon(
+                                  key: const Key('search-results-load-more'),
+                                  onPressed: _loadingMore
+                                      ? null
+                                      : () => _loadMore(page),
+                                  icon: _loadingMore
+                                      ? const SizedBox.square(
+                                          dimension: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.expand_more),
+                                  label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                                ),
+                              );
+                            }
                             final shop = items[index];
                             return ListTile(
                               title: Text(shop.name),
@@ -294,7 +353,8 @@ class _SearchScreenState extends State<SearchScreen> {
                                     reservationRepository:
                                         widget.reservationRepository,
                                     reviewRepository: widget.reviewRepository,
-                                    canInteractReviews: widget.canInteractReviews,
+                                    canInteractReviews:
+                                        widget.canInteractReviews,
                                     thirdPartyConfig: widget.thirdPartyConfig,
                                   ),
                                 ),
