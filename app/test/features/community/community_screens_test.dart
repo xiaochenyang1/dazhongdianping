@@ -29,7 +29,9 @@ class CommunityScreenApi
   bool failNextLike = false;
   bool failNextComment = false;
   bool failNextCommentLoad = false;
+  bool failNextReport = false;
   int postRequests = 0;
+  int reportRequests = 0;
   final List<int> requestedCommentPages = <int>[];
 
   Map<String, dynamic> get post => {
@@ -141,6 +143,7 @@ class CommunityScreenApi
     this.path = path;
     postPath = path;
     this.body = body;
+    if (path.endsWith('/report')) reportRequests++;
     if (path == '/api/c/v1/posts' && failNextSave) {
       failNextSave = false;
       throw StateError('save unavailable');
@@ -181,6 +184,10 @@ class CommunityScreenApi
         'mine': true,
         'createdAt': '2026-07-16 12:00:00',
       };
+    }
+    if (path.endsWith('/report') && failNextReport) {
+      failNextReport = false;
+      throw StateError('report unavailable');
     }
     return post;
   }
@@ -588,6 +595,56 @@ void main() {
     await tester.tap(find.byKey(const Key('post-comment-submit')));
     await tester.pumpAndSettle();
     expect(api.body, {'content': '失败后保留的评论'});
+  });
+
+  testWidgets('post detail preserves a failed report reason for retry', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi()..failNextReport = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('post-report-button')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.tap(find.byKey(const Key('post-report-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('post-report-reason')),
+      '需要重试的举报理由',
+    );
+    await tester.tap(find.text('提交举报'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('举报提交失败'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('post-report-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('需要重试的举报理由'), findsOneWidget);
+    await tester.tap(find.text('提交举报'));
+    await tester.pumpAndSettle();
+
+    expect(api.body, {'reason': '需要重试的举报理由'});
+    expect(api.reportRequests, 2);
+
+    await tester.tap(find.byKey(const Key('post-report-button')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('post-report-reason')))
+          .controller!
+          .text,
+      isEmpty,
+    );
   });
 
   testWidgets('community author opens the public user profile callback', (

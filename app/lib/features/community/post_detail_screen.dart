@@ -29,6 +29,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _repostSaving = false;
   bool _likeSaving = false;
   bool _commentSaving = false;
+  bool _reportSaving = false;
   bool _loadingMoreComments = false;
 
   @override
@@ -210,7 +211,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Future<void> _report() async {
-    _reportController.clear();
+    if (_reportSaving) return;
     final reason = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -236,9 +237,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       ),
     );
     if (reason == null || reason.isEmpty) return;
+    setState(() => _reportSaving = true);
     try {
       await widget.repository.reportPost(widget.postId, reason);
       if (mounted) {
+        _reportController.clear();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('举报已提交')));
@@ -249,6 +252,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('举报提交失败：$error')));
       }
+    } finally {
+      if (mounted) setState(() => _reportSaving = false);
     }
   }
 
@@ -425,7 +430,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
                   TextButton.icon(
-                    onPressed: _report,
+                    key: const Key('post-report-button'),
+                    onPressed: _reportSaving ? null : _report,
                     icon: const Icon(Icons.flag_outlined),
                     label: const Text('举报'),
                   ),
