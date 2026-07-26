@@ -27,6 +27,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   final confirmPasswordController = TextEditingController();
   int gender = 0;
   String bindType = 'email';
+  bool savingProfile = false;
+  bool sendingBindCode = false;
+  bool bindingAccount = false;
+  bool updatingPassword = false;
 
   @override
   void initState() {
@@ -41,6 +45,121 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     signatureController.text = profile.signature;
     gender = profile.gender;
     return profile;
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _saveProfile() async {
+    if (savingProfile) return;
+    setState(() => savingProfile = true);
+    try {
+      final profile = await widget.repository.updateProfile(
+        nickname: nicknameController.text.trim(),
+        avatar: avatarController.text.trim(),
+        gender: gender,
+        signature: signatureController.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _profile = Future.value(profile);
+      });
+      widget.onProfileChanged?.call(profile);
+      _showMessage('资料已保存');
+    } catch (error) {
+      if (mounted) _showMessage('保存资料失败：$error');
+    } finally {
+      if (mounted) setState(() => savingProfile = false);
+    }
+  }
+
+  Future<void> _sendBindCode() async {
+    final account = bindAccountController.text.trim();
+    if (account.isEmpty) {
+      _showMessage('请先填写${bindType == 'email' ? '邮箱' : '手机号'}');
+      return;
+    }
+    if (sendingBindCode) return;
+    setState(() => sendingBindCode = true);
+    try {
+      final result = await widget.repository.sendBindCode(
+        type: bindType,
+        account: account,
+      );
+      if (!mounted) return;
+      final mockCode = result.mockCode;
+      _showMessage(mockCode.isEmpty ? '验证码已发送' : '验证码已发送（本地验证码：$mockCode）');
+    } catch (error) {
+      if (mounted) _showMessage('发送验证码失败：$error');
+    } finally {
+      if (mounted) setState(() => sendingBindCode = false);
+    }
+  }
+
+  Future<void> _bindAccount() async {
+    final account = bindAccountController.text.trim();
+    final code = bindCodeController.text.trim();
+    if (account.isEmpty || code.isEmpty) {
+      _showMessage('请填写账号和验证码');
+      return;
+    }
+    if (bindingAccount) return;
+    setState(() => bindingAccount = true);
+    try {
+      final profile = await widget.repository.bindAccount(
+        type: bindType,
+        account: account,
+        code: code,
+      );
+      if (!mounted) return;
+      bindCodeController.clear();
+      setState(() {
+        _profile = Future.value(profile);
+      });
+      widget.onProfileChanged?.call(profile);
+      _showMessage('账号已绑定');
+    } catch (error) {
+      if (mounted) _showMessage('绑定失败：$error');
+    } finally {
+      if (mounted) setState(() => bindingAccount = false);
+    }
+  }
+
+  Future<void> _updatePassword(UserProfile profile) async {
+    final oldPassword = oldPasswordController.text;
+    final newPassword = newPasswordController.text;
+    if (profile.hasPassword && oldPassword.isEmpty) {
+      _showMessage('请输入旧密码');
+      return;
+    }
+    if (newPassword.isEmpty) {
+      _showMessage('请输入新密码');
+      return;
+    }
+    if (newPassword != confirmPasswordController.text) {
+      _showMessage('两次输入的新密码不一致');
+      return;
+    }
+    if (updatingPassword) return;
+    setState(() => updatingPassword = true);
+    try {
+      await widget.repository.updatePassword(
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+      );
+      if (!mounted) return;
+      oldPasswordController.clear();
+      newPasswordController.clear();
+      confirmPasswordController.clear();
+      _showMessage('密码已更新');
+    } catch (error) {
+      if (mounted) _showMessage('更新密码失败：$error');
+    } finally {
+      if (mounted) setState(() => updatingPassword = false);
+    }
   }
 
   @override
@@ -129,7 +248,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  FilledButton(onPressed: () {}, child: const Text('保存资料')),
+                  FilledButton(
+                    key: const Key('settings-save-profile'),
+                    onPressed: savingProfile ? null : _saveProfile,
+                    child: Text(savingProfile ? '保存中...' : '保存资料'),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -167,13 +290,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                       labelText: '绑定验证码',
                       border: const OutlineInputBorder(),
                       suffixIcon: TextButton(
-                        onPressed: () {},
-                        child: const Text('发送验证码'),
+                        key: const Key('settings-send-bind-code'),
+                        onPressed: sendingBindCode ? null : _sendBindCode,
+                        child: Text(sendingBindCode ? '发送中...' : '发送验证码'),
                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  FilledButton(onPressed: () {}, child: const Text('确认绑定')),
+                  FilledButton(
+                    key: const Key('settings-confirm-bind'),
+                    onPressed: bindingAccount ? null : _bindAccount,
+                    child: Text(bindingAccount ? '绑定中...' : '确认绑定'),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -217,7 +345,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  FilledButton(onPressed: () {}, child: const Text('更新密码')),
+                  FilledButton(
+                    key: const Key('settings-update-password'),
+                    onPressed: updatingPassword
+                        ? null
+                        : () => _updatePassword(profile),
+                    child: Text(updatingPassword ? '更新中...' : '更新密码'),
+                  ),
                 ],
               ),
             ],
