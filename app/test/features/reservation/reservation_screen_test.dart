@@ -5,22 +5,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ReservationScreenApi implements JsonApi {
+  ReservationScreenApi({this.failFirst = false});
+
+  final bool failFirst;
+  int slotRequests = 0;
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
-  }) async => {
-    'date': '2026-07-16',
-    'list': [
-      {
-        'slotId': 3,
-        'startTime': '18:00',
-        'endTime': '20:00',
-        'remainingCount': 4,
-        'available': true,
-      },
-    ],
-  };
+  }) async {
+    slotRequests++;
+    if (failFirst && slotRequests == 1) {
+      throw StateError('network unavailable');
+    }
+    return {
+      'date': '2026-07-16',
+      'list': [
+        {
+          'slotId': 3,
+          'startTime': '18:00',
+          'endTime': '20:00',
+          'remainingCount': 4,
+          'available': true,
+        },
+      ],
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async => {
@@ -31,6 +42,28 @@ class ReservationScreenApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('reservation screen retries an initial slot failure', (
+    tester,
+  ) async {
+    final api = ReservationScreenApi(failFirst: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationScreen(
+          repository: ReservationRepository(api),
+          shopId: 2,
+          initialDate: DateTime(2026, 7, 16),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('时段加载失败'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('reservation-slots-retry')));
+    await tester.pumpAndSettle();
+    expect(api.slotRequests, 2);
+    expect(find.textContaining('18:00'), findsOneWidget);
+  });
+
   testWidgets('reservation screen renders available slots', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

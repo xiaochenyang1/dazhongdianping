@@ -40,6 +40,14 @@ class _ReservationScreenState extends State<ReservationScreen> {
     peopleCount: peopleCount,
   );
 
+  void reloadSlots() {
+    final future = loadSlots();
+    setState(() {
+      slots = future;
+      selected = null;
+    });
+  }
+
   Future<void> createReservation() async {
     if (selected == null) {
       ScaffoldMessenger.of(
@@ -120,7 +128,21 @@ class _ReservationScreenState extends State<ReservationScreen> {
               if (snapshot.connectionState != ConnectionState.done) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (snapshot.hasError) return Text('时段加载失败：${snapshot.error}');
+              if (snapshot.hasError) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('时段加载失败：${snapshot.error}'),
+                    const SizedBox(height: 8),
+                    FilledButton.tonalIcon(
+                      key: const Key('reservation-slots-retry'),
+                      onPressed: reloadSlots,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('重试'),
+                    ),
+                  ],
+                );
+              }
               return Wrap(
                 spacing: 8,
                 runSpacing: 8,
