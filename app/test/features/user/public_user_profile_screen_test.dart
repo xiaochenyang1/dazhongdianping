@@ -6,6 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool paginateFollowers = false;
+  bool failNextProfile = false;
+  bool failNextFollowers = false;
+  int profileRequests = 0;
   final List<int> requestedFollowerPages = <int>[];
   @override
   Future<Map<String, dynamic>> getJson(
@@ -13,6 +16,10 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     Map<String, Object?>? query,
   }) async {
     if (path.endsWith('/followers')) {
+      if (failNextFollowers) {
+        failNextFollowers = false;
+        throw StateError('relationship network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedFollowerPages.add(page);
       return {
@@ -48,6 +55,11 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         'followedByCurrentUser': false,
       };
     }
+    profileRequests++;
+    if (failNextProfile) {
+      failNextProfile = false;
+      throw StateError('profile network unavailable');
+    }
     return {
       'id': 9,
       'nickname': '伦敦小王',
@@ -78,6 +90,50 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('public profile retries an initial load failure', (tester) async {
+    final api = SocialProfileApi()..failNextProfile = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PublicUserProfileScreen(
+          repository: UserRepository(api),
+          userId: 9,
+          canFollow: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('用户主页加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('public-profile-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.profileRequests, 2);
+    expect(find.text('伦敦小王'), findsOneWidget);
+  });
+
+  testWidgets('relationship list retries an initial load failure', (
+    tester,
+  ) async {
+    final api = SocialProfileApi()..failNextFollowers = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserRelationshipsScreen(
+          repository: UserRepository(api),
+          userId: 9,
+          followers: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('关系列表加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('relationships-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedFollowerPages, [1]);
+    expect(find.text('巴黎小陈'), findsOneWidget);
+  });
+
   testWidgets('relationship list loads later users', (tester) async {
     final api = SocialProfileApi()..paginateFollowers = true;
     await tester.pumpWidget(

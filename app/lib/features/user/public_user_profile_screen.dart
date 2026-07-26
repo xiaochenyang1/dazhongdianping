@@ -30,6 +30,15 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
     _profile = widget.repository.loadPublicProfile(widget.userId);
   }
 
+  void _reloadProfile() {
+    final future = widget.repository.loadPublicProfile(widget.userId);
+    setState(() {
+      _profile = future;
+      _visibleProfile = null;
+      _saving = false;
+    });
+  }
+
   Future<void> _toggle(PublicUserProfile profile) async {
     if (_saving) return;
     final previous = profile;
@@ -88,7 +97,21 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('用户主页加载失败：${snapshot.error}'));
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('用户主页加载失败：${snapshot.error}'),
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  key: const Key('public-profile-retry'),
+                  onPressed: _reloadProfile,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          );
         }
         final profile = _visibleProfile ?? snapshot.data!;
         final isSelf = widget.currentUserId == profile.id;
@@ -237,6 +260,17 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
     );
   }
 
+  void reload() {
+    final future = widget.repository.loadRelationships(
+      widget.userId,
+      followers: widget.followers,
+    );
+    setState(() {
+      page = future;
+      loadingMore = false;
+    });
+  }
+
   Future<void> loadMore(SocialUserPage current) async {
     if (loadingMore || !current.hasMore) return;
     setState(() => loadingMore = true);
@@ -281,7 +315,21 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return snapshot.hasError
-              ? Center(child: Text('关系列表加载失败：${snapshot.error}'))
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('关系列表加载失败：${snapshot.error}'),
+                      const SizedBox(height: 12),
+                      FilledButton.tonalIcon(
+                        key: const Key('relationships-retry'),
+                        onPressed: reload,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('重试'),
+                      ),
+                    ],
+                  ),
+                )
               : const Center(child: CircularProgressIndicator());
         }
         final current = snapshot.data!;
