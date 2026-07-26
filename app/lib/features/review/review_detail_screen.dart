@@ -32,6 +32,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   bool _deleteSaving = false;
   bool _loadingMoreComments = false;
   int _reviewRequestId = 0;
+  int _commentRequestId = 0;
 
   @override
   void initState() {
@@ -50,6 +51,12 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       ? widget.repository.loadOwnedReviewDetail(widget.reviewId)
       : widget.repository.loadPublicReview(widget.reviewId);
 
+  Future<ReviewCommentPage> _loadComments() {
+    final future = widget.repository.loadCommentPage(widget.reviewId);
+    future.ignore();
+    return future;
+  }
+
   void _reloadReview() {
     final requestId = ++_reviewRequestId;
     final future = _loadReview();
@@ -58,6 +65,8 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       _visibleReview = null;
       _comments = null;
       _replyTarget = null;
+      _loadingMoreComments = false;
+      _commentRequestId++;
     });
     future
         .then((detail) {
@@ -65,7 +74,8 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
           setState(() {
             _visibleReview = detail;
             if (_shouldShowComments(detail)) {
-              _comments = widget.repository.loadCommentPage(widget.reviewId);
+              _commentRequestId++;
+              _comments = _loadComments();
             }
           });
         })
@@ -77,6 +87,16 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
 
   bool _interactionAllowed(ReviewDetail detail) =>
       widget.canInteract && !widget.owned && detail.canInteract;
+
+  void _reloadComments() {
+    final future = _loadComments();
+    _commentRequestId++;
+    setState(() {
+      _comments = future;
+      _replyTarget = null;
+      _loadingMoreComments = false;
+    });
+  }
 
   Future<void> _toggleLike(ReviewDetail detail) async {
     if (_likeSaving || !_interactionAllowed(detail)) return;
@@ -118,7 +138,8 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       _commentController.clear();
       setState(() {
         _replyTarget = null;
-        _comments = widget.repository.loadCommentPage(widget.reviewId);
+        _commentRequestId++;
+        _comments = _loadComments();
         _visibleReview = detail.copyWith(commentCount: detail.commentCount + 1);
       });
       ScaffoldMessenger.of(
@@ -136,6 +157,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
 
   Future<void> _loadMoreComments(ReviewCommentPage current) async {
     if (_loadingMoreComments || !current.hasMore) return;
+    final requestId = _commentRequestId;
     setState(() => _loadingMoreComments = true);
     try {
       final next = await widget.repository.loadCommentPage(
@@ -143,7 +165,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != _commentRequestId) return;
       final knownIds = current.items.map((comment) => comment.id).toSet();
       setState(() {
         _comments = Future.value(
@@ -159,13 +181,15 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
         );
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && requestId == _commentRequestId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('加载更多评论失败：$error')));
       }
     } finally {
-      if (mounted) setState(() => _loadingMoreComments = false);
+      if (mounted && requestId == _commentRequestId) {
+        setState(() => _loadingMoreComments = false);
+      }
     }
   }
 
@@ -553,7 +577,19 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                     );
                   }
                   if (commentSnapshot.hasError) {
-                    return Text('评论加载失败：${commentSnapshot.error}');
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('评论加载失败：${commentSnapshot.error}'),
+                        const SizedBox(height: 8),
+                        FilledButton.tonalIcon(
+                          key: const Key('review-comments-retry'),
+                          onPressed: _reloadComments,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('重试评论'),
+                        ),
+                      ],
+                    );
                   }
                   final page = commentSnapshot.data!;
                   final comments = page.items;

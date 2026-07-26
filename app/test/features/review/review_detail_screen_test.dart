@@ -11,6 +11,7 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   int likeCount = 3;
   bool paginateComments = false;
   bool failNextDetail = false;
+  bool failNextComments = false;
   int detailRequests = 0;
   final List<int> requestedCommentPages = <int>[];
   final List<Map<String, dynamic>> comments = [
@@ -73,6 +74,10 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
       return detail(owned: true);
     }
     if (path == '/api/c/v1/reviews/12/comments') {
+      if (failNextComments) {
+        failNextComments = false;
+        throw StateError('comment network unavailable');
+      }
       final page = query?['page'] as int? ?? 1;
       requestedCommentPages.add(page);
       final pageComments = !paginateComments
@@ -156,6 +161,32 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('public review detail retries an initial comment failure', (
+    tester,
+  ) async {
+    final api = DetailFakeApi()..failNextComments = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('review-comments-retry')),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('评论加载失败'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('review-comments-retry')));
+    await tester.pumpAndSettle();
+    expect(api.requestedCommentPages, [1]);
+    expect(find.text('说得对'), findsOneWidget);
+  });
+
   testWidgets('public review detail retries an initial load failure', (
     tester,
   ) async {
