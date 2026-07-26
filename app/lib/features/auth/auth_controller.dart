@@ -81,6 +81,54 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<BanAppealStatus> submitBanAppeal({
+    required String type,
+    required String account,
+    required String code,
+    required String reason,
+  }) async {
+    busy = true;
+    errorMessage = null;
+    notifyListeners();
+    try {
+      return await repository.submitBanAppeal(
+        type: type,
+        account: account,
+        code: code,
+        reason: reason,
+      );
+    } catch (error) {
+      errorMessage = '$error';
+      rethrow;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<BanAppealStatus> queryBanAppeal({
+    required String type,
+    required String account,
+    required String code,
+  }) async {
+    busy = true;
+    errorMessage = null;
+    notifyListeners();
+    try {
+      return await repository.queryBanAppeal(
+        type: type,
+        account: account,
+        code: code,
+      );
+    } catch (error) {
+      errorMessage = '$error';
+      rethrow;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> loginWithCode({
     required String account,
     required String type,

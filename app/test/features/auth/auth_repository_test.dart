@@ -28,6 +28,19 @@ class AuthFakeApi implements JsonApi {
         },
       };
     }
+    if (path.endsWith('/auth/ban-appeals') ||
+        path.endsWith('/auth/ban-appeals/query')) {
+      return {
+        'id': 88,
+        'status': 0,
+        'statusText': '待审核',
+        'reason': '这是误封，我没有违规内容。',
+        'rejectReason': '',
+        'banReason': '多次违规',
+        'submittedAt': '2026-07-26 10:00:00',
+        'auditedAt': '',
+      };
+    }
     return {
       'sent': true,
       'expireSeconds': 300,
@@ -95,5 +108,44 @@ void main() {
       'code': '654321',
       'newPassword': 'NewPass123',
     });
+  });
+
+  test('ban appeal submit and query map status responses', () async {
+    final api = AuthFakeApi();
+    final repository = AuthRepository(api);
+
+    final submitted = await repository.submitBanAppeal(
+      type: 'email',
+      account: 'banned@example.com',
+      code: '123456',
+      reason: '这是误封，我没有违规内容。',
+    );
+
+    expect(api.path, '/api/c/v1/auth/ban-appeals');
+    expect(api.body, {
+      'type': 'email',
+      'account': 'banned@example.com',
+      'code': '123456',
+      'reason': '这是误封，我没有违规内容。',
+    });
+    expect(submitted.id, 88);
+    expect(submitted.status, 0);
+    expect(submitted.statusText, '待审核');
+    expect(submitted.isPending, isTrue);
+
+    final queried = await repository.queryBanAppeal(
+      type: 'email',
+      account: 'banned@example.com',
+      code: '654321',
+    );
+
+    expect(api.path, '/api/c/v1/auth/ban-appeals/query');
+    expect(api.body, {
+      'type': 'email',
+      'account': 'banned@example.com',
+      'code': '654321',
+    });
+    expect(queried.id, 88);
+    expect(queried.statusText, '待审核');
   });
 }

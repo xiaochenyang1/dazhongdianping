@@ -123,10 +123,40 @@ void main() {
     expect(captured.headers['X-Region'], 'EU');
     expect(captured.headers['Accept-Language'], 'zh-CN');
     expect(captured.headers['Idempotency-Key'], isNotEmpty);
-    expect(captured.headers['Content-Type'], startsWith('multipart/form-data;'));
+    expect(
+      captured.headers['Content-Type'],
+      startsWith('multipart/form-data;'),
+    );
     expect(captured.body, contains('name="file"'));
     expect(captured.body, contains('filename="meal.png"'));
     expect(captured.body.toLowerCase(), contains('content-type: image/png'));
     expect(result['url'], '/uploads/meal.png');
+  });
+
+  test('api client preserves messageKey on business errors', () async {
+    final client = ApiClient(
+      config: const AppConfig(),
+      tokenProvider: () async => null,
+      transport: MockClient((request) async {
+        return http.Response(
+          '{"code":401,"message":"account banned","messageKey":"auth.user_banned","data":null,"traceId":"trace-ban"}',
+          401,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    try {
+      await client.postJson(
+        '/api/c/v1/auth/login/password',
+        body: {'account': 'banned@example.com', 'password': 'x'},
+      );
+      fail('expected ApiException');
+    } on ApiException catch (error) {
+      expect(error.message, 'account banned');
+      expect(error.messageKey, 'auth.user_banned');
+      expect(error.statusCode, 401);
+      expect(error.traceId, 'trace-ban');
+    }
   });
 }

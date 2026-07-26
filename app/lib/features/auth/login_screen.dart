@@ -1,5 +1,7 @@
+import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
+import 'package:dazhongdianping_app/features/auth/ban_appeal_screen.dart';
 import 'package:dazhongdianping_app/features/auth/register_screen.dart';
 import 'package:dazhongdianping_app/features/auth/reset_password_screen.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool success = false;
   String? localError;
   String? codeHint;
+  String? bannedAccount;
 
   @override
   void dispose() {
@@ -38,6 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String get accountType =>
       accountController.text.trim().contains('@') ? 'email' : 'phone';
+
+  bool _isBannedError(Object error) =>
+      error is ApiException && error.messageKey == 'auth.user_banned';
 
   Future<void> submit() async {
     final account = accountController.text.trim();
@@ -64,11 +70,16 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {
           success = true;
           localError = null;
+          bannedAccount = null;
         });
         widget.onAuthenticated(user);
       }
     } catch (error) {
-      if (mounted) setState(() => localError = '$error');
+      if (!mounted) return;
+      setState(() {
+        localError = '$error';
+        bannedAccount = _isBannedError(error) ? account : null;
+      });
     }
   }
 
@@ -94,6 +105,18 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (error) {
       if (mounted) setState(() => localError = '$error');
     }
+  }
+
+  void openBanAppeal({String? account}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BanAppealScreen(
+          controller: widget.controller,
+          initialAccount:
+              account ?? bannedAccount ?? accountController.text.trim(),
+        ),
+      ),
+    );
   }
 
   @override
@@ -170,6 +193,31 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: const TextStyle(color: Colors.red),
                 ),
               ),
+            if (bannedAccount != null)
+              Padding(
+                key: const Key('login-ban-appeal-cta'),
+                padding: const EdgeInsets.only(top: 16),
+                child: Card(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '账号 $bannedAccount 当前处于封禁状态。如果认为是误封，可以提交申诉，运营复核通过后会自动解封。',
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.tonal(
+                          key: const Key('login-open-ban-appeal'),
+                          onPressed: openBanAppeal,
+                          child: const Text('提交封禁申诉'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             if (success)
               const Padding(
                 padding: EdgeInsets.only(top: 12),
@@ -210,6 +258,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               child: const Text('忘记密码'),
+            ),
+            TextButton(
+              key: const Key('login-ban-appeal-entry'),
+              onPressed: () =>
+                  openBanAppeal(account: accountController.text.trim()),
+              child: const Text('封禁申诉'),
             ),
           ],
         ),

@@ -11,7 +11,7 @@
 - `web/`: `Vue 3 + TypeScript + Vite` PC Web 骨架。
 - `admin-web/`: `Vue 3 + TypeScript + Vite` 管理端运营后台，覆盖门店、Banner、搜索热词、分类/城市/商圈基础数据、审核（含门店草稿与团购）、达人认证、榜单、成长、圈子和话题治理，以及审计日志、隐私任务、订单退款查询/平台仲裁/对账补偿和 C 端用户治理（查询/封禁/解封/封禁申诉审核）。
 - `merchant-web/`: 独立商户工作台，覆盖注册、登录、资质、概览、门店草稿编辑/提交审核、员工、预订、团购创建/编辑/上下架、订单退款、券码核销、点评回复与申诉。
-- `app/`: Flutter 欧洲版工程，已覆盖浏览、搜索、登录、点评、团购、预订、社区帖子、话题广场、用户中心、通知与 GDPR 隐私中心闭环。
+- `app/`: Flutter 欧洲版工程，已覆盖浏览、搜索、登录、封禁申诉、点评、团购、预订、社区帖子、话题广场、用户中心、通知与 GDPR 隐私中心闭环。
 
 ## 当前实现状态
 
@@ -346,6 +346,7 @@ npm run build
 
 ## 已验证
 
+- `2026-07-26` Flutter 封禁申诉入口已补齐：API 错误保留 `messageKey`，密码登录识别 `auth.user_banned` 后展示申诉引导；登录页也提供常驻入口。用户可免登录发送 `appeal` 场景验证码、提交 10-500 字申诉、查询最新审核进度并查看封禁原因/驳回说明，通过后可返回登录。相关 Dart 静态分析无问题，API、仓储、登录页与申诉页聚焦测试 `18` 条通过。
 - `2026-07-25` PC Web SEO 预渲染与隐私导出模块对齐已完成聚焦验证：新增静态入口预渲染和 API 快照导出脚本，构建后可生成独立 HTML、canonical、Open Graph、Twitter Card、JSON-LD、制品清单，并在配置 `PUBLIC_SITE_URL` 时生成 sitemap/robots；带本地 H2 后端、`PRERENDER_REGION=CN` 的 `npm run build:prerender:data` 实测生成 15 个路由（7 个静态入口 + 8 个真实详情快照）。PC 隐私中心补齐后端已支持的 `browse_history/messages/circles/topics` 类型与勾选入口；SEO 快照脚本测试 5 条、Web 全量测试 117 条均通过。常驻 SSR、真实部署域名和目标环境联调仍未完成。
 - `2026-07-24` 封禁申诉链路二轮优化已完成前后端联调与全量回归：申诉通过/驳回/管理员直接解封会给用户写 `account.ban_appeal` 站内通知（复用通知模块，含 WebSocket 推送与聚合逻辑），用户恢复登录后可在通知列表看到审核结果；申诉提交/查询响应带出最近一次 `user_ban` 审计日志的封禁原因，`web` 申诉面板展示"封禁原因"、申诉已通过时提供"回到密码登录"一键预填入口；管理端用户详情新增 `banReason`/`pendingAppealCount`/`latestAppealStatusText` 并支持一键跳转 `/audit/user-appeals`；全局兜底异常 handler 补错误日志，未匹配路径由兜底 `500` 修正为 `404 common.not_found`。`backend` `mvn test` 308 条通过；`web` `npm test` 78 条通过；`admin-web` `npm test` 61 条通过；三端 `vue-tsc`/`build` 通过。本地起 `h2` 后端实测：申诉响应带封禁原因、管理端详情联动字段正确、审核通过后用户登录可见"封禁申诉已通过"通知、错误路径返回 `404`。
 - `2026-07-24` 用户封禁申诉链路本轮已完成前后端联调与全量回归：后端补齐 `biz_type=8` 统一审核（列表富化、通过自动解封、驳回记录原因、管理员直接解封自动了结待审申诉并使任务失效）、`POST /api/c/v1/auth/ban-appeals/query` 申诉进度查询、密码登录封禁改抛 `auth.user_banned`（与验证码登录/刷新一致）；`web` 登录弹层新增封禁识别（`ApiError.messageKey`）与申诉面板（发 `appeal` 验证码、提交、查进度），`admin-web` 新增 `/audit/user-appeals` 审核页并接入菜单/路由/权限（`audit:user_appeal:read/write`，种子权限 47/48）。`backend` 运行 `mvn test`，`308` 条测试通过（含新增 `UserBanAppealFlowTest` 4 条）；`web` 运行 `npm test`，`27` 个测试文件、`77` 条测试通过（含新增 `AuthDialog.test.ts` 4 条）；`admin-web` 运行 `npm test`，`22` 个测试文件、`60` 条测试通过（含新增 `UserAppealAuditView.test.ts` 3 条）。本地起 `h2` 后端 + 双前端 dev 经 Vite 代理实测全链路：封禁登录 `401 auth.user_banned` → 免登录发码提交申诉 → 管理端 `biz_type=8` 列表出现申诉（含用户昵称与理由）→ 通过后用户自动解封并可重新登录 → 申诉进度查询返回"已通过"。

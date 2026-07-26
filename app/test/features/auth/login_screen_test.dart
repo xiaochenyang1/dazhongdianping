@@ -7,6 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class LoginFakeApi implements JsonApi {
+  LoginFakeApi({this.banOnLogin = false});
+
+  final bool banOnLogin;
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
@@ -14,16 +18,25 @@ class LoginFakeApi implements JsonApi {
   }) async => {};
 
   @override
-  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async => {
-    'accessToken': 'access-login',
-    'refreshToken': 'refresh-login',
-    'user': {
-      'id': 3,
-      'nickname': 'Mobile User',
-      'avatar': '',
-      'preferredRegion': 'EU',
-    },
-  };
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    if (banOnLogin && path.endsWith('/login/password')) {
+      throw const ApiException(
+        '账号已被封禁',
+        statusCode: 401,
+        messageKey: 'auth.user_banned',
+      );
+    }
+    return {
+      'accessToken': 'access-login',
+      'refreshToken': 'refresh-login',
+      'user': {
+        'id': 3,
+        'nickname': 'Mobile User',
+        'avatar': '',
+        'preferredRegion': 'EU',
+      },
+    };
+  }
 }
 
 void main() {
@@ -91,5 +104,63 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(AppBar, '找回密码'), findsOneWidget);
+  });
+
+  testWidgets('banned login surfaces appeal entry and opens appeal screen', (
+    tester,
+  ) async {
+    final controller = AuthController(
+      repository: AuthRepository(LoginFakeApi(banOnLogin: true)),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(controller: controller, onAuthenticated: (_) {}),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('login-account')),
+      'banned@example.com',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'Demo123456',
+    );
+    await tester.tap(find.text('登录'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('login-ban-appeal-cta')), findsOneWidget);
+    expect(find.textContaining('banned@example.com'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('login-open-ban-appeal')));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, '封禁申诉'), findsOneWidget);
+    expect(find.byKey(const Key('appeal-account')), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('appeal-account')))
+          .controller
+          ?.text,
+      'banned@example.com',
+    );
+  });
+
+  testWidgets('login screen opens ban appeal entry directly', (tester) async {
+    final controller = AuthController(
+      repository: AuthRepository(LoginFakeApi()),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(controller: controller, onAuthenticated: (_) {}),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('login-ban-appeal-entry')));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, '封禁申诉'), findsOneWidget);
   });
 }

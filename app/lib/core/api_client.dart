@@ -40,9 +40,15 @@ abstract interface class FileUploadApi {
 }
 
 class ApiException implements Exception {
-  const ApiException(this.message, {this.statusCode, this.traceId});
+  const ApiException(
+    this.message, {
+    this.statusCode,
+    this.messageKey,
+    this.traceId,
+  });
   final String message;
   final int? statusCode;
+  final String? messageKey;
   final String? traceId;
   @override
   String toString() =>
@@ -174,6 +180,7 @@ class ApiClient
       throw ApiException(
         root['message'] as String? ?? 'Request failed',
         statusCode: response.statusCode,
+        messageKey: root['messageKey'] as String?,
         traceId: root['traceId'] as String?,
       );
     }

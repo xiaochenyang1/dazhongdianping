@@ -57,6 +57,44 @@ class SendCodeResult {
   );
 }
 
+class BanAppealStatus {
+  const BanAppealStatus({
+    required this.id,
+    required this.status,
+    required this.statusText,
+    required this.reason,
+    required this.rejectReason,
+    required this.banReason,
+    required this.submittedAt,
+    required this.auditedAt,
+  });
+
+  final int id;
+  final int status;
+  final String statusText;
+  final String reason;
+  final String rejectReason;
+  final String banReason;
+  final String submittedAt;
+  final String auditedAt;
+
+  bool get isApproved => status == 1;
+  bool get isRejected => status == 2;
+  bool get isPending => status == 0;
+
+  factory BanAppealStatus.fromJson(Map<String, dynamic> json) =>
+      BanAppealStatus(
+        id: json['id'] as int? ?? 0,
+        status: json['status'] as int? ?? 0,
+        statusText: json['statusText'] as String? ?? '',
+        reason: json['reason'] as String? ?? '',
+        rejectReason: json['rejectReason'] as String? ?? '',
+        banReason: json['banReason'] as String? ?? '',
+        submittedAt: json['submittedAt'] as String? ?? '',
+        auditedAt: json['auditedAt'] as String? ?? '',
+      );
+}
+
 class AuthRepository {
   AuthRepository(this.api);
   final JsonApi api;
@@ -148,6 +186,31 @@ class AuthRepository {
         'newPassword': newPassword,
       },
     );
+  }
+
+  Future<BanAppealStatus> submitBanAppeal({
+    required String type,
+    required String account,
+    required String code,
+    required String reason,
+  }) async {
+    final result = await api.postJson(
+      '/api/c/v1/auth/ban-appeals',
+      body: {'type': type, 'account': account, 'code': code, 'reason': reason},
+    );
+    return BanAppealStatus.fromJson(result);
+  }
+
+  Future<BanAppealStatus> queryBanAppeal({
+    required String type,
+    required String account,
+    required String code,
+  }) async {
+    final result = await api.postJson(
+      '/api/c/v1/auth/ban-appeals/query',
+      body: {'type': type, 'account': account, 'code': code},
+    );
+    return BanAppealStatus.fromJson(result);
   }
 
   Future<void> logout() async {
