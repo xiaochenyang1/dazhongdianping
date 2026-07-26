@@ -41,11 +41,20 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
   }
 
   Future<void> _reload() async {
-    final future = widget.repository.loadActivities();
-    setState(() {
-      _activities = future;
-    });
-    await future;
+    try {
+      final activities = await widget.repository.loadActivities();
+      if (mounted) {
+        setState(() {
+          _activities = Future.value(activities);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('刷新活动失败：$error')));
+      }
+    }
   }
 
   @override
@@ -65,7 +74,11 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                 children: [
                   Text('活动加载失败：${snapshot.error}'),
                   const SizedBox(height: 12),
-                  FilledButton(onPressed: _reload, child: const Text('重试')),
+                  FilledButton(
+                    key: const Key('activity-list-retry'),
+                    onPressed: _reload,
+                    child: const Text('重试'),
+                  ),
                 ],
               ),
             );

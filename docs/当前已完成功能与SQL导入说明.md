@@ -113,6 +113,7 @@
 - M7 帖子第一阶段已接入 Flutter：首页社区入口、推荐流/关注流历史分页、详情、发帖/编辑、图片上传、话题广场推荐/热榜/已关注历史分页、话题详情公开帖子分页、同城圈子广场/成员/圈内公开帖子历史分页、点赞、评论区历史分页与楼中楼回复、转发/取消转发、举报和“我的帖子”均使用真实 API。
 - 本轮已补社区转发/详情动作、圈子/话题帖子跳转、首页订单入口和消息刷新相关 Flutter 聚焦测试，见 `app/test/features/community/*`、`circle_screens_test.dart`、`topic_screens_test.dart`、`home_screen_test.dart` 与 `message_screens_test.dart`。
 - Flutter 城市榜单列表已补首次加载重试与刷新失败保留现有榜单，详情跳转行为不变。
+- Flutter 运营活动列表已补首次加载重试与刷新失败保留现有活动，详情跳转行为不变。
 
 ### 1.8 还没做完的别硬吹
 

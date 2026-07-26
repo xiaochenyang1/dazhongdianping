@@ -58,12 +58,20 @@ class RankScreenApi implements JsonApi {
 }
 
 class ActivityScreenApi implements JsonApi {
+  int loadCount = 0;
+  bool failNextLoad = false;
+
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, Object?>? query,
   }) async {
     if (path == '/api/c/v1/activities') {
+      loadCount += 1;
+      if (failNextLoad) {
+        failNextLoad = false;
+        throw const ApiException('activity network unavailable');
+      }
       return {
         'value': [
           {
@@ -162,5 +170,43 @@ void main() {
     await tester.tap(find.text('暑期火锅节'));
     await tester.pumpAndSettle();
     expect(find.text('活动详情'), findsOneWidget);
+  });
+
+  testWidgets('activity list retries an initial load failure', (tester) async {
+    final api = ActivityScreenApi()..failNextLoad = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ActivityListScreen(repository: ActivityRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('活动加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('activity-list-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.loadCount, 2);
+    expect(find.text('暑期火锅节'), findsOneWidget);
+  });
+
+  testWidgets('failed activity refresh preserves loaded activities', (
+    tester,
+  ) async {
+    final api = ActivityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ActivityListScreen(repository: ActivityRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.failNextLoad = true;
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+
+    expect(api.loadCount, 2);
+    expect(find.text('暑期火锅节'), findsOneWidget);
+    expect(find.textContaining('刷新活动失败'), findsOneWidget);
+    expect(find.textContaining('活动加载失败'), findsNothing);
   });
 }
