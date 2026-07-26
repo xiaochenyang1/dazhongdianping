@@ -463,9 +463,21 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
               if (snapshot.hasError)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    '详情刷新失败：${snapshot.error}',
-                    style: const TextStyle(color: Color(0xFFB45309)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '详情刷新失败：${snapshot.error}',
+                        style: const TextStyle(color: Color(0xFFB45309)),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        key: const Key('coupon-detail-fallback-retry'),
+                        onPressed: _reload,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('重新加载完整详情'),
+                      ),
+                    ],
                   ),
                 ),
             ],

@@ -161,4 +161,42 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('券码已复制'), findsOneWidget);
   });
+
+  testWidgets('coupon fallback can retry loading the complete detail', (
+    tester,
+  ) async {
+    final api = OrderDetailApi(failFirstCoupon: true);
+    const coupon = Coupon(
+      id: 21,
+      orderId: 10,
+      code: 'CP-DEMO-2026',
+      status: 1,
+      statusText: '待使用',
+      dealTitle: '双人晚餐套餐',
+      shopName: '柏林茶馆',
+      expireAt: '2026-12-31',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CouponDetailScreen(
+          repository: TradeRepository(api),
+          code: coupon.code,
+          initialCoupon: coupon,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(coupon.code), findsOneWidget);
+    expect(find.textContaining('详情刷新失败'), findsOneWidget);
+    expect(find.text('使用规则'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('coupon-detail-fallback-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.couponRequests, 2);
+    expect(find.text('使用规则'), findsOneWidget);
+    expect(find.text('周末通用'), findsOneWidget);
+    expect(find.textContaining('详情刷新失败'), findsNothing);
+  });
 }
