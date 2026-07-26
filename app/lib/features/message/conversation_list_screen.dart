@@ -176,7 +176,11 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   List<DirectMessage> _messages = const [];
-  bool _loading = true, _sending = false, _blocked = false;
+  MessagePage? _page;
+  bool _loading = true,
+      _loadingMore = false,
+      _sending = false,
+      _blocked = false;
   @override
   void initState() {
     super.initState();
@@ -185,20 +189,53 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _load() async {
     try {
-      final items = widget.conversation.id == 0
-          ? <DirectMessage>[]
-          : await widget.repository.loadMessages(widget.conversation.id);
+      final page = widget.conversation.id == 0
+          ? const MessagePage(items: [], total: 0, page: 1, pageSize: 20)
+          : await widget.repository.loadMessagePage(widget.conversation.id);
       if (widget.conversation.id != 0) {
         await widget.repository.markRead(widget.conversation.id);
       }
       if (mounted) {
         setState(() {
-          _messages = items.reversed.toList();
+          _page = page;
+          _messages = page.items.reversed.toList();
           _loading = false;
         });
       }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    final current = _page;
+    if (current == null || _loadingMore || !current.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.repository.loadMessagePage(
+        widget.conversation.id,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      final seen = <int>{};
+      final merged = <DirectMessage>[
+        ...next.items.reversed,
+        ..._messages,
+      ].where((message) => seen.add(message.id)).toList();
+      if (mounted) {
+        setState(() {
+          _page = next;
+          _messages = merged;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更早消息失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -292,9 +329,29 @@ class _ChatScreenState extends State<ChatScreen> {
               ? const Center(child: CircularProgressIndicator())
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: _messages.length,
+                  itemCount:
+                      _messages.length + ((_page?.hasMore ?? false) ? 1 : 0),
                   itemBuilder: (_, index) {
-                    final message = _messages[index];
+                    if ((_page?.hasMore ?? false) && index == 0) {
+                      return Center(
+                        child: TextButton.icon(
+                          onPressed: _loadingMore ? null : _loadMore,
+                          icon: _loadingMore
+                              ? const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.history),
+                          label: Text(_loadingMore ? '加载中...' : '加载更早消息'),
+                        ),
+                      );
+                    }
+                    final messageIndex = (_page?.hasMore ?? false)
+                        ? index - 1
+                        : index;
+                    final message = _messages[messageIndex];
                     final mine = message.fromUserId == widget.currentUserId;
                     return Align(
                       alignment: mine

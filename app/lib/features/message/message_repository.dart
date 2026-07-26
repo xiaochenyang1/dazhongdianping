@@ -62,6 +62,20 @@ class DirectMessage {
   );
 }
 
+class MessagePage {
+  const MessagePage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<DirectMessage> items;
+  final int total, page, pageSize;
+
+  bool get hasMore => page * pageSize < total;
+}
+
 class BlockStatus {
   const BlockStatus(this.userId, this.blocked);
   final int userId;
@@ -90,10 +104,26 @@ class MessageRepository {
     );
   }
 
-  Future<List<DirectMessage>> loadMessages(int conversationId) async => _list(
-    await api.getJson('/api/c/v1/messages/conversations/$conversationId'),
-    DirectMessage.fromJson,
-  );
+  Future<List<DirectMessage>> loadMessages(int conversationId) async =>
+      (await loadMessagePage(conversationId)).items;
+
+  Future<MessagePage> loadMessagePage(
+    int conversationId, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final data = await api.getJson(
+      '/api/c/v1/messages/conversations/$conversationId',
+      query: {'page': page, 'pageSize': pageSize},
+    );
+    return MessagePage(
+      items: _list(data, DirectMessage.fromJson),
+      total: data['total'] as int? ?? 0,
+      page: data['page'] as int? ?? page,
+      pageSize: data['pageSize'] as int? ?? pageSize,
+    );
+  }
+
   Future<DirectMessage> send(int toUserId, String content) async =>
       DirectMessage.fromJson(
         await api.postJson(

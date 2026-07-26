@@ -161,7 +161,7 @@
 | 隐私中心 | 已完成当前可用闭环 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `privacy_export_task/privacy_delete_task`;导出文件运行时落 `backend/local-storage/privacy-exports` | 创建数据导出、认证下载 ZIP、提交账号删除、冷静期内撤销 |
 | M7 帖子内容闭环 | 已完成第一阶段 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md` | `01_schema.sql` 建 `post/post_image/topic/post_topic/post_like/post_repost/post_comment/post_report`；审核复用 `audit_task.biz_type=4` | Flutter 点赞、评论、转发/取消转发、帖子正文/评论 `@提醒` 等互动，PC 只读，管理端审核、帖子隐私导出；不含关注/私信/圈子/真实推送 |
 | M7 关注关系与关注流 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `01_schema.sql` 建 `user_follow`，`user_notification` 增加 `actor_user_id`；关注通知使用 `GLOBAL` | 关注/取关、粉丝/关注列表、区域关注流、Flutter 双流与公开主页、PC 只读关系、`follows` 隐私导出；不含私信/圈子/真实推送 |
-| M7 APP 私信 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `conversation/message/user_block/message_report` | 1v1 文本、会话列表分页（Flutter 保留分页元数据、加载更多与 ID 去重）、消息历史分页、已读、举报、拉黑、WebSocket、`messages` 导出与注销治理；PC Web 无入口 |
+| M7 APP 私信 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `conversation/message/user_block/message_report` | 1v1 文本、会话列表分页，以及消息历史向前分页（Flutter 保留分页元数据、按 ID 去重且翻历史页不重复已读确认）、举报、拉黑、WebSocket、`messages` 导出与注销治理；PC Web 无入口 |
 | M7 官方圈子 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `circle/circle_member`，`post.circle_id` | 区域官方圈子、加入退出、成员发帖、管理端维护、Flutter 完整互动、PC 只读、`circles` 隐私治理 |
 | M7 话题广场与热榜 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `topic/post_topic/topic_follow/topic_hot_snapshot` | Flutter 可关注，PC Web 只读，管理端治理/不可逆合并，数据库 7 天热榜，`topics` 隐私导出与注销治理 |
 

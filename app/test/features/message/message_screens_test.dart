@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int conversationCalls = 0;
   final List<int> conversationPages = [];
+  final List<int> messagePages = [];
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -35,19 +36,23 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         'pageSize': 1,
       };
     }
+    final page = query?['page'] as int? ?? 1;
+    messagePages.add(page);
     return {
       'list': [
         {
-          'id': 7,
+          'id': page == 1 ? 7 : 6,
           'conversationId': 3,
           'fromUserId': 9,
           'toUserId': 8,
-          'content': '周末探店？',
+          'content': page == 1 ? '周末探店？' : '上周那家也不错',
           'read': false,
           'createdAt': '10:00',
         },
       ],
-      'total': 1,
+      'total': 2,
+      'page': page,
+      'pageSize': 1,
     };
   }
 
@@ -145,5 +150,40 @@ void main() {
     expect(find.text('伦敦小王'), findsOneWidget);
     expect(find.text('巴黎小李'), findsOneWidget);
     expect(find.text('加载更多'), findsNothing);
+  });
+
+  testWidgets('chat loads earlier messages before the current history', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi();
+    const conversation = ConversationSummary(
+      id: 3,
+      peerUserId: 9,
+      peerNickname: '伦敦小王',
+      peerAvatar: '',
+      lastMessagePreview: '周末探店？',
+      lastMessageAt: '10:00',
+      unreadCount: 2,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: conversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('周末探店？'), findsOneWidget);
+    expect(find.text('加载更早消息'), findsOneWidget);
+    await tester.tap(find.text('加载更早消息'));
+    await tester.pumpAndSettle();
+
+    expect(api.messagePages, [1, 2]);
+    expect(find.text('上周那家也不错'), findsOneWidget);
+    expect(find.text('周末探店？'), findsOneWidget);
+    expect(find.text('加载更早消息'), findsNothing);
   });
 }

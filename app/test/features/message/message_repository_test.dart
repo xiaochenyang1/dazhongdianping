@@ -99,6 +99,16 @@ void main() {
       expect(conversationPage.total, 21);
       expect(conversationPage.hasMore, isTrue);
       expect((await repository.loadMessages(3)).single.content, '周末探店？');
+      final messagePage = await repository.loadMessagePage(
+        3,
+        page: 2,
+        pageSize: 10,
+      );
+      expect(api.query, {'page': 2, 'pageSize': 10});
+      expect(messagePage.page, 2);
+      expect(messagePage.pageSize, 10);
+      expect(messagePage.total, 1);
+      expect(messagePage.hasMore, isFalse);
       expect((await repository.send(9, '走起')).content, '走起');
       expect((await repository.markRead(3)), 2);
       await repository.reportConversation(3, '骚扰');
