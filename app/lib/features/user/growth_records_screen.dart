@@ -17,6 +17,7 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
   int _page = 1;
   bool _hasMore = false;
   bool _loadingMore = false;
+  bool _reloading = false;
   int _pageRevision = 0;
   String? _error;
 
@@ -66,13 +67,21 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
   }
 
   Future<void> _reload() async {
+    if (_reloading) return;
     final revision = ++_pageRevision;
-    if (_loadingMore) setState(() => _loadingMore = false);
+    setState(() {
+      _loadingMore = false;
+      _reloading = true;
+    });
     try {
       await _load(reset: true, revision: revision);
     } catch (error) {
       if (mounted && revision == _pageRevision) {
         setState(() => _error = '刷新流水失败：$error');
+      }
+    } finally {
+      if (mounted && revision == _pageRevision) {
+        setState(() => _reloading = false);
       }
     }
   }
@@ -118,7 +127,11 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
                 children: [
                   Text('流水加载失败：${snapshot.error}'),
                   const SizedBox(height: 12),
-                  FilledButton(onPressed: _reload, child: const Text('重试')),
+                  FilledButton(
+                    key: const Key('growth-records-retry'),
+                    onPressed: _reloading ? null : _reload,
+                    child: Text(_reloading ? '处理中...' : '重试'),
+                  ),
                 ],
               ),
             );

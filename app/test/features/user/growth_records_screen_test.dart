@@ -174,6 +174,29 @@ void main() {
     expect(api.requestedPages, [1, 1]);
   });
 
+  testWidgets('growth records guard duplicate initial retries', (tester) async {
+    final gate = Completer<void>();
+    final api = GrowthRecordsApi()..failNextRecordsLoad = true;
+    await tester.pumpWidget(
+      MaterialApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
+    );
+    await tester.pumpAndSettle();
+    api.requestGates[2] = gate;
+
+    final retry = find.byKey(const Key('growth-records-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry);
+    await tester.pump();
+
+    expect(api.requestedPages, [1, 1]);
+    expect(find.text('处理中...'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.requestedPages, [1, 1]);
+    expect(find.text('发布点评'), findsNWidgets(2));
+  });
+
   testWidgets('growth records refresh invalidates a pending next page', (
     tester,
   ) async {
