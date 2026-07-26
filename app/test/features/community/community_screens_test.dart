@@ -733,6 +733,37 @@ void main() {
     );
   });
 
+  testWidgets('post detail guards duplicate report dialogs', (tester) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final report = find.byKey(const Key('post-report-button'));
+    await tester.scrollUntilVisible(
+      report,
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final reportAction = tester.widget<TextButton>(report).onPressed!;
+
+    reportAction();
+    reportAction();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('举报帖子'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(api.reportRequests, 0);
+  });
+
   testWidgets('community author opens the public user profile callback', (
     tester,
   ) async {

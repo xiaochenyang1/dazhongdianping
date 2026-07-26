@@ -30,6 +30,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _likeSaving = false;
   bool _commentSaving = false;
   bool _reportSaving = false;
+  bool _reportDialogOpen = false;
   bool _loadingMoreComments = false;
 
   @override
@@ -217,31 +218,38 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Future<void> _report() async {
-    if (_reportSaving) return;
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('举报帖子'),
-        content: TextField(
-          key: const Key('post-report-reason'),
-          controller: _reportController,
-          maxLength: 255,
-          maxLines: 4,
-          decoration: const InputDecoration(labelText: '举报理由'),
+    if (_reportSaving || _reportDialogOpen) return;
+    setState(() => _reportDialogOpen = true);
+    String? reason;
+    try {
+      reason = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('举报帖子'),
+          content: TextField(
+            key: const Key('post-report-reason'),
+            controller: _reportController,
+            maxLength: 255,
+            maxLines: 4,
+            decoration: const InputDecoration(labelText: '举报理由'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(_reportController.text.trim()),
+              child: const Text('提交举报'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(_reportController.text.trim()),
-            child: const Text('提交举报'),
-          ),
-        ],
-      ),
-    );
+      );
+    } finally {
+      if (mounted) setState(() => _reportDialogOpen = false);
+    }
     if (reason == null || reason.isEmpty) return;
     setState(() => _reportSaving = true);
     try {
@@ -437,7 +445,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   ),
                   TextButton.icon(
                     key: const Key('post-report-button'),
-                    onPressed: _reportSaving ? null : _report,
+                    onPressed: _reportSaving || _reportDialogOpen
+                        ? null
+                        : _report,
                     icon: const Icon(Icons.flag_outlined),
                     label: const Text('举报'),
                   ),
