@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -14,6 +15,7 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
   String? uploadedFileName;
   bool failNextSave = false;
   bool failNextUpload = false;
+  int uploadRequests = 0;
 
   Map<String, dynamic> detail({String? content}) => {
     'id': 12,
@@ -73,6 +75,7 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     required String contentType,
   }) async {
     method = 'UPLOAD';
+    uploadRequests++;
     this.path = path;
     uploadedFileName = fileName;
     if (failNextUpload) {
@@ -98,6 +101,24 @@ class FailingReviewImagePicker implements ReviewImagePicker {
   @override
   Future<ReviewImageUpload?> pickImage() async {
     throw StateError('picker unavailable');
+  }
+}
+
+class GatedReviewImagePicker implements ReviewImagePicker {
+  final gate = Completer<void>();
+  int calls = 0;
+
+  @override
+  Future<ReviewImageUpload?> pickImage() async {
+    calls++;
+    await gate.future;
+    return ReviewImageUpload(
+      bytes: base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      ),
+      fileName: 'gated.png',
+      contentType: 'image/png',
+    );
   }
 }
 
@@ -200,6 +221,23 @@ void main() {
 
     expect(api.path, '/api/c/v1/files/upload');
     expect(api.uploadedFileName, 'tea.png');
+    expect(find.text('已上传 1/9'), findsOneWidget);
+  });
+
+  testWidgets('review editor guards duplicate image picking', (tester) async {
+    final api = EditorFakeApi();
+    final picker = GatedReviewImagePicker();
+    await tester.pumpWidget(buildEditor(api: api, imagePicker: picker));
+
+    final addImage = find.byKey(const Key('review-add-image'));
+    await scrollTo(tester, addImage);
+    await tester.tap(addImage);
+    await tester.tap(addImage);
+
+    expect(picker.calls, 1);
+    picker.gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.uploadRequests, 1);
     expect(find.text('已上传 1/9'), findsOneWidget);
   });
 

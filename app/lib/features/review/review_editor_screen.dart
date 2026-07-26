@@ -131,25 +131,27 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
       _showMessage('最多上传 9 张图片');
       return;
     }
+    setState(() => _uploading = true);
     ReviewImageUpload? image;
     try {
-      image = await (widget.imagePicker ?? const SystemReviewImagePicker())
-          .pickImage();
-    } catch (error) {
-      if (mounted) _showMessage('图片选择失败：$error');
-      return;
-    }
-    if (image == null || !mounted) return;
-    final imageBytes = image.bytes;
-    setState(() => _uploading = true);
-    try {
-      final url = await widget.repository.uploadImage(image);
-      if (!mounted) return;
-      setState(
-        () => _images.add(_ReviewImageItem(url: url, bytes: imageBytes)),
-      );
-    } catch (error) {
-      if (mounted) _showMessage('图片上传失败：$error');
+      try {
+        image = await (widget.imagePicker ?? const SystemReviewImagePicker())
+            .pickImage();
+      } catch (error) {
+        if (mounted) _showMessage('图片选择失败：$error');
+        return;
+      }
+      if (image == null || !mounted) return;
+      final imageBytes = image.bytes;
+      try {
+        final url = await widget.repository.uploadImage(image);
+        if (!mounted) return;
+        setState(
+          () => _images.add(_ReviewImageItem(url: url, bytes: imageBytes)),
+        );
+      } catch (error) {
+        if (mounted) _showMessage('图片上传失败：$error');
+      }
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
