@@ -231,6 +231,51 @@ void main() {
     expect(find.text('券码已复制'), findsOneWidget);
   });
 
+  testWidgets('coupon detail guards duplicate clipboard writes', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    var clipboardWrites = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          clipboardWrites += 1;
+          await gate.future;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final api = OrderDetailApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CouponDetailScreen(
+          repository: TradeRepository(api),
+          code: 'CP-DEMO-2026',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final copy = find.byKey(const Key('copy-coupon-code'));
+    await tester.tap(copy);
+    await tester.tap(copy);
+    await tester.pump();
+    expect(clipboardWrites, 1);
+    expect(find.text('复制中...'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(clipboardWrites, 1);
+    expect(find.text('券码已复制'), findsOneWidget);
+  });
+
   testWidgets('order detail preserves a failed refund reason for retry', (
     tester,
   ) async {

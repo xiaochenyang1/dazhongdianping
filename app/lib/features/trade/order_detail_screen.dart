@@ -337,6 +337,7 @@ class CouponDetailScreen extends StatefulWidget {
 
 class _CouponDetailScreenState extends State<CouponDetailScreen> {
   late Future<CouponDetail> _detail;
+  bool _copyingCode = false;
 
   @override
   void initState() {
@@ -349,6 +350,20 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
     setState(() {
       _detail = future;
     });
+  }
+
+  Future<void> _copyCode(String code) async {
+    if (_copyingCode) return;
+    setState(() => _copyingCode = true);
+    try {
+      await Clipboard.setData(ClipboardData(text: code));
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('券码已复制')));
+    } finally {
+      if (mounted) setState(() => _copyingCode = false);
+    }
   }
 
   @override
@@ -411,17 +426,11 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         key: const Key('copy-coupon-code'),
-                        onPressed: () async {
-                          await Clipboard.setData(
-                            ClipboardData(text: coupon.code),
-                          );
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('券码已复制')),
-                          );
-                        },
+                        onPressed: _copyingCode
+                            ? null
+                            : () => _copyCode(coupon.code),
                         icon: const Icon(Icons.copy_outlined),
-                        label: const Text('复制券码'),
+                        label: Text(_copyingCode ? '复制中...' : '复制券码'),
                       ),
                       if (qrImageUrl.isNotEmpty) ...[
                         const SizedBox(height: 16),
