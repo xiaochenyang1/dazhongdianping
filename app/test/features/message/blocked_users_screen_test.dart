@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
   final List<int> pages = [];
   final List<int> unblockedUsers = [];
+  bool failNextLoad = false;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -15,6 +16,10 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
   }) async {
     final page = query?['page'] as int? ?? 1;
     pages.add(page);
+    if (failNextLoad) {
+      failNextLoad = false;
+      throw Exception('blocked users network unavailable');
+    }
     return {
       'list': [
         {
@@ -63,5 +68,39 @@ void main() {
     expect(api.unblockedUsers, [9]);
     expect(find.text('伦敦小王'), findsNothing);
     expect(find.text('巴黎小李'), findsOneWidget);
+  });
+
+  testWidgets('blocked users retry an initial load failure', (tester) async {
+    final api = BlockedUsersFakeApi()..failNextLoad = true;
+    await tester.pumpWidget(
+      MaterialApp(home: BlockedUsersScreen(repository: MessageRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('黑名单加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('blocked-users-retry')));
+    await tester.pumpAndSettle();
+
+    expect(api.pages, [1, 1]);
+    expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.textContaining('黑名单加载失败'), findsNothing);
+  });
+
+  testWidgets('failed blocked users refresh preserves loaded items', (
+    tester,
+  ) async {
+    final api = BlockedUsersFakeApi();
+    await tester.pumpWidget(
+      MaterialApp(home: BlockedUsersScreen(repository: MessageRepository(api))),
+    );
+    await tester.pumpAndSettle();
+    api.failNextLoad = true;
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+
+    expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.textContaining('刷新黑名单失败'), findsOneWidget);
+    expect(api.pages, [1, 1]);
   });
 }

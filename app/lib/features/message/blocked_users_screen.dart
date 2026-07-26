@@ -16,9 +16,26 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
   final Set<int> _unblocking = {};
 
   Future<void> _reload() async {
-    final page = widget.repository.loadBlockedUserPage();
-    setState(() => _page = page);
-    await page;
+    try {
+      final page = await widget.repository.loadBlockedUserPage();
+      if (mounted) {
+        setState(() {
+          _page = Future.value(page);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('刷新黑名单失败：$error')));
+      }
+    }
+  }
+
+  void _retryInitialLoad() {
+    setState(() {
+      _page = widget.repository.loadBlockedUserPage();
+    });
   }
 
   Future<void> _loadMore(BlockedUserPage current) async {
@@ -95,10 +112,18 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(
-            child: FilledButton.icon(
-              onPressed: _reload,
-              icon: const Icon(Icons.refresh),
-              label: const Text('重新加载'),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('黑名单加载失败：${snapshot.error}', textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  key: const Key('blocked-users-retry'),
+                  onPressed: _retryInitialLoad,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重新加载'),
+                ),
+              ],
             ),
           );
         }
