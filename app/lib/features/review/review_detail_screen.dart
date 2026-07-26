@@ -30,6 +30,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   bool _likeSaving = false;
   bool _commentSaving = false;
   bool _deleteSaving = false;
+  bool _deleteDialogOpen = false;
   bool _reportSaving = false;
   bool _reportDialogOpen = false;
   bool _loadingMoreComments = false;
@@ -266,25 +267,31 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   }
 
   Future<void> _deleteOwnedReview() async {
-    if (!widget.owned || _deleteSaving) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('删除点评'),
-        content: const Text('删除后不可恢复，确认删除这条点评吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            key: const Key('review-delete-confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('确认删除'),
-          ),
-        ],
-      ),
-    );
+    if (!widget.owned || _deleteSaving || _deleteDialogOpen) return;
+    setState(() => _deleteDialogOpen = true);
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('删除点评'),
+          content: const Text('删除后不可恢复，确认删除这条点评吗？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              key: const Key('review-delete-confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('确认删除'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _deleteDialogOpen = false);
+    }
     if (confirmed != true) return;
     setState(() => _deleteSaving = true);
     try {
@@ -364,14 +371,17 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       actions: [
         if (widget.owned) ...[
           TextButton(
-            onPressed: _visibleReview == null || _deleteSaving
+            onPressed:
+                _visibleReview == null || _deleteSaving || _deleteDialogOpen
                 ? null
                 : () => _openEditor(_visibleReview!),
             child: const Text('编辑'),
           ),
           TextButton(
             key: const Key('review-delete-button'),
-            onPressed: _deleteSaving ? null : _deleteOwnedReview,
+            onPressed: _deleteSaving || _deleteDialogOpen
+                ? null
+                : _deleteOwnedReview,
             child: Text(_deleteSaving ? '删除中...' : '删除'),
           ),
         ],

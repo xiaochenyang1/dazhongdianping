@@ -442,4 +442,31 @@ void main() {
     expect(api.deletedPaths, contains('/api/c/v1/reviews/12'));
     expect(find.text('我的点评详情'), findsNothing);
   });
+
+  testWidgets('owned review guards duplicate delete dialogs', (tester) async {
+    final api = DetailFakeApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+          owned: true,
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final delete = find.byKey(const Key('review-delete-button'));
+    final deleteAction = tester.widget<TextButton>(delete).onPressed!;
+    deleteAction();
+    deleteAction();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('删除点评'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(api.deletedPaths, isEmpty);
+  });
 }
