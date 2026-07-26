@@ -60,6 +60,13 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
     }
   }
 
+  void _reloadDetail() {
+    final future = widget.repository.loadShopDetail(widget.shopId);
+    setState(() {
+      _detail = future;
+    });
+  }
+
   Future<void> _loadFavoriteState() async {
     setState(() => _favoriteLoading = true);
     try {
@@ -88,9 +95,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
       setState(() => _favorited = !_favorited);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('收藏操作失败：$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('收藏操作失败：$error')));
     } finally {
       if (mounted) setState(() => _favoriteSaving = false);
     }
@@ -102,9 +109,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
         '${shop.name} · ★ ${shop.score.toStringAsFixed(1)} · $shareUrl';
     await Clipboard.setData(ClipboardData(text: shareText));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('分享文案已复制')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('分享文案已复制')));
   }
 
   @override
@@ -134,12 +141,18 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
           }
           if (snapshot.hasError) {
             return Center(
-              child: FilledButton(
-                onPressed: () => setState(
-                  () =>
-                      _detail = widget.repository.loadShopDetail(widget.shopId),
-                ),
-                child: const Text('Retry'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('门店详情加载失败：${snapshot.error}'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    key: const Key('shop-detail-retry'),
+                    onPressed: _reloadDetail,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                ],
               ),
             );
           }
@@ -431,7 +444,8 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                                       reservationRepository:
                                           widget.reservationRepository,
                                       reviewRepository: widget.reviewRepository,
-                                      canInteractReviews: widget.canInteractReviews,
+                                      canInteractReviews:
+                                          widget.canInteractReviews,
                                       thirdPartyConfig: widget.thirdPartyConfig,
                                       enableFavorite: widget.enableFavorite,
                                     ),

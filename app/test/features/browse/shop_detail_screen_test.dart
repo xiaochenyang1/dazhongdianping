@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 class DetailFakeRepository extends BrowseRepository {
   DetailFakeRepository({
     this.favorited = false,
+    this.failFirstDetail = false,
     this.similar = const [
       ShopSummary(
         id: 8,
@@ -35,6 +36,8 @@ class DetailFakeRepository extends BrowseRepository {
   });
 
   bool favorited;
+  final bool failFirstDetail;
+  int detailRequests = 0;
   final List<ShopSummary> similar;
   final List<ShopReviewPreview> reviews;
   final List<String> favoriteCalls = <String>[];
@@ -45,19 +48,25 @@ class DetailFakeRepository extends BrowseRepository {
   Future<List<ShopSummary>> loadFeaturedShops() async => const [];
 
   @override
-  Future<ShopDetail> loadShopDetail(int shopId) async => const ShopDetail(
-    id: 7,
-    name: 'Berlin Tea',
-    category: 'Tea',
-    score: 4.5,
-    currency: 'EUR',
-    pricePerCapita: 12,
-    address: 'Alexanderplatz',
-    phone: '+493000000',
-    businessHours: '09:00-21:00',
-    summary: 'Tea and snacks',
-    tags: ['Chinese-friendly'],
-  );
+  Future<ShopDetail> loadShopDetail(int shopId) async {
+    detailRequests++;
+    if (failFirstDetail && detailRequests == 1) {
+      throw StateError('network unavailable');
+    }
+    return const ShopDetail(
+      id: 7,
+      name: 'Berlin Tea',
+      category: 'Tea',
+      score: 4.5,
+      currency: 'EUR',
+      pricePerCapita: 12,
+      address: 'Alexanderplatz',
+      phone: '+493000000',
+      businessHours: '09:00-21:00',
+      summary: 'Tea and snacks',
+      tags: ['Chinese-friendly'],
+    );
+  }
 
   @override
   Future<bool> isShopFavorited(int shopId) async => favorited;
@@ -174,6 +183,24 @@ class DetailReviewApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('shop detail retries an initial load failure safely', (
+    tester,
+  ) async {
+    final repository = DetailFakeRepository(failFirstDetail: true);
+    await tester.pumpWidget(
+      MaterialApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('门店详情加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('shop-detail-retry')));
+    await tester.pumpAndSettle();
+
+    expect(repository.detailRequests, 2);
+    expect(find.text('Berlin Tea'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shop detail shows address and opening hours', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
