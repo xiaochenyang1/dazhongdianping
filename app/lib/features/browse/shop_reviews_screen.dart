@@ -203,7 +203,21 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError && _items.isEmpty) {
-                  return Center(child: Text('门店点评加载失败：${snapshot.error}'));
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('门店点评加载失败：${snapshot.error}'),
+                        const SizedBox(height: 12),
+                        FilledButton.tonalIcon(
+                          key: const Key('shop-reviews-retry'),
+                          onPressed: _reload,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('重试'),
+                        ),
+                      ],
+                    ),
+                  );
                 }
                 if (_items.isEmpty) {
                   return const Center(child: Text('暂无公开点评'));

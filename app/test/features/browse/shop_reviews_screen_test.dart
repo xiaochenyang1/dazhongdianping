@@ -8,6 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ReviewsFakeRepository extends BrowseRepository {
+  ReviewsFakeRepository({this.failFirst = false});
+
+  final bool failFirst;
+  int pageRequests = 0;
   final List<Map<String, Object?>> requests = <Map<String, Object?>>[];
 
   @override
@@ -22,6 +26,10 @@ class ReviewsFakeRepository extends BrowseRepository {
     double? minScore,
     bool? hasImages,
   }) async {
+    pageRequests++;
+    if (failFirst && pageRequests == 1) {
+      throw StateError('network unavailable');
+    }
     requests.add({
       'shopId': shopId,
       'page': page,
@@ -139,6 +147,23 @@ class ReviewsDetailApi implements JsonApi {
 }
 
 void main() {
+  testWidgets('shop reviews screen retries an initial load failure', (
+    tester,
+  ) async {
+    final repository = ReviewsFakeRepository(failFirst: true);
+    await tester.pumpWidget(
+      MaterialApp(home: ShopReviewsScreen(repository: repository, shopId: 7)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('门店点评加载失败'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('shop-reviews-retry')));
+    await tester.pumpAndSettle();
+
+    expect(repository.pageRequests, 2);
+    expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
+  });
+
   testWidgets('shop reviews screen filters sorts and opens review detail', (
     tester,
   ) async {
