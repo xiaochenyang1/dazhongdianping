@@ -24,6 +24,8 @@ class CommunityScreenApi
   bool paginateComments = false;
   bool failNextPost = false;
   bool failNextOwnedPost = false;
+  bool failNextSave = false;
+  bool failNextUpload = false;
   int postRequests = 0;
   final List<int> requestedCommentPages = <int>[];
 
@@ -132,6 +134,10 @@ class CommunityScreenApi
     this.path = path;
     postPath = path;
     this.body = body;
+    if (path == '/api/c/v1/posts' && failNextSave) {
+      failNextSave = false;
+      throw StateError('save unavailable');
+    }
     if (path.endsWith('/like')) return {'liked': true, 'likeCount': 4};
     if (path.endsWith('/repost')) {
       reposted = true;
@@ -185,6 +191,10 @@ class CommunityScreenApi
     required String contentType,
   }) async {
     this.path = path;
+    if (failNextUpload) {
+      failNextUpload = false;
+      throw StateError('upload unavailable');
+    }
     return {'url': '/uploads/$fileName'};
   }
 }
@@ -557,6 +567,48 @@ void main() {
 
     expect(api.path, '/api/c/v1/posts');
     expect(api.body, containsPair('images', ['/uploads/market.png']));
+  });
+
+  testWidgets('post editor reports upload failure and remains usable', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi()..failNextUpload = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostEditorScreen(
+          repository: CommunityRepository(api),
+          imagePicker: FakeCommunityImagePicker(),
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('post-add-image')));
+    await tester.tap(find.byKey(const Key('post-add-image')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('图片上传失败'), findsOneWidget);
+    expect(find.text('已上传 0/9'), findsOneWidget);
+    expect(find.byKey(const Key('post-add-image')), findsOneWidget);
+  });
+
+  testWidgets('post editor reports save failure and preserves form data', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi()..failNextSave = true;
+    await tester.pumpWidget(
+      MaterialApp(home: PostEditorScreen(repository: CommunityRepository(api))),
+    );
+
+    await tester.enterText(find.byKey(const Key('post-title')), '待重试标题');
+    await tester.enterText(find.byKey(const Key('post-content')), '待重试正文');
+    await tester.ensureVisible(find.byKey(const Key('post-submit')));
+    await tester.tap(find.byKey(const Key('post-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('帖子保存失败'), findsOneWidget);
+    expect(find.text('待重试标题'), findsOneWidget);
+    expect(find.text('待重试正文'), findsOneWidget);
+    expect(find.byKey(const Key('post-submit')), findsOneWidget);
   });
 
   testWidgets('post editor loads an owned post for editing', (tester) async {

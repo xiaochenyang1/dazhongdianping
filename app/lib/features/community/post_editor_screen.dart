@@ -111,6 +111,8 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
     try {
       final url = await widget.repository.uploadImage(image);
       if (mounted) setState(() => _images.add(url));
+    } catch (error) {
+      if (mounted) _showMessage('图片上传失败：$error');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -142,9 +144,17 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         context,
       ).showSnackBar(const SnackBar(content: Text('帖子已提交审核')));
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(result);
+    } catch (error) {
+      if (mounted) _showMessage('帖子保存失败：$error');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _delete() async {
