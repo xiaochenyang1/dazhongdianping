@@ -129,6 +129,9 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
             topicRepository: TopicRepository(apiClient),
             rankRepository: RankRepository(apiClient),
             activityRepository: ActivityRepository(apiClient),
+            notificationRepository: authController.currentUser == null
+                ? null
+                : NotificationRepository(apiClient),
             onCommunityLoginRequired: (screenContext) {
               Navigator.of(screenContext).push(
                 MaterialPageRoute(
@@ -191,9 +194,9 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                 ),
               );
             },
-            onNotificationTap: (screenContext) {
+            onNotificationTap: (screenContext) async {
               if (authController.currentUser == null) {
-                Navigator.of(screenContext).push(
+                await Navigator.of(screenContext).push(
                   MaterialPageRoute(
                     builder: (_) => LoginScreen(
                       controller: authController,
@@ -203,7 +206,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                 );
                 return;
               }
-              Navigator.of(screenContext).push(
+              await Navigator.of(screenContext).push(
                 MaterialPageRoute(
                   builder: (_) => NotificationScreen(
                     repository: NotificationRepository(apiClient),

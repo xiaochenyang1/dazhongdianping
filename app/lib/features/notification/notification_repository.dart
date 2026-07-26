@@ -58,6 +58,11 @@ class NotificationRepository {
         .toList();
   }
 
+  Future<int> loadUnreadCount() async {
+    final result = await api.getJson('/api/c/v1/notifications/unread-count');
+    return (result['count'] as num?)?.toInt() ?? 0;
+  }
+
   Future<AppNotification> ack(int id) async {
     final result = await api.postJson('/api/c/v1/notifications/$id/ack');
     return AppNotification.fromJson(result);

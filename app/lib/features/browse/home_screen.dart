@@ -6,6 +6,7 @@ import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_feed_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
+import 'package:dazhongdianping_app/features/notification/notification_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_list_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
@@ -41,6 +42,7 @@ class HomeScreen extends StatefulWidget {
     this.topicRepository,
     this.rankRepository,
     this.activityRepository,
+    this.notificationRepository,
     this.onCommunityLoginRequired,
   });
   final BrowseRepository repository;
@@ -48,7 +50,7 @@ class HomeScreen extends StatefulWidget {
   final ValueChanged<AppRegion>? onRegionChanged;
   final ValueChanged<BuildContext>? onOrdersTap;
   final ValueChanged<BuildContext>? onProfileTap;
-  final ValueChanged<BuildContext>? onNotificationTap;
+  final Future<void> Function(BuildContext)? onNotificationTap;
   final String? currentUserLabel;
   final String localeTag;
   final ValueChanged<String>? onLocaleChanged;
@@ -64,6 +66,7 @@ class HomeScreen extends StatefulWidget {
   final TopicRepository? topicRepository;
   final RankRepository? rankRepository;
   final ActivityRepository? activityRepository;
+  final NotificationRepository? notificationRepository;
   final ValueChanged<BuildContext>? onCommunityLoginRequired;
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -71,10 +74,22 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<ShopSummary>> _shops;
+  int _notificationUnreadCount = 0;
+  int _unreadRequestGeneration = 0;
+
   @override
   void initState() {
     super.initState();
     _shops = widget.repository.loadFeaturedShops();
+    _refreshUnreadCount();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.notificationRepository != widget.notificationRepository) {
+      _refreshUnreadCount();
+    }
   }
 
   void _retry() {
@@ -82,6 +97,30 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _shops = future;
     });
+    _refreshUnreadCount();
+  }
+
+  Future<void> _refreshUnreadCount() async {
+    final requestGeneration = ++_unreadRequestGeneration;
+    final repository = widget.notificationRepository;
+    if (repository == null) {
+      if (mounted && _notificationUnreadCount != 0) {
+        setState(() => _notificationUnreadCount = 0);
+      }
+      return;
+    }
+    try {
+      final count = await repository.loadUnreadCount();
+      if (!mounted || requestGeneration != _unreadRequestGeneration) return;
+      setState(() => _notificationUnreadCount = count);
+    } catch (_) {
+      // Keep the last known badge when unread-count is temporarily unavailable.
+    }
+  }
+
+  Future<void> _openNotifications() async {
+    await widget.onNotificationTap?.call(context);
+    if (mounted) await _refreshUnreadCount();
   }
 
   @override
@@ -139,8 +178,17 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             key: const Key('home-notification-action'),
-            onPressed: () => widget.onNotificationTap?.call(context),
-            icon: const Icon(Icons.notifications_outlined),
+            onPressed: _openNotifications,
+            icon: Badge(
+              key: const Key('home-notification-badge'),
+              isLabelVisible: _notificationUnreadCount > 0,
+              label: Text(
+                _notificationUnreadCount > 99
+                    ? '99+'
+                    : '$_notificationUnreadCount',
+              ),
+              child: const Icon(Icons.notifications_outlined),
+            ),
           ),
           IconButton(
             key: const Key('home-profile-action'),

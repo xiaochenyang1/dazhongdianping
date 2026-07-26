@@ -10,6 +10,9 @@ class NotificationFakeApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     this.path = path;
+    if (path == '/api/c/v1/notifications/unread-count') {
+      return {'count': 4};
+    }
     return {
       'list': [
         {
@@ -72,5 +75,15 @@ void main() {
     expect(api.path, '/api/c/v1/notifications/read-all');
     expect(result.updated, 2);
     expect(result.count, 0);
+  });
+
+  test('notification repository loads aggregate unread count', () async {
+    final api = NotificationFakeApi();
+    final repository = NotificationRepository(api);
+
+    final count = await repository.loadUnreadCount();
+
+    expect(api.path, '/api/c/v1/notifications/unread-count');
+    expect(count, 4);
   });
 }

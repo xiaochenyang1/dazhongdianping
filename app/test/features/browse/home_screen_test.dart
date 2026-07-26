@@ -3,6 +3,7 @@ import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/home_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
+import 'package:dazhongdianping_app/features/notification/notification_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +48,27 @@ class HomeCommunityApi implements JsonApi {
     String path, {
     Map<String, Object?>? query,
   }) async => {'list': const [], 'total': 0};
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
+      const {};
+}
+
+class HomeNotificationApi implements JsonApi {
+  HomeNotificationApi(this.unreadCount);
+
+  int unreadCount;
+  int calls = 0;
+
+  @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, Object?>? query,
+  }) async {
+    calls += 1;
+    expect(path, '/api/c/v1/notifications/unread-count');
+    return {'count': unreadCount};
+  }
+
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
       const {};
@@ -112,7 +134,7 @@ void main() {
       MaterialApp(
         home: HomeScreen(
           repository: FakeBrowseRepository(),
-          onNotificationTap: (_) => opened = true,
+          onNotificationTap: (_) async => opened = true,
         ),
       ),
     );
@@ -121,6 +143,31 @@ void main() {
     await tester.tap(find.byKey(const Key('home-notification-action')));
 
     expect(opened, isTrue);
+  });
+
+  testWidgets('notification badge loads and refreshes after notification flow', (
+    tester,
+  ) async {
+    final api = HomeNotificationApi(120);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          repository: FakeBrowseRepository(),
+          notificationRepository: NotificationRepository(api),
+          onNotificationTap: (_) async => api.unreadCount = 0,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('99+'), findsOneWidget);
+    expect(api.calls, 1);
+
+    await tester.tap(find.byKey(const Key('home-notification-action')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('99+'), findsNothing);
+    expect(api.calls, 2);
   });
 
   testWidgets('orders and profile bottom destinations delegate to real flows', (
