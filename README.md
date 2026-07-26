@@ -346,6 +346,7 @@ npm run build
 
 ## 已验证
 
+- `2026-07-26` Flutter 圈子成员补齐历史分页：仓储新增带 `page/pageSize/total` 的成员页 API 并保留原列表 API；成员页可加载更早成员、按用户 ID 去重，加载失败保留已有成员。圈子仓储/页面聚焦测试 `6` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `199` 条通过。
 - `2026-07-26` Flutter 圈子详情公开帖子补齐历史分页：仓储新增带 `page/pageSize/total` 的帖子页 API 并保留原列表 API；详情页可加载更早帖子、按帖子 ID 去重，失败时保留已有内容。圈子仓储/页面聚焦测试 `5` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `198` 条通过。
 - `2026-07-26` Flutter 同城圈子广场补齐历史分页：全部圈子和我加入的圈子共用带 `page/pageSize/total` 的页 API，原列表 API 保持兼容；页面可加载更早圈子、按圈子 ID 去重，加载失败保留已有内容。圈子仓储/页面聚焦测试 `4` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `197` 条通过。
 - `2026-07-26` Flutter 话题详情公开帖子补齐历史分页：仓储新增带 `page/pageSize/total` 的帖子页 API 并保留原列表 API；详情页可加载更早帖子、按帖子 ID 去重，加载失败保留已有内容并提示。话题仓储/页面聚焦测试 `8` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `196` 条通过。

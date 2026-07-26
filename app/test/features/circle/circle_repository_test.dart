@@ -79,6 +79,11 @@ void main() {
       expect(page.total, 1);
       expect((await repo.loadDetail(3)).memberCount, 12);
       expect((await repo.loadMembers(3)).single.nickname, '伦敦小王');
+      final memberPage = await repo.loadMemberPage(3, page: 2, pageSize: 12);
+      expect(api.query, {'page': 2, 'pageSize': 12});
+      expect(memberPage.page, 2);
+      expect(memberPage.pageSize, 12);
+      expect(memberPage.total, 1);
       expect(await repo.loadPosts(3), isEmpty);
       final postPage = await repo.loadPostPage(3, page: 2, pageSize: 12);
       expect(api.query, {'page': 2, 'pageSize': 12});

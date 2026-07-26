@@ -9,6 +9,8 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   final List<int> requestedCirclePages = <int>[];
   bool paginatePosts = false;
   final List<int> requestedPostPages = <int>[];
+  bool paginateMembers = false;
+  final List<int> requestedMemberPages = <int>[];
   Map<String, dynamic> circle({bool joined = false, int count = 12}) => {
     'id': 3,
     'region': 'EU',
@@ -48,7 +50,25 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     if (path == '/api/c/v1/posts/7/comments') {
       return {'list': const [], 'total': 0};
     }
-    if (path.endsWith('/members')) return {'list': const [], 'total': 0};
+    if (path.endsWith('/members')) {
+      final page = query?['page'] as int? ?? 1;
+      requestedMemberPages.add(page);
+      return {
+        'list': [
+          {
+            'id': page == 1 ? 9 : 10,
+            'nickname': page == 1 ? '伦敦小王' : '巴黎小李',
+            'avatar': '',
+            'signature': '探店',
+            'level': 4,
+            'joinedAt': '2026-07-17 10:00:00',
+          },
+        ],
+        'total': paginateMembers ? 2 : 1,
+        'page': page,
+        'pageSize': paginateMembers ? 1 : 50,
+      };
+    }
     if (path.endsWith('/posts')) {
       final page = query?['page'] as int? ?? 1;
       requestedPostPages.add(page);
@@ -98,6 +118,27 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+  testWidgets('circle members screen loads later members', (tester) async {
+    final api = CircleScreenApi()..paginateMembers = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleMembersScreen(
+          repository: CircleRepository(api),
+          circle: AppCircle.fromJson(api.circle()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('circle-members-load-more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('circle-members-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(api.requestedMemberPages, [1, 2]);
+    expect(find.text('巴黎小李'), findsOneWidget);
+    expect(find.byKey(const Key('circle-members-load-more')), findsNothing);
+  });
+
   testWidgets('circle detail loads later posts', (tester) async {
     final api = CircleScreenApi()..paginatePosts = true;
     await tester.pumpWidget(

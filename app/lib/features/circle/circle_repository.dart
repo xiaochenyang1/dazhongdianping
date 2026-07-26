@@ -85,6 +85,21 @@ class CirclePage {
   bool get hasMore => items.length < total;
 }
 
+class CircleMemberPage {
+  const CircleMemberPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+  final List<CircleMember> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+}
+
 class CircleRepository {
   CircleRepository(this.api);
   final JsonApi api;
@@ -123,15 +138,28 @@ class CircleRepository {
   Future<AppCircle> loadDetail(int id) async =>
       AppCircle.fromJson(await api.getJson('/api/c/v1/groups/$id'));
   Future<List<CircleMember>> loadMembers(int id) async =>
-      ((await api.getJson(
-                    '/api/c/v1/groups/$id/members',
-                    query: const {'page': 1, 'pageSize': 50},
-                  ))['list']
-                  as List<dynamic>? ??
-              const [])
-          .cast<Map<String, dynamic>>()
-          .map(CircleMember.fromJson)
-          .toList();
+      (await loadMemberPage(id)).items;
+  Future<CircleMemberPage> loadMemberPage(
+    int id, {
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    final result = await api.getJson(
+      '/api/c/v1/groups/$id/members',
+      query: {'page': page, 'pageSize': pageSize},
+    );
+    final items = (result['list'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(CircleMember.fromJson)
+        .toList();
+    return CircleMemberPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
+  }
+
   Future<List<CommunityPost>> loadPosts(int id) async =>
       (await loadPostPage(id)).items;
   Future<CommunityPostPage> loadPostPage(

@@ -450,7 +450,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
   );
 }
 
-class CircleMembersScreen extends StatelessWidget {
+class CircleMembersScreen extends StatefulWidget {
   const CircleMembersScreen({
     super.key,
     required this.repository,
@@ -458,23 +458,89 @@ class CircleMembersScreen extends StatelessWidget {
   });
   final CircleRepository repository;
   final AppCircle circle;
+
+  @override
+  State<CircleMembersScreen> createState() => _CircleMembersScreenState();
+}
+
+class _CircleMembersScreenState extends State<CircleMembersScreen> {
+  late Future<CircleMemberPage> page;
+  bool loadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    page = widget.repository.loadMemberPage(widget.circle.id);
+  }
+
+  Future<void> loadMore(CircleMemberPage current) async {
+    if (loadingMore || !current.hasMore) return;
+    setState(() => loadingMore = true);
+    try {
+      final next = await widget.repository.loadMemberPage(
+        widget.circle.id,
+        page: current.page + 1,
+        pageSize: current.pageSize,
+      );
+      if (!mounted) return;
+      final knownIds = current.items.map((member) => member.id).toSet();
+      setState(() {
+        page = Future.value(
+          CircleMemberPage(
+            items: [
+              ...current.items,
+              ...next.items.where((member) => knownIds.add(member.id)),
+            ],
+            total: next.total,
+            page: next.page,
+            pageSize: current.pageSize,
+          ),
+        );
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载更多成员失败：$error')));
+      }
+    } finally {
+      if (mounted) setState(() => loadingMore = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('${circle.name}成员')),
-    body: FutureBuilder<List<CircleMember>>(
-      future: repository.loadMembers(circle.id),
+    appBar: AppBar(title: Text('${widget.circle.name}成员')),
+    body: FutureBuilder<CircleMemberPage>(
+      future: page,
       builder: (_, snapshot) {
         if (!snapshot.hasData) {
           return snapshot.hasError
               ? Center(child: Text('成员加载失败：${snapshot.error}'))
               : const Center(child: CircularProgressIndicator());
         }
+        final current = snapshot.data!;
         return ListView.separated(
           padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.length,
+          itemCount: current.items.length + (current.hasMore ? 1 : 0),
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (_, i) {
-            final member = snapshot.data![i];
+            if (i == current.items.length) {
+              return Center(
+                child: OutlinedButton.icon(
+                  key: const Key('circle-members-load-more'),
+                  onPressed: loadingMore ? null : () => loadMore(current),
+                  icon: loadingMore
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.expand_more),
+                  label: Text(loadingMore ? '加载中...' : '加载更多'),
+                ),
+              );
+            }
+            final member = current.items[i];
             return Card(
               child: ListTile(
                 leading: CircleAvatar(
