@@ -22,6 +22,7 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   final bool failFirstOverview;
   final bool includeSecondDevice;
   int overviewRequests = 0;
+  Completer<void>? overviewRetryGate;
   bool deviceLoggedOut = false;
   bool paginateExports = false;
   final List<int> requestedExportPages = <int>[];
@@ -51,6 +52,7 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
       if (failFirstOverview && overviewRequests == 1) {
         throw StateError('network unavailable');
       }
+      if (overviewRequests > 1) await overviewRetryGate?.future;
     }
     if (path == '/api/c/v1/privacy/policies') {
       return {
@@ -272,6 +274,34 @@ void main() {
     await tester.tap(find.byKey(const Key('privacy-overview-retry')));
     await tester.pumpAndSettle();
 
+    expect(api.overviewRequests, 2);
+    expect(find.text('数据导出'), findsWidgets);
+  });
+
+  testWidgets('privacy center guards duplicate overview retries', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = PrivacyScreenApi(failFirstOverview: true)
+      ..overviewRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['eu@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('privacy-overview-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.overviewRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(api.overviewRequests, 2);
     expect(find.text('数据导出'), findsWidgets);
   });

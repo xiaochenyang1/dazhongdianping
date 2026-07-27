@@ -35,6 +35,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   bool _includeTopics = true;
   bool _creatingExport = false;
   bool _loadingMoreExports = false;
+  bool _retrying = false;
   bool _cancellingDelete = false;
   bool _submittingDelete = false;
   bool _sendingDeleteCode = false;
@@ -80,13 +81,28 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     );
   }
 
-  void _reload() {
+  void _reload() => _startReload();
+
+  Future<_PrivacyData> _startReload() {
     _dataRevision++;
     final future = _load();
     setState(() {
       _data = future;
       _loadingMoreExports = false;
     });
+    return future;
+  }
+
+  Future<void> _retry() async {
+    if (_retrying) return;
+    setState(() => _retrying = true);
+    try {
+      await _startReload();
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
   }
 
   Future<void> _loadMoreExports(_PrivacyData current) async {
@@ -370,9 +386,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('privacy-overview-retry'),
-                    onPressed: _reload,
+                    onPressed: _retrying ? null : _retry,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
+                    label: Text(_retrying ? '处理中...' : '重试'),
                   ),
                 ],
               ),
