@@ -31,6 +31,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _commentSaving = false;
   bool _reportSaving = false;
   bool _reportDialogOpen = false;
+  bool _reloadingInitial = false;
   bool _loadingMoreComments = false;
   bool _reloadingComments = false;
   int _commentRequestId = 0;
@@ -41,7 +42,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     _loadInitial();
   }
 
-  void _loadInitial() {
+  Future<void> _loadInitial() async {
+    if (_reloadingInitial) return;
     final post = widget.repository.loadPost(widget.postId);
     _commentRequestId++;
     final comments = _loadComments();
@@ -50,7 +52,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       _comments = comments;
       _replyTarget = null;
       _loadingMoreComments = false;
+      _reloadingInitial = true;
     });
+    try {
+      await Future.wait([post, comments]);
+    } catch (_) {
+      // FutureBuilders render the request errors.
+    } finally {
+      if (mounted) setState(() => _reloadingInitial = false);
+    }
   }
 
   Future<void> _reloadComments() async {
@@ -361,9 +371,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('post-detail-retry'),
-                  onPressed: _loadInitial,
+                  onPressed: _reloadingInitial ? null : _loadInitial,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重试'),
+                  label: Text(_reloadingInitial ? '处理中...' : '重试'),
                 ),
               ],
             ),

@@ -35,6 +35,7 @@ class CommunityScreenApi
   Completer<void>? commentRetryGate;
   bool failNextReport = false;
   int postRequests = 0;
+  Completer<void>? postRetryGate;
   int reportRequests = 0;
   int saveRequests = 0;
   int uploadRequests = 0;
@@ -146,6 +147,7 @@ class CommunityScreenApi
         failNextPost = false;
         throw StateError('network unavailable');
       }
+      await postRetryGate?.future;
     }
     if (path == '/api/c/v1/user/posts/7') {
       ownedPostRequests++;
@@ -385,6 +387,34 @@ void main() {
 
     expect(api.postRequests, 2);
     expect(api.requestedCommentPages, [1, 1]);
+    expect(find.text('伦敦周末市场指南'), findsOneWidget);
+  });
+
+  testWidgets('post detail guards duplicate initial retries', (tester) async {
+    final gate = Completer<void>();
+    final api = CommunityScreenApi()
+      ..failNextPost = true
+      ..postRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('post-detail-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.postRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.postRequests, 2);
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
   });
 
