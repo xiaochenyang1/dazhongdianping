@@ -28,6 +28,7 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
   final List<bool> retrying = [false, false, false];
   int selected = 0;
   final List<int> requestIds = [0, 0, 0];
+  final Set<int> _openingTopicIds = <int>{};
 
   @override
   void initState() {
@@ -119,6 +120,28 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
     }
   }
 
+  Future<void> _openTopic(TopicSummary topic) async {
+    if (_openingTopicIds.contains(topic.id)) return;
+    setState(() => _openingTopicIds.add(topic.id));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => TopicDetailScreen(
+            repository: widget.repository,
+            initial: topic,
+            canInteract: widget.canInteract,
+            onLoginRequired: widget.onLoginRequired,
+            onUserTap: widget.onUserTap,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingTopicIds.remove(topic.id));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) => DefaultTabController(
     length: 3,
@@ -190,20 +213,13 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
                         ),
                       );
                     }
+                    final topic = page.items[index];
                     return _TopicCard(
-                      topic: page.items[index],
+                      topic: topic,
                       rank: selected == 1 ? index + 1 : null,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => TopicDetailScreen(
-                            repository: widget.repository,
-                            initial: page.items[index],
-                            canInteract: widget.canInteract,
-                            onLoginRequired: widget.onLoginRequired,
-                            onUserTap: widget.onUserTap,
-                          ),
-                        ),
-                      ),
+                      onTap: _openingTopicIds.contains(topic.id)
+                          ? null
+                          : () => _openTopic(topic),
                     );
                   },
                 );
@@ -242,10 +258,11 @@ class _TopicCard extends StatelessWidget {
   });
   final TopicSummary topic;
   final int? rank;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Card(
+    key: Key('topic-card-${topic.id}'),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: onTap,

@@ -21,6 +21,7 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextPosts = false;
   final List<int> requestedPostPages = <int>[];
   Completer<void>? postRetryGate;
+  int postCalls = 0;
 
   Map<String, dynamic> topic({bool followed = false, int count = 88}) => {
     'id': 31,
@@ -72,6 +73,7 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path.endsWith('/posts')) {
+      postCalls++;
       if (failNextPosts) {
         failNextPosts = false;
         throw StateError('post network unavailable');
@@ -373,6 +375,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('已关注'), findsWidgets);
     expect(find.text('89 人关注'), findsOneWidget);
+  });
+
+  testWidgets('topic plaza guards duplicate detail navigation', (tester) async {
+    final gate = Completer<void>();
+    final api = TopicScreenApi()..postRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicPlazaScreen(
+          repository: TopicRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('topic-card-31'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.postCalls, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.postCalls, 1);
   });
 
   testWidgets('topic detail guards duplicate follow requests', (tester) async {
