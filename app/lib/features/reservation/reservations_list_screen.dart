@@ -31,6 +31,7 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
   late Future<ReservationPage> _reservations;
   bool _loadingMore = false;
   bool _retrying = false;
+  final Set<int> _openingReservationIds = <int>{};
   int _requestId = 0;
 
   @override
@@ -110,6 +111,26 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
     if (_status == status) return;
     setState(() => _status = status);
     _reload();
+  }
+
+  Future<void> _openReservation(ReservationSummary reservation) async {
+    if (_openingReservationIds.contains(reservation.id)) return;
+    setState(() => _openingReservationIds.add(reservation.id));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ReservationDetailScreen(
+            repository: widget.repository,
+            reservationId: reservation.id,
+          ),
+        ),
+      );
+      if (mounted) _reload();
+    } finally {
+      if (mounted) {
+        setState(() => _openingReservationIds.remove(reservation.id));
+      }
+    }
   }
 
   @override
@@ -204,18 +225,9 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => Navigator.of(context)
-                            .push(
-                              MaterialPageRoute(
-                                builder: (_) => ReservationDetailScreen(
-                                  repository: widget.repository,
-                                  reservationId: item.id,
-                                ),
-                              ),
-                            )
-                            .then((_) {
-                              if (mounted) _reload();
-                            }),
+                        onTap: _openingReservationIds.contains(item.id)
+                            ? null
+                            : () => _openReservation(item),
                       ),
                     );
                   },

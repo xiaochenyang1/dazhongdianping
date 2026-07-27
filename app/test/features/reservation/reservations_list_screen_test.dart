@@ -16,6 +16,8 @@ class ReservationsApi implements JsonApi {
   final List<String> paths = <String>[];
   final List<int> requestedPages = <int>[];
   Completer<void>? retryGate;
+  Completer<void>? detailGate;
+  int reservationDetailRequests = 0;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -53,6 +55,8 @@ class ReservationsApi implements JsonApi {
       };
     }
     if (path == '/api/c/v1/reservations/11') {
+      reservationDetailRequests++;
+      await detailGate?.future;
       return {
         'id': 11,
         'reservationNo': 'RS-11',
@@ -175,5 +179,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('预订详情'), findsOneWidget);
     expect(api.paths, contains('/api/c/v1/reservations/11'));
+  });
+
+  testWidgets('reservations list guards duplicate detail navigation', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = ReservationsApi()..detailGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationsListScreen(repository: ReservationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('reservation-card-11'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.reservationDetailRequests, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.reservationDetailRequests, 1);
+    expect(api.reservationListRequests, 2);
   });
 }
