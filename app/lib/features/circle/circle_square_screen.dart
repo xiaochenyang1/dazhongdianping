@@ -28,6 +28,7 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
   bool loadingMore = false;
   bool reloading = false;
   int requestId = 0;
+  final Set<int> _openingCircleIds = <int>{};
 
   @override
   void initState() {
@@ -93,6 +94,28 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
     }
   }
 
+  Future<void> _openCircle(AppCircle circle) async {
+    if (_openingCircleIds.contains(circle.id)) return;
+    setState(() => _openingCircleIds.add(circle.id));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CircleDetailScreen(
+            repository: widget.repository,
+            initial: circle,
+            canInteract: widget.canInteract,
+            onLoginRequired: widget.onLoginRequired,
+            onCreatePost: widget.onCreatePost,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingCircleIds.remove(circle.id));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('同城圈子')),
@@ -140,20 +163,13 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
                 ),
               );
             }
+            final circle = current.items[index];
             return _CircleCard(
-              circle: current.items[index],
+              circle: circle,
               colors: _colors(index),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => CircleDetailScreen(
-                    repository: widget.repository,
-                    initial: current.items[index],
-                    canInteract: widget.canInteract,
-                    onLoginRequired: widget.onLoginRequired,
-                    onCreatePost: widget.onCreatePost,
-                  ),
-                ),
-              ),
+              onTap: _openingCircleIds.contains(circle.id)
+                  ? null
+                  : () => _openCircle(circle),
             );
           },
         );
@@ -176,10 +192,11 @@ class _CircleCard extends StatelessWidget {
   });
   final AppCircle circle;
   final List<Color> colors;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Material(
+    key: Key('circle-card-${circle.id}'),
     color: Colors.transparent,
     child: InkWell(
       borderRadius: BorderRadius.circular(24),

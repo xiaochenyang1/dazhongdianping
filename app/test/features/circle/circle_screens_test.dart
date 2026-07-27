@@ -15,6 +15,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextPosts = false;
   final List<int> requestedPostPages = <int>[];
   Completer<void>? postRetryGate;
+  int postCalls = 0;
   Completer<void>? postDetailGate;
   int postDetailCalls = 0;
   bool paginateMembers = false;
@@ -91,6 +92,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path.endsWith('/posts')) {
+      postCalls++;
       if (failNextPosts) {
         failNextPosts = false;
         throw StateError('post network unavailable');
@@ -376,6 +378,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('已加入'), findsOneWidget);
     expect(find.textContaining('13 位成员'), findsOneWidget);
+  });
+
+  testWidgets('circle square guards duplicate detail navigation', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = CircleScreenApi()..postRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleSquareScreen(
+          repository: CircleRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('circle-card-3'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.postCalls, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.postCalls, 1);
   });
 
   testWidgets('circle detail guards duplicate membership requests', (
