@@ -171,6 +171,34 @@ void main() {
     expect(find.text('伦敦咖啡'), findsOneWidget);
   });
 
+  testWidgets('topic plaza guards duplicate retries per tab', (tester) async {
+    final gate = Completer<void>();
+    final api = TopicScreenApi()..failNextRecommended = true;
+    api.topicPageGates['/api/c/v1/topics:1'] = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicPlazaScreen(
+          repository: TopicRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('topic-plaza-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(
+      api.requestedTopicPageKeys.where((key) => key == '/api/c/v1/topics:1'),
+      hasLength(1),
+    );
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('伦敦咖啡'), findsOneWidget);
+  });
+
   testWidgets('topic detail loads later posts', (tester) async {
     final api = TopicScreenApi()..paginatePosts = true;
     await tester.pumpWidget(

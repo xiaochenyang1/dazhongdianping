@@ -25,6 +25,7 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
   Future<TopicPage>? hot;
   Future<TopicPage>? following;
   final List<bool> loadingMore = [false, false, false];
+  final List<bool> retrying = [false, false, false];
   int selected = 0;
   final List<int> requestIds = [0, 0, 0];
 
@@ -44,8 +45,9 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
     });
   }
 
-  void reload() {
+  Future<void> reload() async {
     final tab = selected;
+    if (retrying[tab]) return;
     final future = switch (tab) {
       0 => widget.repository.loadRecommendedPage(),
       1 => widget.repository.loadHotPage(),
@@ -54,10 +56,18 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
     requestIds[tab]++;
     setState(() {
       loadingMore[tab] = false;
+      retrying[tab] = true;
       if (tab == 0) recommended = future;
       if (tab == 1) hot = future;
       if (tab == 2) following = future;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => retrying[tab] = false);
+    }
   }
 
   Future<void> loadMore(TopicPage current) async {
@@ -142,9 +152,9 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('topic-plaza-retry'),
-                          onPressed: reload,
+                          onPressed: retrying[selected] ? null : reload,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('重试'),
+                          label: Text(retrying[selected] ? '处理中...' : '重试'),
                         ),
                       ],
                     ),
