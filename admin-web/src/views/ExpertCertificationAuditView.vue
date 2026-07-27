@@ -20,7 +20,8 @@ const selectedTask = computed(() =>
   ?? pageState.value?.list[0]
   ?? null,
 )
-const canHandleSelected = computed(() => selectedTask.value?.status === 0)
+const canWrite = computed(() => state.permissions.includes('audit:expert_certification:write'))
+const canHandleSelected = computed(() => canWrite.value && selectedTask.value?.status === 0)
 
 async function loadTasks() {
   loading.value = true
@@ -53,14 +54,15 @@ function selectTask(taskId: number) {
 }
 
 async function handlePass() {
-  if (!selectedTask.value) return
+  const task = selectedTask.value
+  if (!canWrite.value || task?.status !== 0) return
 
   acting.value = true
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    await passAuditTask(selectedTask.value.id, { remark: approveRemark.value.trim() || undefined })
-    successMessage.value = `达人认证任务 #${selectedTask.value.id} 已通过。`
+    await passAuditTask(task.id, { remark: approveRemark.value.trim() || undefined })
+    successMessage.value = `达人认证任务 #${task.id} 已通过。`
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
@@ -72,7 +74,8 @@ async function handlePass() {
 }
 
 async function handleReject() {
-  if (!selectedTask.value) return
+  const task = selectedTask.value
+  if (!canWrite.value || task?.status !== 0) return
 
   const reason = rejectReason.value.trim()
   if (!reason) {
@@ -84,8 +87,8 @@ async function handleReject() {
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    await rejectAuditTask(selectedTask.value.id, { reason })
-    successMessage.value = `达人认证任务 #${selectedTask.value.id} 已驳回。`
+    await rejectAuditTask(task.id, { reason })
+    successMessage.value = `达人认证任务 #${task.id} 已驳回。`
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
@@ -199,19 +202,22 @@ watch(
             <div><span>提交时间</span><strong>{{ selectedTask.createdAt }}</strong></div>
           </div>
           <div class="hint-card"><strong>申请摘要</strong><p>{{ selectedTask.summary || '暂无申请摘要' }}</p></div>
-          <label class="field field--full">
-            <span>通过备注</span>
-            <textarea v-model="approveRemark" name="approve-remark" rows="4" placeholder="可选，记录为什么给这人挂标。" />
-          </label>
-          <label class="field field--full">
-            <span>驳回原因</span>
-            <textarea v-model="rejectReason" name="reject-reason" rows="4" placeholder="必填，用户端会看到这段原因。" />
-          </label>
-          <div class="form-actions">
-            <button type="button" class="primary-button" :disabled="acting || !canHandleSelected" @click="handlePass">通过认证</button>
-            <button type="button" class="secondary-button" :disabled="acting || !canHandleSelected" @click="handleReject">驳回申请</button>
-          </div>
-          <p v-if="!canHandleSelected" class="inline-note">当前任务已经处理，只保留查看。</p>
+          <template v-if="canHandleSelected">
+            <label class="field field--full">
+              <span>通过备注</span>
+              <textarea v-model="approveRemark" name="approve-remark" rows="4" placeholder="可选，记录为什么给这人挂标。" />
+            </label>
+            <label class="field field--full">
+              <span>驳回原因</span>
+              <textarea v-model="rejectReason" name="reject-reason" rows="4" placeholder="必填，用户端会看到这段原因。" />
+            </label>
+            <div class="form-actions">
+              <button type="button" class="primary-button" :disabled="acting" @click="handlePass">通过认证</button>
+              <button type="button" class="secondary-button" :disabled="acting" @click="handleReject">驳回申请</button>
+            </div>
+          </template>
+          <p v-else-if="!canWrite" class="inline-note">当前账号只有查看权限，无法处理认证。</p>
+          <p v-else class="inline-note">当前任务已经处理，只保留查看。</p>
         </template>
         <div v-else class="empty-state">请先选择一条达人认证任务。</div>
       </section>

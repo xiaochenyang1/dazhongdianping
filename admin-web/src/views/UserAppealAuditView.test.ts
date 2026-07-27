@@ -7,15 +7,19 @@ const adminMocks = vi.hoisted(() => ({
   rejectAuditTask: vi.fn(),
 }))
 
-vi.mock('@/services/admin', () => adminMocks)
-vi.mock('@/composables/useAdminSession', () => ({
-  useAdminSession: () => ({
-    state: {
-      region: 'CN',
-      permissions: ['audit:user_appeal:read', 'audit:user_appeal:write'],
-    },
-  }),
+const sessionMock = vi.hoisted(() => ({
+  state: undefined as unknown as { region: 'CN' | 'EU'; permissions: string[] },
 }))
+
+vi.mock('@/services/admin', () => adminMocks)
+vi.mock('@/composables/useAdminSession', async () => {
+  const { reactive } = await import('vue')
+  sessionMock.state = reactive({
+    region: 'CN' as const,
+    permissions: ['audit:user_appeal:read', 'audit:user_appeal:write'],
+  })
+  return { useAdminSession: () => ({ state: sessionMock.state }) }
+})
 
 import UserAppealAuditView from './UserAppealAuditView.vue'
 
@@ -54,6 +58,8 @@ function pendingTask() {
 describe('UserAppealAuditView', () => {
   beforeEach(() => {
     Object.values(adminMocks).forEach((mock) => mock.mockReset())
+    sessionMock.state.region = 'CN'
+    sessionMock.state.permissions = ['audit:user_appeal:read', 'audit:user_appeal:write']
     adminMocks.listAuditTasks.mockResolvedValue({
       list: [pendingTask()],
       total: 1,
@@ -138,6 +144,35 @@ describe('UserAppealAuditView', () => {
 
     expect(adminMocks.rejectAuditTask).toHaveBeenCalledWith(88, { reason: '证据充分，维持封禁' })
     expect(host.textContent).toContain('用户保持封禁')
+    app.unmount()
+  })
+
+  it('动态撤权后保留详情但拦截旧处理控件', async () => {
+    const { app, host } = mountView()
+    await flushView()
+
+    const passButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('通过并解封'),
+    )
+    const rejectButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('驳回申诉'),
+    )
+    const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
+    if (!passButton || !rejectButton || !reason) throw new Error('找不到申诉处理控件')
+    reason.value = '撤权后不应提交'
+    reason.dispatchEvent(new Event('input'))
+
+    sessionMock.state.permissions = ['audit:user_appeal:read']
+    passButton.click()
+    rejectButton.click()
+    await flushView()
+
+    expect(adminMocks.passAuditTask).not.toHaveBeenCalled()
+    expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
+    expect(host.textContent).toContain('被封禁的测试用户')
+    expect(host.textContent).toContain('当前账号只有查看权限')
+    expect(host.querySelector('textarea[name="pass-remark"]')).toBeNull()
+    expect(host.querySelector('textarea[name="reject-reason"]')).toBeNull()
     app.unmount()
   })
 })

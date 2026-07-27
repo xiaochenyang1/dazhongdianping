@@ -8,10 +8,19 @@ const adminMocks = vi.hoisted(() => ({
   rejectAuditTask: vi.fn(),
 }))
 
-vi.mock('@/services/admin', () => adminMocks)
-vi.mock('@/composables/useAdminSession', () => ({
-  useAdminSession: () => ({ state: { region: 'EU' } }),
+const sessionMock = vi.hoisted(() => ({
+  state: undefined as unknown as { region: 'CN' | 'EU'; permissions: string[] },
 }))
+
+vi.mock('@/services/admin', () => adminMocks)
+vi.mock('@/composables/useAdminSession', async () => {
+  const { reactive } = await import('vue')
+  sessionMock.state = reactive({
+    region: 'EU' as const,
+    permissions: ['audit:deal:read', 'audit:deal:write'],
+  })
+  return { useAdminSession: () => ({ state: sessionMock.state }) }
+})
 
 import DealAuditView from './DealAuditView.vue'
 
@@ -50,6 +59,8 @@ function pendingTask() {
 describe('DealAuditView', () => {
   beforeEach(() => {
     Object.values(adminMocks).forEach((mock) => mock.mockReset())
+    sessionMock.state.region = 'EU'
+    sessionMock.state.permissions = ['audit:deal:read', 'audit:deal:write']
     adminMocks.listAuditTasks.mockResolvedValue({
       list: [pendingTask()],
       total: 1,
@@ -152,6 +163,45 @@ describe('DealAuditView', () => {
     expect(adminMocks.rejectAuditTask).toHaveBeenCalledWith(62, {
       reason: '价格与规则描述不一致',
     })
+    app.unmount()
+  })
+
+  it('keeps list and deal details visible while hiding write controls from read-only users', async () => {
+    sessionMock.state.permissions = ['audit:deal:read']
+    const { app, host } = mountView()
+    await flushView()
+
+    expect(adminMocks.listAuditTasks).toHaveBeenCalledTimes(1)
+    expect(adminMocks.getAdminDealDetail).toHaveBeenCalledWith(501)
+    expect(host.textContent).toContain('双人午市套餐')
+    expect(host.textContent).toContain('巴黎川味餐饮')
+    expect(host.textContent).toContain('周末通用')
+    expect(host.textContent).toContain('当前账号仅可查看，无团购审核处理权限。')
+    expect(host.querySelector('textarea[name="approve-remark"]')).toBeNull()
+    expect(host.querySelector('textarea[name="reject-reason"]')).toBeNull()
+    expect(host.querySelector('[data-testid="deal-audit-pass"]')).toBeNull()
+    expect(host.querySelector('[data-testid="deal-audit-reject"]')).toBeNull()
+    app.unmount()
+  })
+
+  it('blocks stale pass and reject controls when write permission is revoked', async () => {
+    const { app, host } = mountView()
+    await flushView()
+
+    const passButton = host.querySelector<HTMLButtonElement>('[data-testid="deal-audit-pass"]')
+    const rejectButton = host.querySelector<HTMLButtonElement>('[data-testid="deal-audit-reject"]')
+    if (!passButton || !rejectButton) throw new Error('找不到团购审核处理按钮')
+
+    sessionMock.state.permissions = ['audit:deal:read']
+    passButton.click()
+    rejectButton.click()
+    await flushView()
+
+    expect(adminMocks.passAuditTask).not.toHaveBeenCalled()
+    expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
+    expect(host.querySelector('[data-testid="deal-audit-pass"]')).toBeNull()
+    expect(host.querySelector('[data-testid="deal-audit-reject"]')).toBeNull()
+    expect(host.textContent).toContain('当前账号仅可查看，无团购审核处理权限。')
     app.unmount()
   })
 })

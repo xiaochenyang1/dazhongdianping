@@ -8,10 +8,19 @@ const adminMocks = vi.hoisted(() => ({
   rejectAuditTask: vi.fn(),
 }))
 
-vi.mock('@/services/admin', () => adminMocks)
-vi.mock('@/composables/useAdminSession', () => ({
-  useAdminSession: () => ({ state: { region: 'EU' } }),
+const sessionMock = vi.hoisted(() => ({
+  state: undefined as unknown as { region: 'CN' | 'EU'; permissions: string[] },
 }))
+
+vi.mock('@/services/admin', () => adminMocks)
+vi.mock('@/composables/useAdminSession', async () => {
+  const { reactive } = await import('vue')
+  sessionMock.state = reactive({
+    region: 'EU' as const,
+    permissions: ['audit:shop_change:read', 'audit:shop_change:write'],
+  })
+  return { useAdminSession: () => ({ state: sessionMock.state }) }
+})
 
 import ShopChangeAuditView from './ShopChangeAuditView.vue'
 
@@ -50,6 +59,8 @@ function pendingTask() {
 describe('ShopChangeAuditView', () => {
   beforeEach(() => {
     Object.values(adminMocks).forEach((mock) => mock.mockReset())
+    sessionMock.state.region = 'EU'
+    sessionMock.state.permissions = ['audit:shop_change:read', 'audit:shop_change:write']
     adminMocks.listAuditTasks.mockResolvedValue({
       list: [pendingTask()],
       total: 1,
@@ -155,6 +166,35 @@ describe('ShopChangeAuditView', () => {
     expect(adminMocks.rejectAuditTask).toHaveBeenCalledWith(55, {
       reason: '封面与营业执照主体不一致',
     })
+    app.unmount()
+  })
+
+  it('keeps shop-change details read-only and blocks stale controls after permission revocation', async () => {
+    const { app, host } = mountView()
+    await flushView()
+
+    const passButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('通过门店草稿'),
+    )
+    const rejectButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes('驳回门店草稿'),
+    )
+    const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
+    if (!passButton || !rejectButton || !reason) throw new Error('找不到门店草稿处理控件')
+    reason.value = '动态撤权后不应提交'
+    reason.dispatchEvent(new Event('input'))
+
+    sessionMock.state.permissions = ['audit:shop_change:read']
+    passButton.click()
+    rejectButton.click()
+    await flushView()
+
+    expect(adminMocks.passAuditTask).not.toHaveBeenCalled()
+    expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
+    expect(host.textContent).toContain('Maison Sichuan Draft')
+    expect(host.textContent).toContain('当前账号只有查看权限')
+    expect(host.querySelector('textarea[name="approve-remark"]')).toBeNull()
+    expect(host.querySelector('textarea[name="reject-reason"]')).toBeNull()
     app.unmount()
   })
 })

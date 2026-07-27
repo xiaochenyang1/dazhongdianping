@@ -12,6 +12,7 @@ interface AuditFilters {
 }
 
 const { state } = useAdminSession()
+const canWrite = computed(() => state.permissions.includes('audit:review:write'))
 
 const loading = ref(false)
 const acting = ref(false)
@@ -37,7 +38,7 @@ const selectedTask = computed(() => {
   return pageState.value.list.find((item) => item.id === selectedTaskId.value) ?? pageState.value.list[0]
 })
 
-const canHandleSelected = computed(() => selectedTask.value?.status === 0)
+const canHandleSelected = computed(() => canWrite.value && selectedTask.value?.status === 0)
 
 async function loadTasks() {
   loading.value = true
@@ -71,7 +72,8 @@ function selectTask(taskId: number) {
 }
 
 async function handlePass() {
-  if (!selectedTask.value) {
+  const task = selectedTask.value
+  if (!canWrite.value || !task || task.status !== 0) {
     return
   }
 
@@ -80,10 +82,10 @@ async function handlePass() {
   successMessage.value = ''
 
   try {
-    await passAuditTask(selectedTask.value.id, {
+    await passAuditTask(task.id, {
       remark: approveRemark.value.trim() || undefined,
     })
-    successMessage.value = `任务 #${selectedTask.value.id} 已审核通过。`
+    successMessage.value = `任务 #${task.id} 已审核通过。`
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
@@ -95,7 +97,8 @@ async function handlePass() {
 }
 
 async function handleReject() {
-  if (!selectedTask.value) {
+  const task = selectedTask.value
+  if (!canWrite.value || !task || task.status !== 0) {
     return
   }
 
@@ -110,8 +113,8 @@ async function handleReject() {
   successMessage.value = ''
 
   try {
-    await rejectAuditTask(selectedTask.value.id, { reason })
-    successMessage.value = `任务 #${selectedTask.value.id} 已驳回。`
+    await rejectAuditTask(task.id, { reason })
+    successMessage.value = `任务 #${task.id} 已驳回。`
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
@@ -306,48 +309,51 @@ watch(
             <p>{{ selectedTask.summary || '当前没有可展示的点评摘要。' }}</p>
           </div>
 
-          <label class="field field--full">
-            <span>通过备注</span>
-            <textarea
-              v-model="approveRemark"
-              rows="4"
-              spellcheck="false"
-              placeholder="可选。比如：内容真实、表达完整。"
-            />
-          </label>
+          <template v-if="canHandleSelected">
+            <label class="field field--full">
+              <span>通过备注</span>
+              <textarea
+                v-model="approveRemark"
+                name="approve-remark"
+                rows="4"
+                spellcheck="false"
+                placeholder="可选。比如：内容真实、表达完整。"
+              />
+            </label>
 
-          <label class="field field--full">
-            <span>驳回原因</span>
-            <textarea
-              v-model="rejectReason"
-              rows="4"
-              spellcheck="false"
-              placeholder="必填。别写成“自己体会”，那纯属摆烂。"
-            />
-          </label>
+            <label class="field field--full">
+              <span>驳回原因</span>
+              <textarea
+                v-model="rejectReason"
+                name="reject-reason"
+                rows="4"
+                spellcheck="false"
+                placeholder="必填。别写成“自己体会”，那纯属摆烂。"
+              />
+            </label>
 
-          <div class="form-actions">
-            <button
-              type="button"
-              class="primary-button"
-              :disabled="acting || !canHandleSelected"
-              @click="handlePass"
-            >
-              {{ acting && canHandleSelected ? '处理中...' : '通过点评' }}
-            </button>
-            <button
-              type="button"
-              class="secondary-button"
-              :disabled="acting || !canHandleSelected"
-              @click="handleReject"
-            >
-              {{ acting && canHandleSelected ? '处理中...' : '驳回点评' }}
-            </button>
-          </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="primary-button"
+                :disabled="acting"
+                @click="handlePass"
+              >
+                {{ acting && canHandleSelected ? '处理中...' : '通过点评' }}
+              </button>
+              <button
+                type="button"
+                class="secondary-button"
+                :disabled="acting"
+                @click="handleReject"
+              >
+                {{ acting && canHandleSelected ? '处理中...' : '驳回点评' }}
+              </button>
+            </div>
 
-          <p class="inline-note" v-if="!canHandleSelected">
-            当前任务已经处理过了，只能查看结果，别对着已完成任务猛点按钮。
-          </p>
+          </template>
+          <p v-else-if="!canWrite" class="inline-note">当前账号只有查看权限，无法处理点评审核。</p>
+          <p v-else class="inline-note">当前任务已经处理过了，只能查看结果。</p>
         </template>
 
         <div v-else class="empty-state">

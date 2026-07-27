@@ -18,6 +18,7 @@ const selected = computed(
   () => pageState.value?.list.find((item) => item.id === selectedId.value) ?? pageState.value?.list[0] ?? null,
 )
 const canWrite = computed(() => state.permissions.includes('audit:user_appeal:write'))
+const canHandleSelected = computed(() => canWrite.value && selected.value?.status === 0)
 
 async function load() {
   loading.value = true
@@ -42,13 +43,14 @@ async function load() {
 }
 
 async function pass() {
-  if (!selected.value) return
+  const task = selected.value
+  if (!canWrite.value || task?.status !== 0) return
   acting.value = true
   error.value = ''
   success.value = ''
   try {
-    await passAuditTask(selected.value.id, { remark: passRemark.value.trim() || undefined })
-    success.value = `申诉任务 #${selected.value.id} 已通过，用户已自动解封。`
+    await passAuditTask(task.id, { remark: passRemark.value.trim() || undefined })
+    success.value = `申诉任务 #${task.id} 已通过，用户已自动解封。`
     passRemark.value = ''
     await load()
   } catch (e) {
@@ -59,7 +61,8 @@ async function pass() {
 }
 
 async function reject() {
-  if (!selected.value) return
+  const task = selected.value
+  if (!canWrite.value || task?.status !== 0) return
   const reason = rejectReason.value.trim()
   if (!reason) {
     error.value = '驳回原因不能为空。'
@@ -69,8 +72,8 @@ async function reject() {
   error.value = ''
   success.value = ''
   try {
-    await rejectAuditTask(selected.value.id, { reason })
-    success.value = `申诉任务 #${selected.value.id} 已驳回，用户保持封禁。`
+    await rejectAuditTask(task.id, { reason })
+    success.value = `申诉任务 #${task.id} 已驳回，用户保持封禁。`
     rejectReason.value = ''
     await load()
   } catch (e) {
@@ -178,31 +181,22 @@ watch(
             <strong>申诉理由</strong>
             <p>{{ selected.summary || '暂无理由' }}</p>
           </div>
-          <label class="field field--full">
-            <span>通过备注（通过后立即解封）</span>
-            <textarea v-model="passRemark" rows="4" />
-          </label>
-          <label class="field field--full">
-            <span>驳回原因（会展示给用户）</span>
-            <textarea v-model="rejectReason" rows="4" />
-          </label>
-          <div class="form-actions">
-            <button
-              class="primary-button"
-              :disabled="acting || selected.status !== 0 || !canWrite"
-              @click="pass"
-            >
-              通过并解封
-            </button>
-            <button
-              class="secondary-button"
-              :disabled="acting || selected.status !== 0 || !canWrite"
-              @click="reject"
-            >
-              驳回申诉
-            </button>
-          </div>
-          <p v-if="!canWrite" class="inline-note">当前账号只有查看权限，无法处理申诉。</p>
+          <template v-if="canHandleSelected">
+            <label class="field field--full">
+              <span>通过备注（通过后立即解封）</span>
+              <textarea v-model="passRemark" name="pass-remark" rows="4" />
+            </label>
+            <label class="field field--full">
+              <span>驳回原因（会展示给用户）</span>
+              <textarea v-model="rejectReason" name="reject-reason" rows="4" />
+            </label>
+            <div class="form-actions">
+              <button class="primary-button" :disabled="acting" @click="pass">通过并解封</button>
+              <button class="secondary-button" :disabled="acting" @click="reject">驳回申诉</button>
+            </div>
+          </template>
+          <p v-else-if="!canWrite" class="inline-note">当前账号只有查看权限，无法处理申诉。</p>
+          <p v-else class="inline-note">当前任务已经处理，只保留查看。</p>
         </template>
         <div v-else class="empty-state">请先选择一条申诉任务。</div>
       </section>
