@@ -706,6 +706,37 @@ void main() {
     expect(find.text('我补一层楼中回复。'), findsOneWidget);
   });
 
+  testWidgets('community feed guards duplicate post navigation', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = CommunityScreenApi()..postRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityFeedScreen(
+          repository: CommunityRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('community-post-card-7'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.postRequests, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.postRequests, 1);
+    expect(api.requestedFeedPages, [1]);
+  });
+
   testWidgets('post detail can reply to a threaded comment', (tester) async {
     final api = CommunityScreenApi();
     await tester.pumpWidget(

@@ -34,6 +34,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   final List<bool> _loadingMore = [false, false];
   final List<bool> _reloading = [false, false];
   bool _openingEditor = false;
+  final Set<int> _openingPostIds = <int>{};
   int _selectedTab = 0;
   final List<int> _requestIds = [0, 0];
   @override
@@ -135,6 +136,27 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
       if (mounted) _reload();
     } finally {
       if (mounted) setState(() => _openingEditor = false);
+    }
+  }
+
+  Future<void> _openPost(CommunityPost post) async {
+    if (_openingPostIds.contains(post.id)) return;
+    setState(() => _openingPostIds.add(post.id));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PostDetailScreen(
+            repository: widget.repository,
+            postId: post.id,
+            canInteract: widget.canInteract,
+            onUserTap: widget.onUserTap,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingPostIds.remove(post.id));
+      }
     }
   }
 
@@ -263,18 +285,12 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                       }
                       final post = posts[index];
                       return Card(
+                        key: Key('community-post-card-${post.id}'),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => PostDetailScreen(
-                                repository: widget.repository,
-                                postId: post.id,
-                                canInteract: widget.canInteract,
-                                onUserTap: widget.onUserTap,
-                              ),
-                            ),
-                          ),
+                          onTap: _openingPostIds.contains(post.id)
+                              ? null
+                              : () => _openPost(post),
                           child: Padding(
                             padding: const EdgeInsets.all(18),
                             child: Column(
