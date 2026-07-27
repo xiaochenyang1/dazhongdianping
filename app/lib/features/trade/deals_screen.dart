@@ -21,6 +21,7 @@ class DealsScreen extends StatefulWidget {
 class _DealsScreenState extends State<DealsScreen> {
   late Future<List<DealSummary>> deals;
   bool buying = false;
+  bool reloading = false;
 
   @override
   void initState() {
@@ -28,11 +29,20 @@ class _DealsScreenState extends State<DealsScreen> {
     deals = widget.repository.loadShopDeals(widget.shopId);
   }
 
-  void reload() {
+  Future<void> reload() async {
+    if (reloading) return;
     final future = widget.repository.loadShopDeals(widget.shopId);
     setState(() {
       deals = future;
+      reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => reloading = false);
+    }
   }
 
   Future<void> buy(DealSummary deal) async {
@@ -89,9 +99,9 @@ class _DealsScreenState extends State<DealsScreen> {
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('deals-retry'),
-                    onPressed: reload,
+                    onPressed: reloading ? null : reload,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
+                    label: Text(reloading ? '处理中...' : '重试'),
                   ),
                 ],
               ),

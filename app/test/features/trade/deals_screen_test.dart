@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/trade/deals_screen.dart';
@@ -10,6 +12,7 @@ class DealsScreenApi implements JsonApi {
 
   final bool failFirst;
   int dealRequests = 0;
+  Completer<void>? retryGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -20,6 +23,7 @@ class DealsScreenApi implements JsonApi {
     if (failFirst && dealRequests == 1) {
       throw StateError('network unavailable');
     }
+    if (dealRequests > 1) await retryGate?.future;
     return {
       'value': [
         {
@@ -66,6 +70,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.dealRequests, 2);
+    expect(find.text('Dinner Set'), findsOneWidget);
+  });
+
+  testWidgets('deals screen guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = DealsScreenApi(failFirst: true)..retryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DealsScreen(
+          repository: TradeRepository(api),
+          shopId: 2,
+          thirdPartyConfig: const ThirdPartyConfig(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('deals-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.dealRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(find.text('Dinner Set'), findsOneWidget);
   });
 
