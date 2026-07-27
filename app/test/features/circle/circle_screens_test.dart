@@ -14,6 +14,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool paginatePosts = false;
   bool failNextPosts = false;
   final List<int> requestedPostPages = <int>[];
+  Completer<void>? postRetryGate;
   bool paginateMembers = false;
   bool failNextMembers = false;
   final List<int> requestedMemberPages = <int>[];
@@ -84,6 +85,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         failNextPosts = false;
         throw StateError('post network unavailable');
       }
+      await postRetryGate?.future;
       final page = query?['page'] as int? ?? 1;
       requestedPostPages.add(page);
       return {
@@ -198,6 +200,34 @@ void main() {
     expect(find.textContaining('帖子加载失败'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('circle-posts-retry')));
+    await tester.pumpAndSettle();
+    expect(api.requestedPostPages, [1]);
+    expect(find.text('周末市集指南'), findsOneWidget);
+  });
+
+  testWidgets('circle detail guards duplicate post retries', (tester) async {
+    final gate = Completer<void>();
+    final api = CircleScreenApi()
+      ..failNextPosts = true
+      ..postRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleDetailScreen(
+          repository: CircleRepository(api),
+          initial: AppCircle.fromJson(api.circle()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('circle-posts-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.requestedPostPages, isEmpty);
+
+    gate.complete();
     await tester.pumpAndSettle();
     expect(api.requestedPostPages, [1]);
     expect(find.text('周末市集指南'), findsOneWidget);

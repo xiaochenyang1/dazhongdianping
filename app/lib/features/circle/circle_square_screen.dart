@@ -265,6 +265,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
   late Future<CommunityPostPage> posts;
   bool saving = false;
   bool loadingMorePosts = false;
+  bool reloadingPosts = false;
   int postsRequestId = 0;
 
   @override
@@ -273,13 +274,22 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
     posts = widget.repository.loadPostPage(circle.id);
   }
 
-  void reloadPosts() {
+  Future<void> reloadPosts() async {
+    if (reloadingPosts) return;
     final future = widget.repository.loadPostPage(circle.id);
     postsRequestId++;
     setState(() {
       posts = future;
       loadingMorePosts = false;
+      reloadingPosts = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => reloadingPosts = false);
+    }
   }
 
   Future<void> loadMorePosts(CommunityPostPage current) async {
@@ -443,9 +453,9 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                         const SizedBox(height: 8),
                         FilledButton.tonalIcon(
                           key: const Key('circle-posts-retry'),
-                          onPressed: reloadPosts,
+                          onPressed: reloadingPosts ? null : reloadPosts,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('重试'),
+                          label: Text(reloadingPosts ? '处理中...' : '重试'),
                         ),
                       ],
                     )
