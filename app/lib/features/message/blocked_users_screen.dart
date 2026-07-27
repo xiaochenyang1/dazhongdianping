@@ -49,15 +49,15 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
         page: current.page + 1,
         pageSize: current.pageSize,
       );
-      final byId = <int, BlockedUser>{
-        for (final item in current.items) item.id: item,
-        for (final item in next.items) item.id: item,
-      };
+      final knownIds = current.items.map((item) => item.id).toSet();
       if (mounted && revision == _pageRevision) {
         setState(() {
           _page = Future.value(
             BlockedUserPage(
-              items: byId.values.toList(),
+              items: [
+                ...current.items,
+                ...next.items.where((item) => knownIds.add(item.id)),
+              ],
               total: next.total,
               page: next.page,
               pageSize: next.pageSize,

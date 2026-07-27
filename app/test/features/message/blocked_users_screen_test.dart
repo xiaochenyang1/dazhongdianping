@@ -10,6 +10,7 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
   final List<int> pages = [];
   final List<int> unblockedUsers = [];
   bool failNextLoad = false;
+  bool overlapPages = false;
   final Map<int, Completer<void>> unblockGates = {};
 
   @override
@@ -31,6 +32,13 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
           'avatar': '',
           'blockedAt': '2026-07-26 12:00:00',
         },
+        if (overlapPages && page == 2)
+          {
+            'id': 9,
+            'nickname': '过期黑名单昵称',
+            'avatar': '',
+            'blockedAt': '2026-01-01 00:00:00',
+          },
       ],
       'total': 2,
       'page': page,
@@ -88,6 +96,23 @@ void main() {
     expect(api.pages, [1, 1]);
     expect(find.text('伦敦小王'), findsOneWidget);
     expect(find.textContaining('黑名单加载失败'), findsNothing);
+  });
+
+  testWidgets('blocked user pagination preserves current entries', (
+    tester,
+  ) async {
+    final api = BlockedUsersFakeApi()..overlapPages = true;
+    await tester.pumpWidget(
+      MaterialApp(home: BlockedUsersScreen(repository: MessageRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('加载更多'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.text('过期黑名单昵称'), findsNothing);
+    expect(find.text('巴黎小李'), findsOneWidget);
   });
 
   testWidgets('parallel unblocks compose from the latest page', (tester) async {
