@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
@@ -9,6 +11,7 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
 
   final bool failFirst;
   int profileRequests = 0;
+  Completer<void>? retryGate;
   String? path;
   Object? body;
   final List<String> paths = [];
@@ -42,6 +45,7 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
     if (failFirst && profileRequests == 1) {
       throw StateError('network unavailable');
     }
+    if (profileRequests > 1) await retryGate?.future;
     return profile();
   }
 
@@ -84,6 +88,28 @@ void main() {
     await tester.tap(find.byKey(const Key('account-settings-retry')));
     await tester.pumpAndSettle();
 
+    expect(api.profileRequests, 2);
+    expect(find.text('基础资料'), findsOneWidget);
+  });
+
+  testWidgets('account settings guards duplicate profile retries', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = AccountSettingsApi(failFirst: true)..retryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: AccountSettingsScreen(repository: UserRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('account-settings-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.profileRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(api.profileRequests, 2);
     expect(find.text('基础资料'), findsOneWidget);
   });

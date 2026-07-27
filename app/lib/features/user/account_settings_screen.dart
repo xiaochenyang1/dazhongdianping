@@ -31,6 +31,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   bool sendingBindCode = false;
   bool bindingAccount = false;
   bool updatingPassword = false;
+  bool reloadingProfile = false;
 
   @override
   void initState() {
@@ -48,11 +49,20 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     return profile;
   }
 
-  void _reloadProfile() {
+  Future<void> _reloadProfile() async {
+    if (reloadingProfile) return;
     final future = _loadProfile();
     setState(() {
       _profile = future;
+      reloadingProfile = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => reloadingProfile = false);
+    }
   }
 
   void _showMessage(String message) {
@@ -202,9 +212,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('account-settings-retry'),
-                    onPressed: _reloadProfile,
+                    onPressed: reloadingProfile ? null : _reloadProfile,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
+                    label: Text(reloadingProfile ? '处理中...' : '重试'),
                   ),
                 ],
               ),
