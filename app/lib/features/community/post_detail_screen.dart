@@ -32,6 +32,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _reportSaving = false;
   bool _reportDialogOpen = false;
   bool _loadingMoreComments = false;
+  bool _reloadingComments = false;
   int _commentRequestId = 0;
 
   @override
@@ -52,12 +53,22 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     });
   }
 
-  void _reloadComments() {
+  Future<void> _reloadComments() async {
+    if (_reloadingComments) return;
     _commentRequestId++;
+    final comments = _loadComments();
     setState(() {
-      _comments = _loadComments();
+      _comments = comments;
       _loadingMoreComments = false;
+      _reloadingComments = true;
     });
+    try {
+      await comments;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloadingComments = false);
+    }
   }
 
   Future<CommunityCommentPage> _loadComments() {
@@ -514,9 +525,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         const SizedBox(height: 8),
                         FilledButton.tonalIcon(
                           key: const Key('post-comments-retry'),
-                          onPressed: _reloadComments,
+                          onPressed: _reloadingComments
+                              ? null
+                              : _reloadComments,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('重试评论'),
+                          label: Text(_reloadingComments ? '处理中...' : '重试评论'),
                         ),
                       ],
                     ),

@@ -32,6 +32,7 @@ class CommunityScreenApi
   bool failNextLike = false;
   bool failNextComment = false;
   bool failNextCommentLoad = false;
+  Completer<void>? commentRetryGate;
   bool failNextReport = false;
   int postRequests = 0;
   int reportRequests = 0;
@@ -78,6 +79,7 @@ class CommunityScreenApi
         failNextCommentLoad = false;
         throw StateError('comments unavailable');
       }
+      await commentRetryGate?.future;
       return {
         'list': [
           {
@@ -477,6 +479,36 @@ void main() {
     expect(find.text('收藏了。'), findsOneWidget);
     expect(api.requestedCommentPages, [1, 1]);
     expect(api.postRequests, 1);
+  });
+
+  testWidgets('post detail guards duplicate comment retries', (tester) async {
+    final gate = Completer<void>();
+    final api = CommunityScreenApi()
+      ..failNextCommentLoad = true
+      ..commentRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -900));
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('post-comments-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.requestedCommentPages, [1, 1]);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.requestedCommentPages, [1, 1]);
+    expect(find.text('收藏了。'), findsOneWidget);
   });
 
   testWidgets('community feed loads later pages', (tester) async {
