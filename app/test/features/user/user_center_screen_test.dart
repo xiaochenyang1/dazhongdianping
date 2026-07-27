@@ -5,12 +5,13 @@ import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_center_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class CenterFakeApi implements JsonApi {
+class CenterFakeApi implements JsonApi, JsonMutationApi {
   CenterFakeApi({this.failFirst = false});
 
   final bool failFirst;
@@ -41,6 +42,22 @@ class CenterFakeApi implements JsonApi {
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
       {};
+
+  @override
+  Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
+    final payload = body! as Map<String, dynamic>;
+    return {
+      'id': 9,
+      'nickname': payload['nickname'],
+      'avatar': payload['avatar'],
+      'preferredRegion': 'EU',
+      'level': 4,
+      'points': 120,
+      'growthValue': 350,
+      'gender': payload['gender'],
+      'signature': payload['signature'],
+    };
+  }
 }
 
 class CenterBrowseRepository extends BrowseRepository {
@@ -154,6 +171,46 @@ void main() {
     expect(find.text('我的足迹'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('隐私中心'), 200);
     expect(find.text('隐私中心'), findsOneWidget);
+  });
+
+  testWidgets('user center reflects profile changes from account settings', (
+    tester,
+  ) async {
+    final api = CenterFakeApi();
+    final auth = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserCenterScreen(
+          repository: UserRepository(api),
+          authController: auth,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Center User'), findsOneWidget);
+    await tester.tap(find.text('账户设置'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('settings-nickname')),
+      'Updated Center User',
+    );
+    await tester.drag(find.byType(ListView), const Offset(0, -240));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-save-profile')));
+    await tester.pumpAndSettle();
+    expect(auth.currentUser?.nickname, 'Updated Center User');
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AccountSettingsScreen), findsNothing);
+    expect(find.text('Center User'), findsNothing);
+    expect(find.text('Updated Center User'), findsOneWidget);
   });
 
   testWidgets('user center guards duplicate logout requests', (tester) async {

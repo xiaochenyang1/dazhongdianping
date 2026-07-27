@@ -41,6 +41,7 @@ class UserCenterScreen extends StatefulWidget {
 
 class _UserCenterScreenState extends State<UserCenterScreen> {
   late Future<UserProfile> _profile;
+  UserProfile? _profileOverride;
   bool _loggingOut = false;
   bool _reloading = false;
 
@@ -55,6 +56,7 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
     final future = widget.repository.loadProfile();
     setState(() {
       _profile = future;
+      _profileOverride = null;
       _reloading = true;
     });
     try {
@@ -76,6 +78,20 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
       Navigator.of(context).pop();
     } finally {
       if (mounted) setState(() => _loggingOut = false);
+    }
+  }
+
+  void _applyProfile(UserProfile updated) {
+    widget.authController.replaceCurrentUser(
+      AuthUser(
+        id: updated.id,
+        nickname: updated.nickname,
+        avatar: updated.avatar,
+        preferredRegion: updated.preferredRegion,
+      ),
+    );
+    if (mounted) {
+      setState(() => _profileOverride = updated);
     }
   }
 
@@ -115,7 +131,7 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
               ),
             );
           }
-          final profile = snapshot.data!;
+          final profile = _profileOverride ?? snapshot.data!;
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -161,16 +177,7 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                   MaterialPageRoute(
                     builder: (_) => AccountSettingsScreen(
                       repository: widget.repository,
-                      onProfileChanged: (updated) {
-                        widget.authController.replaceCurrentUser(
-                          AuthUser(
-                            id: updated.id,
-                            nickname: updated.nickname,
-                            avatar: updated.avatar,
-                            preferredRegion: updated.preferredRegion,
-                          ),
-                        );
-                      },
+                      onProfileChanged: _applyProfile,
                     ),
                   ),
                 ),
