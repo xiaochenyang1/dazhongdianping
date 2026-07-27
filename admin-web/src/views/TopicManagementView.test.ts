@@ -10,10 +10,19 @@ const mocks = vi.hoisted(() => ({
   recalculateTopicHot: vi.fn(),
 }))
 
-vi.mock('@/services/topic', () => mocks)
-vi.mock('@/composables/useAdminSession', () => ({
-  useAdminSession: () => ({ state: { region: 'EU' } }),
+const sessionMock = vi.hoisted(() => ({
+  state: undefined as unknown as { region: 'CN' | 'EU'; permissions: string[] },
 }))
+
+vi.mock('@/services/topic', () => mocks)
+vi.mock('@/composables/useAdminSession', async () => {
+  const { reactive } = await import('vue')
+  sessionMock.state = reactive({
+    region: 'EU' as const,
+    permissions: ['operations:topic:read', 'operations:topic:write'],
+  })
+  return { useAdminSession: () => ({ state: sessionMock.state }) }
+})
 
 import TopicManagementView from './TopicManagementView.vue'
 
@@ -59,6 +68,8 @@ describe('TopicManagementView', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     Object.values(mocks).forEach((mock) => mock.mockReset())
+    sessionMock.state.region = 'EU'
+    sessionMock.state.permissions = ['operations:topic:read', 'operations:topic:write']
     mocks.listTopics.mockResolvedValue({ list: [source, target], total: 2, page: 1, pageSize: 20, hasMore: false })
     mocks.updateTopic.mockResolvedValue({ ...source, name: '伦敦咖啡馆' })
     mocks.updateTopicRecommendation.mockResolvedValue({ ...source, recommended: true, pinnedSort: 60 })
@@ -149,6 +160,60 @@ describe('TopicManagementView', () => {
 
     expect(mocks.recalculateTopicHot).toHaveBeenCalledTimes(1)
     expect(host.textContent).toContain('热榜重算失败，旧快照已保留')
+    app.unmount()
+  })
+
+  it('keeps topic browsing available while hiding every write control from read-only users', async () => {
+    sessionMock.state.permissions = ['operations:topic:read']
+    const { host, app } = mount()
+    await flush()
+
+    expect(mocks.listTopics).toHaveBeenCalledTimes(1)
+    expect(host.textContent).toContain('伦敦咖啡')
+    expect(host.querySelector('input[name="pin-31"]')).toBeNull()
+    expect(host.querySelector('[data-testid="rename-form"]')).toBeNull()
+    expect(host.querySelector('select[name="merge-target"]')).toBeNull()
+    expect([...host.querySelectorAll('button')].map((button) => button.textContent?.trim())).toEqual([
+      '执行筛选',
+    ])
+    app.unmount()
+  })
+
+  it('blocks every mutation when write permission is revoked after controls are opened', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { host, app } = mount()
+    await flush()
+
+    const buttons = [...host.querySelectorAll<HTMLButtonElement>('button')]
+    const findButton = (text: string) => buttons.find((button) => button.textContent?.includes(text))
+    findButton('编辑名称')?.click()
+    findButton('合并话题')?.click()
+    await nextTick()
+
+    const renameForm = host.querySelector<HTMLFormElement>('[data-testid="rename-form"]')
+    const mergeTarget = host.querySelector<HTMLSelectElement>('select[name="merge-target"]')
+    const mergeButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
+      .find((button) => button.textContent?.includes('确认不可逆合并'))
+    if (!renameForm || !mergeTarget || !mergeButton) throw new Error('缺少已打开的话题写入控件')
+    mergeTarget.value = '32'
+    mergeTarget.dispatchEvent(new Event('change'))
+
+    sessionMock.state.permissions = ['operations:topic:read']
+    renameForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    mergeButton.click()
+    findButton('推荐并置顶')?.click()
+    findButton('屏蔽')?.click()
+    findButton('重算热榜')?.click()
+    await flush()
+
+    expect(confirm).not.toHaveBeenCalled()
+    expect(mocks.updateTopic).not.toHaveBeenCalled()
+    expect(mocks.updateTopicRecommendation).not.toHaveBeenCalled()
+    expect(mocks.updateTopicStatus).not.toHaveBeenCalled()
+    expect(mocks.mergeTopic).not.toHaveBeenCalled()
+    expect(mocks.recalculateTopicHot).not.toHaveBeenCalled()
+    expect(host.querySelector('[data-testid="rename-form"]')).toBeNull()
+    expect(host.querySelector('select[name="merge-target"]')).toBeNull()
     app.unmount()
   })
 })

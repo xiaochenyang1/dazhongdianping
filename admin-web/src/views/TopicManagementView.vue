@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useAdminSession } from '@/composables/useAdminSession'
 import {
   listTopics,
   mergeTopic,
@@ -10,6 +11,8 @@ import {
   type AdminTopic,
 } from '@/services/topic'
 
+const { state } = useAdminSession()
+const canWrite = computed(() => state.permissions.includes('operations:topic:write'))
 const rows = ref<AdminTopic[]>([])
 const loading = ref(false)
 const actionBusy = ref(false)
@@ -51,12 +54,13 @@ async function load() {
 }
 
 function startRename(row: AdminTopic) {
+  if (!canWrite.value) return
   editingId.value = row.id
   editingName.value = row.name
 }
 
 async function saveRename() {
-  if (editingId.value == null || !editingName.value.trim()) return
+  if (!canWrite.value || editingId.value == null || !editingName.value.trim()) return
   await runAction(async () => {
     await updateTopic(editingId.value!, { name: editingName.value.trim() })
     editingId.value = null
@@ -67,6 +71,7 @@ async function saveRename() {
 }
 
 async function toggleRecommendation(row: AdminTopic) {
+  if (!canWrite.value) return
   await runAction(async () => {
     await updateTopicRecommendation(row.id, {
       recommended: !row.recommended,
@@ -78,6 +83,7 @@ async function toggleRecommendation(row: AdminTopic) {
 }
 
 async function toggleStatus(row: AdminTopic) {
+  if (!canWrite.value) return
   await runAction(async () => {
     await updateTopicStatus(row.id, row.status === 1 ? 2 : 1)
     notice.value = row.status === 1 ? '话题已屏蔽' : '话题已恢复'
@@ -86,11 +92,13 @@ async function toggleStatus(row: AdminTopic) {
 }
 
 function startMerge(row: AdminTopic) {
+  if (!canWrite.value) return
   mergeSource.value = row
   mergeTargetId.value = null
 }
 
 async function confirmMerge() {
+  if (!canWrite.value) return
   const source = mergeSource.value
   const target = rows.value.find((row) => row.id === mergeTargetId.value)
   if (!source || !target) {
@@ -111,6 +119,7 @@ async function confirmMerge() {
 }
 
 async function recalculate() {
+  if (!canWrite.value) return
   await runAction(async () => {
     const result = await recalculateTopicHot()
     notice.value = `${result.region} 热榜已重算：${result.calculatedAt}`
@@ -119,6 +128,7 @@ async function recalculate() {
 }
 
 async function runAction(action: () => Promise<void>) {
+  if (!canWrite.value) return
   actionBusy.value = true
   error.value = ''
   notice.value = ''
@@ -142,7 +152,7 @@ onMounted(load)
         <h1>话题治理作战台</h1>
         <p class="lede">推荐负责发现，置顶负责秩序，合并负责收拾重复命名留下的烂摊子。</p>
       </div>
-      <button class="recalculate-button" type="button" :disabled="actionBusy" @click="recalculate">
+      <button v-if="canWrite" class="recalculate-button" type="button" :disabled="actionBusy" @click="recalculate">
         <span>↻</span> 重算热榜
       </button>
     </header>
@@ -201,7 +211,7 @@ onMounted(load)
         <p class="formula-line">{{ row.postCount7d }} 帖 · {{ row.likeCount7d }} 赞 · {{ row.commentCount7d }} 评论</p>
         <p class="calculated-at">最近计算 {{ row.calculatedAt || '尚未生成快照' }}</p>
 
-        <div class="pin-control">
+        <div v-if="canWrite" class="pin-control">
           <label :for="`pin-${row.id}`">置顶排序</label>
           <input
             :id="`pin-${row.id}`"
@@ -212,7 +222,7 @@ onMounted(load)
           />
         </div>
 
-        <div class="card-actions">
+        <div v-if="canWrite" class="card-actions">
           <button type="button" @click="startRename(row)">编辑名称</button>
           <button type="button" class="accent-action" @click="toggleRecommendation(row)">
             {{ row.recommended ? '取消推荐' : '推荐并置顶' }}
@@ -225,7 +235,7 @@ onMounted(load)
       </article>
     </div>
 
-    <aside v-if="editingId != null" class="operation-drawer stage-item">
+    <aside v-if="editingId != null && canWrite" class="operation-drawer stage-item">
       <div>
         <p class="eyebrow">RENAME TOPIC</p>
         <h2>修改公开名称</h2>
@@ -237,7 +247,7 @@ onMounted(load)
       </form>
     </aside>
 
-    <aside v-if="mergeSource" class="operation-drawer merge-drawer stage-item">
+    <aside v-if="mergeSource && canWrite" class="operation-drawer merge-drawer stage-item">
       <div>
         <p class="eyebrow">IRREVERSIBLE MERGE</p>
         <h2>合并「{{ mergeSource.name }}」</h2>
