@@ -12,6 +12,7 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
   bool failNextLoad = false;
   bool overlapPages = false;
   final Map<int, Completer<void>> unblockGates = {};
+  final Map<int, Completer<void>> loadGates = {};
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -20,6 +21,7 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
   }) async {
     final page = query?['page'] as int? ?? 1;
     pages.add(page);
+    await loadGates[pages.length]?.future;
     if (failNextLoad) {
       failNextLoad = false;
       throw Exception('blocked users network unavailable');
@@ -159,5 +161,31 @@ void main() {
     expect(find.text('伦敦小王'), findsOneWidget);
     expect(find.textContaining('刷新黑名单失败'), findsOneWidget);
     expect(api.pages, [1, 1]);
+  });
+
+  testWidgets('blocked users refresh invalidates a pending next page', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = BlockedUsersFakeApi()..loadGates[2] = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: BlockedUsersScreen(repository: MessageRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('加载更多'));
+    await tester.pump();
+    expect(api.pages, [1, 2]);
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+    expect(api.pages, [1, 2, 1]);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('伦敦小王'), findsOneWidget);
+    expect(find.text('巴黎小李'), findsNothing);
+    expect(find.text('加载更多'), findsOneWidget);
   });
 }

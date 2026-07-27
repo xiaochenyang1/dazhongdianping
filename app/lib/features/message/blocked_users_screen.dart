@@ -17,7 +17,8 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
   int _pageRevision = 0;
 
   Future<void> _reload() async {
-    final revision = _pageRevision;
+    final revision = ++_pageRevision;
+    if (_loadingMore) setState(() => _loadingMore = false);
     try {
       final page = await widget.repository.loadBlockedUserPage();
       if (mounted && revision == _pageRevision) {
@@ -36,6 +37,8 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
 
   void _retryInitialLoad() {
     setState(() {
+      _pageRevision++;
+      _loadingMore = false;
       _page = widget.repository.loadBlockedUserPage();
     });
   }
