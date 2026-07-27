@@ -38,17 +38,41 @@ jobs:
     env:
       DEPLOY_ENVIRONMENT: test
       DEPLOY_REGION: CN
+      DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+      DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+      DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+      DEPLOY_REMOTE_ROOT: ${{ vars.DEPLOY_REMOTE_ROOT }}
+      DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
+      DEPLOY_WEB_SERVICE: ${{ vars.DEPLOY_WEB_SERVICE }}
+      DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
+      DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
       APP_RELEASE_VERSION: ${{ github.event.workflow_run.head_sha }}
     steps:
+      - name: Check test deployment configuration
+        id: deployment-config
+        shell: bash
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [[ -n "$DEPLOY_SSH_HOST" && -n "$DEPLOY_SSH_USER" && -n "$DEPLOY_REMOTE_ROOT" && -n "$DEPLOY_SSH_PRIVATE_KEY" && -n "$DEPLOY_KNOWN_HOSTS" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping test deployment because the test environment is not configured."
+          fi
       - uses: actions/checkout@v4
+        if: steps.deployment-config.outputs.configured == 'true'
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-java@v4
+        if: steps.deployment-config.outputs.configured == 'true'
         with:
           distribution: temurin
           java-version: "17"
           cache: maven
       - uses: actions/setup-node@v4
+        if: steps.deployment-config.outputs.configured == 'true'
         with:
           node-version: "22"
           cache: npm
@@ -56,12 +80,15 @@ jobs:
             web/package-lock.json
             admin-web/package-lock.json
       - name: Install frontend dependencies
+        if: steps.deployment-config.outputs.configured == 'true'
         run: |
           npm ci --prefix web
           npm ci --prefix admin-web
       - name: Make Maven wrapper executable
+        if: steps.deployment-config.outputs.configured == 'true'
         run: chmod +x backend/mvnw
       - name: Prepare SSH
+        if: steps.deployment-config.outputs.configured == 'true'
         shell: bash
         run: |
           mkdir -p ~/.ssh
@@ -69,11 +96,14 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       - name: Package release
+        if: steps.deployment-config.outputs.configured == 'true'
         shell: pwsh
         run: |
           $bundle = ./scripts/ci/package-release.ps1
+          if (-not (Test-Path -LiteralPath $bundle)) { throw "Release bundle path was not produced" }
           "APP_RELEASE_BUNDLE=$bundle" >> $env:GITHUB_ENV
       - name: Deploy test
+        if: steps.deployment-config.outputs.configured == 'true'
         shell: pwsh
         run: ./scripts/ci/deploy-release.ps1
 
@@ -84,6 +114,14 @@ jobs:
     env:
       DEPLOY_ENVIRONMENT: pre
       DEPLOY_REGION: ${{ inputs.region }}
+      DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+      DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+      DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+      DEPLOY_REMOTE_ROOT: ${{ vars.DEPLOY_REMOTE_ROOT }}
+      DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
+      DEPLOY_WEB_SERVICE: ${{ vars.DEPLOY_WEB_SERVICE }}
+      DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
+      DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
       APP_RELEASE_VERSION: ${{ inputs.release_version }}
     steps:
       - uses: actions/checkout@v4
@@ -116,6 +154,7 @@ jobs:
         shell: pwsh
         run: |
           $bundle = ./scripts/ci/package-release.ps1
+          if (-not (Test-Path -LiteralPath $bundle)) { throw "Release bundle path was not produced" }
           "APP_RELEASE_BUNDLE=$bundle" >> $env:GITHUB_ENV
       - name: Deploy pre
         shell: pwsh
@@ -128,6 +167,14 @@ jobs:
     env:
       DEPLOY_ENVIRONMENT: prod
       DEPLOY_REGION: ${{ inputs.region }}
+      DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+      DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+      DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+      DEPLOY_REMOTE_ROOT: ${{ vars.DEPLOY_REMOTE_ROOT }}
+      DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
+      DEPLOY_WEB_SERVICE: ${{ vars.DEPLOY_WEB_SERVICE }}
+      DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
+      DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
       APP_RELEASE_VERSION: ${{ inputs.release_version }}
     steps:
       - uses: actions/checkout@v4
@@ -160,6 +207,7 @@ jobs:
         shell: pwsh
         run: |
           $bundle = ./scripts/ci/package-release.ps1
+          if (-not (Test-Path -LiteralPath $bundle)) { throw "Release bundle path was not produced" }
           "APP_RELEASE_BUNDLE=$bundle" >> $env:GITHUB_ENV
       - name: Deploy prod
         shell: pwsh

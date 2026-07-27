@@ -38,7 +38,7 @@ function Invoke-Native {
 
     Push-Location $WorkingDirectory
     try {
-        & $FilePath @Arguments
+        & $FilePath @Arguments | ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0) {
             throw "$FilePath exited with code $LASTEXITCODE"
         }

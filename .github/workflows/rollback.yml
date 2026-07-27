@@ -31,6 +31,14 @@ jobs:
     env:
       DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
       DEPLOY_REGION: ${{ inputs.region }}
+      DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+      DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+      DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+      DEPLOY_REMOTE_ROOT: ${{ vars.DEPLOY_REMOTE_ROOT }}
+      DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
+      DEPLOY_WEB_SERVICE: ${{ vars.DEPLOY_WEB_SERVICE }}
+      DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
+      DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
       TARGET_VERSION: ${{ inputs.target_version }}
     steps:
       - uses: actions/checkout@v4
