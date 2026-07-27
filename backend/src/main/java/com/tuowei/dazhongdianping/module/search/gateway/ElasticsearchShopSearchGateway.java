@@ -62,7 +62,10 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
                     .toBodilessEntity();
             if (!documents.isEmpty()) {
                 String response = restClient.post()
-                        .uri("/_bulk")
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/_bulk")
+                                .queryParam("refresh", "wait_for")
+                                .build())
                         .contentType(MediaType.parseMediaType("application/x-ndjson"))
                         .body(bulkBody(documents))
                         .retrieve()
@@ -105,11 +108,40 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
     }
 
     private Map<String, Object> indexDefinition() {
+        Map<String, Object> pinyinPrefixFilter = Map.of(
+                "type", "edge_ngram",
+                "min_gram", 2,
+                "max_gram", 64
+        );
+        Map<String, Object> pinyinPrefixAnalyzer = Map.of(
+                "type", "custom",
+                "tokenizer", "keyword",
+                "filter", List.of("lowercase", "pinyin_prefix_filter")
+        );
+        Map<String, Object> pinyinSearchAnalyzer = Map.of(
+                "type", "custom",
+                "tokenizer", "keyword",
+                "filter", List.of("lowercase")
+        );
+        Map<String, Object> settings = Map.of(
+                "index", Map.of("max_ngram_diff", 62),
+                "analysis", Map.of(
+                        "filter", Map.of("pinyin_prefix_filter", pinyinPrefixFilter),
+                        "analyzer", Map.of(
+                                "pinyin_prefix_analyzer", pinyinPrefixAnalyzer,
+                                "pinyin_search_analyzer", pinyinSearchAnalyzer
+                        )
+                )
+        );
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("id", Map.of("type", "long"));
         properties.put("region", Map.of("type", "keyword"));
         properties.put("name", Map.of("type", "text"));
-        properties.put("namePinyin", Map.of("type", "text"));
+        properties.put("namePinyin", Map.of(
+                "type", "text",
+                "analyzer", "pinyin_prefix_analyzer",
+                "search_analyzer", "pinyin_search_analyzer"
+        ));
         properties.put("categoryId", Map.of("type", "long"));
         properties.put("categoryName", Map.of("type", "text", "fields", Map.of("keyword", Map.of("type", "keyword"))));
         properties.put("cityId", Map.of("type", "long"));
@@ -126,7 +158,10 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
         properties.put("hasDeal", Map.of("type", "boolean"));
         properties.put("openNow", Map.of("type", "boolean"));
         properties.put("status", Map.of("type", "integer"));
-        return Map.of("mappings", Map.of("properties", properties));
+        return Map.of(
+                "settings", settings,
+                "mappings", Map.of("properties", properties)
+        );
     }
 
     private String bulkBody(List<ShopSearchDocument> documents) throws Exception {

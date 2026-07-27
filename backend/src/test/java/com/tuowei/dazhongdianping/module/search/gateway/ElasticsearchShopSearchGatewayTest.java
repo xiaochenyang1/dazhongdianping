@@ -65,8 +65,11 @@ class ElasticsearchShopSearchGatewayTest {
         server.expect(requestTo("http://elasticsearch.test/shop_index"))
                 .andExpect(method(HttpMethod.PUT))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("geo_point")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("edge_ngram")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("pinyin_prefix_analyzer")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("pinyin_search_analyzer")))
                 .andRespond(withSuccess("{\"acknowledged\":true}", MediaType.APPLICATION_JSON));
-        server.expect(requestTo("http://elasticsearch.test/_bulk"))
+        server.expect(requestTo("http://elasticsearch.test/_bulk?refresh=wait_for"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("yulihuoguoxuhuidian")))
                 .andRespond(withSuccess("{\"errors\":false}", MediaType.APPLICATION_JSON));
