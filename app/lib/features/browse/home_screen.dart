@@ -97,17 +97,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _reloadShops() {
+  Future<void> _reloadShops() async {
     final future = widget.repository.loadFeaturedShops();
     setState(() {
       _shops = future;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    }
   }
 
-  void _retry() {
-    _reloadShops();
-    _refreshUnreadCount();
-  }
+  Future<void> _retry() =>
+      Future.wait<void>([_reloadShops(), _refreshUnreadCount()]);
 
   Future<void> _refreshUnreadCount() async {
     final requestGeneration = ++_unreadRequestGeneration;
@@ -218,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => _retry(),
+        onRefresh: _retry,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [

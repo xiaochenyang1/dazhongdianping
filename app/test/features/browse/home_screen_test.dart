@@ -58,6 +58,30 @@ class NamedBrowseRepository extends BrowseRepository {
   }
 }
 
+class GatedRefreshBrowseRepository extends BrowseRepository {
+  int calls = 0;
+  final Completer<List<ShopSummary>> refreshGate =
+      Completer<List<ShopSummary>>();
+
+  @override
+  Future<List<ShopSummary>> loadFeaturedShops() {
+    calls += 1;
+    if (calls == 1) {
+      return Future.value(const [
+        ShopSummary(
+          id: 1,
+          name: 'Before Refresh',
+          category: 'Cafe',
+          score: 4.1,
+          currency: 'EUR',
+          pricePerCapita: 10,
+        ),
+      ]);
+    }
+    return refreshGate.future;
+  }
+}
+
 class HomeCommunityApi implements JsonApi {
   @override
   Future<Map<String, dynamic>> getJson(
@@ -129,6 +153,44 @@ void main() {
       expect(repository.calls, 2);
     },
   );
+
+  testWidgets('pull-to-refresh waits for the featured shops request', (
+    tester,
+  ) async {
+    final repository = GatedRefreshBrowseRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(repository: repository, localeTag: 'en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    var completed = false;
+    final refresh = tester
+        .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+        .onRefresh();
+    refresh.then((_) => completed = true);
+    await tester.pump();
+
+    expect(repository.calls, 2);
+    expect(completed, isFalse);
+
+    repository.refreshGate.complete(const [
+      ShopSummary(
+        id: 2,
+        name: 'After Refresh',
+        category: 'Restaurant',
+        score: 4.9,
+        currency: 'EUR',
+        pricePerCapita: 25,
+      ),
+    ]);
+    await refresh;
+    await tester.pumpAndSettle();
+
+    expect(completed, isTrue);
+    expect(find.text('After Refresh'), findsOneWidget);
+  });
 
   testWidgets('region change reloads featured shops from the new repository', (
     tester,
