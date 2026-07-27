@@ -18,6 +18,7 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   int reportRequests = 0;
   int detailRequests = 0;
   Completer<void>? commentRetryGate;
+  Completer<void>? detailRetryGate;
   final List<int> requestedCommentPages = <int>[];
   final List<Map<String, dynamic>> comments = [
     {
@@ -117,6 +118,7 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
         failNextDetail = false;
         throw StateError('network unavailable');
       }
+      await detailRetryGate?.future;
       return detail();
     }
     throw StateError('unexpected path $path');
@@ -251,6 +253,33 @@ void main() {
     expect(api.detailRequests, 2);
     expect(find.text('柏林茶馆'), findsOneWidget);
     expect(api.requestedCommentPages, [1]);
+  });
+
+  testWidgets('public review guards duplicate detail retries', (tester) async {
+    final gate = Completer<void>();
+    final api = DetailFakeApi()
+      ..failNextDetail = true
+      ..detailRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('review-detail-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.detailRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.detailRequests, 2);
+    expect(find.text('柏林茶馆'), findsOneWidget);
   });
 
   testWidgets('public review detail loads later comment pages', (tester) async {

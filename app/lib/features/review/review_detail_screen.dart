@@ -33,6 +33,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   bool _deleteDialogOpen = false;
   bool _reportSaving = false;
   bool _reportDialogOpen = false;
+  bool _reloadingReview = false;
   bool _loadingMoreComments = false;
   bool _reloadingComments = false;
   int _reviewRequestId = 0;
@@ -61,7 +62,8 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     return future;
   }
 
-  void _reloadReview() {
+  Future<void> _reloadReview() async {
+    if (_reloadingReview) return;
     final requestId = ++_reviewRequestId;
     final future = _loadReview();
     setState(() {
@@ -70,20 +72,24 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       _comments = null;
       _replyTarget = null;
       _loadingMoreComments = false;
+      _reloadingReview = true;
       _commentRequestId++;
     });
-    future
-        .then((detail) {
-          if (!mounted || requestId != _reviewRequestId) return;
-          setState(() {
-            _visibleReview = detail;
-            if (_shouldShowComments(detail)) {
-              _commentRequestId++;
-              _comments = _loadComments();
-            }
-          });
-        })
-        .catchError((_) {});
+    try {
+      final detail = await future;
+      if (!mounted || requestId != _reviewRequestId) return;
+      setState(() {
+        _visibleReview = detail;
+        if (_shouldShowComments(detail)) {
+          _commentRequestId++;
+          _comments = _loadComments();
+        }
+      });
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloadingReview = false);
+    }
   }
 
   bool _shouldShowComments(ReviewDetail detail) =>
@@ -412,9 +418,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('review-detail-retry'),
-                  onPressed: _reloadReview,
+                  onPressed: _reloadingReview ? null : _reloadReview,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重试'),
+                  label: Text(_reloadingReview ? '处理中...' : '重试'),
                 ),
               ],
             ),
