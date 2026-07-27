@@ -28,6 +28,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   late Future<CommunityPostPage> posts;
   bool saving = false;
   bool loadingMore = false;
+  bool reloading = false;
   int postsRequestId = 0;
 
   @override
@@ -36,13 +37,22 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
     posts = widget.repository.loadPostPage(topic.id);
   }
 
-  void reloadPosts() {
+  Future<void> reloadPosts() async {
+    if (reloading) return;
     final future = widget.repository.loadPostPage(topic.id);
     postsRequestId++;
     setState(() {
       posts = future;
       loadingMore = false;
+      reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => reloading = false);
+    }
   }
 
   Future<void> loadMore(CommunityPostPage current) async {
@@ -192,9 +202,9 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                   const SizedBox(height: 8),
                   FilledButton.tonalIcon(
                     key: const Key('topic-posts-retry'),
-                    onPressed: reloadPosts,
+                    onPressed: reloading ? null : reloadPosts,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
+                    label: Text(reloading ? '处理中...' : '重试'),
                   ),
                 ],
               );

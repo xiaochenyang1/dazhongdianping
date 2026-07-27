@@ -18,6 +18,7 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool paginatePosts = false;
   bool failNextPosts = false;
   final List<int> requestedPostPages = <int>[];
+  Completer<void>? postRetryGate;
 
   Map<String, dynamic> topic({bool followed = false, int count = 88}) => {
     'id': 31,
@@ -73,6 +74,7 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         failNextPosts = false;
         throw StateError('post network unavailable');
       }
+      await postRetryGate?.future;
       final page = query?['page'] as int? ?? 1;
       requestedPostPages.add(page);
       return {
@@ -149,6 +151,34 @@ void main() {
     expect(api.requestedPostPages, [1]);
     expect(find.text('周末咖啡地图'), findsOneWidget);
     expect(find.text('88 人关注'), findsOneWidget);
+  });
+
+  testWidgets('topic detail guards duplicate post retries', (tester) async {
+    final gate = Completer<void>();
+    final api = TopicScreenApi()
+      ..failNextPosts = true
+      ..postRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicDetailScreen(
+          repository: TopicRepository(api),
+          initial: TopicSummary.fromJson(api.topic()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('topic-posts-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.requestedPostPages, isEmpty);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.requestedPostPages, [1]);
+    expect(find.text('周末咖啡地图'), findsOneWidget);
   });
 
   testWidgets('topic plaza retries an initial load failure', (tester) async {
