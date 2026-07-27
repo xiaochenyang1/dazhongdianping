@@ -12,6 +12,7 @@ class ReviewsFakeRepository extends BrowseRepository {
 
   final bool failFirst;
   int pageRequests = 0;
+  Completer<void>? retryGate;
   final List<Map<String, Object?>> requests = <Map<String, Object?>>[];
 
   @override
@@ -30,6 +31,7 @@ class ReviewsFakeRepository extends BrowseRepository {
     if (failFirst && pageRequests == 1) {
       throw StateError('network unavailable');
     }
+    if (pageRequests > 1) await retryGate?.future;
     requests.add({
       'shopId': shopId,
       'page': page,
@@ -160,6 +162,26 @@ void main() {
     await tester.tap(find.byKey(const Key('shop-reviews-retry')));
     await tester.pumpAndSettle();
 
+    expect(repository.pageRequests, 2);
+    expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
+  });
+
+  testWidgets('shop reviews screen guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final repository = ReviewsFakeRepository(failFirst: true)..retryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: ShopReviewsScreen(repository: repository, shopId: 7)),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('shop-reviews-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(repository.pageRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(repository.pageRequests, 2);
     expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
   });

@@ -33,6 +33,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
   int _currentPage = 1;
   bool _hasMore = false;
   bool _loadingMore = false;
+  bool _retrying = false;
   String? _loadMoreError;
   int _requestId = 0;
 
@@ -42,7 +43,9 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
     _reload();
   }
 
-  void _reload() {
+  void _reload() => _startReload();
+
+  Future<ShopReviewPage> _startReload() {
     final requestId = ++_requestId;
     final future = widget.repository.loadShopReviewPage(
       widget.shopId,
@@ -71,6 +74,19 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
           });
         })
         .catchError((_) {});
+    return future;
+  }
+
+  Future<void> _retry() async {
+    if (_retrying) return;
+    setState(() => _retrying = true);
+    try {
+      await _startReload();
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
   }
 
   Future<void> _loadMore() async {
@@ -211,9 +227,9 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('shop-reviews-retry'),
-                          onPressed: _reload,
+                          onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('重试'),
+                          label: Text(_retrying ? '处理中...' : '重试'),
                         ),
                       ],
                     ),
