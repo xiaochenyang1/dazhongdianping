@@ -31,6 +31,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
   late Future<CouponPage> _coupons;
   bool _loadingMore = false;
   bool _retrying = false;
+  final Set<String> _openingCouponCodes = <String>{};
   int _requestId = 0;
 
   @override
@@ -110,6 +111,26 @@ class _CouponsScreenState extends State<CouponsScreen> {
     if (_status == status) return;
     setState(() => _status = status);
     _reload();
+  }
+
+  Future<void> _openCoupon(Coupon coupon) async {
+    if (_openingCouponCodes.contains(coupon.code)) return;
+    setState(() => _openingCouponCodes.add(coupon.code));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CouponDetailScreen(
+            repository: widget.repository,
+            code: coupon.code,
+            initialCoupon: coupon,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingCouponCodes.remove(coupon.code));
+      }
+    }
   }
 
   @override
@@ -221,15 +242,9 @@ class _CouponsScreenState extends State<CouponsScreen> {
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => CouponDetailScreen(
-                              repository: widget.repository,
-                              code: coupon.code,
-                              initialCoupon: coupon,
-                            ),
-                          ),
-                        ),
+                        onTap: _openingCouponCodes.contains(coupon.code)
+                            ? null
+                            : () => _openCoupon(coupon),
                       ),
                     );
                   },

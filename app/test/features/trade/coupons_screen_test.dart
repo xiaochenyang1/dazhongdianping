@@ -16,6 +16,8 @@ class CouponsApi implements JsonApi {
   final List<String> paths = <String>[];
   final List<int> requestedPages = <int>[];
   Completer<void>? retryGate;
+  Completer<void>? detailGate;
+  int couponDetailRequests = 0;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -49,6 +51,8 @@ class CouponsApi implements JsonApi {
       };
     }
     if (path == '/api/c/v1/coupons/CP-DEMO') {
+      couponDetailRequests++;
+      await detailGate?.future;
       return {
         'id': 21,
         'orderId': 10,
@@ -159,5 +163,31 @@ void main() {
     expect(find.text('券详情'), findsOneWidget);
     expect(find.byKey(const Key('coupon-detail-code')), findsOneWidget);
     expect(api.paths, contains('/api/c/v1/coupons/CP-DEMO'));
+  });
+
+  testWidgets('coupons screen guards duplicate detail navigation', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = CouponsApi()..detailGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: CouponsScreen(repository: TradeRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('coupon-card-CP-DEMO'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.couponDetailRequests, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.couponDetailRequests, 1);
+    expect(api.couponListRequests, 1);
   });
 }
