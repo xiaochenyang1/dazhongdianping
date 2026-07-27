@@ -31,7 +31,7 @@ class CommunityFeedScreen extends StatefulWidget {
 class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   late Future<CommunityPostPage> _posts;
   Future<CommunityPostPage>? _followingPosts;
-  bool _loadingMore = false;
+  final List<bool> _loadingMore = [false, false];
   bool _openingEditor = false;
   int _selectedTab = 0;
   final List<int> _requestIds = [0, 0];
@@ -45,7 +45,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
     final tab = _selectedTab;
     _requestIds[tab]++;
     setState(() {
-      _loadingMore = false;
+      _loadingMore[tab] = false;
       if (_selectedTab == 0) {
         _posts = widget.repository.loadFeedPage();
       } else if (widget.canInteract) {
@@ -64,11 +64,11 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   }
 
   Future<void> _loadMore(CommunityPostPage current) async {
-    if (_loadingMore || !current.hasMore) return;
     final following = _selectedTab == 1;
     final tab = following ? 1 : 0;
+    if (_loadingMore[tab] || !current.hasMore) return;
     final requestId = _requestIds[tab];
-    setState(() => _loadingMore = true);
+    setState(() => _loadingMore[tab] = true);
     try {
       final next = following
           ? await widget.repository.loadFollowingFeedPage(
@@ -105,7 +105,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
       }
     } finally {
       if (mounted && requestId == _requestIds[tab]) {
-        setState(() => _loadingMore = false);
+        setState(() => _loadingMore[tab] = false);
       }
     }
   }
@@ -227,10 +227,10 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                         return Center(
                           child: OutlinedButton.icon(
                             key: const Key('community-feed-load-more'),
-                            onPressed: _loadingMore
+                            onPressed: _loadingMore[_selectedTab]
                                 ? null
                                 : () => _loadMore(page),
-                            icon: _loadingMore
+                            icon: _loadingMore[_selectedTab]
                                 ? const SizedBox.square(
                                     dimension: 18,
                                     child: CircularProgressIndicator(
@@ -238,7 +238,9 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                                     ),
                                   )
                                 : const Icon(Icons.expand_more),
-                            label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                            label: Text(
+                              _loadingMore[_selectedTab] ? '加载中...' : '加载更多',
+                            ),
                           ),
                         );
                       }

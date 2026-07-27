@@ -22,6 +22,8 @@ class CommunityScreenApi
   bool paginateFeed = false;
   bool failNextFeed = false;
   final List<int> requestedFeedPages = <int>[];
+  final List<String> requestedFeedPageKeys = <String>[];
+  final feedPageGates = <String, Completer<void>>{};
   bool paginateComments = false;
   bool failNextPost = false;
   bool failNextOwnedPost = false;
@@ -121,6 +123,9 @@ class CommunityScreenApi
       }
       final page = query?['page'] as int? ?? 1;
       requestedFeedPages.add(page);
+      final pageKey = '$path:$page';
+      requestedFeedPageKeys.add(pageKey);
+      await feedPageGates[pageKey]?.future;
       return {
         'list': [
           if (!paginateFeed || page == 1)
@@ -871,6 +876,46 @@ void main() {
     await tester.tap(find.text('关注'));
     await tester.pumpAndSettle();
     expect(api.path, '/api/c/v1/posts/following');
+  });
+
+  testWidgets('community feed paginates each tab independently', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi()..paginateFeed = true;
+    final recommendationGate = Completer<void>();
+    final followingGate = Completer<void>();
+    api.feedPageGates['/api/c/v1/posts:2'] = recommendationGate;
+    api.feedPageGates['/api/c/v1/posts/following:2'] = followingGate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityFeedScreen(
+          repository: CommunityRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('community-feed-load-more')));
+    await tester.pump();
+    await tester.tap(find.text('关注'));
+    await tester.pumpAndSettle();
+
+    final followingLoadMore = find.byKey(const Key('community-feed-load-more'));
+    expect(
+      tester.widget<OutlinedButton>(followingLoadMore).onPressed,
+      isNotNull,
+    );
+    await tester.tap(followingLoadMore);
+    await tester.pump();
+    expect(
+      api.requestedFeedPageKeys,
+      containsAll(<String>['/api/c/v1/posts:2', '/api/c/v1/posts/following:2']),
+    );
+
+    recommendationGate.complete();
+    followingGate.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets(
