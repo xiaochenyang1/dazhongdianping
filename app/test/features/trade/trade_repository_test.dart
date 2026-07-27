@@ -12,6 +12,33 @@ class TradeFakeApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     this.path = path;
+    if (path == '/api/c/v1/deals/5') {
+      return {
+        'id': 5,
+        'shopId': 2,
+        'shopName': 'EU Shop',
+        'title': 'Dinner Set',
+        'coverImage': 'https://example.com/deal.jpg',
+        'price': 29.9,
+        'originalPrice': 39.9,
+        'currency': 'EUR',
+        'stock': 10,
+        'soldCount': 4,
+        'rules': 'Booking required',
+        'validStart': '2026-07-01',
+        'validEnd': '2026-12-31',
+        'items': [
+          {
+            'id': 51,
+            'dealId': 5,
+            'name': 'Dinner for two',
+            'quantity': 1,
+            'price': 29.9,
+            'sort': 1,
+          },
+        ],
+      };
+    }
     return {
       'value': [
         {
@@ -130,6 +157,12 @@ void main() {
     final deals = await repository.loadShopDeals(2);
     expect(api.path, '/api/c/v1/shops/2/deals');
     expect(deals.single.title, 'Dinner Set');
+
+    final detail = await repository.loadDeal(5);
+    expect(api.path, '/api/c/v1/deals/5');
+    expect(detail.rules, 'Booking required');
+    expect(detail.items.single.name, 'Dinner for two');
+    expect(detail.coverImage, 'https://example.com/deal.jpg');
 
     final order = await repository.createOrder(dealId: 5, quantity: 1);
     expect(api.path, '/api/c/v1/orders');

@@ -11,6 +11,7 @@ class DealSummary {
     required this.currency,
     required this.stock,
     required this.soldCount,
+    this.coverImage = '',
   });
   final int id;
   final int shopId;
@@ -21,6 +22,7 @@ class DealSummary {
   final String currency;
   final int stock;
   final int soldCount;
+  final String coverImage;
 
   factory DealSummary.fromJson(Map<String, dynamic> json) => DealSummary(
     id: json['id'] as int,
@@ -32,6 +34,78 @@ class DealSummary {
     currency: json['currency'] as String? ?? 'EUR',
     stock: json['stock'] as int? ?? 0,
     soldCount: json['soldCount'] as int? ?? 0,
+    coverImage: json['coverImage'] as String? ?? '',
+  );
+}
+
+class DealItem {
+  const DealItem({
+    required this.id,
+    required this.dealId,
+    required this.name,
+    required this.quantity,
+    required this.price,
+    required this.sort,
+  });
+
+  final int id;
+  final int dealId;
+  final String name;
+  final int quantity;
+  final num price;
+  final int sort;
+
+  factory DealItem.fromJson(Map<String, dynamic> json) => DealItem(
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    dealId: (json['dealId'] as num?)?.toInt() ?? 0,
+    name: json['name'] as String? ?? '',
+    quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+    price: json['price'] as num? ?? 0,
+    sort: (json['sort'] as num?)?.toInt() ?? 0,
+  );
+}
+
+class DealDetail extends DealSummary {
+  const DealDetail({
+    required super.id,
+    required super.shopId,
+    required super.shopName,
+    required super.title,
+    required super.price,
+    required super.originalPrice,
+    required super.currency,
+    required super.stock,
+    required super.soldCount,
+    super.coverImage,
+    required this.items,
+    required this.rules,
+    required this.validStart,
+    required this.validEnd,
+  });
+
+  final List<DealItem> items;
+  final String rules;
+  final String validStart;
+  final String validEnd;
+
+  factory DealDetail.fromJson(Map<String, dynamic> json) => DealDetail(
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    shopId: (json['shopId'] as num?)?.toInt() ?? 0,
+    shopName: json['shopName'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    price: json['price'] as num? ?? 0,
+    originalPrice: json['originalPrice'] as num? ?? 0,
+    currency: json['currency'] as String? ?? 'EUR',
+    stock: (json['stock'] as num?)?.toInt() ?? 0,
+    soldCount: (json['soldCount'] as num?)?.toInt() ?? 0,
+    coverImage: json['coverImage'] as String? ?? '',
+    items: (json['items'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(DealItem.fromJson)
+        .toList(),
+    rules: json['rules'] as String? ?? '',
+    validStart: json['validStart'] as String? ?? '',
+    validEnd: json['validEnd'] as String? ?? '',
   );
 }
 
@@ -261,6 +335,9 @@ class TradeRepository {
     final list = result['value'] as List<dynamic>? ?? const [];
     return list.cast<Map<String, dynamic>>().map(DealSummary.fromJson).toList();
   }
+
+  Future<DealDetail> loadDeal(int dealId) async =>
+      DealDetail.fromJson(await api.getJson('/api/c/v1/deals/$dealId'));
 
   Future<TradeOrder> createOrder({
     required int dealId,
