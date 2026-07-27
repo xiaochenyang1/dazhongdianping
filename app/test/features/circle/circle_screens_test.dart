@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
+  bool circleJoined = false;
   bool paginateCircles = false;
   bool failNextCircles = false;
   final List<int> requestedCirclePages = <int>[];
@@ -25,7 +26,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int memberCalls = 0;
   Completer<void>? membershipGate;
   int membershipCalls = 0;
-  Map<String, dynamic> circle({bool joined = false, int count = 12}) => {
+  Map<String, dynamic> circle({bool? joined, int count = 12}) => {
     'id': 3,
     'region': 'EU',
     'name': '伦敦生活圈',
@@ -35,7 +36,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     'postCount': 8,
     'sort': 20,
     'status': 1,
-    'joinedByCurrentUser': joined,
+    'joinedByCurrentUser': joined ?? circleJoined,
   };
   Map<String, dynamic> get post => {
     'id': 7,
@@ -124,9 +125,10 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     requestedCirclePages.add(page);
     return {
       'list': [
-        if (!paginateCircles || page == 1)
+        if ((query?['joined'] != true || circleJoined) &&
+            (!paginateCircles || page == 1))
           circle()
-        else
+        else if (query?['joined'] != true || circleJoined)
           {...circle(), 'id': 4, 'name': '巴黎生活圈'},
       ],
       'total': paginateCircles ? 2 : 1,
@@ -142,15 +144,15 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
     membershipCalls++;
     await membershipGate?.future;
+    circleJoined = true;
     return {'circleId': 3, 'joined': true, 'memberCount': 13};
   }
 
   @override
-  Future<Map<String, dynamic>> deleteJson(String path) async => {
-    'circleId': 3,
-    'joined': false,
-    'memberCount': 12,
-  };
+  Future<Map<String, dynamic>> deleteJson(String path) async {
+    circleJoined = false;
+    return {'circleId': 3, 'joined': false, 'memberCount': 12};
+  }
 }
 
 void main() {
@@ -380,6 +382,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('已加入'), findsOneWidget);
     expect(find.textContaining('13 位成员'), findsOneWidget);
+  });
+
+  testWidgets('joined circle list refreshes after leaving a circle', (
+    tester,
+  ) async {
+    final api = CircleScreenApi()..circleJoined = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleSquareScreen(
+          repository: CircleRepository(api),
+          canInteract: true,
+          showJoinedOnly: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('circle-card-3')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('circle-membership-toggle')));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.requestedCirclePages, [1, 1]);
+    expect(find.byKey(const Key('circle-card-3')), findsNothing);
   });
 
   testWidgets('circle square guards duplicate detail navigation', (

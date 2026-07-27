@@ -109,6 +109,9 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
           ),
         ),
       );
+      if (mounted && widget.showJoinedOnly) {
+        await reload();
+      }
     } finally {
       if (mounted) {
         setState(() => _openingCircleIds.remove(circle.id));
