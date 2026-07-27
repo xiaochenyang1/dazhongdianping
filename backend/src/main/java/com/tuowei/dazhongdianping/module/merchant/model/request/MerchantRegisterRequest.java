@@ -20,6 +20,7 @@ public record MerchantRegisterRequest(
         @NotBlank(message = "contactPhone 不能为空")
         @Size(max = 32, message = "contactPhone 长度不能超过 32")
         String contactPhone,
+        @NotBlank(message = "region 不能为空")
         @Pattern(regexp = "CN|EU", message = "region 仅支持 CN 或 EU")
         String region
 ) {

@@ -4,6 +4,7 @@ public record MerchantLoginResponse(
         String accessToken,
         String tokenType,
         Long merchantId,
-        String account
+        String account,
+        String region
 ) {
 }

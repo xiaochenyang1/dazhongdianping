@@ -41,7 +41,8 @@ public class MerchantAuthService {
                 operator.getId(),
                 operator.getMerchantId(),
                 operator.getAccount(),
-                operator.getOperatorType()
+                operator.getOperatorType(),
+                operator.getRegion()
         );
         return issueSession(session);
     }
@@ -65,7 +66,10 @@ public class MerchantAuthService {
             throw new UnauthorizedException("商户登录已过期，请重新登录");
         }
         MerchantOperatorRow operator = merchantIdentityMapper.selectOperatorById(storedSession.session().operatorId());
-        if (operator == null || operator.getOperatorStatus() != 1 || operator.getMerchantStatus() != 1) {
+        if (operator == null
+                || operator.getOperatorStatus() != 1
+                || operator.getMerchantStatus() != 1
+                || !storedSession.session().region().equals(operator.getRegion())) {
             sessionStore.remove(token, storedSession);
             throw new UnauthorizedException("商户登录已失效，请重新登录");
         }

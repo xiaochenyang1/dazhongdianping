@@ -90,7 +90,8 @@ public class MerchantWorkbenchController {
                         result.accessToken(),
                         "Bearer",
                         result.session().merchantId(),
-                        result.session().account()
+                        result.session().account(),
+                        result.session().region()
                 )
         );
     }

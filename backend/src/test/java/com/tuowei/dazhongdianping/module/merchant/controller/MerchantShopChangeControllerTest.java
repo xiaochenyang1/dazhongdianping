@@ -252,7 +252,9 @@ class MerchantShopChangeControllerTest {
         mockMvc.perform(get("/api/b/v1/shop-changes/{id}", changeId)
                         .header("Authorization", bearer(ownerToken))
                         .header("X-Region", "CN"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("当前区域无权访问该商户工作台"));
 
         String otherMerchantToken = merchantToken("merchant_eu_cafe@example.com", "merchant123456");
         mockMvc.perform(get("/api/b/v1/shop-changes/{id}", changeId)

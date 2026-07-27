@@ -1,14 +1,19 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
-import { useMerchantSession } from '@/composables/useMerchantSession'
+import {
+  useMerchantSession,
+  type MerchantSessionSnapshot,
+} from '@/composables/useMerchantSession'
 
 interface ApiEnvelope<T> { code: number; message: string; data: T; traceId?: string }
 
 const http = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL ?? '', timeout: 10000 })
 
-function headers() {
-  const { state } = useMerchantSession()
-  const result: Record<string, string> = { 'Accept-Language': 'zh-CN', 'X-Region': state.region }
-  if (state.token) result.Authorization = `Bearer ${state.token}`
+function headers(snapshot: MerchantSessionSnapshot) {
+  const result: Record<string, string> = {
+    'Accept-Language': 'zh-CN',
+    'X-Region': snapshot.region,
+  }
+  if (snapshot.token) result.Authorization = `Bearer ${snapshot.token}`
   return result
 }
 
@@ -17,17 +22,19 @@ function idempotencyKey() {
 }
 
 async function request<T>(config: AxiosRequestConfig) {
+  const session = useMerchantSession()
+  const snapshot = session.snapshotSession()
   try {
     const response = await http.request<ApiEnvelope<T>>({
       ...config,
-      headers: { ...headers(), ...(config.headers ?? {}) },
+      headers: { ...headers(snapshot), ...(config.headers ?? {}) },
     })
     if (response.data.code !== 0) throw new Error(response.data.message || '请求失败')
     return response.data.data
   } catch (error) {
     if (error instanceof Error && !(error instanceof AxiosError)) throw error
     if (axios.isAxiosError(error)) {
-      if (error.response?.status === 401) useMerchantSession().clearSession()
+      if (error.response?.status === 401) session.clearSessionIfCurrent(snapshot)
       const data = error.response?.data as Partial<ApiEnvelope<unknown>> | undefined
       throw new Error(data?.message || error.message || '请求失败')
     }

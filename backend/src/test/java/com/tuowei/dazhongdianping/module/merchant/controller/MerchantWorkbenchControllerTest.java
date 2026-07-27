@@ -65,7 +65,8 @@ class MerchantWorkbenchControllerTest {
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.data.merchantId").value(2001))
-                .andExpect(jsonPath("$.data.account").value("merchant_eu_sichuan@example.com"));
+                .andExpect(jsonPath("$.data.account").value("merchant_eu_sichuan@example.com"))
+                .andExpect(jsonPath("$.data.region").value("EU"));
     }
 
     @Test
@@ -161,6 +162,19 @@ class MerchantWorkbenchControllerTest {
     }
 
     @Test
+    void shouldInvalidateMerchantTokenWhenTheAccountRegionChanges() throws Exception {
+        String merchantToken = loginMerchant();
+        jdbc.update("UPDATE merchant SET region='CN' WHERE id=2001");
+
+        mockMvc.perform(get("/api/b/v1/settle/status")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(merchantToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401))
+                .andExpect(jsonPath("$.message").value("商户登录已失效，请重新登录"));
+    }
+
+    @Test
     void shouldExposeMerchantAccountSummary() throws Exception {
         mockMvc.perform(get("/api/b/v1/account/me")
                         .header("X-Region", "EU")
@@ -206,23 +220,35 @@ class MerchantWorkbenchControllerTest {
         mockMvc.perform(get("/api/b/v1/account/me")
                         .header("X-Region", "CN")
                         .header("Authorization", bearer(token)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value(401))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403))
                 .andExpect(jsonPath("$.message").value("当前区域无权访问该商户工作台"));
 
         mockMvc.perform(get("/api/b/v1/roles")
                         .header("X-Region", "CN")
                         .header("Authorization", bearer(token)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value(401))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403))
                 .andExpect(jsonPath("$.message").value("当前区域无权访问该商户工作台"));
 
         mockMvc.perform(get("/api/b/v1/shops")
                         .header("X-Region", "CN")
                         .header("Authorization", bearer(token)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value(401))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403))
                 .andExpect(jsonPath("$.message").value("当前区域无权访问该商户工作台"));
+
+        mockMvc.perform(get("/api/b/v1/settle/status")
+                        .header("X-Region", "CN")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("当前区域无权访问该商户工作台"));
+
+        mockMvc.perform(get("/api/b/v1/settle/status")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk());
     }
 
     private String loginMerchant() throws Exception {

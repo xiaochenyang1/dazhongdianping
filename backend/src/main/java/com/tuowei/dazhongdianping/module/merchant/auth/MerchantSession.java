@@ -4,10 +4,7 @@ public record MerchantSession(
         Long operatorId,
         Long merchantId,
         String account,
-        Integer operatorType
+        Integer operatorType,
+        String region
 ) {
-
-    public MerchantSession(Long merchantId, String account) {
-        this(merchantId, merchantId, account, 1);
-    }
 }

@@ -22,7 +22,7 @@ async function submit() {
   error.value = ''
   try {
     const result = await registerMerchant({ ...form })
-    setSession({ ...result, region: form.region })
+    setSession(result)
     await router.replace('/settlement')
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '注册失败'

@@ -59,6 +59,7 @@ class MerchantSettlementControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.data.account").value(account))
+                .andExpect(jsonPath("$.data.region").value("EU"))
                 .andExpect(jsonPath("$.data.auditStatus").value(0))
                 .andReturn();
         String token = objectMapper.readTree(registered.getResponse().getContentAsString())
@@ -100,6 +101,24 @@ class MerchantSettlementControllerTest {
                         .content(registerBody(account)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("商户账号已存在"));
+    }
+
+    @Test
+    void shouldRequireARegionWhenRegistering() throws Exception {
+        mockMvc.perform(post("/api/b/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "account": "region-required@example.com",
+                                  "password": "Merchant#123456",
+                                  "companyName": "Region Required GmbH",
+                                  "contactName": "Alice Wang",
+                                  "contactPhone": "+491234567890"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("region 不能为空"));
     }
 
     private String registerBody(String account) {

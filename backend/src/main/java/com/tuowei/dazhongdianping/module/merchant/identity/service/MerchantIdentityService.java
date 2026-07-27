@@ -75,7 +75,7 @@ public class MerchantIdentityService {
         mapper.insertOperatorRole(operator.getId(), OWNER_ROLE_ID);
 
         MerchantAuthService.MerchantLoginResult login = authService.issueSession(new MerchantSession(
-                operator.getId(), merchant.getId(), account, 1
+                operator.getId(), merchant.getId(), account, 1, merchant.getRegion()
         ));
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("accessToken", login.accessToken());
@@ -83,6 +83,7 @@ public class MerchantIdentityService {
         result.put("merchantId", merchant.getId());
         result.put("operatorId", operator.getId());
         result.put("account", account);
+        result.put("region", merchant.getRegion());
         result.put("auditStatus", 0);
         return result;
     }

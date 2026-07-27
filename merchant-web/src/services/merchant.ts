@@ -2,7 +2,13 @@ import { apiGet, apiPost, apiPut } from '@/lib/http'
 import type { MerchantRegion } from '@/composables/useMerchantSession'
 
 export interface PageResult<T> { list: T[]; total: number; page: number; pageSize: number; hasMore: boolean }
-export interface MerchantLogin { accessToken: string; tokenType: string; merchantId: number; account: string }
+export interface MerchantLogin {
+  accessToken: string
+  tokenType: string
+  merchantId: number
+  account: string
+  region: MerchantRegion
+}
 export interface MerchantRegistrationPayload {
   account: string
   password: string

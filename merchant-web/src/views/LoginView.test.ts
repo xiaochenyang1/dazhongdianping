@@ -2,12 +2,12 @@ import { createApp, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const serviceMocks = vi.hoisted(() => ({ loginMerchant: vi.fn(), fetchSettlementStatus: vi.fn() }))
-const sessionMocks = vi.hoisted(() => ({ setSession: vi.fn(), setRegion: vi.fn() }))
+const sessionMocks = vi.hoisted(() => ({ setSession: vi.fn() }))
 const routerMocks = vi.hoisted(() => ({ replace: vi.fn() }))
 
 vi.mock('@/services/merchant', () => serviceMocks)
 vi.mock('@/composables/useMerchantSession', () => ({
-  useMerchantSession: () => ({ setSession: sessionMocks.setSession, setRegion: sessionMocks.setRegion }),
+  useMerchantSession: () => ({ setSession: sessionMocks.setSession }),
 }))
 vi.mock('vue-router', () => ({
   RouterLink: { props: ['to'], template: '<a><slot /></a>' },
@@ -32,10 +32,6 @@ async function submitLogin() {
   inputs[0].dispatchEvent(new Event('input'))
   inputs[1].value = 'Merchant#123456'
   inputs[1].dispatchEvent(new Event('input'))
-  const region = host.querySelector<HTMLSelectElement>('[name="region"]')
-  if (!region) throw new Error('missing region')
-  region.value = 'EU'
-  region.dispatchEvent(new Event('change'))
   host.querySelector('form')?.dispatchEvent(new Event('submit'))
   await flushView()
   return app
@@ -46,13 +42,22 @@ describe('LoginView', () => {
     Object.values(serviceMocks).forEach((mock) => mock.mockReset())
     Object.values(sessionMocks).forEach((mock) => mock.mockReset())
     Object.values(routerMocks).forEach((mock) => mock.mockReset())
-    serviceMocks.loginMerchant.mockResolvedValue({ accessToken: 'token', tokenType: 'Bearer', merchantId: 7, account: 'owner@example.com' })
+    serviceMocks.loginMerchant.mockResolvedValue({
+      accessToken: 'token',
+      tokenType: 'Bearer',
+      merchantId: 7,
+      account: 'owner@example.com',
+      region: 'EU',
+    })
   })
 
   it('routes a pending merchant to settlement', async () => {
     serviceMocks.fetchSettlementStatus.mockResolvedValue({ status: 0 })
     const app = await submitLogin()
-    expect(sessionMocks.setRegion).toHaveBeenCalledWith('EU')
+    expect(sessionMocks.setSession).toHaveBeenCalledWith(expect.objectContaining({
+      accessToken: 'token',
+      region: 'EU',
+    }))
     expect(serviceMocks.fetchSettlementStatus).toHaveBeenCalled()
     expect(routerMocks.replace).toHaveBeenCalledWith('/settlement')
     app.unmount()
@@ -63,6 +68,15 @@ describe('LoginView', () => {
     const app = await submitLogin()
     expect(serviceMocks.fetchSettlementStatus).toHaveBeenCalled()
     expect(routerMocks.replace).toHaveBeenCalledWith('/orders')
+    app.unmount()
+  })
+
+  it('does not ask an existing merchant to choose a mutable region', () => {
+    const host = document.createElement('div')
+    const app = createApp(LoginView)
+    app.mount(host)
+
+    expect(host.querySelector('[name="region"]')).toBeNull()
     app.unmount()
   })
 })

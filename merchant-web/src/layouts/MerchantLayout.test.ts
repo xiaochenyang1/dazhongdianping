@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ fetchAccount: vi.fn() }))
 vi.mock('@/services/merchant', () => mocks)
 vi.mock('@/composables/useMerchantSession', () => ({
-  useMerchantSession: () => ({ state: { token: 'token', region: 'EU', account: 'owner@example.com' }, clearSession: vi.fn(), setRegion: vi.fn() }),
+  useMerchantSession: () => ({ state: { token: 'token', region: 'EU', account: 'owner@example.com' }, clearSession: vi.fn() }),
 }))
 vi.mock('vue-router', () => ({
   RouterLink: { props: ['to'], template: '<a :data-to="to"><slot /></a>' },
@@ -49,6 +49,8 @@ describe('MerchantLayout', () => {
     expect(paths).toEqual(['/shops', '/reservations', '/reservation-slots', '/coupons', '/reviews'])
     expect(host.querySelector('[data-testid="router-view"]')?.textContent)
       .toBe('shop:view,reservation:view,review:reply,coupon:verify')
+    expect(host.querySelector('[data-testid="merchant-fixed-region"]')?.textContent).toBe('EU · 欧洲区')
+    expect(host.querySelector('header select')).toBeNull()
     app.unmount()
   })
 })

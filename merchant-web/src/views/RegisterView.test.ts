@@ -33,6 +33,7 @@ describe('RegisterView', () => {
       merchantId: 77,
       operatorId: 88,
       account: 'owner@example.com',
+      region: 'EU',
       auditStatus: 0,
     })
   })
