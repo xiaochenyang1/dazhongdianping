@@ -24,7 +24,7 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
   late Future<TopicPage> recommended;
   Future<TopicPage>? hot;
   Future<TopicPage>? following;
-  bool loadingMore = false;
+  final List<bool> loadingMore = [false, false, false];
   int selected = 0;
   final List<int> requestIds = [0, 0, 0];
 
@@ -53,7 +53,7 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
     };
     requestIds[tab]++;
     setState(() {
-      loadingMore = false;
+      loadingMore[tab] = false;
       if (tab == 0) recommended = future;
       if (tab == 1) hot = future;
       if (tab == 2) following = future;
@@ -61,10 +61,10 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
   }
 
   Future<void> loadMore(TopicPage current) async {
-    if (loadingMore || !current.hasMore) return;
     final tab = selected;
+    if (loadingMore[tab] || !current.hasMore) return;
     final requestId = requestIds[tab];
-    setState(() => loadingMore = true);
+    setState(() => loadingMore[tab] = true);
     try {
       final next = switch (tab) {
         0 => await widget.repository.loadRecommendedPage(
@@ -104,7 +104,7 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
       }
     } finally {
       if (mounted && requestId == requestIds[tab]) {
-        setState(() => loadingMore = false);
+        setState(() => loadingMore[tab] = false);
       }
     }
   }
@@ -163,8 +163,10 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
                       return Center(
                         child: OutlinedButton.icon(
                           key: const Key('topic-plaza-load-more'),
-                          onPressed: loadingMore ? null : () => loadMore(page),
-                          icon: loadingMore
+                          onPressed: loadingMore[selected]
+                              ? null
+                              : () => loadMore(page),
+                          icon: loadingMore[selected]
                               ? const SizedBox.square(
                                   dimension: 18,
                                   child: CircularProgressIndicator(
@@ -172,7 +174,9 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
                                   ),
                                 )
                               : const Icon(Icons.expand_more),
-                          label: Text(loadingMore ? '加载中...' : '加载更多'),
+                          label: Text(
+                            loadingMore[selected] ? '加载中...' : '加载更多',
+                          ),
                         ),
                       );
                     }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/topic/topic_detail_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_plaza_screen.dart';
@@ -11,6 +13,8 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool paginateTopics = false;
   bool failNextRecommended = false;
   final List<int> requestedTopicPages = <int>[];
+  final List<String> requestedTopicPageKeys = <String>[];
+  final topicPageGates = <String, Completer<void>>{};
   bool paginatePosts = false;
   bool failNextPosts = false;
   final List<int> requestedPostPages = <int>[];
@@ -90,6 +94,9 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     }
     final page = query?['page'] as int? ?? 1;
     requestedTopicPages.add(page);
+    final pageKey = '$path:$page';
+    requestedTopicPageKeys.add(pageKey);
+    await topicPageGates[pageKey]?.future;
     return {
       'list': [
         if (!paginateTopics || page == 1)
@@ -227,6 +234,41 @@ void main() {
     expect(find.text('TOP 1'), findsOneWidget);
     expect(find.text('热度 169'), findsOneWidget);
     expect(find.text('7 天：2 帖 · 3 赞 · 4 评论'), findsOneWidget);
+  });
+
+  testWidgets('topic plaza paginates tabs independently', (tester) async {
+    final api = TopicScreenApi()..paginateTopics = true;
+    final recommendedGate = Completer<void>();
+    final hotGate = Completer<void>();
+    api.topicPageGates['/api/c/v1/topics:2'] = recommendedGate;
+    api.topicPageGates['/api/c/v1/topics/hot:2'] = hotGate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicPlazaScreen(
+          repository: TopicRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('topic-plaza-load-more')));
+    await tester.pump();
+    await tester.tap(find.text('热榜'));
+    await tester.pumpAndSettle();
+
+    final hotLoadMore = find.byKey(const Key('topic-plaza-load-more'));
+    expect(tester.widget<OutlinedButton>(hotLoadMore).onPressed, isNotNull);
+    await tester.tap(hotLoadMore);
+    await tester.pump();
+    expect(
+      api.requestedTopicPageKeys,
+      containsAll(<String>['/api/c/v1/topics:2', '/api/c/v1/topics/hot:2']),
+    );
+
+    recommendedGate.complete();
+    hotGate.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('guest following tab avoids protected request and shows guide', (
