@@ -148,6 +148,33 @@ void main() {
     expect(find.text('当前区域还没有浏览足迹'), findsOneWidget);
   });
 
+  testWidgets('browse history refresh invalidates a pending next page', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final repository = BrowseHistoryFakeRepository(paginated: true)
+      ..pageGates[2] = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: BrowseHistoryScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('browse-history-load-more')));
+    await tester.pump();
+    expect(repository.requestedPages, [1, 2]);
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+    expect(repository.requestedPages, [1, 2, 1]);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('London Hotpot'), findsOneWidget);
+    expect(find.text('Paris Cafe'), findsNothing);
+    expect(find.byKey(const Key('browse-history-load-more')), findsOneWidget);
+  });
+
   testWidgets('browse history retries an initial load failure', (tester) async {
     final repository = BrowseHistoryFakeRepository()..failNextLoad = true;
     await tester.pumpWidget(

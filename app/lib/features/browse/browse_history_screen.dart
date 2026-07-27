@@ -44,8 +44,9 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
 
   Future<void> _reload() async {
     if (_refreshing) return;
-    final revision = _historyRevision;
+    final revision = ++_historyRevision;
     _refreshing = true;
+    if (_loadingMore) setState(() => _loadingMore = false);
     try {
       final page = await widget.repository.loadBrowseHistoryPage();
       if (mounted && revision == _historyRevision) {
@@ -60,12 +61,14 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
         ).showSnackBar(SnackBar(content: Text('刷新足迹失败：$error')));
       }
     } finally {
-      if (revision == _historyRevision) _refreshing = false;
+      _refreshing = false;
     }
   }
 
   void _retryInitialLoad() {
     setState(() {
+      _historyRevision++;
+      _loadingMore = false;
       _history = widget.repository.loadBrowseHistoryPage();
     });
   }
