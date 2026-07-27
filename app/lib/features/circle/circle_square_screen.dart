@@ -26,6 +26,7 @@ class CircleSquareScreen extends StatefulWidget {
 class _CircleSquareScreenState extends State<CircleSquareScreen> {
   late Future<CirclePage> page;
   bool loadingMore = false;
+  bool reloading = false;
   int requestId = 0;
 
   @override
@@ -34,7 +35,8 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
     page = widget.repository.loadCirclePage(joinedOnly: widget.showJoinedOnly);
   }
 
-  void reload() {
+  Future<void> reload() async {
+    if (reloading) return;
     final future = widget.repository.loadCirclePage(
       joinedOnly: widget.showJoinedOnly,
     );
@@ -42,7 +44,15 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
     setState(() {
       page = future;
       loadingMore = false;
+      reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => reloading = false);
+    }
   }
 
   Future<void> loadMore(CirclePage current) async {
@@ -98,9 +108,9 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('circle-square-retry'),
-                  onPressed: reload,
+                  onPressed: reloading ? null : reload,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重试'),
+                  label: Text(reloading ? '处理中...' : '重试'),
                 ),
               ],
             ),

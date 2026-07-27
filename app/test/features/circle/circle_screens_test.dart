@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
 import 'package:dazhongdianping_app/features/circle/circle_square_screen.dart';
@@ -8,6 +10,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool paginateCircles = false;
   bool failNextCircles = false;
   final List<int> requestedCirclePages = <int>[];
+  Completer<void>? circleRetryGate;
   bool paginatePosts = false;
   bool failNextPosts = false;
   final List<int> requestedPostPages = <int>[];
@@ -100,6 +103,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       failNextCircles = false;
       throw StateError('circle network unavailable');
     }
+    await circleRetryGate?.future;
     final page = query?['page'] as int? ?? 1;
     requestedCirclePages.add(page);
     return {
@@ -147,6 +151,33 @@ void main() {
     expect(find.textContaining('圈子加载失败'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('circle-square-retry')));
+    await tester.pumpAndSettle();
+    expect(api.requestedCirclePages, [1]);
+    expect(find.text('伦敦生活圈'), findsOneWidget);
+  });
+
+  testWidgets('circle square guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = CircleScreenApi()
+      ..failNextCircles = true
+      ..circleRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleSquareScreen(
+          repository: CircleRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('circle-square-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.requestedCirclePages, isEmpty);
+
+    gate.complete();
     await tester.pumpAndSettle();
     expect(api.requestedCirclePages, [1]);
     expect(find.text('伦敦生活圈'), findsOneWidget);
