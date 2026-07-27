@@ -28,6 +28,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   late int? _payStatus;
   late Future<TradeOrderPage> _orders;
   bool _loadingMore = false;
+  bool _retrying = false;
   int _requestId = 0;
 
   @override
@@ -44,6 +45,24 @@ class _OrdersScreenState extends State<OrdersScreen> {
       _orders = future;
       _loadingMore = false;
     });
+  }
+
+  Future<void> _retry() async {
+    if (_retrying) return;
+    _requestId++;
+    final future = widget.repository.loadOrderPage(payStatus: _payStatus);
+    setState(() {
+      _orders = future;
+      _loadingMore = false;
+      _retrying = true;
+    });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
   }
 
   Future<void> _loadMore(TradeOrderPage current) async {
@@ -132,9 +151,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('orders-retry'),
-                          onPressed: _reload,
+                          onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('重试'),
+                          label: Text(_retrying ? '处理中...' : '重试'),
                         ),
                       ],
                     ),
