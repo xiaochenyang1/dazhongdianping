@@ -540,6 +540,7 @@ class CircleMembersScreen extends StatefulWidget {
 class _CircleMembersScreenState extends State<CircleMembersScreen> {
   late Future<CircleMemberPage> page;
   bool loadingMore = false;
+  bool reloading = false;
   int requestId = 0;
 
   @override
@@ -548,13 +549,22 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
     page = widget.repository.loadMemberPage(widget.circle.id);
   }
 
-  void reload() {
+  Future<void> reload() async {
+    if (reloading) return;
     final future = widget.repository.loadMemberPage(widget.circle.id);
     requestId++;
     setState(() {
       page = future;
       loadingMore = false;
+      reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => reloading = false);
+    }
   }
 
   Future<void> loadMore(CircleMemberPage current) async {
@@ -611,9 +621,9 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
                       const SizedBox(height: 12),
                       FilledButton.tonalIcon(
                         key: const Key('circle-members-retry'),
-                        onPressed: reload,
+                        onPressed: reloading ? null : reload,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('重试'),
+                        label: Text(reloading ? '处理中...' : '重试'),
                       ),
                     ],
                   ),

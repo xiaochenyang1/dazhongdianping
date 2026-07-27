@@ -18,6 +18,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool paginateMembers = false;
   bool failNextMembers = false;
   final List<int> requestedMemberPages = <int>[];
+  Completer<void>? memberRetryGate;
   Map<String, dynamic> circle({bool joined = false, int count = 12}) => {
     'id': 3,
     'region': 'EU',
@@ -62,6 +63,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         failNextMembers = false;
         throw StateError('member network unavailable');
       }
+      await memberRetryGate?.future;
       final page = query?['page'] as int? ?? 1;
       requestedMemberPages.add(page);
       return {
@@ -247,6 +249,33 @@ void main() {
     expect(find.textContaining('成员加载失败'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('circle-members-retry')));
+    await tester.pumpAndSettle();
+    expect(api.requestedMemberPages, [1]);
+    expect(find.text('伦敦小王'), findsOneWidget);
+  });
+
+  testWidgets('circle members guard duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = CircleScreenApi()
+      ..failNextMembers = true
+      ..memberRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleMembersScreen(
+          repository: CircleRepository(api),
+          circle: AppCircle.fromJson(api.circle()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('circle-members-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.requestedMemberPages, isEmpty);
+
+    gate.complete();
     await tester.pumpAndSettle();
     expect(api.requestedMemberPages, [1]);
     expect(find.text('伦敦小王'), findsOneWidget);
