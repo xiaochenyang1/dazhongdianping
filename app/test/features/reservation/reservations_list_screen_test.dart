@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservations_list_screen.dart';
@@ -13,6 +15,7 @@ class ReservationsApi implements JsonApi {
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
   final List<int> requestedPages = <int>[];
+  Completer<void>? retryGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -26,6 +29,7 @@ class ReservationsApi implements JsonApi {
       if (failFirst && reservationListRequests == 1) {
         throw StateError('network unavailable');
       }
+      if (reservationListRequests > 1) await retryGate?.future;
       final page = query?['page'] as int? ?? 1;
       requestedPages.add(page);
       return {
@@ -99,6 +103,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.reservationListRequests, 2);
+    expect(find.byKey(const Key('reservation-card-11')), findsOneWidget);
+  });
+
+  testWidgets('reservations list guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = ReservationsApi(failFirst: true)..retryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationsListScreen(repository: ReservationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('reservations-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.reservationListRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('reservation-card-11')), findsOneWidget);
   });
 
