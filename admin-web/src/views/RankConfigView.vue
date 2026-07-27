@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
 import { createRankConfig, listRankConfigs, publishRankConfig, rollbackRankConfig } from '@/services/admin'
 import type { RankConfig } from '@/types/admin'
@@ -10,6 +10,7 @@ const loading = ref(false)
 const saving = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const canWrite = computed(() => state.permissions.includes('operations:rank:write'))
 
 const form = reactive({
   rankType: 1,
@@ -32,6 +33,7 @@ async function load() {
 }
 
 async function createDraft() {
+  if (!canWrite.value || saving.value) return
   saving.value = true
   errorMessage.value = ''
   successMessage.value = ''
@@ -51,6 +53,7 @@ async function createDraft() {
 }
 
 async function publish(configId: number) {
+  if (!canWrite.value) return
   try {
     const result = await publishRankConfig(configId)
     successMessage.value = `发布成功：榜单 #${result.rankId}，共 ${result.itemCount} 家门店。`
@@ -59,6 +62,7 @@ async function publish(configId: number) {
 }
 
 async function rollback(configId: number) {
+  if (!canWrite.value) return
   try {
     const result = await rollbackRankConfig(configId)
     successMessage.value = `已按历史规则生成新版本并发布，榜单 #${result.rankId}。`
@@ -82,13 +86,13 @@ watch(() => state.region, () => {
       <section class="content-card">
         <div class="section-headline"><div><p class="eyebrow">规则版本</p><h2>区域 {{ state.region }} 的历史版本</h2></div></div>
         <p v-if="loading" class="feedback">加载中...</p>
-        <div v-else class="table-shell"><table class="data-table"><thead><tr><th>类型</th><th>作用域</th><th>版本</th><th>状态</th><th>操作</th></tr></thead><tbody>
-          <tr v-for="config in configs" :key="config.id"><td>{{ config.rankTypeText }}</td><td>城市 {{ config.cityId }} / 分类 {{ config.categoryId }}</td><td>v{{ config.version }}</td><td><span class="status-pill">{{ config.statusText }}</span></td><td class="table-actions"><button v-if="config.status === 0" class="table-action" @click="publish(config.id)">发布</button><button v-else class="table-action" @click="rollback(config.id)">回滚到此规则</button></td></tr>
+        <div v-else class="table-shell"><table class="data-table"><thead><tr><th>类型</th><th>作用域</th><th>版本</th><th>状态</th><th v-if="canWrite">操作</th></tr></thead><tbody>
+          <tr v-for="config in configs" :key="config.id"><td>{{ config.rankTypeText }}</td><td>城市 {{ config.cityId }} / 分类 {{ config.categoryId }}</td><td>v{{ config.version }}</td><td><span class="status-pill">{{ config.statusText }}</span></td><td v-if="canWrite" class="table-actions"><button v-if="config.status === 0" type="button" class="table-action" :data-testid="`rank-publish-${config.id}`" @click="publish(config.id)">发布</button><button v-else type="button" class="table-action" :data-testid="`rank-rollback-${config.id}`" @click="rollback(config.id)">回滚到此规则</button></td></tr>
         </tbody></table></div>
       </section>
       <section class="content-card editor-card">
         <div class="section-headline"><div><p class="eyebrow">新草稿</p><h2>创建下一版本</h2></div></div>
-        <form class="editor-form" @submit.prevent="createDraft"><div class="form-grid form-grid--two">
+        <form v-if="canWrite" class="editor-form" data-testid="rank-draft-form" @submit.prevent="createDraft"><div class="form-grid form-grid--two">
           <label class="field"><span>榜单类型</span><select v-model.number="form.rankType"><option :value="1">必吃榜</option><option :value="2">好评榜</option><option :value="3">热门榜</option></select></label>
           <label class="field"><span>计算周期</span><select v-model.number="form.calcCycle"><option :value="1">日</option><option :value="2">周</option><option :value="3">月</option><option :value="4">季</option></select></label>
           <label class="field"><span>城市 ID</span><input v-model.number="form.cityId" type="number" min="1" /></label>
@@ -99,6 +103,7 @@ watch(() => state.region, () => {
           <label class="field"><span>最低评分</span><input v-model.number="form.minScore" type="number" min="0" max="5" step="0.1" /></label>
           <label class="field"><span>最低点评量</span><input v-model.number="form.minReviewCount" type="number" min="0" /></label>
         </div><div class="form-actions"><button class="primary-button" type="submit" :disabled="saving">{{ saving ? '创建中...' : '保存草稿' }}</button></div></form>
+        <p v-else class="inline-note">当前账号仅可查看，无榜单配置权限。</p>
       </section>
     </div>
   </section>
