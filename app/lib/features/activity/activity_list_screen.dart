@@ -34,6 +34,7 @@ class ActivityListScreen extends StatefulWidget {
 class _ActivityListScreenState extends State<ActivityListScreen> {
   late Future<List<ActivitySummary>> _activities;
   bool _reloading = false;
+  final Set<int> _openingActivityIds = <int>{};
 
   @override
   void initState() {
@@ -59,6 +60,31 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
       }
     } finally {
       if (mounted) setState(() => _reloading = false);
+    }
+  }
+
+  Future<void> _openActivity(ActivitySummary activity) async {
+    if (_openingActivityIds.contains(activity.id)) return;
+    setState(() => _openingActivityIds.add(activity.id));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ActivityDetailScreen(
+            repository: widget.repository,
+            activityId: activity.id,
+            browseRepository: widget.browseRepository,
+            tradeRepository: widget.tradeRepository,
+            reservationRepository: widget.reservationRepository,
+            reviewRepository: widget.reviewRepository,
+            canInteractReviews: widget.canInteractReviews,
+            thirdPartyConfig: widget.thirdPartyConfig,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingActivityIds.remove(activity.id));
+      }
     }
   }
 
@@ -111,6 +137,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                   if (item.endAt.isNotEmpty) item.endAt,
                 ].join(' ~ ');
                 return Card(
+                  key: Key('activity-card-${item.id}'),
                   child: ListTile(
                     title: Text(item.name),
                     subtitle: Text(
@@ -121,20 +148,9 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                     ),
                     isThreeLine: period.isNotEmpty,
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ActivityDetailScreen(
-                          repository: widget.repository,
-                          activityId: item.id,
-                          browseRepository: widget.browseRepository,
-                          tradeRepository: widget.tradeRepository,
-                          reservationRepository: widget.reservationRepository,
-                          reviewRepository: widget.reviewRepository,
-                          canInteractReviews: widget.canInteractReviews,
-                          thirdPartyConfig: widget.thirdPartyConfig,
-                        ),
-                      ),
-                    ),
+                    onTap: _openingActivityIds.contains(item.id)
+                        ? null
+                        : () => _openActivity(item),
                   ),
                 );
               },

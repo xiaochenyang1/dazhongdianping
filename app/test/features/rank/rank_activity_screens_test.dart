@@ -335,6 +335,34 @@ void main() {
     expect(find.text('活动详情'), findsOneWidget);
   });
 
+  testWidgets('activity list guards duplicate detail navigation', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = ActivityScreenApi()..detailGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ActivityListScreen(repository: ActivityRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('activity-card-9001'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.detailLoadCount, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.detailLoadCount, 1);
+    expect(api.loadCount, 1);
+  });
+
   testWidgets('activity list retries an initial load failure', (tester) async {
     final api = ActivityScreenApi()..failNextLoad = true;
     await tester.pumpWidget(
