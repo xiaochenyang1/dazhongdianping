@@ -94,6 +94,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   }
 
   Future<void> toggleFollow() async {
+    if (saving) return;
     if (!widget.canInteract) {
       widget.onLoginRequired?.call();
       return;
@@ -173,6 +174,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
+                  key: const Key('topic-follow-toggle'),
                   onPressed: saving ? null : toggleFollow,
                   icon: Icon(
                     topic.followed

@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int followingCalls = 0;
   bool failFollow = false;
+  int followCalls = 0;
+  Completer<void>? followGate;
   bool paginateTopics = false;
   bool failNextRecommended = false;
   final List<int> requestedTopicPages = <int>[];
@@ -118,6 +120,8 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 
   @override
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
+    followCalls++;
+    await followGate?.future;
     if (failFollow) throw const ApiException('关注失败');
     return {'topicId': 31, 'followed': true, 'followerCount': 89};
   }
@@ -369,6 +373,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('已关注'), findsWidgets);
     expect(find.text('89 人关注'), findsOneWidget);
+  });
+
+  testWidgets('topic detail guards duplicate follow requests', (tester) async {
+    final gate = Completer<void>();
+    final api = TopicScreenApi()..followGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicDetailScreen(
+          repository: TopicRepository(api),
+          initial: TopicSummary.fromJson(api.topic()),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final follow = find.byKey(const Key('topic-follow-toggle'));
+    await tester.tap(follow);
+    await tester.tap(follow, warnIfMissed: false);
+    await tester.pump();
+    expect(api.followCalls, 1);
+    expect(find.text('89 人关注'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.followCalls, 1);
+    expect(find.text('已关注'), findsWidgets);
   });
 
   testWidgets('topic post opens the community post detail', (tester) async {
