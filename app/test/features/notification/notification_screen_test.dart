@@ -757,6 +757,39 @@ void main() {
     expect(api.markAllCalls, 0);
   });
 
+  testWidgets('notification refresh invalidates a pending next page', (
+    tester,
+  ) async {
+    final nextPageGate = Completer<void>();
+    final api = NotificationScreenApi(paginated: true)
+      ..loadGates[2] = nextPageGate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notifications-load-more')));
+    await tester.pump();
+    await tester.fling(
+      find.byKey(const Key('notification-list')),
+      const Offset(0, 300),
+      1000,
+    );
+    for (var i = 0; i < 20 && api.loadCount < 3; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(api.requestedPages, [1, 2, 1]);
+
+    await tester.pumpAndSettle();
+    nextPageGate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('已读新通知'), findsOneWidget);
+    expect(find.text('更早未读通知'), findsNothing);
+  });
+
   testWidgets('late refresh cannot restore unread notifications', (
     tester,
   ) async {

@@ -49,8 +49,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Future<void> _reload() async {
     if (_reloading) return;
-    final revision = _pageRevision;
-    setState(() => _reloading = true);
+    final revision = ++_pageRevision;
+    setState(() {
+      _loadingMore = false;
+      _reloading = true;
+    });
     try {
       final page = await widget.repository.loadPage();
       if (mounted && revision == _pageRevision) {
