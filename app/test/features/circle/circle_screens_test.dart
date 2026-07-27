@@ -15,6 +15,8 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextPosts = false;
   final List<int> requestedPostPages = <int>[];
   Completer<void>? postRetryGate;
+  Completer<void>? postDetailGate;
+  int postDetailCalls = 0;
   bool paginateMembers = false;
   bool failNextMembers = false;
   final List<int> requestedMemberPages = <int>[];
@@ -56,7 +58,11 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     String path, {
     Map<String, Object?>? query,
   }) async {
-    if (path == '/api/c/v1/posts/7') return post;
+    if (path == '/api/c/v1/posts/7') {
+      postDetailCalls++;
+      await postDetailGate?.future;
+      return post;
+    }
     if (path == '/api/c/v1/posts/7/comments') {
       return {'list': const [], 'total': 0};
     }
@@ -419,5 +425,35 @@ void main() {
 
     expect(find.text('帖子详情'), findsOneWidget);
     expect(find.text('本周六开放'), findsOneWidget);
+  });
+
+  testWidgets('circle detail guards duplicate post navigation', (tester) async {
+    final gate = Completer<void>();
+    final api = CircleScreenApi()..postDetailGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleDetailScreen(
+          repository: CircleRepository(api),
+          initial: AppCircle.fromJson(api.circle()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('circle-post-card-7'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.postDetailCalls, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.postDetailCalls, 1);
+    expect(api.requestedPostPages, [1]);
   });
 }

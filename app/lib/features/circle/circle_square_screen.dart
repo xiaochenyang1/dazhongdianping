@@ -267,6 +267,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
   bool loadingMorePosts = false;
   bool reloadingPosts = false;
   int postsRequestId = 0;
+  final Set<int> _openingPostIds = <int>{};
 
   @override
   void initState() {
@@ -363,6 +364,26 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
       }
     } finally {
       if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> _openPost(CommunityPost post) async {
+    if (_openingPostIds.contains(post.id)) return;
+    setState(() => _openingPostIds.add(post.id));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PostDetailScreen(
+            repository: CommunityRepository(widget.repository.api),
+            postId: post.id,
+            canInteract: widget.canInteract,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingPostIds.remove(post.id));
+      }
     }
   }
 
@@ -476,6 +497,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
               children: [
                 ...page.items.map(
                   (post) => Card(
+                    key: Key('circle-post-card-${post.id}'),
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(16),
@@ -489,17 +511,9 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       trailing: Text('❤ ${post.likeCount}'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => PostDetailScreen(
-                            repository: CommunityRepository(
-                              widget.repository.api,
-                            ),
-                            postId: post.id,
-                            canInteract: widget.canInteract,
-                          ),
-                        ),
-                      ),
+                      onTap: _openingPostIds.contains(post.id)
+                          ? null
+                          : () => _openPost(post),
                     ),
                   ),
                 ),
