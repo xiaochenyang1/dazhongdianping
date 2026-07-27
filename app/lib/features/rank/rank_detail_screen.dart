@@ -35,6 +35,7 @@ class RankDetailScreen extends StatefulWidget {
 
 class _RankDetailScreenState extends State<RankDetailScreen> {
   late Future<RankDetail> _detail;
+  bool _reloading = false;
 
   @override
   void initState() {
@@ -42,11 +43,20 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
     _detail = widget.repository.loadRankDetail(widget.rankId);
   }
 
-  void _reload() {
+  Future<void> _reload() async {
+    if (_reloading) return;
     final future = widget.repository.loadRankDetail(widget.rankId);
     setState(() {
       _detail = future;
+      _reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloading = false);
+    }
   }
 
   @override
@@ -68,9 +78,9 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('rank-detail-retry'),
-                    onPressed: _reload,
+                    onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
+                    label: Text(_reloading ? '处理中...' : '重试'),
                   ),
                 ],
               ),
