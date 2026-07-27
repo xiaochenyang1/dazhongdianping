@@ -16,6 +16,7 @@ const rejectReason = ref('')
 const filters = reactive({ status: '0', page: 1, pageSize: 20 })
 
 const selected = computed(() => pageState.value?.list.find((item) => item.merchantId === selectedMerchantId.value) ?? null)
+const canWrite = computed(() => state.permissions.includes('audit:merchant_application:write'))
 
 async function load() {
   loading.value = true
@@ -34,6 +35,7 @@ async function load() {
 }
 
 async function decide(application: AdminMerchantApplication, status: 1 | 2) {
+  if (!canWrite.value || application.status !== 0) return
   const reason = rejectReason.value.trim()
   if (status === 2 && !reason) {
     errorMessage.value = '驳回原因不能为空'
@@ -57,6 +59,7 @@ async function decide(application: AdminMerchantApplication, status: 1 | 2) {
 }
 
 function openReject(application: AdminMerchantApplication) {
+  if (!canWrite.value || application.status !== 0) return
   selectedMerchantId.value = application.merchantId
   rejectMode.value = true
   rejectReason.value = ''
@@ -94,7 +97,7 @@ watch(() => state.region, () => { filters.page = 1; void load() }, { immediate: 
               <td><strong>{{ application.legalPerson }}</strong><p><a :href="application.licenseUrl" target="_blank" rel="noreferrer">查看营业执照</a></p></td>
               <td><div class="application-photos"><a v-for="photo in application.shopPhotoUrls" :key="photo" :href="photo" target="_blank" rel="noreferrer"><img :src="photo" alt="门店资质照片" /></a></div></td>
               <td><span class="status-pill" :class="application.status === 0 ? 'status-pill--warn' : application.status === 1 ? 'status-pill--good' : 'status-pill--muted'">{{ application.statusText }}</span><p v-if="application.rejectReason">{{ application.rejectReason }}</p></td>
-              <td><div v-if="application.status === 0" class="table-actions"><button class="table-action" type="button" :disabled="acting" @click="decide(application, 1)">通过申请</button><button class="table-action table-action--danger" type="button" :disabled="acting" @click="openReject(application)">驳回申请</button></div><span v-else class="inline-note">已处理</span></td>
+              <td><div v-if="application.status === 0 && canWrite" class="table-actions"><button class="table-action" type="button" :disabled="acting" @click="decide(application, 1)">通过申请</button><button class="table-action table-action--danger" type="button" :disabled="acting" @click="openReject(application)">驳回申请</button></div><span v-else-if="application.status === 0" class="inline-note">当前账号仅可查看，无商户准入审核权限。</span><span v-else class="inline-note">已处理</span></td>
             </tr>
           </tbody>
         </table>
@@ -103,7 +106,7 @@ watch(() => state.region, () => { filters.page = 1; void load() }, { immediate: 
       <div class="pager"><button class="ghost-button" type="button" :disabled="filters.page <= 1" @click="filters.page--; load()">上一页</button><span>第 {{ filters.page }} 页</span><button class="ghost-button" type="button" :disabled="!pageState?.hasMore" @click="filters.page++; load()">下一页</button></div>
     </section>
 
-    <div v-if="rejectMode && selected" class="audit-drawer">
+    <div v-if="rejectMode && selected && canWrite && selected.status === 0" class="audit-drawer">
       <div><p class="eyebrow">驳回申请</p><h2>{{ selected.companyName }}</h2><p>原因会原样返回商户端，写人话，别写“资料不符”四个字就跑路。</p></div>
       <label class="field field--full"><span>驳回原因</span><textarea v-model="rejectReason" name="rejectReason" rows="4" /></label>
       <div class="form-actions"><button class="ghost-button" type="button" @click="rejectMode = false">取消</button><button class="secondary-button" type="button" :disabled="acting" @click="decide(selected, 2)">确认驳回</button></div>
