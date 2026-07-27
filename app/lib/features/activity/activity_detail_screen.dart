@@ -39,6 +39,7 @@ class ActivityDetailScreen extends StatefulWidget {
 
 class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   late Future<ActivityDetail> _detail;
+  bool _reloading = false;
 
   @override
   void initState() {
@@ -46,11 +47,20 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
     _detail = widget.repository.loadActivityDetail(widget.activityId);
   }
 
-  void _reload() {
+  Future<void> _reload() async {
+    if (_reloading) return;
     final future = widget.repository.loadActivityDetail(widget.activityId);
     setState(() {
       _detail = future;
+      _reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloading = false);
+    }
   }
 
   void _openItem(ActivityItem item) {
@@ -122,9 +132,9 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('activity-detail-retry'),
-                    onPressed: _reload,
+                    onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
+                    label: Text(_reloading ? '处理中...' : '重试'),
                   ),
                 ],
               ),

@@ -76,6 +76,7 @@ class ActivityScreenApi implements JsonApi {
   int detailLoadCount = 0;
   bool failNextDetail = false;
   Completer<void>? loadGate;
+  Completer<void>? detailGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -111,6 +112,7 @@ class ActivityScreenApi implements JsonApi {
         failNextDetail = false;
         throw const ApiException('activity detail network unavailable');
       }
+      await detailGate?.future;
       return {
         'id': 9001,
         'name': '暑期火锅节',
@@ -150,6 +152,33 @@ void main() {
     await tester.tap(find.byKey(const Key('activity-detail-retry')));
     await tester.pumpAndSettle();
 
+    expect(api.detailLoadCount, 2);
+    expect(find.text('暑期火锅节'), findsOneWidget);
+  });
+
+  testWidgets('activity detail guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = ActivityScreenApi()
+      ..failNextDetail = true
+      ..detailGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ActivityDetailScreen(
+          repository: ActivityRepository(api),
+          activityId: 9001,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('activity-detail-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.detailLoadCount, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(api.detailLoadCount, 2);
     expect(find.text('暑期火锅节'), findsOneWidget);
   });
