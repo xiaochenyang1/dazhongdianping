@@ -44,6 +44,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   bool _favoriteLoading = false;
   bool _favoriteSaving = false;
   bool _sharing = false;
+  bool _reloadingDetail = false;
 
   @override
   void initState() {
@@ -87,11 +88,20 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
     });
   }
 
-  void _reloadDetail() {
+  Future<void> _reloadDetail() async {
+    if (_reloadingDetail) return;
     final future = widget.repository.loadShopDetail(widget.shopId);
     setState(() {
       _detail = future;
+      _reloadingDetail = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloadingDetail = false);
+    }
   }
 
   Future<void> _loadFavoriteState() async {
@@ -181,9 +191,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('shop-detail-retry'),
-                    onPressed: _reloadDetail,
+                    onPressed: _reloadingDetail ? null : _reloadDetail,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
+                    label: Text(_reloadingDetail ? '处理中...' : '重试'),
                   ),
                 ],
               ),

@@ -44,6 +44,7 @@ class DetailFakeRepository extends BrowseRepository {
   final bool failFirstSimilar;
   final bool failFirstReviews;
   int detailRequests = 0;
+  Completer<void>? detailRetryGate;
   final List<ShopSummary> similar;
   final List<ShopReviewPreview> reviews;
   final List<String> favoriteCalls = <String>[];
@@ -59,6 +60,7 @@ class DetailFakeRepository extends BrowseRepository {
     if (failFirstDetail && detailRequests == 1) {
       throw StateError('network unavailable');
     }
+    if (detailRequests > 1) await detailRetryGate?.future;
     return const ShopDetail(
       id: 7,
       name: 'Berlin Tea',
@@ -253,6 +255,27 @@ void main() {
     expect(repository.detailRequests, 2);
     expect(find.text('Berlin Tea'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shop detail guards duplicate detail retries', (tester) async {
+    final gate = Completer<void>();
+    final repository = DetailFakeRepository(failFirstDetail: true)
+      ..detailRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('shop-detail-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(repository.detailRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(repository.detailRequests, 2);
+    expect(find.text('Berlin Tea'), findsOneWidget);
   });
 
   testWidgets('shop detail shows address and opening hours', (tester) async {
