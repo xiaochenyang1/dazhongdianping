@@ -25,6 +25,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
   PublicUserProfile? _visibleProfile;
   bool _saving = false;
   bool _reloadingProfile = false;
+  bool _openingRelationships = false;
   @override
   void initState() {
     super.initState();
@@ -84,18 +85,26 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
     }
   }
 
-  void _openRelationships(bool followers) => Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (_) => UserRelationshipsScreen(
-        repository: widget.repository,
-        userId: widget.userId,
-        followers: followers,
-        canFollow: widget.canFollow,
-        currentUserId: widget.currentUserId,
-        onMessage: widget.onMessage,
-      ),
-    ),
-  );
+  Future<void> _openRelationships(bool followers) async {
+    if (_openingRelationships) return;
+    setState(() => _openingRelationships = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => UserRelationshipsScreen(
+            repository: widget.repository,
+            userId: widget.userId,
+            followers: followers,
+            canFollow: widget.canFollow,
+            currentUserId: widget.currentUserId,
+            onMessage: widget.onMessage,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _openingRelationships = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -163,7 +172,10 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                 ),
                 Expanded(
                   child: InkWell(
-                    onTap: () => _openRelationships(true),
+                    key: const Key('public-profile-followers'),
+                    onTap: _openingRelationships
+                        ? null
+                        : () => _openRelationships(true),
                     child: _Metric(
                       label: '粉丝',
                       value: '${profile.followerCount}',
@@ -172,7 +184,10 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                 ),
                 Expanded(
                   child: InkWell(
-                    onTap: () => _openRelationships(false),
+                    key: const Key('public-profile-following'),
+                    onTap: _openingRelationships
+                        ? null
+                        : () => _openRelationships(false),
                     child: _Metric(
                       label: '关注',
                       value: '${profile.followingCount}',

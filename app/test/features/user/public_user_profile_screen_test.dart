@@ -13,6 +13,7 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int profileRequests = 0;
   Completer<void>? profileRetryGate;
   final List<int> requestedFollowerPages = <int>[];
+  int relationshipRequests = 0;
   Completer<void>? relationshipRetryGate;
   @override
   Future<Map<String, dynamic>> getJson(
@@ -20,6 +21,7 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     Map<String, Object?>? query,
   }) async {
     if (path.endsWith('/followers')) {
+      relationshipRequests++;
       if (failNextFollowers) {
         failNextFollowers = false;
         throw StateError('relationship network unavailable');
@@ -243,6 +245,34 @@ void main() {
       expect(find.text('已关注'), findsOneWidget);
     },
   );
+
+  testWidgets('public profile guards duplicate relationship navigation', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = SocialProfileApi()..relationshipRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PublicUserProfileScreen(
+          repository: UserRepository(api),
+          userId: 9,
+          canFollow: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final followers = find.byKey(const Key('public-profile-followers'));
+    await tester.tap(followers);
+    await tester.tap(followers, warnIfMissed: false);
+    await tester.pump();
+    expect(api.relationshipRequests, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.relationshipRequests, 1);
+    expect(find.text('巴黎小陈'), findsOneWidget);
+  });
 
   testWidgets('relationship list opens nested public profile', (tester) async {
     await tester.pumpWidget(
