@@ -46,6 +46,7 @@ class DetailFakeRepository extends BrowseRepository {
   int detailRequests = 0;
   Completer<void>? detailRetryGate;
   Completer<void>? reviewRetryGate;
+  Completer<void>? similarRetryGate;
   final List<ShopSummary> similar;
   final List<ShopReviewPreview> reviews;
   final List<String> favoriteCalls = <String>[];
@@ -101,6 +102,7 @@ class DetailFakeRepository extends BrowseRepository {
     if (failFirstSimilar && similarRequests.length == 1) {
       throw StateError('similar network unavailable');
     }
+    if (similarRequests.length > 1) await similarRetryGate?.future;
     return similar;
   }
 
@@ -267,6 +269,34 @@ void main() {
     expect(repository.similarRequests, [7, 7]);
     expect(find.text('Berlin Dumplings'), findsOneWidget);
     expect(repository.detailRequests, 1);
+  });
+
+  testWidgets('shop detail guards duplicate similar shop retries', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final repository = DetailFakeRepository(failFirstSimilar: true)
+      ..similarRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('similar-shops-retry')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    final retry = find.byKey(const Key('similar-shops-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(repository.similarRequests, [7, 7]);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(repository.similarRequests, [7, 7]);
+    expect(find.text('Berlin Dumplings'), findsOneWidget);
   });
 
   testWidgets('shop detail retries an initial load failure safely', (

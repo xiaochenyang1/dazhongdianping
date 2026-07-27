@@ -46,6 +46,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   bool _sharing = false;
   bool _reloadingDetail = false;
   bool _reloadingReviewPreviews = false;
+  bool _reloadingSimilar = false;
 
   @override
   void initState() {
@@ -75,11 +76,20 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
     return future;
   }
 
-  void _reloadSimilar() {
+  Future<void> _reloadSimilar() async {
+    if (_reloadingSimilar) return;
     final future = _loadSimilar();
     setState(() {
       _similar = future;
+      _reloadingSimilar = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloadingSimilar = false);
+    }
   }
 
   Future<void> _reloadReviewPreviews() async {
@@ -491,9 +501,11 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                           const SizedBox(height: 8),
                           FilledButton.tonalIcon(
                             key: const Key('similar-shops-retry'),
-                            onPressed: _reloadSimilar,
+                            onPressed: _reloadingSimilar
+                                ? null
+                                : _reloadSimilar,
                             icon: const Icon(Icons.refresh),
-                            label: const Text('重试推荐'),
+                            label: Text(_reloadingSimilar ? '处理中...' : '重试推荐'),
                           ),
                         ],
                       );
