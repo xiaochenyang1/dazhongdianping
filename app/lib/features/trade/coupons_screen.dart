@@ -30,6 +30,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
   late int? _status;
   late Future<CouponPage> _coupons;
   bool _loadingMore = false;
+  bool _retrying = false;
   int _requestId = 0;
 
   @override
@@ -46,6 +47,24 @@ class _CouponsScreenState extends State<CouponsScreen> {
       _coupons = future;
       _loadingMore = false;
     });
+  }
+
+  Future<void> _retry() async {
+    if (_retrying) return;
+    _requestId++;
+    final future = widget.repository.loadCouponPage(status: _status);
+    setState(() {
+      _coupons = future;
+      _loadingMore = false;
+      _retrying = true;
+    });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
   }
 
   Future<void> _loadMore(CouponPage current) async {
@@ -146,9 +165,9 @@ class _CouponsScreenState extends State<CouponsScreen> {
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('coupons-retry'),
-                          onPressed: _reload,
+                          onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('重试'),
+                          label: Text(_retrying ? '处理中...' : '重试'),
                         ),
                       ],
                     ),

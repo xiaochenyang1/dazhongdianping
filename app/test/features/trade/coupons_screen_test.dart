@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/trade/coupons_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
@@ -13,6 +15,7 @@ class CouponsApi implements JsonApi {
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
   final List<int> requestedPages = <int>[];
+  Completer<void>? retryGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -26,6 +29,7 @@ class CouponsApi implements JsonApi {
       if (failFirst && couponListRequests == 1) {
         throw StateError('network unavailable');
       }
+      if (couponListRequests > 1) await retryGate?.future;
       final page = query?['page'] as int? ?? 1;
       requestedPages.add(page);
       return {
@@ -85,6 +89,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.couponListRequests, 2);
+    expect(find.byKey(const Key('coupon-card-CP-DEMO')), findsOneWidget);
+  });
+
+  testWidgets('coupons screen guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = CouponsApi(failFirst: true)..retryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: CouponsScreen(repository: TradeRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('coupons-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.couponListRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('coupon-card-CP-DEMO')), findsOneWidget);
   });
 
