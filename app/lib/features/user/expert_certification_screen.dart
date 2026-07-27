@@ -15,6 +15,7 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
   late Future<ExpertCertificationStatus> _statusFuture;
   final _reasonController = TextEditingController();
   bool _submitting = false;
+  bool _reloading = false;
   String? _error;
 
   @override
@@ -31,11 +32,21 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
     return status;
   }
 
-  void _reload() {
+  Future<void> _reload() async {
+    if (_reloading) return;
+    final future = _load();
     setState(() {
       _error = null;
-      _statusFuture = _load();
+      _statusFuture = future;
+      _reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloading = false);
+    }
   }
 
   Future<void> _submit(ExpertCertificationStatus current) async {
@@ -105,7 +116,11 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                 children: [
                   Text('认证状态加载失败：${snapshot.error}'),
                   const SizedBox(height: 12),
-                  FilledButton(onPressed: _reload, child: const Text('重试')),
+                  FilledButton(
+                    key: const Key('expert-cert-retry'),
+                    onPressed: _reloading ? null : _reload,
+                    child: Text(_reloading ? '处理中...' : '重试'),
+                  ),
                 ],
               ),
             );

@@ -12,6 +12,7 @@ class ExpertCertApi implements JsonApi {
   int status = 0;
   String reason = '';
   int failLoads = 0;
+  int loadRequests = 0;
   Completer<void>? loadGate;
 
   @override
@@ -20,6 +21,7 @@ class ExpertCertApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     this.path = path;
+    loadRequests++;
     if (failLoads > 0) {
       failLoads--;
       throw StateError('certification unavailable');
@@ -105,11 +107,37 @@ void main() {
 
     expect(find.textContaining('认证状态加载失败'), findsOneWidget);
 
-    await tester.tap(find.text('重试'));
+    await tester.tap(find.byKey(const Key('expert-cert-retry')));
     await tester.pumpAndSettle();
 
     expect(find.text('未申请'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('expert certification guards duplicate load retries', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = ExpertCertApi()
+      ..failLoads = 1
+      ..loadGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ExpertCertificationScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('expert-cert-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.loadRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.loadRequests, 2);
+    expect(find.text('未申请'), findsOneWidget);
   });
 
   testWidgets('expert certification ignores a load completed after disposal', (
