@@ -331,6 +331,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
   }
 
   Future<void> toggle() async {
+    if (saving) return;
     if (!widget.canInteract) {
       widget.onLoginRequired?.call();
       return;
@@ -399,6 +400,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                 children: [
                   Expanded(
                     child: FilledButton(
+                      key: const Key('circle-membership-toggle'),
                       onPressed: saving ? null : toggle,
                       child: Text(circle.joined ? '已加入' : '加入圈子'),
                     ),

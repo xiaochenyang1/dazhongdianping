@@ -19,6 +19,8 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextMembers = false;
   final List<int> requestedMemberPages = <int>[];
   Completer<void>? memberRetryGate;
+  Completer<void>? membershipGate;
+  int membershipCalls = 0;
   Map<String, dynamic> circle({bool joined = false, int count = 12}) => {
     'id': 3,
     'region': 'EU',
@@ -127,11 +129,12 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
       {};
   @override
-  Future<Map<String, dynamic>> putJson(String path, {Object? body}) async => {
-    'circleId': 3,
-    'joined': true,
-    'memberCount': 13,
-  };
+  Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
+    membershipCalls++;
+    await membershipGate?.future;
+    return {'circleId': 3, 'joined': true, 'memberCount': 13};
+  }
+
   @override
   Future<Map<String, dynamic>> deleteJson(String path) async => {
     'circleId': 3,
@@ -367,6 +370,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('已加入'), findsOneWidget);
     expect(find.textContaining('13 位成员'), findsOneWidget);
+  });
+
+  testWidgets('circle detail guards duplicate membership requests', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = CircleScreenApi()..membershipGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleDetailScreen(
+          repository: CircleRepository(api),
+          initial: AppCircle.fromJson(api.circle()),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final toggle = find.byKey(const Key('circle-membership-toggle'));
+    await tester.tap(toggle);
+    await tester.tap(toggle, warnIfMissed: false);
+    await tester.pump();
+    expect(api.membershipCalls, 1);
+    expect(find.textContaining('13 位成员'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.membershipCalls, 1);
+    expect(find.text('已加入'), findsOneWidget);
   });
 
   testWidgets('circle post opens the community post detail', (tester) async {
