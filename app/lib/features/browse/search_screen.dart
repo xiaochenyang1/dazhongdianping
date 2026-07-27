@@ -34,6 +34,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<ShopSearchPage>? _results;
   String _searchedKeyword = '';
   bool _loadingMore = false;
+  bool _retryingSearch = false;
   List<SearchHotWord> _hotWords = const [];
   List<SearchHistoryItem> _history = const [];
   SearchHistoryPage? _historyPage;
@@ -182,6 +183,16 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (_) {
       // Search failure is already rendered by FutureBuilder; history refresh is best-effort.
+    }
+  }
+
+  Future<void> _retrySearch() async {
+    if (_retryingSearch) return;
+    setState(() => _retryingSearch = true);
+    try {
+      await _search(_searchedKeyword);
+    } finally {
+      if (mounted) setState(() => _retryingSearch = false);
     }
   }
 
@@ -451,9 +462,13 @@ class _SearchScreenState extends State<SearchScreen> {
                                 const SizedBox(height: 12),
                                 FilledButton.tonalIcon(
                                   key: const Key('search-results-retry'),
-                                  onPressed: () => _search(_searchedKeyword),
+                                  onPressed: _retryingSearch
+                                      ? null
+                                      : _retrySearch,
                                   icon: const Icon(Icons.refresh),
-                                  label: const Text('重试'),
+                                  label: Text(
+                                    _retryingSearch ? '处理中...' : '重试',
+                                  ),
                                 ),
                               ],
                             ),

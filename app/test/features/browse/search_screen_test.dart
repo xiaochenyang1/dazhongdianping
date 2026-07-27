@@ -33,6 +33,7 @@ class SearchFakeRepository extends BrowseRepository {
   final List<int> removedHistoryIds = <int>[];
   Completer<void>? clearHistoryGate;
   Completer<void>? panelRetryGate;
+  Completer<void>? searchRetryGate;
   final Map<int, Completer<void>> removeHistoryGates = {};
   final Map<int, Completer<void>> historyPageGates = {};
 
@@ -64,6 +65,7 @@ class SearchFakeRepository extends BrowseRepository {
     if (failFirstSearch && searchRequests == 1) {
       throw StateError('search network unavailable');
     }
+    if (searchRequests > 1) await searchRetryGate?.future;
     searchedKeywords.add(keyword);
     requestedPages.add(page);
     final shop = ShopSummary(
@@ -203,6 +205,29 @@ void main() {
     expect(find.textContaining('Search failed'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('search-results-retry')));
+    await tester.pumpAndSettle();
+    expect(repository.searchRequests, 2);
+    expect(find.text('Berlin Tea'), findsOneWidget);
+  });
+
+  testWidgets('search results guard duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final repository = SearchFakeRepository(failFirstSearch: true)
+      ..searchRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SearchScreen(repository: repository, initialKeyword: 'tea'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('search-results-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(repository.searchRequests, 2);
+
+    gate.complete();
     await tester.pumpAndSettle();
     expect(repository.searchRequests, 2);
     expect(find.text('Berlin Tea'), findsOneWidget);
