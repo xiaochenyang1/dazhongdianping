@@ -334,6 +334,36 @@ void main() {
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
   });
 
+  testWidgets('community feed guards duplicate retries per tab', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = CommunityScreenApi()..failNextFeed = true;
+    api.feedPageGates['/api/c/v1/posts:1'] = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityFeedScreen(
+          repository: CommunityRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('community-feed-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(
+      api.requestedFeedPageKeys.where((key) => key == '/api/c/v1/posts:1'),
+      hasLength(1),
+    );
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('伦敦周末市场指南'), findsOneWidget);
+  });
+
   testWidgets('post detail retries an initial load failure', (tester) async {
     final api = CommunityScreenApi()..failNextPost = true;
     await tester.pumpWidget(

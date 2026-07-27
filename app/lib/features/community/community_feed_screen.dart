@@ -32,6 +32,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   late Future<CommunityPostPage> _posts;
   Future<CommunityPostPage>? _followingPosts;
   final List<bool> _loadingMore = [false, false];
+  final List<bool> _reloading = [false, false];
   bool _openingEditor = false;
   int _selectedTab = 0;
   final List<int> _requestIds = [0, 0];
@@ -41,17 +42,29 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
     _posts = widget.repository.loadFeedPage();
   }
 
-  void _reload() {
+  Future<void> _reload() async {
     final tab = _selectedTab;
+    if (_reloading[tab]) return;
     _requestIds[tab]++;
+    final future = tab == 0
+        ? widget.repository.loadFeedPage()
+        : widget.repository.loadFollowingFeedPage();
     setState(() {
       _loadingMore[tab] = false;
-      if (_selectedTab == 0) {
-        _posts = widget.repository.loadFeedPage();
+      _reloading[tab] = true;
+      if (tab == 0) {
+        _posts = future;
       } else if (widget.canInteract) {
-        _followingPosts = widget.repository.loadFollowingFeedPage();
+        _followingPosts = future;
       }
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloading[tab] = false);
+    }
   }
 
   void _selectTab(int index) {
@@ -192,7 +205,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
       body: _selectedTab == 1 && !widget.canInteract
           ? const Center(child: Text('登录后查看关注流，关注的人更新时会出现在这里。'))
           : RefreshIndicator(
-              onRefresh: () async => _reload(),
+              onRefresh: _reload,
               child: FutureBuilder<CommunityPostPage>(
                 future: _selectedTab == 0 ? _posts : _followingPosts,
                 builder: (context, snapshot) {
@@ -208,9 +221,13 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                           const SizedBox(height: 12),
                           FilledButton.tonalIcon(
                             key: const Key('community-feed-retry'),
-                            onPressed: _reload,
+                            onPressed: _reloading[_selectedTab]
+                                ? null
+                                : _reload,
                             icon: const Icon(Icons.refresh),
-                            label: const Text('重试'),
+                            label: Text(
+                              _reloading[_selectedTab] ? '处理中...' : '重试',
+                            ),
                           ),
                         ],
                       ),
