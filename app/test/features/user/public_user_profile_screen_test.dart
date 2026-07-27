@@ -13,6 +13,7 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int profileRequests = 0;
   Completer<void>? profileRetryGate;
   final List<int> requestedFollowerPages = <int>[];
+  Completer<void>? relationshipRetryGate;
   @override
   Future<Map<String, dynamic>> getJson(
     String path, {
@@ -23,6 +24,7 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         failNextFollowers = false;
         throw StateError('relationship network unavailable');
       }
+      await relationshipRetryGate?.future;
       final page = query?['page'] as int? ?? 1;
       requestedFollowerPages.add(page);
       return {
@@ -162,6 +164,34 @@ void main() {
     await tester.tap(find.byKey(const Key('relationships-retry')));
     await tester.pumpAndSettle();
 
+    expect(api.requestedFollowerPages, [1]);
+    expect(find.text('巴黎小陈'), findsOneWidget);
+  });
+
+  testWidgets('relationship list guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = SocialProfileApi()
+      ..failNextFollowers = true
+      ..relationshipRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserRelationshipsScreen(
+          repository: UserRepository(api),
+          userId: 9,
+          followers: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('relationships-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.requestedFollowerPages, isEmpty);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(api.requestedFollowerPages, [1]);
     expect(find.text('巴黎小陈'), findsOneWidget);
   });

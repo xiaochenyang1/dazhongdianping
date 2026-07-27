@@ -260,6 +260,7 @@ class UserRelationshipsScreen extends StatefulWidget {
 class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
   late Future<SocialUserPage> page;
   bool loadingMore = false;
+  bool reloading = false;
 
   @override
   void initState() {
@@ -270,7 +271,8 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
     );
   }
 
-  void reload() {
+  Future<void> reload() async {
+    if (reloading) return;
     final future = widget.repository.loadRelationships(
       widget.userId,
       followers: widget.followers,
@@ -278,7 +280,15 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
     setState(() {
       page = future;
       loadingMore = false;
+      reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => reloading = false);
+    }
   }
 
   Future<void> loadMore(SocialUserPage current) async {
@@ -333,9 +343,9 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
                       const SizedBox(height: 12),
                       FilledButton.tonalIcon(
                         key: const Key('relationships-retry'),
-                        onPressed: reload,
+                        onPressed: reloading ? null : reload,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('重试'),
+                        label: Text(reloading ? '处理中...' : '重试'),
                       ),
                     ],
                   ),
