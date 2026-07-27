@@ -14,6 +14,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $dbNameWasExplicitlySupplied = $PSBoundParameters.ContainsKey("DbName") -and -not [string]::IsNullOrWhiteSpace([string]$PSBoundParameters["DbName"])
+$dbPasswordWasExplicitlySupplied = $PSBoundParameters.ContainsKey("DbPassword")
 $backendPortWasExplicitlySupplied = $PSBoundParameters.ContainsKey("BackendPort") -or -not [string]::IsNullOrWhiteSpace([string]$env:APP_BACKEND_SMOKE_PORT)
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
@@ -28,7 +29,7 @@ if (-not $DbHost) { $DbHost = if ($env:APP_DB_HOST) { $env:APP_DB_HOST } else { 
 if ($DbPort -eq 0) { $DbPort = if ($env:APP_DB_PORT) { [int]$env:APP_DB_PORT } else { 3306 } }
 if (-not $DbName) { $DbName = if ($env:APP_DB_NAME) { $env:APP_DB_NAME } else { "dazhongdianping" } }
 if (-not $DbUsername) { $DbUsername = if ($env:APP_DB_USERNAME) { $env:APP_DB_USERNAME } else { "root" } }
-if ($null -eq $DbPassword) { $DbPassword = if ($env:APP_DB_PASSWORD) { $env:APP_DB_PASSWORD } else { "" } }
+if (-not $dbPasswordWasExplicitlySupplied) { $DbPassword = [string]$env:APP_DB_PASSWORD }
 if ($BackendPort -eq 0) { $BackendPort = if ($env:APP_BACKEND_SMOKE_PORT) { [int]$env:APP_BACKEND_SMOKE_PORT } else { 18080 } }
 
 $baseUrl = "http://127.0.0.1:$BackendPort"
@@ -306,6 +307,9 @@ if ($AllowDestructiveImport -and -not $dbNameWasExplicitlySupplied) {
 
 if ($DryRun) {
     Write-Output "Plan:"
+    $passwordSource = if ($dbPasswordWasExplicitlySupplied) { "explicit -DbPassword" } else { "APP_DB_PASSWORD" }
+    $passwordState = if ($DbPassword.Length -gt 0) { "configured" } else { "empty" }
+    Write-Output "- MySQL password source: $passwordSource ($passwordState)."
     if ($SkipImport) {
         Write-Output "- Skip database import and use the existing $DbName database."
     }

@@ -23,10 +23,21 @@ Assert-True (Test-Path -LiteralPath $readmePath) "README.md must exist"
 Assert-True (Test-Path -LiteralPath $currentStatusPath) "current implementation status document must exist"
 
 $smokeDbName = "dazhongdianping_smoke_contract"
-$dryRunOutput = & $scriptPath -DryRun -DbName $smokeDbName
+$originalDbPassword = $env:APP_DB_PASSWORD
+try {
+    $env:APP_DB_PASSWORD = "contract-password"
+    $dryRunOutput = & $scriptPath -DryRun -DbName $smokeDbName
+    $explicitEmptyPasswordOutput = & $scriptPath -DryRun -DbName $smokeDbName -DbPassword ""
+}
+finally {
+    $env:APP_DB_PASSWORD = $originalDbPassword
+}
 $dryRunText = $dryRunOutput -join "`n"
+$explicitEmptyPasswordText = $explicitEmptyPasswordOutput -join "`n"
 
 Assert-True ($dryRunText -match [regex]::Escape($smokeDbName)) "dry-run output must mention the selected smoke database"
+Assert-True ($dryRunText -match "APP_DB_PASSWORD \(configured\)") "mysql-smoke must read a configured password from APP_DB_PASSWORD when -DbPassword is omitted"
+Assert-True ($explicitEmptyPasswordText -match "explicit -DbPassword \(empty\)") "an explicitly empty -DbPassword must override APP_DB_PASSWORD"
 Assert-True ($dryRunText -match "sql/mysql/01_schema.sql") "dry-run output must mention the schema SQL"
 Assert-True ($dryRunText -match "sql/mysql/02_seed_data.sql") "dry-run output must mention the seed SQL"
 Assert-True ($dryRunText -notmatch "sql/mysql/00_all_in_one.sql") "dry-run output must not use the hard-coded all-in-one SQL"
