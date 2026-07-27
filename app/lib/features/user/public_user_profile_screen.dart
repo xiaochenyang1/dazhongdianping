@@ -24,19 +24,29 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
   late Future<PublicUserProfile> _profile;
   PublicUserProfile? _visibleProfile;
   bool _saving = false;
+  bool _reloadingProfile = false;
   @override
   void initState() {
     super.initState();
     _profile = widget.repository.loadPublicProfile(widget.userId);
   }
 
-  void _reloadProfile() {
+  Future<void> _reloadProfile() async {
+    if (_reloadingProfile) return;
     final future = widget.repository.loadPublicProfile(widget.userId);
     setState(() {
       _profile = future;
       _visibleProfile = null;
       _saving = false;
+      _reloadingProfile = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloadingProfile = false);
+    }
   }
 
   Future<void> _toggle(PublicUserProfile profile) async {
@@ -105,9 +115,9 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('public-profile-retry'),
-                  onPressed: _reloadProfile,
+                  onPressed: _reloadingProfile ? null : _reloadProfile,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重试'),
+                  label: Text(_reloadingProfile ? '处理中...' : '重试'),
                 ),
               ],
             ),

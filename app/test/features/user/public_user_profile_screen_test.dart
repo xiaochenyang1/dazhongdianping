@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/user/public_user_profile_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
@@ -9,6 +11,7 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextProfile = false;
   bool failNextFollowers = false;
   int profileRequests = 0;
+  Completer<void>? profileRetryGate;
   final List<int> requestedFollowerPages = <int>[];
   @override
   Future<Map<String, dynamic>> getJson(
@@ -60,6 +63,7 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       failNextProfile = false;
       throw StateError('profile network unavailable');
     }
+    await profileRetryGate?.future;
     return {
       'id': 9,
       'nickname': '伦敦小王',
@@ -107,6 +111,34 @@ void main() {
     await tester.tap(find.byKey(const Key('public-profile-retry')));
     await tester.pumpAndSettle();
 
+    expect(api.profileRequests, 2);
+    expect(find.text('伦敦小王'), findsOneWidget);
+  });
+
+  testWidgets('public profile guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = SocialProfileApi()
+      ..failNextProfile = true
+      ..profileRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PublicUserProfileScreen(
+          repository: UserRepository(api),
+          userId: 9,
+          canFollow: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('public-profile-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.profileRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(api.profileRequests, 2);
     expect(find.text('伦敦小王'), findsOneWidget);
   });
