@@ -100,6 +100,7 @@ const categoryOptions = computed<CategoryOption[]>(() =>
   }),
 )
 
+const canWrite = computed(() => state.permissions.includes('data:shop:write'))
 const editorTitle = computed(() => (selectedShopId.value ? `编辑门店 #${selectedShopId.value}` : '新建门店'))
 const listCountText = computed(() => {
   if (!pageState.value || pageState.value.list.length === 0) {
@@ -174,7 +175,7 @@ async function loadFormAreas() {
   formAreas.value = await fetchAreas(Number(form.cityId))
 }
 
-async function openCreateForm() {
+async function prepareCreateForm() {
   selectedShopId.value = null
   selectedDetail.value = null
   Object.assign(form, createEmptyShopForm(state.region))
@@ -190,6 +191,11 @@ async function openCreateForm() {
   if (categoryOptions.value.length > 0) {
     form.categoryId = String(categoryOptions.value[0].id)
   }
+}
+
+async function openCreateForm() {
+  if (!canWrite.value) return
+  await prepareCreateForm()
 }
 
 async function applyDetail(detail: AdminShopDetail) {
@@ -253,7 +259,7 @@ async function bootstrapPage() {
   try {
     await loadMeta()
     await loadFilterAreas()
-    await openCreateForm()
+    await prepareCreateForm()
     await loadShops()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '商户管理初始化失败'
@@ -343,6 +349,8 @@ function buildPayload(): AdminShopSavePayload {
 }
 
 async function saveShop() {
+  if (!canWrite.value || saving.value) return
+
   saving.value = true
   errorMessage.value = ''
   successMessage.value = ''
@@ -366,10 +374,12 @@ async function saveShop() {
 }
 
 async function handleDelete(shopId: number) {
+  if (!canWrite.value || removingShopId.value != null) return
+
   const target = pageState.value?.list.find((item) => item.id === shopId)
   const confirmed = window.confirm(`确认删除门店「${target?.name ?? `#${shopId}`}」？`)
 
-  if (!confirmed) {
+  if (!confirmed || !canWrite.value) {
     return
   }
 
@@ -381,7 +391,7 @@ async function handleDelete(shopId: number) {
     await removeShop(shopId)
 
     if (selectedShopId.value === shopId) {
-      await openCreateForm()
+      await prepareCreateForm()
     }
 
     if (pageState.value && pageState.value.list.length === 1 && filters.page > 1) {
@@ -455,7 +465,7 @@ watch(
 
       <div class="header-actions">
         <button type="button" class="secondary-button" @click="loadShops">刷新列表</button>
-        <button type="button" class="primary-button" @click="openCreateForm">新建门店</button>
+        <button v-if="canWrite" type="button" class="primary-button" data-testid="create-shop" @click="openCreateForm">新建门店</button>
       </div>
     </div>
 
@@ -549,10 +559,12 @@ watch(
                   </span>
                 </td>
                 <td class="table-actions">
-                  <button type="button" class="table-action" @click="handleEdit(shop.id)">编辑</button>
+                  <button type="button" class="table-action" :data-testid="`open-shop-${shop.id}`" @click="handleEdit(shop.id)">{{ canWrite ? '编辑' : '查看' }}</button>
                   <button
+                    v-if="canWrite"
                     type="button"
                     class="table-action table-action--danger"
+                    :data-testid="`delete-shop-${shop.id}`"
                     :disabled="removingShopId === shop.id"
                     @click="handleDelete(shop.id)"
                   >
@@ -581,11 +593,12 @@ watch(
             <p class="eyebrow">编辑器</p>
             <h2>{{ editorTitle }}</h2>
           </div>
-          <span class="inline-note">{{ detailLoading ? '详情加载中...' : `区域 ${state.region}` }}</span>
+          <span class="inline-note">{{ detailLoading ? '详情加载中...' : canWrite ? `区域 ${state.region}` : '只读' }}</span>
         </div>
 
-        <form class="editor-form" @submit.prevent="saveShop">
-          <div class="form-grid form-grid--two">
+        <form class="editor-form" data-testid="shop-editor" @submit.prevent="saveShop">
+          <fieldset class="editor-fieldset" data-testid="shop-editor-fields" :disabled="!canWrite">
+            <div class="form-grid form-grid--two">
             <label class="field">
               <span>商户 ID</span>
               <input v-model="form.merchantId" type="number" min="0" placeholder="可为空或填现有商户 ID" />
@@ -623,7 +636,7 @@ watch(
 
             <label class="field">
               <span>门店名称</span>
-              <input v-model="form.name" type="text" placeholder="例如：徐汇测试店" />
+              <input v-model="form.name" name="shop-name" type="text" placeholder="例如：徐汇测试店" />
             </label>
 
             <label class="field">
@@ -662,7 +675,7 @@ watch(
 
             <label class="field field--full">
               <span>地址</span>
-              <input v-model="form.address" type="text" placeholder="请填写完整地址" />
+              <input v-model="form.address" name="shop-address" type="text" placeholder="请填写完整地址" />
             </label>
 
             <label class="field">
@@ -704,22 +717,24 @@ watch(
               <span>摘要</span>
               <textarea
                 v-model="form.summary"
+                name="shop-summary"
                 rows="4"
                 placeholder="写清楚门店亮点，不要满屏废话。"
               />
             </label>
-          </div>
+            </div>
 
-          <div class="toggle-grid">
-            <label class="toggle-card">
-              <input v-model="form.hasDeal" type="checkbox" />
-              <span>当前有优惠 / 团购</span>
-            </label>
-            <label class="toggle-card">
-              <input v-model="form.openNow" type="checkbox" />
-              <span>当前展示为营业中</span>
-            </label>
-          </div>
+            <div class="toggle-grid">
+              <label class="toggle-card">
+                <input v-model="form.hasDeal" type="checkbox" />
+                <span>当前有优惠 / 团购</span>
+              </label>
+              <label class="toggle-card">
+                <input v-model="form.openNow" type="checkbox" />
+                <span>当前展示为营业中</span>
+              </label>
+            </div>
+          </fieldset>
 
           <div class="image-preview">
             <img :src="coverPreviewUrl" :alt="form.name || '门店封面预览'" />
@@ -741,12 +756,13 @@ watch(
             </div>
           </div>
 
-          <div class="form-actions">
+          <div v-if="canWrite" class="form-actions">
             <button type="button" class="ghost-button" @click="openCreateForm">重置表单</button>
-            <button type="submit" class="primary-button" :disabled="saving">
+            <button type="submit" class="primary-button" data-testid="save-shop" :disabled="saving">
               {{ saving ? '保存中...' : selectedShopId ? '保存修改' : '创建门店' }}
             </button>
           </div>
+          <p v-else class="inline-note">当前账号仅可查看门店资料，无维护权限。</p>
 
           <p class="inline-note">
             现成演示商户 ID：`CN` 可用 `1001 / 1002`，`EU` 可用 `2001 / 2002`。
@@ -756,3 +772,12 @@ watch(
     </div>
   </section>
 </template>
+
+<style scoped>
+.editor-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+</style>
