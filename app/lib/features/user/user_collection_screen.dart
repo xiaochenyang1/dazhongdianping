@@ -209,6 +209,7 @@ class _PaginatedCollectionBody extends StatefulWidget {
 class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
   late Future<UserCollectionPage> _page;
   bool _loadingMore = false;
+  bool _retrying = false;
   int _requestId = 0;
 
   @override
@@ -217,13 +218,22 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
     _page = widget.repository.loadCollection(widget.collection);
   }
 
-  void _reload() {
+  Future<void> _reload() async {
+    if (_retrying) return;
     final future = widget.repository.loadCollection(widget.collection);
     _requestId++;
     setState(() {
       _page = future;
       _loadingMore = false;
+      _retrying = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
   }
 
   Future<void> _loadMore(UserCollectionPage current) async {
@@ -282,9 +292,9 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('user-collection-retry'),
-                  onPressed: _reload,
+                  onPressed: _retrying ? null : _reload,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重试'),
+                  label: Text(_retrying ? '处理中...' : '重试'),
                 ),
               ],
             ),

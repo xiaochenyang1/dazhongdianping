@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_collection_screen.dart';
@@ -11,6 +13,7 @@ class CollectionApi implements JsonApi {
   final bool paginatedReviews;
   final bool failFirstReviews;
   int reviewRequests = 0;
+  Completer<void>? reviewRetryGate;
   final List<int> requestedReviewPages = <int>[];
 
   @override
@@ -23,6 +26,7 @@ class CollectionApi implements JsonApi {
       if (failFirstReviews && reviewRequests == 1) {
         throw StateError('network unavailable');
       }
+      if (reviewRequests > 1) await reviewRetryGate?.future;
       final page = query?['page'] as int? ?? 1;
       requestedReviewPages.add(page);
       return {
@@ -286,6 +290,31 @@ void main() {
     await tester.tap(find.byKey(const Key('user-collection-retry')));
     await tester.pumpAndSettle();
 
+    expect(api.reviewRequests, 2);
+    expect(find.text('柏林茶馆'), findsOneWidget);
+  });
+
+  testWidgets('user collection guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = CollectionApi(failFirstReviews: true)..reviewRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserCollectionScreen(
+          repository: UserRepository(api),
+          collection: UserCollection.reviews,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('user-collection-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.reviewRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(api.reviewRequests, 2);
     expect(find.text('柏林茶馆'), findsOneWidget);
   });
