@@ -100,9 +100,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _loadPanel() async {
     final requestId = ++_panelRequestId;
+    final historyRevision = ++_historyRevision;
     setState(() {
       _panelLoading = true;
       _panelError = null;
+      _loadingMoreHistory = false;
     });
     try {
       final hotFuture = widget.repository.loadHotWords(limit: 8);
@@ -112,7 +114,11 @@ class _SearchScreenState extends State<SearchScreen> {
       );
       final hot = await hotFuture;
       final historyPage = await historyFuture;
-      if (!mounted || requestId != _panelRequestId) return;
+      if (!mounted ||
+          requestId != _panelRequestId ||
+          historyRevision != _historyRevision) {
+        return;
+      }
       setState(() {
         _hotWords = hot;
         _historyPage = historyPage;
@@ -121,7 +127,11 @@ class _SearchScreenState extends State<SearchScreen> {
         _panelError = null;
       });
     } catch (error) {
-      if (!mounted || requestId != _panelRequestId) return;
+      if (!mounted ||
+          requestId != _panelRequestId ||
+          historyRevision != _historyRevision) {
+        return;
+      }
       setState(() {
         _panelLoading = false;
         _panelError = '$error';
@@ -144,11 +154,17 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       await future;
       if (!mounted || requestId != _searchRequestId) return;
+      final historyRevision = ++_historyRevision;
+      setState(() => _loadingMoreHistory = false);
       final historyPage = await widget.repository.loadSearchHistoryPage(
         page: 1,
         pageSize: 8,
       );
-      if (!mounted || requestId != _searchRequestId) return;
+      if (!mounted ||
+          requestId != _searchRequestId ||
+          historyRevision != _historyRevision) {
+        return;
+      }
       setState(() {
         _historyPage = historyPage;
         _history = historyPage.items;
@@ -156,6 +172,18 @@ class _SearchScreenState extends State<SearchScreen> {
     } catch (_) {
       // Search failure is already rendered by FutureBuilder; history refresh is best-effort.
     }
+  }
+
+  void _showDiscovery() {
+    _searchRequestId++;
+    setState(() {
+      _results = null;
+      _searchedKeyword = '';
+      _controller.clear();
+      _suggestions = const [];
+      _loadingMore = false;
+    });
+    _loadPanel();
   }
 
   Future<void> _loadMore(ShopSearchPage current) async {
@@ -323,8 +351,17 @@ class _SearchScreenState extends State<SearchScreen> {
                 hintText: 'Restaurant, supermarket, service',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
-                  onPressed: () => _search(_controller.text),
-                  icon: const Icon(Icons.arrow_forward),
+                  key: Key(
+                    _results == null
+                        ? 'search-submit'
+                        : 'search-show-discovery',
+                  ),
+                  onPressed: _results == null
+                      ? () => _search(_controller.text)
+                      : _showDiscovery,
+                  icon: Icon(
+                    _results == null ? Icons.arrow_forward : Icons.close,
+                  ),
                 ),
                 border: const OutlineInputBorder(),
               ),

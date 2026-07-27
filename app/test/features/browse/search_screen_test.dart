@@ -276,6 +276,38 @@ void main() {
     expect(find.byKey(const Key('search-history-load-more')), findsNothing);
   });
 
+  testWidgets('search invalidates an older history page before discovery', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final repository = SearchFakeRepository(
+      hotWords: const [SearchHotWord(term: 'Brunch', score: 12)],
+      paginatedHistory: true,
+    )..historyPageGates[2] = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: SearchScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('search-history-load-more')));
+    await tester.pump();
+    expect(repository.requestedHistoryPages, [1, 2]);
+
+    await tester.enterText(find.byType(TextField), 'tea');
+    await tester.tap(find.byKey(const Key('search-submit')));
+    await tester.pumpAndSettle();
+    expect(find.text('Berlin Tea'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('search-show-discovery')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('noodles'), findsOneWidget);
+    expect(find.text('cafe'), findsNothing);
+    expect(repository.requestedHistoryPages, [1, 2, 1, 1]);
+  });
+
   testWidgets('can remove one history item and clear all history', (
     tester,
   ) async {
