@@ -45,6 +45,7 @@ class DetailFakeRepository extends BrowseRepository {
   final bool failFirstReviews;
   int detailRequests = 0;
   Completer<void>? detailRetryGate;
+  Completer<void>? reviewRetryGate;
   final List<ShopSummary> similar;
   final List<ShopReviewPreview> reviews;
   final List<String> favoriteCalls = <String>[];
@@ -116,6 +117,7 @@ class DetailFakeRepository extends BrowseRepository {
     if (failFirstReviews && reviewRequests.length == 1) {
       throw StateError('review network unavailable');
     }
+    if (reviewRequests.length > 1) await reviewRetryGate?.future;
     return reviews;
   }
 
@@ -216,6 +218,34 @@ void main() {
     expect(repository.reviewRequests, [7, 7]);
     expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
     expect(repository.detailRequests, 1);
+  });
+
+  testWidgets('shop detail guards duplicate review preview retries', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final repository = DetailFakeRepository(failFirstReviews: true)
+      ..reviewRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('shop-review-previews-retry')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    final retry = find.byKey(const Key('shop-review-previews-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(repository.reviewRequests, [7, 7]);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(repository.reviewRequests, [7, 7]);
+    expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
   });
 
   testWidgets('shop detail retries failed similar shops locally', (

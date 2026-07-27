@@ -45,6 +45,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   bool _favoriteSaving = false;
   bool _sharing = false;
   bool _reloadingDetail = false;
+  bool _reloadingReviewPreviews = false;
 
   @override
   void initState() {
@@ -81,11 +82,20 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
     });
   }
 
-  void _reloadReviewPreviews() {
+  Future<void> _reloadReviewPreviews() async {
+    if (_reloadingReviewPreviews) return;
     final future = _loadReviewPreviews();
     setState(() {
       _reviews = future;
+      _reloadingReviewPreviews = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloadingReviewPreviews = false);
+    }
   }
 
   Future<void> _reloadDetail() async {
@@ -384,9 +394,13 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                           const SizedBox(height: 8),
                           FilledButton.tonalIcon(
                             key: const Key('shop-review-previews-retry'),
-                            onPressed: _reloadReviewPreviews,
+                            onPressed: _reloadingReviewPreviews
+                                ? null
+                                : _reloadReviewPreviews,
                             icon: const Icon(Icons.refresh),
-                            label: const Text('重试点评'),
+                            label: Text(
+                              _reloadingReviewPreviews ? '处理中...' : '重试点评',
+                            ),
                           ),
                         ],
                       );
