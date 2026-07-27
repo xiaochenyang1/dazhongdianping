@@ -22,6 +22,8 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   final List<int> requestedPostPages = <int>[];
   Completer<void>? postRetryGate;
   int postCalls = 0;
+  Completer<void>? postDetailGate;
+  int postDetailCalls = 0;
 
   Map<String, dynamic> topic({bool followed = false, int count = 88}) => {
     'id': 31,
@@ -61,7 +63,11 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     String path, {
     Map<String, Object?>? query,
   }) async {
-    if (path == '/api/c/v1/posts/7') return post;
+    if (path == '/api/c/v1/posts/7') {
+      postDetailCalls++;
+      await postDetailGate?.future;
+      return post;
+    }
     if (path == '/api/c/v1/posts/7/comments') {
       return {'list': const [], 'total': 0};
     }
@@ -449,6 +455,36 @@ void main() {
 
     expect(find.text('帖子详情'), findsOneWidget);
     expect(find.text('三家新店实测。'), findsOneWidget);
+  });
+
+  testWidgets('topic detail guards duplicate post navigation', (tester) async {
+    final gate = Completer<void>();
+    final api = TopicScreenApi()..postDetailGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopicDetailScreen(
+          repository: TopicRepository(api),
+          initial: TopicSummary.fromJson(api.topic()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('topic-post-card-7'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.postDetailCalls, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.postDetailCalls, 1);
+    expect(api.postCalls, 1);
   });
 
   testWidgets('failed optimistic follow restores state and count', (
