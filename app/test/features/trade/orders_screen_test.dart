@@ -16,6 +16,8 @@ class OrdersApi implements JsonApi {
   final List<String> paths = <String>[];
   final List<int> requestedPages = <int>[];
   Completer<void>? retryGate;
+  Completer<void>? detailGate;
+  int orderDetailRequests = 0;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -53,6 +55,8 @@ class OrdersApi implements JsonApi {
       };
     }
     if (path == '/api/c/v1/orders/10') {
+      orderDetailRequests++;
+      await detailGate?.future;
       return {
         'id': 10,
         'orderNo': 'OD-10',
@@ -159,5 +163,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('订单详情'), findsOneWidget);
     expect(api.paths, contains('/api/c/v1/orders/10'));
+  });
+
+  testWidgets('orders screen guards duplicate detail navigation', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = OrdersApi()..detailGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: OrdersScreen(repository: TradeRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('order-card-10'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.orderDetailRequests, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.orderDetailRequests, 1);
+    expect(api.orderListRequests, 2);
   });
 }

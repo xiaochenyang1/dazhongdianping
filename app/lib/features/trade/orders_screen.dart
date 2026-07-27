@@ -29,6 +29,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   late Future<TradeOrderPage> _orders;
   bool _loadingMore = false;
   bool _retrying = false;
+  final Set<int> _openingOrderIds = <int>{};
   int _requestId = 0;
 
   @override
@@ -108,6 +109,26 @@ class _OrdersScreenState extends State<OrdersScreen> {
     if (_payStatus == payStatus) return;
     setState(() => _payStatus = payStatus);
     _reload();
+  }
+
+  Future<void> _openOrder(TradeOrder order) async {
+    if (_openingOrderIds.contains(order.id)) return;
+    setState(() => _openingOrderIds.add(order.id));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OrderDetailScreen(
+            repository: widget.repository,
+            orderId: order.id,
+          ),
+        ),
+      );
+      if (mounted) _reload();
+    } finally {
+      if (mounted) {
+        setState(() => _openingOrderIds.remove(order.id));
+      }
+    }
   }
 
   @override
@@ -202,18 +223,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => Navigator.of(context)
-                            .push(
-                              MaterialPageRoute(
-                                builder: (_) => OrderDetailScreen(
-                                  repository: widget.repository,
-                                  orderId: order.id,
-                                ),
-                              ),
-                            )
-                            .then((_) {
-                              if (mounted) _reload();
-                            }),
+                        onTap: _openingOrderIds.contains(order.id)
+                            ? null
+                            : () => _openOrder(order),
                       ),
                     );
                   },
