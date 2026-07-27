@@ -15,6 +15,7 @@ class CenterFakeApi implements JsonApi {
 
   final bool failFirst;
   int profileRequests = 0;
+  Completer<void>? retryGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -25,6 +26,7 @@ class CenterFakeApi implements JsonApi {
     if (failFirst && profileRequests == 1) {
       throw StateError('network unavailable');
     }
+    if (profileRequests > 1) await retryGate?.future;
     return {
       'id': 9,
       'nickname': 'Center User',
@@ -81,6 +83,35 @@ void main() {
     await tester.tap(find.byKey(const Key('user-center-retry')));
     await tester.pumpAndSettle();
 
+    expect(api.profileRequests, 2);
+    expect(find.text('Center User'), findsOneWidget);
+  });
+
+  testWidgets('user center guards duplicate profile retries', (tester) async {
+    final gate = Completer<void>();
+    final api = CenterFakeApi(failFirst: true)..retryGate = gate;
+    final auth = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: UserCenterScreen(
+          repository: UserRepository(api),
+          authController: auth,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('user-center-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.profileRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
     expect(api.profileRequests, 2);
     expect(find.text('Center User'), findsOneWidget);
   });

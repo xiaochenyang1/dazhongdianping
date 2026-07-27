@@ -42,6 +42,7 @@ class UserCenterScreen extends StatefulWidget {
 class _UserCenterScreenState extends State<UserCenterScreen> {
   late Future<UserProfile> _profile;
   bool _loggingOut = false;
+  bool _reloading = false;
 
   @override
   void initState() {
@@ -49,11 +50,20 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
     _profile = widget.repository.loadProfile();
   }
 
-  void _reload() {
+  Future<void> _reload() async {
+    if (_reloading) return;
     final future = widget.repository.loadProfile();
     setState(() {
       _profile = future;
+      _reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloading = false);
+    }
   }
 
   Future<void> _logout() async {
@@ -97,9 +107,9 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('user-center-retry'),
-                    onPressed: _reload,
+                    onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
+                    label: Text(_reloading ? '处理中...' : '重试'),
                   ),
                 ],
               ),
