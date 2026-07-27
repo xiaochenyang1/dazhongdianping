@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -15,6 +17,7 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   bool failNextReport = false;
   int reportRequests = 0;
   int detailRequests = 0;
+  Completer<void>? commentRetryGate;
   final List<int> requestedCommentPages = <int>[];
   final List<Map<String, dynamic>> comments = [
     {
@@ -80,6 +83,7 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
         failNextComments = false;
         throw StateError('comment network unavailable');
       }
+      await commentRetryGate?.future;
       final page = query?['page'] as int? ?? 1;
       requestedCommentPages.add(page);
       final pageComments = !paginateComments
@@ -189,6 +193,38 @@ void main() {
     expect(find.textContaining('评论加载失败'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('review-comments-retry')));
+    await tester.pumpAndSettle();
+    expect(api.requestedCommentPages, [1]);
+    expect(find.text('说得对'), findsOneWidget);
+  });
+
+  testWidgets('public review guards duplicate comment retries', (tester) async {
+    final gate = Completer<void>();
+    final api = DetailFakeApi()
+      ..failNextComments = true
+      ..commentRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('review-comments-retry')),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    final retry = find.byKey(const Key('review-comments-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.requestedCommentPages, isEmpty);
+
+    gate.complete();
     await tester.pumpAndSettle();
     expect(api.requestedCommentPages, [1]);
     expect(find.text('说得对'), findsOneWidget);
