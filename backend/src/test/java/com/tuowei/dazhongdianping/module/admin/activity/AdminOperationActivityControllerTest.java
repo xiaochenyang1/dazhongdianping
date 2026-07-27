@@ -344,7 +344,9 @@ class AdminOperationActivityControllerTest {
         mockMvc.perform(get("/api/admin/v1/menus")
                         .header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[3].children[6].path").value("/operations/activities"));
+                .andExpect(jsonPath("$.data[?(@.code == 'operations')].children"
+                        + "[?(@.code == 'operations.activities')].path")
+                        .value("/operations/activities"));
     }
 
     private org.springframework.test.web.servlet.ResultActions createActivity(String token,
