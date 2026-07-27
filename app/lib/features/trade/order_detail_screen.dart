@@ -9,11 +9,13 @@ class OrderDetailScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.orderId,
+    this.initialOrder,
     this.thirdPartyConfig = const ThirdPartyConfig(),
   });
 
   final TradeRepository repository;
   final int orderId;
+  final TradeOrder? initialOrder;
   final ThirdPartyConfig thirdPartyConfig;
 
   @override
@@ -32,7 +34,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _order = widget.initialOrder;
+    if (_order == null) _load();
   }
 
   @override

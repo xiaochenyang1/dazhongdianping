@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
+import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -49,31 +50,38 @@ class _DealsScreenState extends State<DealsScreen> {
     if (buying) return;
     setState(() => buying = true);
     try {
-      final order = await widget.repository.createOrder(
-        dealId: deal.id,
-        quantity: 1,
-      );
-      final reason = widget.thirdPartyConfig.unavailableReason(
-        ThirdPartyFeature.payment,
-      );
-      if (!mounted) return;
-      if (reason.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$reason 订单 ${order.orderNo} 已创建，可稍后支付。')),
+      late TradeOrder order;
+      try {
+        order = await widget.repository.createOrder(
+          dealId: deal.id,
+          quantity: 1,
         );
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('下单失败：$error')));
+        }
         return;
       }
-      final intent = await widget.repository.createPayment(order.id);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('请使用 ${intent.channel} 完成支付')));
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('下单失败：$error')));
+      if (!mounted) return;
+      try {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OrderDetailScreen(
+              repository: widget.repository,
+              orderId: order.id,
+              initialOrder: order,
+              thirdPartyConfig: widget.thirdPartyConfig,
+            ),
+          ),
+        );
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('订单 ${order.orderNo} 已创建，但打开详情失败：$error')),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => buying = false);
@@ -140,6 +148,7 @@ class _DealsScreenState extends State<DealsScreen> {
                         ),
                       ),
                       FilledButton(
+                        key: Key('deal-action-${deal.id}'),
                         onPressed: buying || deal.stock <= 0
                             ? null
                             : () => buy(deal),
