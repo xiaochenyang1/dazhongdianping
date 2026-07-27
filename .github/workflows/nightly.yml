@@ -32,7 +32,7 @@ jobs:
           --health-timeout=5s
           --health-retries=10
       minio:
-        image: bitnami/minio:2024
+        image: bitnamilegacy/minio@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
         env:
           MINIO_ROOT_USER: minioadmin
           MINIO_ROOT_PASSWORD: minioadmin
