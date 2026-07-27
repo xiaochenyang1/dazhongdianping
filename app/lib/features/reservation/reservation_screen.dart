@@ -21,6 +21,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
   int peopleCount = 2;
   ReservationSlot? selected;
   late Future<List<ReservationSlot>> slots;
+  bool retryingSlots = false;
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final remarkController = TextEditingController();
@@ -40,12 +41,21 @@ class _ReservationScreenState extends State<ReservationScreen> {
     peopleCount: peopleCount,
   );
 
-  void reloadSlots() {
+  Future<void> retrySlots() async {
+    if (retryingSlots) return;
     final future = loadSlots();
     setState(() {
       slots = future;
       selected = null;
+      retryingSlots = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => retryingSlots = false);
+    }
   }
 
   Future<void> createReservation() async {
@@ -136,9 +146,9 @@ class _ReservationScreenState extends State<ReservationScreen> {
                     const SizedBox(height: 8),
                     FilledButton.tonalIcon(
                       key: const Key('reservation-slots-retry'),
-                      onPressed: reloadSlots,
+                      onPressed: retryingSlots ? null : retrySlots,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('重试'),
+                      label: Text(retryingSlots ? '处理中...' : '重试'),
                     ),
                   ],
                 );

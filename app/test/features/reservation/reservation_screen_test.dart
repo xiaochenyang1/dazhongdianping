@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_screen.dart';
@@ -9,6 +11,7 @@ class ReservationScreenApi implements JsonApi {
 
   final bool failFirst;
   int slotRequests = 0;
+  Completer<void>? retryGate;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -19,6 +22,7 @@ class ReservationScreenApi implements JsonApi {
     if (failFirst && slotRequests == 1) {
       throw StateError('network unavailable');
     }
+    if (slotRequests > 1) await retryGate?.future;
     return {
       'date': '2026-07-16',
       'list': [
@@ -59,6 +63,34 @@ void main() {
     expect(find.textContaining('时段加载失败'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('reservation-slots-retry')));
+    await tester.pumpAndSettle();
+    expect(api.slotRequests, 2);
+    expect(find.textContaining('18:00'), findsOneWidget);
+  });
+
+  testWidgets('reservation screen guards duplicate slot retries', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = ReservationScreenApi(failFirst: true)..retryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationScreen(
+          repository: ReservationRepository(api),
+          shopId: 2,
+          initialDate: DateTime(2026, 7, 16),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('reservation-slots-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.slotRequests, 2);
+
+    gate.complete();
     await tester.pumpAndSettle();
     expect(api.slotRequests, 2);
     expect(find.textContaining('18:00'), findsOneWidget);
