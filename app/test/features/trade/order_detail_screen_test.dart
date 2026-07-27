@@ -19,6 +19,7 @@ class OrderDetailApi implements JsonApi {
   final bool failFirstOrder;
   final bool paid;
   int couponRequests = 0;
+  Completer<void>? couponGate;
   String? path;
   Object? body;
   bool failNextRefund = false;
@@ -61,6 +62,7 @@ class OrderDetailApi implements JsonApi {
       if (failFirstCoupon && couponRequests == 1) {
         throw StateError('network unavailable');
       }
+      await couponGate?.future;
       return {
         'id': 21,
         'orderId': 10,
@@ -134,6 +136,31 @@ void main() {
     expect(api.couponRequests, 2);
     expect(find.text('CP-DEMO-2026'), findsOneWidget);
     expect(find.textContaining('由商户核销'), findsOneWidget);
+  });
+
+  testWidgets('coupon detail guards duplicate retries', (tester) async {
+    final gate = Completer<void>();
+    final api = OrderDetailApi(failFirstCoupon: true)..couponGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CouponDetailScreen(
+          repository: TradeRepository(api),
+          code: 'CP-DEMO-2026',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('coupon-detail-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(api.couponRequests, 2);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.couponRequests, 2);
+    expect(find.text('CP-DEMO-2026'), findsOneWidget);
   });
 
   testWidgets('order detail shows honest payment state and cancels order', (

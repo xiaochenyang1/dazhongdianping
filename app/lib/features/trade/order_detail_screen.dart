@@ -338,6 +338,7 @@ class CouponDetailScreen extends StatefulWidget {
 class _CouponDetailScreenState extends State<CouponDetailScreen> {
   late Future<CouponDetail> _detail;
   bool _copyingCode = false;
+  bool _reloading = false;
 
   @override
   void initState() {
@@ -345,11 +346,20 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
     _detail = widget.repository.loadCouponDetail(widget.code);
   }
 
-  void _reload() {
+  Future<void> _reload() async {
+    if (_reloading) return;
     final future = widget.repository.loadCouponDetail(widget.code);
     setState(() {
       _detail = future;
+      _reloading = true;
     });
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    } finally {
+      if (mounted) setState(() => _reloading = false);
+    }
   }
 
   Future<void> _copyCode(String code) async {
@@ -386,9 +396,9 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('coupon-detail-retry'),
-                    onPressed: _reload,
+                    onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
+                    label: Text(_reloading ? '处理中...' : '重试'),
                   ),
                 ],
               ),
@@ -517,9 +527,9 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
                         key: const Key('coupon-detail-fallback-retry'),
-                        onPressed: _reload,
+                        onPressed: _reloading ? null : _reload,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('重新加载完整详情'),
+                        label: Text(_reloading ? '处理中...' : '重新加载完整详情'),
                       ),
                     ],
                   ),
