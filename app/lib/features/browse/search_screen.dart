@@ -39,6 +39,7 @@ class _SearchScreenState extends State<SearchScreen> {
   SearchHistoryPage? _historyPage;
   List<SearchSuggestion> _suggestions = const [];
   bool _panelLoading = false;
+  bool _retryingPanel = false;
   bool _clearingHistory = false;
   bool _loadingMoreHistory = false;
   final Set<int> _removingHistoryIds = <int>{};
@@ -136,6 +137,16 @@ class _SearchScreenState extends State<SearchScreen> {
         _panelLoading = false;
         _panelError = '$error';
       });
+    }
+  }
+
+  Future<void> _retryPanel() async {
+    if (_retryingPanel) return;
+    setState(() => _retryingPanel = true);
+    try {
+      await _loadPanel();
+    } finally {
+      if (mounted) setState(() => _retryingPanel = false);
     }
   }
 
@@ -530,9 +541,9 @@ class _SearchScreenState extends State<SearchScreen> {
               const SizedBox(height: 12),
               FilledButton.tonalIcon(
                 key: const Key('search-panel-retry'),
-                onPressed: _loadPanel,
+                onPressed: _retryingPanel ? null : _retryPanel,
                 icon: const Icon(Icons.refresh),
-                label: const Text('重试'),
+                label: Text(_retryingPanel ? '处理中...' : '重试'),
               ),
             ],
           ),

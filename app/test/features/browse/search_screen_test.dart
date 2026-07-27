@@ -32,6 +32,7 @@ class SearchFakeRepository extends BrowseRepository {
   int clearCalls = 0;
   final List<int> removedHistoryIds = <int>[];
   Completer<void>? clearHistoryGate;
+  Completer<void>? panelRetryGate;
   final Map<int, Completer<void>> removeHistoryGates = {};
   final Map<int, Completer<void>> historyPageGates = {};
 
@@ -87,6 +88,7 @@ class SearchFakeRepository extends BrowseRepository {
     if (failFirstPanel && panelRequests == 1) {
       throw StateError('panel network unavailable');
     }
+    if (panelRequests > 1) await panelRetryGate?.future;
     return hotWords;
   }
 
@@ -160,6 +162,31 @@ void main() {
     expect(find.textContaining('搜索发现加载失败'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('search-panel-retry')));
+    await tester.pumpAndSettle();
+    expect(repository.panelRequests, 2);
+    expect(find.text('Brunch · 12'), findsOneWidget);
+  });
+
+  testWidgets('search discovery guards duplicate panel retries', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final repository = SearchFakeRepository(
+      failFirstPanel: true,
+      hotWords: const [SearchHotWord(term: 'Brunch', score: 12)],
+    )..panelRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: SearchScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = find.byKey(const Key('search-panel-retry'));
+    await tester.tap(retry);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(repository.panelRequests, 2);
+
+    gate.complete();
     await tester.pumpAndSettle();
     expect(repository.panelRequests, 2);
     expect(find.text('Brunch · 12'), findsOneWidget);
