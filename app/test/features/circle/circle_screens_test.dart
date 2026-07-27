@@ -22,6 +22,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool failNextMembers = false;
   final List<int> requestedMemberPages = <int>[];
   Completer<void>? memberRetryGate;
+  int memberCalls = 0;
   Completer<void>? membershipGate;
   int membershipCalls = 0;
   Map<String, dynamic> circle({bool joined = false, int count = 12}) => {
@@ -68,6 +69,7 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       return {'list': const [], 'total': 0};
     }
     if (path.endsWith('/members')) {
+      memberCalls++;
       if (failNextMembers) {
         failNextMembers = false;
         throw StateError('member network unavailable');
@@ -437,6 +439,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.membershipCalls, 1);
     expect(find.text('已加入'), findsOneWidget);
+  });
+
+  testWidgets('circle detail guards duplicate member navigation', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = CircleScreenApi()..memberRetryGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CircleDetailScreen(
+          repository: CircleRepository(api),
+          initial: AppCircle.fromJson(api.circle()),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final members = find.byKey(const Key('circle-members-open'));
+    await tester.tap(members);
+    await tester.tap(members, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.memberCalls, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.memberCalls, 1);
   });
 
   testWidgets('circle post opens the community post detail', (tester) async {

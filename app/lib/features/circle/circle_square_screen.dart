@@ -283,6 +283,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
   bool saving = false;
   bool loadingMorePosts = false;
   bool reloadingPosts = false;
+  bool _openingMembers = false;
   int postsRequestId = 0;
   final Set<int> _openingPostIds = <int>{};
 
@@ -404,6 +405,25 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
     }
   }
 
+  Future<void> _openMembers() async {
+    if (_openingMembers) return;
+    setState(() => _openingMembers = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CircleMembersScreen(
+            repository: widget.repository,
+            circle: circle,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingMembers = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(circle.name)),
@@ -445,14 +465,8 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                   ),
                   const SizedBox(width: 10),
                   IconButton.outlined(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => CircleMembersScreen(
-                          repository: widget.repository,
-                          circle: circle,
-                        ),
-                      ),
-                    ),
+                    key: const Key('circle-members-open'),
+                    onPressed: _openingMembers ? null : _openMembers,
                     icon: const Icon(Icons.group_outlined),
                     tooltip: '查看成员',
                   ),
