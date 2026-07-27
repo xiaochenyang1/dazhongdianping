@@ -240,6 +240,30 @@ void main() {
     expect(find.text('榜单详情'), findsOneWidget);
   });
 
+  testWidgets('rank list guards duplicate detail navigation', (tester) async {
+    final gate = Completer<void>();
+    final api = RankScreenApi()..detailGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(home: RankListScreen(repository: RankRepository(api))),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('rank-card-30001'));
+    await tester.tap(card);
+    await tester.tap(card, warnIfMissed: false);
+    await tester.pump();
+
+    expect(api.detailLoadCount, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(api.detailLoadCount, 1);
+    expect(api.loadCount, 1);
+  });
+
   testWidgets('rank list retries an initial load failure', (tester) async {
     final api = RankScreenApi()..failNextLoad = true;
     await tester.pumpWidget(

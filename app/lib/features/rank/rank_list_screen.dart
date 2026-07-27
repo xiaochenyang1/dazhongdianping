@@ -34,6 +34,7 @@ class RankListScreen extends StatefulWidget {
 class _RankListScreenState extends State<RankListScreen> {
   late Future<List<RankSummary>> _ranks;
   bool _reloading = false;
+  final Set<int> _openingRankIds = <int>{};
 
   @override
   void initState() {
@@ -59,6 +60,31 @@ class _RankListScreenState extends State<RankListScreen> {
       }
     } finally {
       if (mounted) setState(() => _reloading = false);
+    }
+  }
+
+  Future<void> _openRank(RankSummary rank) async {
+    if (_openingRankIds.contains(rank.id)) return;
+    setState(() => _openingRankIds.add(rank.id));
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RankDetailScreen(
+            repository: widget.repository,
+            rankId: rank.id,
+            browseRepository: widget.browseRepository,
+            tradeRepository: widget.tradeRepository,
+            reservationRepository: widget.reservationRepository,
+            reviewRepository: widget.reviewRepository,
+            canInteractReviews: widget.canInteractReviews,
+            thirdPartyConfig: widget.thirdPartyConfig,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingRankIds.remove(rank.id));
+      }
     }
   }
 
@@ -108,6 +134,7 @@ class _RankListScreenState extends State<RankListScreen> {
                   '${item.itemCount} 家门店',
                 ].where((part) => part.isNotEmpty).join(' · ');
                 return Card(
+                  key: Key('rank-card-${item.id}'),
                   child: ListTile(
                     title: Text(item.name),
                     subtitle: Text(
@@ -120,20 +147,9 @@ class _RankListScreenState extends State<RankListScreen> {
                     ),
                     isThreeLine: true,
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => RankDetailScreen(
-                          repository: widget.repository,
-                          rankId: item.id,
-                          browseRepository: widget.browseRepository,
-                          tradeRepository: widget.tradeRepository,
-                          reservationRepository: widget.reservationRepository,
-                          reviewRepository: widget.reviewRepository,
-                          canInteractReviews: widget.canInteractReviews,
-                          thirdPartyConfig: widget.thirdPartyConfig,
-                        ),
-                      ),
-                    ),
+                    onTap: _openingRankIds.contains(item.id)
+                        ? null
+                        : () => _openRank(item),
                   ),
                 );
               },
