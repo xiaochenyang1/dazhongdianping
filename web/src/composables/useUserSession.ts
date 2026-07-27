@@ -12,6 +12,12 @@ const PROFILE_STORAGE_KEY = 'dzdp:user-profile'
 
 type PendingAuthAction = () => void | Promise<void>
 
+export interface UserSessionSnapshot {
+  revision: number
+  accessToken?: string
+  refreshToken?: string
+}
+
 function emptyExpertCertificationStatus(): UserExpertCertificationStatus {
   return {
     id: null,
@@ -98,14 +104,58 @@ const state = reactive<{
   initializing: false,
 } )
 
-function setSession(session: AuthSessionResponse) {
+let sessionRevision = 0
+
+function writeSession(session: AuthSessionResponse, currentUser: AuthCurrentUser) {
   state.accessToken = session.accessToken
   state.refreshToken = session.refreshToken
-  state.currentUser = toCurrentUser(session)
+  state.currentUser = currentUser
 
   localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, session.accessToken)
   localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, session.refreshToken)
-  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.currentUser))
+  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(currentUser))
+}
+
+function setSession(session: AuthSessionResponse) {
+  sessionRevision += 1
+  writeSession(session, toCurrentUser(session))
+}
+
+function snapshotSession(): UserSessionSnapshot {
+  return {
+    revision: sessionRevision,
+    accessToken: state.accessToken,
+    refreshToken: state.refreshToken,
+  }
+}
+
+function matchesSession(snapshot: UserSessionSnapshot) {
+  return (
+    sessionRevision === snapshot.revision &&
+    state.accessToken === snapshot.accessToken &&
+    state.refreshToken === snapshot.refreshToken
+  )
+}
+
+function rotateSessionIfCurrent(snapshot: UserSessionSnapshot, session: AuthSessionResponse) {
+  if (!matchesSession(snapshot)) {
+    return false
+  }
+
+  if (state.currentUser && state.currentUser.id !== session.user.id) {
+    return false
+  }
+
+  const currentUser = state.currentUser
+    ? {
+        ...state.currentUser,
+        nickname: session.user.nickname,
+        avatar: session.user.avatar,
+        preferredRegion: session.user.preferredRegion,
+      }
+    : toCurrentUser(session)
+  writeSession(session, currentUser)
+  return true
 }
 
 function setCurrentUser(currentUser: AuthCurrentUser) {
@@ -114,12 +164,22 @@ function setCurrentUser(currentUser: AuthCurrentUser) {
 }
 
 function clearSession() {
+  sessionRevision += 1
   state.accessToken = undefined
   state.refreshToken = undefined
   state.currentUser = undefined
   localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
   localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
   localStorage.removeItem(PROFILE_STORAGE_KEY)
+}
+
+function clearSessionIfCurrent(snapshot: UserSessionSnapshot) {
+  if (!matchesSession(snapshot)) {
+    return false
+  }
+
+  clearSession()
+  return true
 }
 
 function openAuthDialog(options?: { mode?: AuthMode; redirectTo?: string; afterLogin?: PendingAuthAction }) {
@@ -153,8 +213,11 @@ export function useUserSession() {
   return {
     state,
     setSession,
+    snapshotSession,
+    rotateSessionIfCurrent,
     setCurrentUser,
     clearSession,
+    clearSessionIfCurrent,
     openAuthDialog,
     closeAuthDialog,
     consumePendingAuthAction,

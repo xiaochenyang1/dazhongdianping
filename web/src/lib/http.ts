@@ -1,6 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 import { useAppContext } from '@/composables/useAppContext'
-import { useUserSession } from '@/composables/useUserSession'
+import { useUserSession, type UserSessionSnapshot } from '@/composables/useUserSession'
 import type { AuthSessionResponse } from '@/types/auth'
 
 interface ApiEnvelope<T> {
@@ -37,16 +37,15 @@ function enrichMessage(message: string, traceId?: string) {
   return `${message} [traceId: ${traceId}]`
 }
 
-function buildHeaders() {
+function buildHeaders(accessToken?: string) {
   const { state: appState } = useAppContext()
-  const { state: sessionState } = useUserSession()
   const headers: Record<string, string> = {
     'Accept-Language': 'zh-CN',
     'X-Region': appState.region,
   }
 
-  if (sessionState.accessToken) {
-    headers.Authorization = `Bearer ${sessionState.accessToken}`
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`
   }
 
   return headers
@@ -67,37 +66,105 @@ function idempotencyHeaders() {
   }
 }
 
-async function refreshSession() {
+interface RefreshFlight {
+  revision: number
+  refreshToken: string
+  promise: Promise<boolean>
+}
+
+let refreshFlight: RefreshFlight | undefined
+
+function isSameSnapshot(left: UserSessionSnapshot, right: UserSessionSnapshot) {
+  return (
+    left.revision === right.revision &&
+    left.accessToken === right.accessToken &&
+    left.refreshToken === right.refreshToken
+  )
+}
+
+function refreshSession(snapshot: UserSessionSnapshot) {
   const { state: appState } = useAppContext()
-  const { state: sessionState, setSession, clearSession } = useUserSession()
+  const session = useUserSession()
 
-  if (!sessionState.refreshToken) {
-    clearSession()
-    return false
+  if (!isSameSnapshot(session.snapshotSession(), snapshot)) {
+    return Promise.resolve(false)
   }
 
-  try {
-    const response = await http.post<ApiEnvelope<AuthSessionResponse>>(
-      '/api/c/v1/auth/refresh',
-      { refreshToken: sessionState.refreshToken },
-      {
-        headers: {
-          'Accept-Language': 'zh-CN',
-          'X-Region': appState.region,
+  if (!snapshot.refreshToken) {
+    session.clearSessionIfCurrent(snapshot)
+    return Promise.resolve(false)
+  }
+
+  if (
+    refreshFlight &&
+    refreshFlight.revision === snapshot.revision &&
+    refreshFlight.refreshToken === snapshot.refreshToken
+  ) {
+    return refreshFlight.promise
+  }
+
+  const region = appState.region
+  let promise: Promise<boolean>
+  promise = (async () => {
+    try {
+      const response = await http.post<ApiEnvelope<AuthSessionResponse>>(
+        '/api/c/v1/auth/refresh',
+        { refreshToken: snapshot.refreshToken },
+        {
+          headers: {
+            'Accept-Language': 'zh-CN',
+            'X-Region': region,
+          },
         },
-      },
-    )
+      )
 
-    if (response.data.code !== 0) {
-      throw new Error(response.data.message || '刷新登录态失败')
+      if (response.data.code !== 0) {
+        throw new Error(response.data.message || '刷新登录态失败')
+      }
+
+      return session.rotateSessionIfCurrent(snapshot, response.data.data)
+    } catch {
+      session.clearSessionIfCurrent(snapshot)
+      return false
     }
+  })().finally(() => {
+    if (refreshFlight?.promise === promise) {
+      refreshFlight = undefined
+    }
+  })
 
-    setSession(response.data.data)
-    return true
-  } catch {
-    clearSession()
+  refreshFlight = {
+    revision: snapshot.revision,
+    refreshToken: snapshot.refreshToken,
+    promise,
+  }
+  return promise
+}
+
+async function recoverUnauthorized(snapshot: UserSessionSnapshot) {
+  const session = useUserSession()
+  const current = session.snapshotSession()
+
+  if (current.revision !== snapshot.revision) {
     return false
   }
+
+  if (current.accessToken !== snapshot.accessToken) {
+    return Boolean(current.accessToken)
+  }
+
+  if (current.refreshToken !== snapshot.refreshToken) {
+    return false
+  }
+
+  const refreshed = await refreshSession(snapshot)
+  const afterRefresh = session.snapshotSession()
+  return (
+    refreshed &&
+    afterRefresh.revision === snapshot.revision &&
+    Boolean(afterRefresh.accessToken) &&
+    afterRefresh.accessToken !== snapshot.accessToken
+  )
 }
 
 interface RetryableRequestConfig extends AxiosRequestConfig {
@@ -105,11 +172,14 @@ interface RetryableRequestConfig extends AxiosRequestConfig {
 }
 
 async function request<T>(config: RetryableRequestConfig) {
+  const session = useUserSession()
+  const sentSession = session.snapshotSession()
+
   try {
     const response = await http.request<ApiEnvelope<T>>({
       ...config,
       headers: {
-        ...buildHeaders(),
+        ...buildHeaders(sentSession.accessToken),
         ...(config.headers ?? {}),
       },
     })
@@ -132,14 +202,14 @@ async function request<T>(config: RetryableRequestConfig) {
       const envelope = error.response?.data as Partial<ApiEnvelope<unknown>> | undefined
 
       if (status === 401 && !config._retried && config.url !== '/api/c/v1/auth/refresh') {
-        const refreshed = await refreshSession()
+        const refreshed = await recoverUnauthorized(sentSession)
         if (refreshed) {
           return request<T>({ ...config, _retried: true })
         }
       }
 
       if (status === 401) {
-        useUserSession().clearSession()
+        session.clearSessionIfCurrent(sentSession)
       }
 
       const message = typeof envelope?.message === 'string' ? envelope.message : error.message || '请求失败'
@@ -153,12 +223,15 @@ async function request<T>(config: RetryableRequestConfig) {
 }
 
 async function downloadRequest(config: RetryableRequestConfig): Promise<Blob> {
+  const session = useUserSession()
+  const sentSession = session.snapshotSession()
+
   try {
     const response = await http.request<Blob>({
       ...config,
       responseType: 'blob',
       headers: {
-        ...buildHeaders(),
+        ...buildHeaders(sentSession.accessToken),
         ...(config.headers ?? {}),
       },
     })
@@ -169,14 +242,14 @@ async function downloadRequest(config: RetryableRequestConfig): Promise<Blob> {
       const status = error.response?.status
 
       if (status === 401 && !config._retried) {
-        const refreshed = await refreshSession()
+        const refreshed = await recoverUnauthorized(sentSession)
         if (refreshed) {
           return downloadRequest({ ...config, _retried: true })
         }
       }
 
       if (status === 401) {
-        useUserSession().clearSession()
+        session.clearSessionIfCurrent(sentSession)
       }
 
       throw new Error(error.message || '文件下载失败')
