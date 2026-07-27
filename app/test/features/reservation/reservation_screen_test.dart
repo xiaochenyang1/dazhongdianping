@@ -12,6 +12,8 @@ class ReservationScreenApi implements JsonApi {
   final bool failFirst;
   int slotRequests = 0;
   Completer<void>? retryGate;
+  Completer<void>? createGate;
+  int createRequests = 0;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -38,11 +40,11 @@ class ReservationScreenApi implements JsonApi {
   }
 
   @override
-  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async => {
-    'id': 11,
-    'reservationNo': 'R11',
-    'statusText': '待确认',
-  };
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    createRequests++;
+    await createGate?.future;
+    return {'id': 11, 'reservationNo': 'R11', 'statusText': '待确认'};
+  }
 }
 
 void main() {
@@ -109,5 +111,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('18:00'), findsOneWidget);
     expect(find.textContaining('剩余 4'), findsOneWidget);
+  });
+
+  testWidgets('reservation screen guards duplicate submissions', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final api = ReservationScreenApi()..createGate = gate;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReservationScreen(
+          repository: ReservationRepository(api),
+          shopId: 2,
+          initialDate: DateTime(2026, 7, 16),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('18:00'));
+    final submit = find.byKey(const Key('reservation-submit'));
+    await tester.tap(submit);
+    await tester.tap(submit, warnIfMissed: false);
+    await tester.pump();
+    expect(api.createRequests, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(api.createRequests, 1);
+    expect(find.textContaining('预订 R11 已创建'), findsOneWidget);
   });
 }

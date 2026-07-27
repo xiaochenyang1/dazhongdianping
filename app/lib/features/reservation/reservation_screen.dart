@@ -22,6 +22,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
   ReservationSlot? selected;
   late Future<List<ReservationSlot>> slots;
   bool retryingSlots = false;
+  bool creating = false;
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final remarkController = TextEditingController();
@@ -59,12 +60,14 @@ class _ReservationScreenState extends State<ReservationScreen> {
   }
 
   Future<void> createReservation() async {
+    if (creating) return;
     if (selected == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('请选择时段')));
       return;
     }
+    setState(() => creating = true);
     try {
       final result = await widget.repository.create(
         shopId: widget.shopId,
@@ -89,6 +92,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('预订失败：$error')));
       }
+    } finally {
+      if (mounted) setState(() => creating = false);
     }
   }
 
@@ -198,7 +203,11 @@ class _ReservationScreenState extends State<ReservationScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          FilledButton(onPressed: createReservation, child: const Text('提交预订')),
+          FilledButton(
+            key: const Key('reservation-submit'),
+            onPressed: creating ? null : createReservation,
+            child: Text(creating ? '提交中...' : '提交预订'),
+          ),
         ],
       ),
     );
