@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -129,7 +130,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
   Future<void> _pickImage() async {
     if (_uploading) return;
     if (_images.length >= 9) {
-      _showMessage('最多上传 9 张图片');
+      _showMessage(AppLocalizations.of(context).maxNineImages);
       return;
     }
     setState(() => _uploading = true);
@@ -139,7 +140,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
         image = await (widget.imagePicker ?? const SystemReviewImagePicker())
             .pickImage();
       } catch (error) {
-        if (mounted) _showMessage('图片选择失败：$error');
+        if (mounted) _showMessage(AppLocalizations.of(context).imagePickFailed(error));
         return;
       }
       if (image == null || !mounted) return;
@@ -151,7 +152,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
           () => _images.add(_ReviewImageItem(url: url, bytes: imageBytes)),
         );
       } catch (error) {
-        if (mounted) _showMessage('图片上传失败：$error');
+        if (mounted) _showMessage(AppLocalizations.of(context).imageUploadFailed(error));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -185,10 +186,10 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
           ? await widget.repository.updateReview(widget.reviewId!, input)
           : await widget.repository.createReview(input);
       if (!mounted) return;
-      _showMessage(_isEditing ? '点评已更新并重新进入审核' : '点评已提交，等待审核');
+      _showMessage(_isEditing ? AppLocalizations.of(context).reviewUpdatedResubmitted : AppLocalizations.of(context).reviewSubmittedPending);
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(result);
     } catch (error) {
-      if (mounted) _showMessage('保存失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).saveFailed(error));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -207,7 +208,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? '编辑点评' : '写点评')),
+      appBar: AppBar(title: Text(_isEditing ? AppLocalizations.of(context).editReview : AppLocalizations.of(context).writeReview)),
       body: _buildBody(context),
     );
   }
@@ -220,7 +221,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
           key: const Key('review-editor-retry'),
           onPressed: _loadReview,
           icon: const Icon(Icons.refresh),
-          label: const Text('点评加载失败，点击重试'),
+          label: Text(AppLocalizations.of(context).reviewLoadFailedTapRetry),
         ),
       );
     }
@@ -236,27 +237,27 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
           ],
           const SizedBox(height: 16),
           _SectionCard(
-            title: '这次体验，值几颗星？',
-            subtitle: '拖动评分，别客气，也别冤枉人。',
+            title: AppLocalizations.of(context).ratingPrompt,
+            subtitle: AppLocalizations.of(context).ratingHint,
             child: Column(
               children: [
                 _ScoreRow(
-                  label: '总体',
+                  label: AppLocalizations.of(context).scoreOverall,
                   value: _scoreOverall,
                   onChanged: (value) => setState(() => _scoreOverall = value),
                 ),
                 _ScoreRow(
-                  label: '口味',
+                  label: AppLocalizations.of(context).scoreTaste,
                   value: _scoreTaste,
                   onChanged: (value) => setState(() => _scoreTaste = value),
                 ),
                 _ScoreRow(
-                  label: '环境',
+                  label: AppLocalizations.of(context).scoreEnv,
                   value: _scoreEnv,
                   onChanged: (value) => setState(() => _scoreEnv = value),
                 ),
                 _ScoreRow(
-                  label: '服务',
+                  label: AppLocalizations.of(context).scoreService,
                   value: _scoreService,
                   onChanged: (value) => setState(() => _scoreService = value),
                 ),
@@ -265,8 +266,8 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
           ),
           const SizedBox(height: 14),
           _SectionCard(
-            title: '说点有用的',
-            subtitle: '味道、服务、排队和避坑信息，都比“还不错”值钱。',
+            title: AppLocalizations.of(context).saySomethingUseful,
+            subtitle: AppLocalizations.of(context).reviewWritingHint,
             child: TextFormField(
               key: const Key('review-content'),
               controller: _contentController,
@@ -274,20 +275,20 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
               maxLines: 9,
               maxLength: 500,
               textInputAction: TextInputAction.newline,
-              decoration: const InputDecoration(
-                hintText: '写下你的真实体验……',
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context).reviewContentHint,
                 filled: true,
                 border: OutlineInputBorder(borderSide: BorderSide.none),
               ),
               validator: (value) =>
-                  value == null || value.trim().isEmpty ? '请写下真实体验' : null,
+                  value == null || value.trim().isEmpty ? AppLocalizations.of(context).pleaseWriteRealExperience : null,
             ),
           ),
           const SizedBox(height: 14),
           _SectionCard(
-            title: '现场照片',
-            subtitle: '最多 9 张，选择后会立即上传。',
-            trailing: Text('已上传 ${_images.length}/9'),
+            title: AppLocalizations.of(context).onSitePhotos,
+            subtitle: AppLocalizations.of(context).photosUploadHint,
+            trailing: Text(AppLocalizations.of(context).uploadedCount(_images.length)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -316,15 +317,15 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.add_photo_alternate_outlined),
-                  label: Text(_uploading ? '上传中…' : '添加图片'),
+                  label: Text(_uploading ? AppLocalizations.of(context).uploading : AppLocalizations.of(context).addImages),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 14),
           _SectionCard(
-            title: '消费与标签',
-            subtitle: '金额用于人均参考；多个标签请用逗号分隔。',
+            title: AppLocalizations.of(context).spendAndTags,
+            subtitle: AppLocalizations.of(context).spendTagsHint,
             child: Column(
               children: [
                 TextFormField(
@@ -334,21 +335,21 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
                     decimal: true,
                   ),
                   decoration: InputDecoration(
-                    labelText: '本次消费',
+                    labelText: AppLocalizations.of(context).spendAmount,
                     suffixText: _currency.isEmpty ? 'CNY' : _currency,
                   ),
                   validator: (value) {
                     final amount = double.tryParse(value?.trim() ?? '');
-                    return amount == null || amount < 0 ? '请输入不小于 0 的金额' : null;
+                    return amount == null || amount < 0 ? AppLocalizations.of(context).enterNonNegativeAmount : null;
                   },
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   key: const Key('review-tags'),
                   controller: _tagsController,
-                  decoration: const InputDecoration(
-                    labelText: '标签（最多 10 个）',
-                    hintText: '中文服务，适合聚会，性价比高',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).tagsLabel,
+                    hintText: AppLocalizations.of(context).tagsHint,
                   ),
                 ),
               ],
@@ -366,7 +367,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
                 : const Icon(Icons.rate_review_outlined),
             label: Padding(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              child: Text(_isEditing ? '保存并重新提交审核' : '发布点评'),
+              child: Text(_isEditing ? AppLocalizations.of(context).saveAndResubmit : AppLocalizations.of(context).publishReview),
             ),
           ),
         ],
@@ -408,7 +409,7 @@ class _ShopHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('正在点评', style: TextStyle(fontSize: 12)),
+                Text(AppLocalizations.of(context).reviewingShop, style: const TextStyle(fontSize: 12)),
                 Text(
                   shopName,
                   style: const TextStyle(

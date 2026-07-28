@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class DetailFakeApi implements JsonApi, JsonDeleteApi {
@@ -173,13 +175,31 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('public review detail retries an initial comment failure', (
     tester,
   ) async {
     final api = DetailFakeApi()..failNextComments = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -206,7 +226,7 @@ void main() {
       ..failNextComments = true
       ..commentRetryGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -237,7 +257,7 @@ void main() {
   ) async {
     final api = DetailFakeApi()..failNextDetail = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -261,7 +281,7 @@ void main() {
       ..failNextDetail = true
       ..detailRetryGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -285,7 +305,7 @@ void main() {
   testWidgets('public review detail loads later comment pages', (tester) async {
     final api = DetailFakeApi()..paginateComments = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -313,7 +333,7 @@ void main() {
   ) async {
     final api = DetailFakeApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -369,7 +389,7 @@ void main() {
   testWidgets('guest public review detail is read-only', (tester) async {
     final api = DetailFakeApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -387,7 +407,7 @@ void main() {
   testWidgets('public review guards duplicate report dialogs', (tester) async {
     final api = DetailFakeApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -420,7 +440,7 @@ void main() {
   ) async {
     final api = DetailFakeApi()..failNextReport = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -468,7 +488,7 @@ void main() {
   ) async {
     final api = DetailFakeApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -488,7 +508,7 @@ void main() {
   testWidgets('owned review detail can delete the review', (tester) async {
     final api = DetailFakeApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,
@@ -511,7 +531,7 @@ void main() {
   testWidgets('owned review guards duplicate delete dialogs', (tester) async {
     final api = DetailFakeApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReviewDetailScreen(
           repository: ReviewRepository(api),
           reviewId: 12,

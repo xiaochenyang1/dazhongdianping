@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter/material.dart';
@@ -131,12 +132,12 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(result.liked ? '已点赞' : '已取消点赞')));
+      ).showSnackBar(SnackBar(content: Text(result.liked ? AppLocalizations.of(context).liked : AppLocalizations.of(context).unliked)));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('点赞失败：$error')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).likeFailed(error))));
     } finally {
       if (mounted) setState(() => _likeSaving = false);
     }
@@ -163,12 +164,12 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('评论已发布')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).commentPublished)));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('评论失败：$error')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).commentFailed(error))));
     } finally {
       if (mounted) setState(() => _commentSaving = false);
     }
@@ -203,7 +204,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       if (mounted && requestId == _commentRequestId) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多评论失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreCommentsFailed(error))));
       }
     } finally {
       if (mounted && requestId == _commentRequestId) {
@@ -220,24 +221,24 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       reason = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('举报点评'),
+          title: Text(AppLocalizations.of(context).reportReview),
           content: TextField(
             key: const Key('review-report-reason'),
             controller: _reportController,
             maxLength: 200,
             maxLines: 4,
-            decoration: const InputDecoration(labelText: '举报理由'),
+            decoration: InputDecoration(labelText: AppLocalizations.of(context).reportReason),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('取消'),
+              child: Text(AppLocalizations.of(context).cancelAction),
             ),
             FilledButton(
               onPressed: () => Navigator.of(
                 dialogContext,
               ).pop(_reportController.text.trim()),
-              child: const Text('提交举报'),
+              child: Text(AppLocalizations.of(context).submitReport),
             ),
           ],
         ),
@@ -253,12 +254,12 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       _reportController.clear();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('举报已提交')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reportSubmitted)));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('举报失败：$error')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reportFailed(error))));
     } finally {
       if (mounted) setState(() => _reportSaving = false);
     }
@@ -290,17 +291,17 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('删除点评'),
-          content: const Text('删除后不可恢复，确认删除这条点评吗？'),
+          title: Text(AppLocalizations.of(context).deleteReview),
+          content: Text(AppLocalizations.of(context).deleteReviewConfirm),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('取消'),
+              child: Text(AppLocalizations.of(context).cancelAction),
             ),
             FilledButton(
               key: const Key('review-delete-confirm'),
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('确认删除'),
+              child: Text(AppLocalizations.of(context).confirmDelete),
             ),
           ],
         ),
@@ -315,13 +316,13 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('点评已删除')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reviewDeleted)));
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('删除失败：$error')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteFailed(error))));
     } finally {
       if (mounted) setState(() => _deleteSaving = false);
     }
@@ -345,7 +346,10 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
-                    '回复 ${comment.replyTo!.userName}：${comment.replyTo!.content}',
+                    AppLocalizations.of(context).replyToPreview(
+                      name: comment.replyTo!.userName,
+                      content: comment.replyTo!.content,
+                    ),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -360,7 +364,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                     TextButton(
                       key: Key('review-comment-reply-${comment.id}'),
                       onPressed: () => setState(() => _replyTarget = comment),
-                      child: const Text('回复'),
+                      child: Text(AppLocalizations.of(context).reply),
                     ),
                 ],
               ),
@@ -383,7 +387,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.owned ? '我的点评详情' : '点评详情'),
+      title: Text(widget.owned ? AppLocalizations.of(context).myReviewDetail : AppLocalizations.of(context).reviewDetail),
       actions: [
         if (widget.owned) ...[
           TextButton(
@@ -391,14 +395,14 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                 _visibleReview == null || _deleteSaving || _deleteDialogOpen
                 ? null
                 : () => _openEditor(_visibleReview!),
-            child: const Text('编辑'),
+            child: Text(AppLocalizations.of(context).edit),
           ),
           TextButton(
             key: const Key('review-delete-button'),
             onPressed: _deleteSaving || _deleteDialogOpen
                 ? null
                 : _deleteOwnedReview,
-            child: Text(_deleteSaving ? '删除中...' : '删除'),
+            child: Text(_deleteSaving ? AppLocalizations.of(context).deleting : AppLocalizations.of(context).delete),
           ),
         ],
       ],
@@ -414,13 +418,13 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('点评详情加载失败：${snapshot.error}'),
+                Text(AppLocalizations.of(context).reviewDetailLoadFailed(snapshot.error!)),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('review-detail-retry'),
                   onPressed: _reloadingReview ? null : _reloadReview,
                   icon: const Icon(Icons.refresh),
-                  label: Text(_reloadingReview ? '处理中...' : '重试'),
+                  label: Text(_reloadingReview ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
                 ),
               ],
             ),
@@ -462,7 +466,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                 color: const Color(0xFFFFF7ED),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Text('审核备注：${review.auditRemark}'),
+                  child: Text(AppLocalizations.of(context).auditRemarkLabel(review.auditRemark)),
                 ),
               ),
             ],
@@ -508,14 +512,17 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Text('商家回复：${review.merchantReply}'),
+                  child: Text(
+                    AppLocalizations.of(context).merchantReplyLabel(
+                      review.merchantReply!,
+                    ),
+                  ),
                 ),
               ),
             ],
             const SizedBox(height: 12),
             Text(
-              '点赞 ${review.likeCount} · 评论 ${review.commentCount}'
-              '${review.createdAt.isEmpty ? '' : ' · ${review.createdAt}'}',
+              '${AppLocalizations.of(context).likeCommentStats(likes: review.likeCount, comments: review.commentCount)}${review.createdAt.isEmpty ? '' : ' · ${review.createdAt}'}',
             ),
             if (showInteraction) ...[
               const SizedBox(height: 16),
@@ -530,7 +537,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                             ? Icons.favorite
                             : Icons.favorite_border,
                       ),
-                      label: Text(review.likedByCurrentUser ? '已点赞' : '点赞'),
+                      label: Text(review.likedByCurrentUser ? AppLocalizations.of(context).liked : AppLocalizations.of(context).like),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -541,7 +548,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                           ? null
                           : _reportReview,
                       icon: const Icon(Icons.flag_outlined),
-                      label: const Text('举报'),
+                      label: Text(AppLocalizations.of(context).report),
                     ),
                   ),
                 ],
@@ -549,20 +556,22 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
             ] else if (!widget.owned &&
                 !widget.canInteract &&
                 review.canInteract)
-              const Padding(
-                padding: EdgeInsets.only(top: 16),
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
                 child: Card(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text('登录后可点赞、评论和举报这条点评。'),
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      AppLocalizations.of(context).reviewLoginToInteract,
+                    ),
                   ),
                 ),
               ),
             if (showComments) ...[
               const SizedBox(height: 24),
-              const Text(
-                '评论',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              Text(
+                AppLocalizations.of(context).commentsSection,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               if (showInteraction) ...[
@@ -573,13 +582,13 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            '回复 ${_replyTarget!.userName}',
+                            AppLocalizations.of(context).replyingTo(_replyTarget!.userName),
                             key: const Key('review-reply-target'),
                           ),
                         ),
                         TextButton(
                           onPressed: () => setState(() => _replyTarget = null),
-                          child: const Text('取消'),
+                          child: Text(AppLocalizations.of(context).cancelAction),
                         ),
                       ],
                     ),
@@ -589,8 +598,8 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                   controller: _commentController,
                   maxLength: 300,
                   maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: '写评论',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).writeComment,
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -602,7 +611,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                     onPressed: _commentSaving
                         ? null
                         : () => _submitComment(review),
-                    child: Text(_commentSaving ? '发布中...' : '发布评论'),
+                    child: Text(_commentSaving ? AppLocalizations.of(context).publishing : AppLocalizations.of(context).publishComment),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -621,7 +630,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('评论加载失败：${commentSnapshot.error}'),
+                        Text(AppLocalizations.of(context).commentsLoadFailed(commentSnapshot.error!)),
                         const SizedBox(height: 8),
                         FilledButton.tonalIcon(
                           key: const Key('review-comments-retry'),
@@ -629,7 +638,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                               ? null
                               : _reloadComments,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_reloadingComments ? '处理中...' : '重试评论'),
+                          label: Text(_reloadingComments ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retryComments),
                         ),
                       ],
                     );
@@ -637,7 +646,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                   final page = commentSnapshot.data!;
                   final comments = page.items;
                   if (comments.isEmpty) {
-                    return const Text('暂无评论');
+                    return Text(AppLocalizations.of(context).noComments);
                   }
                   return Column(
                     children: [
@@ -657,7 +666,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                                 )
                               : const Icon(Icons.expand_more),
                           label: Text(
-                            _loadingMoreComments ? '加载中...' : '加载更多评论',
+                            _loadingMoreComments
+                                ? AppLocalizations.of(context).loading
+                                : AppLocalizations.of(context).loadMoreComments,
                           ),
                         ),
                     ],

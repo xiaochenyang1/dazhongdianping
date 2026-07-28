@@ -293,6 +293,77 @@ class AppLocalizations {
     'rescheduleSlotMeta': '{start} · {mode} · 余 {count}',
     'changeTimeline': '变更时间线',
     'noChangeRecords': '暂无变更记录',
+    'liked': '已点赞',
+    'like': '点赞',
+    'unliked': '已取消点赞',
+    'likeFailed': '点赞失败：{error}',
+    'commentPublished': '评论已发布',
+    'commentFailed': '评论失败：{error}',
+    'loadMoreCommentsFailed': '加载更多评论失败：{error}',
+    'reportReview': '举报点评',
+    'reportReason': '举报理由',
+    'submitReport': '提交举报',
+    'reportFailed': '举报失败：{error}',
+    'deleteReview': '删除点评',
+    'deleteReviewConfirm': '删除后不可恢复，确认删除这条点评吗？',
+    'confirmDelete': '确认删除',
+    'reviewDeleted': '点评已删除',
+    'deleteFailed': '删除失败：{error}',
+    'reply': '回复',
+    'myReviewDetail': '我的点评详情',
+    'reviewDetail': '点评详情',
+    'edit': '编辑',
+    'deleting': '删除中...',
+    'delete': '删除',
+    'reviewDetailLoadFailed': '点评详情加载失败：{error}',
+    'auditRemarkLabel': '审核备注：{remark}',
+    'merchantReplyLabel': '商家回复：{reply}',
+    'report': '举报',
+    'reviewLoginToInteract': '登录后可点赞、评论和举报这条点评。',
+    'commentsSection': '评论',
+    'replyingTo': '回复 @{name}',
+    'writeComment': '写评论',
+    'publishing': '发布中...',
+    'publishComment': '发布评论',
+    'commentsLoadFailed': '评论加载失败：{error}',
+    'retryComments': '重试评论',
+    'noComments': '暂无评论',
+    'writeReview': '写点评',
+    'editReview': '编辑点评',
+    'reviewLoadFailedTapRetry': '点评加载失败，点击重试',
+    'reviewContentHint': '写下你的真实体验……',
+    'uploadedCount': '已上传 {count}/9',
+    'uploading': '上传中…',
+    'addImages': '添加图片',
+    'spendAmount': '本次消费',
+    'tagsLabel': '标签（最多 10 个）',
+    'tagsHint': '中文服务，适合聚会，性价比高',
+    'saveAndResubmit': '保存并重新提交审核',
+    'publishReview': '发布点评',
+    'reviewingShop': '正在点评',
+    'scoreOverall': '总体',
+    'scoreTaste': '口味',
+    'scoreEnv': '环境',
+    'scoreService': '服务',
+    'replyToPreview': '回复 {name}：{content}',
+    'likeCommentStats': '点赞 {likes} · 评论 {comments}',
+    'loadMoreComments': '加载更多评论',
+    'maxNineImages': '最多上传 9 张图片',
+    'imagePickFailed': '图片选择失败：{error}',
+    'imageUploadFailed': '图片上传失败：{error}',
+    'reviewUpdatedResubmitted': '点评已更新并重新进入审核',
+    'reviewSubmittedPending': '点评已提交，等待审核',
+    'saveFailed': '保存失败：{error}',
+    'ratingPrompt': '这次体验，值几颗星？',
+    'ratingHint': '拖动评分，别客气，也别冤枉人。',
+    'saySomethingUseful': '说点有用的',
+    'reviewWritingHint': '味道、服务、排队和避坑信息，都比“还不错”值钱。',
+    'pleaseWriteRealExperience': '请写下真实体验',
+    'onSitePhotos': '现场照片',
+    'photosUploadHint': '最多 9 张，选择后会立即上传。',
+    'spendAndTags': '消费与标签',
+    'spendTagsHint': '金额用于人均参考；多个标签请用逗号分隔。',
+    'enterNonNegativeAmount': '请输入不小于 0 的金额',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -573,6 +644,77 @@ class AppLocalizations {
     'rescheduleSlotMeta': '{start} · {mode} · 餘 {count}',
     'changeTimeline': '變更時間線',
     'noChangeRecords': '暫無變更記錄',
+    'liked': '已按讚',
+    'like': '按讚',
+    'unliked': '已取消按讚',
+    'likeFailed': '按讚失敗：{error}',
+    'commentPublished': '評論已發布',
+    'commentFailed': '評論失敗：{error}',
+    'loadMoreCommentsFailed': '載入更多評論失敗：{error}',
+    'reportReview': '檢舉評論',
+    'reportReason': '檢舉理由',
+    'submitReport': '提交檢舉',
+    'reportFailed': '檢舉失敗：{error}',
+    'deleteReview': '刪除評論',
+    'deleteReviewConfirm': '刪除後不可恢復，確認刪除這則評論嗎？',
+    'confirmDelete': '確認刪除',
+    'reviewDeleted': '評論已刪除',
+    'deleteFailed': '刪除失敗：{error}',
+    'reply': '回覆',
+    'myReviewDetail': '我的評論詳情',
+    'reviewDetail': '評論詳情',
+    'edit': '編輯',
+    'deleting': '刪除中...',
+    'delete': '刪除',
+    'reviewDetailLoadFailed': '評論詳情載入失敗：{error}',
+    'auditRemarkLabel': '審核備註：{remark}',
+    'merchantReplyLabel': '商家回覆：{reply}',
+    'report': '檢舉',
+    'reviewLoginToInteract': '登入後可按讚、評論和檢舉這則評論。',
+    'commentsSection': '評論',
+    'replyingTo': '回覆 @{name}',
+    'writeComment': '寫評論',
+    'publishing': '發布中...',
+    'publishComment': '發布評論',
+    'commentsLoadFailed': '評論載入失敗：{error}',
+    'retryComments': '重試評論',
+    'noComments': '暫無評論',
+    'writeReview': '寫評論',
+    'editReview': '編輯評論',
+    'reviewLoadFailedTapRetry': '評論載入失敗，點擊重試',
+    'reviewContentHint': '寫下你的真實體驗……',
+    'uploadedCount': '已上傳 {count}/9',
+    'uploading': '上傳中…',
+    'addImages': '新增圖片',
+    'spendAmount': '本次消費',
+    'tagsLabel': '標籤（最多 10 個）',
+    'tagsHint': '中文服務，適合聚會，性價比高',
+    'saveAndResubmit': '儲存並重新提交審核',
+    'publishReview': '發布評論',
+    'reviewingShop': '正在評論',
+    'scoreOverall': '總體',
+    'scoreTaste': '口味',
+    'scoreEnv': '環境',
+    'scoreService': '服務',
+    'replyToPreview': '回覆 {name}：{content}',
+    'likeCommentStats': '按讚 {likes} · 評論 {comments}',
+    'loadMoreComments': '載入更多評論',
+    'maxNineImages': '最多上傳 9 張圖片',
+    'imagePickFailed': '圖片選擇失敗：{error}',
+    'imageUploadFailed': '圖片上傳失敗：{error}',
+    'reviewUpdatedResubmitted': '評論已更新並重新進入審核',
+    'reviewSubmittedPending': '評論已提交，等待審核',
+    'saveFailed': '儲存失敗：{error}',
+    'ratingPrompt': '這次體驗，值幾顆星？',
+    'ratingHint': '拖動評分，別客氣，也別冤枉人。',
+    'saySomethingUseful': '說點有用的',
+    'reviewWritingHint': '味道、服務、排隊和避雷資訊，都比「還不錯」值錢。',
+    'pleaseWriteRealExperience': '請寫下真實體驗',
+    'onSitePhotos': '現場照片',
+    'photosUploadHint': '最多 9 張，選擇後會立即上傳。',
+    'spendAndTags': '消費與標籤',
+    'spendTagsHint': '金額用於人均參考；多個標籤請用逗號分隔。',
+    'enterNonNegativeAmount': '請輸入不小於 0 的金額',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -863,6 +1005,78 @@ class AppLocalizations {
     'rescheduleSlotMeta': '{start} · {mode} · {count} left',
     'changeTimeline': 'Change timeline',
     'noChangeRecords': 'No change records yet',
+    'liked': 'Liked',
+    'like': 'Like',
+    'unliked': 'Like removed',
+    'likeFailed': 'Could not like: {error}',
+    'commentPublished': 'Comment published',
+    'commentFailed': 'Could not comment: {error}',
+    'loadMoreCommentsFailed': 'Could not load more comments: {error}',
+    'reportReview': 'Report review',
+    'reportReason': 'Report reason',
+    'submitReport': 'Submit report',
+    'reportFailed': 'Could not report: {error}',
+    'deleteReview': 'Delete review',
+    'deleteReviewConfirm': 'This cannot be undone. Delete this review?',
+    'confirmDelete': 'Delete',
+    'reviewDeleted': 'Review deleted',
+    'deleteFailed': 'Could not delete: {error}',
+    'reply': 'Reply',
+    'myReviewDetail': 'My review details',
+    'reviewDetail': 'Review details',
+    'edit': 'Edit',
+    'deleting': 'Deleting...',
+    'delete': 'Delete',
+    'reviewDetailLoadFailed': 'Could not load review details: {error}',
+    'auditRemarkLabel': 'Audit note: {remark}',
+    'merchantReplyLabel': 'Merchant reply: {reply}',
+    'report': 'Report',
+    'reviewLoginToInteract': 'Sign in to like, comment, or report this review.',
+    'commentsSection': 'Comments',
+    'replyingTo': 'Replying to @{name}',
+    'writeComment': 'Write a comment',
+    'publishing': 'Publishing...',
+    'publishComment': 'Post comment',
+    'commentsLoadFailed': 'Could not load comments: {error}',
+    'retryComments': 'Retry comments',
+    'noComments': 'No comments yet',
+    'writeReview': 'Write a review',
+    'editReview': 'Edit review',
+    'reviewLoadFailedTapRetry': 'Could not load review. Tap to retry',
+    'reviewContentHint': 'Share your real experience…',
+    'uploadedCount': 'Uploaded {count}/9',
+    'uploading': 'Uploading…',
+    'addImages': 'Add photos',
+    'spendAmount': 'Spend amount',
+    'tagsLabel': 'Tags (up to 10)',
+    'tagsHint': 'Chinese service, good for groups, great value',
+    'saveAndResubmit': 'Save and resubmit for review',
+    'publishReview': 'Publish review',
+    'reviewingShop': 'Reviewing',
+    'scoreOverall': 'Overall',
+    'scoreTaste': 'Taste',
+    'scoreEnv': 'Environment',
+    'scoreService': 'Service',
+    'replyToPreview': 'Reply to {name}: {content}',
+    'likeCommentStats': '{likes} likes · {comments} comments',
+    'loadMoreComments': 'Load more comments',
+    'maxNineImages': 'Up to 9 photos',
+    'imagePickFailed': 'Could not pick image: {error}',
+    'imageUploadFailed': 'Could not upload image: {error}',
+    'reviewUpdatedResubmitted': 'Review updated and resubmitted for audit',
+    'reviewSubmittedPending': 'Review submitted and pending audit',
+    'saveFailed': 'Could not save: {error}',
+    'ratingPrompt': 'How many stars for this visit?',
+    'ratingHint': 'Drag to rate — be fair, not harsh.',
+    'saySomethingUseful': 'Say something useful',
+    'reviewWritingHint':
+        'Taste, service, queues and tips beat a vague “pretty good”.',
+    'pleaseWriteRealExperience': 'Please write a real experience',
+    'onSitePhotos': 'Photos from the visit',
+    'photosUploadHint': 'Up to 9 photos. Upload starts after you pick them.',
+    'spendAndTags': 'Spend and tags',
+    'spendTagsHint': 'Amount helps average spend. Separate tags with commas.',
+    'enterNonNegativeAmount': 'Enter an amount of 0 or more',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -1311,6 +1525,93 @@ class AppLocalizations {
       .replaceFirst('{count}', '$count');
   String get changeTimeline => _text('changeTimeline');
   String get noChangeRecords => _text('noChangeRecords');
+
+  String get liked => _text('liked');
+  String get like => _text('like');
+  String get unliked => _text('unliked');
+  String likeFailed(Object error) => _withError('likeFailed', error);
+  String get commentPublished => _text('commentPublished');
+  String commentFailed(Object error) => _withError('commentFailed', error);
+  String loadMoreCommentsFailed(Object error) =>
+      _withError('loadMoreCommentsFailed', error);
+  String get reportReview => _text('reportReview');
+  String get reportReason => _text('reportReason');
+  String get submitReport => _text('submitReport');
+  String reportFailed(Object error) => _withError('reportFailed', error);
+  String get deleteReview => _text('deleteReview');
+  String get deleteReviewConfirm => _text('deleteReviewConfirm');
+  String get confirmDelete => _text('confirmDelete');
+  String get reviewDeleted => _text('reviewDeleted');
+  String deleteFailed(Object error) => _withError('deleteFailed', error);
+  String get reply => _text('reply');
+  String get myReviewDetail => _text('myReviewDetail');
+  String get reviewDetail => _text('reviewDetail');
+  String get edit => _text('edit');
+  String get deleting => _text('deleting');
+  String get delete => _text('delete');
+  String reviewDetailLoadFailed(Object error) =>
+      _withError('reviewDetailLoadFailed', error);
+  String auditRemarkLabel(String remark) =>
+      _text('auditRemarkLabel').replaceFirst('{remark}', remark);
+  String merchantReplyLabel(String reply) =>
+      _text('merchantReplyLabel').replaceFirst('{reply}', reply);
+  String get report => _text('report');
+  String get reviewLoginToInteract => _text('reviewLoginToInteract');
+  String get commentsSection => _text('commentsSection');
+  String replyingTo(String name) =>
+      _text('replyingTo').replaceFirst('{name}', name);
+  String get writeComment => _text('writeComment');
+  String get publishing => _text('publishing');
+  String get publishComment => _text('publishComment');
+  String commentsLoadFailed(Object error) =>
+      _withError('commentsLoadFailed', error);
+  String get retryComments => _text('retryComments');
+  String get noComments => _text('noComments');
+  String get writeReview => _text('writeReview');
+  String get editReview => _text('editReview');
+  String get reviewLoadFailedTapRetry => _text('reviewLoadFailedTapRetry');
+  String get reviewContentHint => _text('reviewContentHint');
+  String uploadedCount(int count) => _withCount('uploadedCount', count);
+  String get uploading => _text('uploading');
+  String get addImages => _text('addImages');
+  String get spendAmount => _text('spendAmount');
+  String get tagsLabel => _text('tagsLabel');
+  String get tagsHint => _text('tagsHint');
+  String get saveAndResubmit => _text('saveAndResubmit');
+  String get publishReview => _text('publishReview');
+  String get reviewingShop => _text('reviewingShop');
+  String get scoreOverall => _text('scoreOverall');
+  String get scoreTaste => _text('scoreTaste');
+  String get scoreEnv => _text('scoreEnv');
+  String get scoreService => _text('scoreService');
+
+  String replyToPreview({required String name, required String content}) =>
+      _text('replyToPreview')
+          .replaceFirst('{name}', name)
+          .replaceFirst('{content}', content);
+  String likeCommentStats({required int likes, required int comments}) =>
+      _text('likeCommentStats')
+          .replaceFirst('{likes}', '$likes')
+          .replaceFirst('{comments}', '$comments');
+  String get loadMoreComments => _text('loadMoreComments');
+
+  String get maxNineImages => _text('maxNineImages');
+  String imagePickFailed(Object error) => _withError('imagePickFailed', error);
+  String imageUploadFailed(Object error) =>
+      _withError('imageUploadFailed', error);
+  String get reviewUpdatedResubmitted => _text('reviewUpdatedResubmitted');
+  String get reviewSubmittedPending => _text('reviewSubmittedPending');
+  String saveFailed(Object error) => _withError('saveFailed', error);
+  String get ratingPrompt => _text('ratingPrompt');
+  String get ratingHint => _text('ratingHint');
+  String get saySomethingUseful => _text('saySomethingUseful');
+  String get reviewWritingHint => _text('reviewWritingHint');
+  String get pleaseWriteRealExperience => _text('pleaseWriteRealExperience');
+  String get onSitePhotos => _text('onSitePhotos');
+  String get photosUploadHint => _text('photosUploadHint');
+  String get spendAndTags => _text('spendAndTags');
+  String get spendTagsHint => _text('spendTagsHint');
+  String get enterNonNegativeAmount => _text('enterNonNegativeAmount');
   String statusWithRedeemability(String status, bool usable) =>
       '$status · ${usable ? redeemable : notRedeemable}';
 }
