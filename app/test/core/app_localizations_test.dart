@@ -48,6 +48,12 @@ void main() {
       AppLocalizations.forTag('zh-CN').markAllReadWithCount(3),
       '全部已读（3）',
     );
+    expect(AppLocalizations.forTag('en').accountSettings, 'Account settings');
+    expect(AppLocalizations.forTag('en').privacyCenter, 'Privacy center');
+    expect(
+      AppLocalizations.forTag('zh-CN').growthValueLabel(350),
+      '350 成长值',
+    );
   });
 
   test('delegate supports every configured app locale', () async {

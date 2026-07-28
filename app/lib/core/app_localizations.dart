@@ -92,6 +92,28 @@ class AppLocalizations {
     'noNotifications': '暂无消息',
     'continueFindUnread': '继续查找未读消息',
     'unreadBadge': '未读',
+    'loggingOut': '退出中...',
+    'logout': '退出',
+    'profileLoadFailed': '用户资料加载失败：{error}',
+    'levelRegionPoints': 'Lv.{level} · {region} · {points} 积分',
+    'growthValueLabel': '{value} 成长值',
+    'accountSettings': '账户设置',
+    'accountSettingsSubtitle': '资料、绑定账号、修改密码',
+    'localExpertCertification': '本地达人认证',
+    'localExpertCertificationSubtitle': '提交或重提本地达人申请',
+    'growthRecords': '成长值流水',
+    'growthRecordsSubtitle': 'Lv.{level} · 成长值 {growth} · 积分 {points}',
+    'myMessages': '我的私信',
+    'blockedUsers': '黑名单管理',
+    'myCircles': '我的圈子',
+    'myReviews': '我的点评',
+    'myPosts': '我的帖子',
+    'myFavorites': '我的收藏',
+    'myOrders': '我的订单',
+    'myCoupons': '我的券',
+    'myReservations': '我的预订',
+    'myBrowseHistory': '我的足迹',
+    'privacyCenter': '隐私中心',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -171,6 +193,28 @@ class AppLocalizations {
     'noNotifications': '暫無訊息',
     'continueFindUnread': '繼續尋找未讀訊息',
     'unreadBadge': '未讀',
+    'loggingOut': '登出中...',
+    'logout': '登出',
+    'profileLoadFailed': '使用者資料載入失敗：{error}',
+    'levelRegionPoints': 'Lv.{level} · {region} · {points} 積分',
+    'growthValueLabel': '{value} 成長值',
+    'accountSettings': '帳戶設定',
+    'accountSettingsSubtitle': '資料、綁定帳號、修改密碼',
+    'localExpertCertification': '在地達人認證',
+    'localExpertCertificationSubtitle': '提交或重新提交在地達人申請',
+    'growthRecords': '成長值流水',
+    'growthRecordsSubtitle': 'Lv.{level} · 成長值 {growth} · 積分 {points}',
+    'myMessages': '我的私信',
+    'blockedUsers': '黑名單管理',
+    'myCircles': '我的圈子',
+    'myReviews': '我的評論',
+    'myPosts': '我的貼文',
+    'myFavorites': '我的收藏',
+    'myOrders': '我的訂單',
+    'myCoupons': '我的券',
+    'myReservations': '我的預訂',
+    'myBrowseHistory': '我的足跡',
+    'privacyCenter': '隱私中心',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -251,6 +295,29 @@ class AppLocalizations {
     'noNotifications': 'No notifications yet',
     'continueFindUnread': 'Keep looking for unread',
     'unreadBadge': 'Unread',
+    'loggingOut': 'Signing out...',
+    'logout': 'Sign out',
+    'profileLoadFailed': 'Could not load profile: {error}',
+    'levelRegionPoints': 'Lv.{level} · {region} · {points} points',
+    'growthValueLabel': '{value} growth',
+    'accountSettings': 'Account settings',
+    'accountSettingsSubtitle': 'Profile, linked accounts, password',
+    'localExpertCertification': 'Local expert certification',
+    'localExpertCertificationSubtitle': 'Submit or resubmit a local expert application',
+    'growthRecords': 'Growth history',
+    'growthRecordsSubtitle':
+        'Lv.{level} · growth {growth} · points {points}',
+    'myMessages': 'Messages',
+    'blockedUsers': 'Blocked users',
+    'myCircles': 'My circles',
+    'myReviews': 'My reviews',
+    'myPosts': 'My posts',
+    'myFavorites': 'Favorites',
+    'myOrders': 'Orders',
+    'myCoupons': 'Coupons',
+    'myReservations': 'Reservations',
+    'myBrowseHistory': 'Browse history',
+    'privacyCenter': 'Privacy center',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -378,6 +445,45 @@ class AppLocalizations {
   String get noNotifications => _text('noNotifications');
   String get continueFindUnread => _text('continueFindUnread');
   String get unreadBadge => _text('unreadBadge');
+  String get loggingOut => _text('loggingOut');
+  String get logout => _text('logout');
+  String profileLoadFailed(Object error) =>
+      _withError('profileLoadFailed', error);
+  String levelRegionPoints({
+    required int level,
+    required String region,
+    required int points,
+  }) => _text('levelRegionPoints')
+      .replaceFirst('{level}', '$level')
+      .replaceFirst('{region}', region)
+      .replaceFirst('{points}', '$points');
+  String growthValueLabel(int value) =>
+      _text('growthValueLabel').replaceFirst('{value}', '$value');
+  String get accountSettings => _text('accountSettings');
+  String get accountSettingsSubtitle => _text('accountSettingsSubtitle');
+  String get localExpertCertification => _text('localExpertCertification');
+  String get localExpertCertificationSubtitle =>
+      _text('localExpertCertificationSubtitle');
+  String get growthRecords => _text('growthRecords');
+  String growthRecordsSubtitle({
+    required int level,
+    required int growth,
+    required int points,
+  }) => _text('growthRecordsSubtitle')
+      .replaceFirst('{level}', '$level')
+      .replaceFirst('{growth}', '$growth')
+      .replaceFirst('{points}', '$points');
+  String get myMessages => _text('myMessages');
+  String get blockedUsers => _text('blockedUsers');
+  String get myCircles => _text('myCircles');
+  String get myReviews => _text('myReviews');
+  String get myPosts => _text('myPosts');
+  String get myFavorites => _text('myFavorites');
+  String get myOrders => _text('myOrders');
+  String get myCoupons => _text('myCoupons');
+  String get myReservations => _text('myReservations');
+  String get myBrowseHistory => _text('myBrowseHistory');
+  String get privacyCenter => _text('privacyCenter');
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

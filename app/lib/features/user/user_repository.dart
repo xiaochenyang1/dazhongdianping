@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 
 enum UserCollection { reviews, posts, favorites, orders, coupons, reservations }
@@ -13,13 +14,15 @@ extension UserCollectionInfo on UserCollection {
     UserCollection.reservations => '/api/c/v1/reservations',
   };
 
-  String get label => switch (this) {
-    UserCollection.reviews => '我的点评',
-    UserCollection.posts => '我的帖子',
-    UserCollection.favorites => '我的收藏',
-    UserCollection.orders => '我的订单',
-    UserCollection.coupons => '我的券',
-    UserCollection.reservations => '我的预订',
+  String get label => localizedLabel(AppLocalizations.forTag('zh-CN'));
+
+  String localizedLabel(AppLocalizations strings) => switch (this) {
+    UserCollection.reviews => strings.myReviews,
+    UserCollection.posts => strings.myPosts,
+    UserCollection.favorites => strings.myFavorites,
+    UserCollection.orders => strings.myOrders,
+    UserCollection.coupons => strings.myCoupons,
+    UserCollection.reservations => strings.myReservations,
   };
 }
 

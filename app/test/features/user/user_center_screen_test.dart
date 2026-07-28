@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
@@ -9,6 +10,7 @@ import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_center_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CenterFakeApi implements JsonApi, JsonMutationApi {
@@ -79,15 +81,62 @@ class GatedAuthController extends AuthController {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
-  testWidgets('user center retries an initial profile failure', (tester) async {
+  
+  testWidgets('user center switches English chrome', (tester) async {
+    final api = CenterFakeApi();
+    final auth = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: UserCenterScreen(
+          repository: UserRepository(api),
+          authController: auth,
+          browseRepository: CenterBrowseRepository(),
+          onCircles: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Me'), findsOneWidget);
+    expect(find.text('Account settings'), findsOneWidget);
+    expect(find.text('Local expert certification'), findsOneWidget);
+    expect(find.text('Growth history'), findsOneWidget);
+    expect(find.text('My reviews'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Privacy center'), 200);
+    expect(find.text('Privacy center'), findsOneWidget);
+  });
+
+testWidgets('user center retries an initial profile failure', (tester) async {
     final api = CenterFakeApi(failFirst: true);
     final auth = AuthController(
       repository: AuthRepository(api),
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: UserCenterScreen(
           repository: UserRepository(api),
           authController: auth,
@@ -112,7 +161,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: UserCenterScreen(
           repository: UserRepository(api),
           authController: auth,
@@ -140,7 +189,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: UserCenterScreen(
           repository: UserRepository(api),
           authController: auth,
@@ -182,7 +231,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: UserCenterScreen(
           repository: UserRepository(api),
           authController: auth,
@@ -205,7 +254,7 @@ void main() {
     expect(auth.currentUser?.nickname, 'Updated Center User');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
 
     expect(find.byType(AccountSettingsScreen), findsNothing);
@@ -219,7 +268,7 @@ void main() {
     final auth = GatedAuthController(gate: gate, api: api);
     var loggedOut = 0;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: UserCenterScreen(
           repository: UserRepository(api),
           authController: auth,

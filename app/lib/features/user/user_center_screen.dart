@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
@@ -97,14 +98,15 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的'),
+        title: Text(strings.profile),
         actions: [
           TextButton(
             key: const Key('user-center-logout'),
             onPressed: _loggingOut ? null : _logout,
-            child: Text(_loggingOut ? '退出中...' : '退出'),
+            child: Text(_loggingOut ? strings.loggingOut : strings.logout),
           ),
         ],
       ),
@@ -119,13 +121,13 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('用户资料加载失败：${snapshot.error}'),
+                  Text(strings.profileLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('user-center-retry'),
                     onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloading ? '处理中...' : '重试'),
+                    label: Text(_reloading ? strings.processing : strings.retry),
                   ),
                 ],
               ),
@@ -157,9 +159,13 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                               ),
                             ),
                             Text(
-                              'Lv.${profile.level} · ${profile.preferredRegion} · ${profile.points} 积分',
+                              strings.levelRegionPoints(
+                                level: profile.level,
+                                region: profile.preferredRegion,
+                                points: profile.points,
+                              ),
                             ),
-                            Text('${profile.growthValue} 成长值'),
+                            Text(strings.growthValueLabel(profile.growthValue)),
                           ],
                         ),
                       ),
@@ -170,8 +176,8 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
               const SizedBox(height: 16),
               ListTile(
                 leading: const Icon(Icons.manage_accounts_outlined),
-                title: const Text('账户设置'),
-                subtitle: const Text('资料、绑定账号、修改密码'),
+                title: Text(strings.accountSettings),
+                subtitle: Text(strings.accountSettingsSubtitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -184,8 +190,8 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.verified_outlined),
-                title: const Text('本地达人认证'),
-                subtitle: const Text('提交或重提本地达人申请'),
+                title: Text(strings.localExpertCertification),
+                subtitle: Text(strings.localExpertCertificationSubtitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -197,9 +203,13 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.trending_up),
-                title: const Text('成长值流水'),
+                title: Text(strings.growthRecords),
                 subtitle: Text(
-                  'Lv.${profile.level} · 成长值 ${profile.growthValue} · 积分 ${profile.points}',
+                  strings.growthRecordsSubtitle(
+                    level: profile.level,
+                    growth: profile.growthValue,
+                    points: profile.points,
+                  ),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
@@ -212,13 +222,13 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
               if (widget.onMessages != null)
                 ListTile(
                   leading: const Icon(Icons.forum_outlined),
-                  title: const Text('我的私信'),
+                  title: Text(strings.myMessages),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: widget.onMessages,
                 ),
               ListTile(
                 leading: const Icon(Icons.block_outlined),
-                title: const Text('黑名单管理'),
+                title: Text(strings.blockedUsers),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -231,13 +241,13 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
               if (widget.onCircles != null)
                 ListTile(
                   leading: const Icon(Icons.groups_2_outlined),
-                  title: const Text('我的圈子'),
+                  title: Text(strings.myCircles),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: widget.onCircles,
                 ),
               ...UserCollection.values.map(
                 (collection) => ListTile(
-                  title: Text(collection.label),
+                  title: Text(collection.localizedLabel(strings)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -255,7 +265,7 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
               if (widget.browseRepository != null)
                 ListTile(
                   leading: const Icon(Icons.history),
-                  title: const Text('我的足迹'),
+                  title: Text(strings.myBrowseHistory),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -268,7 +278,7 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                   ),
                 ),
               ListTile(
-                title: const Text('隐私中心'),
+                title: Text(strings.privacyCenter),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(

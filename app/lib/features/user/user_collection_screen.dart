@@ -12,6 +12,7 @@ import 'package:dazhongdianping_app/features/reservation/reservations_list_scree
 import 'package:dazhongdianping_app/features/trade/coupons_screen.dart';
 import 'package:dazhongdianping_app/features/trade/orders_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -56,7 +57,9 @@ class UserCollectionScreen extends StatelessWidget {
       );
     }
     return Scaffold(
-      appBar: AppBar(title: Text(collection.label)),
+      appBar: AppBar(
+        title: Text(collection.localizedLabel(AppLocalizations.of(context))),
+      ),
       body: _PaginatedCollectionBody(
         repository: repository,
         collection: collection,
