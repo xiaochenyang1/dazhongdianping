@@ -61,6 +61,13 @@ void main() {
       AppLocalizations.forTag('en').postMetaStats(likes: 2, comments: 3),
       ' · ❤ 2 · comments 3',
     );
+    expect(AppLocalizations.forTag('en').topicPlaza, 'Topics');
+    expect(AppLocalizations.forTag('en').hotTab, 'Trending');
+    expect(AppLocalizations.forTag('zh-CN').followTopic, '关注话题');
+    expect(
+      AppLocalizations.forTag('en').topicFollowerCount(12),
+      '12 followers',
+    );
   });
 
   test('delegate supports every configured app locale', () async {

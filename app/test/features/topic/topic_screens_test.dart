@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/topic/topic_detail_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_plaza_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
@@ -143,6 +145,32 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+
+  testWidgets('topic plaza switches English chrome', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: TopicPlazaScreen(
+          repository: TopicRepository(TopicScreenApi()),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Topics'), findsOneWidget);
+    expect(find.text('For you'), findsOneWidget);
+    expect(find.text('Trending'), findsOneWidget);
+    expect(find.text('Following'), findsOneWidget);
+  });
+
+
   testWidgets('topic detail retries an initial post failure', (tester) async {
     final api = TopicScreenApi()..failNextPosts = true;
     await tester.pumpWidget(

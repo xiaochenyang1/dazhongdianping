@@ -125,6 +125,23 @@ class AppLocalizations {
     'communityLoadFailed': '社区加载失败：{error}',
     'noCommunityPosts': '暂无帖子',
     'postMetaStats': ' · ❤ {likes} · 评论 {comments}',
+    'hotTab': '热榜',
+    'followingTopicsTab': '已关注',
+    'loadMoreTopicsFailed': '加载更多话题失败：{error}',
+    'topicsLoadFailed': '话题加载失败：{error}',
+    'followingTopicsLoginRequired': '登录后查看关注的话题，不会额外生成独立动态流。',
+    'goLogin': '去登录',
+    'hotScore': '热度 {score}',
+    'topicSevenDayStats':
+        '7 天：{posts} 帖 · {likes} 赞 · {comments} 评论',
+    'topicFollowMeta': '{followers} 人关注 · {posts} 篇公开帖子',
+    'topicFollowerCount': '{count} 人关注',
+    'followStatusUpdateFailed': '关注状态更新失败：{error}',
+    'followed': '已关注',
+    'followTopic': '关注话题',
+    'publicPosts': '公开帖子',
+    'postsLoadFailed': '帖子加载失败：{error}',
+    'noPublicPostsHere': '这里还没有公开帖子。',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -237,6 +254,23 @@ class AppLocalizations {
     'communityLoadFailed': '社群載入失敗：{error}',
     'noCommunityPosts': '暫無貼文',
     'postMetaStats': ' · ❤ {likes} · 評論 {comments}',
+    'hotTab': '熱榜',
+    'followingTopicsTab': '已追蹤',
+    'loadMoreTopicsFailed': '載入更多話題失敗：{error}',
+    'topicsLoadFailed': '話題載入失敗：{error}',
+    'followingTopicsLoginRequired': '登入後查看追蹤的話題，不會額外產生獨立動態流。',
+    'goLogin': '去登入',
+    'hotScore': '熱度 {score}',
+    'topicSevenDayStats':
+        '7 天：{posts} 帖 · {likes} 讚 · {comments} 評論',
+    'topicFollowMeta': '{followers} 人追蹤 · {posts} 篇公開貼文',
+    'topicFollowerCount': '{count} 人追蹤',
+    'followStatusUpdateFailed': '追蹤狀態更新失敗：{error}',
+    'followed': '已追蹤',
+    'followTopic': '追蹤話題',
+    'publicPosts': '公開貼文',
+    'postsLoadFailed': '貼文載入失敗：{error}',
+    'noPublicPostsHere': '這裡還沒有公開貼文。',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -352,6 +386,24 @@ class AppLocalizations {
     'communityLoadFailed': 'Could not load community: {error}',
     'noCommunityPosts': 'No posts yet',
     'postMetaStats': ' · ❤ {likes} · comments {comments}',
+    'hotTab': 'Trending',
+    'followingTopicsTab': 'Following',
+    'loadMoreTopicsFailed': 'Could not load more topics: {error}',
+    'topicsLoadFailed': 'Could not load topics: {error}',
+    'followingTopicsLoginRequired':
+        'Sign in to see followed topics. This does not create a separate feed.',
+    'goLogin': 'Sign in',
+    'hotScore': 'Heat {score}',
+    'topicSevenDayStats':
+        '7 days: {posts} posts · {likes} likes · {comments} comments',
+    'topicFollowMeta': '{followers} followers · {posts} public posts',
+    'topicFollowerCount': '{count} followers',
+    'followStatusUpdateFailed': 'Could not update follow status: {error}',
+    'followed': 'Following',
+    'followTopic': 'Follow topic',
+    'publicPosts': 'Public posts',
+    'postsLoadFailed': 'Could not load posts: {error}',
+    'noPublicPostsHere': 'No public posts here yet.',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -533,6 +585,36 @@ class AppLocalizations {
   String postMetaStats({required int likes, required int comments}) => _text(
     'postMetaStats',
   ).replaceFirst('{likes}', '$likes').replaceFirst('{comments}', '$comments');
+  String get hotTab => _text('hotTab');
+  String get followingTopicsTab => _text('followingTopicsTab');
+  String loadMoreTopicsFailed(Object error) =>
+      _withError('loadMoreTopicsFailed', error);
+  String topicsLoadFailed(Object error) => _withError('topicsLoadFailed', error);
+  String get followingTopicsLoginRequired =>
+      _text('followingTopicsLoginRequired');
+  String get goLogin => _text('goLogin');
+  String hotScore(num score) =>
+      _text('hotScore').replaceFirst('{score}', '$score');
+  String topicSevenDayStats({
+    required int posts,
+    required int likes,
+    required int comments,
+  }) => _text('topicSevenDayStats')
+      .replaceFirst('{posts}', '$posts')
+      .replaceFirst('{likes}', '$likes')
+      .replaceFirst('{comments}', '$comments');
+  String topicFollowMeta({required int followers, required int posts}) => _text(
+    'topicFollowMeta',
+  ).replaceFirst('{followers}', '$followers').replaceFirst('{posts}', '$posts');
+  String topicFollowerCount(int count) =>
+      _text('topicFollowerCount').replaceFirst('{count}', '$count');
+  String followStatusUpdateFailed(Object error) =>
+      _withError('followStatusUpdateFailed', error);
+  String get followed => _text('followed');
+  String get followTopic => _text('followTopic');
+  String get publicPosts => _text('publicPosts');
+  String postsLoadFailed(Object error) => _withError('postsLoadFailed', error);
+  String get noPublicPostsHere => _text('noPublicPostsHere');
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

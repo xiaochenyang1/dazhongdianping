@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/topic/topic_detail_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:flutter/material.dart';
@@ -109,9 +110,13 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
       });
     } catch (error) {
       if (mounted && requestId == requestIds[tab]) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多话题失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreTopicsFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && requestId == requestIds[tab]) {
@@ -143,111 +148,123 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => DefaultTabController(
-    length: 3,
-    child: Scaffold(
-      appBar: AppBar(
-        title: const Text('话题广场'),
-        bottom: TabBar(
-          onTap: select,
-          tabs: const [
-            Tab(text: '推荐'),
-            Tab(text: '热榜'),
-            Tab(text: '已关注'),
-          ],
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(strings.topicPlaza),
+          bottom: TabBar(
+            onTap: select,
+            tabs: [
+              Tab(text: strings.recommendedTab),
+              Tab(text: strings.hotTab),
+              Tab(text: strings.followingTopicsTab),
+            ],
+          ),
         ),
-      ),
-      body: selected == 2 && !widget.canInteract
-          ? _LoginGuide(onLoginRequired: widget.onLoginRequired)
-          : FutureBuilder<TopicPage>(
-              future: selected == 0
-                  ? recommended
-                  : selected == 1
-                  ? hot
-                  : following,
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('话题加载失败：${snapshot.error}'),
-                        const SizedBox(height: 12),
-                        FilledButton.tonalIcon(
-                          key: const Key('topic-plaza-retry'),
-                          onPressed: retrying[selected] ? null : reload,
-                          icon: const Icon(Icons.refresh),
-                          label: Text(retrying[selected] ? '处理中...' : '重试'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final page = snapshot.data!;
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: page.items.length + (page.hasMore ? 1 : 0),
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (_, index) {
-                    if (index == page.items.length) {
-                      return Center(
-                        child: OutlinedButton.icon(
-                          key: const Key('topic-plaza-load-more'),
-                          onPressed: loadingMore[selected]
-                              ? null
-                              : () => loadMore(page),
-                          icon: loadingMore[selected]
-                              ? const SizedBox.square(
-                                  dimension: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.expand_more),
-                          label: Text(
-                            loadingMore[selected] ? '加载中...' : '加载更多',
+        body: selected == 2 && !widget.canInteract
+            ? _LoginGuide(onLoginRequired: widget.onLoginRequired)
+            : FutureBuilder<TopicPage>(
+                future: selected == 0
+                    ? recommended
+                    : selected == 1
+                    ? hot
+                    : following,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(strings.topicsLoadFailed(snapshot.error!)),
+                          const SizedBox(height: 12),
+                          FilledButton.tonalIcon(
+                            key: const Key('topic-plaza-retry'),
+                            onPressed: retrying[selected] ? null : reload,
+                            icon: const Icon(Icons.refresh),
+                            label: Text(
+                              retrying[selected]
+                                  ? strings.processing
+                                  : strings.retry,
+                            ),
                           ),
-                        ),
-                      );
-                    }
-                    final topic = page.items[index];
-                    return _TopicCard(
-                      topic: topic,
-                      rank: selected == 1 ? index + 1 : null,
-                      onTap: _openingTopicIds.contains(topic.id)
-                          ? null
-                          : () => _openTopic(topic),
+                        ],
+                      ),
                     );
-                  },
-                );
-              },
-            ),
-    ),
-  );
+                  }
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final page = snapshot.data!;
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: page.items.length + (page.hasMore ? 1 : 0),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (_, index) {
+                      if (index == page.items.length) {
+                        return Center(
+                          child: OutlinedButton.icon(
+                            key: const Key('topic-plaza-load-more'),
+                            onPressed: loadingMore[selected]
+                                ? null
+                                : () => loadMore(page),
+                            icon: loadingMore[selected]
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.expand_more),
+                            label: Text(
+                              loadingMore[selected]
+                                  ? strings.loading
+                                  : strings.loadMore,
+                            ),
+                          ),
+                        );
+                      }
+                      final topic = page.items[index];
+                      return _TopicCard(
+                        topic: topic,
+                        rank: selected == 1 ? index + 1 : null,
+                        onTap: _openingTopicIds.contains(topic.id)
+                            ? null
+                            : () => _openTopic(topic),
+                      );
+                    },
+                  );
+                },
+              ),
+      ),
+    );
+  }
 }
 
 class _LoginGuide extends StatelessWidget {
   const _LoginGuide({this.onLoginRequired});
   final VoidCallback? onLoginRequired;
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.bookmark_add_outlined, size: 46),
-          const SizedBox(height: 14),
-          const Text('登录后查看关注的话题，不会额外生成独立动态流。'),
-          const SizedBox(height: 14),
-          FilledButton(onPressed: onLoginRequired, child: const Text('去登录')),
-        ],
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.bookmark_add_outlined, size: 46),
+            const SizedBox(height: 14),
+            Text(strings.followingTopicsLoginRequired),
+            const SizedBox(height: 14),
+            FilledButton(onPressed: onLoginRequired, child: Text(strings.goLogin)),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _TopicCard extends StatelessWidget {
@@ -261,72 +278,82 @@ class _TopicCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Card(
-    key: Key('topic-card-${topic.id}'),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (rank != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return Card(
+      key: Key('topic-card-${topic.id}'),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (rank != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: rank == 1
+                            ? const Color(0xFFE85D2A)
+                            : const Color(0xFF25352F),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'TOP $rank',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: rank == 1
-                          ? const Color(0xFFE85D2A)
-                          : const Color(0xFF25352F),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                  if (rank != null) const SizedBox(width: 10),
+                  Expanded(
                     child: Text(
-                      'TOP $rank',
+                      topic.name,
                       style: const TextStyle(
-                        color: Colors.white,
+                        fontSize: 22,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
-                if (rank != null) const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    topic.name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
+                  if (topic.recommended)
+                    const Icon(
+                      Icons.workspace_premium_outlined,
+                      color: Color(0xFFE85D2A),
                     ),
-                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                strings.hotScore(topic.hotScore),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                strings.topicSevenDayStats(
+                  posts: topic.postCount7d,
+                  likes: topic.likeCount7d,
+                  comments: topic.commentCount7d,
                 ),
-                if (topic.recommended)
-                  const Icon(
-                    Icons.workspace_premium_outlined,
-                    color: Color(0xFFE85D2A),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '热度 ${topic.hotScore}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              '7 天：${topic.postCount7d} 帖 · ${topic.likeCount7d} 赞 · ${topic.commentCount7d} 评论',
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '${topic.followerCount} 人关注 · ${topic.postCount} 篇公开帖子',
-              style: TextStyle(color: Theme.of(context).colorScheme.primary),
-            ),
-          ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                strings.topicFollowMeta(
+                  followers: topic.followerCount,
+                  posts: topic.postCount,
+                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
