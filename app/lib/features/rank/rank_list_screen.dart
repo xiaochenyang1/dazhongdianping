@@ -1,10 +1,11 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_detail_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
-import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:flutter/material.dart';
 
 class RankListScreen extends StatefulWidget {
@@ -54,9 +55,13 @@ class _RankListScreenState extends State<RankListScreen> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('刷新榜单失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).refreshRanksFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _reloading = false);
@@ -90,8 +95,9 @@ class _RankListScreenState extends State<RankListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('城市榜单')),
+      appBar: AppBar(title: Text(strings.cityRankings)),
       body: FutureBuilder<List<RankSummary>>(
         future: _ranks,
         builder: (context, snapshot) {
@@ -103,12 +109,12 @@ class _RankListScreenState extends State<RankListScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('榜单加载失败：${snapshot.error}'),
+                  Text(strings.ranksLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('rank-list-retry'),
                     onPressed: _reloading ? null : _reload,
-                    child: Text(_reloading ? '处理中...' : '重试'),
+                    child: Text(_reloading ? strings.processing : strings.retry),
                   ),
                 ],
               ),
@@ -116,7 +122,7 @@ class _RankListScreenState extends State<RankListScreen> {
           }
           final items = snapshot.data ?? const [];
           if (items.isEmpty) {
-            return const Center(child: Text('当前区域暂无公开榜单'));
+            return Center(child: Text(strings.noPublicRanks));
           }
           return RefreshIndicator(
             onRefresh: _reload,
@@ -131,7 +137,7 @@ class _RankListScreenState extends State<RankListScreen> {
                   if (item.cityName.isNotEmpty) item.cityName,
                   if (item.categoryName.isNotEmpty) item.categoryName,
                   if (item.period.isNotEmpty) item.period,
-                  '${item.itemCount} 家门店',
+                  strings.shopCount(item.itemCount),
                 ].where((part) => part.isNotEmpty).join(' · ');
                 return Card(
                   key: Key('rank-card-${item.id}'),
@@ -141,7 +147,7 @@ class _RankListScreenState extends State<RankListScreen> {
                       [
                         meta,
                         if (item.topShopName.isNotEmpty)
-                          '榜首 ${item.topShopName}',
+                          strings.topShop(item.topShopName),
                         if (item.updatedAt.isNotEmpty) item.updatedAt,
                       ].where((part) => part.isNotEmpty).join('\n'),
                     ),

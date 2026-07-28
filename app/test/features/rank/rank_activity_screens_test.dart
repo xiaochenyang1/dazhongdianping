@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/activity/activity_list_screen.dart';
 import 'package:dazhongdianping_app/features/activity/activity_detail_screen.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
@@ -8,7 +9,25 @@ import 'package:dazhongdianping_app/features/rank/rank_list_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_detail_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
 
 class RankScreenApi implements JsonApi {
   int loadCount = 0;
@@ -141,7 +160,7 @@ void main() {
   ) async {
     final api = ActivityScreenApi()..failNextDetail = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ActivityDetailScreen(
           repository: ActivityRepository(api),
           activityId: 9001,
@@ -164,7 +183,7 @@ void main() {
       ..failNextDetail = true
       ..detailGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ActivityDetailScreen(
           repository: ActivityRepository(api),
           activityId: 9001,
@@ -188,7 +207,7 @@ void main() {
   testWidgets('rank detail retries an initial load failure', (tester) async {
     final api = RankScreenApi()..failNextDetail = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: RankDetailScreen(repository: RankRepository(api), rankId: 30001),
       ),
     );
@@ -208,7 +227,7 @@ void main() {
       ..failNextDetail = true
       ..detailGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: RankDetailScreen(repository: RankRepository(api), rankId: 30001),
       ),
     );
@@ -228,7 +247,7 @@ void main() {
 
   testWidgets('rank list opens detail', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: RankListScreen(repository: RankRepository(RankScreenApi())),
       ),
     );
@@ -240,11 +259,36 @@ void main() {
     expect(find.text('榜单详情'), findsOneWidget);
   });
 
+  testWidgets('rank and activity screens switch English chrome', (tester) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: RankListScreen(repository: RankRepository(RankScreenApi())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('City rankings'), findsOneWidget);
+    expect(find.textContaining('10 places'), findsOneWidget);
+    expect(find.textContaining('Top place:'), findsOneWidget);
+
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ActivityListScreen(
+          repository: ActivityRepository(ActivityScreenApi()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Activities'), findsOneWidget);
+    expect(find.textContaining('3 resources'), findsOneWidget);
+  });
+
   testWidgets('rank list guards duplicate detail navigation', (tester) async {
     final gate = Completer<void>();
     final api = RankScreenApi()..detailGate = gate;
     await tester.pumpWidget(
-      MaterialApp(home: RankListScreen(repository: RankRepository(api))),
+      localizedApp(home: RankListScreen(repository: RankRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -257,7 +301,7 @@ void main() {
 
     gate.complete();
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
 
     expect(api.detailLoadCount, 1);
@@ -267,7 +311,7 @@ void main() {
   testWidgets('rank list retries an initial load failure', (tester) async {
     final api = RankScreenApi()..failNextLoad = true;
     await tester.pumpWidget(
-      MaterialApp(home: RankListScreen(repository: RankRepository(api))),
+      localizedApp(home: RankListScreen(repository: RankRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -282,7 +326,7 @@ void main() {
   testWidgets('failed rank refresh preserves loaded ranks', (tester) async {
     final api = RankScreenApi();
     await tester.pumpWidget(
-      MaterialApp(home: RankListScreen(repository: RankRepository(api))),
+      localizedApp(home: RankListScreen(repository: RankRepository(api))),
     );
     await tester.pumpAndSettle();
     api.failNextLoad = true;
@@ -300,7 +344,7 @@ void main() {
     final gate = Completer<void>();
     final api = RankScreenApi()..failNextLoad = true;
     await tester.pumpWidget(
-      MaterialApp(home: RankListScreen(repository: RankRepository(api))),
+      localizedApp(home: RankListScreen(repository: RankRepository(api))),
     );
     await tester.pumpAndSettle();
     api.loadGate = gate;
@@ -321,7 +365,7 @@ void main() {
 
   testWidgets('activity list opens detail', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ActivityListScreen(
           repository: ActivityRepository(ActivityScreenApi()),
         ),
@@ -341,7 +385,7 @@ void main() {
     final gate = Completer<void>();
     final api = ActivityScreenApi()..detailGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ActivityListScreen(repository: ActivityRepository(api)),
       ),
     );
@@ -356,7 +400,7 @@ void main() {
 
     gate.complete();
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
 
     expect(api.detailLoadCount, 1);
@@ -366,7 +410,7 @@ void main() {
   testWidgets('activity list retries an initial load failure', (tester) async {
     final api = ActivityScreenApi()..failNextLoad = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ActivityListScreen(repository: ActivityRepository(api)),
       ),
     );
@@ -384,7 +428,7 @@ void main() {
     final gate = Completer<void>();
     final api = ActivityScreenApi()..failNextLoad = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ActivityListScreen(repository: ActivityRepository(api)),
       ),
     );
@@ -410,7 +454,7 @@ void main() {
   ) async {
     final api = ActivityScreenApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ActivityListScreen(repository: ActivityRepository(api)),
       ),
     );

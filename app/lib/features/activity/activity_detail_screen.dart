@@ -1,3 +1,5 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
@@ -11,7 +13,6 @@ import 'package:dazhongdianping_app/features/topic/topic_detail_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:dazhongdianping_app/features/trade/deal_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
-import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -97,6 +98,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   Future<void> _openItem(ActivityItem item) async {
     if (!_canOpenItem(item) || _openingItemIds.contains(item.id)) return;
     setState(() => _openingItemIds.add(item.id));
+    final strings = AppLocalizations.of(context);
     try {
       switch (item.targetType) {
         case 1:
@@ -172,19 +174,19 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                 uri,
               );
           if (!launched && mounted) {
-            _showOpenError('无法打开外部链接');
+            _showOpenError(strings.cannotOpenExternalLink);
           }
           break;
       }
     } catch (error) {
       if (mounted) {
         final targetName = switch (item.targetType) {
-          2 => '团购',
-          5 => '话题',
-          6 => '外部链接',
-          _ => '资源',
+          2 => strings.targetDeal,
+          5 => strings.targetTopic,
+          6 => strings.targetExternalLink,
+          _ => strings.targetResource,
         };
-        _showOpenError('$targetName打开失败：$error');
+        _showOpenError(strings.openTargetFailed(targetName, error));
       }
     } finally {
       if (mounted) setState(() => _openingItemIds.remove(item.id));
@@ -199,8 +201,9 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('活动详情')),
+      appBar: AppBar(title: Text(strings.activityDetailTitle)),
       body: FutureBuilder<ActivityDetail>(
         future: _detail,
         builder: (context, snapshot) {
@@ -212,13 +215,13 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('活动详情加载失败：${snapshot.error}'),
+                  Text(strings.activityDetailLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('activity-detail-retry'),
                     onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloading ? '处理中...' : '重试'),
+                    label: Text(_reloading ? strings.processing : strings.retry),
                   ),
                 ],
               ),
@@ -250,7 +253,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
               ),
               const SizedBox(height: 16),
               if (detail.items.isEmpty)
-                const Text('该活动暂无资源项')
+                Text(strings.activityNoItems)
               else
                 ...detail.items.map((item) {
                   final canOpen = _canOpenItem(item);

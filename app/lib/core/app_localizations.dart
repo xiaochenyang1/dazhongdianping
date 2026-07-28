@@ -55,6 +55,27 @@ class AppLocalizations {
     'clearHistoryFailed': '清空搜索历史失败：{error}',
     'removeHistoryFailed': '删除搜索历史失败：{error}',
     'loadMoreHistoryFailed': '加载更多搜索历史失败：{error}',
+    'rankDetailTitle': '榜单详情',
+    'refreshRanksFailed': '刷新榜单失败：{error}',
+    'ranksLoadFailed': '榜单加载失败：{error}',
+    'noPublicRanks': '当前区域暂无公开榜单',
+    'shopCount': '{count} 家门店',
+    'topShop': '榜首 {name}',
+    'rankDetailLoadFailed': '榜单详情加载失败：{error}',
+    'rankNoShops': '该榜单暂无门店',
+    'activityDetailTitle': '活动详情',
+    'refreshActivitiesFailed': '刷新活动失败：{error}',
+    'activitiesLoadFailed': '活动加载失败：{error}',
+    'noOnlineActivities': '当前区域暂无上线活动',
+    'resourceCount': '{count} 个资源',
+    'activityDetailLoadFailed': '活动详情加载失败：{error}',
+    'activityNoItems': '该活动暂无资源项',
+    'cannotOpenExternalLink': '无法打开外部链接',
+    'openTargetFailed': '{target}打开失败：{error}',
+    'targetDeal': '团购',
+    'targetTopic': '话题',
+    'targetExternalLink': '外部链接',
+    'targetResource': '资源',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -97,6 +118,27 @@ class AppLocalizations {
     'clearHistoryFailed': '清除搜尋記錄失敗：{error}',
     'removeHistoryFailed': '刪除搜尋記錄失敗：{error}',
     'loadMoreHistoryFailed': '載入更多搜尋記錄失敗：{error}',
+    'rankDetailTitle': '排行榜詳情',
+    'refreshRanksFailed': '重新整理排行榜失敗：{error}',
+    'ranksLoadFailed': '排行榜載入失敗：{error}',
+    'noPublicRanks': '目前區域暫無公開排行榜',
+    'shopCount': '{count} 家店家',
+    'topShop': '榜首 {name}',
+    'rankDetailLoadFailed': '排行榜詳情載入失敗：{error}',
+    'rankNoShops': '此排行榜暫無店家',
+    'activityDetailTitle': '活動詳情',
+    'refreshActivitiesFailed': '重新整理活動失敗：{error}',
+    'activitiesLoadFailed': '活動載入失敗：{error}',
+    'noOnlineActivities': '目前區域暫無上線活動',
+    'resourceCount': '{count} 個資源',
+    'activityDetailLoadFailed': '活動詳情載入失敗：{error}',
+    'activityNoItems': '此活動暫無資源項',
+    'cannotOpenExternalLink': '無法開啟外部連結',
+    'openTargetFailed': '{target}開啟失敗：{error}',
+    'targetDeal': '團購',
+    'targetTopic': '話題',
+    'targetExternalLink': '外部連結',
+    'targetResource': '資源',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -140,6 +182,27 @@ class AppLocalizations {
     'clearHistoryFailed': 'Could not clear search history: {error}',
     'removeHistoryFailed': 'Could not remove search history: {error}',
     'loadMoreHistoryFailed': 'Could not load more search history: {error}',
+    'rankDetailTitle': 'Ranking details',
+    'refreshRanksFailed': 'Could not refresh rankings: {error}',
+    'ranksLoadFailed': 'Could not load rankings: {error}',
+    'noPublicRanks': 'No public rankings in this region yet',
+    'shopCount': '{count} places',
+    'topShop': 'Top place: {name}',
+    'rankDetailLoadFailed': 'Could not load ranking details: {error}',
+    'rankNoShops': 'This ranking has no places yet',
+    'activityDetailTitle': 'Activity details',
+    'refreshActivitiesFailed': 'Could not refresh activities: {error}',
+    'activitiesLoadFailed': 'Could not load activities: {error}',
+    'noOnlineActivities': 'No live activities in this region yet',
+    'resourceCount': '{count} resources',
+    'activityDetailLoadFailed': 'Could not load activity details: {error}',
+    'activityNoItems': 'This activity has no resources yet',
+    'cannotOpenExternalLink': 'Could not open the external link',
+    'openTargetFailed': 'Could not open {target}: {error}',
+    'targetDeal': 'deal',
+    'targetTopic': 'topic',
+    'targetExternalLink': 'external link',
+    'targetResource': 'resource',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -170,6 +233,10 @@ class AppLocalizations {
   String _text(String key) => _values[key]!;
   String _withError(String key, Object error) =>
       _text(key).replaceFirst('{error}', '$error');
+  String _withCount(String key, int count) =>
+      _text(key).replaceFirst('{count}', '$count');
+  String _withName(String key, String name) =>
+      _text(key).replaceFirst('{name}', name);
 
   String get homeTitle => _text('homeTitle');
   String get searchHint => _text('searchHint');
@@ -215,6 +282,34 @@ class AppLocalizations {
       _withError('removeHistoryFailed', error);
   String loadMoreHistoryFailed(Object error) =>
       _withError('loadMoreHistoryFailed', error);
+  String get rankDetailTitle => _text('rankDetailTitle');
+  String refreshRanksFailed(Object error) =>
+      _withError('refreshRanksFailed', error);
+  String ranksLoadFailed(Object error) => _withError('ranksLoadFailed', error);
+  String get noPublicRanks => _text('noPublicRanks');
+  String shopCount(int count) => _withCount('shopCount', count);
+  String topShop(String name) => _withName('topShop', name);
+  String rankDetailLoadFailed(Object error) =>
+      _withError('rankDetailLoadFailed', error);
+  String get rankNoShops => _text('rankNoShops');
+  String get activityDetailTitle => _text('activityDetailTitle');
+  String refreshActivitiesFailed(Object error) =>
+      _withError('refreshActivitiesFailed', error);
+  String activitiesLoadFailed(Object error) =>
+      _withError('activitiesLoadFailed', error);
+  String get noOnlineActivities => _text('noOnlineActivities');
+  String resourceCount(int count) => _withCount('resourceCount', count);
+  String activityDetailLoadFailed(Object error) =>
+      _withError('activityDetailLoadFailed', error);
+  String get activityNoItems => _text('activityNoItems');
+  String get cannotOpenExternalLink => _text('cannotOpenExternalLink');
+  String openTargetFailed(String target, Object error) => _text(
+    'openTargetFailed',
+  ).replaceFirst('{target}', target).replaceFirst('{error}', '$error');
+  String get targetDeal => _text('targetDeal');
+  String get targetTopic => _text('targetTopic');
+  String get targetExternalLink => _text('targetExternalLink');
+  String get targetResource => _text('targetResource');
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

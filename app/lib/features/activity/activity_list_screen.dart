@@ -1,10 +1,11 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/activity/activity_detail_screen.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
-import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:flutter/material.dart';
 
 class ActivityListScreen extends StatefulWidget {
@@ -54,9 +55,13 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('刷新活动失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).refreshActivitiesFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _reloading = false);
@@ -90,8 +95,9 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('运营活动')),
+      appBar: AppBar(title: Text(strings.activities)),
       body: FutureBuilder<List<ActivitySummary>>(
         future: _activities,
         builder: (context, snapshot) {
@@ -103,12 +109,12 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('活动加载失败：${snapshot.error}'),
+                  Text(strings.activitiesLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('activity-list-retry'),
                     onPressed: _reloading ? null : _reload,
-                    child: Text(_reloading ? '处理中...' : '重试'),
+                    child: Text(_reloading ? strings.processing : strings.retry),
                   ),
                 ],
               ),
@@ -116,7 +122,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
           }
           final items = snapshot.data ?? const [];
           if (items.isEmpty) {
-            return const Center(child: Text('当前区域暂无上线活动'));
+            return Center(child: Text(strings.noOnlineActivities));
           }
           return RefreshIndicator(
             onRefresh: _reload,
@@ -130,7 +136,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                   item.typeText,
                   item.channelText,
                   if (item.cityName.isNotEmpty) item.cityName,
-                  '${item.itemCount} 个资源',
+                  strings.resourceCount(item.itemCount),
                 ].where((part) => part.isNotEmpty).join(' · ');
                 final period = [
                   if (item.startAt.isNotEmpty) item.startAt,

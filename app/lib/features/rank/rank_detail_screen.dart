@@ -1,10 +1,12 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
+import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
-import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:flutter/material.dart';
 
 class RankDetailScreen extends StatefulWidget {
@@ -61,8 +63,9 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('榜单详情')),
+      appBar: AppBar(title: Text(strings.rankDetailTitle)),
       body: FutureBuilder<RankDetail>(
         future: _detail,
         builder: (context, snapshot) {
@@ -74,13 +77,13 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('榜单详情加载失败：${snapshot.error}'),
+                  Text(strings.rankDetailLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('rank-detail-retry'),
                     onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloading ? '处理中...' : '重试'),
+                    label: Text(_reloading ? strings.processing : strings.retry),
                   ),
                 ],
               ),
@@ -109,7 +112,7 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
               ),
               const SizedBox(height: 16),
               if (detail.items.isEmpty)
-                const Text('该榜单暂无门店')
+                Text(strings.rankNoShops)
               else
                 ...detail.items.map((item) {
                   final shop = item.shop;
@@ -133,7 +136,13 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: Text('${shop.currency} ${shop.pricePerCapita}'),
+                      trailing: Text(
+                        formatMoney(
+                          shop.pricePerCapita,
+                          shop.currency,
+                          locale: strings.tag,
+                        ),
+                      ),
                       onTap: widget.browseRepository == null || shop.id <= 0
                           ? null
                           : () => Navigator.of(context).push(
