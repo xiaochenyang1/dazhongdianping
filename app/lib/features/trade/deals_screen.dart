@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
@@ -60,7 +61,7 @@ class _DealsScreenState extends State<DealsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('下单失败：$error')));
+          ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).createOrderFailed(error))));
         }
         return;
       }
@@ -79,7 +80,7 @@ class _DealsScreenState extends State<DealsScreen> {
       } catch (error) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('订单 ${order.orderNo} 已创建，但打开详情失败：$error')),
+            SnackBar(content: Text(AppLocalizations.of(context).orderCreatedOpenDetailFailed(order.orderNo, error))),
           );
         }
       }
@@ -90,8 +91,9 @@ class _DealsScreenState extends State<DealsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('团购优惠')),
+      appBar: AppBar(title: Text(strings.groupDeals)),
       body: FutureBuilder<List<DealSummary>>(
         future: deals,
         builder: (context, snapshot) {
@@ -103,20 +105,20 @@ class _DealsScreenState extends State<DealsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('团购加载失败：${snapshot.error}'),
+                  Text(strings.dealsLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('deals-retry'),
                     onPressed: reloading ? null : reload,
                     icon: const Icon(Icons.refresh),
-                    label: Text(reloading ? '处理中...' : '重试'),
+                    label: Text(reloading ? strings.processing : strings.retry),
                   ),
                 ],
               ),
             );
           }
           final items = snapshot.data ?? const [];
-          if (items.isEmpty) return const Center(child: Text('当前门店暂无团购'));
+          if (items.isEmpty) return Center(child: Text(strings.noDealsForShop));
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: items.length,
@@ -141,9 +143,12 @@ class _DealsScreenState extends State<DealsScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '${formatMoney(deal.price, deal.currency)} · 已售 ${deal.soldCount}',
+                              strings.priceSoldMeta(
+                                price: formatMoney(deal.price, deal.currency),
+                                count: deal.soldCount,
+                              ),
                             ),
-                            Text('库存 ${deal.stock}'),
+                            Text(strings.stockCount(deal.stock)),
                           ],
                         ),
                       ),
@@ -152,7 +157,7 @@ class _DealsScreenState extends State<DealsScreen> {
                         onPressed: buying || deal.stock <= 0
                             ? null
                             : () => buy(deal),
-                        child: const Text('购买'),
+                        child: Text(strings.buy),
                       ),
                     ],
                   ),

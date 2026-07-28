@@ -185,6 +185,77 @@ class AppLocalizations {
     'blockedAt': '拉黑时间：{time}',
     'userFallback': '用户 {id}',
     'anonymousPeer': 'TA',
+    'payPending': '待支付',
+    'payPaid': '已支付',
+    'payRefunded': '已退款',
+    'payPartialRefund': '部分退款',
+    'couponPending': '待使用',
+    'couponUsed': '已使用',
+    'couponExpired': '已过期',
+    'couponRefunded': '已退款',
+    'loadMoreOrdersFailed': '加载更多订单失败：{error}',
+    'ordersLoadFailed': '订单加载失败：{error}',
+    'noOrdersForFilter': '当前筛选下暂无订单',
+    'loadMoreCouponsFailed': '加载更多券码失败：{error}',
+    'couponsLoadFailed': '券码加载失败：{error}',
+    'noCouponsForFilter': '当前筛选下暂无券码',
+    'couponHighlight': '定位券码 {code}',
+    'groupDeals': '团购优惠',
+    'dealsLoadFailed': '团购加载失败：{error}',
+    'noDealsForShop': '当前门店暂无团购',
+    'soldCount': '已售 {count}',
+    'stockCount': '库存 {count}',
+    'buy': '购买',
+    'createOrderFailed': '下单失败：{error}',
+    'orderCreatedOpenDetailFailed': '订单 {orderNo} 已创建，但打开详情失败：{error}',
+    'dealDetail': '团购详情',
+    'dealDetailLoadFailed': '团购详情加载失败：{error}',
+    'soldAndStock': '已售 {sold} · 库存 {stock}',
+    'validUntil': '有效期 {range}',
+    'noPackageItems': '暂无套餐明细',
+    'quantityLabel': '数量 {count}',
+    'orderDetail': '订单详情',
+    'cancelOrder': '取消订单',
+    'cancelOrderConfirm': '订单取消后将释放库存，确定继续？',
+    'keepOrder': '先不取消',
+    'confirmCancel': '确认取消',
+    'applyRefund': '申请退款',
+    'submitApplication': '提交申请',
+    'cancelAction': '取消',
+    'orderLoadFailedTapRetry': '订单加载失败，点击重试',
+    'orderShopMeta': '{shop} · 订单 {orderNo}',
+    'startPayment': '发起支付',
+    'refundLabel': '退款：{status}',
+    'couponCopied': '券码已复制',
+    'couponDetail': '券详情',
+    'couponDetailLoadFailed': '券码详情加载失败：{error}',
+    'qrLoadFailed': '二维码加载失败',
+    'verifiedAt': '核销时间 {time}',
+    'showCodeToMerchant': '请向商户出示券码',
+    'priceSoldMeta': '{price} · 已售 {count}',
+    'usageRules': '使用规则',
+    'packageContents': '套餐内容',
+    'quantitySimple': '数量',
+    'unitPrice': '单价',
+    'paidAmount': '实付',
+    'orderCanceled': '订单已取消',
+    'refundReason': '退款原因',
+    'refundSubmitted': '退款申请已提交',
+    'defaultRefundReason': '行程有变',
+    'paymentRequestCreated': '已创建 {channel} 支付请求，请在支付渠道完成付款',
+    'paymentStartFailed': '支付发起失败：{error}',
+    'relatedCoupons': '关联券码',
+    'redeemable': '可核销',
+    'notRedeemable': '不可核销',
+    'copying': '复制中...',
+    'copyCouponCode': '复制券码',
+    'validUntilDate': '有效期至 {date}',
+    'noExpiry': '不限期',
+    'dealValidityRange': '团购有效期 {start} ~ {end}',
+    'noExtraRules': '暂无补充规则',
+    'defaultVerifyHint': '券码由商户核销；用户端不提供自助核销，避免误操作。',
+    'detailRefreshFailed': '详情刷新失败：{error}',
+    'reloadFullDetail': '重新加载完整详情',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -357,6 +428,77 @@ class AppLocalizations {
     'blockedAt': '封鎖時間：{time}',
     'userFallback': '使用者 {id}',
     'anonymousPeer': 'TA',
+    'payPending': '待支付',
+    'payPaid': '已支付',
+    'payRefunded': '已退款',
+    'payPartialRefund': '部分退款',
+    'couponPending': '待使用',
+    'couponUsed': '已使用',
+    'couponExpired': '已過期',
+    'couponRefunded': '已退款',
+    'loadMoreOrdersFailed': '載入更多訂單失敗：{error}',
+    'ordersLoadFailed': '訂單載入失敗：{error}',
+    'noOrdersForFilter': '目前篩選下暫無訂單',
+    'loadMoreCouponsFailed': '載入更多券碼失敗：{error}',
+    'couponsLoadFailed': '券碼載入失敗：{error}',
+    'noCouponsForFilter': '目前篩選下暫無券碼',
+    'couponHighlight': '定位券碼 {code}',
+    'groupDeals': '團購優惠',
+    'dealsLoadFailed': '團購載入失敗：{error}',
+    'noDealsForShop': '目前店家暫無團購',
+    'soldCount': '已售 {count}',
+    'stockCount': '庫存 {count}',
+    'buy': '購買',
+    'createOrderFailed': '下單失敗：{error}',
+    'orderCreatedOpenDetailFailed': '訂單 {orderNo} 已建立，但開啟詳情失敗：{error}',
+    'dealDetail': '團購詳情',
+    'dealDetailLoadFailed': '團購詳情載入失敗：{error}',
+    'soldAndStock': '已售 {sold} · 庫存 {stock}',
+    'validUntil': '有效期 {range}',
+    'noPackageItems': '暫無套餐明細',
+    'quantityLabel': '數量 {count}',
+    'orderDetail': '訂單詳情',
+    'cancelOrder': '取消訂單',
+    'cancelOrderConfirm': '訂單取消後將釋放庫存，確定繼續？',
+    'keepOrder': '先不取消',
+    'confirmCancel': '確認取消',
+    'applyRefund': '申請退款',
+    'submitApplication': '提交申請',
+    'cancelAction': '取消',
+    'orderLoadFailedTapRetry': '訂單載入失敗，點擊重試',
+    'orderShopMeta': '{shop} · 訂單 {orderNo}',
+    'startPayment': '發起支付',
+    'refundLabel': '退款：{status}',
+    'couponCopied': '券碼已複製',
+    'couponDetail': '券詳情',
+    'couponDetailLoadFailed': '券碼詳情載入失敗：{error}',
+    'qrLoadFailed': '二維碼載入失敗',
+    'verifiedAt': '核銷時間 {time}',
+    'showCodeToMerchant': '請向商家出示券碼',
+    'priceSoldMeta': '{price} · 已售 {count}',
+    'usageRules': '使用規則',
+    'packageContents': '套餐內容',
+    'quantitySimple': '數量',
+    'unitPrice': '單價',
+    'paidAmount': '實付',
+    'orderCanceled': '訂單已取消',
+    'refundReason': '退款原因',
+    'refundSubmitted': '退款申請已提交',
+    'defaultRefundReason': '行程有變',
+    'paymentRequestCreated': '已建立 {channel} 支付請求，請在支付渠道完成付款',
+    'paymentStartFailed': '支付發起失敗：{error}',
+    'relatedCoupons': '關聯券碼',
+    'redeemable': '可核銷',
+    'notRedeemable': '不可核銷',
+    'copying': '複製中...',
+    'copyCouponCode': '複製券碼',
+    'validUntilDate': '有效期至 {date}',
+    'noExpiry': '不限期',
+    'dealValidityRange': '團購有效期 {start} ~ {end}',
+    'noExtraRules': '暫無補充規則',
+    'defaultVerifyHint': '券碼由商家核銷；用戶端不提供自助核銷，避免誤操作。',
+    'detailRefreshFailed': '詳情重新整理失敗：{error}',
+    'reloadFullDetail': '重新載入完整詳情',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -535,6 +677,80 @@ class AppLocalizations {
     'blockedAt': 'Blocked at: {time}',
     'userFallback': 'User {id}',
     'anonymousPeer': 'Someone',
+    'payPending': 'Unpaid',
+    'payPaid': 'Paid',
+    'payRefunded': 'Refunded',
+    'payPartialRefund': 'Partially refunded',
+    'couponPending': 'Available',
+    'couponUsed': 'Used',
+    'couponExpired': 'Expired',
+    'couponRefunded': 'Refunded',
+    'loadMoreOrdersFailed': 'Could not load more orders: {error}',
+    'ordersLoadFailed': 'Could not load orders: {error}',
+    'noOrdersForFilter': 'No orders for this filter',
+    'loadMoreCouponsFailed': 'Could not load more coupons: {error}',
+    'couponsLoadFailed': 'Could not load coupons: {error}',
+    'noCouponsForFilter': 'No coupons for this filter',
+    'couponHighlight': 'Locate coupon {code}',
+    'groupDeals': 'Group deals',
+    'dealsLoadFailed': 'Could not load deals: {error}',
+    'noDealsForShop': 'No deals for this place yet',
+    'soldCount': 'Sold {count}',
+    'stockCount': 'Stock {count}',
+    'buy': 'Buy',
+    'createOrderFailed': 'Could not create order: {error}',
+    'orderCreatedOpenDetailFailed':
+        'Order {orderNo} was created, but opening details failed: {error}',
+    'dealDetail': 'Deal details',
+    'dealDetailLoadFailed': 'Could not load deal details: {error}',
+    'soldAndStock': 'Sold {sold} · stock {stock}',
+    'validUntil': 'Valid {range}',
+    'noPackageItems': 'No package items yet',
+    'quantityLabel': 'Qty {count}',
+    'orderDetail': 'Order details',
+    'cancelOrder': 'Cancel order',
+    'cancelOrderConfirm': 'Canceling releases inventory. Continue?',
+    'keepOrder': 'Keep order',
+    'confirmCancel': 'Confirm cancel',
+    'applyRefund': 'Request refund',
+    'submitApplication': 'Submit',
+    'cancelAction': 'Cancel',
+    'orderLoadFailedTapRetry': 'Could not load order. Tap to retry',
+    'orderShopMeta': '{shop} · order {orderNo}',
+    'startPayment': 'Pay now',
+    'refundLabel': 'Refund: {status}',
+    'couponCopied': 'Coupon code copied',
+    'couponDetail': 'Coupon details',
+    'couponDetailLoadFailed': 'Could not load coupon details: {error}',
+    'qrLoadFailed': 'Could not load QR code',
+    'verifiedAt': 'Verified at {time}',
+    'showCodeToMerchant': 'Show this code to the merchant',
+    'priceSoldMeta': '{price} · sold {count}',
+    'usageRules': 'Usage rules',
+    'packageContents': 'Package contents',
+    'quantitySimple': 'Quantity',
+    'unitPrice': 'Unit price',
+    'paidAmount': 'Paid',
+    'orderCanceled': 'Order canceled',
+    'refundReason': 'Refund reason',
+    'refundSubmitted': 'Refund request submitted',
+    'defaultRefundReason': 'Plans changed',
+    'paymentRequestCreated':
+        'Created a {channel} payment request. Finish payment in the channel.',
+    'paymentStartFailed': 'Could not start payment: {error}',
+    'relatedCoupons': 'Linked coupons',
+    'redeemable': 'Redeemable',
+    'notRedeemable': 'Not redeemable',
+    'copying': 'Copying...',
+    'copyCouponCode': 'Copy code',
+    'validUntilDate': 'Valid until {date}',
+    'noExpiry': 'No expiry',
+    'dealValidityRange': 'Deal validity {start} ~ {end}',
+    'noExtraRules': 'No extra rules',
+    'defaultVerifyHint':
+        'Merchants redeem this code. Self-service redemption is disabled on the user side.',
+    'detailRefreshFailed': 'Could not refresh details: {error}',
+    'reloadFullDetail': 'Reload full details',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -809,6 +1025,110 @@ class AppLocalizations {
   String userFallback(int id) =>
       _text('userFallback').replaceFirst('{id}', '$id');
   String get anonymousPeer => _text('anonymousPeer');
+
+  String get payPending => _text('payPending');
+  String get payPaid => _text('payPaid');
+  String get payRefunded => _text('payRefunded');
+  String get payPartialRefund => _text('payPartialRefund');
+  String get couponPending => _text('couponPending');
+  String get couponUsed => _text('couponUsed');
+  String get couponExpired => _text('couponExpired');
+  String get couponRefunded => _text('couponRefunded');
+  String loadMoreOrdersFailed(Object error) =>
+      _withError('loadMoreOrdersFailed', error);
+  String ordersLoadFailed(Object error) => _withError('ordersLoadFailed', error);
+  String get noOrdersForFilter => _text('noOrdersForFilter');
+  String loadMoreCouponsFailed(Object error) =>
+      _withError('loadMoreCouponsFailed', error);
+  String couponsLoadFailed(Object error) =>
+      _withError('couponsLoadFailed', error);
+  String get noCouponsForFilter => _text('noCouponsForFilter');
+  String couponHighlight(String code) =>
+      _text('couponHighlight').replaceFirst('{code}', code);
+  String get groupDeals => _text('groupDeals');
+  String dealsLoadFailed(Object error) => _withError('dealsLoadFailed', error);
+  String get noDealsForShop => _text('noDealsForShop');
+  String soldCount(int count) => _withCount('soldCount', count);
+  String stockCount(int count) => _withCount('stockCount', count);
+  String get buy => _text('buy');
+  String createOrderFailed(Object error) =>
+      _withError('createOrderFailed', error);
+  String orderCreatedOpenDetailFailed(String orderNo, Object error) => _text(
+        'orderCreatedOpenDetailFailed',
+      )
+      .replaceFirst('{orderNo}', orderNo)
+      .replaceFirst('{error}', '$error');
+  String get dealDetail => _text('dealDetail');
+  String dealDetailLoadFailed(Object error) =>
+      _withError('dealDetailLoadFailed', error);
+  String soldAndStock({required int sold, required int stock}) => _text(
+        'soldAndStock',
+      ).replaceFirst('{sold}', '$sold').replaceFirst('{stock}', '$stock');
+  String validUntil(String range) =>
+      _text('validUntil').replaceFirst('{range}', range);
+  String get noPackageItems => _text('noPackageItems');
+  String quantityLabel(int count) => _withCount('quantityLabel', count);
+  String get orderDetail => _text('orderDetail');
+  String get cancelOrder => _text('cancelOrder');
+  String get cancelOrderConfirm => _text('cancelOrderConfirm');
+  String get keepOrder => _text('keepOrder');
+  String get confirmCancel => _text('confirmCancel');
+  String get applyRefund => _text('applyRefund');
+  String get submitApplication => _text('submitApplication');
+  String get cancelAction => _text('cancelAction');
+  String get orderLoadFailedTapRetry => _text('orderLoadFailedTapRetry');
+  String orderShopMeta({required String shop, required String orderNo}) => _text(
+        'orderShopMeta',
+      ).replaceFirst('{shop}', shop).replaceFirst('{orderNo}', orderNo);
+  String get startPayment => _text('startPayment');
+  String refundLabel(String status) =>
+      _text('refundLabel').replaceFirst('{status}', status);
+  String get couponCopied => _text('couponCopied');
+  String get couponDetail => _text('couponDetail');
+  String couponDetailLoadFailed(Object error) =>
+      _withError('couponDetailLoadFailed', error);
+  String get qrLoadFailed => _text('qrLoadFailed');
+  String verifiedAt(String time) =>
+      _text('verifiedAt').replaceFirst('{time}', time);
+  String get showCodeToMerchant => _text('showCodeToMerchant');
+  String priceSoldMeta({required String price, required int count}) => _text(
+        'priceSoldMeta',
+      ).replaceFirst('{price}', price).replaceFirst('{count}', '$count');
+
+  String get usageRules => _text('usageRules');
+  String get packageContents => _text('packageContents');
+  String get quantitySimple => _text('quantitySimple');
+  String get unitPrice => _text('unitPrice');
+  String get paidAmount => _text('paidAmount');
+  String get orderCanceled => _text('orderCanceled');
+  String get refundReason => _text('refundReason');
+  String get refundSubmitted => _text('refundSubmitted');
+  String get defaultRefundReason => _text('defaultRefundReason');
+  String paymentRequestCreated(String channel) =>
+      _text('paymentRequestCreated').replaceFirst('{channel}', channel);
+  String paymentStartFailed(Object error) =>
+      _withError('paymentStartFailed', error);
+  String get relatedCoupons => _text('relatedCoupons');
+
+  String get redeemable => _text('redeemable');
+  String get notRedeemable => _text('notRedeemable');
+  String get copying => _text('copying');
+  String get copyCouponCode => _text('copyCouponCode');
+  String validUntilDate(String date) =>
+      _text('validUntilDate').replaceFirst('{date}', date);
+  String get noExpiry => _text('noExpiry');
+  String dealValidityRange({required String start, required String end}) =>
+      _text('dealValidityRange')
+          .replaceFirst('{start}', start)
+          .replaceFirst('{end}', end);
+  String get noExtraRules => _text('noExtraRules');
+  String get defaultVerifyHint => _text('defaultVerifyHint');
+
+  String detailRefreshFailed(Object error) =>
+      _withError('detailRefreshFailed', error);
+  String get reloadFullDetail => _text('reloadFullDetail');
+  String statusWithRedeemability(String status, bool usable) =>
+      '$status · ${usable ? redeemable : notRedeemable}';
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

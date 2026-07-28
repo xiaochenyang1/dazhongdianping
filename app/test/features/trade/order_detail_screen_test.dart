@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -116,11 +118,29 @@ class OrderDetailApi implements JsonApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('coupon detail retries an initial load failure', (tester) async {
     final api = OrderDetailApi(failFirstCoupon: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: CouponDetailScreen(
           repository: TradeRepository(api),
           code: 'CP-DEMO-2026',
@@ -142,7 +162,7 @@ void main() {
     final gate = Completer<void>();
     final api = OrderDetailApi(failFirstCoupon: true)..couponGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: CouponDetailScreen(
           repository: TradeRepository(api),
           code: 'CP-DEMO-2026',
@@ -168,7 +188,7 @@ void main() {
   ) async {
     final api = OrderDetailApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: OrderDetailScreen(
           repository: TradeRepository(api),
           orderId: 10,
@@ -195,7 +215,7 @@ void main() {
     final gate = Completer<void>();
     final api = OrderDetailApi(failFirstOrder: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
       ),
     );
@@ -239,7 +259,7 @@ void main() {
       expireAt: '2026-12-31',
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: CouponDetailScreen(
           repository: TradeRepository(api),
           code: coupon.code,
@@ -281,7 +301,7 @@ void main() {
     );
     final api = OrderDetailApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: CouponDetailScreen(
           repository: TradeRepository(api),
           code: 'CP-DEMO-2026',
@@ -308,7 +328,7 @@ void main() {
   ) async {
     final api = OrderDetailApi(paid: true)..failNextRefund = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
       ),
     );
@@ -343,7 +363,7 @@ void main() {
     final gate = Completer<void>();
     final api = OrderDetailApi()..paymentGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: OrderDetailScreen(
           repository: TradeRepository(api),
           orderId: 10,
@@ -368,7 +388,7 @@ void main() {
   testWidgets('order detail guards duplicate cancel dialogs', (tester) async {
     final api = OrderDetailApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
       ),
     );
@@ -396,7 +416,7 @@ void main() {
   testWidgets('order detail guards duplicate refund dialogs', (tester) async {
     final api = OrderDetailApi(paid: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
       ),
     );
@@ -436,7 +456,7 @@ void main() {
       expireAt: '2026-12-31',
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: CouponDetailScreen(
           repository: TradeRepository(api),
           code: coupon.code,

@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
@@ -23,7 +24,7 @@ class OrderDetailScreen extends StatefulWidget {
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
-  final _refundReasonController = TextEditingController(text: '行程有变');
+  final _refundReasonController = TextEditingController();
   TradeOrder? _order;
   String? _error;
   bool _loading = false;
@@ -67,20 +68,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     try {
       confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('取消订单'),
-          content: const Text('订单取消后将释放库存，确定继续？'),
+        builder: (context) {
+          final strings = AppLocalizations.of(context);
+          return AlertDialog(
+          title: Text(strings.cancelOrder),
+          content: Text(strings.cancelOrderConfirm),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('先不取消'),
+              child: Text(strings.keepOrder),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('确认取消'),
+              child: Text(strings.confirmCancel),
             ),
           ],
-        ),
+        );
+        },
       );
     } finally {
       if (mounted) setState(() => _confirmingCancel = false);
@@ -88,7 +92,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     if (confirmed != true || !mounted) return;
     await _runAction(
       () => widget.repository.cancelOrder(widget.orderId),
-      '订单已取消',
+      AppLocalizations.of(context).orderCanceled,
     );
   }
 
@@ -99,27 +103,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     try {
       reason = await showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('申请退款'),
+        builder: (context) {
+          final strings = AppLocalizations.of(context);
+          if (_refundReasonController.text.trim().isEmpty) {
+            _refundReasonController.text = strings.defaultRefundReason;
+          }
+          return AlertDialog(
+          title: Text(strings.applyRefund),
           content: TextField(
             key: const Key('order-refund-reason'),
             controller: _refundReasonController,
             autofocus: true,
-            decoration: const InputDecoration(labelText: '退款原因'),
+            decoration: InputDecoration(labelText: strings.refundReason),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
+              child: Text(strings.cancelAction),
             ),
             FilledButton(
               onPressed: () => Navigator.of(
                 context,
               ).pop(_refundReasonController.text.trim()),
-              child: const Text('提交申请'),
+              child: Text(strings.submitApplication),
             ),
           ],
-        ),
+        );
+        },
       );
     } finally {
       if (mounted) setState(() => _refundDialogOpen = false);
@@ -128,9 +138,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     if (refundReason == null || refundReason.isEmpty || !mounted) return;
     final succeeded = await _runAction(
       () => widget.repository.refundOrder(widget.orderId, reason: refundReason),
-      '退款申请已提交',
+      AppLocalizations.of(context).refundSubmitted,
     );
-    if (succeeded) _refundReasonController.text = '行程有变';
+    if (succeeded && mounted) {
+      _refundReasonController.text =
+          AppLocalizations.of(context).defaultRefundReason;
+    }
   }
 
   Future<void> _pay() async {
@@ -145,9 +158,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     setState(() => _acting = true);
     try {
       final intent = await widget.repository.createPayment(widget.orderId);
-      if (mounted) _showMessage('已创建 ${intent.channel} 支付请求，请在支付渠道完成付款');
+      if (mounted) {
+        _showMessage(
+          AppLocalizations.of(context).paymentRequestCreated(intent.channel),
+        );
+      }
     } catch (error) {
-      if (mounted) _showMessage('支付发起失败：$error');
+      if (mounted) {
+        _showMessage(AppLocalizations.of(context).paymentStartFailed(error));
+      }
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -166,7 +185,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       _showMessage(successMessage);
       return true;
     } catch (error) {
-      if (mounted) _showMessage('操作失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).actionFailed(error));
       return false;
     } finally {
       if (mounted) setState(() => _acting = false);
@@ -181,8 +200,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('订单详情')),
+      appBar: AppBar(title: Text(strings.orderDetail)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -190,7 +210,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               child: FilledButton(
                 key: const Key('order-detail-retry'),
                 onPressed: _load,
-                child: const Text('订单加载失败，点击重试'),
+                child: Text(strings.orderLoadFailedTapRetry),
               ),
             )
           : _buildOrder(context, _order!),
@@ -198,6 +218,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget _buildOrder(BuildContext context, TradeOrder order) {
+    final strings = AppLocalizations.of(context);
     final paymentReason = widget.thirdPartyConfig.unavailableReason(
       ThirdPartyFeature.payment,
     );
@@ -223,7 +244,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Text('${order.shopName} · 订单 ${order.orderNo}'),
+                Text(strings.orderShopMeta(shop: order.shopName, orderNo: order.orderNo)),
               ],
             ),
           ),
@@ -234,13 +255,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             padding: const EdgeInsets.all(18),
             child: Column(
               children: [
-                _DetailRow(label: '数量', value: '${order.quantity}'),
+                _DetailRow(label: strings.quantitySimple, value: '${order.quantity}'),
                 _DetailRow(
-                  label: '单价',
+                  label: strings.unitPrice,
                   value: formatMoney(order.unitPrice, order.currency),
                 ),
                 _DetailRow(
-                  label: '实付',
+                  label: strings.paidAmount,
                   value: formatMoney(order.amount, order.currency),
                   emphasize: true,
                 ),
@@ -263,12 +284,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             key: const Key('order-pay-button'),
             onPressed: _acting ? null : _pay,
             icon: const Icon(Icons.payments_outlined),
-            label: const Text('发起支付'),
+            label: Text(strings.startPayment),
           ),
           OutlinedButton(
             key: const Key('order-cancel-button'),
             onPressed: _acting || _confirmingCancel ? null : _cancel,
-            child: const Text('取消订单'),
+            child: Text(strings.cancelOrder),
           ),
         ],
         if (order.payStatus == 1 &&
@@ -279,23 +300,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             key: const Key('order-refund-button'),
             onPressed: _acting || _refundDialogOpen ? null : _refund,
             icon: const Icon(Icons.currency_exchange),
-            label: const Text('申请退款'),
+            label: Text(strings.applyRefund),
           ),
         ],
         if (order.refund != null) ...[
           const SizedBox(height: 14),
           Card(
             child: ListTile(
-              title: Text('退款：${order.refund!.statusText}'),
+              title: Text(strings.refundLabel(order.refund!.statusText)),
               subtitle: Text(order.refund!.reason),
             ),
           ),
         ],
         if (order.coupons.isNotEmpty) ...[
           const SizedBox(height: 18),
-          const Text(
-            '关联券码',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          Text(
+            strings.relatedCoupons,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           ...order.coupons.map(
@@ -371,9 +392,9 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
     try {
       await Clipboard.setData(ClipboardData(text: code));
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('券码已复制')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).couponCopied)),
+      );
     } finally {
       if (mounted) setState(() => _copyingCode = false);
     }
@@ -381,8 +402,9 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('券详情')),
+      appBar: AppBar(title: Text(strings.couponDetail)),
       body: FutureBuilder<CouponDetail>(
         future: _detail,
         builder: (context, snapshot) {
@@ -395,13 +417,13 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('券码详情加载失败：${snapshot.error}'),
+                  Text(strings.couponDetailLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('coupon-detail-retry'),
                     onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloading ? '处理中...' : '重试'),
+                    label: Text(_reloading ? strings.processing : strings.retry),
                   ),
                 ],
               ),
@@ -410,7 +432,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
           final detail = snapshot.data;
           final coupon = detail ?? widget.initialCoupon!;
           final usable = detail?.usable;
-          final verifyHint = detail?.verifyHint ?? '券码由商户核销；用户端不提供自助核销，避免误操作。';
+          final verifyHint = detail?.verifyHint.isNotEmpty == true ? detail!.verifyHint : strings.defaultVerifyHint;
           final qrImageUrl = detail?.qrImageUrl ?? '';
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -424,7 +446,10 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                       Text(
                         usable == null
                             ? coupon.statusText
-                            : '${coupon.statusText} · ${usable ? '可核销' : '不可核销'}',
+                            : strings.statusWithRedeemability(
+                                coupon.statusText,
+                                usable,
+                              ),
                       ),
                       const SizedBox(height: 12),
                       SelectableText(
@@ -443,7 +468,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                             ? null
                             : () => _copyCode(coupon.code),
                         icon: const Icon(Icons.copy_outlined),
-                        label: Text(_copyingCode ? '复制中...' : '复制券码'),
+                        label: Text(_copyingCode ? strings.copying : strings.copyCouponCode),
                       ),
                       if (qrImageUrl.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -452,7 +477,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                           key: const Key('coupon-qr-image'),
                           width: 220,
                           height: 220,
-                          errorBuilder: (_, _, _) => const Text('二维码加载失败'),
+                          errorBuilder: (_, _, _) => Text(strings.qrLoadFailed),
                         ),
                       ],
                     ],
@@ -476,16 +501,27 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                       const SizedBox(height: 6),
                       Text(coupon.shopName),
                       Text(
-                        '有效期至 ${coupon.expireAt.isEmpty ? '不限期' : coupon.expireAt}',
+                        strings.validUntilDate(
+                          coupon.expireAt.isEmpty
+                              ? strings.noExpiry
+                              : coupon.expireAt,
+                        ),
                       ),
                       if (detail != null &&
                           (detail.validStart.isNotEmpty ||
                               detail.validEnd.isNotEmpty))
                         Text(
-                          '团购有效期 ${detail.validStart.isEmpty ? '—' : detail.validStart} ~ ${detail.validEnd.isEmpty ? '—' : detail.validEnd}',
+                          strings.dealValidityRange(
+                            start: detail.validStart.isEmpty
+                                ? '—'
+                                : detail.validStart,
+                            end: detail.validEnd.isEmpty
+                                ? '—'
+                                : detail.validEnd,
+                          ),
                         ),
                       if (detail != null && detail.verifyAt.isNotEmpty)
-                        Text('核销时间 ${detail.verifyAt}'),
+                        Text(strings.verifiedAt(detail.verifyAt)),
                     ],
                   ),
                 ),
@@ -498,12 +534,16 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          '使用规则',
-                          style: TextStyle(fontWeight: FontWeight.w800),
+                        Text(
+                          strings.usageRules,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 8),
-                        Text(detail.rules.isEmpty ? '暂无补充规则' : detail.rules),
+                        Text(
+                          detail.rules.isEmpty
+                              ? strings.noExtraRules
+                              : detail.rules,
+                        ),
                       ],
                     ),
                   ),
@@ -513,7 +553,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.verified_user_outlined),
-                  title: const Text('请向商户出示券码'),
+                  title: Text(strings.showCodeToMerchant),
                   subtitle: Text(verifyHint),
                 ),
               ),
@@ -532,7 +572,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                         key: const Key('coupon-detail-fallback-retry'),
                         onPressed: _reloading ? null : _reload,
                         icon: const Icon(Icons.refresh),
-                        label: Text(_reloading ? '处理中...' : '重新加载完整详情'),
+                        label: Text(_reloading ? strings.processing : strings.reloadFullDetail),
                       ),
                     ],
                   ),

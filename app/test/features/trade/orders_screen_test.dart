@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/trade/orders_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class OrdersApi implements JsonApi {
@@ -80,11 +82,43 @@ class OrdersApi implements JsonApi {
       const {};
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
+
+  testWidgets('orders screen switches English chrome', (tester) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: OrdersScreen(repository: TradeRepository(OrdersApi())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Orders'), findsOneWidget);
+    expect(find.text('Unpaid'), findsOneWidget);
+  });
+
+
   testWidgets('orders screen retries an initial load failure', (tester) async {
     final api = OrdersApi(failFirst: true);
     await tester.pumpWidget(
-      MaterialApp(home: OrdersScreen(repository: TradeRepository(api))),
+      localizedApp(home: OrdersScreen(repository: TradeRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -100,7 +134,7 @@ void main() {
     final gate = Completer<void>();
     final api = OrdersApi(failFirst: true)..retryGate = gate;
     await tester.pumpWidget(
-      MaterialApp(home: OrdersScreen(repository: TradeRepository(api))),
+      localizedApp(home: OrdersScreen(repository: TradeRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -118,7 +152,7 @@ void main() {
   testWidgets('orders screen loads later filtered pages', (tester) async {
     final api = OrdersApi(paginated: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: OrdersScreen(
           repository: TradeRepository(api),
           initialPayStatus: 1,
@@ -143,7 +177,7 @@ void main() {
   ) async {
     final api = OrdersApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: OrdersScreen(
           repository: TradeRepository(api),
           initialPayStatus: 0,
@@ -171,7 +205,7 @@ void main() {
     final gate = Completer<void>();
     final api = OrdersApi()..detailGate = gate;
     await tester.pumpWidget(
-      MaterialApp(home: OrdersScreen(repository: TradeRepository(api))),
+      localizedApp(home: OrdersScreen(repository: TradeRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -184,7 +218,7 @@ void main() {
 
     gate.complete();
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
 
     expect(api.orderDetailRequests, 1);

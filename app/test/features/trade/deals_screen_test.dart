@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/trade/deals_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class DealsScreenApi implements JsonApi {
@@ -98,11 +100,47 @@ class DealsScreenApi implements JsonApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
+
+  testWidgets('deals screen switches English chrome', (tester) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: DealsScreen(
+          repository: TradeRepository(DealsScreenApi()),
+          shopId: 1,
+          thirdPartyConfig: const ThirdPartyConfig(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Group deals'), findsOneWidget);
+    expect(find.text('Group deals'), findsWidgets);
+  });
+
+
   testWidgets('deals screen retries an initial load failure', (tester) async {
     final api = DealsScreenApi(failFirst: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: DealsScreen(
           repository: TradeRepository(api),
           shopId: 2,
@@ -124,7 +162,7 @@ void main() {
     final gate = Completer<void>();
     final api = DealsScreenApi(failFirst: true)..retryGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: DealsScreen(
           repository: TradeRepository(api),
           shopId: 2,
@@ -149,7 +187,7 @@ void main() {
     'deal purchase blocks real payment when provider is unconfigured',
     (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        localizedApp(
           home: DealsScreen(
             repository: TradeRepository(DealsScreenApi()),
             shopId: 2,
@@ -170,7 +208,7 @@ void main() {
   ) async {
     final api = DealsScreenApi(failPayment: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: DealsScreen(
           repository: TradeRepository(api),
           shopId: 2,

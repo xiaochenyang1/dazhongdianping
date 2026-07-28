@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
@@ -19,12 +20,12 @@ class CouponsScreen extends StatefulWidget {
 }
 
 class _CouponsScreenState extends State<CouponsScreen> {
-  static const _tabs = <({int? status, String label})>[
-    (status: null, label: '全部'),
-    (status: 1, label: '待使用'),
-    (status: 2, label: '已使用'),
-    (status: 3, label: '已过期'),
-    (status: 4, label: '已退款'),
+  List<({int? status, String label})> _tabs(AppLocalizations strings) => [
+    (status: null, label: strings.filterAll),
+    (status: 1, label: strings.couponPending),
+    (status: 2, label: strings.couponUsed),
+    (status: 3, label: strings.couponExpired),
+    (status: 4, label: strings.couponRefunded),
   ];
 
   late int? _status;
@@ -98,7 +99,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
       if (mounted && requestId == _requestId) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多券码失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreCouponsFailed(error))));
       }
     } finally {
       if (mounted && requestId == _requestId) {
@@ -135,16 +136,18 @@ class _CouponsScreenState extends State<CouponsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    final tabs = _tabs(strings);
     final highlight = widget.highlightCode?.trim() ?? '';
     return Scaffold(
-      appBar: AppBar(title: const Text('我的券')),
+      appBar: AppBar(title: Text(strings.myCoupons)),
       body: Column(
         children: [
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
-              children: _tabs
+              children: tabs
                   .map(
                     (tab) => Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -165,7 +168,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '定位券码 $highlight',
+                  strings.couponHighlight(highlight),
                   key: const Key('coupon-highlight-banner'),
                 ),
               ),
@@ -182,13 +185,13 @@ class _CouponsScreenState extends State<CouponsScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('券码加载失败：${snapshot.error}'),
+                        Text(strings.couponsLoadFailed(snapshot.error!)),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('coupons-retry'),
                           onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_retrying ? '处理中...' : '重试'),
+                          label: Text(_retrying ? strings.processing : strings.retry),
                         ),
                       ],
                     ),
@@ -197,7 +200,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                 final page = snapshot.data!;
                 final items = page.items;
                 if (items.isEmpty) {
-                  return const Center(child: Text('当前筛选下暂无券码'));
+                  return Center(child: Text(strings.noCouponsForFilter));
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -219,7 +222,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                                   ),
                                 )
                               : const Icon(Icons.expand_more),
-                          label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                          label: Text(_loadingMore ? strings.loading : strings.loadMore),
                         ),
                       );
                     }

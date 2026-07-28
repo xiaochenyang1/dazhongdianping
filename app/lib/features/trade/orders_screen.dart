@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
@@ -17,12 +18,12 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  static const _tabs = <({int? payStatus, String label})>[
-    (payStatus: null, label: '全部'),
-    (payStatus: 0, label: '待支付'),
-    (payStatus: 1, label: '已支付'),
-    (payStatus: 2, label: '已退款'),
-    (payStatus: 3, label: '部分退款'),
+  List<({int? payStatus, String label})> _tabs(AppLocalizations strings) => [
+    (payStatus: null, label: strings.filterAll),
+    (payStatus: 0, label: strings.payPending),
+    (payStatus: 1, label: strings.payPaid),
+    (payStatus: 2, label: strings.payRefunded),
+    (payStatus: 3, label: strings.payPartialRefund),
   ];
 
   late int? _payStatus;
@@ -96,7 +97,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       if (mounted && requestId == _requestId) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多订单失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreOrdersFailed(error))));
       }
     } finally {
       if (mounted && requestId == _requestId) {
@@ -133,15 +134,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    final tabs = _tabs(strings);
     return Scaffold(
-      appBar: AppBar(title: const Text('我的订单')),
+      appBar: AppBar(title: Text(strings.myOrders)),
       body: Column(
         children: [
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
-              children: _tabs
+              children: tabs
                   .map(
                     (tab) => Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -168,13 +171,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('订单加载失败：${snapshot.error}'),
+                        Text(strings.ordersLoadFailed(snapshot.error!)),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('orders-retry'),
                           onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_retrying ? '处理中...' : '重试'),
+                          label: Text(_retrying ? strings.processing : strings.retry),
                         ),
                       ],
                     ),
@@ -183,7 +186,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 final page = snapshot.data!;
                 final items = page.items;
                 if (items.isEmpty) {
-                  return const Center(child: Text('当前筛选下暂无订单'));
+                  return Center(child: Text(strings.noOrdersForFilter));
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -205,7 +208,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   ),
                                 )
                               : const Icon(Icons.expand_more),
-                          label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                          label: Text(_loadingMore ? strings.loading : strings.loadMore),
                         ),
                       );
                     }

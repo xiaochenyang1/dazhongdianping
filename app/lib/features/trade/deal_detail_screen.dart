@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
@@ -43,8 +44,10 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('团购详情')),
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return Scaffold(
+    appBar: AppBar(title: Text(strings.dealDetail)),
     body: FutureBuilder<DealDetail>(
       future: _detail,
       builder: (context, snapshot) {
@@ -56,13 +59,13 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('团购详情加载失败：${snapshot.error}'),
+                Text(strings.dealDetailLoadFailed(snapshot.error!)),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('deal-detail-retry'),
                   onPressed: _reloading ? null : _reload,
                   icon: const Icon(Icons.refresh),
-                  label: Text(_reloading ? '处理中...' : '重试'),
+                  label: Text(_reloading ? strings.processing : strings.retry),
                 ),
               ],
             ),
@@ -124,34 +127,34 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
               ],
             ),
             const SizedBox(height: 6),
-            Text('已售 ${detail.soldCount} · 库存 ${detail.stock}'),
+            Text(strings.soldAndStock(sold: detail.soldCount, stock: detail.stock)),
             if (validity.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text('有效期 $validity'),
+              Text(strings.validUntil(validity)),
             ],
             if (detail.rules.isNotEmpty) ...[
               const SizedBox(height: 22),
-              const Text(
-                '使用规则',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              Text(
+                strings.usageRules,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Text(detail.rules),
             ],
             const SizedBox(height: 22),
-            const Text(
-              '套餐内容',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            Text(
+              strings.packageContents,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             if (detail.items.isEmpty)
-              const Text('暂无套餐明细')
+              Text(strings.noPackageItems)
             else
               ...detail.items.map(
                 (item) => ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(item.name),
-                  subtitle: Text('数量 ${item.quantity}'),
+                  subtitle: Text(strings.quantityLabel(item.quantity)),
                   trailing: Text(formatMoney(item.price, detail.currency)),
                 ),
               ),
@@ -160,4 +163,5 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
       },
     ),
   );
+  }
 }

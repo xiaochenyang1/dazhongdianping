@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/trade/coupons_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CouponsApi implements JsonApi {
@@ -80,11 +82,43 @@ class CouponsApi implements JsonApi {
       const {};
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
+
+  testWidgets('coupons screen switches English chrome', (tester) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CouponsScreen(repository: TradeRepository(CouponsApi())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Coupons'), findsOneWidget);
+    expect(find.text('Available'), findsOneWidget);
+  });
+
+
   testWidgets('coupons screen retries an initial load failure', (tester) async {
     final api = CouponsApi(failFirst: true);
     await tester.pumpWidget(
-      MaterialApp(home: CouponsScreen(repository: TradeRepository(api))),
+      localizedApp(home: CouponsScreen(repository: TradeRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -100,7 +134,7 @@ void main() {
     final gate = Completer<void>();
     final api = CouponsApi(failFirst: true)..retryGate = gate;
     await tester.pumpWidget(
-      MaterialApp(home: CouponsScreen(repository: TradeRepository(api))),
+      localizedApp(home: CouponsScreen(repository: TradeRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -118,7 +152,7 @@ void main() {
   testWidgets('coupons screen loads later filtered pages', (tester) async {
     final api = CouponsApi(paginated: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: CouponsScreen(repository: TradeRepository(api), initialStatus: 1),
       ),
     );
@@ -140,7 +174,7 @@ void main() {
   ) async {
     final api = CouponsApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: CouponsScreen(
           repository: TradeRepository(api),
           initialStatus: 1,
@@ -171,7 +205,7 @@ void main() {
     final gate = Completer<void>();
     final api = CouponsApi()..detailGate = gate;
     await tester.pumpWidget(
-      MaterialApp(home: CouponsScreen(repository: TradeRepository(api))),
+      localizedApp(home: CouponsScreen(repository: TradeRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -184,7 +218,7 @@ void main() {
 
     gate.complete();
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
 
     expect(api.couponDetailRequests, 1);
