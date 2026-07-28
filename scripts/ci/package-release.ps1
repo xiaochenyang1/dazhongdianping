@@ -10,6 +10,9 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $backendDir = Join-Path $repoRoot "backend"
 $webDir = Join-Path $repoRoot "web"
 $adminDir = Join-Path $repoRoot "admin-web"
+$publicSiteUrl = $env:PUBLIC_SITE_URL
+$prerenderApiBaseUrl = $env:PRERENDER_API_BASE_URL
+$prerenderRegion = if ($env:PRERENDER_REGION) { $env:PRERENDER_REGION } else { "CN" }
 $runningOnWindows = [System.Environment]::OSVersion.Platform -eq "Win32NT"
 $mvnw = Join-Path $backendDir $(if ($runningOnWindows) { "mvnw.cmd" } else { "mvnw" })
 
@@ -53,8 +56,9 @@ if ($DryRun) {
     Write-Output "1. Build the backend jar with backend/mvnw.cmd -DskipTests package."
     Write-Output "2. Build web dist with npm run build under web."
     Write-Output "3. Build admin-web dist with npm run build under admin-web."
-    Write-Output "4. Assemble backend jar + web dist + admin-web dist into a release bundle under $OutputDir."
-    Write-Output "5. Write a release manifest for version $Version."
+    Write-Output "4. If PUBLIC_SITE_URL and PRERENDER_API_BASE_URL are configured, build real SEO snapshots for PRERENDER_REGION=$prerenderRegion."
+    Write-Output "5. Assemble backend jar + web dist + admin-web dist into a release bundle under $OutputDir."
+    Write-Output "6. Write a release manifest for version $Version."
     exit 0
 }
 
@@ -67,6 +71,11 @@ try {
 
     Invoke-Native -FilePath $mvnw -Arguments @("-q", "-DskipTests", "package") -WorkingDirectory $backendDir
     Invoke-Native -FilePath "npm" -Arguments @("run", "build") -WorkingDirectory $webDir
+    $seoSnapshotEnabled = -not [string]::IsNullOrWhiteSpace($publicSiteUrl) -and
+        -not [string]::IsNullOrWhiteSpace($prerenderApiBaseUrl)
+    if ($seoSnapshotEnabled) {
+        Invoke-Native -FilePath "npm" -Arguments @("run", "build:prerender:data") -WorkingDirectory $webDir
+    }
     Invoke-Native -FilePath "npm" -Arguments @("run", "build") -WorkingDirectory $adminDir
 
     $backendJar = Get-ChildItem -File -LiteralPath (Join-Path $backendDir "target") -Filter "*.jar" |
@@ -92,6 +101,13 @@ try {
         commitSha = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { "" }
         bundleName = [System.IO.Path]::GetFileName($bundlePath)
         backendJar = $backendJar.Name
+        seoSnapshot = [ordered]@{
+            enabled = $seoSnapshotEnabled
+            siteUrl = if ($seoSnapshotEnabled) { $publicSiteUrl } else { "" }
+            apiBaseUrl = if ($seoSnapshotEnabled) { $prerenderApiBaseUrl } else { "" }
+            region = if ($seoSnapshotEnabled) { $prerenderRegion } else { "" }
+            generatedAtUtc = if ($seoSnapshotEnabled) { [System.DateTimeOffset]::UtcNow.ToString("o") } else { "" }
+        }
     }
     $manifestPath = Join-Path $stagingDir "release-manifest.json"
     $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
