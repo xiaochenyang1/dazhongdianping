@@ -174,6 +174,42 @@ class AdminRbacControllerTest {
     }
 
     @Test
+    void shouldListActiveScopeShopsAndPersistShopWhitelist() throws Exception {
+        String token = login("admin", "admin123456");
+        mockMvc.perform(get("/api/admin/v1/rbac/scope-shops")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.id == 20001 && @.region == 'EU' && @.cityId == 101)]").isNotEmpty())
+                .andExpect(jsonPath("$.data[?(@.id == 20002 && @.region == 'EU' && @.cityId == 102)]").isNotEmpty());
+
+        long roleId = createRole(token, "shop_scope_validator", "门店白名单校验员", 14L);
+        MvcResult result = mockMvc.perform(post("/api/admin/v1/rbac/admins")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "account", "shop.whitelist",
+                                "password", "Operator#123456",
+                                "name", "门店白名单管理员",
+                                "roleIds", List.of(roleId),
+                                "regions", List.of("EU"),
+                                "cityScopes", List.of(Map.of(
+                                        "region", "EU",
+                                        "allCities", false,
+                                        "cityIds", List.of(),
+                                        "shopIds", List.of(20001L)
+                                ))
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cityScopes[0].shopIds[0]").value(20001))
+                .andReturn();
+        long adminId = dataId(result);
+        AdminCityScope scope = adminAuthService.authenticate(login("shop.whitelist", "Operator#123456")).cityScopes().get("EU");
+        assertNotNull(scope);
+        assertEquals(Set.of(20001L), scope.shopIds());
+        assertEquals(adminId, jdbc.queryForObject("SELECT admin_id FROM admin_shop_scope WHERE shop_id=20001 AND region='EU'", Long.class));
+    }
+
+    @Test
     void shouldRejectInvalidAdminCityScopes() throws Exception {
         String token = login("admin", "admin123456");
         long roleId = createRole(token, "city_scope_validator", "城市范围校验员", 14L);

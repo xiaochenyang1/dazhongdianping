@@ -6,17 +6,19 @@ import {
   listAdminAccounts,
   listAdminRoles,
   listAdminScopeCities,
+  listAdminScopeShops,
   resetAdminAccountPassword,
   updateAdminAccount,
   updateAdminAccountStatus,
 } from '@/services/admin'
-import type { AdminAccount, AdminCityScope, AdminRole, AdminScopeCity, Region } from '@/types/admin'
+import type { AdminAccount, AdminCityScope, AdminRole, AdminScopeCity, AdminScopeShop, Region } from '@/types/admin'
 
 const { state } = useAdminSession()
 
 const accounts = ref<AdminAccount[]>([])
 const roles = ref<AdminRole[]>([])
 const scopeCities = ref<AdminScopeCity[]>([])
+const scopeShops = ref<AdminScopeShop[]>([])
 const page = ref(1)
 const total = ref(0)
 const pageSize = 20
@@ -37,10 +39,11 @@ const form = reactive({
   roleIds: [] as number[],
   regions: [] as Region[],
   cityScopes: {
-    CN: { allCities: true, cityIds: [] as number[] },
-    EU: { allCities: true, cityIds: [] as number[] },
+    CN: { allCities: true, cityIds: [] as number[], shopIds: [] as number[] },
+    EU: { allCities: true, cityIds: [] as number[], shopIds: [] as number[] },
   },
 })
+const selectedShopRegions = reactive<Record<Region, boolean>>({ CN: false, EU: false })
 
 const canWrite = computed(() => state.permissions.includes('system:admin:write'))
 const activeRoles = computed(() => roles.value.filter((role) => role.status === 1))
@@ -50,6 +53,8 @@ const dialogTitle = computed(() => editingAccount.value ? '编辑管理员' : '�
 function resetCityScope(region: Region) {
   form.cityScopes[region].allCities = true
   form.cityScopes[region].cityIds = []
+  form.cityScopes[region].shopIds = []
+  selectedShopRegions[region] = false
 }
 
 function cityScope(region: Region) {
@@ -60,12 +65,37 @@ function citiesForRegion(region: Region) {
   return scopeCities.value.filter((city) => city.region === region)
 }
 
+function shopsForRegion(region: Region) {
+  return scopeShops.value.filter((shop) => shop.region === region)
+}
+
+function scopeMode(region: Region) {
+  const scope = form.cityScopes[region]
+  if (scope.allCities) return 'all'
+  if (selectedShopRegions[region] || (scope.shopIds.length > 0 && scope.cityIds.length === 0)) return 'shops'
+  return 'cities'
+}
+
 function onRegionToggle(region: Region) {
   if (!form.regions.includes(region)) resetCityScope(region)
 }
 
 function selectAllCities(region: Region) {
   if (form.cityScopes[region].allCities) form.cityScopes[region].cityIds = []
+  if (form.cityScopes[region].allCities) form.cityScopes[region].shopIds = []
+  selectedShopRegions[region] = false
+}
+
+function selectCities(region: Region) {
+  form.cityScopes[region].allCities = false
+  form.cityScopes[region].shopIds = []
+  selectedShopRegions[region] = false
+}
+
+function selectShops(region: Region) {
+  form.cityScopes[region].allCities = false
+  form.cityScopes[region].cityIds = []
+  selectedShopRegions[region] = true
 }
 
 function buildCityScopes(): AdminCityScope[] {
@@ -73,6 +103,7 @@ function buildCityScopes(): AdminCityScope[] {
     region,
     allCities: form.cityScopes[region].allCities,
     cityIds: form.cityScopes[region].allCities ? [] : [...form.cityScopes[region].cityIds].sort((left, right) => left - right),
+    shopIds: form.cityScopes[region].allCities ? [] : [...form.cityScopes[region].shopIds].sort((left, right) => left - right),
   }))
 }
 
@@ -81,7 +112,9 @@ function formatCityScopes(account: AdminAccount) {
     if (scope.allCities) return `${scope.region}: 全部城市`
     const names = scope.cityIds.map((cityId) =>
       scopeCities.value.find((city) => city.id === cityId && city.region === scope.region)?.name ?? `#${cityId}`)
-    return `${scope.region}: ${names.join(' / ')}`
+    const shopNames = (scope.shopIds ?? []).map((shopId) =>
+      scopeShops.value.find((shop) => shop.id === shopId && shop.region === scope.region)?.name ?? `#${shopId}`)
+    return `${scope.region}: ${[...names, ...shopNames].join(' / ')}`
   }).join(' · ')
 }
 
@@ -114,6 +147,8 @@ function openEdit(account: AdminAccount) {
     const scope = account.cityScopes.find((item) => item.region === region)
     form.cityScopes[region].allCities = scope?.allCities ?? true
     form.cityScopes[region].cityIds = scope?.allCities === false ? [...scope.cityIds] : []
+    form.cityScopes[region].shopIds = scope?.allCities === false ? [...(scope.shopIds ?? [])] : []
+    selectedShopRegions[region] = scope?.allCities === false && (scope.shopIds ?? []).length > 0 && (scope.cityIds ?? []).length === 0
   })
   errorMessage.value = ''
   dialogOpen.value = true
@@ -129,15 +164,17 @@ async function load() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [accountResult, roleResult, cityResult] = await Promise.all([
+    const [accountResult, roleResult, cityResult, shopResult] = await Promise.all([
       listAdminAccounts({ page: page.value, pageSize }),
       listAdminRoles(),
       listAdminScopeCities(),
+      listAdminScopeShops(),
     ])
     accounts.value = accountResult.list
     total.value = accountResult.total
     roles.value = roleResult
     scopeCities.value = cityResult
+    scopeShops.value = shopResult
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '管理员列表加载失败'
   } finally {
@@ -156,7 +193,7 @@ async function submitForm() {
     return
   }
   const incompleteRegion = form.regions.find((region) =>
-    !form.cityScopes[region].allCities && form.cityScopes[region].cityIds.length === 0)
+    !form.cityScopes[region].allCities && form.cityScopes[region].cityIds.length === 0 && form.cityScopes[region].shopIds.length === 0)
   if (incompleteRegion) {
     errorMessage.value = `${incompleteRegion} 至少选择一个城市`
     return
@@ -380,7 +417,7 @@ watch(canWrite, (allowed) => {
           <section v-for="region in form.regions" :key="region" class="city-scope-section">
             <div class="city-scope-section__header">
               <strong>{{ region }}</strong>
-              <span>{{ cityScope(region).allCities ? '全部城市' : '指定城市' }}</span>
+              <span>{{ scopeMode(region) === 'all' ? '全部城市' : scopeMode(region) === 'shops' ? '指定门店' : '指定城市' }}</span>
             </div>
             <div class="city-scope-modes">
               <label class="selection-option selection-option--compact">
@@ -388,16 +425,27 @@ watch(canWrite, (allowed) => {
                 <span><strong>全部城市</strong></span>
               </label>
               <label class="selection-option selection-option--compact">
-                <input :name="`city-scope-${region}`" :data-testid="`city-scope-selected-${region}`" v-model="cityScope(region).allCities" type="radio" :value="false" />
+                <input :name="`city-scope-${region}`" :data-testid="`city-scope-selected-${region}`" :checked="scopeMode(region) === 'cities'" type="radio" :value="false" @change="selectCities(region)" />
                 <span><strong>指定城市</strong></span>
               </label>
+              <label class="selection-option selection-option--compact">
+                <input :name="`city-scope-${region}`" :data-testid="`city-scope-shops-${region}`" :checked="scopeMode(region) === 'shops'" type="radio" :value="false" @change="selectShops(region)" />
+                <span><strong>指定门店</strong></span>
+              </label>
             </div>
-            <div v-if="!cityScope(region).allCities" class="city-scope-cities">
+            <div v-if="scopeMode(region) === 'cities'" class="city-scope-cities">
               <label v-for="city in citiesForRegion(region)" :key="city.id" class="selection-option selection-option--compact">
                 <input :name="`city-${region}-${city.id}`" v-model="cityScope(region).cityIds" type="checkbox" :value="city.id" />
                 <span><strong>{{ city.name }}</strong><small>#{{ city.id }}</small></span>
               </label>
               <p v-if="citiesForRegion(region).length === 0" class="inline-note">当前区域没有可分配城市。</p>
+            </div>
+            <div v-if="scopeMode(region) === 'shops'" class="city-scope-cities">
+              <label v-for="shop in shopsForRegion(region)" :key="shop.id" class="selection-option selection-option--compact">
+                <input :name="`shop-${region}-${shop.id}`" v-model="cityScope(region).shopIds" type="checkbox" :value="shop.id" />
+                <span><strong>{{ shop.name }}</strong><small>{{ shop.cityName }} · #{{ shop.id }}</small></span>
+              </label>
+              <p v-if="shopsForRegion(region).length === 0" class="inline-note">当前区域没有可分配门店。</p>
             </div>
           </section>
         </fieldset>

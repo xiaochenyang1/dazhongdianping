@@ -19,16 +19,19 @@ public interface AdminManagementMapper {
 
     long countAdminShops(@Param("query") AdminShopListQuery query,
                          @Param("allCities") boolean allCities,
-                         @Param("cityIds") Set<Long> cityIds);
+                         @Param("cityIds") Set<Long> cityIds,
+                         @Param("shopIds") Set<Long> shopIds);
 
     List<AdminShopRow> selectAdminShops(@Param("query") AdminShopListQuery query,
                                         @Param("allCities") boolean allCities,
-                                        @Param("cityIds") Set<Long> cityIds);
+                                        @Param("cityIds") Set<Long> cityIds,
+                                        @Param("shopIds") Set<Long> shopIds);
 
     AdminShopRow selectAdminShopDetail(@Param("shopId") Long shopId,
                                        @Param("region") String region,
                                        @Param("allCities") boolean allCities,
-                                       @Param("cityIds") Set<Long> cityIds);
+                                       @Param("cityIds") Set<Long> cityIds,
+                                       @Param("shopIds") Set<Long> shopIds);
 
     void insertShop(AdminShopRow adminShopRow);
 

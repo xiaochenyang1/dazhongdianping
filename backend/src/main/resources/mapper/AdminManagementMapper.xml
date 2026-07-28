@@ -63,17 +63,22 @@
 
     <sql id="adminShopCityScope">
         <if test="allCities == false">
-            <choose>
-                <when test="cityIds != null and !cityIds.isEmpty()">
-                    AND s.city_id IN
-                    <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">
-                        #{cityId}
-                    </foreach>
-                </when>
-                <otherwise>
-                    AND 1 = 0
-                </otherwise>
-            </choose>
+            AND (
+            <if test="cityIds != null and !cityIds.isEmpty()">
+                s.city_id IN
+                <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">
+                    #{cityId}
+                </foreach>
+            </if>
+            <if test="cityIds != null and !cityIds.isEmpty() and shopIds != null and !shopIds.isEmpty()"> OR </if>
+            <if test="shopIds != null and !shopIds.isEmpty()">
+                s.id IN
+                <foreach collection="shopIds" item="shopId" open="(" separator="," close=")">
+                    #{shopId}
+                </foreach>
+            </if>
+            <if test="(cityIds == null or cityIds.isEmpty()) and (shopIds == null or shopIds.isEmpty())">1 = 0</if>
+            )
         </if>
     </sql>
 

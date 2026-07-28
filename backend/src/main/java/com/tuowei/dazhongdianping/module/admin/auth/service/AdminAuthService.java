@@ -14,6 +14,7 @@ import com.tuowei.dazhongdianping.module.admin.rbac.mapper.AdminRbacMapper;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminCityScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRegionScopeRow;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminShopScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminUserRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.service.AdminAuditLogService;
 import org.springframework.beans.factory.annotation.Value;
@@ -123,6 +124,11 @@ public class AdminAuthService {
             selectedCityIds.computeIfAbsent(row.getRegion(), ignored -> new LinkedHashSet<>())
                     .add(row.getCityId());
         }
+        Map<String, Set<Long>> selectedShopIds = new LinkedHashMap<>();
+        for (AdminShopScopeRow row : mapper.selectActiveShopScopesByAdminId(adminId)) {
+            selectedShopIds.computeIfAbsent(row.getRegion(), ignored -> new LinkedHashSet<>())
+                    .add(row.getShopId());
+        }
 
         Map<String, AdminCityScope> scopes = new LinkedHashMap<>();
         for (AdminRegionScopeRow row : mapper.selectRegionScopesByAdminId(adminId)) {
@@ -130,7 +136,10 @@ public class AdminAuthService {
             Set<Long> cityIds = allCities
                     ? Set.of()
                     : selectedCityIds.getOrDefault(row.getRegion(), Set.of());
-            scopes.put(row.getRegion(), new AdminCityScope(allCities, cityIds));
+            Set<Long> shopIds = allCities
+                    ? Set.of()
+                    : selectedShopIds.getOrDefault(row.getRegion(), Set.of());
+            scopes.put(row.getRegion(), new AdminCityScope(allCities, cityIds, shopIds));
         }
         return Map.copyOf(scopes);
     }

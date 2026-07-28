@@ -58,11 +58,20 @@ export interface AdminCityScope {
   region: Region
   allCities: boolean
   cityIds: number[]
+  shopIds: number[]
 }
 
 export interface AdminScopeCity {
   id: number
   region: Region
+  name: string
+}
+
+export interface AdminScopeShop {
+  id: number
+  region: Region
+  cityId: number
+  cityName: string
   name: string
 }
 

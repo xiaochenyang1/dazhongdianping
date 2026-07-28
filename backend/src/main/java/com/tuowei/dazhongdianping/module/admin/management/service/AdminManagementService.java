@@ -67,9 +67,9 @@ public class AdminManagementService {
         String region = currentRegion().name();
         query.setRegion(region);
         AuthorizedCityScope cityScope = currentCityScope(region);
-        long total = adminManagementMapper.countAdminShops(query, cityScope.allCities(), cityScope.cityIds());
+        long total = adminManagementMapper.countAdminShops(query, cityScope.allCities(), cityScope.cityIds(), cityScope.shopIds());
         List<AdminShopSummaryResponse> items = adminManagementMapper
-                .selectAdminShops(query, cityScope.allCities(), cityScope.cityIds()).stream()
+                .selectAdminShops(query, cityScope.allCities(), cityScope.cityIds(), cityScope.shopIds()).stream()
                 .map(this::toAdminShopSummaryResponse)
                 .toList();
         return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);
@@ -82,7 +82,7 @@ public class AdminManagementService {
     @Transactional
     public AdminShopDetailResponse createShop(AdminShopSaveRequest request) {
         Region region = requireWriteRegion(request.getRegion());
-        requireCityWriteAccess(region.name(), Set.of(request.getCityId()));
+        requireCityWriteAccess(region.name(), request.getCityId(), null);
         AdminShopRow row = toAdminShopRow(region, request);
         validateShopReferences(row);
         adminManagementMapper.insertShop(row);
@@ -94,7 +94,7 @@ public class AdminManagementService {
     public AdminShopDetailResponse updateShop(Long shopId, AdminShopSaveRequest request) {
         AdminShopRow existing = requireShop(shopId);
         Region region = requireWriteRegion(request.getRegion());
-        requireCityWriteAccess(region.name(), Set.of(request.getCityId()));
+        requireCityWriteAccess(region.name(), request.getCityId(), existing.getId());
         AdminShopRow row = toAdminShopRow(region, request);
         row.setId(existing.getId());
         validateShopReferences(row);
@@ -119,9 +119,9 @@ public class AdminManagementService {
     @Transactional
     public AdminImportResultResponse importShops(AdminImportShopsRequest request) {
         Region region = requireWriteRegion(request.getRegion());
-        requireCityWriteAccess(
-                region.name(),
-                request.getRecords().stream().map(AdminImportShopRecordRequest::getCityId).collect(Collectors.toSet()));
+        for (Long cityId : request.getRecords().stream().map(AdminImportShopRecordRequest::getCityId).collect(Collectors.toSet())) {
+            requireCityWriteAccess(region.name(), cityId, null);
+        }
         AdminSession session = currentAdmin();
         geoReferenceLockService.lockInOrder(
                 region.name(),
@@ -248,7 +248,7 @@ public class AdminManagementService {
         String region = currentRegion().name();
         AuthorizedCityScope cityScope = currentCityScope(region);
         AdminShopRow row = adminManagementMapper.selectAdminShopDetail(
-                shopId, region, cityScope.allCities(), cityScope.cityIds());
+                shopId, region, cityScope.allCities(), cityScope.cityIds(), cityScope.shopIds());
         if (row == null) {
             throw new NotFoundException("门店不存在");
         }
@@ -260,16 +260,17 @@ public class AdminManagementService {
         Map<String, AdminCityScope> cityScopes = session.cityScopes();
         AdminCityScope cityScope = cityScopes == null ? null : cityScopes.get(region);
         if (cityScope == null) {
-            return new AuthorizedCityScope(false, Set.of());
+            return new AuthorizedCityScope(false, Set.of(), Set.of());
         }
         return new AuthorizedCityScope(
                 cityScope.allCities(),
-                cityScope.cityIds() == null ? Set.of() : Set.copyOf(cityScope.cityIds()));
+                cityScope.cityIds() == null ? Set.of() : Set.copyOf(cityScope.cityIds()),
+                cityScope.shopIds() == null ? Set.of() : Set.copyOf(cityScope.shopIds()));
     }
 
-    private void requireCityWriteAccess(String region, Set<Long> cityIds) {
+    private void requireCityWriteAccess(String region, Long cityId, Long shopId) {
         AuthorizedCityScope cityScope = currentCityScope(region);
-        if (!cityScope.allCities() && !cityScope.cityIds().containsAll(cityIds)) {
+        if (!cityScope.allows(cityId, shopId)) {
             throw new ForbiddenException("当前管理员无权操作该城市");
         }
     }
@@ -480,6 +481,9 @@ public class AdminManagementService {
         applicationEventPublisher.publishEvent(new ShopSearchIndexChangedEvent(shopId));
     }
 
-    private record AuthorizedCityScope(boolean allCities, Set<Long> cityIds) {
+    private record AuthorizedCityScope(boolean allCities, Set<Long> cityIds, Set<Long> shopIds) {
+        private boolean allows(Long cityId, Long shopId) {
+            return allCities || cityIds.contains(cityId) || (shopId != null && shopIds.contains(shopId));
+        }
     }
 }

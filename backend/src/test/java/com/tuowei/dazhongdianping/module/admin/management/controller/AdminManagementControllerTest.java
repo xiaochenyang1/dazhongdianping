@@ -400,6 +400,38 @@ class AdminManagementControllerTest {
     }
 
     @Test
+    void shouldEnforceSelectedShopWhitelist() throws Exception {
+        String token = shopScopedAdminToken("shop_scope_whitelist", 20001L);
+
+        mockMvc.perform(get("/api/admin/v1/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].id").value(20001));
+
+        mockMvc.perform(get("/api/admin/v1/shops/20002")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(put("/api/admin/v1/shops/20001")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(euShopBody("Paris whitelist update", 101L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("Paris whitelist update"));
+
+        mockMvc.perform(post("/api/admin/v1/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(euShopBody("Whitelist cannot create", 101L)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldRejectCreateShopWhenBodyRegionDiffersFromRequestRegion() throws Exception {
         mockMvc.perform(post("/api/admin/v1/shops")
                         .header("X-Region", "CN")
@@ -784,6 +816,37 @@ class AdminManagementControllerTest {
                     adminId, cityId);
         }
         return loginToken(account, "城市范围测试管理员");
+    }
+
+    private String shopScopedAdminToken(String suffix, Long... shopIds) throws Exception {
+        String account = suffix + "@example.com";
+        String roleCode = suffix + "_role";
+        String passwordHash = jdbcTemplate.queryForObject(
+                "SELECT password_hash FROM admin_user WHERE id=1", String.class);
+        jdbcTemplate.update(
+                "INSERT INTO admin_user(account,password_hash,name,status) VALUES(?,?,?,1)",
+                account, passwordHash, "门店白名单测试管理员");
+        Long adminId = jdbcTemplate.queryForObject(
+                "SELECT id FROM admin_user WHERE account=?", Long.class, account);
+        jdbcTemplate.update(
+                "INSERT INTO admin_role(code,name,description,status,built_in) VALUES(?,?,?,1,FALSE)",
+                roleCode, "门店白名单测试角色", "门店白名单集成测试");
+        Long roleId = jdbcTemplate.queryForObject(
+                "SELECT id FROM admin_role WHERE code=?", Long.class, roleCode);
+        jdbcTemplate.update("INSERT INTO admin_user_role(admin_id,role_id) VALUES(?,?)", adminId, roleId);
+        jdbcTemplate.update("""
+                INSERT INTO admin_role_permission(role_id,permission_id)
+                SELECT ?,id FROM admin_permission
+                WHERE code IN ('data:shop:read','data:shop:write')
+                """, roleId);
+        jdbcTemplate.update(
+                "INSERT INTO admin_region_scope(admin_id,region,all_cities) VALUES(?,'EU',FALSE)", adminId);
+        for (Long shopId : shopIds) {
+            jdbcTemplate.update(
+                    "INSERT INTO admin_shop_scope(admin_id,region,shop_id) VALUES(?,'EU',?)",
+                    adminId, shopId);
+        }
+        return loginToken(account, "门店白名单测试管理员");
     }
 
     private String loginToken() throws Exception {

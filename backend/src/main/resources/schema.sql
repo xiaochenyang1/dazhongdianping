@@ -103,6 +103,13 @@ CREATE TABLE IF NOT EXISTS admin_city_scope (
     PRIMARY KEY (admin_id, region, city_id)
 );
 
+CREATE TABLE IF NOT EXISTS admin_shop_scope (
+    admin_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL,
+    shop_id BIGINT NOT NULL,
+    PRIMARY KEY (admin_id, region, shop_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_admin_user_status ON admin_user(status, id);
 CREATE INDEX IF NOT EXISTS idx_admin_role_status ON admin_role(status, id);
 CREATE INDEX IF NOT EXISTS idx_admin_user_role_role ON admin_user_role(role_id, admin_id);

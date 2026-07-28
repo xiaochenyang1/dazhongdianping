@@ -67,6 +67,23 @@
         ORDER BY scope.region, scope.city_id
     </select>
 
+    <select id="selectShopScopesByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminShopScopeRow">
+        SELECT region, shop_id
+        FROM admin_shop_scope
+        WHERE admin_id = #{adminId}
+        ORDER BY region, shop_id
+    </select>
+
+    <select id="selectActiveShopScopesByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminShopScopeRow">
+        SELECT scope.region, scope.shop_id
+        FROM admin_shop_scope scope
+        JOIN shop s ON s.id = scope.shop_id
+                    AND s.region = scope.region
+                    AND s.is_deleted = FALSE
+        WHERE scope.admin_id = #{adminId}
+        ORDER BY scope.region, scope.shop_id
+    </select>
+
     <select id="selectActiveScopeCities" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminScopeCityRow">
         SELECT id, region, name
         FROM city
@@ -83,6 +100,26 @@
             #{cityId}
         </foreach>
         ORDER BY region, id
+    </select>
+
+    <select id="selectActiveScopeShops" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminScopeShopResponse">
+        SELECT s.id, s.region, s.city_id, c.name AS city_name, s.name
+        FROM shop s
+        JOIN city c ON c.id = s.city_id AND c.region = s.region AND c.status = 1
+        WHERE s.is_deleted = FALSE
+        ORDER BY s.region, s.city_id, s.id
+    </select>
+
+    <select id="selectActiveScopeShopsByIds" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminScopeShopResponse">
+        SELECT s.id, s.region, s.city_id, c.name AS city_name, s.name
+        FROM shop s
+        JOIN city c ON c.id = s.city_id AND c.region = s.region AND c.status = 1
+        WHERE s.is_deleted = FALSE
+          AND s.id IN
+        <foreach collection="shopIds" item="shopId" open="(" separator="," close=")">
+            #{shopId}
+        </foreach>
+        ORDER BY s.region, s.city_id, s.id
     </select>
 
     <select id="selectActivePermissions" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow">
@@ -251,6 +288,11 @@
         WHERE admin_id = #{adminId}
     </delete>
 
+    <delete id="deleteAdminShopScopes">
+        DELETE FROM admin_shop_scope
+        WHERE admin_id = #{adminId}
+    </delete>
+
     <delete id="deleteAdminRegions">
         DELETE FROM admin_region_scope
         WHERE admin_id = #{adminId}
@@ -264,6 +306,11 @@
     <insert id="insertAdminCityScope">
         INSERT INTO admin_city_scope(admin_id, region, city_id)
         VALUES (#{adminId}, #{region}, #{cityId})
+    </insert>
+
+    <insert id="insertAdminShopScope">
+        INSERT INTO admin_shop_scope(admin_id, region, shop_id)
+        VALUES (#{adminId}, #{region}, #{shopId})
     </insert>
 
     <update id="updateLastLoginAt">

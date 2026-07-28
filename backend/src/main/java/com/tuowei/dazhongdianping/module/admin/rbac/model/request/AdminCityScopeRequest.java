@@ -10,6 +10,7 @@ public record AdminCityScopeRequest(
         @NotNull(message = "allCities 不能为空")
         Boolean allCities,
         @NotNull(message = "cityIds 不能为空")
-        List<@NotNull(message = "城市 ID 不能为空") Long> cityIds
+        List<@NotNull(message = "城市 ID 不能为空") Long> cityIds,
+        List<@NotNull(message = "门店 ID 不能为空") Long> shopIds
 ) {
 }

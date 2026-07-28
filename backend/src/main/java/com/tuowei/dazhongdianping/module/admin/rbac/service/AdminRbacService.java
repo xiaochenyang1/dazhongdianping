@@ -14,6 +14,7 @@ import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminCityScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRegionScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminShopScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminScopeCityRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminUserRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.request.AdminCityScopeRequest;
@@ -27,6 +28,7 @@ import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminCityScop
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminPermissionResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminRoleResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminScopeCityResponse;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminScopeShopResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
@@ -80,6 +82,10 @@ public class AdminRbacService {
         return mapper.selectActiveScopeCities().stream()
                 .map(city -> new AdminScopeCityResponse(city.getId(), city.getRegion(), city.getName()))
                 .toList();
+    }
+
+    public List<AdminScopeShopResponse> listScopeShops() {
+        return mapper.selectActiveScopeShops();
     }
 
     @Transactional
@@ -330,6 +336,7 @@ public class AdminRbacService {
 
         Map<String, NormalizedCityScope> scopesByRegion = new LinkedHashMap<>();
         Set<Long> selectedCityIds = new LinkedHashSet<>();
+        Set<Long> selectedShopIds = new LinkedHashSet<>();
         for (AdminCityScopeRequest requestedScope : requestedScopes) {
             if (requestedScope == null || requestedScope.allCities() == null) {
                 throw new IllegalArgumentException("城市范围配置不合法");
@@ -340,16 +347,18 @@ public class AdminRbacService {
             }
 
             List<Long> cityIds = normalizeCityIds(requestedScope.cityIds());
-            if (requestedScope.allCities() && !cityIds.isEmpty()) {
-                throw new IllegalArgumentException("全部城市范围不能指定城市 ID");
+            List<Long> shopIds = normalizeCityIds(requestedScope.shopIds());
+            if (requestedScope.allCities() && (!cityIds.isEmpty() || !shopIds.isEmpty())) {
+                throw new IllegalArgumentException("全部城市范围不能指定城市或门店 ID");
             }
-            if (!requestedScope.allCities() && cityIds.isEmpty()) {
-                throw new IllegalArgumentException("指定城市范围时至少选择一个城市");
+            if (!requestedScope.allCities() && cityIds.isEmpty() && shopIds.isEmpty()) {
+                throw new IllegalArgumentException("指定范围时至少选择一个城市或门店");
             }
             if (!requestedScope.allCities()) {
                 selectedCityIds.addAll(cityIds);
+                selectedShopIds.addAll(shopIds);
             }
-            scopesByRegion.put(region, new NormalizedCityScope(region, requestedScope.allCities(), cityIds));
+            scopesByRegion.put(region, new NormalizedCityScope(region, requestedScope.allCities(), cityIds, shopIds));
         }
 
         if (!new LinkedHashSet<>(regions).equals(scopesByRegion.keySet())) {
@@ -370,6 +379,20 @@ public class AdminRbacService {
                 AdminScopeCityRow city = activeCitiesById.get(cityId);
                 if (city == null || !scope.region().equals(city.getRegion())) {
                     throw new IllegalArgumentException("城市不存在、不启用或不属于对应区域");
+                }
+            }
+        }
+        Map<Long, AdminScopeShopResponse> activeShopsById = new LinkedHashMap<>();
+        if (!selectedShopIds.isEmpty()) {
+            for (AdminScopeShopResponse shop : mapper.selectActiveScopeShopsByIds(List.copyOf(selectedShopIds))) {
+                activeShopsById.put(shop.id(), shop);
+            }
+        }
+        for (NormalizedCityScope scope : scopesByRegion.values()) {
+            for (Long shopId : scope.shopIds()) {
+                AdminScopeShopResponse shop = activeShopsById.get(shopId);
+                if (shop == null || !scope.region().equals(shop.region())) {
+                    throw new IllegalArgumentException("门店不存在、已删除或不属于对应区域");
                 }
             }
         }
@@ -410,12 +433,15 @@ public class AdminRbacService {
 
     private void replaceAdminScopes(Long adminId, List<NormalizedCityScope> cityScopes) {
         mapper.deleteAdminCityScopes(adminId);
+        mapper.deleteAdminShopScopes(adminId);
         mapper.deleteAdminRegions(adminId);
         for (NormalizedCityScope cityScope : cityScopes) {
             mapper.insertAdminRegion(adminId, cityScope.region(), cityScope.allCities());
             if (!cityScope.allCities()) {
                 cityScope.cityIds().forEach(cityId ->
                         mapper.insertAdminCityScope(adminId, cityScope.region(), cityId));
+                cityScope.shopIds().forEach(shopId ->
+                        mapper.insertAdminShopScope(adminId, cityScope.region(), shopId));
             }
         }
     }
@@ -466,13 +492,21 @@ public class AdminRbacService {
             cityIdsByRegion.computeIfAbsent(row.getRegion(), ignored -> new java.util.ArrayList<>())
                     .add(row.getCityId());
         }
+        Map<String, List<Long>> shopIdsByRegion = new LinkedHashMap<>();
+        for (AdminShopScopeRow row : mapper.selectShopScopesByAdminId(adminId)) {
+            shopIdsByRegion.computeIfAbsent(row.getRegion(), ignored -> new java.util.ArrayList<>())
+                    .add(row.getShopId());
+        }
         return mapper.selectRegionScopesByAdminId(adminId).stream()
                 .map(scope -> new AdminCityScopeResponse(
                         scope.getRegion(),
                         Boolean.TRUE.equals(scope.getAllCities()),
                         Boolean.TRUE.equals(scope.getAllCities())
                                 ? List.of()
-                                : List.copyOf(cityIdsByRegion.getOrDefault(scope.getRegion(), List.of()))
+                                : List.copyOf(cityIdsByRegion.getOrDefault(scope.getRegion(), List.of())),
+                        Boolean.TRUE.equals(scope.getAllCities())
+                                ? List.of()
+                                : List.copyOf(shopIdsByRegion.getOrDefault(scope.getRegion(), List.of()))
                 ))
                 .toList();
     }
@@ -482,7 +516,8 @@ public class AdminRbacService {
                 .map(scope -> Map.<String, Object>of(
                         "region", scope.region(),
                         "allCities", scope.allCities(),
-                        "cityIds", scope.cityIds()
+                        "cityIds", scope.cityIds(),
+                        "shopIds", scope.shopIds()
                 ))
                 .toList();
     }
@@ -530,6 +565,6 @@ public class AdminRbacService {
         }
     }
 
-    private record NormalizedCityScope(String region, boolean allCities, List<Long> cityIds) {
+    private record NormalizedCityScope(String region, boolean allCities, List<Long> cityIds, List<Long> shopIds) {
     }
 }

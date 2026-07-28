@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   listAdminAccounts: vi.fn(),
   listAdminRoles: vi.fn(),
   listAdminScopeCities: vi.fn(),
+  listAdminScopeShops: vi.fn(),
   createAdminAccount: vi.fn(),
   updateAdminAccount: vi.fn(),
   updateAdminAccountStatus: vi.fn(),
@@ -42,6 +43,11 @@ const scopeCities = [
   { id: 102, region: 'EU', name: 'Berlin' },
 ]
 
+const scopeShops = [
+  { id: 20001, region: 'EU', cityId: 101, cityName: 'Paris', name: 'Maison Sichuan Paris' },
+  { id: 20002, region: 'EU', cityId: 102, cityName: 'Berlin', name: 'Spree Sichuan' },
+]
+
 const accounts = [
   {
     id: 1,
@@ -52,8 +58,8 @@ const accounts = [
     roleNames: ['超级管理员'],
     regions: ['CN', 'EU'],
     cityScopes: [
-      { region: 'CN', allCities: true, cityIds: [] },
-      { region: 'EU', allCities: true, cityIds: [] },
+      { region: 'CN', allCities: true, cityIds: [], shopIds: [] },
+      { region: 'EU', allCities: true, cityIds: [], shopIds: [] },
     ],
     lastLoginAt: '2026-07-18 09:00:00',
   },
@@ -65,7 +71,7 @@ const accounts = [
     roleIds: [2],
     roleNames: ['门店只读员'],
     regions: ['EU'],
-    cityScopes: [{ region: 'EU', allCities: false, cityIds: [101] }],
+    cityScopes: [{ region: 'EU', allCities: false, cityIds: [101], shopIds: [] }],
     lastLoginAt: '',
   },
 ]
@@ -112,6 +118,7 @@ describe('AdminAccountsView', () => {
     mocks.listAdminAccounts.mockResolvedValue({ list: accounts, total: 2, page: 1, pageSize: 20, hasMore: false })
     mocks.listAdminRoles.mockResolvedValue(roles)
     mocks.listAdminScopeCities.mockResolvedValue(scopeCities)
+    mocks.listAdminScopeShops.mockResolvedValue(scopeShops)
     mocks.createAdminAccount.mockResolvedValue({ ...accounts[1], id: 8, account: 'eu.new' })
     mocks.updateAdminAccount.mockResolvedValue(accounts[1])
     mocks.updateAdminAccountStatus.mockResolvedValue({ ...accounts[1], status: 2 })
@@ -125,6 +132,7 @@ describe('AdminAccountsView', () => {
     expect(mocks.listAdminAccounts).toHaveBeenCalledWith({ page: 1, pageSize: 20 })
     expect(mocks.listAdminRoles).toHaveBeenCalledTimes(1)
     expect(mocks.listAdminScopeCities).toHaveBeenCalledTimes(1)
+    expect(mocks.listAdminScopeShops).toHaveBeenCalledTimes(1)
     expect(host.textContent).toContain('系统管理员')
     expect(host.textContent).toContain('CN: 全部城市')
     expect(host.textContent).toContain('EU: Paris')
@@ -149,7 +157,7 @@ describe('AdminAccountsView', () => {
       name: 'EU 新管理员',
       roleIds: [2],
       regions: ['EU'],
-      cityScopes: [{ region: 'EU', allCities: true, cityIds: [] }],
+      cityScopes: [{ region: 'EU', allCities: true, cityIds: [], shopIds: [] }],
     })
     app.unmount()
   })
@@ -212,7 +220,7 @@ describe('AdminAccountsView', () => {
       name: 'Paris 只读员',
       roleIds: [2],
       regions: ['EU'],
-      cityScopes: [{ region: 'EU', allCities: false, cityIds: [101] }],
+      cityScopes: [{ region: 'EU', allCities: false, cityIds: [101], shopIds: [] }],
     })
     app.unmount()
   })
@@ -240,7 +248,40 @@ describe('AdminAccountsView', () => {
       name: 'EU 只读员',
       roleIds: [2],
       regions: ['EU'],
-      cityScopes: [{ region: 'EU', allCities: false, cityIds: [101, 102] }],
+      cityScopes: [{ region: 'EU', allCities: false, cityIds: [101, 102], shopIds: [] }],
+    })
+    app.unmount()
+  })
+
+  it('submits a selected-shop whitelist', async () => {
+    const { app, host } = mount()
+    await flush()
+
+    click(host, '新建管理员')
+    await nextTick()
+    input(host, 'admin-account', 'shop.reader')
+    input(host, 'admin-password', 'Reader#123456')
+    input(host, 'admin-name', '门店只读员')
+    check(host, 'role-2')
+    check(host, 'region-EU')
+    await nextTick()
+    const shopScope = host.querySelector<HTMLInputElement>('[data-testid="city-scope-shops-EU"]')
+    if (!shopScope) throw new Error('missing EU selected-shop scope option')
+    shopScope.checked = true
+    shopScope.dispatchEvent(new Event('change'))
+    await nextTick()
+    check(host, 'shop-EU-20001')
+    host.querySelector<HTMLFormElement>('[data-testid="admin-form"]')
+      ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flush()
+
+    expect(mocks.createAdminAccount).toHaveBeenCalledWith({
+      account: 'shop.reader',
+      password: 'Reader#123456',
+      name: '门店只读员',
+      roleIds: [2],
+      regions: ['EU'],
+      cityScopes: [{ region: 'EU', allCities: false, cityIds: [], shopIds: [20001] }],
     })
     app.unmount()
   })

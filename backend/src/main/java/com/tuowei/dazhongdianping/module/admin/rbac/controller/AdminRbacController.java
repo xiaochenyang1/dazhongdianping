@@ -12,6 +12,7 @@ import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminAccountR
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminPermissionResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminRoleResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminScopeCityResponse;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminScopeShopResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.service.AdminRbacService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -100,6 +101,12 @@ public class AdminRbacController {
     @AdminPermission(value = "system:admin:read", regionScoped = false)
     public ApiResponse<List<AdminScopeCityResponse>> listScopeCities() {
         return ApiResponse.success(service.listScopeCities());
+    }
+
+    @GetMapping("/scope-shops")
+    @AdminPermission(value = "system:admin:read", regionScoped = false)
+    public ApiResponse<List<AdminScopeShopResponse>> listScopeShops() {
+        return ApiResponse.success(service.listScopeShops());
     }
 
     @PostMapping("/admins")
