@@ -1,7 +1,10 @@
 package com.tuowei.dazhongdianping.module.admin.rbac.mapper;
 
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminCityScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRegionScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminScopeCityRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminUserRow;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -14,6 +17,11 @@ public interface AdminRbacMapper {
     List<AdminRoleRow> selectActiveRolesByAdminId(@Param("adminId") Long adminId);
     List<AdminPermissionRow> selectActivePermissionsByAdminId(@Param("adminId") Long adminId);
     List<String> selectRegionsByAdminId(@Param("adminId") Long adminId);
+    List<AdminRegionScopeRow> selectRegionScopesByAdminId(@Param("adminId") Long adminId);
+    List<AdminCityScopeRow> selectCityScopesByAdminId(@Param("adminId") Long adminId);
+    List<AdminCityScopeRow> selectActiveCityScopesByAdminId(@Param("adminId") Long adminId);
+    List<AdminScopeCityRow> selectActiveScopeCities();
+    List<AdminScopeCityRow> selectActiveScopeCitiesByIds(@Param("cityIds") List<Long> cityIds);
     List<AdminPermissionRow> selectActivePermissions();
     List<AdminRoleRow> selectRoles();
     AdminRoleRow selectRoleById(@Param("roleId") Long roleId);
@@ -38,8 +46,14 @@ public interface AdminRbacMapper {
     int updateUserPassword(@Param("adminId") Long adminId, @Param("passwordHash") String passwordHash);
     void deleteUserRoles(@Param("adminId") Long adminId);
     void insertUserRole(@Param("adminId") Long adminId, @Param("roleId") Long roleId);
+    void deleteAdminCityScopes(@Param("adminId") Long adminId);
     void deleteAdminRegions(@Param("adminId") Long adminId);
-    void insertAdminRegion(@Param("adminId") Long adminId, @Param("region") String region);
+    void insertAdminRegion(@Param("adminId") Long adminId,
+                           @Param("region") String region,
+                           @Param("allCities") boolean allCities);
+    void insertAdminCityScope(@Param("adminId") Long adminId,
+                              @Param("region") String region,
+                              @Param("cityId") Long cityId);
     int updateLastLoginAt(@Param("adminId") Long adminId);
     void insertAuditLog(@Param("adminId") Long adminId,
                         @Param("action") String action,

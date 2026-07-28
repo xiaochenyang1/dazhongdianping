@@ -93,7 +93,9 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (55, 'audit:merchant_verification:write', '处理认证商户', 'audit', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
-INSERT INTO admin_region_scope (admin_id, region) VALUES (1, 'CN'), (1, 'EU');
+INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
+    (1, 'CN', TRUE),
+    (1, 'EU', TRUE);
 INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM admin_permission;
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),

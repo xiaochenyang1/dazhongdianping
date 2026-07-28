@@ -35,6 +35,14 @@ class AdminRbacSeedTest {
                 "SELECT region FROM admin_region_scope WHERE admin_id=1 ORDER BY region",
                 String.class
         ));
+        assertEquals(List.of(true, true), jdbc.queryForList(
+                "SELECT all_cities FROM admin_region_scope WHERE admin_id=1 ORDER BY region",
+                Boolean.class
+        ));
+        assertEquals(0, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM admin_city_scope WHERE admin_id=1",
+                Integer.class
+        ));
         assertEquals(5, jdbc.queryForObject("SELECT COUNT(1) FROM admin_role", Integer.class));
         assertEquals(1, jdbc.queryForObject(
                 "SELECT COUNT(1) FROM admin_user_role aur "

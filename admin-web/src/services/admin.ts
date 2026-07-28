@@ -35,6 +35,7 @@ import type {
   AdminAccount,
   AdminAccountCreatePayload,
   AdminAccountUpdatePayload,
+  AdminScopeCity,
   AdminShopDetail,
   AdminShopSavePayload,
   AdminShopSummary,
@@ -173,6 +174,10 @@ export function removeAdminRole(roleId: number) {
 
 export function listAdminAccounts(params: { page?: number; pageSize?: number }) {
   return apiGet<PageResult<AdminAccount>>('/api/admin/v1/rbac/admins', params)
+}
+
+export function listAdminScopeCities() {
+  return apiGet<AdminScopeCity[]>('/api/admin/v1/rbac/scope-cities')
 }
 
 export function createAdminAccount(payload: AdminAccountCreatePayload) {

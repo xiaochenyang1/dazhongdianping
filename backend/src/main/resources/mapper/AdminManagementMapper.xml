@@ -39,24 +39,41 @@
 
     <sql id="adminShopWhere">
         WHERE s.is_deleted = FALSE
-        <if test="region != null and region != ''">
-            AND s.region = #{region}
+        <if test="query.region != null and query.region != ''">
+            AND s.region = #{query.region}
         </if>
-        <if test="cityId != null">
-            AND s.city_id = #{cityId}
+        <if test="query.cityId != null">
+            AND s.city_id = #{query.cityId}
         </if>
-        <if test="areaId != null">
-            AND s.area_id = #{areaId}
+        <if test="query.areaId != null">
+            AND s.area_id = #{query.areaId}
         </if>
-        <if test="categoryId != null">
-            AND s.category_id = #{categoryId}
+        <if test="query.categoryId != null">
+            AND s.category_id = #{query.categoryId}
         </if>
-        <if test="keyword != null and keyword != ''">
+        <if test="query.keyword != null and query.keyword != ''">
             AND (
-                LOWER(s.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-                OR LOWER(s.address) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-                OR LOWER(m.company_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                LOWER(s.name) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR LOWER(s.address) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR LOWER(m.company_name) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
             )
+        </if>
+        <include refid="adminShopCityScope"/>
+    </sql>
+
+    <sql id="adminShopCityScope">
+        <if test="allCities == false">
+            <choose>
+                <when test="cityIds != null and !cityIds.isEmpty()">
+                    AND s.city_id IN
+                    <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">
+                        #{cityId}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
         </if>
     </sql>
 
@@ -106,7 +123,7 @@
         LEFT JOIN area a ON a.id = s.area_id
         <include refid="adminShopWhere"/>
         ORDER BY s.id DESC
-        LIMIT #{pageSize} OFFSET #{offset}
+        LIMIT #{query.pageSize} OFFSET #{query.offset}
     </select>
 
     <select id="selectAdminShopDetail" resultType="com.tuowei.dazhongdianping.module.admin.management.model.AdminShopRow">
@@ -149,6 +166,7 @@
         WHERE s.id = #{shopId}
           AND s.region = #{region}
           AND s.is_deleted = FALSE
+        <include refid="adminShopCityScope"/>
     </select>
 
     <insert id="insertShop" useGeneratedKeys="true" keyProperty="id">
@@ -208,31 +226,33 @@
 
     <update id="updateShop">
         UPDATE shop
-        SET merchant_id = #{merchantId},
-            category_id = #{categoryId},
-            city_id = #{cityId},
-            area_id = #{areaId},
-            region = #{region},
-            name = #{name},
-            cover_url = #{coverUrl},
-            phone = #{phone},
-            score = #{score},
-            taste_score = #{tasteScore},
-            env_score = #{envScore},
-            service_score = #{serviceScore},
-            price_per_capita = #{pricePerCapita},
-            currency = #{currency},
-            address = #{address},
-            latitude = #{latitude},
-            longitude = #{longitude},
-            business_hours = #{businessHours},
-            summary = #{summary},
-            has_deal = #{hasDeal},
-            open_now = #{openNow},
-            status = #{status},
-            tags = #{tags},
+        SET merchant_id = #{shop.merchantId},
+            category_id = #{shop.categoryId},
+            city_id = #{shop.cityId},
+            area_id = #{shop.areaId},
+            region = #{shop.region},
+            name = #{shop.name},
+            cover_url = #{shop.coverUrl},
+            phone = #{shop.phone},
+            score = #{shop.score},
+            taste_score = #{shop.tasteScore},
+            env_score = #{shop.envScore},
+            service_score = #{shop.serviceScore},
+            price_per_capita = #{shop.pricePerCapita},
+            currency = #{shop.currency},
+            address = #{shop.address},
+            latitude = #{shop.latitude},
+            longitude = #{shop.longitude},
+            business_hours = #{shop.businessHours},
+            summary = #{shop.summary},
+            has_deal = #{shop.hasDeal},
+            open_now = #{shop.openNow},
+            status = #{shop.status},
+            tags = #{shop.tags},
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = #{id}
+        WHERE id = #{shop.id}
+          AND region = #{expectedRegion}
+          AND city_id = #{expectedCityId}
           AND is_deleted = FALSE
     </update>
 
@@ -242,6 +262,7 @@
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{shopId}
           AND region = #{region}
+          AND city_id = #{expectedCityId}
           AND is_deleted = FALSE
     </update>
 

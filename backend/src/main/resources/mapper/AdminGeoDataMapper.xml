@@ -143,6 +143,7 @@
              + (SELECT COUNT(1) FROM home_feed WHERE region = #{region} AND city_id = #{cityId})
              + (SELECT COUNT(1) FROM rank_config WHERE region = #{region} AND city_id = #{cityId})
              + (SELECT COUNT(1) FROM `rank` WHERE region = #{region} AND city_id = #{cityId})
+             + (SELECT COUNT(1) FROM admin_city_scope WHERE region = #{region} AND city_id = #{cityId})
     </select>
 
     <select id="selectAreas" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminAreaRow">

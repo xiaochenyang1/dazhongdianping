@@ -10,6 +10,9 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
+import com.tuowei.dazhongdianping.common.admin.AdminSession;
+import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
 import com.tuowei.dazhongdianping.common.api.ConflictException;
 import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
@@ -21,6 +24,8 @@ import com.tuowei.dazhongdianping.module.admin.management.model.response.AdminSh
 import com.tuowei.dazhongdianping.module.admin.management.service.AdminManagementService;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -121,6 +126,14 @@ class AdminGeoDataConcurrencyTest {
 
     private Object createShop(long categoryId, String shopName) {
         RegionContext.setRegion(Region.CN);
+        AdminSessionContext.set(new AdminSession(
+                1L,
+                "admin",
+                "系统管理员",
+                Set.of(),
+                Set.of("CN"),
+                Map.of("CN", new AdminCityScope(true, Set.of()))
+        ));
         try {
             AdminShopSaveRequest request = new AdminShopSaveRequest();
             request.setMerchantId(1001L);
@@ -141,6 +154,7 @@ class AdminGeoDataConcurrencyTest {
         } catch (RuntimeException exception) {
             return exception;
         } finally {
+            AdminSessionContext.clear();
             RegionContext.clear();
         }
     }

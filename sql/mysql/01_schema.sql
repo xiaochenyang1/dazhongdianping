@@ -8,6 +8,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS `admin_city_scope`;
 DROP TABLE IF EXISTS `admin_region_scope`;
 DROP TABLE IF EXISTS `admin_role_permission`;
 DROP TABLE IF EXISTS `admin_user_role`;
@@ -144,7 +145,15 @@ CREATE TABLE `admin_role_permission` (
 CREATE TABLE `admin_region_scope` (
   `admin_id` BIGINT NOT NULL,
   `region` VARCHAR(8) NOT NULL,
+  `all_cities` TINYINT(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`admin_id`, `region`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `admin_city_scope` (
+  `admin_id` BIGINT NOT NULL,
+  `region` VARCHAR(8) NOT NULL,
+  `city_id` BIGINT NOT NULL,
+  PRIMARY KEY (`admin_id`, `region`, `city_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `merchant` (

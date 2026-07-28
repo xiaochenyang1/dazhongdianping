@@ -10,19 +10,26 @@ import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.module.admin.rbac.mapper.AdminRbacMapper;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminCityScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRegionScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminScopeCityRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminUserRow;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.request.AdminCityScopeRequest;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.request.AdminPasswordResetRequest;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.request.AdminRoleSaveRequest;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.request.AdminStatusRequest;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.request.AdminUserCreateRequest;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.request.AdminUserUpdateRequest;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminAccountResponse;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminCityScopeResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminPermissionResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminRoleResponse;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminScopeCityResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -67,6 +74,12 @@ public class AdminRbacService {
 
     public List<AdminRoleResponse> listRoles() {
         return mapper.selectRoles().stream().map(this::toRoleResponse).toList();
+    }
+
+    public List<AdminScopeCityResponse> listScopeCities() {
+        return mapper.selectActiveScopeCities().stream()
+                .map(city -> new AdminScopeCityResponse(city.getId(), city.getRegion(), city.getName()))
+                .toList();
     }
 
     @Transactional
@@ -172,6 +185,7 @@ public class AdminRbacService {
         }
         List<Long> roleIds = validateActiveRoleIds(request.roleIds());
         List<String> regions = normalizeRegions(request.regions());
+        List<NormalizedCityScope> cityScopes = normalizeCityScopes(request.cityScopes(), regions);
 
         AdminUserRow user = new AdminUserRow();
         user.setAccount(account);
@@ -180,9 +194,9 @@ public class AdminRbacService {
         user.setStatus(1);
         mapper.insertUser(user);
         replaceUserRoles(user.getId(), roleIds);
-        replaceAdminRegions(user.getId(), regions);
+        replaceAdminScopes(user.getId(), cityScopes);
         record("admin.account_create", "admin:" + user.getId(),
-                Map.of("roleIds", roleIds, "regions", regions), requestIp);
+                Map.of("roleIds", roleIds, "regions", regions, "cityScopes", cityScopeAuditDetail(cityScopes)), requestIp);
         return toAdminAccountResponse(requireUser(user.getId()));
     }
 
@@ -191,14 +205,15 @@ public class AdminRbacService {
         AdminUserRow user = requireUser(adminId);
         List<Long> roleIds = validateActiveRoleIds(request.roleIds());
         List<String> regions = normalizeRegions(request.regions());
+        List<NormalizedCityScope> cityScopes = normalizeCityScopes(request.cityScopes(), regions);
         if (isActiveSuperAdmin(user) && !hasSuperAdminRole(roleIds) && mapper.countActiveSuperAdminUsers() <= 1) {
             throw new ConflictException("不能移除最后一个有效超级管理员");
         }
         mapper.updateUser(adminId, request.name().trim());
         replaceUserRoles(adminId, roleIds);
-        replaceAdminRegions(adminId, regions);
+        replaceAdminScopes(adminId, cityScopes);
         record("admin.account_update", "admin:" + adminId,
-                Map.of("roleIds", roleIds, "regions", regions), requestIp);
+                Map.of("roleIds", roleIds, "regions", regions, "cityScopes", cityScopeAuditDetail(cityScopes)), requestIp);
         return toAdminAccountResponse(requireUser(adminId));
     }
 
@@ -305,6 +320,84 @@ public class AdminRbacService {
         return values.stream().sorted().toList();
     }
 
+    private List<NormalizedCityScope> normalizeCityScopes(
+            List<AdminCityScopeRequest> requestedScopes,
+            List<String> regions
+    ) {
+        if (requestedScopes == null || requestedScopes.isEmpty()) {
+            throw new IllegalArgumentException("城市范围不能为空");
+        }
+
+        Map<String, NormalizedCityScope> scopesByRegion = new LinkedHashMap<>();
+        Set<Long> selectedCityIds = new LinkedHashSet<>();
+        for (AdminCityScopeRequest requestedScope : requestedScopes) {
+            if (requestedScope == null || requestedScope.allCities() == null) {
+                throw new IllegalArgumentException("城市范围配置不合法");
+            }
+            String region = normalizeRegion(requestedScope.region());
+            if (scopesByRegion.containsKey(region)) {
+                throw new IllegalArgumentException("每个区域只能配置一个城市范围");
+            }
+
+            List<Long> cityIds = normalizeCityIds(requestedScope.cityIds());
+            if (requestedScope.allCities() && !cityIds.isEmpty()) {
+                throw new IllegalArgumentException("全部城市范围不能指定城市 ID");
+            }
+            if (!requestedScope.allCities() && cityIds.isEmpty()) {
+                throw new IllegalArgumentException("指定城市范围时至少选择一个城市");
+            }
+            if (!requestedScope.allCities()) {
+                selectedCityIds.addAll(cityIds);
+            }
+            scopesByRegion.put(region, new NormalizedCityScope(region, requestedScope.allCities(), cityIds));
+        }
+
+        if (!new LinkedHashSet<>(regions).equals(scopesByRegion.keySet())) {
+            throw new IllegalArgumentException("城市范围必须与区域一一对应");
+        }
+
+        Map<Long, AdminScopeCityRow> activeCitiesById = new LinkedHashMap<>();
+        if (!selectedCityIds.isEmpty()) {
+            for (AdminScopeCityRow city : mapper.selectActiveScopeCitiesByIds(List.copyOf(selectedCityIds))) {
+                activeCitiesById.put(city.getId(), city);
+            }
+        }
+        for (NormalizedCityScope scope : scopesByRegion.values()) {
+            if (scope.allCities()) {
+                continue;
+            }
+            for (Long cityId : scope.cityIds()) {
+                AdminScopeCityRow city = activeCitiesById.get(cityId);
+                if (city == null || !scope.region().equals(city.getRegion())) {
+                    throw new IllegalArgumentException("城市不存在、不启用或不属于对应区域");
+                }
+            }
+        }
+        return regions.stream().map(scopesByRegion::get).toList();
+    }
+
+    private String normalizeRegion(String rawRegion) {
+        try {
+            return Region.valueOf(rawRegion.trim().toUpperCase(Locale.ROOT)).name();
+        } catch (RuntimeException exception) {
+            throw new IllegalArgumentException("区域不合法");
+        }
+    }
+
+    private List<Long> normalizeCityIds(List<Long> requestedCityIds) {
+        if (requestedCityIds == null || requestedCityIds.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> cityIds = new LinkedHashSet<>();
+        for (Long cityId : requestedCityIds) {
+            if (cityId == null || cityId <= 0) {
+                throw new IllegalArgumentException("城市 ID 不合法");
+            }
+            cityIds.add(cityId);
+        }
+        return cityIds.stream().sorted().toList();
+    }
+
     private void replaceRolePermissions(Long roleId, List<Long> permissionIds) {
         mapper.deleteRolePermissions(roleId);
         permissionIds.forEach(permissionId -> mapper.insertRolePermission(roleId, permissionId));
@@ -315,9 +408,16 @@ public class AdminRbacService {
         roleIds.forEach(roleId -> mapper.insertUserRole(adminId, roleId));
     }
 
-    private void replaceAdminRegions(Long adminId, List<String> regions) {
+    private void replaceAdminScopes(Long adminId, List<NormalizedCityScope> cityScopes) {
+        mapper.deleteAdminCityScopes(adminId);
         mapper.deleteAdminRegions(adminId);
-        regions.forEach(region -> mapper.insertAdminRegion(adminId, region));
+        for (NormalizedCityScope cityScope : cityScopes) {
+            mapper.insertAdminRegion(adminId, cityScope.region(), cityScope.allCities());
+            if (!cityScope.allCities()) {
+                cityScope.cityIds().forEach(cityId ->
+                        mapper.insertAdminCityScope(adminId, cityScope.region(), cityId));
+            }
+        }
     }
 
     private boolean isActiveSuperAdmin(AdminUserRow user) {
@@ -346,6 +446,7 @@ public class AdminRbacService {
 
     private AdminAccountResponse toAdminAccountResponse(AdminUserRow user) {
         List<AdminRoleRow> roles = mapper.selectRolesByAdminId(user.getId());
+        List<AdminCityScopeResponse> cityScopes = loadCityScopeResponses(user.getId());
         return new AdminAccountResponse(
                 user.getId(),
                 user.getAccount(),
@@ -353,9 +454,37 @@ public class AdminRbacService {
                 user.getStatus(),
                 roles.stream().map(AdminRoleRow::getId).toList(),
                 roles.stream().map(AdminRoleRow::getName).toList(),
-                mapper.selectRegionsByAdminId(user.getId()),
+                cityScopes.stream().map(AdminCityScopeResponse::region).toList(),
+                cityScopes,
                 formatDateTime(user.getLastLoginAt())
         );
+    }
+
+    private List<AdminCityScopeResponse> loadCityScopeResponses(Long adminId) {
+        Map<String, List<Long>> cityIdsByRegion = new LinkedHashMap<>();
+        for (AdminCityScopeRow row : mapper.selectCityScopesByAdminId(adminId)) {
+            cityIdsByRegion.computeIfAbsent(row.getRegion(), ignored -> new java.util.ArrayList<>())
+                    .add(row.getCityId());
+        }
+        return mapper.selectRegionScopesByAdminId(adminId).stream()
+                .map(scope -> new AdminCityScopeResponse(
+                        scope.getRegion(),
+                        Boolean.TRUE.equals(scope.getAllCities()),
+                        Boolean.TRUE.equals(scope.getAllCities())
+                                ? List.of()
+                                : List.copyOf(cityIdsByRegion.getOrDefault(scope.getRegion(), List.of()))
+                ))
+                .toList();
+    }
+
+    private List<Map<String, Object>> cityScopeAuditDetail(List<NormalizedCityScope> cityScopes) {
+        return cityScopes.stream()
+                .map(scope -> Map.<String, Object>of(
+                        "region", scope.region(),
+                        "allCities", scope.allCities(),
+                        "cityIds", scope.cityIds()
+                ))
+                .toList();
     }
 
     private int validateStatus(Integer status) {
@@ -399,5 +528,8 @@ public class AdminRbacService {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("管理员审计日志序列化失败", exception);
         }
+    }
+
+    private record NormalizedCityScope(String region, boolean allCities, List<Long> cityIds) {
     }
 }

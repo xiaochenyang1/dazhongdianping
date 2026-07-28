@@ -43,6 +43,48 @@
         ORDER BY region
     </select>
 
+    <select id="selectRegionScopesByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRegionScopeRow">
+        SELECT region, all_cities
+        FROM admin_region_scope
+        WHERE admin_id = #{adminId}
+        ORDER BY region
+    </select>
+
+    <select id="selectCityScopesByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminCityScopeRow">
+        SELECT region, city_id
+        FROM admin_city_scope
+        WHERE admin_id = #{adminId}
+        ORDER BY region, city_id
+    </select>
+
+    <select id="selectActiveCityScopesByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminCityScopeRow">
+        SELECT scope.region, scope.city_id
+        FROM admin_city_scope scope
+        JOIN city c ON c.id = scope.city_id
+                   AND c.region = scope.region
+                   AND c.status = 1
+        WHERE scope.admin_id = #{adminId}
+        ORDER BY scope.region, scope.city_id
+    </select>
+
+    <select id="selectActiveScopeCities" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminScopeCityRow">
+        SELECT id, region, name
+        FROM city
+        WHERE status = 1
+        ORDER BY region, sort_no, id
+    </select>
+
+    <select id="selectActiveScopeCitiesByIds" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminScopeCityRow">
+        SELECT id, region, name
+        FROM city
+        WHERE status = 1
+          AND id IN
+        <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">
+            #{cityId}
+        </foreach>
+        ORDER BY region, id
+    </select>
+
     <select id="selectActivePermissions" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow">
         SELECT id, code, name, category, permission_type, status
         FROM admin_permission
@@ -204,14 +246,24 @@
         VALUES (#{adminId}, #{roleId})
     </insert>
 
+    <delete id="deleteAdminCityScopes">
+        DELETE FROM admin_city_scope
+        WHERE admin_id = #{adminId}
+    </delete>
+
     <delete id="deleteAdminRegions">
         DELETE FROM admin_region_scope
         WHERE admin_id = #{adminId}
     </delete>
 
     <insert id="insertAdminRegion">
-        INSERT INTO admin_region_scope(admin_id, region)
-        VALUES (#{adminId}, #{region})
+        INSERT INTO admin_region_scope(admin_id, region, all_cities)
+        VALUES (#{adminId}, #{region}, #{allCities})
+    </insert>
+
+    <insert id="insertAdminCityScope">
+        INSERT INTO admin_city_scope(admin_id, region, city_id)
+        VALUES (#{adminId}, #{region}, #{cityId})
     </insert>
 
     <update id="updateLastLoginAt">

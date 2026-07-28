@@ -1,20 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
 import {
   createAdminAccount,
   listAdminAccounts,
   listAdminRoles,
+  listAdminScopeCities,
   resetAdminAccountPassword,
   updateAdminAccount,
   updateAdminAccountStatus,
 } from '@/services/admin'
-import type { AdminAccount, AdminRole, Region } from '@/types/admin'
+import type { AdminAccount, AdminCityScope, AdminRole, AdminScopeCity, Region } from '@/types/admin'
 
 const { state } = useAdminSession()
 
 const accounts = ref<AdminAccount[]>([])
 const roles = ref<AdminRole[]>([])
+const scopeCities = ref<AdminScopeCity[]>([])
 const page = ref(1)
 const total = ref(0)
 const pageSize = 20
@@ -26,6 +28,7 @@ const saving = ref(false)
 const resetTarget = ref<AdminAccount | null>(null)
 const resetPassword = ref('')
 const resetError = ref('')
+const regions: Region[] = ['CN', 'EU']
 
 const form = reactive({
   account: '',
@@ -33,6 +36,10 @@ const form = reactive({
   name: '',
   roleIds: [] as number[],
   regions: [] as Region[],
+  cityScopes: {
+    CN: { allCities: true, cityIds: [] as number[] },
+    EU: { allCities: true, cityIds: [] as number[] },
+  },
 })
 
 const canWrite = computed(() => state.permissions.includes('system:admin:write'))
@@ -40,28 +47,74 @@ const activeRoles = computed(() => roles.value.filter((role) => role.status === 
 const hasMore = computed(() => page.value * pageSize < total.value)
 const dialogTitle = computed(() => editingAccount.value ? '编辑管理员' : '新建管理员')
 
+function resetCityScope(region: Region) {
+  form.cityScopes[region].allCities = true
+  form.cityScopes[region].cityIds = []
+}
+
+function cityScope(region: Region) {
+  return form.cityScopes[region]
+}
+
+function citiesForRegion(region: Region) {
+  return scopeCities.value.filter((city) => city.region === region)
+}
+
+function onRegionToggle(region: Region) {
+  if (!form.regions.includes(region)) resetCityScope(region)
+}
+
+function selectAllCities(region: Region) {
+  if (form.cityScopes[region].allCities) form.cityScopes[region].cityIds = []
+}
+
+function buildCityScopes(): AdminCityScope[] {
+  return form.regions.map((region) => ({
+    region,
+    allCities: form.cityScopes[region].allCities,
+    cityIds: form.cityScopes[region].allCities ? [] : [...form.cityScopes[region].cityIds].sort((left, right) => left - right),
+  }))
+}
+
+function formatCityScopes(account: AdminAccount) {
+  return account.cityScopes.map((scope) => {
+    if (scope.allCities) return `${scope.region}: 全部城市`
+    const names = scope.cityIds.map((cityId) =>
+      scopeCities.value.find((city) => city.id === cityId && city.region === scope.region)?.name ?? `#${cityId}`)
+    return `${scope.region}: ${names.join(' / ')}`
+  }).join(' · ')
+}
+
 function resetForm() {
   form.account = ''
   form.password = ''
   form.name = ''
   form.roleIds = []
   form.regions = []
+  regions.forEach(resetCityScope)
   errorMessage.value = ''
 }
 
 function openCreate() {
+  if (!canWrite.value) return
   editingAccount.value = null
   resetForm()
   dialogOpen.value = true
 }
 
 function openEdit(account: AdminAccount) {
+  if (!canWrite.value) return
   editingAccount.value = account
   form.account = account.account
   form.password = ''
   form.name = account.name
   form.roleIds = [...account.roleIds]
   form.regions = [...account.regions]
+  regions.forEach((region) => {
+    const scope = account.cityScopes.find((item) => item.region === region)
+    form.cityScopes[region].allCities = scope?.allCities ?? true
+    form.cityScopes[region].cityIds = scope?.allCities === false ? [...scope.cityIds] : []
+  })
   errorMessage.value = ''
   dialogOpen.value = true
 }
@@ -76,13 +129,15 @@ async function load() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [accountResult, roleResult] = await Promise.all([
+    const [accountResult, roleResult, cityResult] = await Promise.all([
       listAdminAccounts({ page: page.value, pageSize }),
       listAdminRoles(),
+      listAdminScopeCities(),
     ])
     accounts.value = accountResult.list
     total.value = accountResult.total
     roles.value = roleResult
+    scopeCities.value = cityResult
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '管理员列表加载失败'
   } finally {
@@ -91,12 +146,19 @@ async function load() {
 }
 
 async function submitForm() {
+  if (!canWrite.value || saving.value) return
   if (form.roleIds.length === 0) {
     errorMessage.value = '至少选择一个角色'
     return
   }
   if (form.regions.length === 0) {
     errorMessage.value = '至少选择一个区域'
+    return
+  }
+  const incompleteRegion = form.regions.find((region) =>
+    !form.cityScopes[region].allCities && form.cityScopes[region].cityIds.length === 0)
+  if (incompleteRegion) {
+    errorMessage.value = `${incompleteRegion} 至少选择一个城市`
     return
   }
   if (!editingAccount.value && form.password.length < 8) {
@@ -112,6 +174,7 @@ async function submitForm() {
         name: form.name.trim(),
         roleIds: [...form.roleIds],
         regions: [...form.regions],
+        cityScopes: buildCityScopes(),
       })
     } else {
       await createAdminAccount({
@@ -120,6 +183,7 @@ async function submitForm() {
         name: form.name.trim(),
         roleIds: [...form.roleIds],
         regions: [...form.regions],
+        cityScopes: buildCityScopes(),
       })
     }
     dialogOpen.value = false
@@ -140,6 +204,7 @@ async function changeStatus(account: AdminAccount) {
   if (!window.confirm(`确认${action}管理员「${account.name}」吗？`)) {
     return
   }
+  if (!canWrite.value) return
   errorMessage.value = ''
   try {
     await updateAdminAccountStatus(account.id, nextStatus)
@@ -150,13 +215,14 @@ async function changeStatus(account: AdminAccount) {
 }
 
 function openPasswordReset(account: AdminAccount) {
+  if (!canWrite.value) return
   resetTarget.value = account
   resetPassword.value = ''
   resetError.value = ''
 }
 
 async function submitPasswordReset() {
-  if (!resetTarget.value) {
+  if (!canWrite.value || !resetTarget.value) {
     return
   }
   if (resetPassword.value.length < 8) {
@@ -180,6 +246,13 @@ async function goPage(nextPage: number) {
 onMounted(() => {
   void load()
 })
+
+watch(canWrite, (allowed) => {
+  if (!allowed) {
+    dialogOpen.value = false
+    resetTarget.value = null
+  }
+})
 </script>
 
 <template>
@@ -188,7 +261,7 @@ onMounted(() => {
       <div>
         <p class="eyebrow">System Access</p>
         <h1>管理员账号</h1>
-        <p>账号、角色与区域范围由服务端实时读取，停用后旧会话会在下一次请求失效。</p>
+        <p>账号、角色、区域与城市范围由服务端实时读取，停用后旧会话会在下一次请求失效。</p>
       </div>
       <div class="header-actions">
         <button v-if="canWrite" type="button" class="primary-button" @click="openCreate">新建管理员</button>
@@ -208,7 +281,7 @@ onMounted(() => {
             <tr>
               <th>账号</th>
               <th>角色</th>
-              <th>区域</th>
+              <th>区域 / 城市</th>
               <th>最近登录</th>
               <th>状态</th>
               <th v-if="canWrite">操作</th>
@@ -221,7 +294,7 @@ onMounted(() => {
                 <p class="code-box">{{ account.account }}</p>
               </td>
               <td><span class="tag-list">{{ account.roleNames.join(' / ') || '--' }}</span></td>
-              <td><span class="region-list">{{ account.regions.join(' · ') }}</span></td>
+              <td><span class="region-list">{{ formatCityScopes(account) }}</span></td>
               <td class="numeric-cell">{{ account.lastLoginAt || '从未登录' }}</td>
               <td>
                 <span class="status-pill" :class="account.status === 1 ? 'status-pill--good' : 'status-pill--muted'">
@@ -259,8 +332,8 @@ onMounted(() => {
       </div>
     </article>
 
-    <div v-if="dialogOpen" class="dialog-backdrop" role="presentation" @click.self="closeDialog">
-      <form class="dialog-panel system-dialog" data-testid="admin-form" @submit.prevent="submitForm">
+    <div v-if="dialogOpen && canWrite" class="dialog-backdrop" role="presentation" @click.self="closeDialog">
+      <form class="dialog-panel system-dialog system-dialog--wide" data-testid="admin-form" @submit.prevent="submitForm">
         <header class="dialog-panel__header">
           <div>
             <p class="eyebrow">Account Form</p>
@@ -296,10 +369,37 @@ onMounted(() => {
 
         <fieldset class="selection-fieldset selection-fieldset--regions">
           <legend>区域范围</legend>
-          <label v-for="region in (['CN', 'EU'] as Region[])" :key="region" class="selection-option selection-option--compact">
-            <input :name="`region-${region}`" v-model="form.regions" type="checkbox" :value="region" />
+          <label v-for="region in regions" :key="region" class="selection-option selection-option--compact">
+            <input :name="`region-${region}`" v-model="form.regions" type="checkbox" :value="region" @change="onRegionToggle(region)" />
             <span><strong>{{ region }}</strong></span>
           </label>
+        </fieldset>
+
+        <fieldset v-if="form.regions.length > 0" class="selection-fieldset city-scope-fieldset">
+          <legend>城市范围</legend>
+          <section v-for="region in form.regions" :key="region" class="city-scope-section">
+            <div class="city-scope-section__header">
+              <strong>{{ region }}</strong>
+              <span>{{ cityScope(region).allCities ? '全部城市' : '指定城市' }}</span>
+            </div>
+            <div class="city-scope-modes">
+              <label class="selection-option selection-option--compact">
+                <input :name="`city-scope-${region}`" :data-testid="`city-scope-all-${region}`" v-model="cityScope(region).allCities" type="radio" :value="true" @change="selectAllCities(region)" />
+                <span><strong>全部城市</strong></span>
+              </label>
+              <label class="selection-option selection-option--compact">
+                <input :name="`city-scope-${region}`" :data-testid="`city-scope-selected-${region}`" v-model="cityScope(region).allCities" type="radio" :value="false" />
+                <span><strong>指定城市</strong></span>
+              </label>
+            </div>
+            <div v-if="!cityScope(region).allCities" class="city-scope-cities">
+              <label v-for="city in citiesForRegion(region)" :key="city.id" class="selection-option selection-option--compact">
+                <input :name="`city-${region}-${city.id}`" v-model="cityScope(region).cityIds" type="checkbox" :value="city.id" />
+                <span><strong>{{ city.name }}</strong><small>#{{ city.id }}</small></span>
+              </label>
+              <p v-if="citiesForRegion(region).length === 0" class="inline-note">当前区域没有可分配城市。</p>
+            </div>
+          </section>
         </fieldset>
 
         <footer class="form-actions dialog-panel__footer">
@@ -309,7 +409,7 @@ onMounted(() => {
       </form>
     </div>
 
-    <div v-if="resetTarget" class="dialog-backdrop" role="presentation" @click.self="resetTarget = null">
+    <div v-if="resetTarget && canWrite" class="dialog-backdrop" role="presentation" @click.self="resetTarget = null">
       <form class="dialog-panel system-dialog system-dialog--compact" @submit.prevent="submitPasswordReset">
         <header class="dialog-panel__header">
           <div>
@@ -331,3 +431,47 @@ onMounted(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.city-scope-fieldset {
+  grid-template-columns: 1fr;
+}
+
+.city-scope-section {
+  display: grid;
+  gap: 0.65rem;
+  padding-block: 0.25rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.city-scope-section:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.city-scope-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text-muted);
+}
+
+.city-scope-section__header strong {
+  color: var(--text);
+}
+
+.city-scope-modes,
+.city-scope-cities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+@media (max-width: 720px) {
+  .city-scope-modes,
+  .city-scope-cities {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

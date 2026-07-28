@@ -54,6 +54,18 @@ export interface AdminRolePayload {
   permissionIds: number[]
 }
 
+export interface AdminCityScope {
+  region: Region
+  allCities: boolean
+  cityIds: number[]
+}
+
+export interface AdminScopeCity {
+  id: number
+  region: Region
+  name: string
+}
+
 export interface AdminAccount {
   id: number
   account: string
@@ -62,6 +74,7 @@ export interface AdminAccount {
   roleIds: number[]
   roleNames: string[]
   regions: Region[]
+  cityScopes: AdminCityScope[]
   lastLoginAt: string
 }
 
@@ -71,6 +84,7 @@ export interface AdminAccountCreatePayload {
   name: string
   roleIds: number[]
   regions: Region[]
+  cityScopes: AdminCityScope[]
 }
 
 export interface AdminAuditLog {
@@ -335,6 +349,7 @@ export interface AdminAccountUpdatePayload {
   name: string
   roleIds: number[]
   regions: Region[]
+  cityScopes: AdminCityScope[]
 }
 
 export interface AdminMenuItem {

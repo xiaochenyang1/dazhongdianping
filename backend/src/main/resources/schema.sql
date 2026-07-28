@@ -92,7 +92,15 @@ CREATE TABLE IF NOT EXISTS admin_role_permission (
 CREATE TABLE IF NOT EXISTS admin_region_scope (
     admin_id BIGINT NOT NULL,
     region VARCHAR(8) NOT NULL,
+    all_cities BOOLEAN NOT NULL DEFAULT TRUE,
     PRIMARY KEY (admin_id, region)
+);
+
+CREATE TABLE IF NOT EXISTS admin_city_scope (
+    admin_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL,
+    city_id BIGINT NOT NULL,
+    PRIMARY KEY (admin_id, region, city_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_admin_user_status ON admin_user(status, id);

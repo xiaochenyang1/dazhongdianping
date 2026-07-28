@@ -6,6 +6,7 @@ import com.tuowei.dazhongdianping.module.admin.management.model.AdminShopRow;
 import com.tuowei.dazhongdianping.module.admin.management.model.ImportBatchRow;
 import com.tuowei.dazhongdianping.module.admin.management.model.MerchantRow;
 import java.util.List;
+import java.util.Set;
 import org.apache.ibatis.annotations.Param;
 
 public interface AdminManagementMapper {
@@ -16,19 +17,28 @@ public interface AdminManagementMapper {
 
     void insertMerchant(MerchantRow merchantRow);
 
-    long countAdminShops(AdminShopListQuery query);
+    long countAdminShops(@Param("query") AdminShopListQuery query,
+                         @Param("allCities") boolean allCities,
+                         @Param("cityIds") Set<Long> cityIds);
 
-    List<AdminShopRow> selectAdminShops(AdminShopListQuery query);
+    List<AdminShopRow> selectAdminShops(@Param("query") AdminShopListQuery query,
+                                        @Param("allCities") boolean allCities,
+                                        @Param("cityIds") Set<Long> cityIds);
 
     AdminShopRow selectAdminShopDetail(@Param("shopId") Long shopId,
-                                       @Param("region") String region);
+                                       @Param("region") String region,
+                                       @Param("allCities") boolean allCities,
+                                       @Param("cityIds") Set<Long> cityIds);
 
     void insertShop(AdminShopRow adminShopRow);
 
-    int updateShop(AdminShopRow adminShopRow);
+    int updateShop(@Param("shop") AdminShopRow adminShopRow,
+                   @Param("expectedRegion") String expectedRegion,
+                   @Param("expectedCityId") Long expectedCityId);
 
     int softDeleteShop(@Param("shopId") Long shopId,
-                       @Param("region") String region);
+                       @Param("region") String region,
+                       @Param("expectedCityId") Long expectedCityId);
 
     void insertImportBatch(ImportBatchRow batchRow);
 

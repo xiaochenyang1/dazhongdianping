@@ -247,6 +247,27 @@ class AdminGeoDataControllerTest {
     }
 
     @Test
+    void shouldProtectCityReferencedByAdminCityScope() throws Exception {
+        String token = loginToken("admin");
+        long cityId = findId(mockMvc.perform(post("/api/admin/v1/cities")
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"SCOPE\",\"name\":\"Scope City\",\"sortNo\":9}"))
+                .andExpect(status().isOk())
+                .andReturn());
+        jdbcTemplate.update(
+                "UPDATE admin_region_scope SET all_cities=FALSE WHERE admin_id=1 AND region='EU'");
+        jdbcTemplate.update(
+                "INSERT INTO admin_city_scope(admin_id,region,city_id) VALUES(1,'EU',?)", cityId);
+
+        deleteGeo(token, "cities", cityId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("城市仍被商圈或业务数据引用，不能删除"));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM city WHERE id=?", Integer.class, cityId));
+    }
+
+    @Test
     void shouldRejectDuplicateAndInvalidCityAreaScopes() throws Exception {
         String token = loginToken("admin");
         mockMvc.perform(post("/api/admin/v1/cities")

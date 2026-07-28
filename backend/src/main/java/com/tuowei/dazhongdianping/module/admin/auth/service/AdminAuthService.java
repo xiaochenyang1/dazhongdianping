@@ -1,21 +1,27 @@
 package com.tuowei.dazhongdianping.module.admin.auth.service;
 
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
 import com.tuowei.dazhongdianping.common.admin.AdminSession;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import com.tuowei.dazhongdianping.module.admin.rbac.mapper.AdminRbacMapper;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminCityScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRegionScopeRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.AdminUserRow;
 import com.tuowei.dazhongdianping.module.admin.rbac.service.AdminAuditLogService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdminAuthService {
@@ -35,10 +41,12 @@ public class AdminAuthService {
         this.accessTokenExpireSeconds = accessTokenExpireSeconds;
     }
 
+    @Transactional(isolation = Isolation.REPEATABLE_READ, noRollbackFor = UnauthorizedException.class)
     public AdminLoginResult login(String account, String password) {
         return login(account, password, "");
     }
 
+    @Transactional(isolation = Isolation.REPEATABLE_READ, noRollbackFor = UnauthorizedException.class)
     public AdminLoginResult login(String account, String password, String ip) {
         String normalizedAccount = account == null ? "" : account.trim();
         AdminUserRow user = mapper.selectUserByAccount(normalizedAccount);
@@ -61,6 +69,7 @@ public class AdminAuthService {
         return new AdminLoginResult(token, session);
     }
 
+    @Transactional(isolation = Isolation.REPEATABLE_READ, readOnly = true)
     public AdminSession authenticate(String token) {
         StoredAdminSession storedSession = sessionStore.get(token);
         if (storedSession == null) {
@@ -97,13 +106,33 @@ public class AdminAuthService {
         for (AdminPermissionRow permission : mapper.selectActivePermissionsByAdminId(user.getId())) {
             permissions.add(permission.getCode());
         }
+        Map<String, AdminCityScope> cityScopes = loadCityScopes(user.getId());
         return new AdminSession(
                 user.getId(),
                 user.getAccount(),
                 user.getName(),
                 Set.copyOf(permissions),
-                Set.copyOf(new LinkedHashSet<>(mapper.selectRegionsByAdminId(user.getId())))
+                Set.copyOf(cityScopes.keySet()),
+                cityScopes
         );
+    }
+
+    private Map<String, AdminCityScope> loadCityScopes(Long adminId) {
+        Map<String, Set<Long>> selectedCityIds = new LinkedHashMap<>();
+        for (AdminCityScopeRow row : mapper.selectActiveCityScopesByAdminId(adminId)) {
+            selectedCityIds.computeIfAbsent(row.getRegion(), ignored -> new LinkedHashSet<>())
+                    .add(row.getCityId());
+        }
+
+        Map<String, AdminCityScope> scopes = new LinkedHashMap<>();
+        for (AdminRegionScopeRow row : mapper.selectRegionScopesByAdminId(adminId)) {
+            boolean allCities = Boolean.TRUE.equals(row.getAllCities());
+            Set<Long> cityIds = allCities
+                    ? Set.of()
+                    : selectedCityIds.getOrDefault(row.getRegion(), Set.of());
+            scopes.put(row.getRegion(), new AdminCityScope(allCities, cityIds));
+        }
+        return Map.copyOf(scopes);
     }
 
     private String maskAccount(String account) {

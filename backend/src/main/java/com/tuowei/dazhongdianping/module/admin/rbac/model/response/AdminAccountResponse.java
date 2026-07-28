@@ -10,6 +10,7 @@ public record AdminAccountResponse(
         List<Long> roleIds,
         List<String> roleNames,
         List<String> regions,
+        List<AdminCityScopeResponse> cityScopes,
         String lastLoginAt
 ) {
 }

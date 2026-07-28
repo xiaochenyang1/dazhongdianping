@@ -1,8 +1,10 @@
 package com.tuowei.dazhongdianping.module.admin.management.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
 import com.tuowei.dazhongdianping.common.admin.AdminSession;
 import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
+import com.tuowei.dazhongdianping.common.api.ForbiddenException;
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
@@ -32,6 +34,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,25 +64,25 @@ public class AdminManagementService {
 
     public PageResult<AdminShopSummaryResponse> listShops(AdminShopListQuery query) {
         query.normalize();
-        query.setRegion(currentRegion().name());
-        long total = adminManagementMapper.countAdminShops(query);
-        List<AdminShopSummaryResponse> items = adminManagementMapper.selectAdminShops(query).stream()
+        String region = currentRegion().name();
+        query.setRegion(region);
+        AuthorizedCityScope cityScope = currentCityScope(region);
+        long total = adminManagementMapper.countAdminShops(query, cityScope.allCities(), cityScope.cityIds());
+        List<AdminShopSummaryResponse> items = adminManagementMapper
+                .selectAdminShops(query, cityScope.allCities(), cityScope.cityIds()).stream()
                 .map(this::toAdminShopSummaryResponse)
                 .toList();
         return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);
     }
 
     public AdminShopDetailResponse getShopDetail(Long shopId) {
-        AdminShopRow row = adminManagementMapper.selectAdminShopDetail(shopId, currentRegion().name());
-        if (row == null) {
-            throw new NotFoundException("门店不存在");
-        }
-        return toAdminShopDetailResponse(row);
+        return toAdminShopDetailResponse(requireShop(shopId));
     }
 
     @Transactional
     public AdminShopDetailResponse createShop(AdminShopSaveRequest request) {
         Region region = requireWriteRegion(request.getRegion());
+        requireCityWriteAccess(region.name(), Set.of(request.getCityId()));
         AdminShopRow row = toAdminShopRow(region, request);
         validateShopReferences(row);
         adminManagementMapper.insertShop(row);
@@ -90,10 +94,11 @@ public class AdminManagementService {
     public AdminShopDetailResponse updateShop(Long shopId, AdminShopSaveRequest request) {
         AdminShopRow existing = requireShop(shopId);
         Region region = requireWriteRegion(request.getRegion());
+        requireCityWriteAccess(region.name(), Set.of(request.getCityId()));
         AdminShopRow row = toAdminShopRow(region, request);
         row.setId(existing.getId());
         validateShopReferences(row);
-        int affected = adminManagementMapper.updateShop(row);
+        int affected = adminManagementMapper.updateShop(row, existing.getRegion(), existing.getCityId());
         if (affected == 0) {
             throw new NotFoundException("门店不存在");
         }
@@ -103,8 +108,8 @@ public class AdminManagementService {
 
     @Transactional
     public void deleteShop(Long shopId) {
-        requireShop(shopId);
-        int affected = adminManagementMapper.softDeleteShop(shopId, currentRegion().name());
+        AdminShopRow existing = requireShop(shopId);
+        int affected = adminManagementMapper.softDeleteShop(shopId, existing.getRegion(), existing.getCityId());
         if (affected == 0) {
             throw new NotFoundException("门店不存在");
         }
@@ -114,6 +119,9 @@ public class AdminManagementService {
     @Transactional
     public AdminImportResultResponse importShops(AdminImportShopsRequest request) {
         Region region = requireWriteRegion(request.getRegion());
+        requireCityWriteAccess(
+                region.name(),
+                request.getRecords().stream().map(AdminImportShopRecordRequest::getCityId).collect(Collectors.toSet()));
         AdminSession session = currentAdmin();
         geoReferenceLockService.lockInOrder(
                 region.name(),
@@ -237,11 +245,33 @@ public class AdminManagementService {
     }
 
     private AdminShopRow requireShop(Long shopId) {
-        AdminShopRow row = adminManagementMapper.selectAdminShopDetail(shopId, currentRegion().name());
+        String region = currentRegion().name();
+        AuthorizedCityScope cityScope = currentCityScope(region);
+        AdminShopRow row = adminManagementMapper.selectAdminShopDetail(
+                shopId, region, cityScope.allCities(), cityScope.cityIds());
         if (row == null) {
             throw new NotFoundException("门店不存在");
         }
         return row;
+    }
+
+    private AuthorizedCityScope currentCityScope(String region) {
+        AdminSession session = currentAdmin();
+        Map<String, AdminCityScope> cityScopes = session.cityScopes();
+        AdminCityScope cityScope = cityScopes == null ? null : cityScopes.get(region);
+        if (cityScope == null) {
+            return new AuthorizedCityScope(false, Set.of());
+        }
+        return new AuthorizedCityScope(
+                cityScope.allCities(),
+                cityScope.cityIds() == null ? Set.of() : Set.copyOf(cityScope.cityIds()));
+    }
+
+    private void requireCityWriteAccess(String region, Set<Long> cityIds) {
+        AuthorizedCityScope cityScope = currentCityScope(region);
+        if (!cityScope.allCities() && !cityScope.cityIds().containsAll(cityIds)) {
+            throw new ForbiddenException("当前管理员无权操作该城市");
+        }
     }
 
     private AdminShopRow toAdminShopRow(Region region, AdminShopSaveRequest request) {
@@ -448,5 +478,8 @@ public class AdminManagementService {
 
     private void publishSearchIndexChange(Long shopId) {
         applicationEventPublisher.publishEvent(new ShopSearchIndexChangedEvent(shopId));
+    }
+
+    private record AuthorizedCityScope(boolean allCities, Set<Long> cityIds) {
     }
 }

@@ -388,6 +388,8 @@ npm run build
 
 - `2026-07-26` Flutter 门店团购列表补齐初始错误恢复：加载失败展示原因和重试入口，重试成功后恢复购买流程；真实支付未配置时仍只创建订单并明确提示，不伪装支付成功。交易仓储与团购页聚焦测试 `5` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `233` 条通过。
 
+- `2026-07-28` 管理员城市级数据权限已落地：账号可在每个 `CN/EU` 区域选择全部城市或指定启用城市，登录态每次请求实时加载 `admin_region_scope` / `admin_city_scope`；门店列表、详情、新增、编辑、删除和批量导入统一执行城市范围过滤与写入校验，管理端账号页已补配置和回显。已有 MySQL 数据库可执行 `sql/mysql/03_admin_city_scope_migration.sql` 保留原区域授权为全部城市。后端全量 `355` 条、管理端全量 `109` 条测试及管理端生产构建通过；单门店白名单仍未实现。
+
 - `2026-07-26` Flutter 隐私中心补齐初始加载恢复：隐私规则、导出任务、协议记录或设备列表任一请求失败时展示错误与重试入口；重试重新聚合完整数据并清理遗留分页加载态。隐私仓储、中心页与导出保存聚焦测试 `20` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `232` 条通过。
 
 - `2026-07-26` Flutter 账户设置补齐初始加载恢复与生命周期保护：资料请求失败可原地重试；页面已销毁时迟到响应不再写入已释放的输入控制器，资料保存、账号绑定与密码更新行为保持不变。用户仓储、账户设置与用户中心聚焦测试 `15` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `231` 条通过。
@@ -467,6 +469,7 @@ npm run build
 - `sql/mysql/00_all_in_one.sql`: 已退役的安全阻断桩；执行时会直接报错，防止旧的一键命令无确认重置固定数据库。
 - `sql/mysql/01_schema.sql`: 当前代码口径的 MySQL 建表脚本,已包含 `review_like`、`review_comment`、`review_report`、`growth_points_log`。
 - `sql/mysql/02_seed_data.sql`: 当前浏览链路、公开点评、点评图片、点赞/评论演示数据、审核演示数据和 C 端演示账号初始化脚本。
+- `sql/mysql/03_admin_city_scope_migration.sql`: 已有数据库的非破坏性城市权限迁移；为区域授权补 `all_cities` 并新增 `admin_city_scope`，原授权默认继续覆盖区域内全部城市。
 
 如果你要看“哪个功能已经做完了、标在哪些文档、对应哪套 SQL”，直接看 `docs/当前已完成功能与SQL导入说明.md`，那份已经整理成对照表了。
 

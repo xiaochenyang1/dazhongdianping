@@ -1,5 +1,8 @@
 package com.tuowei.dazhongdianping.module.admin.rbac;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -9,15 +12,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
+import com.tuowei.dazhongdianping.module.admin.auth.service.AdminAuthService;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +36,8 @@ class AdminRbacControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
+    @Autowired private AdminAuthService adminAuthService;
+    @Autowired private JdbcTemplate jdbc;
 
     @Test
     void shouldManageCustomRolesAndProtectBuiltInSuperAdmin() throws Exception {
@@ -79,11 +88,15 @@ class AdminRbacControllerTest {
                                   "password":"Operator#123456",
                                   "name":"EU 门店操作员",
                                   "roleIds":[%d],
-                                  "regions":["EU"]
+                                  "regions":["EU"],
+                                  "cityScopes":[{"region":"EU","allCities":false,"cityIds":[101]}]
                                 }
                                 """.formatted(roleId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.account").value("eu.operator"))
+                .andExpect(jsonPath("$.data.cityScopes[0].region").value("EU"))
+                .andExpect(jsonPath("$.data.cityScopes[0].allCities").value(false))
+                .andExpect(jsonPath("$.data.cityScopes[0].cityIds[0]").value(101))
                 .andReturn();
         long adminId = dataId(created);
 
@@ -91,7 +104,35 @@ class AdminRbacControllerTest {
         mockMvc.perform(get("/api/admin/v1/shops")
                         .header("Authorization", bearer(operatorToken))
                         .header("X-Region", "EU"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].id").value(20001));
+
+        mockMvc.perform(put("/api/admin/v1/rbac/admins/{adminId}", adminId)
+                        .header("Authorization", bearer(superAdminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name":"EU 门店操作员",
+                                  "roleIds":[%d],
+                                  "regions":["EU"],
+                                  "cityScopes":[{"region":"EU","allCities":false,"cityIds":[102]}]
+                                }
+                                """.formatted(roleId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cityScopes[0].cityIds[0]").value(102));
+
+        AdminCityScope refreshedScope = adminAuthService.authenticate(operatorToken).cityScopes().get("EU");
+        assertNotNull(refreshedScope);
+        assertFalse(refreshedScope.allCities());
+        assertEquals(Set.of(102L), refreshedScope.cityIds());
+
+        mockMvc.perform(get("/api/admin/v1/shops")
+                        .header("Authorization", bearer(operatorToken))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].id").value(20002));
 
         mockMvc.perform(put("/api/admin/v1/rbac/roles/{roleId}/status", roleId)
                         .header("Authorization", bearer(superAdminToken))
@@ -117,6 +158,46 @@ class AdminRbacControllerTest {
                 .andExpect(status().isOk());
 
         login("eu.operator", "Operator#654321");
+    }
+
+    @Test
+    void shouldListOnlyActiveScopeCities() throws Exception {
+        String token = login("admin", "admin123456");
+        jdbc.update("UPDATE city SET status=0 WHERE id=102");
+
+        mockMvc.perform(get("/api/admin/v1/rbac/scope-cities")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.id == 1 && @.region == 'CN' && @.name == '上海')]").isNotEmpty())
+                .andExpect(jsonPath("$.data[?(@.id == 101 && @.region == 'EU' && @.name == 'Paris')]").isNotEmpty())
+                .andExpect(jsonPath("$.data[?(@.id == 102)]").isEmpty());
+    }
+
+    @Test
+    void shouldRejectInvalidAdminCityScopes() throws Exception {
+        String token = login("admin", "admin123456");
+        long roleId = createRole(token, "city_scope_validator", "城市范围校验员", 14L);
+
+        assertAdminCreateBadRequest(token, roleId, "scope.ids.missing", List.of("EU"), List.of(
+                Map.of("region", "EU", "allCities", true)
+        ));
+        assertAdminCreateBadRequest(token, roleId, "scope.all.ids", List.of("EU"), List.of(
+                Map.of("region", "EU", "allCities", true, "cityIds", List.of(101L))
+        ));
+        assertAdminCreateBadRequest(token, roleId, "scope.selected.empty", List.of("EU"), List.of(
+                Map.of("region", "EU", "allCities", false, "cityIds", List.of())
+        ));
+        assertAdminCreateBadRequest(token, roleId, "scope.region.mismatch", List.of("EU"), List.of(
+                Map.of("region", "CN", "allCities", true, "cityIds", List.of())
+        ));
+        assertAdminCreateBadRequest(token, roleId, "scope.cross.region", List.of("EU"), List.of(
+                Map.of("region", "EU", "allCities", false, "cityIds", List.of(1L))
+        ));
+
+        jdbc.update("UPDATE city SET status=0 WHERE id=102");
+        assertAdminCreateBadRequest(token, roleId, "scope.inactive.city", List.of("EU"), List.of(
+                Map.of("region", "EU", "allCities", false, "cityIds", List.of(102L))
+        ));
     }
 
     @Test
@@ -155,6 +236,27 @@ class AdminRbacControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return dataId(result);
+    }
+
+    private void assertAdminCreateBadRequest(
+            String token,
+            long roleId,
+            String account,
+            List<String> regions,
+            List<Map<String, Object>> cityScopes
+    ) throws Exception {
+        mockMvc.perform(post("/api/admin/v1/rbac/admins")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "account", account,
+                                "password", "Operator#123456",
+                                "name", "城市范围测试管理员",
+                                "roleIds", List.of(roleId),
+                                "regions", regions,
+                                "cityScopes", cityScopes
+                        ))))
+                .andExpect(status().isBadRequest());
     }
 
     private String login(String account, String password) throws Exception {

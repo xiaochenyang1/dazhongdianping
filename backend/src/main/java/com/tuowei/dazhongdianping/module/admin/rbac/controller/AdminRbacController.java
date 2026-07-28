@@ -11,6 +11,7 @@ import com.tuowei.dazhongdianping.module.admin.rbac.model.request.AdminUserUpdat
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminAccountResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminPermissionResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminRoleResponse;
+import com.tuowei.dazhongdianping.module.admin.rbac.model.response.AdminScopeCityResponse;
 import com.tuowei.dazhongdianping.module.admin.rbac.service.AdminRbacService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -93,6 +94,12 @@ public class AdminRbacController {
             @RequestParam(defaultValue = "20") Integer pageSize
     ) {
         return ApiResponse.success(service.listAdmins(page, pageSize));
+    }
+
+    @GetMapping("/scope-cities")
+    @AdminPermission(value = "system:admin:read", regionScoped = false)
+    public ApiResponse<List<AdminScopeCityResponse>> listScopeCities() {
+        return ApiResponse.success(service.listScopeCities());
     }
 
     @PostMapping("/admins")

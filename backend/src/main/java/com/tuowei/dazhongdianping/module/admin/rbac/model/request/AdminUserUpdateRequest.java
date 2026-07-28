@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 import java.util.List;
 
 public record AdminUserUpdateRequest(
@@ -13,6 +14,9 @@ public record AdminUserUpdateRequest(
         @NotEmpty(message = "至少选择一个角色")
         List<@NotNull(message = "角色不能为空") Long> roleIds,
         @NotEmpty(message = "至少选择一个区域")
-        List<@NotBlank(message = "区域不能为空") String> regions
+        List<@NotBlank(message = "区域不能为空") String> regions,
+        @Valid
+        @NotEmpty(message = "城市范围不能为空")
+        List<@NotNull(message = "城市范围不能为空") AdminCityScopeRequest> cityScopes
 ) {
 }

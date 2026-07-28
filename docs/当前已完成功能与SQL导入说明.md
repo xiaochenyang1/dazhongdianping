@@ -99,9 +99,9 @@
 
 ### 1.6.1 管理端数据库 RBAC 基础
 
-- 管理员身份不再依赖配置账号：`admin_user`、`admin_role`、`admin_permission`、`admin_user_role`、`admin_role_permission` 与 `admin_region_scope` 已同步 H2/MySQL，并为 `admin` 种子账号配置内置角色、权限和 `CN/EU` 范围。
+- 管理员身份不再依赖配置账号：`admin_user`、`admin_role`、`admin_permission`、`admin_user_role`、`admin_role_permission`、`admin_region_scope` 与 `admin_city_scope` 已同步 H2/MySQL，并为 `admin` 种子账号配置内置角色、权限和 `CN/EU` 全城市范围。
 - `POST /api/admin/v1/auth/login` 使用数据库账号与 BCrypt；`GET /api/admin/v1/auth/me` 返回当前身份、权限和区域范围。token 仅缓存身份标识与过期时间，每次管理端请求都会重新加载启用账号、角色、权限与区域：角色停用后旧 token 仍可取得 `200` 的 `auth/me`，但权限被实时收回，固定受限 API 返回 `403`，动态审核列表可返回 `200` 空结果；管理员账号停用后旧 token 才会在下一次请求返回 `401`，前端清理本地会话并回登录页。
-- `GET /api/admin/v1/menus` 按权限过滤菜单；所有非登录、退出、身份和菜单的管理端业务接口均要求权限元数据。受限账号访问无权限 API 或越出 `admin_region_scope` 的 `X-Region` 时返回 `403`。
+- `GET /api/admin/v1/menus` 按权限过滤菜单；所有非登录、退出、身份和菜单的管理端业务接口均要求权限元数据。受限账号访问无权限 API 或越出 `admin_region_scope` 的 `X-Region` 时返回 `403`；门店治理列表、详情、写入和批量导入还会按 `admin_city_scope` 实时收窄城市范围，越权写入返回 `403`，越权详情按不存在处理。
 - 管理员与角色权限接口已完成：`/api/admin/v1/rbac/permissions`、`/api/admin/v1/rbac/roles`、`/api/admin/v1/rbac/admins`。`admin-web` 已提供 `/system/admins`、`/system/roles`，路由和菜单使用相同权限码。
 
 ### 1.7 M6 Flutter 本地业务闭环

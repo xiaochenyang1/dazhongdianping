@@ -204,6 +204,202 @@ class AdminManagementControllerTest {
     }
 
     @Test
+    void shouldLimitShopReadsToTheAuthorizedCitiesAndKeepAllCitiesBehavior() throws Exception {
+        String parisToken = cityScopedAdminToken("shop_reader_paris", false, 101L);
+
+        mockMvc.perform(get("/api/admin/v1/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(parisToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].id").value(20001));
+
+        mockMvc.perform(get("/api/admin/v1/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(parisToken))
+                        .param("cityId", "102"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0))
+                .andExpect(jsonPath("$.data.list").isEmpty());
+
+        mockMvc.perform(get("/api/admin/v1/shops/20001")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(parisToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cityId").value(101));
+
+        mockMvc.perform(get("/api/admin/v1/shops/20002")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(parisToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(404));
+
+        mockMvc.perform(get("/api/admin/v1/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(loginToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.list[0].id").value(20002))
+                .andExpect(jsonPath("$.data.list[1].id").value(20001));
+    }
+
+    @Test
+    void shouldConcealOutOfScopeShopsAndRejectMovingAnAuthorizedShopToAnotherCity() throws Exception {
+        String token = cityScopedAdminToken("shop_writer_paris", false, 101L);
+        String berlinName = jdbcTemplate.queryForObject(
+                "SELECT name FROM shop WHERE id=20002", String.class);
+
+        mockMvc.perform(put("/api/admin/v1/shops/20002")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(euShopBody("Berlin scope violation", 102L)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(404));
+
+        mockMvc.perform(delete("/api/admin/v1/shops/20002")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(404));
+
+        assertEquals(berlinName, jdbcTemplate.queryForObject(
+                "SELECT name FROM shop WHERE id=20002", String.class));
+        assertEquals(Boolean.FALSE, jdbcTemplate.queryForObject(
+                "SELECT is_deleted FROM shop WHERE id=20002", Boolean.class));
+
+        mockMvc.perform(put("/api/admin/v1/shops/20001")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(euShopBody("Paris shop moved to Berlin", 102L)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("当前管理员无权操作该城市"));
+
+        assertEquals(101L, jdbcTemplate.queryForObject(
+                "SELECT city_id FROM shop WHERE id=20001", Long.class));
+        assertEquals("Maison Sichuan Paris", jdbcTemplate.queryForObject(
+                "SELECT name FROM shop WHERE id=20001", String.class));
+    }
+
+    @Test
+    void shouldEnforceTheTargetCityWhenCreatingShops() throws Exception {
+        String token = cityScopedAdminToken("shop_creator_paris", false, 101L);
+
+        mockMvc.perform(post("/api/admin/v1/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(euShopBody("Unauthorized Berlin creation", 102L)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("当前管理员无权操作该城市"));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM shop WHERE name='Unauthorized Berlin creation'", Integer.class));
+
+        mockMvc.perform(post("/api/admin/v1/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(euShopBody("Authorized Paris creation", 101L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("Authorized Paris creation"))
+                .andExpect(jsonPath("$.data.cityId").value(101));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM shop WHERE name='Authorized Paris creation' AND city_id=101", Integer.class));
+    }
+
+    @Test
+    void shouldPreflightEveryImportCityBeforeCreatingAnyBatchMerchantOrShop() throws Exception {
+        String token = cityScopedAdminToken("shop_importer_paris", false, 101L);
+        String mixedFileName = "mixed-city-scope-import.json";
+
+        mockMvc.perform(post("/api/admin/v1/import/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fileName", mixedFileName,
+                                "region", "EU",
+                                "records", new Object[]{
+                                        euImportRecord(
+                                                "city-scope-mixed-paris@example.com",
+                                                "Mixed Paris Merchant",
+                                                "Mixed Paris Shop",
+                                                101L),
+                                        euImportRecord(
+                                                "city-scope-mixed-berlin@example.com",
+                                                "Mixed Berlin Merchant",
+                                                "Mixed Berlin Shop",
+                                                102L)
+                                }
+                        ))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("当前管理员无权操作该城市"));
+
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM import_batch WHERE file_name=?", Integer.class, mixedFileName));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM merchant WHERE account IN "
+                        + "('city-scope-mixed-paris@example.com','city-scope-mixed-berlin@example.com')",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM shop WHERE name IN ('Mixed Paris Shop','Mixed Berlin Shop')",
+                Integer.class));
+
+        String parisFileName = "paris-city-scope-import.json";
+        mockMvc.perform(post("/api/admin/v1/import/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "fileName", parisFileName,
+                                "region", "EU",
+                                "records", new Object[]{
+                                        euImportRecord(
+                                                "city-scope-paris-only@example.com",
+                                                "Paris Only Merchant",
+                                                "Paris Only Shop",
+                                                101L)
+                                }
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.success").value(1))
+                .andExpect(jsonPath("$.data.failed").value(0));
+
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM import_batch WHERE file_name=?", Integer.class, parisFileName));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM merchant WHERE account='city-scope-paris-only@example.com'", Integer.class));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM shop WHERE name='Paris Only Shop' AND city_id=101", Integer.class));
+    }
+
+    @Test
+    void shouldFailClosedWhenNoCitiesAreGrantedForTheRegion() throws Exception {
+        String token = cityScopedAdminToken("shop_scope_empty", false);
+
+        mockMvc.perform(get("/api/admin/v1/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/admin/v1/shops/20001")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/admin/v1/shops")
+                        .header("X-Region", "EU")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(euShopBody("No city scope creation", 101L)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldRejectCreateShopWhenBodyRegionDiffersFromRequestRegion() throws Exception {
         mockMvc.perform(post("/api/admin/v1/shops")
                         .header("X-Region", "CN")
@@ -500,19 +696,111 @@ class AdminManagementControllerTest {
         ));
     }
 
+    private String euShopBody(String name, long cityId) throws Exception {
+        boolean paris = cityId == 101L;
+        return objectMapper.writeValueAsString(Map.ofEntries(
+                Map.entry("merchantId", paris ? 2001 : 2002),
+                Map.entry("region", "EU"),
+                Map.entry("categoryId", paris ? 201 : 202),
+                Map.entry("cityId", cityId),
+                Map.entry("areaId", paris ? 1011 : 1021),
+                Map.entry("name", name),
+                Map.entry("coverUrl", "https://example.com/city-scope-shop.jpg"),
+                Map.entry("phone", paris ? "+33100000000" : "+49300000000"),
+                Map.entry("pricePerCapita", 40),
+                Map.entry("currency", "EUR"),
+                Map.entry("address", paris ? "1 Rue de Test, Paris" : "1 Teststrasse, Berlin"),
+                Map.entry("businessHours", "10:00-22:00"),
+                Map.entry("summary", "城市数据范围集成测试门店。"),
+                Map.entry("score", 4.2),
+                Map.entry("tasteScore", 4.2),
+                Map.entry("envScore", 4.2),
+                Map.entry("serviceScore", 4.2),
+                Map.entry("hasDeal", false),
+                Map.entry("openNow", true),
+                Map.entry("status", 1),
+                Map.entry("tags", new String[]{"Scope"})
+        ));
+    }
+
+    private Map<String, Object> euImportRecord(String merchantAccount,
+                                                String companyName,
+                                                String shopName,
+                                                long cityId) {
+        boolean paris = cityId == 101L;
+        return Map.ofEntries(
+                Map.entry("merchantAccount", merchantAccount),
+                Map.entry("companyName", companyName),
+                Map.entry("contactName", "Scope Tester"),
+                Map.entry("contactPhone", paris ? "+33100000001" : "+49300000001"),
+                Map.entry("shopName", shopName),
+                Map.entry("categoryId", paris ? 201 : 202),
+                Map.entry("cityId", cityId),
+                Map.entry("areaId", paris ? 1011 : 1021),
+                Map.entry("address", paris ? "2 Rue de Test, Paris" : "2 Teststrasse, Berlin"),
+                Map.entry("phone", paris ? "+33100000002" : "+49300000002"),
+                Map.entry("businessHours", "10:00-22:00"),
+                Map.entry("pricePerCapita", 30),
+                Map.entry("coverUrl", "https://example.com/city-scope-import.jpg"),
+                Map.entry("summary", "城市数据范围导入测试门店。"),
+                Map.entry("score", 4.1),
+                Map.entry("tasteScore", 4.1),
+                Map.entry("envScore", 4.1),
+                Map.entry("serviceScore", 4.1),
+                Map.entry("currency", "EUR"),
+                Map.entry("hasDeal", false),
+                Map.entry("openNow", true),
+                Map.entry("tags", new String[]{"Scope", "Import"})
+        );
+    }
+
+    private String cityScopedAdminToken(String suffix, boolean allCities, Long... cityIds) throws Exception {
+        String account = suffix + "@example.com";
+        String roleCode = suffix + "_role";
+        String passwordHash = jdbcTemplate.queryForObject(
+                "SELECT password_hash FROM admin_user WHERE id=1", String.class);
+        jdbcTemplate.update(
+                "INSERT INTO admin_user(account,password_hash,name,status) VALUES(?,?,?,1)",
+                account, passwordHash, "城市范围测试管理员");
+        Long adminId = jdbcTemplate.queryForObject(
+                "SELECT id FROM admin_user WHERE account=?", Long.class, account);
+        jdbcTemplate.update(
+                "INSERT INTO admin_role(code,name,description,status,built_in) VALUES(?,?,?,1,FALSE)",
+                roleCode, "城市范围测试角色", "门店城市范围集成测试");
+        Long roleId = jdbcTemplate.queryForObject(
+                "SELECT id FROM admin_role WHERE code=?", Long.class, roleCode);
+        jdbcTemplate.update("INSERT INTO admin_user_role(admin_id,role_id) VALUES(?,?)", adminId, roleId);
+        jdbcTemplate.update("""
+                INSERT INTO admin_role_permission(role_id,permission_id)
+                SELECT ?,id FROM admin_permission
+                WHERE code IN ('data:shop:read','data:shop:write','data:shop:import','data:import_batch:read')
+                """, roleId);
+        jdbcTemplate.update(
+                "INSERT INTO admin_region_scope(admin_id,region,all_cities) VALUES(?,'EU',?)",
+                adminId, allCities);
+        for (Long cityId : cityIds) {
+            jdbcTemplate.update(
+                    "INSERT INTO admin_city_scope(admin_id,region,city_id) VALUES(?,'EU',?)",
+                    adminId, cityId);
+        }
+        return loginToken(account, "城市范围测试管理员");
+    }
+
     private String loginToken() throws Exception {
+        return loginToken("admin", "系统管理员");
+    }
+
+    private String loginToken(String account, String expectedName) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "account": "admin",
-                                  "password": "admin123456"
-                                }
-                                """))
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "account", account,
+                                "password", "admin123456"
+                        ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.data.profile.account").value("admin"))
-                .andExpect(jsonPath("$.data.profile.name").value("系统管理员"))
+                .andExpect(jsonPath("$.data.profile.account").value(account))
+                .andExpect(jsonPath("$.data.profile.name").value(expectedName))
                 .andReturn();
         JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
         return root.path("data").path("accessToken").asText();

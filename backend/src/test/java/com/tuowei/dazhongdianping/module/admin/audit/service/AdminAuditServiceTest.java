@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tuowei.dazhongdianping.common.admin.AdminSession;
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
 import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
 import com.tuowei.dazhongdianping.module.admin.auth.service.AdminPermissionChecker;
 import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
@@ -233,7 +234,11 @@ class AdminAuditServiceTest {
                 "admin",
                 "系统管理员",
                 java.util.Set.of("audit:review:write"),
-                java.util.Set.of("CN", "EU")
+                java.util.Set.of("CN", "EU"),
+                java.util.Map.of(
+                        "CN", new AdminCityScope(true, java.util.Set.of()),
+                        "EU", new AdminCityScope(true, java.util.Set.of())
+                )
         ));
             ready.countDown();
             start.await();
@@ -254,7 +259,11 @@ class AdminAuditServiceTest {
                 "admin",
                 "系统管理员",
                 java.util.Set.of(permission),
-                java.util.Set.of("CN", "EU")
+                java.util.Set.of("CN", "EU"),
+                java.util.Map.of(
+                        "CN", new AdminCityScope(true, java.util.Set.of()),
+                        "EU", new AdminCityScope(true, java.util.Set.of())
+                )
         ));
     }
 
