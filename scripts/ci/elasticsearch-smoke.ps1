@@ -39,6 +39,7 @@ function Start-Backend([string]$JarPath) {
     $stderrPath = Join-Path $runDir "backend.stderr.log"
     $arguments = @(
         "-jar", $JarPath,
+        "--spring.profiles.active=local",
         "--server.port=$BackendPort",
         "--spring.datasource.driver-class-name=org.h2.Driver",
         "--spring.datasource.url=jdbc:h2:mem:dzdp-es-smoke;MODE=MYSQL;DATABASE_TO_LOWER=TRUE",

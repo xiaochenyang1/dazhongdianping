@@ -79,6 +79,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(429, exception.getMessage(), "common.too_many_requests"));
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleServiceUnavailableException(ServiceUnavailableException exception) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error(503, exception.getMessage(), "common.service_unavailable"));
+    }
+
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)

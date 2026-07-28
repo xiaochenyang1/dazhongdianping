@@ -464,6 +464,7 @@ VALUES ('$databaseOwnershipToken');
     $backendProcess = Start-ManagedProcess -Name "backend" -FilePath $javaCommand.Source -Arguments @(
         "-jar",
         $backendJar.FullName,
+        "--spring.profiles.active=local",
         "--server.port=$BackendPort",
         "--management.health.redis.enabled=false"
     ) -WorkingDirectory $backendDir

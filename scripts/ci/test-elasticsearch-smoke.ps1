@@ -24,6 +24,7 @@ $scriptContent = Get-Content -LiteralPath $scriptPath -Raw
 Assert-True ($scriptContent -match 'APP_SEARCH_PROVIDER') "smoke must start backend with Elasticsearch provider"
 Assert-True ($scriptContent -match 'APP_SEARCH_FALLBACK_ON_ERROR') "smoke must disable MySQL fallback"
 Assert-True ($scriptContent -match 'jdbc:h2:mem:') "smoke must use isolated H2 source data"
+Assert-True ($scriptContent -match 'spring\.profiles\.active=local') "smoke must explicitly opt into the local runtime profile"
 Assert-True ($scriptContent -match '/api/c/v1/search/shops') "smoke must call the real public search endpoint"
 
 $verifyAllContent = Get-Content -LiteralPath $verifyAllPath -Raw

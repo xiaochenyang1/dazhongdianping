@@ -206,7 +206,7 @@
 
 ```powershell
 cd backend
-./mvnw.cmd spring-boot:run
+./mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 
 验证:
@@ -224,8 +224,11 @@ cd backend
 
 说明:
 
-- 默认运行配置已经指向 `MySQL`。先用 `scripts/ci/mysql-smoke.ps1` 向全新的显式数据库名导入，再用 `APP_DB_HOST` / `APP_DB_PORT` / `APP_DB_NAME` / `APP_DB_USERNAME` / `APP_DB_PASSWORD` 覆盖连接信息。
-- 需要临时走内存库时，用 `h2` profile 启动。
+- 默认运行配置已经指向 `MySQL`。先用 `scripts/ci/mysql-smoke.ps1` 向全新的显式数据库名导入，再用 `APP_DB_HOST` / `APP_DB_PORT` / `APP_DB_NAME` / `APP_DB_USERNAME` / `APP_DB_PASSWORD` 覆盖连接信息。上面的命令显式启用 `local` profile，仅用于本地开发；需要临时走内存库时，使用 `"-Dspring-boot.run.profiles=h2,local"`。
+- 未显式启用 `local` 时，`APP_RUNTIME_MODE` 默认为 `prod`。可选值为 `local`、`test`、`pre`、`prod`；`local` / `test` 运行模式必须同时激活同名 Spring profile，单独覆盖环境变量不能降级。激活 Spring `pre` / `prod` profile 时始终按严格模式校验。
+- 所有运行模式解析出的 JWT 与支付回调密钥都必须至少 32 字符。`local` profile 内置的仓库开发密钥只能用于本地；`pre` / `prod` 必须通过 `APP_AUTH_JWT_SECRET` 和 `APP_PAYMENT_NOTIFY_SECRET` 注入独立密钥，否则会在启动时失败。
+- `APP_PAYMENT_MOCK_ENABLED`、`APP_AUTH_VERIFICATION_MOCK_ENABLED` 和 `APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE` 默认均为 `false`，且在 `pre` / `prod` 中必须保持关闭。仅在显式本地开发时可启用；`APP_AUTH_VERIFICATION_MOCK_CODE` 必须是 6 位数字，验证码暴露开关只能与验证码 mock 同时启用。
+- 当前仓库尚未接入真实短信/邮件验证码 provider 或真实支付 provider。关闭对应 mock 后，发送/校验验证码、创建/回调/模拟完成支付等依赖 provider 的操作会返回 `503 Service Unavailable`，不会伪装成功。
 
 ## 前端
 
@@ -395,6 +398,8 @@ npm run build
 - `2026-07-28` 管理端控制台经营汇总已接城市/门店范围：门店数、已支付订单数和待退款数不再按区域全量统计，城市受限账号与单门店白名单账号只看到授权范围指标。后端聚焦测试与全量 `360` 条测试通过。
 
 - `2026-07-28` 管理端导入批次已补齐数据隔离：区域全量管理员仍可查看当前区域所有批次，城市或门店受限管理员的批次列表和控制台汇总只展示本人发起记录；初始化 schema 与 `04_admin_import_batch_scope_migration.sql` 已补组合索引，避免受限查询扫描区域全量批次。后端聚焦测试与全量 `363` 条测试通过。
+
+- `2026-07-28` 运行配置已改为生产默认 fail-closed：未显式启用同名 profile 的 `local/test` 模式不能启动，`pre/prod` 拒绝仓库开发密钥、mock 支付、mock 验证码及验证码回显；缺少真实验证码或支付 provider 时相关接口返回 `503`，不再伪装成功。四个本地 smoke 启动入口已显式启用 `local`，Web 兼容生产响应缺少 `mockCode`；后端聚焦 `37` 条与全量 `377` 条测试、Web 生产构建通过。
 
 - `2026-07-26` Flutter 隐私中心补齐初始加载恢复：隐私规则、导出任务、协议记录或设备列表任一请求失败时展示错误与重试入口；重试重新聚合完整数据并清理遗留分页加载态。隐私仓储、中心页与导出保存聚焦测试 `20` 条通过，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `232` 条通过。
 

@@ -47,9 +47,10 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger - [%X{traceId}] %msg%n"
 
 app:
+  runtime-mode: ${APP_RUNTIME_MODE:prod}
   payment:
-    notify-secret: ${APP_PAYMENT_NOTIFY_SECRET:local-payment-notify-secret}
-    mock-enabled: ${APP_PAYMENT_MOCK_ENABLED:true}
+    notify-secret: ${APP_PAYMENT_NOTIFY_SECRET:}
+    mock-enabled: ${APP_PAYMENT_MOCK_ENABLED:false}
   search:
     provider: ${APP_SEARCH_PROVIDER:mysql}
     base-url: ${APP_SEARCH_BASE_URL:http://127.0.0.1:9200}
@@ -67,9 +68,13 @@ app:
     merchant-id: ${APP_MERCHANT_ID:2001}
     access-token-expire-seconds: ${APP_MERCHANT_ACCESS_TOKEN_EXPIRE_SECONDS:7200}
   auth:
-    jwt-secret: local-dev-auth-secret-please-change
+    jwt-secret: ${APP_AUTH_JWT_SECRET:}
     access-token-expire-seconds: 7200
     refresh-token-expire-seconds: 2592000
+    verification-code:
+      mock-enabled: ${APP_AUTH_VERIFICATION_MOCK_ENABLED:false}
+      mock-code: ${APP_AUTH_VERIFICATION_MOCK_CODE:}
+      expose-mock-code: ${APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE:false}
     send-code-rate-limit:
       account-short-window-seconds: 60
       account-short-window-max-requests: 1

@@ -26,7 +26,7 @@ Assert-True ($dryRunText -match "login/password") "dry-run output must mention p
 Assert-True ($dryRunText -match "/api/c/v1/files/upload") "dry-run output must mention the upload endpoint"
 Assert-True ($dryRunText -match "stop the backend") "dry-run output must mention backend shutdown"
 
-Assert-True ($scriptContent -match "spring\.profiles\.active=h2") "storage smoke must run the backend with the h2 profile"
+Assert-True ($scriptContent -match "spring\.profiles\.active=h2,local") "storage smoke must run the backend with the h2 and explicit local profiles"
 Assert-True ($scriptContent -match "APP_FILE_STORAGE_PROVIDER") "storage smoke must set APP_FILE_STORAGE_PROVIDER"
 Assert-True ($scriptContent -match "APP_S3_ENDPOINT") "storage smoke must read the S3 endpoint from environment or parameters"
 Assert-True ($scriptContent -match "MultipartFormDataContent") "storage smoke must build a real multipart upload request"

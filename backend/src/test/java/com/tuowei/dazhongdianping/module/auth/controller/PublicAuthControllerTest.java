@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tuowei.dazhongdianping.config.VerificationCodeProperties;
 import com.tuowei.dazhongdianping.module.auth.service.SendCodeRateLimitService;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -43,6 +44,9 @@ class PublicAuthControllerTest {
     private SendCodeRateLimitService sendCodeRateLimitService;
 
     @Autowired
+    private VerificationCodeProperties verificationCodeProperties;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
@@ -73,6 +77,100 @@ class PublicAuthControllerTest {
                 .andExpect(jsonPath("$.data.expireSeconds").value(300))
                 .andExpect(jsonPath("$.data.nextRetrySeconds").value(60))
                 .andExpect(jsonPath("$.data.mockCode").value("123456"));
+    }
+
+    @Test
+    void shouldOmitMockCodeWhenExposureIsDisabled() throws Exception {
+        boolean original = verificationCodeProperties.isExposeMockCode();
+        verificationCodeProperties.setExposeMockCode(false);
+        try {
+            mockMvc.perform(post("/api/c/v1/auth/send-code")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "scene": "register",
+                                      "type": "email",
+                                      "account": "hidden-code@example.com",
+                                      "deviceId": "hidden-code-device"
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.sent").value(true))
+                    .andExpect(jsonPath("$.data.mockCode").doesNotExist());
+        } finally {
+            verificationCodeProperties.setExposeMockCode(original);
+        }
+    }
+
+    @Test
+    void shouldFailClosedWhenVerificationProviderIsUnavailable() throws Exception {
+        boolean originalEnabled = verificationCodeProperties.isMockEnabled();
+        boolean originalExposure = verificationCodeProperties.isExposeMockCode();
+        String pendingAccount = "pending-mock-code@example.com";
+        mockMvc.perform(post("/api/c/v1/auth/send-code")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "scene": "register",
+                                  "type": "email",
+                                  "account": "pending-mock-code@example.com",
+                                  "deviceId": "pending-mock-code-device"
+                                }
+                                """))
+                .andExpect(status().isOk());
+        verificationCodeProperties.setMockEnabled(false);
+        verificationCodeProperties.setExposeMockCode(false);
+        try {
+            mockMvc.perform(post("/api/c/v1/auth/send-code")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "scene": "register",
+                                      "type": "email",
+                                      "account": "unconfigured-provider@example.com",
+                                      "deviceId": "unconfigured-provider-device"
+                                    }
+                                    """))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value(503))
+                    .andExpect(jsonPath("$.messageKey").value("common.service_unavailable"));
+
+            mockMvc.perform(post("/api/c/v1/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "type": "email",
+                                      "account": "pending-mock-code@example.com",
+                                      "code": "123456",
+                                      "password": "Passw0rd!"
+                                    }
+                                    """))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value(503))
+                    .andExpect(jsonPath("$.messageKey").value("common.service_unavailable"));
+
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(1) FROM verification_code WHERE target=?",
+                    Integer.class,
+                    "unconfigured-provider@example.com"
+            );
+            org.junit.jupiter.api.Assertions.assertEquals(0, count);
+            Integer pendingUserCount = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(1) FROM app_user WHERE email=?",
+                    Integer.class,
+                    pendingAccount
+            );
+            org.junit.jupiter.api.Assertions.assertEquals(0, pendingUserCount);
+            Integer pendingCodeStatus = jdbcTemplate.queryForObject(
+                    "SELECT status FROM verification_code WHERE target=? ORDER BY id DESC LIMIT 1",
+                    Integer.class,
+                    pendingAccount
+            );
+            org.junit.jupiter.api.Assertions.assertEquals(0, pendingCodeStatus);
+        } finally {
+            verificationCodeProperties.setMockEnabled(originalEnabled);
+            verificationCodeProperties.setExposeMockCode(originalExposure);
+        }
     }
 
     @Test

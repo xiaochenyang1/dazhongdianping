@@ -1,0 +1,11 @@
+app:
+  runtime-mode: ${APP_RUNTIME_MODE:local}
+  payment:
+    notify-secret: ${APP_PAYMENT_NOTIFY_SECRET:local-payment-notify-secret-please-change}
+    mock-enabled: ${APP_PAYMENT_MOCK_ENABLED:true}
+  auth:
+    jwt-secret: ${APP_AUTH_JWT_SECRET:local-dev-auth-secret-please-change}
+    verification-code:
+      mock-enabled: ${APP_AUTH_VERIFICATION_MOCK_ENABLED:true}
+      mock-code: ${APP_AUTH_VERIFICATION_MOCK_CODE:123456}
+      expose-mock-code: ${APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE:true}

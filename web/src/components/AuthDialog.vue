@@ -166,13 +166,13 @@ const stageSummary = computed(() => {
     return `目标路径 ${state.redirectTo} 已记录在当前会话里，登录完成后会自动跳回。`
   }
 
-  return '当前本地开发环境会直接返回 mockCode，方便把登录、刷新和用户资料链路一起联调透。'
+  return '验证码会发送到你填写的邮箱或手机号，完成验证后即可继续。'
 })
 
 const resumeFacts = computed(() => [
   {
     label: state.redirectTo ? '恢复目标' : '运行环境',
-    value: state.redirectTo ?? 'mock 验证码联调',
+    value: state.redirectTo ?? '账号安全验证',
   },
   {
     label: '当前区域',
@@ -192,8 +192,8 @@ const servicePromises = computed(() => [
       : '登录链路和页面浏览处在同一套弹层闭环里。',
   },
   {
-    title: '验证码联调',
-    detail: '本地环境直接回显 mockCode，不用再去翻后端日志抄验证码。',
+    title: '验证码验证',
+    detail: '验证码仅用于本次账号验证，请勿转发给他人。',
   },
   {
     title: '区域一致',

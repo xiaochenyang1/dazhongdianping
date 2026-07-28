@@ -105,6 +105,7 @@ Assert-True ($scriptContent -match 'Get-FreeTcpPort') "mysql-smoke must be able 
 Assert-True ($scriptContent -match '\$backendPortWasExplicitlySupplied') "mysql-smoke must distinguish between explicit ports and the default fallback port"
 Assert-True ($scriptContent -match 'Wait-PortReleased -Port \$BackendPort') "mysql-smoke cleanup must verify the backend port is released"
 Assert-True ($scriptContent -match 'Start-ManagedProcess -Name "backend"') "mysql-smoke must manage the backend process directly instead of relying on Maven JMX defaults"
+Assert-True ($scriptContent -match 'spring\.profiles\.active=local') "mysql-smoke must explicitly opt into the local runtime profile"
 Assert-True ($scriptContent -match '__dzdp_smoke_owner') "temporary database cleanup must store an ownership marker"
 Assert-True ($scriptContent -match '\$databaseOwnershipToken') "temporary database cleanup must use an unguessable ownership token"
 Assert-True ($scriptContent -match '\$actualOwnershipToken -eq \$databaseOwnershipToken') "DropDatabaseAfter must verify ownership again before dropping the database"

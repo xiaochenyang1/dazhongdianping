@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: test
   application:
     name: dazhongdianping-backend
   datasource:
@@ -38,6 +40,10 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger - [%X{traceId}] %msg%n"
 
 app:
+  runtime-mode: test
+  payment:
+    notify-secret: local-payment-notify-secret-please-change
+    mock-enabled: true
   admin:
     account: admin
     password: admin123456
@@ -52,6 +58,10 @@ app:
     jwt-secret: local-dev-auth-secret-please-change
     access-token-expire-seconds: 7200
     refresh-token-expire-seconds: 2592000
+    verification-code:
+      mock-enabled: true
+      mock-code: "123456"
+      expose-mock-code: true
     send-code-rate-limit:
       account-short-window-seconds: 60
       account-short-window-max-requests: 1

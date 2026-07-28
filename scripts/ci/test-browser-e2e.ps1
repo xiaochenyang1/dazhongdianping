@@ -36,7 +36,7 @@ Assert-True ($browserE2eScript -match "Start-Process") "browser E2E script must 
 Assert-True ($browserE2eScript -match "java") "browser E2E script must start the packaged backend directly"
 Assert-True ($browserE2eScript -match "vite[\\/]bin[\\/]vite.js") "browser E2E script must start Vite directly through Node"
 Assert-True ($browserE2eScript -match "PLAYWRIGHT_EXTERNAL_SERVERS") "browser E2E script must disable Playwright-managed server teardown"
-Assert-True ($browserE2eScript -match "spring.profiles.active=h2") "real E2E backend must use the H2 profile"
+Assert-True ($browserE2eScript -match "spring\.profiles\.active=h2,local") "real E2E backend must use the H2 and explicit local profiles"
 Assert-True ($browserE2eScript -match "PLAYWRIGHT_OUTPUT_DIR") "browser E2E script must isolate Playwright output per run"
 Assert-True ($browserE2eScript -match "@playwright[\\/]test[\\/]cli.js") "browser E2E script must invoke Playwright directly without npm recursion"
 Assert-True ($browserE2eScript -match "Stop-Process") "browser E2E script must stop every managed process in finally"

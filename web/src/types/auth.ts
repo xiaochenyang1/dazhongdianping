@@ -104,7 +104,7 @@ export interface AuthSendCodeResponse {
   sent: boolean
   expireSeconds: number
   nextRetrySeconds: number
-  mockCode: string
+  mockCode?: string
 }
 
 export interface UserProfileUpdatePayload {

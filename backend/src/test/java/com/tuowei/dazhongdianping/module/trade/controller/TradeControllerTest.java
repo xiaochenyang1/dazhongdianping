@@ -14,6 +14,7 @@ import java.util.HexFormat;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -27,6 +28,7 @@ class TradeControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Value("${app.payment.notify-secret}") private String paymentNotifySecret;
 
     @Test
     void shouldCompleteOrderPaymentCouponAndRefundFlow() throws Exception {
@@ -185,6 +187,6 @@ class TradeControllerTest {
 
     private String registerToken() throws Exception { return registerToken("trade-"+UUID.randomUUID()+"@example.com"); }
     private String registerToken(String account) throws Exception { mockMvc.perform(post("/api/c/v1/auth/send-code").contentType(MediaType.APPLICATION_JSON).content("{\"scene\":\"register\",\"type\":\"email\",\"account\":\""+account+"\",\"deviceId\":\"trade-test\"}")).andExpect(status().isOk()); MvcResult r=mockMvc.perform(post("/api/c/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"email\",\"account\":\""+account+"\",\"code\":\"123456\",\"password\":\"Passw0rd!\"}")).andExpect(status().isOk()).andReturn(); return objectMapper.readTree(r.getResponse().getContentAsString()).at("/data/accessToken").asText(); }
-    private String sign(String orderNo,String txn,String status,String amount) throws Exception { String raw=orderNo+"|"+txn+"|"+status+"|"+amount+"|local-payment-notify-secret"; return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8))); }
+    private String sign(String orderNo,String txn,String status,String amount) throws Exception { String raw=orderNo+"|"+txn+"|"+status+"|"+amount+"|"+paymentNotifySecret; return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8))); }
     private String bearer(String token){return "Bearer "+token;}
 }

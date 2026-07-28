@@ -5,6 +5,7 @@ import com.tuowei.dazhongdianping.config.InfrastructureProperties;
 import com.tuowei.dazhongdianping.config.PrivacyProperties;
 import com.tuowei.dazhongdianping.config.SearchProperties;
 import com.tuowei.dazhongdianping.config.SendCodeRateLimitProperties;
+import com.tuowei.dazhongdianping.config.VerificationCodeProperties;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -18,6 +19,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         FileStorageProperties.class,
         InfrastructureProperties.class,
         SendCodeRateLimitProperties.class,
+        VerificationCodeProperties.class,
         PrivacyProperties.class,
         SearchProperties.class
 })

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.tuowei.dazhongdianping.config.VerificationCodeProperties;
 import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
@@ -86,6 +87,8 @@ class PublicAuthServiceConcurrencyTest {
         SocialService socialService = mock(SocialService.class);
         UserExpertCertificationService userExpertCertificationService = mock(UserExpertCertificationService.class);
         UserAccessTokenService userAccessTokenService = mock(UserAccessTokenService.class);
+        VerificationCodeProperties verificationCodeProperties = new VerificationCodeProperties();
+        verificationCodeProperties.setMockEnabled(true);
         PublicAuthService publicAuthService = new PublicAuthService(
                 authCommandMapper,
                 sendCodeRateLimitService,
@@ -93,6 +96,7 @@ class PublicAuthServiceConcurrencyTest {
                 socialService,
                 userExpertCertificationService,
                 userAccessTokenService,
+                verificationCodeProperties,
                 2_592_000
         );
 

@@ -306,7 +306,7 @@ try {
     $backendProcess = Start-ManagedProcess -Name "backend" -FilePath $javaPath -Arguments @(
         "-jar",
         $backendJar.FullName,
-        "--spring.profiles.active=h2",
+        "--spring.profiles.active=h2,local",
         "--server.port=$BackendPort",
         "--management.health.redis.enabled=false"
     ) -WorkingDirectory $backendDir
