@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class ExpertCertificationScreen extends StatefulWidget {
@@ -74,7 +75,7 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('达人认证申请已提交')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).expertApplicationSubmitted)));
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -102,7 +103,7 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('本地达人认证')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).localExpertCertification)),
       body: FutureBuilder<ExpertCertificationStatus>(
         future: _statusFuture,
         builder: (context, snapshot) {
@@ -114,7 +115,7 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('认证状态加载失败：${snapshot.error}'),
+                  Text(AppLocalizations.of(context).expertStatusLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('expert-cert-retry'),
@@ -155,19 +156,19 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                       ),
                       if (status.submittedAt.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Text('提交时间：${status.submittedAt}'),
+                        Text(AppLocalizations.of(context).submittedAtLabel(status.submittedAt)),
                       ],
                       if (status.reviewedAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text('审核时间：${status.reviewedAt}'),
+                        Text(AppLocalizations.of(context).reviewedAtLabel(status.reviewedAt)),
                       ],
                       if (status.effectiveStartAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text('生效开始：${status.effectiveStartAt}'),
+                        Text(AppLocalizations.of(context).effectiveStartLabel(status.effectiveStartAt)),
                       ],
                       if (status.effectiveEndAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text('生效结束：${status.effectiveEndAt}'),
+                        Text(AppLocalizations.of(context).effectiveEndLabel(status.effectiveEndAt)),
                       ],
                       if (status.rejectReason.isNotEmpty) ...[
                         const SizedBox(height: 12),
@@ -192,9 +193,9 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                 maxLines: 6,
                 maxLength: 500,
                 enabled: status.canApply && !_submitting,
-                decoration: const InputDecoration(
-                  hintText: '说明你在本地区的内容贡献、探店经验或持续输出计划',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context).expertReasonHint,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               if (_error != null) ...[
@@ -208,9 +209,9 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                   child: Text(_submitting ? '提交中...' : '提交申请'),
                 )
               else if (status.isPending)
-                const Text('申请审核中，请耐心等待结果。')
+                Text(AppLocalizations.of(context).expertPendingHint)
               else if (status.isApproved)
-                const Text('你已通过本地达人认证，公开内容会展示达人标识。'),
+                Text(AppLocalizations.of(context).expertApprovedHint),
             ],
           );
         },

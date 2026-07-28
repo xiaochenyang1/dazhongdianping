@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class GrowthRecordsScreen extends StatefulWidget {
@@ -112,7 +113,7 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('成长值流水')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).growthRecords)),
       body: FutureBuilder<UserGrowthRecordPage>(
         future: _pageFuture,
         builder: (context, snapshot) {
@@ -125,7 +126,7 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('流水加载失败：${snapshot.error}'),
+                  Text(AppLocalizations.of(context).growthRecordsLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('growth-records-retry'),
@@ -174,9 +175,9 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
                     ),
                   ),
                 if (_items.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 48),
-                    child: Center(child: Text('还没有成长值 / 积分流水')),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 48),
+                    child: Center(child: Text(AppLocalizations.of(context).noGrowthRecords)),
                   )
                 else
                   ..._items.map(

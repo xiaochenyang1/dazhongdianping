@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -86,9 +87,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         _profile = Future.value(profile);
       });
       widget.onProfileChanged?.call(profile);
-      _showMessage('资料已保存');
+      _showMessage(AppLocalizations.of(context).profileSaved);
     } catch (error) {
-      if (mounted) _showMessage('保存资料失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).saveProfileFailed(error));
     } finally {
       if (mounted) setState(() => savingProfile = false);
     }
@@ -97,7 +98,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   Future<void> _sendBindCode() async {
     final account = bindAccountController.text.trim();
     if (account.isEmpty) {
-      _showMessage('请先填写${bindType == 'email' ? '邮箱' : '手机号'}');
+      _showMessage(AppLocalizations.of(context).fillTargetFirst(bindType == 'email' ? AppLocalizations.of(context).email : AppLocalizations.of(context).phone));
       return;
     }
     if (sendingBindCode) return;
@@ -109,9 +110,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       );
       if (!mounted) return;
       final mockCode = result.mockCode;
-      _showMessage(mockCode.isEmpty ? '验证码已发送' : '验证码已发送（本地验证码：$mockCode）');
+      _showMessage(mockCode.isEmpty ? AppLocalizations.of(context).codeSent : AppLocalizations.of(context).codeSentWithLocal(mockCode));
     } catch (error) {
-      if (mounted) _showMessage('发送验证码失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).sendCodeFailed(error));
     } finally {
       if (mounted) setState(() => sendingBindCode = false);
     }
@@ -121,7 +122,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final account = bindAccountController.text.trim();
     final code = bindCodeController.text.trim();
     if (account.isEmpty || code.isEmpty) {
-      _showMessage('请填写账号和验证码');
+      _showMessage(AppLocalizations.of(context).fillAccountAndCode);
       return;
     }
     if (bindingAccount) return;
@@ -138,9 +139,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         _profile = Future.value(profile);
       });
       widget.onProfileChanged?.call(profile);
-      _showMessage('账号已绑定');
+      _showMessage(AppLocalizations.of(context).accountBound);
     } catch (error) {
-      if (mounted) _showMessage('绑定失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).bindFailed(error));
     } finally {
       if (mounted) setState(() => bindingAccount = false);
     }
@@ -150,15 +151,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final oldPassword = oldPasswordController.text;
     final newPassword = newPasswordController.text;
     if (profile.hasPassword && oldPassword.isEmpty) {
-      _showMessage('请输入旧密码');
+      _showMessage(AppLocalizations.of(context).enterOldPassword);
       return;
     }
     if (newPassword.isEmpty) {
-      _showMessage('请输入新密码');
+      _showMessage(AppLocalizations.of(context).enterNewPassword);
       return;
     }
     if (newPassword != confirmPasswordController.text) {
-      _showMessage('两次输入的新密码不一致');
+      _showMessage(AppLocalizations.of(context).newPasswordsDoNotMatch);
       return;
     }
     if (updatingPassword) return;
@@ -172,9 +173,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       oldPasswordController.clear();
       newPasswordController.clear();
       confirmPasswordController.clear();
-      _showMessage('密码已更新');
+      _showMessage(AppLocalizations.of(context).passwordUpdated);
     } catch (error) {
-      if (mounted) _showMessage('更新密码失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).updatePasswordFailed(error));
     } finally {
       if (mounted) setState(() => updatingPassword = false);
     }
@@ -195,8 +196,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('账户设置')),
+      appBar: AppBar(title: Text(strings.accountSettings)),
       body: FutureBuilder<UserProfile>(
         future: _profile,
         builder: (context, snapshot) {
@@ -208,13 +210,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('账户资料加载失败：${snapshot.error}'),
+                  Text(strings.accountProfileLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('account-settings-retry'),
                     onPressed: reloadingProfile ? null : _reloadProfile,
                     icon: const Icon(Icons.refresh),
-                    label: Text(reloadingProfile ? '处理中...' : '重试'),
+                    label: Text(reloadingProfile ? strings.processing : strings.retry),
                   ),
                 ],
               ),
@@ -224,24 +226,24 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Text(
-                '把账户握在自己手里',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+              Text(
+                strings.accountSettingsHero,
+                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
-              const Text('资料、绑定和密码都走真实后端校验，没整一堆看着能点的摆设。'),
+              Text(strings.accountSettingsSubtitleLong),
               const SizedBox(height: 20),
               _SettingsCard(
-                title: '基础资料',
+                title: strings.basicProfile,
                 icon: Icons.badge_outlined,
                 children: [
                   TextField(
                     key: const Key('settings-nickname'),
                     controller: nicknameController,
                     maxLength: 64,
-                    decoration: const InputDecoration(
-                      labelText: '昵称',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: strings.nickname,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -249,22 +251,22 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     key: const Key('settings-avatar'),
                     controller: avatarController,
                     maxLength: 255,
-                    decoration: const InputDecoration(
-                      labelText: '头像 URL',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: strings.avatarUrl,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int>(
                     initialValue: gender,
-                    decoration: const InputDecoration(
-                      labelText: '性别',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: strings.gender,
+                      border: const OutlineInputBorder(),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 0, child: Text('未知')),
-                      DropdownMenuItem(value: 1, child: Text('男')),
-                      DropdownMenuItem(value: 2, child: Text('女')),
+                    items: [
+                      DropdownMenuItem(value: 0, child: Text(strings.genderUnknown)),
+                      DropdownMenuItem(value: 1, child: Text(strings.genderMale)),
+                      DropdownMenuItem(value: 2, child: Text(strings.genderFemale)),
                     ],
                     onChanged: (value) => setState(() => gender = value ?? 0),
                   ),
@@ -274,31 +276,31 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     controller: signatureController,
                     maxLength: 255,
                     maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: '签名',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: strings.signature,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 8),
                   FilledButton(
                     key: const Key('settings-save-profile'),
                     onPressed: savingProfile ? null : _saveProfile,
-                    child: Text(savingProfile ? '保存中...' : '保存资料'),
+                    child: Text(savingProfile ? strings.saving : strings.saveProfile),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               _SettingsCard(
-                title: '账号绑定',
+                title: strings.accountBinding,
                 icon: Icons.link_outlined,
                 children: [
-                  Text('邮箱：${profile.email.isEmpty ? '未绑定' : profile.email}'),
-                  Text('手机号：${profile.phone.isEmpty ? '未绑定' : profile.phone}'),
+                  Text(strings.emailLabel(profile.email.isEmpty ? strings.unbound : profile.email)),
+                  Text(strings.phoneLabel(profile.phone.isEmpty ? strings.unbound : profile.phone)),
                   const SizedBox(height: 12),
                   SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'email', label: Text('邮箱')),
-                      ButtonSegment(value: 'phone', label: Text('手机号')),
+                    segments: [
+                      ButtonSegment(value: 'email', label: Text(strings.email)),
+                      ButtonSegment(value: 'phone', label: Text(strings.phone)),
                     ],
                     selected: {bindType},
                     onSelectionChanged: (selection) {
@@ -310,7 +312,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     key: const Key('settings-bind-account'),
                     controller: bindAccountController,
                     decoration: InputDecoration(
-                      labelText: bindType == 'email' ? '邮箱' : '手机号',
+                      labelText: bindType == 'email' ? strings.email : strings.phone,
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -319,12 +321,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     key: const Key('settings-bind-code'),
                     controller: bindCodeController,
                     decoration: InputDecoration(
-                      labelText: '绑定验证码',
+                      labelText: strings.bindVerificationCode,
                       border: const OutlineInputBorder(),
                       suffixIcon: TextButton(
                         key: const Key('settings-send-bind-code'),
                         onPressed: sendingBindCode ? null : _sendBindCode,
-                        child: Text(sendingBindCode ? '发送中...' : '发送验证码'),
+                        child: Text(sendingBindCode ? strings.sendingCode : strings.sendCode),
                       ),
                     ),
                   ),
@@ -332,28 +334,28 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   FilledButton(
                     key: const Key('settings-confirm-bind'),
                     onPressed: bindingAccount ? null : _bindAccount,
-                    child: Text(bindingAccount ? '绑定中...' : '确认绑定'),
+                    child: Text(bindingAccount ? strings.binding : strings.confirmBind),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               _SettingsCard(
-                title: '修改密码',
+                title: strings.changePassword,
                 icon: Icons.lock_outline,
                 children: [
                   Text(
                     profile.hasPassword
-                        ? '当前账号已有密码，修改时需要校验旧密码。'
-                        : '当前账号还没有密码，可以直接设置新密码。',
+                        ? strings.hasPasswordHint
+                        : strings.noPasswordHint,
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     key: const Key('settings-old-password'),
                     controller: oldPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: '旧密码',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: strings.oldPassword,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -361,9 +363,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     key: const Key('settings-new-password'),
                     controller: newPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: '新密码',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: strings.newPassword,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -371,9 +373,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     key: const Key('settings-confirm-password'),
                     controller: confirmPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: '确认新密码',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: strings.confirmNewPassword,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -382,7 +384,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     onPressed: updatingPassword
                         ? null
                         : () => _updatePassword(profile),
-                    child: Text(updatingPassword ? '更新中...' : '更新密码'),
+                    child: Text(updatingPassword ? strings.updating : strings.updatePassword),
                   ),
                 ],
               ),

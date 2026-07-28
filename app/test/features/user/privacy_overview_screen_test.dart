@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/user/privacy_export_saver.dart';
 import 'package:dazhongdianping_app/features/user/privacy_overview_screen.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
@@ -255,13 +257,31 @@ Future<void> scrollTo(WidgetTester tester, Finder target) async {
   await tester.pumpAndSettle();
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('privacy center retries an initial overview failure', (
     tester,
   ) async {
     final api = PrivacyScreenApi(failFirstOverview: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['eu@example.com'],
@@ -285,7 +305,7 @@ void main() {
     final api = PrivacyScreenApi(failFirstOverview: true)
       ..overviewRetryGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['eu@example.com'],
@@ -309,7 +329,7 @@ void main() {
   testWidgets('privacy center loads older export tasks', (tester) async {
     final api = PrivacyScreenApi()..paginateExports = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -330,7 +350,7 @@ void main() {
 
   testWidgets('privacy center renders rules and active tasks', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(PrivacyScreenApi()),
           accounts: const ['user@example.com'],
@@ -365,7 +385,7 @@ void main() {
     (tester) async {
       final api = PrivacyScreenApi(deleteStatus: null);
       await tester.pumpWidget(
-        MaterialApp(
+        localizedApp(
           home: PrivacyOverviewScreen(
             repository: PrivacyRepository(api),
             accounts: const ['user@example.com'],
@@ -405,7 +425,7 @@ void main() {
       ..policyAcceptGates[1] = Completer<void>()
       ..policyAcceptGates[2] = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -435,7 +455,7 @@ void main() {
       ..deviceLogoutGates[7] = Completer<void>()
       ..deviceLogoutGates[8] = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -468,7 +488,7 @@ void main() {
     int? savedTaskId;
     Uint8List? savedBytes;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(PrivacyScreenApi()),
           accounts: const ['user@example.com'],
@@ -499,7 +519,7 @@ void main() {
   ) async {
     final api = PrivacyScreenApi()..downloadExportGates[8] = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -526,7 +546,7 @@ void main() {
   ) async {
     final api = PrivacyScreenApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -570,7 +590,7 @@ void main() {
   ) async {
     final api = PrivacyScreenApi()..createExportGate = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -593,7 +613,7 @@ void main() {
   ) async {
     final api = PrivacyScreenApi()..paginateExports = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -623,7 +643,7 @@ void main() {
   testWidgets('privacy center cancels an active delete task', (tester) async {
     final api = PrivacyScreenApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -650,7 +670,7 @@ void main() {
   ) async {
     final api = PrivacyScreenApi()..cancelDeleteGate = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -674,7 +694,7 @@ void main() {
   ) async {
     final api = PrivacyScreenApi(deleteStatus: null);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -716,7 +736,7 @@ void main() {
     final api = PrivacyScreenApi(deleteStatus: null)
       ..submitDeleteGate = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -751,7 +771,7 @@ void main() {
   ) async {
     final api = PrivacyScreenApi(deleteStatus: null);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -782,7 +802,7 @@ void main() {
     final api = PrivacyScreenApi(deleteStatus: null)
       ..sendDeleteCodeGate = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(api),
           accounts: const ['user@example.com'],
@@ -806,7 +826,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: PrivacyOverviewScreen(
           repository: PrivacyRepository(PrivacyScreenApi(deleteStatus: null)),
           accounts: const ['user@example.com'],

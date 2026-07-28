@@ -429,6 +429,128 @@ class AppLocalizations {
     'appealProgressRefreshed': '已刷新申诉 #{id} 的最新进度',
     'appealStatusTitle': '申诉 #{id} · {status}',
     'appealApprovedHint': '申诉已通过，账号已解封。请返回登录页继续使用。',
+    'privacySubtitle': '导出能带走，删除有冷静期，规则和任务状态都摊开讲清楚。',
+    'privacyLoadFailed': '隐私数据加载失败：{error}',
+    'exportModuleAccount': '账号数据',
+    'exportModuleReviews': '点评数据',
+    'exportModuleOrders': '订单数据',
+    'exportModulePosts': '帖子数据',
+    'exportModuleReservations': '预订数据',
+    'exportModuleFavorites': '收藏数据',
+    'exportModuleFollows': '关注关系',
+    'exportModuleMessages': '私信数据',
+    'exportModuleCircles': '圈子关系',
+    'exportModuleTopics': '话题关注',
+    'privacyExportHint': '帖子、关注关系、私信、圈子和话题关注均支持真实导出。',
+    'noExportTasks': '还没有导出任务',
+    'agreementRecordsHint': '记录你确认过的用户协议和隐私政策版本，省得日后各说各话。',
+    'noAgreementRecords': '还没有协议同意记录。',
+    'deviceLifecycleHint': '登录设备会保留生命周期记录；未配置推送时不会冒充 FCM/APNs 已接通。',
+    'noRegisteredDevices': '还没有登记设备。',
+    'loadMoreExportTasksFailed': '加载更多导出任务失败：{error}',
+    'agreementRecorded': '协议同意记录已留痕',
+    'agreementRecordFailed': '协议留痕失败：{error}',
+    'deviceDeactivated': '设备已停用并清除推送 token',
+    'deviceDeactivateFailed': '停用设备失败：{error}',
+    'exportSaved': '导出文件已保存：{path}',
+    'exportDownloadFailed': '下载导出文件失败：{error}',
+    'selectExportModule': '至少选择一个导出模块',
+    'exportTaskCreated': '导出任务已创建，准备好后可下载',
+    'createExportFailed': '创建导出任务失败：{error}',
+    'deleteRequestCanceled': '删除申请已撤销，账号会继续保留',
+    'cancelDeleteFailed': '撤销删除申请失败：{error}',
+    'fillAccountAndDeleteReason': '校验账号和删除原因都得填',
+    'codeNotFilled': '验证码还没填',
+    'passwordNotFilled': '登录密码还没填',
+    'deleteEnteredCoolingOff': '删除申请已进入冷静期，到期前可以撤销',
+    'submitDeleteFailed': '提交删除申请失败：{error}',
+    'fillBoundAccountFirst': '先填写当前已绑定账号',
+    'sendDeleteCodeFailed': '发送注销验证码失败：{error}',
+    'createdAtLabel': '创建于 {time}',
+    'expiresAtLabel': '到期 {time}',
+    'reasonLabel': '原因：{value}',
+    'coolingOffDeadline': '冷静期截止：{value}',
+    'verifyByCode': '验证码校验',
+    'verifyByPassword': '密码校验',
+    'boundAccount': '当前已绑定账号',
+    'deleteVerificationCode': '注销验证码',
+    'currentLoginPassword': '当前登录密码',
+    'deleteReason': '删除原因',
+    'coolingOffIntro': '提交后进入 {days} 天冷静期，到期前可以撤销。',
+    'accountSettingsSubtitleLong': '资料、绑定和密码都走真实后端校验，没整一堆看着能点的摆设。',
+    'accountProfileLoadFailed': '账户资料加载失败：{error}',
+    'nickname': '昵称',
+    'avatarUrl': '头像 URL',
+    'gender': '性别',
+    'genderUnknown': '未知',
+    'genderMale': '男',
+    'genderFemale': '女',
+    'signature': '签名',
+    'emailLabel': '邮箱：{value}',
+    'phoneLabel': '手机号：{value}',
+    'unbound': '未绑定',
+    'email': '邮箱',
+    'phone': '手机号',
+    'bindVerificationCode': '绑定验证码',
+    'oldPassword': '旧密码',
+    'expertApplicationSubmitted': '达人认证申请已提交',
+    'expertStatusLoadFailed': '认证状态加载失败：{error}',
+    'reviewedAtLabel': '审核时间：{value}',
+    'effectiveStartLabel': '生效开始：{value}',
+    'effectiveEndLabel': '生效结束：{value}',
+    'expertReasonHint': '说明你在本地区的内容贡献、探店经验或持续输出计划',
+    'expertPendingHint': '申请审核中，请耐心等待结果。',
+    'expertApprovedHint': '你已通过本地达人认证，公开内容会展示达人标识。',
+    'growthRecordsLoadFailed': '流水加载失败：{error}',
+    'noGrowthRecords': '还没有成长值 / 积分流水',
+    'profileSaved': '资料已保存',
+    'saveProfileFailed': '保存资料失败：{error}',
+    'fillTargetFirst': '请先填写{target}',
+    'codeSentWithLocal': '验证码已发送（本地验证码：{code}）',
+    'sendCodeFailed': '发送验证码失败：{error}',
+    'fillAccountAndCode': '请填写账号和验证码',
+    'accountBound': '账号已绑定',
+    'bindFailed': '绑定失败：{error}',
+    'enterOldPassword': '请输入旧密码',
+    'enterNewPassword': '请输入新密码',
+    'newPasswordsDoNotMatch': '两次输入的新密码不一致',
+    'passwordUpdated': '密码已更新',
+    'updatePasswordFailed': '更新密码失败：{error}',
+    'accountSettingsHero': '把账户握在自己手里',
+    'basicProfile': '基础资料',
+    'accountBinding': '账号绑定',
+    'changePassword': '修改密码',
+    'saving': '保存中...',
+    'saveProfile': '保存资料',
+    'binding': '绑定中...',
+    'confirmBind': '确认绑定',
+    'updating': '更新中...',
+    'updatePassword': '更新密码',
+    'hasPasswordHint': '当前账号已有密码，修改时需要校验旧密码。',
+    'noPasswordHint': '当前账号还没有密码，可以直接设置新密码。',
+    'dataExport': '数据导出',
+    'accountDeletion': '账号删除',
+    'coolingOffDays': '{days} 天冷静期',
+    'createExportTask': '创建导出任务',
+    'loadMoreExportTasks': '加载更多导出任务',
+    'agreementTrace': '协议留痕',
+    'confirmPrivacyPolicy': '确认隐私政策',
+    'confirmUserAgreement': '确认用户协议',
+    'deviceManagement': '设备管理',
+    'deactivateThisDevice': '停用此设备',
+    'privacyPolicy': '隐私政策',
+    'userAgreement': '用户协议',
+    'unknownAgreement': '未知协议',
+    'unknownDevice': '未知设备',
+    'deleteTaskTitle': '删除任务 #{id} · {status}',
+    'cancelDeleteRequest': '撤销删除申请',
+    'submitDeleteRequest': '提交删除申请',
+    'sendDeleteCode': '发送注销验证码',
+    'localCodeOnly': '本地验证码：{code}',
+    'unknownStatus': '未知状态',
+    'deviceEnabled': '启用',
+    'deviceDisabled': '已停用',
+    'deviceLoggedOut': '已登出',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -845,6 +967,128 @@ class AppLocalizations {
     'appealProgressRefreshed': '已刷新申訴 #{id} 的最新進度',
     'appealStatusTitle': '申訴 #{id} · {status}',
     'appealApprovedHint': '申訴已通過，帳號已解封。請返回登入頁繼續使用。',
+    'privacySubtitle': '匯出能帶走，刪除有冷靜期，規則和任務狀態都攤開講清楚。',
+    'privacyLoadFailed': '隱私資料載入失敗：{error}',
+    'exportModuleAccount': '帳號資料',
+    'exportModuleReviews': '評論資料',
+    'exportModuleOrders': '訂單資料',
+    'exportModulePosts': '貼文資料',
+    'exportModuleReservations': '預訂資料',
+    'exportModuleFavorites': '收藏資料',
+    'exportModuleFollows': '追蹤關係',
+    'exportModuleMessages': '私信資料',
+    'exportModuleCircles': '圈子關係',
+    'exportModuleTopics': '話題追蹤',
+    'privacyExportHint': '貼文、追蹤關係、私信、圈子和話題追蹤均支援真實匯出。',
+    'noExportTasks': '還沒有匯出任務',
+    'agreementRecordsHint': '記錄你確認過的使用者協議和隱私政策版本，省得日後各說各話。',
+    'noAgreementRecords': '還沒有協議同意記錄。',
+    'deviceLifecycleHint': '登入裝置會保留生命週期記錄；未設定推播時不會冒充 FCM/APNs 已接通。',
+    'noRegisteredDevices': '還沒有登記裝置。',
+    'loadMoreExportTasksFailed': '載入更多匯出任務失敗：{error}',
+    'agreementRecorded': '協議同意記錄已留痕',
+    'agreementRecordFailed': '協議留痕失敗：{error}',
+    'deviceDeactivated': '裝置已停用並清除推播 token',
+    'deviceDeactivateFailed': '停用裝置失敗：{error}',
+    'exportSaved': '匯出檔案已儲存：{path}',
+    'exportDownloadFailed': '下載匯出檔案失敗：{error}',
+    'selectExportModule': '至少選擇一個匯出模組',
+    'exportTaskCreated': '匯出任務已建立，準備好後可下載',
+    'createExportFailed': '建立匯出任務失敗：{error}',
+    'deleteRequestCanceled': '刪除申請已撤銷，帳號會繼續保留',
+    'cancelDeleteFailed': '撤銷刪除申請失敗：{error}',
+    'fillAccountAndDeleteReason': '校驗帳號和刪除原因都得填',
+    'codeNotFilled': '驗證碼還沒填',
+    'passwordNotFilled': '登入密碼還沒填',
+    'deleteEnteredCoolingOff': '刪除申請已進入冷靜期，到期前可以撤銷',
+    'submitDeleteFailed': '提交刪除申請失敗：{error}',
+    'fillBoundAccountFirst': '先填寫目前已綁定帳號',
+    'sendDeleteCodeFailed': '發送註銷驗證碼失敗：{error}',
+    'createdAtLabel': '建立於 {time}',
+    'expiresAtLabel': '到期 {time}',
+    'reasonLabel': '原因：{value}',
+    'coolingOffDeadline': '冷靜期截止：{value}',
+    'verifyByCode': '驗證碼校驗',
+    'verifyByPassword': '密碼校驗',
+    'boundAccount': '目前已綁定帳號',
+    'deleteVerificationCode': '註銷驗證碼',
+    'currentLoginPassword': '目前登入密碼',
+    'deleteReason': '刪除原因',
+    'coolingOffIntro': '提交後進入 {days} 天冷靜期，到期前可以撤銷。',
+    'accountSettingsSubtitleLong': '資料、綁定和密碼都走真實後端校驗，沒整一堆看著能點的擺設。',
+    'accountProfileLoadFailed': '帳戶資料載入失敗：{error}',
+    'nickname': '暱稱',
+    'avatarUrl': '頭像 URL',
+    'gender': '性別',
+    'genderUnknown': '未知',
+    'genderMale': '男',
+    'genderFemale': '女',
+    'signature': '簽名',
+    'emailLabel': '信箱：{value}',
+    'phoneLabel': '手機號：{value}',
+    'unbound': '未綁定',
+    'email': '信箱',
+    'phone': '手機號',
+    'bindVerificationCode': '綁定驗證碼',
+    'oldPassword': '舊密碼',
+    'expertApplicationSubmitted': '達人認證申請已提交',
+    'expertStatusLoadFailed': '認證狀態載入失敗：{error}',
+    'reviewedAtLabel': '審核時間：{value}',
+    'effectiveStartLabel': '生效開始：{value}',
+    'effectiveEndLabel': '生效結束：{value}',
+    'expertReasonHint': '說明你在本地區的內容貢獻、探店經驗或持續輸出計畫',
+    'expertPendingHint': '申請審核中，請耐心等待結果。',
+    'expertApprovedHint': '你已通過在地達人認證，公開內容會展示達人標識。',
+    'growthRecordsLoadFailed': '流水載入失敗：{error}',
+    'noGrowthRecords': '還沒有成長值 / 積分流水',
+    'profileSaved': '資料已儲存',
+    'saveProfileFailed': '儲存資料失敗：{error}',
+    'fillTargetFirst': '請先填寫{target}',
+    'codeSentWithLocal': '驗證碼已發送（本地驗證碼：{code}）',
+    'sendCodeFailed': '發送驗證碼失敗：{error}',
+    'fillAccountAndCode': '請填寫帳號和驗證碼',
+    'accountBound': '帳號已綁定',
+    'bindFailed': '綁定失敗：{error}',
+    'enterOldPassword': '請輸入舊密碼',
+    'enterNewPassword': '請輸入新密碼',
+    'newPasswordsDoNotMatch': '兩次輸入的新密碼不一致',
+    'passwordUpdated': '密碼已更新',
+    'updatePasswordFailed': '更新密碼失敗：{error}',
+    'accountSettingsHero': '把帳戶握在自己手裡',
+    'basicProfile': '基礎資料',
+    'accountBinding': '帳號綁定',
+    'changePassword': '修改密碼',
+    'saving': '儲存中...',
+    'saveProfile': '儲存資料',
+    'binding': '綁定中...',
+    'confirmBind': '確認綁定',
+    'updating': '更新中...',
+    'updatePassword': '更新密碼',
+    'hasPasswordHint': '目前帳號已有密碼，修改時需要校驗舊密碼。',
+    'noPasswordHint': '目前帳號還沒有密碼，可以直接設定新密碼。',
+    'dataExport': '資料匯出',
+    'accountDeletion': '帳號刪除',
+    'coolingOffDays': '{days} 天冷靜期',
+    'createExportTask': '建立匯出任務',
+    'loadMoreExportTasks': '載入更多匯出任務',
+    'agreementTrace': '協議留痕',
+    'confirmPrivacyPolicy': '確認隱私政策',
+    'confirmUserAgreement': '確認使用者協議',
+    'deviceManagement': '裝置管理',
+    'deactivateThisDevice': '停用此裝置',
+    'privacyPolicy': '隱私政策',
+    'userAgreement': '使用者協議',
+    'unknownAgreement': '未知協議',
+    'unknownDevice': '未知裝置',
+    'deleteTaskTitle': '刪除任務 #{id} · {status}',
+    'cancelDeleteRequest': '撤銷刪除申請',
+    'submitDeleteRequest': '提交刪除申請',
+    'sendDeleteCode': '發送註銷驗證碼',
+    'localCodeOnly': '本地驗證碼：{code}',
+    'unknownStatus': '未知狀態',
+    'deviceEnabled': '啟用',
+    'deviceDisabled': '已停用',
+    'deviceLoggedOut': '已登出',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -1278,6 +1522,139 @@ class AppLocalizations {
     'appealStatusTitle': 'Appeal #{id} · {status}',
     'appealApprovedHint':
         'Appeal approved and account unbanned. Return to sign in.',
+    'privacySubtitle':
+        'Exports leave with you. Deletion has a cooling-off period. Rules and task status stay explicit.',
+    'privacyLoadFailed': 'Could not load privacy data: {error}',
+    'exportModuleAccount': 'Account data',
+    'exportModuleReviews': 'Review data',
+    'exportModuleOrders': 'Order data',
+    'exportModulePosts': 'Post data',
+    'exportModuleReservations': 'Reservation data',
+    'exportModuleFavorites': 'Favorites',
+    'exportModuleFollows': 'Follow graph',
+    'exportModuleMessages': 'Message data',
+    'exportModuleCircles': 'Circle memberships',
+    'exportModuleTopics': 'Topic follows',
+    'privacyExportHint':
+        'Posts, follows, messages, circles and topic follows support real exports.',
+    'noExportTasks': 'No export tasks yet',
+    'agreementRecordsHint':
+        'We keep the terms and privacy versions you accepted, so records stay clear later.',
+    'noAgreementRecords': 'No agreement records yet.',
+    'deviceLifecycleHint':
+        'Signed-in devices keep lifecycle records. Unconfigured push is never faked as FCM/APNs.',
+    'noRegisteredDevices': 'No registered devices yet.',
+    'loadMoreExportTasksFailed': 'Could not load more export tasks: {error}',
+    'agreementRecorded': 'Agreement acceptance recorded',
+    'agreementRecordFailed': 'Could not record agreement: {error}',
+    'deviceDeactivated': 'Device deactivated and push token cleared',
+    'deviceDeactivateFailed': 'Could not deactivate device: {error}',
+    'exportSaved': 'Export saved: {path}',
+    'exportDownloadFailed': 'Could not download export: {error}',
+    'selectExportModule': 'Select at least one export module',
+    'exportTaskCreated': 'Export task created. Download when ready',
+    'createExportFailed': 'Could not create export task: {error}',
+    'deleteRequestCanceled': 'Delete request canceled. Account stays active',
+    'cancelDeleteFailed': 'Could not cancel delete request: {error}',
+    'fillAccountAndDeleteReason': 'Bound account and delete reason are required',
+    'codeNotFilled': 'Verification code is missing',
+    'passwordNotFilled': 'Login password is missing',
+    'deleteEnteredCoolingOff':
+        'Delete request is in cooling-off and can be canceled before it ends',
+    'submitDeleteFailed': 'Could not submit delete request: {error}',
+    'fillBoundAccountFirst': 'Enter your currently bound account first',
+    'sendDeleteCodeFailed': 'Could not send deletion code: {error}',
+    'createdAtLabel': 'Created {time}',
+    'expiresAtLabel': 'Expires {time}',
+    'reasonLabel': 'Reason: {value}',
+    'coolingOffDeadline': 'Cooling-off ends: {value}',
+    'verifyByCode': 'Verify with code',
+    'verifyByPassword': 'Verify with password',
+    'boundAccount': 'Currently bound account',
+    'deleteVerificationCode': 'Deletion code',
+    'currentLoginPassword': 'Current login password',
+    'deleteReason': 'Delete reason',
+    'coolingOffIntro':
+        'Submission starts a {days}-day cooling-off period and can be canceled before it ends.',
+    'accountSettingsSubtitleLong':
+        'Profile, bindings and password all hit real backend validation — no fake controls.',
+    'accountProfileLoadFailed': 'Could not load account profile: {error}',
+    'nickname': 'Nickname',
+    'avatarUrl': 'Avatar URL',
+    'gender': 'Gender',
+    'genderUnknown': 'Unknown',
+    'genderMale': 'Male',
+    'genderFemale': 'Female',
+    'signature': 'Bio',
+    'emailLabel': 'Email: {value}',
+    'phoneLabel': 'Phone: {value}',
+    'unbound': 'Not bound',
+    'email': 'Email',
+    'phone': 'Phone',
+    'bindVerificationCode': 'Binding code',
+    'oldPassword': 'Current password',
+    'expertApplicationSubmitted': 'Local expert application submitted',
+    'expertStatusLoadFailed': 'Could not load certification status: {error}',
+    'reviewedAtLabel': 'Reviewed: {value}',
+    'effectiveStartLabel': 'Effective from: {value}',
+    'effectiveEndLabel': 'Effective until: {value}',
+    'expertReasonHint':
+        'Describe your local content work, exploration experience or ongoing plans',
+    'expertPendingHint': 'Application is under review. Please wait.',
+    'expertApprovedHint':
+        'You are a local expert. Public content can show the expert badge.',
+    'growthRecordsLoadFailed': 'Could not load growth history: {error}',
+    'noGrowthRecords': 'No growth or points history yet',
+    'profileSaved': 'Profile saved',
+    'saveProfileFailed': 'Could not save profile: {error}',
+    'fillTargetFirst': 'Enter {target} first',
+    'codeSentWithLocal': 'Code sent (local code: {code})',
+    'sendCodeFailed': 'Could not send code: {error}',
+    'fillAccountAndCode': 'Enter account and verification code',
+    'accountBound': 'Account bound',
+    'bindFailed': 'Could not bind account: {error}',
+    'enterOldPassword': 'Enter current password',
+    'enterNewPassword': 'Enter new password',
+    'newPasswordsDoNotMatch': 'New passwords do not match',
+    'passwordUpdated': 'Password updated',
+    'updatePasswordFailed': 'Could not update password: {error}',
+    'accountSettingsHero': 'Keep your account in your hands',
+    'basicProfile': 'Basic profile',
+    'accountBinding': 'Account binding',
+    'changePassword': 'Change password',
+    'saving': 'Saving...',
+    'saveProfile': 'Save profile',
+    'binding': 'Binding...',
+    'confirmBind': 'Confirm binding',
+    'updating': 'Updating...',
+    'updatePassword': 'Update password',
+    'hasPasswordHint':
+        'This account already has a password. Changing it requires the current one.',
+    'noPasswordHint':
+        'This account has no password yet. You can set a new one directly.',
+    'dataExport': 'Data export',
+    'accountDeletion': 'Account deletion',
+    'coolingOffDays': '{days}-day cooling-off',
+    'createExportTask': 'Create export task',
+    'loadMoreExportTasks': 'Load more export tasks',
+    'agreementTrace': 'Agreement records',
+    'confirmPrivacyPolicy': 'Confirm privacy policy',
+    'confirmUserAgreement': 'Confirm user agreement',
+    'deviceManagement': 'Device management',
+    'deactivateThisDevice': 'Deactivate this device',
+    'privacyPolicy': 'Privacy policy',
+    'userAgreement': 'User agreement',
+    'unknownAgreement': 'Unknown agreement',
+    'unknownDevice': 'Unknown device',
+    'deleteTaskTitle': 'Delete task #{id} · {status}',
+    'cancelDeleteRequest': 'Cancel delete request',
+    'submitDeleteRequest': 'Submit delete request',
+    'sendDeleteCode': 'Send deletion code',
+    'localCodeOnly': 'Local code: {code}',
+    'unknownStatus': 'Unknown status',
+    'deviceEnabled': 'Active',
+    'deviceDisabled': 'Deactivated',
+    'deviceLoggedOut': 'Signed out',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -1894,6 +2271,163 @@ class AppLocalizations {
           .replaceFirst('{id}', '$id')
           .replaceFirst('{status}', status);
   String get appealApprovedHint => _text('appealApprovedHint');
+
+  String get privacySubtitle => _text('privacySubtitle');
+  String privacyLoadFailed(Object error) => _withError('privacyLoadFailed', error);
+  String get exportModuleAccount => _text('exportModuleAccount');
+  String get exportModuleReviews => _text('exportModuleReviews');
+  String get exportModuleOrders => _text('exportModuleOrders');
+  String get exportModulePosts => _text('exportModulePosts');
+  String get exportModuleReservations => _text('exportModuleReservations');
+  String get exportModuleFavorites => _text('exportModuleFavorites');
+  String get exportModuleFollows => _text('exportModuleFollows');
+  String get exportModuleMessages => _text('exportModuleMessages');
+  String get exportModuleCircles => _text('exportModuleCircles');
+  String get exportModuleTopics => _text('exportModuleTopics');
+  String get privacyExportHint => _text('privacyExportHint');
+  String get noExportTasks => _text('noExportTasks');
+  String get agreementRecordsHint => _text('agreementRecordsHint');
+  String get noAgreementRecords => _text('noAgreementRecords');
+  String get deviceLifecycleHint => _text('deviceLifecycleHint');
+  String get noRegisteredDevices => _text('noRegisteredDevices');
+  String loadMoreExportTasksFailed(Object error) =>
+      _withError('loadMoreExportTasksFailed', error);
+  String get agreementRecorded => _text('agreementRecorded');
+  String agreementRecordFailed(Object error) =>
+      _withError('agreementRecordFailed', error);
+  String get deviceDeactivated => _text('deviceDeactivated');
+  String deviceDeactivateFailed(Object error) =>
+      _withError('deviceDeactivateFailed', error);
+  String exportSaved(String path) =>
+      _text('exportSaved').replaceFirst('{path}', path);
+  String exportDownloadFailed(Object error) =>
+      _withError('exportDownloadFailed', error);
+  String get selectExportModule => _text('selectExportModule');
+  String get exportTaskCreated => _text('exportTaskCreated');
+  String createExportFailed(Object error) =>
+      _withError('createExportFailed', error);
+  String get deleteRequestCanceled => _text('deleteRequestCanceled');
+  String cancelDeleteFailed(Object error) =>
+      _withError('cancelDeleteFailed', error);
+  String get fillAccountAndDeleteReason => _text('fillAccountAndDeleteReason');
+  String get codeNotFilled => _text('codeNotFilled');
+  String get passwordNotFilled => _text('passwordNotFilled');
+  String get deleteEnteredCoolingOff => _text('deleteEnteredCoolingOff');
+  String submitDeleteFailed(Object error) =>
+      _withError('submitDeleteFailed', error);
+  String get fillBoundAccountFirst => _text('fillBoundAccountFirst');
+  String sendDeleteCodeFailed(Object error) =>
+      _withError('sendDeleteCodeFailed', error);
+  String createdAtLabel(String time) =>
+      _text('createdAtLabel').replaceFirst('{time}', time);
+  String expiresAtLabel(String time) =>
+      _text('expiresAtLabel').replaceFirst('{time}', time);
+  String reasonLabel(String value) =>
+      _text('reasonLabel').replaceFirst('{value}', value);
+  String coolingOffDeadline(String value) =>
+      _text('coolingOffDeadline').replaceFirst('{value}', value);
+  String get verifyByCode => _text('verifyByCode');
+  String get verifyByPassword => _text('verifyByPassword');
+  String get boundAccount => _text('boundAccount');
+  String get deleteVerificationCode => _text('deleteVerificationCode');
+  String get currentLoginPassword => _text('currentLoginPassword');
+  String get deleteReason => _text('deleteReason');
+  String coolingOffIntro(int days) =>
+      _text('coolingOffIntro').replaceFirst('{days}', '$days');
+  String get accountSettingsSubtitleLong =>
+      _text('accountSettingsSubtitleLong');
+  String accountProfileLoadFailed(Object error) =>
+      _withError('accountProfileLoadFailed', error);
+  String get nickname => _text('nickname');
+  String get avatarUrl => _text('avatarUrl');
+  String get gender => _text('gender');
+  String get genderUnknown => _text('genderUnknown');
+  String get genderMale => _text('genderMale');
+  String get genderFemale => _text('genderFemale');
+  String get signature => _text('signature');
+  String emailLabel(String value) =>
+      _text('emailLabel').replaceFirst('{value}', value);
+  String phoneLabel(String value) =>
+      _text('phoneLabel').replaceFirst('{value}', value);
+  String get unbound => _text('unbound');
+  String get email => _text('email');
+  String get phone => _text('phone');
+  String get bindVerificationCode => _text('bindVerificationCode');
+  String get oldPassword => _text('oldPassword');
+  String get expertApplicationSubmitted => _text('expertApplicationSubmitted');
+  String expertStatusLoadFailed(Object error) =>
+      _withError('expertStatusLoadFailed', error);
+  String reviewedAtLabel(String value) =>
+      _text('reviewedAtLabel').replaceFirst('{value}', value);
+  String effectiveStartLabel(String value) =>
+      _text('effectiveStartLabel').replaceFirst('{value}', value);
+  String effectiveEndLabel(String value) =>
+      _text('effectiveEndLabel').replaceFirst('{value}', value);
+  String get expertReasonHint => _text('expertReasonHint');
+  String get expertPendingHint => _text('expertPendingHint');
+  String get expertApprovedHint => _text('expertApprovedHint');
+  String growthRecordsLoadFailed(Object error) =>
+      _withError('growthRecordsLoadFailed', error);
+  String get noGrowthRecords => _text('noGrowthRecords');
+
+  String get profileSaved => _text('profileSaved');
+  String saveProfileFailed(Object error) => _withError('saveProfileFailed', error);
+  String fillTargetFirst(String target) =>
+      _text('fillTargetFirst').replaceFirst('{target}', target);
+  String codeSentWithLocal(String code) =>
+      _text('codeSentWithLocal').replaceFirst('{code}', code);
+  String sendCodeFailed(Object error) => _withError('sendCodeFailed', error);
+  String get fillAccountAndCode => _text('fillAccountAndCode');
+  String get accountBound => _text('accountBound');
+  String bindFailed(Object error) => _withError('bindFailed', error);
+  String get enterOldPassword => _text('enterOldPassword');
+  String get enterNewPassword => _text('enterNewPassword');
+  String get newPasswordsDoNotMatch => _text('newPasswordsDoNotMatch');
+  String get passwordUpdated => _text('passwordUpdated');
+  String updatePasswordFailed(Object error) =>
+      _withError('updatePasswordFailed', error);
+  String get accountSettingsHero => _text('accountSettingsHero');
+  String get basicProfile => _text('basicProfile');
+  String get accountBinding => _text('accountBinding');
+  String get changePassword => _text('changePassword');
+  String get saving => _text('saving');
+  String get saveProfile => _text('saveProfile');
+  String get binding => _text('binding');
+  String get confirmBind => _text('confirmBind');
+  String get updating => _text('updating');
+  String get updatePassword => _text('updatePassword');
+  String get hasPasswordHint => _text('hasPasswordHint');
+  String get noPasswordHint => _text('noPasswordHint');
+
+  String get dataExport => _text('dataExport');
+  String get accountDeletion => _text('accountDeletion');
+  String coolingOffDays(int days) =>
+      _text('coolingOffDays').replaceFirst('{days}', '$days');
+  String get createExportTask => _text('createExportTask');
+  String get loadMoreExportTasks => _text('loadMoreExportTasks');
+  String get agreementTrace => _text('agreementTrace');
+  String get confirmPrivacyPolicy => _text('confirmPrivacyPolicy');
+  String get confirmUserAgreement => _text('confirmUserAgreement');
+  String get deviceManagement => _text('deviceManagement');
+  String get deactivateThisDevice => _text('deactivateThisDevice');
+  String get privacyPolicy => _text('privacyPolicy');
+  String get userAgreement => _text('userAgreement');
+  String get unknownAgreement => _text('unknownAgreement');
+  String get unknownDevice => _text('unknownDevice');
+  String deleteTaskTitle({required int id, required String status}) =>
+      _text('deleteTaskTitle')
+          .replaceFirst('{id}', '$id')
+          .replaceFirst('{status}', status);
+  String get cancelDeleteRequest => _text('cancelDeleteRequest');
+  String get submitDeleteRequest => _text('submitDeleteRequest');
+  String get sendDeleteCode => _text('sendDeleteCode');
+  String localCodeOnly(String code) =>
+      _text('localCodeOnly').replaceFirst('{code}', code);
+  String get unknownStatus => _text('unknownStatus');
+
+  String get deviceEnabled => _text('deviceEnabled');
+  String get deviceDisabled => _text('deviceDisabled');
+  String get deviceLoggedOut => _text('deviceLoggedOut');
   String statusWithRedeemability(String status, bool usable) =>
       '$status · ${usable ? redeemable : notRedeemable}';
 }

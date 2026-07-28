@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class AccountSettingsApi implements JsonApi, JsonMutationApi {
@@ -74,13 +76,31 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('account settings retries an initial profile failure', (
     tester,
   ) async {
     final api = AccountSettingsApi(failFirst: true);
     await tester.pumpWidget(
-      MaterialApp(home: AccountSettingsScreen(repository: UserRepository(api))),
+      localizedApp(home: AccountSettingsScreen(repository: UserRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -98,7 +118,7 @@ void main() {
     final gate = Completer<void>();
     final api = AccountSettingsApi(failFirst: true)..retryGate = gate;
     await tester.pumpWidget(
-      MaterialApp(home: AccountSettingsScreen(repository: UserRepository(api))),
+      localizedApp(home: AccountSettingsScreen(repository: UserRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -118,7 +138,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: AccountSettingsScreen(
           repository: UserRepository(AccountSettingsApi()),
         ),
@@ -153,7 +173,7 @@ void main() {
     final api = AccountSettingsApi();
     UserProfile? changedProfile;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: AccountSettingsScreen(
           repository: UserRepository(api),
           onProfileChanged: (profile) => changedProfile = profile,
@@ -207,7 +227,7 @@ void main() {
   ) async {
     final api = AccountSettingsApi();
     await tester.pumpWidget(
-      MaterialApp(home: AccountSettingsScreen(repository: UserRepository(api))),
+      localizedApp(home: AccountSettingsScreen(repository: UserRepository(api))),
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(

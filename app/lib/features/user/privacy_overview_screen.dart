@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/features/user/privacy_export_saver.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class PrivacyOverviewScreen extends StatefulWidget {
@@ -133,7 +134,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       if (mounted && revision == _dataRevision) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多导出任务失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreExportTasksFailed(error))));
       }
     } finally {
       if (mounted && revision == _dataRevision) {
@@ -155,12 +156,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       _reload();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('协议同意记录已留痕')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).agreementRecorded)));
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('协议留痕失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).agreementRecordFailed(error))));
       }
     } finally {
       if (mounted) {
@@ -178,12 +179,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       _reload();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('设备已停用并清除推送 token')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deviceDeactivated)));
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('停用设备失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deviceDeactivateFailed(error))));
       }
     } finally {
       if (mounted) {
@@ -201,13 +202,13 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('导出文件已保存：$path')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).exportSaved(path))));
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('下载导出文件失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).exportDownloadFailed(error))));
       }
     } finally {
       if (mounted) {
@@ -233,7 +234,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     if (modules.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('至少选择一个导出模块')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).selectExportModule)));
       return;
     }
     setState(() => _creatingExport = true);
@@ -243,12 +244,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       _reload();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('导出任务已创建，准备好后可下载')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).exportTaskCreated)));
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('创建导出任务失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).createExportFailed(error))));
       }
     } finally {
       if (mounted) {
@@ -266,12 +267,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       _reload();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('删除申请已撤销，账号会继续保留')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteRequestCanceled)));
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('撤销删除申请失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).cancelDeleteFailed(error))));
       }
     } finally {
       if (mounted) {
@@ -289,19 +290,19 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     if (account.isEmpty || reason.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('校验账号和删除原因都得填')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).fillAccountAndDeleteReason)));
       return;
     }
     if (_verifyType == 'code' && code.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('验证码还没填')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).codeNotFilled)));
       return;
     }
     if (_verifyType == 'password' && password.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('登录密码还没填')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).passwordNotFilled)));
       return;
     }
     setState(() => _submittingDelete = true);
@@ -319,12 +320,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       _reload();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('删除申请已进入冷静期，到期前可以撤销')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteEnteredCoolingOff)));
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('提交删除申请失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).submitDeleteFailed(error))));
       }
     } finally {
       if (mounted) {
@@ -339,7 +340,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     if (account.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('先填写当前已绑定账号')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).fillBoundAccountFirst)));
       return;
     }
     setState(() {
@@ -352,13 +353,13 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       setState(() {
         _codeHint = result.mockCode.isEmpty
             ? '${result.nextRetrySeconds} 秒后可重新发送'
-            : '本地验证码：${result.mockCode}';
+            : AppLocalizations.of(context).localCodeOnly(result.mockCode);
       });
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('发送注销验证码失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).sendDeleteCodeFailed(error))));
       }
     } finally {
       if (mounted) {
@@ -370,7 +371,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('隐私中心')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).privacyCenter)),
       body: FutureBuilder<_PrivacyData>(
         future: _data,
         builder: (context, snapshot) {
@@ -382,7 +383,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('隐私数据加载失败：${snapshot.error}'),
+                  Text(AppLocalizations.of(context).privacyLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('privacy-overview-retry'),
@@ -404,14 +405,14 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
-              const Text('导出能带走，删除有冷静期，规则和任务状态都摊开讲清楚。'),
+              Text(AppLocalizations.of(context).privacySubtitle),
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
                     child: _RuleCard(
                       icon: Icons.archive_outlined,
-                      title: '数据导出',
+                      title: AppLocalizations.of(context).dataExport,
                       value: '每天最多 ${overview.exportRule.dailyLimit} 次',
                       detail: '文件保留 ${overview.exportRule.expireHours} 小时',
                     ),
@@ -420,16 +421,16 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                   Expanded(
                     child: _RuleCard(
                       icon: Icons.schedule_outlined,
-                      title: '账号删除',
-                      value: '${overview.deleteRule.coolingOffDays} 天冷静期',
+                      title: AppLocalizations.of(context).accountDeletion,
+                      value: AppLocalizations.of(context).coolingOffDays(overview.deleteRule.coolingOffDays),
                       detail: '到期前可以撤销',
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 28),
-              const Text(
-                '数据导出',
+              Text(
+                AppLocalizations.of(context).dataExport,
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 12),
@@ -438,70 +439,70 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 runSpacing: 8,
                 children: [
                   FilterChip(
-                    label: const Text('账号数据'),
+                    label: Text(AppLocalizations.of(context).exportModuleAccount),
                     selected: _includeAccount,
                     onSelected: (selected) {
                       setState(() => _includeAccount = selected);
                     },
                   ),
                   FilterChip(
-                    label: const Text('点评数据'),
+                    label: Text(AppLocalizations.of(context).exportModuleReviews),
                     selected: _includeReviews,
                     onSelected: (selected) {
                       setState(() => _includeReviews = selected);
                     },
                   ),
                   FilterChip(
-                    label: const Text('订单数据'),
+                    label: Text(AppLocalizations.of(context).exportModuleOrders),
                     selected: _includeOrders,
                     onSelected: (selected) {
                       setState(() => _includeOrders = selected);
                     },
                   ),
                   FilterChip(
-                    label: const Text('帖子数据'),
+                    label: Text(AppLocalizations.of(context).exportModulePosts),
                     selected: _includePosts,
                     onSelected: (selected) {
                       setState(() => _includePosts = selected);
                     },
                   ),
                   FilterChip(
-                    label: const Text('预订数据'),
+                    label: Text(AppLocalizations.of(context).exportModuleReservations),
                     selected: _includeReservations,
                     onSelected: (selected) {
                       setState(() => _includeReservations = selected);
                     },
                   ),
                   FilterChip(
-                    label: const Text('收藏数据'),
+                    label: Text(AppLocalizations.of(context).exportModuleFavorites),
                     selected: _includeFavorites,
                     onSelected: (selected) {
                       setState(() => _includeFavorites = selected);
                     },
                   ),
                   FilterChip(
-                    label: const Text('关注关系'),
+                    label: Text(AppLocalizations.of(context).exportModuleFollows),
                     selected: _includeFollows,
                     onSelected: (selected) {
                       setState(() => _includeFollows = selected);
                     },
                   ),
                   FilterChip(
-                    label: const Text('私信数据'),
+                    label: Text(AppLocalizations.of(context).exportModuleMessages),
                     selected: _includeMessages,
                     onSelected: (selected) {
                       setState(() => _includeMessages = selected);
                     },
                   ),
                   FilterChip(
-                    label: const Text('圈子关系'),
+                    label: Text(AppLocalizations.of(context).exportModuleCircles),
                     selected: _includeCircles,
                     onSelected: (selected) {
                       setState(() => _includeCircles = selected);
                     },
                   ),
                   FilterChip(
-                    label: const Text('话题关注'),
+                    label: Text(AppLocalizations.of(context).exportModuleTopics),
                     selected: _includeTopics,
                     onSelected: (selected) {
                       setState(() => _includeTopics = selected);
@@ -510,13 +511,13 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              const Text('帖子、关注关系、私信、圈子和话题关注均支持真实导出。'),
+              Text(AppLocalizations.of(context).privacyExportHint),
               const SizedBox(height: 12),
               FilledButton.icon(
                 key: const Key('privacy-create-export'),
                 onPressed: _creatingExport ? null : _createExport,
                 icon: const Icon(Icons.archive_outlined),
-                label: Text(_creatingExport ? '创建中...' : '创建导出任务'),
+                label: Text(_creatingExport ? '创建中...' : AppLocalizations.of(context).createExportTask),
               ),
               const SizedBox(height: 16),
               ...data.exportTasks.map(_buildExportTask),
@@ -533,21 +534,21 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.expand_more),
-                    label: Text(_loadingMoreExports ? '加载中...' : '加载更多导出任务'),
+                    label: Text(_loadingMoreExports ? '加载中...' : AppLocalizations.of(context).loadMoreExportTasks),
                   ),
                 ),
               if (data.exportTasks.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('还没有导出任务')),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text(AppLocalizations.of(context).noExportTasks)),
                 ),
               const SizedBox(height: 28),
-              const Text(
-                '协议留痕',
+              Text(
+                AppLocalizations.of(context).agreementTrace,
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
-              const Text('记录你确认过的用户协议和隐私政策版本，省得日后各说各话。'),
+              Text(AppLocalizations.of(context).agreementRecordsHint),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -559,7 +560,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                         ? () => _acceptPolicy(1)
                         : null,
                     child: Text(
-                      _acceptingPolicyTypes.contains(1) ? '记录中...' : '确认隐私政策',
+                      _acceptingPolicyTypes.contains(1) ? '记录中...' : AppLocalizations.of(context).confirmPrivacyPolicy,
                     ),
                   ),
                   OutlinedButton(
@@ -568,7 +569,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                         ? () => _acceptPolicy(2)
                         : null,
                     child: Text(
-                      _acceptingPolicyTypes.contains(2) ? '记录中...' : '确认用户协议',
+                      _acceptingPolicyTypes.contains(2) ? '记录中...' : AppLocalizations.of(context).confirmUserAgreement,
                     ),
                   ),
                 ],
@@ -588,17 +589,17 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 ),
               ),
               if (data.policyLogs.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('还没有协议同意记录。'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(AppLocalizations.of(context).noAgreementRecords),
                 ),
               const SizedBox(height: 28),
-              const Text(
-                '设备管理',
+              Text(
+                AppLocalizations.of(context).deviceManagement,
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
-              const Text('登录设备会保留生命周期记录；未配置推送时不会冒充 FCM/APNs 已接通。'),
+              Text(AppLocalizations.of(context).deviceLifecycleHint),
               const SizedBox(height: 12),
               ...data.devices.map(
                 (device) => Card(
@@ -607,7 +608,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                       '${_platformName(device.platform)} · ${device.appVersion}',
                     ),
                     subtitle: Text(
-                      '${device.deviceUid}\n${_deviceStatusText(device.status)} · 最近活跃 ${device.lastActiveAt ?? '—'}',
+                      '${device.deviceUid}\n${_deviceStatusText(AppLocalizations.of(context), device.status)} · 最近活跃 ${device.lastActiveAt ?? '—'}',
                     ),
                     isThreeLine: true,
                     trailing: device.active
@@ -619,21 +620,21 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                             child: Text(
                               _loggingOutDeviceIds.contains(device.id)
                                   ? '停用中...'
-                                  : '停用此设备',
+                                  : AppLocalizations.of(context).deactivateThisDevice,
                             ),
                           )
-                        : Text(_deviceStatusText(device.status)),
+                        : Text(_deviceStatusText(AppLocalizations.of(context), device.status)),
                   ),
                 ),
               ),
               if (data.devices.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('还没有登记设备。'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(AppLocalizations.of(context).noRegisteredDevices),
                 ),
               const SizedBox(height: 28),
-              const Text(
-                '账号删除',
+              Text(
+                AppLocalizations.of(context).accountDeletion,
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 12),
@@ -652,10 +653,10 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
 
   String _policyName(int policyType) {
     return switch (policyType) {
-      1 => '隐私政策',
-      2 => '用户协议',
+      1 => AppLocalizations.of(context).privacyPolicy,
+      2 => AppLocalizations.of(context).userAgreement,
       3 => 'Cookie/营销告知',
-      _ => '未知协议',
+      _ => AppLocalizations.of(context).unknownAgreement,
     };
   }
 
@@ -664,16 +665,16 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       1 => 'iOS',
       2 => 'Android',
       3 => 'Web',
-      _ => '未知设备',
+      _ => AppLocalizations.of(context).unknownDevice,
     };
   }
 
-  String _deviceStatusText(int status) {
+  String _deviceStatusText(AppLocalizations strings, int status) {
     return switch (status) {
-      1 => '启用',
-      2 => '已停用',
-      3 => '已登出',
-      _ => '未知状态',
+      1 => strings.deviceEnabled,
+      2 => strings.deviceDisabled,
+      3 => strings.deviceLoggedOut,
+      _ => strings.unknownStatus,
     };
   }
 
@@ -699,8 +700,8 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               ),
               const SizedBox(height: 8),
               Text(task.modules.join(' / ')),
-              Text('创建于 ${task.createdAt}'),
-              if (task.expireAt != null) Text('到期 ${task.expireAt}'),
+              Text(AppLocalizations.of(context).createdAtLabel(task.createdAt)),
+              if (task.expireAt != null) Text(AppLocalizations.of(context).expiresAtLabel('${task.expireAt}')),
               if (task.failReason.isNotEmpty)
                 Text(
                   task.failReason,
@@ -735,18 +736,18 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '删除任务 #${task.id} · ${task.statusText}',
+              AppLocalizations.of(context).deleteTaskTitle(id: task.id, status: task.statusText),
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
-            Text('原因：${task.reason}'),
-            Text('冷静期截止：${task.coolingOffExpireAt ?? '—'}'),
+            Text(AppLocalizations.of(context).reasonLabel(task.reason)),
+            Text(AppLocalizations.of(context).coolingOffDeadline(task.coolingOffExpireAt ?? '—')),
             if (task.canCancel) ...[
               const SizedBox(height: 12),
               OutlinedButton(
                 key: Key('privacy-cancel-delete-${task.id}'),
                 onPressed: _cancellingDelete ? null : () => _cancelDelete(task),
-                child: Text(_cancellingDelete ? '撤销中...' : '撤销删除申请'),
+                child: Text(_cancellingDelete ? '撤销中...' : AppLocalizations.of(context).cancelDeleteRequest),
               ),
             ],
           ],
@@ -762,15 +763,15 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              '提交删除申请',
+            Text(
+              AppLocalizations.of(context).submitDeleteRequest,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'code', label: Text('验证码校验')),
-                ButtonSegment(value: 'password', label: Text('密码校验')),
+              segments: [
+                ButtonSegment(value: 'code', label: Text(AppLocalizations.of(context).verifyByCode)),
+                ButtonSegment(value: 'password', label: Text(AppLocalizations.of(context).verifyByPassword)),
               ],
               selected: {_verifyType},
               onSelectionChanged: (selection) {
@@ -782,8 +783,8 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               DropdownButtonFormField<String>(
                 initialValue: _selectedAccount,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: '当前已绑定账号',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).boundAccount,
                   border: OutlineInputBorder(),
                 ),
                 items: widget.accounts
@@ -800,8 +801,8 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               TextField(
                 key: const Key('privacy-delete-account'),
                 controller: _accountController,
-                decoration: const InputDecoration(
-                  labelText: '当前已绑定账号',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).boundAccount,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -813,16 +814,16 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                   TextField(
                     key: const Key('privacy-delete-code'),
                     controller: _codeController,
-                    decoration: const InputDecoration(
-                      labelText: '注销验证码',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context).deleteVerificationCode,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton(
                     key: const Key('privacy-send-delete-code'),
                     onPressed: _sendingDeleteCode ? null : _sendDeleteCode,
-                    child: Text(_sendingDeleteCode ? '发送中...' : '发送注销验证码'),
+                    child: Text(_sendingDeleteCode ? '发送中...' : AppLocalizations.of(context).sendDeleteCode),
                   ),
                   if (_codeHint.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -835,8 +836,8 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 key: const Key('privacy-delete-password'),
                 controller: _passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: '当前登录密码',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).currentLoginPassword,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -846,12 +847,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               controller: _reasonController,
               maxLength: 255,
               maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: '删除原因',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).deleteReason,
                 border: OutlineInputBorder(),
               ),
             ),
-            Text('提交后进入 ${rule.coolingOffDays} 天冷静期，到期前可以撤销。'),
+            Text(AppLocalizations.of(context).coolingOffIntro(rule.coolingOffDays)),
             const SizedBox(height: 12),
             FilledButton(
               key: const Key('privacy-delete-submit'),
@@ -859,7 +860,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 backgroundColor: Colors.red.shade700,
               ),
               onPressed: _submittingDelete ? null : _submitDelete,
-              child: Text(_submittingDelete ? '提交中...' : '提交删除申请'),
+              child: Text(_submittingDelete ? '提交中...' : AppLocalizations.of(context).submitDeleteRequest),
             ),
           ],
         ),

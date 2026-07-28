@@ -94,6 +94,9 @@ void main() {
     expect(AppLocalizations.forTag('en').login, 'Sign in');
     expect(AppLocalizations.forTag('en').registerAccount, 'Create account');
     expect(AppLocalizations.forTag('zh-CN').banAppeal, '封禁申诉');
+    expect(AppLocalizations.forTag('en').privacyCenter, 'Privacy center');
+    expect(AppLocalizations.forTag('en').accountSettings, 'Account settings');
+    expect(AppLocalizations.forTag('zh-CN').exportModuleAccount, '账号数据');
   });
 
   test('delegate supports every configured app locale', () async {

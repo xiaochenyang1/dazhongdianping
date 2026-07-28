@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/user/expert_certification_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ExpertCertApi implements JsonApi {
@@ -67,13 +69,31 @@ class ExpertCertApi implements JsonApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('expert certification screen can submit application', (
     tester,
   ) async {
     final api = ExpertCertApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ExpertCertificationScreen(repository: UserRepository(api)),
       ),
     );
@@ -99,7 +119,7 @@ void main() {
   ) async {
     final api = ExpertCertApi()..failLoads = 1;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ExpertCertificationScreen(repository: UserRepository(api)),
       ),
     );
@@ -122,7 +142,7 @@ void main() {
       ..failLoads = 1
       ..loadGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ExpertCertificationScreen(repository: UserRepository(api)),
       ),
     );
@@ -148,13 +168,13 @@ void main() {
       ..reason = '已有的申请理由'
       ..loadGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ExpertCertificationScreen(repository: UserRepository(api)),
       ),
     );
     await tester.pump();
 
-    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pumpWidget(localizedApp(home: const SizedBox.shrink()));
     gate.complete();
     await tester.pumpAndSettle();
 

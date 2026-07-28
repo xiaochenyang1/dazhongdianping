@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/user/growth_records_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class GrowthRecordsApi implements JsonApi {
@@ -117,12 +119,30 @@ class GrowthRecordsApi implements JsonApi {
       const {};
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('growth records screen renders profile and ledger entries', (
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: GrowthRecordsScreen(
           repository: UserRepository(GrowthRecordsApi()),
         ),
@@ -143,7 +163,7 @@ void main() {
   ) async {
     final api = GrowthRecordsApi(paginated: true);
     await tester.pumpWidget(
-      MaterialApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
+      localizedApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
     );
     await tester.pumpAndSettle();
 
@@ -161,7 +181,7 @@ void main() {
   ) async {
     final api = GrowthRecordsApi();
     await tester.pumpWidget(
-      MaterialApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
+      localizedApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
     );
     await tester.pumpAndSettle();
     api.failNextRecordsLoad = true;
@@ -178,7 +198,7 @@ void main() {
     final gate = Completer<void>();
     final api = GrowthRecordsApi()..failNextRecordsLoad = true;
     await tester.pumpWidget(
-      MaterialApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
+      localizedApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
     );
     await tester.pumpAndSettle();
     api.requestGates[2] = gate;
@@ -204,7 +224,7 @@ void main() {
     final api = GrowthRecordsApi(paginated: true)
       ..requestGates[2] = loadMoreGate;
     await tester.pumpWidget(
-      MaterialApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
+      localizedApp(home: GrowthRecordsScreen(repository: UserRepository(api))),
     );
     await tester.pumpAndSettle();
 
