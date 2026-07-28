@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
 import 'package:dazhongdianping_app/features/circle/circle_square_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
@@ -156,6 +158,29 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+
+  testWidgets('circle square switches English chrome', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: CircleSquareScreen(
+          repository: CircleRepository(CircleScreenApi()),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Local circles'), findsOneWidget);
+  });
+
+
   testWidgets('circle square retries an initial load failure', (tester) async {
     final api = CircleScreenApi()..failNextCircles = true;
     await tester.pumpWidget(

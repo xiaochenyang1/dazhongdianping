@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
@@ -85,7 +86,7 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
       if (mounted && currentRequestId == requestId) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多圈子失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreCirclesFailed(error))));
       }
     } finally {
       if (mounted && currentRequestId == requestId) {
@@ -121,7 +122,7 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('同城圈子')),
+    appBar: AppBar(title: Text(AppLocalizations.of(context).localCircles)),
     body: FutureBuilder<CirclePage>(
       future: page,
       builder: (context, snapshot) {
@@ -130,13 +131,13 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('圈子加载失败：${snapshot.error}'),
+                Text(AppLocalizations.of(context).circlesLoadFailed(snapshot.error!)),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('circle-square-retry'),
                   onPressed: reloading ? null : reload,
                   icon: const Icon(Icons.refresh),
-                  label: Text(reloading ? '处理中...' : '重试'),
+                  label: Text(reloading ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
                 ),
               ],
             ),
@@ -162,7 +163,7 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.expand_more),
-                  label: Text(loadingMore ? '加载中...' : '加载更多'),
+                  label: Text(loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
                 ),
               );
             }
@@ -248,7 +249,7 @@ class _CircleCard extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                '${circle.memberCount} 位成员 · ${circle.postCount} 篇帖子',
+                AppLocalizations.of(context).circleMeta(members: circle.memberCount, posts: circle.postCount),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -343,7 +344,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
       if (mounted && requestId == postsRequestId) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多帖子失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMorePostsFailed(error))));
       }
     } finally {
       if (mounted && requestId == postsRequestId) {
@@ -381,7 +382,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
         setState(() => circle = before);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('圈子状态更新失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).circleStatusUpdateFailed(error))));
       }
     } finally {
       if (mounted) setState(() => saving = false);
@@ -453,7 +454,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
               Text(circle.description),
               const SizedBox(height: 18),
               Text(
-                '${circle.memberCount} 位成员 · ${circle.postCount} 篇帖子',
+                AppLocalizations.of(context).circleMeta(members: circle.memberCount, posts: circle.postCount),
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 16),
@@ -463,7 +464,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                     child: FilledButton(
                       key: const Key('circle-membership-toggle'),
                       onPressed: saving ? null : toggle,
-                      child: Text(circle.joined ? '已加入' : '加入圈子'),
+                      child: Text(circle.joined ? AppLocalizations.of(context).joined : AppLocalizations.of(context).joinCircle),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -471,7 +472,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                     key: const Key('circle-members-open'),
                     onPressed: _openingMembers ? null : _openMembers,
                     icon: const Icon(Icons.group_outlined),
-                    tooltip: '查看成员',
+                    tooltip: AppLocalizations.of(context).viewMembers,
                   ),
                 ],
               ),
@@ -483,19 +484,19 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
           FilledButton.icon(
             onPressed: () => widget.onCreatePost?.call(circle),
             icon: const Icon(Icons.edit_outlined),
-            label: const Text('在圈子发帖'),
+            label: Text(AppLocalizations.of(context).postInCircle),
           )
         else
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('加入圈子后即可发布内容，历史帖子公开可见。'),
+              padding: const EdgeInsets.all(16),
+              child: Text(AppLocalizations.of(context).joinCircleToPost),
             ),
           ),
         const SizedBox(height: 22),
-        const Text(
-          '圈子新帖',
-          style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+        Text(
+          AppLocalizations.of(context).circleNewPosts,
+          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 10),
         FutureBuilder<CommunityPostPage>(
@@ -506,13 +507,13 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('帖子加载失败：${snapshot.error}'),
+                        Text(AppLocalizations.of(context).postsLoadFailed(snapshot.error!)),
                         const SizedBox(height: 8),
                         FilledButton.tonalIcon(
                           key: const Key('circle-posts-retry'),
                           onPressed: reloadingPosts ? null : reloadPosts,
                           icon: const Icon(Icons.refresh),
-                          label: Text(reloadingPosts ? '处理中...' : '重试'),
+                          label: Text(reloadingPosts ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
                         ),
                       ],
                     )
@@ -520,10 +521,10 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
             }
             final page = snapshot.data!;
             if (page.items.isEmpty) {
-              return const Card(
+              return Card(
                 child: Padding(
-                  padding: EdgeInsets.all(18),
-                  child: Text('这里还没有公开帖子。'),
+                  padding: const EdgeInsets.all(18),
+                  child: Text(AppLocalizations.of(context).noPublicPostsHere),
                 ),
               );
             }
@@ -563,7 +564,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.expand_more),
-                    label: Text(loadingMorePosts ? '加载中...' : '加载更多'),
+                    label: Text(loadingMorePosts ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
                   ),
               ],
             );
@@ -646,7 +647,7 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
       if (mounted && currentRequestId == requestId) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多成员失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreMembersFailed(error))));
       }
     } finally {
       if (mounted && currentRequestId == requestId) {
@@ -657,7 +658,7 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('${widget.circle.name}成员')),
+    appBar: AppBar(title: Text(AppLocalizations.of(context).circleMembersTitle(widget.circle.name))),
     body: FutureBuilder<CircleMemberPage>(
       future: page,
       builder: (_, snapshot) {
@@ -667,13 +668,13 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('成员加载失败：${snapshot.error}'),
+                      Text(AppLocalizations.of(context).membersLoadFailed(snapshot.error!)),
                       const SizedBox(height: 12),
                       FilledButton.tonalIcon(
                         key: const Key('circle-members-retry'),
                         onPressed: reloading ? null : reload,
                         icon: const Icon(Icons.refresh),
-                        label: Text(reloading ? '处理中...' : '重试'),
+                        label: Text(reloading ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
                       ),
                     ],
                   ),
@@ -697,7 +698,7 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.expand_more),
-                  label: Text(loadingMore ? '加载中...' : '加载更多'),
+                  label: Text(loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
                 ),
               );
             }

@@ -68,6 +68,12 @@ void main() {
       AppLocalizations.forTag('en').topicFollowerCount(12),
       '12 followers',
     );
+    expect(AppLocalizations.forTag('en').localCircles, 'Local circles');
+    expect(AppLocalizations.forTag('en').joinCircle, 'Join circle');
+    expect(
+      AppLocalizations.forTag('zh-CN').circleMeta(members: 3, posts: 5),
+      '3 位成员 · 5 篇帖子',
+    );
   });
 
   test('delegate supports every configured app locale', () async {

@@ -142,6 +142,19 @@ class AppLocalizations {
     'publicPosts': '公开帖子',
     'postsLoadFailed': '帖子加载失败：{error}',
     'noPublicPostsHere': '这里还没有公开帖子。',
+    'loadMoreCirclesFailed': '加载更多圈子失败：{error}',
+    'circlesLoadFailed': '圈子加载失败：{error}',
+    'circleMeta': '{members} 位成员 · {posts} 篇帖子',
+    'circleStatusUpdateFailed': '圈子状态更新失败：{error}',
+    'joined': '已加入',
+    'joinCircle': '加入圈子',
+    'viewMembers': '查看成员',
+    'postInCircle': '在圈子发帖',
+    'joinCircleToPost': '加入圈子后即可发布内容，历史帖子公开可见。',
+    'circleNewPosts': '圈子新帖',
+    'loadMoreMembersFailed': '加载更多成员失败：{error}',
+    'circleMembersTitle': '{name}成员',
+    'membersLoadFailed': '成员加载失败：{error}',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -271,6 +284,19 @@ class AppLocalizations {
     'publicPosts': '公開貼文',
     'postsLoadFailed': '貼文載入失敗：{error}',
     'noPublicPostsHere': '這裡還沒有公開貼文。',
+    'loadMoreCirclesFailed': '載入更多圈子失敗：{error}',
+    'circlesLoadFailed': '圈子載入失敗：{error}',
+    'circleMeta': '{members} 位成員 · {posts} 篇貼文',
+    'circleStatusUpdateFailed': '圈子狀態更新失敗：{error}',
+    'joined': '已加入',
+    'joinCircle': '加入圈子',
+    'viewMembers': '查看成員',
+    'postInCircle': '在圈子發文',
+    'joinCircleToPost': '加入圈子後即可發布內容，歷史貼文公開可見。',
+    'circleNewPosts': '圈子新貼',
+    'loadMoreMembersFailed': '載入更多成員失敗：{error}',
+    'circleMembersTitle': '{name}成員',
+    'membersLoadFailed': '成員載入失敗：{error}',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -404,6 +430,20 @@ class AppLocalizations {
     'publicPosts': 'Public posts',
     'postsLoadFailed': 'Could not load posts: {error}',
     'noPublicPostsHere': 'No public posts here yet.',
+    'loadMoreCirclesFailed': 'Could not load more circles: {error}',
+    'circlesLoadFailed': 'Could not load circles: {error}',
+    'circleMeta': '{members} members · {posts} posts',
+    'circleStatusUpdateFailed': 'Could not update circle status: {error}',
+    'joined': 'Joined',
+    'joinCircle': 'Join circle',
+    'viewMembers': 'View members',
+    'postInCircle': 'Post in circle',
+    'joinCircleToPost':
+        'Join the circle to publish. Existing posts stay publicly visible.',
+    'circleNewPosts': 'New circle posts',
+    'loadMoreMembersFailed': 'Could not load more members: {error}',
+    'circleMembersTitle': '{name} members',
+    'membersLoadFailed': 'Could not load members: {error}',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -615,6 +655,27 @@ class AppLocalizations {
   String get publicPosts => _text('publicPosts');
   String postsLoadFailed(Object error) => _withError('postsLoadFailed', error);
   String get noPublicPostsHere => _text('noPublicPostsHere');
+  String loadMoreCirclesFailed(Object error) =>
+      _withError('loadMoreCirclesFailed', error);
+  String circlesLoadFailed(Object error) =>
+      _withError('circlesLoadFailed', error);
+  String circleMeta({required int members, required int posts}) => _text(
+    'circleMeta',
+  ).replaceFirst('{members}', '$members').replaceFirst('{posts}', '$posts');
+  String circleStatusUpdateFailed(Object error) =>
+      _withError('circleStatusUpdateFailed', error);
+  String get joined => _text('joined');
+  String get joinCircle => _text('joinCircle');
+  String get viewMembers => _text('viewMembers');
+  String get postInCircle => _text('postInCircle');
+  String get joinCircleToPost => _text('joinCircleToPost');
+  String get circleNewPosts => _text('circleNewPosts');
+  String loadMoreMembersFailed(Object error) =>
+      _withError('loadMoreMembersFailed', error);
+  String circleMembersTitle(String name) =>
+      _text('circleMembersTitle').replaceFirst('{name}', name);
+  String membersLoadFailed(Object error) =>
+      _withError('membersLoadFailed', error);
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
