@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -65,20 +66,23 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
     try {
       confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('取消预订'),
-          content: const Text('取消时间限制由门店规则决定，确定继续？'),
+        builder: (context) {
+          final strings = AppLocalizations.of(context);
+          return AlertDialog(
+          title: Text(strings.cancelReservation),
+          content: Text(strings.cancelReservationConfirm),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('先不取消'),
+              child: Text(strings.keepReservation),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('确认取消'),
+              child: Text(strings.confirmCancel),
             ),
           ],
-        ),
+        );
+        },
       );
     } finally {
       if (mounted) setState(() => _confirmingCancel = false);
@@ -86,7 +90,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
     if (confirmed != true || !mounted) return;
     await _runAction(
       () => widget.repository.cancelReservation(widget.reservationId),
-      '预订已取消',
+      AppLocalizations.of(context).reservationCanceled,
     );
   }
 
@@ -131,7 +135,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
         });
       }
     } catch (error) {
-      if (mounted) _showMessage('时段加载失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).slotsLoadFailed(error));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -145,9 +149,9 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
         widget.reservationId,
         slotId: slot.slotId,
         reserveTime: '$_dateText ${slot.startTime}',
-        reason: '用户在线改期',
+        reason: AppLocalizations.of(context).rescheduleReason,
       ),
-      '预订已改期',
+      AppLocalizations.of(context).reservationRescheduled,
     );
     if (succeeded && mounted) {
       setState(() {
@@ -170,7 +174,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
       _showMessage(message);
       return true;
     } catch (error) {
-      if (mounted) _showMessage('操作失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).actionFailed(error));
       return false;
     } finally {
       if (mounted) setState(() => _acting = false);
@@ -185,8 +189,9 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('预订详情')),
+      appBar: AppBar(title: Text(strings.reservationDetail)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -194,7 +199,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
               child: FilledButton(
                 key: const Key('reservation-detail-retry'),
                 onPressed: _load,
-                child: const Text('预订加载失败，点击重试'),
+                child: Text(strings.reservationLoadFailedTapRetry),
               ),
             )
           : _buildDetail(context, _reservation!),
@@ -202,6 +207,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   }
 
   Widget _buildDetail(BuildContext context, ReservationDetail reservation) {
+    final strings = AppLocalizations.of(context);
     return ListView(
       padding: const EdgeInsets.all(18),
       children: [
@@ -225,7 +231,10 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                   ),
                 ),
                 Text(
-                  '${reservation.reserveTime} · ${reservation.peopleCount} 人',
+                  strings.reservationTimePeople(
+                    time: reservation.reserveTime,
+                    people: reservation.peopleCount,
+                  ),
                 ),
                 Text(reservation.address),
               ],
@@ -255,7 +264,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                   onPressed: _acting || _confirmingCancel || _pickingDate
                       ? null
                       : _cancel,
-                  child: const Text('取消预订'),
+                  child: Text(strings.cancelReservation),
                 ),
               if (reservation.canReschedule)
                 OutlinedButton.icon(
@@ -268,7 +277,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                 FilledButton.tonal(
                   key: const Key('reservation-find-slots'),
                   onPressed: _acting || _pickingDate ? null : _findSlots,
-                  child: const Text('查询改期时段'),
+                  child: Text(strings.findRescheduleSlots),
                 ),
             ],
           ),
@@ -282,7 +291,11 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                 .map(
                   (slot) => ChoiceChip(
                     label: Text(
-                      '${slot.startTime} · ${slot.confirmModeText} · 余 ${slot.remainingCount}',
+                      strings.rescheduleSlotMeta(
+                        start: slot.startTime,
+                        mode: slot.confirmModeText,
+                        count: slot.remainingCount,
+                      ),
                     ),
                     selected: _selectedSlot?.slotId == slot.slotId,
                     onSelected: slot.available
@@ -297,17 +310,17 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
             onPressed: _selectedSlot == null || _acting || _pickingDate
                 ? null
                 : _reschedule,
-            child: const Text('确认改期'),
+            child: Text(strings.confirmReschedule),
           ),
         ],
         const SizedBox(height: 18),
-        const Text(
-          '变更时间线',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+        Text(
+          strings.changeTimeline,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 8),
         if (reservation.timeline.isEmpty)
-          const Card(child: ListTile(title: Text('暂无变更记录')))
+          Card(child: ListTile(title: Text(strings.noChangeRecords)))
         else
           ...reservation.timeline.map(
             (item) => Card(

@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ReservationDetailApi implements JsonApi {
@@ -95,6 +97,24 @@ class ReservationDetailApi implements JsonApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('reservation detail guards duplicate load retries', (
     tester,
@@ -102,7 +122,7 @@ void main() {
     final gate = Completer<void>();
     final api = ReservationDetailApi()..failFirstDetail = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationDetailScreen(
           repository: ReservationRepository(api),
           reservationId: 11,
@@ -127,7 +147,7 @@ void main() {
   testWidgets('reservation detail cancels after confirmation', (tester) async {
     final api = ReservationDetailApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationDetailScreen(
           repository: ReservationRepository(api),
           reservationId: 11,
@@ -153,7 +173,7 @@ void main() {
   ) async {
     final api = ReservationDetailApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationDetailScreen(
           repository: ReservationRepository(api),
           reservationId: 11,
@@ -184,7 +204,7 @@ void main() {
   ) async {
     final api = ReservationDetailApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationDetailScreen(
           repository: ReservationRepository(api),
           reservationId: 11,
@@ -218,7 +238,7 @@ void main() {
   ) async {
     final api = ReservationDetailApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationDetailScreen(
           repository: ReservationRepository(api),
           reservationId: 11,
@@ -245,7 +265,7 @@ void main() {
   ) async {
     final api = ReservationDetailApi()..failNextReschedule = true;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationDetailScreen(
           repository: ReservationRepository(api),
           reservationId: 11,
@@ -285,7 +305,7 @@ void main() {
     final gate = Completer<void>();
     final api = ReservationDetailApi()..slotGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationDetailScreen(
           repository: ReservationRepository(api),
           reservationId: 11,

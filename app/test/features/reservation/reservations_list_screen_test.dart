@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservations_list_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ReservationsApi implements JsonApi {
@@ -90,13 +92,45 @@ class ReservationsApi implements JsonApi {
       const {};
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
+
+  testWidgets('reservations list switches English chrome', (tester) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationsListScreen(repository: ReservationRepository(ReservationsApi())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Reservations'), findsOneWidget);
+    expect(find.text('Pending'), findsOneWidget);
+  });
+
+
   testWidgets('reservations list retries an initial load failure', (
     tester,
   ) async {
     final api = ReservationsApi(failFirst: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationsListScreen(repository: ReservationRepository(api)),
       ),
     );
@@ -114,7 +148,7 @@ void main() {
     final gate = Completer<void>();
     final api = ReservationsApi(failFirst: true)..retryGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationsListScreen(repository: ReservationRepository(api)),
       ),
     );
@@ -134,7 +168,7 @@ void main() {
   testWidgets('reservations list loads later filtered pages', (tester) async {
     final api = ReservationsApi(paginated: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationsListScreen(
           repository: ReservationRepository(api),
           initialStatus: 1,
@@ -159,7 +193,7 @@ void main() {
   ) async {
     final api = ReservationsApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationsListScreen(
           repository: ReservationRepository(api),
           initialStatus: 1,
@@ -187,7 +221,7 @@ void main() {
     final gate = Completer<void>();
     final api = ReservationsApi()..detailGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationsListScreen(repository: ReservationRepository(api)),
       ),
     );
@@ -202,7 +236,7 @@ void main() {
 
     gate.complete();
     await tester.pumpAndSettle();
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
 
     expect(api.reservationDetailRequests, 1);

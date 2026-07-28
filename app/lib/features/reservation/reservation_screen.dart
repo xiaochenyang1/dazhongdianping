@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -64,7 +65,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
     if (selected == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请选择时段')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).selectSlotFirst)));
       return;
     }
     setState(() => creating = true);
@@ -81,7 +82,10 @@ class _ReservationScreenState extends State<ReservationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '预订 ${result.reservationNo} 已创建：${result.statusText}',
+              AppLocalizations.of(context).reservationCreated(
+                no: result.reservationNo,
+                status: result.statusText,
+              ),
             ),
           ),
         );
@@ -90,7 +94,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('预订失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reservationFailed(error))));
       }
     } finally {
       if (mounted) setState(() => creating = false);
@@ -107,21 +111,22 @@ class _ReservationScreenState extends State<ReservationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('在线预订')),
+      appBar: AppBar(title: Text(strings.onlineReservation)),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Row(
             children: [
-              Expanded(child: Text('日期 $dateText')),
+              Expanded(child: Text(strings.dateLabel(dateText))),
               DropdownButton<int>(
                 value: peopleCount,
                 items: [1, 2, 3, 4, 5, 6]
                     .map(
                       (count) => DropdownMenuItem(
                         value: count,
-                        child: Text('$count 人'),
+                        child: Text(strings.peopleCount(count)),
                       ),
                     )
                     .toList(),
@@ -147,13 +152,13 @@ class _ReservationScreenState extends State<ReservationScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('时段加载失败：${snapshot.error}'),
+                    Text(strings.slotsLoadFailed(snapshot.error!)),
                     const SizedBox(height: 8),
                     FilledButton.tonalIcon(
                       key: const Key('reservation-slots-retry'),
                       onPressed: retryingSlots ? null : retrySlots,
                       icon: const Icon(Icons.refresh),
-                      label: Text(retryingSlots ? '处理中...' : '重试'),
+                      label: Text(retryingSlots ? strings.processing : strings.retry),
                     ),
                   ],
                 );
@@ -165,7 +170,11 @@ class _ReservationScreenState extends State<ReservationScreen> {
                     .map(
                       (slot) => ChoiceChip(
                         label: Text(
-                          '${slot.startTime}-${slot.endTime} · 剩余 ${slot.remainingCount}',
+                          strings.slotRemaining(
+                            start: slot.startTime,
+                            end: slot.endTime,
+                            count: slot.remainingCount,
+                          ),
                         ),
                         selected: selected?.slotId == slot.slotId,
                         onSelected: slot.available
@@ -180,33 +189,33 @@ class _ReservationScreenState extends State<ReservationScreen> {
           const SizedBox(height: 20),
           TextField(
             controller: nameController,
-            decoration: const InputDecoration(
-              labelText: '联系人',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: strings.contactName,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: phoneController,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: '联系电话',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: strings.contactPhone,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: remarkController,
-            decoration: const InputDecoration(
-              labelText: '备注',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: strings.remark,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 20),
           FilledButton(
             key: const Key('reservation-submit'),
             onPressed: creating ? null : createReservation,
-            child: Text(creating ? '提交中...' : '提交预订'),
+            child: Text(creating ? strings.submitting : strings.submitReservation),
           ),
         ],
       ),

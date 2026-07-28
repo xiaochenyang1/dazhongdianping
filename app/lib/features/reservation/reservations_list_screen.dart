@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:flutter/material.dart';
@@ -17,14 +18,14 @@ class ReservationsListScreen extends StatefulWidget {
 }
 
 class _ReservationsListScreenState extends State<ReservationsListScreen> {
-  static const _tabs = <({int? status, String label})>[
-    (status: null, label: '全部'),
-    (status: 0, label: '待确认'),
-    (status: 1, label: '已确认'),
-    (status: 2, label: '已到店'),
-    (status: 3, label: '用户取消'),
-    (status: 4, label: '商户拒绝'),
-    (status: 5, label: '爽约'),
+  List<({int? status, String label})> _tabs(AppLocalizations strings) => [
+    (status: null, label: strings.filterAll),
+    (status: 0, label: strings.reservationPending),
+    (status: 1, label: strings.reservationConfirmed),
+    (status: 2, label: strings.reservationArrived),
+    (status: 3, label: strings.reservationUserCanceled),
+    (status: 4, label: strings.reservationMerchantRejected),
+    (status: 5, label: strings.reservationNoShow),
   ];
 
   late int? _status;
@@ -98,7 +99,7 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
       if (mounted && requestId == _requestId) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多预订失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreReservationsFailed(error))));
       }
     } finally {
       if (mounted && requestId == _requestId) {
@@ -135,15 +136,17 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    final tabs = _tabs(strings);
     return Scaffold(
-      appBar: AppBar(title: const Text('我的预订')),
+      appBar: AppBar(title: Text(strings.myReservations)),
       body: Column(
         children: [
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
-              children: _tabs
+              children: tabs
                   .map(
                     (tab) => Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -170,13 +173,13 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('预订加载失败：${snapshot.error}'),
+                        Text(strings.reservationsLoadFailed(snapshot.error!)),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('reservations-retry'),
                           onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_retrying ? '处理中...' : '重试'),
+                          label: Text(_retrying ? strings.processing : strings.retry),
                         ),
                       ],
                     ),
@@ -185,7 +188,7 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                 final page = snapshot.data!;
                 final items = page.items;
                 if (items.isEmpty) {
-                  return const Center(child: Text('当前筛选下暂无预订'));
+                  return Center(child: Text(strings.noReservationsForFilter));
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -207,7 +210,7 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                                   ),
                                 )
                               : const Icon(Icons.expand_more),
-                          label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                          label: Text(_loadingMore ? strings.loading : strings.loadMore),
                         ),
                       );
                     }
@@ -221,7 +224,12 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                               : item.shopName,
                         ),
                         subtitle: Text(
-                          '${item.reservationNo}\n${item.reserveTime} · ${item.peopleCount} 人 · ${item.statusText}',
+                          strings.reservationListMeta(
+                            no: item.reservationNo,
+                            time: item.reserveTime,
+                            people: item.peopleCount,
+                            status: item.statusText,
+                          ),
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),

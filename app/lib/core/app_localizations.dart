@@ -256,6 +256,43 @@ class AppLocalizations {
     'defaultVerifyHint': '券码由商户核销；用户端不提供自助核销，避免误操作。',
     'detailRefreshFailed': '详情刷新失败：{error}',
     'reloadFullDetail': '重新加载完整详情',
+    'reservationPending': '待确认',
+    'reservationConfirmed': '已确认',
+    'reservationArrived': '已到店',
+    'reservationUserCanceled': '用户取消',
+    'reservationMerchantRejected': '商户拒绝',
+    'reservationNoShow': '爽约',
+    'loadMoreReservationsFailed': '加载更多预订失败：{error}',
+    'reservationsLoadFailed': '预订加载失败：{error}',
+    'noReservationsForFilter': '当前筛选下暂无预订',
+    'reservationListMeta': '{no}\n{time} · {people} 人 · {status}',
+    'onlineReservation': '在线预订',
+    'selectSlotFirst': '请选择时段',
+    'reservationCreated': '预订 {no} 已创建：{status}',
+    'reservationFailed': '预订失败：{error}',
+    'dateLabel': '日期 {date}',
+    'peopleCount': '{count} 人',
+    'slotsLoadFailed': '时段加载失败：{error}',
+    'slotRemaining': '{start}-{end} · 剩余 {count}',
+    'contactName': '联系人',
+    'contactPhone': '联系电话',
+    'remark': '备注',
+    'submitting': '提交中...',
+    'submitReservation': '提交预订',
+    'reservationDetail': '预订详情',
+    'reservationLoadFailedTapRetry': '预订加载失败，点击重试',
+    'cancelReservation': '取消预订',
+    'cancelReservationConfirm': '取消时间限制由门店规则决定，确定继续？',
+    'keepReservation': '先不取消',
+    'reservationCanceled': '预订已取消',
+    'findRescheduleSlots': '查询改期时段',
+    'confirmReschedule': '确认改期',
+    'reservationRescheduled': '预订已改期',
+    'rescheduleReason': '用户在线改期',
+    'reservationTimePeople': '{time} · {people} 人',
+    'rescheduleSlotMeta': '{start} · {mode} · 余 {count}',
+    'changeTimeline': '变更时间线',
+    'noChangeRecords': '暂无变更记录',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -499,6 +536,43 @@ class AppLocalizations {
     'defaultVerifyHint': '券碼由商家核銷；用戶端不提供自助核銷，避免誤操作。',
     'detailRefreshFailed': '詳情重新整理失敗：{error}',
     'reloadFullDetail': '重新載入完整詳情',
+    'reservationPending': '待確認',
+    'reservationConfirmed': '已確認',
+    'reservationArrived': '已到店',
+    'reservationUserCanceled': '使用者取消',
+    'reservationMerchantRejected': '商家拒絕',
+    'reservationNoShow': '爽約',
+    'loadMoreReservationsFailed': '載入更多預訂失敗：{error}',
+    'reservationsLoadFailed': '預訂載入失敗：{error}',
+    'noReservationsForFilter': '目前篩選下暫無預訂',
+    'reservationListMeta': '{no}\n{time} · {people} 人 · {status}',
+    'onlineReservation': '線上預訂',
+    'selectSlotFirst': '請選擇時段',
+    'reservationCreated': '預訂 {no} 已建立：{status}',
+    'reservationFailed': '預訂失敗：{error}',
+    'dateLabel': '日期 {date}',
+    'peopleCount': '{count} 人',
+    'slotsLoadFailed': '時段載入失敗：{error}',
+    'slotRemaining': '{start}-{end} · 剩餘 {count}',
+    'contactName': '聯絡人',
+    'contactPhone': '聯絡電話',
+    'remark': '備註',
+    'submitting': '提交中...',
+    'submitReservation': '提交預訂',
+    'reservationDetail': '預訂詳情',
+    'reservationLoadFailedTapRetry': '預訂載入失敗，點擊重試',
+    'cancelReservation': '取消預訂',
+    'cancelReservationConfirm': '取消時間限制由店家規則決定，確定繼續？',
+    'keepReservation': '先不取消',
+    'reservationCanceled': '預訂已取消',
+    'findRescheduleSlots': '查詢改期時段',
+    'confirmReschedule': '確認改期',
+    'reservationRescheduled': '預訂已改期',
+    'rescheduleReason': '使用者線上改期',
+    'reservationTimePeople': '{time} · {people} 人',
+    'rescheduleSlotMeta': '{start} · {mode} · 餘 {count}',
+    'changeTimeline': '變更時間線',
+    'noChangeRecords': '暫無變更記錄',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -751,6 +825,44 @@ class AppLocalizations {
         'Merchants redeem this code. Self-service redemption is disabled on the user side.',
     'detailRefreshFailed': 'Could not refresh details: {error}',
     'reloadFullDetail': 'Reload full details',
+    'reservationPending': 'Pending',
+    'reservationConfirmed': 'Confirmed',
+    'reservationArrived': 'Arrived',
+    'reservationUserCanceled': 'Canceled by user',
+    'reservationMerchantRejected': 'Rejected by merchant',
+    'reservationNoShow': 'No-show',
+    'loadMoreReservationsFailed': 'Could not load more reservations: {error}',
+    'reservationsLoadFailed': 'Could not load reservations: {error}',
+    'noReservationsForFilter': 'No reservations for this filter',
+    'reservationListMeta': '{no}\n{time} · {people} guests · {status}',
+    'onlineReservation': 'Book online',
+    'selectSlotFirst': 'Please select a time slot',
+    'reservationCreated': 'Reservation {no} created: {status}',
+    'reservationFailed': 'Could not create reservation: {error}',
+    'dateLabel': 'Date {date}',
+    'peopleCount': '{count} guests',
+    'slotsLoadFailed': 'Could not load time slots: {error}',
+    'slotRemaining': '{start}-{end} · {count} left',
+    'contactName': 'Contact name',
+    'contactPhone': 'Contact phone',
+    'remark': 'Notes',
+    'submitting': 'Submitting...',
+    'submitReservation': 'Submit reservation',
+    'reservationDetail': 'Reservation details',
+    'reservationLoadFailedTapRetry': 'Could not load reservation. Tap to retry',
+    'cancelReservation': 'Cancel reservation',
+    'cancelReservationConfirm':
+        'Cancellation cutoffs follow shop rules. Continue?',
+    'keepReservation': 'Keep reservation',
+    'reservationCanceled': 'Reservation canceled',
+    'findRescheduleSlots': 'Find new slots',
+    'confirmReschedule': 'Confirm reschedule',
+    'reservationRescheduled': 'Reservation rescheduled',
+    'rescheduleReason': 'Rescheduled by user',
+    'reservationTimePeople': '{time} · {people} guests',
+    'rescheduleSlotMeta': '{start} · {mode} · {count} left',
+    'changeTimeline': 'Change timeline',
+    'noChangeRecords': 'No change records yet',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -1127,6 +1239,78 @@ class AppLocalizations {
   String detailRefreshFailed(Object error) =>
       _withError('detailRefreshFailed', error);
   String get reloadFullDetail => _text('reloadFullDetail');
+  String get reservationPending => _text('reservationPending');
+  String get reservationConfirmed => _text('reservationConfirmed');
+  String get reservationArrived => _text('reservationArrived');
+  String get reservationUserCanceled => _text('reservationUserCanceled');
+  String get reservationMerchantRejected =>
+      _text('reservationMerchantRejected');
+  String get reservationNoShow => _text('reservationNoShow');
+  String loadMoreReservationsFailed(Object error) =>
+      _withError('loadMoreReservationsFailed', error);
+  String reservationsLoadFailed(Object error) =>
+      _withError('reservationsLoadFailed', error);
+  String get noReservationsForFilter => _text('noReservationsForFilter');
+  String reservationListMeta({
+    required String no,
+    required String time,
+    required int people,
+    required String status,
+  }) => _text('reservationListMeta')
+      .replaceFirst('{no}', no)
+      .replaceFirst('{time}', time)
+      .replaceFirst('{people}', '$people')
+      .replaceFirst('{status}', status);
+  String get onlineReservation => _text('onlineReservation');
+  String get selectSlotFirst => _text('selectSlotFirst');
+  String reservationCreated({required String no, required String status}) =>
+      _text('reservationCreated')
+          .replaceFirst('{no}', no)
+          .replaceFirst('{status}', status);
+  String reservationFailed(Object error) =>
+      _withError('reservationFailed', error);
+  String dateLabel(String date) =>
+      _text('dateLabel').replaceFirst('{date}', date);
+  String peopleCount(int count) => _withCount('peopleCount', count);
+  String slotsLoadFailed(Object error) => _withError('slotsLoadFailed', error);
+  String slotRemaining({
+    required String start,
+    required String end,
+    required int count,
+  }) => _text('slotRemaining')
+      .replaceFirst('{start}', start)
+      .replaceFirst('{end}', end)
+      .replaceFirst('{count}', '$count');
+  String get contactName => _text('contactName');
+  String get contactPhone => _text('contactPhone');
+  String get remark => _text('remark');
+  String get submitting => _text('submitting');
+  String get submitReservation => _text('submitReservation');
+  String get reservationDetail => _text('reservationDetail');
+  String get reservationLoadFailedTapRetry =>
+      _text('reservationLoadFailedTapRetry');
+  String get cancelReservation => _text('cancelReservation');
+  String get cancelReservationConfirm => _text('cancelReservationConfirm');
+  String get keepReservation => _text('keepReservation');
+  String get reservationCanceled => _text('reservationCanceled');
+  String get findRescheduleSlots => _text('findRescheduleSlots');
+  String get confirmReschedule => _text('confirmReschedule');
+  String get reservationRescheduled => _text('reservationRescheduled');
+  String get rescheduleReason => _text('rescheduleReason');
+  String reservationTimePeople({required String time, required int people}) =>
+      _text('reservationTimePeople')
+          .replaceFirst('{time}', time)
+          .replaceFirst('{people}', '$people');
+  String rescheduleSlotMeta({
+    required String start,
+    required String mode,
+    required int count,
+  }) => _text('rescheduleSlotMeta')
+      .replaceFirst('{start}', start)
+      .replaceFirst('{mode}', mode)
+      .replaceFirst('{count}', '$count');
+  String get changeTimeline => _text('changeTimeline');
+  String get noChangeRecords => _text('noChangeRecords');
   String statusWithRedeemability(String status, bool usable) =>
       '$status · ${usable ? redeemable : notRedeemable}';
 }

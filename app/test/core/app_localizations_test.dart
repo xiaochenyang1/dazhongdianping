@@ -85,6 +85,9 @@ void main() {
     expect(AppLocalizations.forTag('en').groupDeals, 'Group deals');
     expect(AppLocalizations.forTag('zh-CN').payPending, '待支付');
     expect(AppLocalizations.forTag('en').buy, 'Buy');
+    expect(AppLocalizations.forTag('en').onlineReservation, 'Book online');
+    expect(AppLocalizations.forTag('en').myReservations, 'Reservations');
+    expect(AppLocalizations.forTag('zh-CN').cancelReservation, '取消预订');
   });
 
   test('delegate supports every configured app locale', () async {

@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ReservationScreenApi implements JsonApi {
@@ -47,13 +49,48 @@ class ReservationScreenApi implements JsonApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
+
+  testWidgets('reservation screen switches English chrome', (tester) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationScreen(
+          repository: ReservationRepository(ReservationScreenApi()),
+          shopId: 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Book online'), findsOneWidget);
+    expect(find.text('Submit reservation'), findsOneWidget);
+  });
+
+
   testWidgets('reservation screen retries an initial slot failure', (
     tester,
   ) async {
     final api = ReservationScreenApi(failFirst: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationScreen(
           repository: ReservationRepository(api),
           shopId: 2,
@@ -76,7 +113,7 @@ void main() {
     final gate = Completer<void>();
     final api = ReservationScreenApi(failFirst: true)..retryGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationScreen(
           repository: ReservationRepository(api),
           shopId: 2,
@@ -100,7 +137,7 @@ void main() {
 
   testWidgets('reservation screen renders available slots', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationScreen(
           repository: ReservationRepository(ReservationScreenApi()),
           shopId: 2,
@@ -119,7 +156,7 @@ void main() {
     final gate = Completer<void>();
     final api = ReservationScreenApi()..createGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ReservationScreen(
           repository: ReservationRepository(api),
           shopId: 2,
