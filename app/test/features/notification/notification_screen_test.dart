@@ -1,10 +1,29 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/notification/notification_repository.dart';
 import 'package:dazhongdianping_app/features/notification/notification_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
 
 class NotificationScreenApi implements JsonApi {
   NotificationScreenApi({
@@ -247,12 +266,29 @@ class NotificationScreenApi implements JsonApi {
 }
 
 void main() {
-  testWidgets('notification screen filters unread messages locally', (
+  
+  testWidgets('notification screen switches English chrome', (tester) async {
+    final api = NotificationScreenApi(mixedRead: true);
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Notifications'), findsOneWidget);
+    expect(find.text('Unread only'), findsOneWidget);
+    expect(find.text('Unread'), findsOneWidget);
+    expect(find.text('Mark all read (1)'), findsOneWidget);
+  });
+
+testWidgets('notification screen filters unread messages locally', (
     tester,
   ) async {
     final api = NotificationScreenApi(mixedRead: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -273,7 +309,7 @@ void main() {
   ) async {
     final api = NotificationScreenApi(failFirstLoad: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -291,7 +327,7 @@ void main() {
     final gate = Completer<void>();
     final api = NotificationScreenApi(failFirstLoad: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -315,7 +351,7 @@ void main() {
   testWidgets('pull to refresh reloads notifications', (tester) async {
     final api = NotificationScreenApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -337,7 +373,7 @@ void main() {
   ) async {
     final api = NotificationScreenApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -360,7 +396,7 @@ void main() {
   testWidgets('empty notification state can refresh', (tester) async {
     final api = NotificationScreenApi(empty: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -378,7 +414,7 @@ void main() {
   ) async {
     final api = NotificationScreenApi(paginated: true);
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -400,7 +436,7 @@ void main() {
 
   testWidgets('notification screen renders an unread message', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(
           repository: NotificationRepository(NotificationScreenApi()),
         ),
@@ -417,7 +453,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(
           repository: NotificationRepository(
             NotificationScreenApi(directMessage: true),
@@ -434,7 +470,7 @@ void main() {
   testWidgets('tapping an unread message acknowledges it', (tester) async {
     final api = NotificationScreenApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -453,7 +489,7 @@ void main() {
       final api = NotificationScreenApi(social: true);
       int? openedUserId;
       await tester.pumpWidget(
-        MaterialApp(
+        localizedApp(
           home: NotificationScreen(
             repository: NotificationRepository(api),
             onUserTap: (userId) => openedUserId = userId,
@@ -475,7 +511,7 @@ void main() {
     final api = NotificationScreenApi(social: true)..ackGate = gate;
     var openedCount = 0;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(
           repository: NotificationRepository(api),
           onUserTap: (_) => openedCount += 1,
@@ -505,7 +541,7 @@ void main() {
       ..ackGates[1] = firstGate
       ..ackGates[2] = secondGate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -532,7 +568,7 @@ void main() {
     String? openedPeerName;
 
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(
           repository: NotificationRepository(api),
           onConversationTap: (conversationId, peerUserId, peerName) {
@@ -560,7 +596,7 @@ void main() {
       final api = NotificationScreenApi(postAudit: true);
       int? openedPostId;
       await tester.pumpWidget(
-        MaterialApp(
+        localizedApp(
           home: NotificationScreen(
             repository: NotificationRepository(api),
             onPostTap: (postId) => openedPostId = postId,
@@ -581,7 +617,7 @@ void main() {
       final api = NotificationScreenApi(orderPaid: true);
       int? openedOrderId;
       await tester.pumpWidget(
-        MaterialApp(
+        localizedApp(
           home: NotificationScreen(
             repository: NotificationRepository(api),
             onOrderTap: (orderId) => openedOrderId = orderId,
@@ -602,7 +638,7 @@ void main() {
       final api = NotificationScreenApi(reservationCreated: true);
       int? openedReservationId;
       await tester.pumpWidget(
-        MaterialApp(
+        localizedApp(
           home: NotificationScreen(
             repository: NotificationRepository(api),
             onReservationTap: (reservationId) =>
@@ -625,7 +661,7 @@ void main() {
       int? openedReviewId;
       bool? openedOwned;
       await tester.pumpWidget(
-        MaterialApp(
+        localizedApp(
           home: NotificationScreen(
             repository: NotificationRepository(api),
             onReviewTap: (reviewId, {required owned}) {
@@ -651,7 +687,7 @@ void main() {
       int? openedStatus;
       String? openedCode;
       await tester.pumpWidget(
-        MaterialApp(
+        localizedApp(
           home: NotificationScreen(
             repository: NotificationRepository(api),
             onCouponListTap: ({status, code}) {
@@ -676,7 +712,7 @@ void main() {
     final api = NotificationScreenApi(couponVerified: true);
     String? openedCode;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(
           repository: NotificationRepository(api),
           onCouponDetailTap: (code) => openedCode = code,
@@ -696,7 +732,7 @@ void main() {
       final api = NotificationScreenApi(expertResult: true);
       String? openedResult;
       await tester.pumpWidget(
-        MaterialApp(
+        localizedApp(
           home: NotificationScreen(
             repository: NotificationRepository(api),
             onExpertCertificationTap: (result) => openedResult = result,
@@ -716,7 +752,7 @@ void main() {
   ) async {
     final api = NotificationScreenApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -740,7 +776,7 @@ void main() {
       paginatedFirstUnread: true,
     )..loadMoreGate = gate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -764,7 +800,7 @@ void main() {
     final api = NotificationScreenApi(paginated: true)
       ..loadGates[2] = nextPageGate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );
@@ -796,7 +832,7 @@ void main() {
     final refreshGate = Completer<void>();
     final api = NotificationScreenApi()..loadGates[2] = refreshGate;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: NotificationScreen(repository: NotificationRepository(api)),
       ),
     );

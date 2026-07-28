@@ -76,6 +76,22 @@ class AppLocalizations {
     'targetTopic': '话题',
     'targetExternalLink': '外部链接',
     'targetResource': '资源',
+    'refreshNotificationsFailed': '刷新消息失败：{error}',
+    'loadMoreFailed': '加载更多失败：{error}',
+    'markReadFailed': '标记已读失败：{error}',
+    'allNotificationsMarkedRead': '全部通知已标记为已读',
+    'markAllReadFailed': '全部已读失败：{error}',
+    'markAllRead': '全部已读',
+    'markAllReadWithCount': '全部已读（{count}）',
+    'filterAll': '全部',
+    'filterUnreadOnly': '只看未读',
+    'notificationsLoadFailed': '消息加载失败：{error}',
+    'reload': '重新加载',
+    'refresh': '刷新',
+    'noUnreadNotifications': '暂无未读消息',
+    'noNotifications': '暂无消息',
+    'continueFindUnread': '继续查找未读消息',
+    'unreadBadge': '未读',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -139,6 +155,22 @@ class AppLocalizations {
     'targetTopic': '話題',
     'targetExternalLink': '外部連結',
     'targetResource': '資源',
+    'refreshNotificationsFailed': '重新整理訊息失敗：{error}',
+    'loadMoreFailed': '載入更多失敗：{error}',
+    'markReadFailed': '標記已讀失敗：{error}',
+    'allNotificationsMarkedRead': '全部通知已標記為已讀',
+    'markAllReadFailed': '全部已讀失敗：{error}',
+    'markAllRead': '全部已讀',
+    'markAllReadWithCount': '全部已讀（{count}）',
+    'filterAll': '全部',
+    'filterUnreadOnly': '只看未讀',
+    'notificationsLoadFailed': '訊息載入失敗：{error}',
+    'reload': '重新載入',
+    'refresh': '重新整理',
+    'noUnreadNotifications': '暫無未讀訊息',
+    'noNotifications': '暫無訊息',
+    'continueFindUnread': '繼續尋找未讀訊息',
+    'unreadBadge': '未讀',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -203,6 +235,22 @@ class AppLocalizations {
     'targetTopic': 'topic',
     'targetExternalLink': 'external link',
     'targetResource': 'resource',
+    'refreshNotificationsFailed': 'Could not refresh notifications: {error}',
+    'loadMoreFailed': 'Could not load more: {error}',
+    'markReadFailed': 'Could not mark as read: {error}',
+    'allNotificationsMarkedRead': 'All notifications marked as read',
+    'markAllReadFailed': 'Could not mark all as read: {error}',
+    'markAllRead': 'Mark all read',
+    'markAllReadWithCount': 'Mark all read ({count})',
+    'filterAll': 'All',
+    'filterUnreadOnly': 'Unread only',
+    'notificationsLoadFailed': 'Could not load notifications: {error}',
+    'reload': 'Reload',
+    'refresh': 'Refresh',
+    'noUnreadNotifications': 'No unread notifications',
+    'noNotifications': 'No notifications yet',
+    'continueFindUnread': 'Keep looking for unread',
+    'unreadBadge': 'Unread',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -310,6 +358,26 @@ class AppLocalizations {
   String get targetTopic => _text('targetTopic');
   String get targetExternalLink => _text('targetExternalLink');
   String get targetResource => _text('targetResource');
+  String refreshNotificationsFailed(Object error) =>
+      _withError('refreshNotificationsFailed', error);
+  String loadMoreFailed(Object error) => _withError('loadMoreFailed', error);
+  String markReadFailed(Object error) => _withError('markReadFailed', error);
+  String get allNotificationsMarkedRead => _text('allNotificationsMarkedRead');
+  String markAllReadFailed(Object error) =>
+      _withError('markAllReadFailed', error);
+  String get markAllRead => _text('markAllRead');
+  String markAllReadWithCount(int count) =>
+      _withCount('markAllReadWithCount', count);
+  String get filterAll => _text('filterAll');
+  String get filterUnreadOnly => _text('filterUnreadOnly');
+  String notificationsLoadFailed(Object error) =>
+      _withError('notificationsLoadFailed', error);
+  String get reload => _text('reload');
+  String get refresh => _text('refresh');
+  String get noUnreadNotifications => _text('noUnreadNotifications');
+  String get noNotifications => _text('noNotifications');
+  String get continueFindUnread => _text('continueFindUnread');
+  String get unreadBadge => _text('unreadBadge');
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

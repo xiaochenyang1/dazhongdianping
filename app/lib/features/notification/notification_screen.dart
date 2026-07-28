@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/notification/notification_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -63,9 +64,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
     } catch (error) {
       if (mounted && revision == _pageRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('刷新消息失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).refreshNotificationsFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _reloading = false);
@@ -99,9 +104,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
       });
     } catch (error) {
       if (mounted && revision == _pageRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).loadMoreFailed(error)),
+          ),
+        );
       }
     } finally {
       if (mounted && revision == _pageRevision) {
@@ -131,9 +138,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('标记已读失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).markReadFailed(error)),
+          ),
+        );
       }
     }
   }
@@ -173,14 +182,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         );
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('全部通知已标记为已读')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).allNotificationsMarkedRead),
+        ),
+      );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('全部已读失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).markAllReadFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _markingAll = false);
@@ -302,9 +317,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('消息通知'),
+        title: Text(strings.notifications),
         actions: [
           FutureBuilder<NotificationPage>(
             future: _notifications,
@@ -318,10 +334,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     : () => _markAllRead(snapshot.data!),
                 child: Text(
                   _markingAll
-                      ? '处理中...'
+                      ? strings.processing
                       : unread == 0
-                      ? '全部已读'
-                      : '全部已读（$unread）',
+                      ? strings.markAllRead
+                      : strings.markAllReadWithCount(unread),
                 ),
               );
             },
@@ -334,9 +350,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: SegmentedButton<bool>(
               key: const Key('notification-read-filter'),
-              segments: const [
-                ButtonSegment(value: false, label: Text('全部')),
-                ButtonSegment(value: true, label: Text('只看未读')),
+              segments: [
+                ButtonSegment(value: false, label: Text(strings.filterAll)),
+                ButtonSegment(
+                  value: true,
+                  label: Text(strings.filterUnreadOnly),
+                ),
               ],
               selected: {_showUnreadOnly},
               onSelectionChanged: (selection) {
@@ -356,13 +375,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('消息加载失败：${snapshot.error}'),
+                        Text(strings.notificationsLoadFailed(snapshot.error!)),
                         const SizedBox(height: 12),
                         FilledButton.icon(
                           key: const Key('notifications-retry'),
                           onPressed: _reloading ? null : _reload,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_reloading ? '处理中...' : '重新加载'),
+                          label: Text(
+                            _reloading ? strings.processing : strings.reload,
+                          ),
                         ),
                       ],
                     ),
@@ -378,14 +399,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(_showUnreadOnly ? '暂无未读消息' : '暂无消息'),
+                        Text(
+                          _showUnreadOnly
+                              ? strings.noUnreadNotifications
+                              : strings.noNotifications,
+                        ),
                         if (!_showUnreadOnly) ...[
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
                             key: const Key('notifications-empty-refresh'),
                             onPressed: _reloading ? null : _reload,
                             icon: const Icon(Icons.refresh),
-                            label: Text(_reloading ? '处理中...' : '刷新'),
+                            label: Text(
+                              _reloading ? strings.processing : strings.refresh,
+                            ),
                           ),
                         ],
                       ],
@@ -418,10 +445,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 : const Icon(Icons.expand_more),
                             label: Text(
                               _loadingMore
-                                  ? '加载中...'
+                                  ? strings.loading
                                   : _showUnreadOnly && visible.isEmpty
-                                  ? '继续查找未读消息'
-                                  : '加载更多',
+                                  ? strings.continueFindUnread
+                                  : strings.loadMore,
                             ),
                           ),
                         );
@@ -467,9 +494,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                   ),
                                 ),
                               if (!notification.read)
-                                const Text(
-                                  '未读',
-                                  style: TextStyle(
+                                Text(
+                                  strings.unreadBadge,
+                                  style: const TextStyle(
                                     color: Color(0xFFE85D2A),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,

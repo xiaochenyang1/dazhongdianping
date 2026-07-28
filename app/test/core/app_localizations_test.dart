@@ -39,6 +39,15 @@ void main() {
       AppLocalizations.forTag('en').openTargetFailed('deal', 'offline'),
       'Could not open deal: offline',
     );
+    expect(
+      AppLocalizations.forTag('en').allNotificationsMarkedRead,
+      'All notifications marked as read',
+    );
+    expect(AppLocalizations.forTag('en').filterUnreadOnly, 'Unread only');
+    expect(
+      AppLocalizations.forTag('zh-CN').markAllReadWithCount(3),
+      '全部已读（3）',
+    );
   });
 
   test('delegate supports every configured app locale', () async {
