@@ -114,6 +114,17 @@ class AppLocalizations {
     'myReservations': '我的预订',
     'myBrowseHistory': '我的足迹',
     'privacyCenter': '隐私中心',
+    'communityTitle': '华人社区',
+    'topicPlaza': '话题广场',
+    'localCircles': '同城圈子',
+    'recommendedTab': '推荐',
+    'followingTab': '关注',
+    'createPost': '发帖',
+    'followingFeedLoginRequired': '登录后查看关注流，关注的人更新时会出现在这里。',
+    'loadMorePostsFailed': '加载更多帖子失败：{error}',
+    'communityLoadFailed': '社区加载失败：{error}',
+    'noCommunityPosts': '暂无帖子',
+    'postMetaStats': ' · ❤ {likes} · 评论 {comments}',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -215,6 +226,17 @@ class AppLocalizations {
     'myReservations': '我的預訂',
     'myBrowseHistory': '我的足跡',
     'privacyCenter': '隱私中心',
+    'communityTitle': '華人社群',
+    'topicPlaza': '話題廣場',
+    'localCircles': '同城圈子',
+    'recommendedTab': '推薦',
+    'followingTab': '追蹤',
+    'createPost': '發文',
+    'followingFeedLoginRequired': '登入後查看追蹤動態，你追蹤的人更新時會出現在這裡。',
+    'loadMorePostsFailed': '載入更多貼文失敗：{error}',
+    'communityLoadFailed': '社群載入失敗：{error}',
+    'noCommunityPosts': '暫無貼文',
+    'postMetaStats': ' · ❤ {likes} · 評論 {comments}',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -318,6 +340,18 @@ class AppLocalizations {
     'myReservations': 'Reservations',
     'myBrowseHistory': 'Browse history',
     'privacyCenter': 'Privacy center',
+    'communityTitle': 'Community',
+    'topicPlaza': 'Topics',
+    'localCircles': 'Local circles',
+    'recommendedTab': 'For you',
+    'followingTab': 'Following',
+    'createPost': 'Post',
+    'followingFeedLoginRequired':
+        'Sign in to see your following feed. Updates from people you follow will appear here.',
+    'loadMorePostsFailed': 'Could not load more posts: {error}',
+    'communityLoadFailed': 'Could not load community: {error}',
+    'noCommunityPosts': 'No posts yet',
+    'postMetaStats': ' · ❤ {likes} · comments {comments}',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -484,6 +518,21 @@ class AppLocalizations {
   String get myReservations => _text('myReservations');
   String get myBrowseHistory => _text('myBrowseHistory');
   String get privacyCenter => _text('privacyCenter');
+  String get communityTitle => _text('communityTitle');
+  String get topicPlaza => _text('topicPlaza');
+  String get localCircles => _text('localCircles');
+  String get recommendedTab => _text('recommendedTab');
+  String get followingTab => _text('followingTab');
+  String get createPost => _text('createPost');
+  String get followingFeedLoginRequired => _text('followingFeedLoginRequired');
+  String loadMorePostsFailed(Object error) =>
+      _withError('loadMorePostsFailed', error);
+  String communityLoadFailed(Object error) =>
+      _withError('communityLoadFailed', error);
+  String get noCommunityPosts => _text('noCommunityPosts');
+  String postMetaStats({required int likes, required int comments}) => _text(
+    'postMetaStats',
+  ).replaceFirst('{likes}', '$likes').replaceFirst('{comments}', '$comments');
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

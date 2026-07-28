@@ -54,6 +54,13 @@ void main() {
       AppLocalizations.forTag('zh-CN').growthValueLabel(350),
       '350 成长值',
     );
+    expect(AppLocalizations.forTag('en').communityTitle, 'Community');
+    expect(AppLocalizations.forTag('en').createPost, 'Post');
+    expect(AppLocalizations.forTag('zh-CN').recommendedTab, '推荐');
+    expect(
+      AppLocalizations.forTag('en').postMetaStats(likes: 2, comments: 3),
+      ' · ❤ 2 · comments 3',
+    );
   });
 
   test('delegate supports every configured app locale', () async {

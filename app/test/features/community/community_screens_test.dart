@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/community/community_feed_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:dazhongdianping_app/features/community/post_editor_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CommunityScreenApi
@@ -318,6 +320,33 @@ class CommunityTopicApi extends CommunityScreenApi {
 }
 
 void main() {
+
+  testWidgets('community feed switches English chrome', (tester) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: CommunityFeedScreen(
+          repository: CommunityRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Community'), findsOneWidget);
+    expect(find.text('For you'), findsOneWidget);
+    expect(find.text('Following'), findsOneWidget);
+    expect(find.text('Post'), findsOneWidget);
+  });
+
+
   testWidgets('community feed retries an initial load failure', (tester) async {
     final api = CommunityScreenApi()..failNextFeed = true;
     await tester.pumpWidget(
