@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -119,7 +120,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         image = await (widget.imagePicker ?? const SystemCommunityImagePicker())
             .pickImage();
       } catch (error) {
-        if (mounted) _showMessage('图片选择失败：$error');
+        if (mounted) _showMessage(AppLocalizations.of(context).imagePickFailed(error));
         return;
       }
       if (image == null) return;
@@ -127,7 +128,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         final url = await widget.repository.uploadImage(image);
         if (mounted) setState(() => _images.add(url));
       } catch (error) {
-        if (mounted) _showMessage('图片上传失败：$error');
+        if (mounted) _showMessage(AppLocalizations.of(context).imageUploadFailed(error));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -165,10 +166,10 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('帖子已提交审核')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).postSubmittedForAudit)));
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(result);
     } catch (error) {
-      if (mounted) _showMessage('帖子保存失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).postSaveFailed(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -189,17 +190,17 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
       confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('删除帖子'),
-          content: const Text('删除后不可恢复，确认删除这条帖子吗？'),
+          title: Text(AppLocalizations.of(context).deletePost),
+          content: Text(AppLocalizations.of(context).deletePostConfirm),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('取消'),
+              child: Text(AppLocalizations.of(context).cancelAction),
             ),
             FilledButton(
               key: const Key('post-delete-confirm'),
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('确认删除'),
+              child: Text(AppLocalizations.of(context).confirmDelete),
             ),
           ],
         ),
@@ -214,13 +215,13 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('帖子已删除')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).postDeleted)));
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('删除失败：$error')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteFailed(error))));
     } finally {
       if (mounted) setState(() => _deleting = false);
     }
@@ -229,7 +230,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.postId == null ? '发布帖子' : '编辑帖子'),
+      title: Text(widget.postId == null ? AppLocalizations.of(context).publishPost : AppLocalizations.of(context).editPost),
       actions: [
         if (widget.postId != null)
           TextButton(
@@ -242,7 +243,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                     _loadError != null
                 ? null
                 : _delete,
-            child: Text(_deleting ? '删除中...' : '删除'),
+            child: Text(_deleting ? AppLocalizations.of(context).deleting : AppLocalizations.of(context).delete),
           ),
       ],
     ),
@@ -253,13 +254,13 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('帖子编辑数据加载失败：$_loadError'),
-                const SizedBox(height: 12),
+                Text(AppLocalizations.of(context).postEditorLoadFailed(_loadError!)),
+                SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('post-editor-retry'),
                   onPressed: _load,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重试'),
+                  label: Text(AppLocalizations.of(context).retry),
                 ),
               ],
             ),
@@ -274,8 +275,8 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                     color: const Color(0xFFFFE5D8),
                     child: ListTile(
                       leading: const Icon(Icons.groups_2_outlined),
-                      title: Text('发布到 ${widget.circleName}'),
-                      subtitle: const Text('内容仍需经过现有社区审核。'),
+                      title: Text(AppLocalizations.of(context).publishToCircle(widget.circleName!)),
+                      subtitle: Text(AppLocalizations.of(context).circlePostNeedsAudit),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -290,15 +291,15 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                           : Text(_auditRemark),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                 ],
                 TextFormField(
                   key: const Key('post-title'),
                   controller: _title,
                   maxLength: 80,
-                  decoration: const InputDecoration(labelText: '标题'),
+                  decoration: InputDecoration(labelText: AppLocalizations.of(context).titleLabel),
                   validator: (v) =>
-                      v == null || v.trim().isEmpty ? '请输入标题' : null,
+                      v == null || v.trim().isEmpty ? AppLocalizations.of(context).pleaseEnterTitle : null,
                 ),
                 TextFormField(
                   key: const Key('post-content'),
@@ -306,32 +307,32 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                   minLines: 5,
                   maxLines: 10,
                   maxLength: 5000,
-                  decoration: const InputDecoration(labelText: '正文'),
+                  decoration: InputDecoration(labelText: AppLocalizations.of(context).bodyLabel),
                   validator: (v) =>
-                      v == null || v.trim().isEmpty ? '请输入正文' : null,
+                      v == null || v.trim().isEmpty ? AppLocalizations.of(context).pleaseEnterBody : null,
                 ),
                 TextField(
                   key: const Key('post-topics'),
                   controller: _topics,
-                  decoration: const InputDecoration(labelText: '话题，用逗号分隔'),
+                  decoration: InputDecoration(labelText: AppLocalizations.of(context).topicsCommaSeparated),
                 ),
-                const SizedBox(height: 12),
-                Text('已上传 ${_images.length}/9'),
+                SizedBox(height: 12),
+                Text(AppLocalizations.of(context).uploadedCount(_images.length)),
                 OutlinedButton.icon(
                   key: const Key('post-add-image'),
                   onPressed: _busy || _deleteDialogOpen || _images.length >= 9
                       ? null
                       : _pick,
                   icon: const Icon(Icons.add_photo_alternate_outlined),
-                  label: const Text('添加图片'),
+                  label: Text(AppLocalizations.of(context).addImages),
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
                 FilledButton(
                   key: const Key('post-submit'),
                   onPressed: _busy || _deleteDialogOpen ? null : _submit,
-                  child: const Padding(
-                    padding: EdgeInsets.all(14),
-                    child: Text('提交审核'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Text(AppLocalizations.of(context).submitForAudit),
                   ),
                 ),
               ],

@@ -1,6 +1,7 @@
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class ShopReviewsScreen extends StatefulWidget {
@@ -153,7 +154,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                   children: [
                     ChoiceChip(
                       key: const Key('shop-reviews-sort-latest'),
-                      label: const Text('最新'),
+                      label: Text(AppLocalizations.of(context).sortLatest),
                       selected: _sort == 'latest',
                       onSelected: (_) {
                         if (_sort == 'latest') return;
@@ -163,7 +164,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     ),
                     ChoiceChip(
                       key: const Key('shop-reviews-sort-popular'),
-                      label: const Text('最热'),
+                      label: Text(AppLocalizations.of(context).sortHottest),
                       selected: _sort == 'popular',
                       onSelected: (_) {
                         if (_sort == 'popular') return;
@@ -173,7 +174,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     ),
                     ChoiceChip(
                       key: const Key('shop-reviews-sort-score'),
-                      label: const Text('好评优先'),
+                      label: Text(AppLocalizations.of(context).sortBestRated),
                       selected: _sort == 'score',
                       onSelected: (_) {
                         if (_sort == 'score') return;
@@ -183,13 +184,13 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   children: [
                     FilterChip(
                       key: const Key('shop-reviews-filter-score4'),
-                      label: const Text('4 分以上'),
+                      label: Text(AppLocalizations.of(context).minScoreFour),
                       selected: _minScore == 4,
                       onSelected: (selected) {
                         setState(() => _minScore = selected ? 4 : null);
@@ -198,7 +199,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     ),
                     FilterChip(
                       key: const Key('shop-reviews-filter-images'),
-                      label: const Text('只看带图'),
+                      label: Text(AppLocalizations.of(context).withPhotosOnly),
                       selected: _hasImages == true,
                       onSelected: (selected) {
                         setState(() => _hasImages = selected ? true : null);
@@ -223,20 +224,20 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('门店点评加载失败：${snapshot.error}'),
-                        const SizedBox(height: 12),
+                        Text(AppLocalizations.of(context).shopReviewsLoadFailed(snapshot.error!)),
+                        SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('shop-reviews-retry'),
                           onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_retrying ? '处理中...' : '重试'),
+                          label: Text(_retrying ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
                         ),
                       ],
                     ),
                   );
                 }
                 if (_items.isEmpty) {
-                  return const Center(child: Text('暂无公开点评'));
+                  return Center(child: Text(AppLocalizations.of(context).noPublicReviews));
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -245,12 +246,12 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                   itemBuilder: (context, index) {
                     if (index == _items.length) {
                       if (_loadMoreError != null) {
-                        return Text('加载更多失败：$_loadMoreError');
+                        return Text(AppLocalizations.of(context).loadMoreFailed(_loadMoreError!));
                       }
                       if (!_hasMore) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Center(child: Text('已经到底了')),
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Center(child: Text(AppLocalizations.of(context).alreadyAtEnd)),
                         );
                       }
                       return Padding(
@@ -259,7 +260,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                           child: FilledButton.tonal(
                             key: const Key('shop-reviews-load-more'),
                             onPressed: _loadingMore ? null : _loadMore,
-                            child: Text(_loadingMore ? '加载中...' : '加载更多'),
+                            child: Text(_loadingMore ? AppLocalizations.of(context).loading : '加载更多'),
                           ),
                         ),
                       );

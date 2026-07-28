@@ -4,6 +4,7 @@ import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class BrowseHistoryScreen extends StatefulWidget {
@@ -58,7 +59,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       if (mounted && revision == _historyRevision) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('刷新足迹失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).refreshBrowseHistoryFailed(error))));
       }
     } finally {
       _refreshing = false;
@@ -102,7 +103,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       if (mounted && revision == _historyRevision) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多足迹失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreBrowseHistoryFailed(error))));
       }
     } finally {
       if (mounted && revision == _historyRevision) {
@@ -136,7 +137,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('清空足迹失败：$error')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).clearBrowseHistoryFailed(error))));
     } finally {
       if (mounted) setState(() => _clearing = false);
     }
@@ -171,7 +172,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('删除足迹失败：$error')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteBrowseHistoryFailed(error))));
     } finally {
       if (mounted) {
         setState(() => _removingShopIds.remove(item.shopId));
@@ -183,14 +184,14 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的足迹'),
+        title: Text(AppLocalizations.of(context).myBrowseHistory),
         actions: [
           TextButton(
             key: const Key('browse-history-clear'),
             onPressed: _clearing || _removingShopIds.isNotEmpty
                 ? null
                 : _clearAll,
-            child: Text(_clearing ? '清空中...' : '清空'),
+            child: Text(_clearing ? AppLocalizations.of(context).clearing : AppLocalizations.of(context).clearAll),
           ),
         ],
       ),
@@ -205,12 +206,12 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('足迹加载失败：${snapshot.error}'),
+                  Text(AppLocalizations.of(context).browseHistoryLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('browse-history-retry'),
                     onPressed: _retryInitialLoad,
-                    child: const Text('重试'),
+                    child: Text(AppLocalizations.of(context).retry),
                   ),
                 ],
               ),
@@ -219,7 +220,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
           final page = snapshot.data!;
           final items = page.items;
           if (items.isEmpty) {
-            return const Center(child: Text('当前区域还没有浏览足迹'));
+            return Center(child: Text(AppLocalizations.of(context).noBrowseHistory));
           }
           return RefreshIndicator(
             onRefresh: _reload,
@@ -244,7 +245,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.expand_more),
-                      label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                      label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
                     ),
                   );
                 }

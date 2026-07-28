@@ -8,6 +8,7 @@ import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/deals_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -154,7 +155,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('收藏操作失败：$error')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).favoriteActionFailed(error))));
     } finally {
       if (mounted) setState(() => _favoriteSaving = false);
     }
@@ -171,7 +172,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('分享文案已复制')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).shareCopied)));
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
@@ -181,11 +182,11 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Place details'),
+        title: Text(AppLocalizations.of(context).shopDetail),
         actions: [
           if (widget.enableFavorite)
             IconButton(
-              tooltip: _favorited ? '取消收藏' : '收藏门店',
+              tooltip: _favorited ? AppLocalizations.of(context).unfavoriteShop : AppLocalizations.of(context).favoriteShop,
               onPressed: (_favoriteLoading || _favoriteSaving)
                   ? null
                   : _toggleFavorite,
@@ -207,13 +208,13 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('门店详情加载失败：${snapshot.error}'),
-                  const SizedBox(height: 12),
+                  Text(AppLocalizations.of(context).shopDetailLoadFailed(snapshot.error!)),
+                  SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('shop-detail-retry'),
                     onPressed: _reloadingDetail ? null : _reloadDetail,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloadingDetail ? '处理中...' : '重试'),
+                    label: Text(_reloadingDetail ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
                   ),
                 ],
               ),
@@ -279,8 +280,8 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Text(
                       _favoriteLoading
-                          ? '收藏状态加载中...'
-                          : (_favorited ? '取消收藏' : '收藏门店'),
+                          ? AppLocalizations.of(context).favoriteStatusLoading
+                          : (_favorited ? AppLocalizations.of(context).unfavoriteShop : AppLocalizations.of(context).favoriteShop),
                     ),
                   ),
                 ),
@@ -292,7 +293,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 icon: const Icon(Icons.share_outlined),
                 label: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(_sharing ? '分享中...' : '分享门店'),
+                  child: Text(_sharing ? AppLocalizations.of(context).sharing : AppLocalizations.of(context).shareShop),
                 ),
               ),
               const SizedBox(height: 12),
@@ -310,9 +311,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     ),
                   ),
                   icon: const Icon(Icons.rate_review_outlined),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('写点评'),
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(AppLocalizations.of(context).writeReview),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -332,7 +333,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                           ),
                         ),
                         icon: const Icon(Icons.local_offer_outlined),
-                        label: const Text('团购优惠'),
+                        label: Text(AppLocalizations.of(context).groupDeals),
                       ),
                     ),
                   if (widget.tradeRepository != null &&
@@ -350,7 +351,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                           ),
                         ),
                         icon: const Icon(Icons.event_available_outlined),
-                        label: const Text('在线预订'),
+                        label: Text(AppLocalizations.of(context).onlineReservation),
                       ),
                     ),
                 ],
@@ -359,9 +360,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 const SizedBox(height: 28),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        '门店点评',
+                        AppLocalizations.of(context).shopReviewsSection,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -381,7 +382,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                           ),
                         ),
                       ),
-                      child: const Text('查看全部'),
+                      child: Text(AppLocalizations.of(context).viewAll),
                     ),
                   ],
                 ),
@@ -392,7 +393,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     if (reviewSnapshot.connectionState !=
                         ConnectionState.done) {
                       return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
@@ -400,7 +401,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('门店点评加载失败：${reviewSnapshot.error}'),
+                          Text(AppLocalizations.of(context).shopReviewsLoadFailed(reviewSnapshot.error!)),
                           const SizedBox(height: 8),
                           FilledButton.tonalIcon(
                             key: const Key('shop-review-previews-retry'),
@@ -409,7 +410,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                                 : _reloadReviewPreviews,
                             icon: const Icon(Icons.refresh),
                             label: Text(
-                              _reloadingReviewPreviews ? '处理中...' : '重试点评',
+                              _reloadingReviewPreviews ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retryReviews,
                             ),
                           ),
                         ],
@@ -417,7 +418,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     }
                     final items = reviewSnapshot.data ?? const [];
                     if (items.isEmpty) {
-                      return const Text('暂无公开点评');
+                      return Text(AppLocalizations.of(context).noPublicReviews);
                     }
                     return Column(
                       children: items
@@ -435,18 +436,19 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                                     const SizedBox(height: 6),
                                     Text(item.content),
                                     if (item.merchantReply != null) ...[
-                                      const SizedBox(height: 8),
+                                      SizedBox(height: 8),
                                       Text(
-                                        '商家回复：${item.merchantReply}',
+                                        AppLocalizations.of(context).merchantReplyLabel(
+                                          item.merchantReply ?? '',
+                                        ),
                                         style: const TextStyle(
                                           color: Color(0xFF4B5563),
                                         ),
                                       ),
                                     ],
-                                    const SizedBox(height: 8),
+                                    SizedBox(height: 8),
                                     Text(
-                                      '点赞 ${item.likedCount} · 评论 ${item.commentCount}'
-                                      '${item.createdAt.isEmpty ? '' : ' · ${item.createdAt}'}',
+                                      '${AppLocalizations.of(context).likeCommentStats(likes: item.likedCount, comments: item.commentCount)}${item.createdAt.isEmpty ? '' : ' · ${item.createdAt}'}',
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                   ],
@@ -477,9 +479,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 ),
               ],
               if (_similar != null) ...[
-                const SizedBox(height: 28),
-                const Text(
-                  '相似门店',
+                SizedBox(height: 28),
+                Text(
+                  AppLocalizations.of(context).similarShopsSection,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 12),
@@ -489,7 +491,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     if (similarSnapshot.connectionState !=
                         ConnectionState.done) {
                       return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
@@ -497,22 +499,22 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('相似门店加载失败：${similarSnapshot.error}'),
-                          const SizedBox(height: 8),
+                          Text(AppLocalizations.of(context).similarShopsLoadFailed(similarSnapshot.error!)),
+                          SizedBox(height: 8),
                           FilledButton.tonalIcon(
                             key: const Key('similar-shops-retry'),
                             onPressed: _reloadingSimilar
                                 ? null
                                 : _reloadSimilar,
                             icon: const Icon(Icons.refresh),
-                            label: Text(_reloadingSimilar ? '处理中...' : '重试推荐'),
+                            label: Text(_reloadingSimilar ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retryRecommendations),
                           ),
                         ],
                       );
                     }
                     final items = similarSnapshot.data ?? const [];
                     if (items.isEmpty) {
-                      return const Text('暂无相似门店');
+                      return Text(AppLocalizations.of(context).noSimilarShops);
                     }
                     return Column(
                       children: items

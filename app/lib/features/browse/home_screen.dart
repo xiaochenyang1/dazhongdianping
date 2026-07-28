@@ -184,10 +184,10 @@ class _HomeScreenState extends State<HomeScreen> {
           PopupMenuButton<String>(
             initialValue: widget.localeTag,
             onSelected: widget.onLocaleChanged,
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'zh-CN', child: Text('简体中文')),
-              PopupMenuItem(value: 'zh-TW', child: Text('繁體中文')),
-              PopupMenuItem(value: 'en', child: Text('English')),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'zh-CN', child: Text(strings.simplifiedChinese)),
+              PopupMenuItem(value: 'zh-TW', child: Text(strings.traditionalChinese)),
+              PopupMenuItem(value: 'en', child: Text(strings.englishLanguage)),
             ],
             icon: const Icon(Icons.language),
             tooltip: strings.language,
@@ -323,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return const Padding(
-                    padding: EdgeInsets.all(32),
+                    padding: const EdgeInsets.all(32),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }

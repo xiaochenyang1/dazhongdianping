@@ -64,13 +64,13 @@ class UserCollectionScreen extends StatelessWidget {
         repository: repository,
         collection: collection,
         itemBuilder: (context, item, index) {
-          final title = _title(item, index);
+          final title = _title(context, item, index);
           final destination = _destination(item);
           return Card(
             child: ListTile(
               title: Text(title),
               subtitle: Text(
-                _subtitle(item),
+                _subtitle(context, item),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -89,7 +89,7 @@ class UserCollectionScreen extends StatelessWidget {
     );
   }
 
-  String _title(Map<String, dynamic> item, int index) {
+  String _title(BuildContext context, Map<String, dynamic> item, int index) {
     if (collection == UserCollection.favorites) {
       final target = item['target'];
       if (target is Map<String, dynamic>) {
@@ -98,10 +98,10 @@ class UserCollectionScreen extends StatelessWidget {
       }
       final targetType = item['targetType'];
       final targetId = item['targetId'];
-      if (targetType == 1) return '门店 #$targetId';
-      if (targetType == 2) return '帖子 #$targetId';
+      if (targetType == 1) return AppLocalizations.of(context).shopHash(targetId);
+      if (targetType == 2) return AppLocalizations.of(context).postHash(targetId);
     }
-    return '${item['title'] ?? item['name'] ?? item['orderNo'] ?? item['reservationNo'] ?? item['code'] ?? item['shopName'] ?? item['content'] ?? '记录 #${item['id'] ?? index + 1}'}';
+    return '${item['title'] ?? item['name'] ?? item['orderNo'] ?? item['reservationNo'] ?? item['code'] ?? item['shopName'] ?? item['content'] ?? AppLocalizations.of(context).recordHash(item['id'] ?? index + 1)}';
   }
 
   Widget? _destination(Map<String, dynamic> item) {
@@ -153,7 +153,7 @@ class UserCollectionScreen extends StatelessWidget {
     return PostEditorScreen(repository: communityRepository, postId: id);
   }
 
-  String _subtitle(Map<String, dynamic> item) {
+  String _subtitle(BuildContext context, Map<String, dynamic> item) {
     return switch (collection) {
       UserCollection.reviews =>
         '${item['content'] ?? ''}\n${item['auditStatusText'] ?? ''}',
@@ -165,11 +165,11 @@ class UserCollectionScreen extends StatelessWidget {
         '${item['dealTitle'] ?? ''} · ${item['shopName'] ?? ''} · ${item['statusText'] ?? ''} · ${item['expireAt'] ?? ''}',
       UserCollection.reservations =>
         '${(item['shop'] as Map<String, dynamic>?)?['name'] ?? ''} · ${item['reserveTime'] ?? ''} · ${item['statusText'] ?? ''}',
-      UserCollection.favorites => _favoriteSubtitle(item),
+      UserCollection.favorites => _favoriteSubtitle(context, item),
     };
   }
 
-  String _favoriteSubtitle(Map<String, dynamic> item) {
+  String _favoriteSubtitle(BuildContext context, Map<String, dynamic> item) {
     final targetType = item['targetType'];
     final createdAt = item['createdAt'] ?? '';
     final target = item['target'];
@@ -180,14 +180,14 @@ class UserCollectionScreen extends StatelessWidget {
       ].whereType<String>().where((part) => part.isNotEmpty).join(' · ');
       final score = target['score'];
       return [
-        '门店',
+        AppLocalizations.of(context).shopLabel,
         if (location.isNotEmpty) location,
         if (score != null) '★ $score',
-        if ('$createdAt'.isNotEmpty) '收藏于 $createdAt',
+        if ('$createdAt'.isNotEmpty) AppLocalizations.of(context).favoritedAt('$createdAt'),
       ].join(' · ');
     }
     if (targetType == 2) {
-      return ['帖子', if ('$createdAt'.isNotEmpty) '收藏于 $createdAt'].join(' · ');
+      return [AppLocalizations.of(context).postLabel, if ('$createdAt'.isNotEmpty) AppLocalizations.of(context).favoritedAt('$createdAt')].join(' · ');
     }
     return jsonEncode(item);
   }
@@ -269,7 +269,7 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
       if (mounted && requestId == _requestId) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreFailed(error))));
       }
     } finally {
       if (mounted && requestId == _requestId) {
@@ -291,7 +291,7 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('加载失败：${snapshot.error}'),
+                Text(AppLocalizations.of(context).collectionLoadFailed(snapshot.error!)),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('user-collection-retry'),
@@ -304,7 +304,7 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
           );
         }
         final page = snapshot.data!;
-        if (page.items.isEmpty) return const Center(child: Text('暂无数据'));
+        if (page.items.isEmpty) return Center(child: Text(AppLocalizations.of(context).noCollectionData));
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: page.items.length + (page.hasMore ? 1 : 0),
@@ -321,7 +321,7 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.expand_more),
-                  label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                  label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
                 ),
               );
             }

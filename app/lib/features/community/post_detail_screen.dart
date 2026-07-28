@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class PostDetailScreen extends StatefulWidget {
@@ -102,7 +103,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(result.liked ? '已点赞' : '已取消点赞')));
+      ).showSnackBar(SnackBar(content: Text(result.liked ? AppLocalizations.of(context).liked : AppLocalizations.of(context).unliked)));
       setState(
         () => _post = Future.value(post.copyWith(likeCount: result.likeCount)),
       );
@@ -177,7 +178,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (mounted && requestId == _commentRequestId) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多评论失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreCommentsFailed(error))));
       }
     } finally {
       if (mounted && requestId == _commentRequestId) {
@@ -208,7 +209,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('收藏操作失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).favoriteActionFailed(error))));
       }
     } finally {
       if (mounted) setState(() => _favoriteSaving = false);
@@ -232,14 +233,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           );
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result.reposted ? '已转发' : '已取消转发')),
+          SnackBar(content: Text(result.reposted ? AppLocalizations.of(context).reposted : AppLocalizations.of(context).unreposted)),
         );
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('转发操作失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).repostFailed(error))));
       }
     } finally {
       if (mounted) setState(() => _repostSaving = false);
@@ -254,24 +255,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       reason = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('举报帖子'),
+          title: Text(AppLocalizations.of(context).reportPost),
           content: TextField(
             key: const Key('post-report-reason'),
             controller: _reportController,
             maxLength: 255,
             maxLines: 4,
-            decoration: const InputDecoration(labelText: '举报理由'),
+            decoration: InputDecoration(labelText: AppLocalizations.of(context).reportReason),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('取消'),
+              child: Text(AppLocalizations.of(context).cancelAction),
             ),
             FilledButton(
               onPressed: () => Navigator.of(
                 dialogContext,
               ).pop(_reportController.text.trim()),
-              child: const Text('提交举报'),
+              child: Text(AppLocalizations.of(context).submitReport),
             ),
           ],
         ),
@@ -287,13 +288,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _reportController.clear();
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('举报已提交')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reportSubmitted)));
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('举报提交失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reportSubmitFailed(error))));
       }
     } finally {
       if (mounted) setState(() => _reportSaving = false);
@@ -318,7 +319,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
-                    '回复 ${comment.replyTo!.userName}：${comment.replyTo!.content}',
+                    AppLocalizations.of(context).replyToPreview(name: comment.replyTo!.userName, content: comment.replyTo!.content),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -333,7 +334,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     TextButton(
                       key: Key('comment-reply-${comment.id}'),
                       onPressed: () => _selectReply(comment),
-                      child: const Text('回复'),
+                      child: Text(AppLocalizations.of(context).reply),
                     ),
                 ],
               ),
@@ -355,7 +356,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('帖子详情')),
+    appBar: AppBar(title: Text(AppLocalizations.of(context).postDetail)),
     body: FutureBuilder<CommunityPost>(
       future: _post,
       builder: (context, snapshot) {
@@ -367,7 +368,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('帖子加载失败：${snapshot.error}'),
+                Text(AppLocalizations.of(context).postLoadFailed(snapshot.error!)),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('post-detail-retry'),
@@ -454,22 +455,22 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     key: const Key('post-like-button'),
                     onPressed: _likeSaving ? null : () => _like(post),
                     icon: const Icon(Icons.favorite_border),
-                    label: Text('点赞 ${post.likeCount}'),
+                    label: Text(AppLocalizations.of(context).likeCountLabel(post.likeCount)),
                   ),
                   OutlinedButton.icon(
                     onPressed: _favoriteSaving ? null : _toggleFavorite,
                     icon: Icon(
                       _favorited ? Icons.bookmark : Icons.bookmark_border,
                     ),
-                    label: Text(_favorited ? '取消收藏' : '收藏帖子'),
+                    label: Text(_favorited ? AppLocalizations.of(context).unfavoritePost : AppLocalizations.of(context).favoritePost),
                   ),
                   OutlinedButton.icon(
                     onPressed: _repostSaving ? null : () => _toggleRepost(post),
                     icon: const Icon(Icons.repeat),
                     label: Text(
                       post.repostedByCurrentUser
-                          ? '取消转发 ${post.repostCount}'
-                          : '转发 ${post.repostCount}',
+                          ? AppLocalizations.of(context).unrepostWithCount(post.repostCount)
+                          : AppLocalizations.of(context).repostWithCount(post.repostCount),
                     ),
                   ),
                   TextButton.icon(
@@ -478,26 +479,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         ? null
                         : _report,
                     icon: const Icon(Icons.flag_outlined),
-                    label: const Text('举报'),
+                    label: Text(AppLocalizations.of(context).report),
                   ),
                 ],
               ),
-            const Divider(height: 32),
-            const Text(
-              '评论',
+            Divider(height: 32),
+            Text(
+              AppLocalizations.of(context).commentsSection,
               style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
             ),
             if (widget.canInteract) ...[
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               if (_replyTarget != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
                     children: [
-                      Expanded(child: Text('正在回复 ${_replyTarget!.userName}')),
+                      Expanded(child: Text(AppLocalizations.of(context).replyingToUser(_replyTarget!.userName))),
                       TextButton(
                         onPressed: _clearReply,
-                        child: const Text('取消回复'),
+                        child: Text(AppLocalizations.of(context).cancelReply),
                       ),
                     ],
                   ),
@@ -507,7 +508,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   Expanded(
                     child: TextField(
                       controller: _commentController,
-                      decoration: const InputDecoration(hintText: '说点有用的'),
+                      decoration: InputDecoration(hintText: AppLocalizations.of(context).saySomethingUsefulShort),
                     ),
                   ),
                   IconButton(
@@ -531,23 +532,23 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        Text('评论加载失败：${snapshot.error}'),
-                        const SizedBox(height: 8),
+                        Text(AppLocalizations.of(context).commentsLoadFailed(snapshot.error!)),
+                        SizedBox(height: 8),
                         FilledButton.tonalIcon(
                           key: const Key('post-comments-retry'),
                           onPressed: _reloadingComments
                               ? null
                               : _reloadComments,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_reloadingComments ? '处理中...' : '重试评论'),
+                          label: Text(_reloadingComments ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retryComments),
                         ),
                       ],
                     ),
                   );
                 }
                 if (!snapshot.hasData) {
-                  return const Padding(
-                    padding: EdgeInsets.all(20),
+                  return Padding(
+                    padding: const EdgeInsets.all(20),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
@@ -569,7 +570,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 ),
                               )
                             : const Icon(Icons.expand_more),
-                        label: Text(_loadingMoreComments ? '加载中...' : '加载更多评论'),
+                        label: Text(_loadingMoreComments ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMoreComments),
                       ),
                   ],
                 );

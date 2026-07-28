@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class PublicUserProfileScreen extends StatefulWidget {
@@ -78,7 +79,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
         setState(() => _visibleProfile = previous);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('关注状态更新失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).followStatusUpdateFailed(error))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -108,7 +109,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('公开主页')),
+    appBar: AppBar(title: Text(AppLocalizations.of(context).publicProfile)),
     body: FutureBuilder<PublicUserProfile>(
       future: _profile,
       builder: (context, snapshot) {
@@ -120,13 +121,13 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('用户主页加载失败：${snapshot.error}'),
-                const SizedBox(height: 12),
+                Text(AppLocalizations.of(context).publicProfileLoadFailed(snapshot.error!)),
+                SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('public-profile-retry'),
                   onPressed: _reloadingProfile ? null : _reloadProfile,
                   icon: const Icon(Icons.refresh),
-                  label: Text(_reloadingProfile ? '处理中...' : '重试'),
+                  label: Text(_reloadingProfile ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
                 ),
               ],
             ),
@@ -161,14 +162,14 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
               ),
             ],
             Text(
-              profile.signature.isEmpty ? '暂未填写签名' : profile.signature,
+              profile.signature.isEmpty ? AppLocalizations.of(context).noSignature : profile.signature,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
-                  child: _Metric(label: '点评', value: '${profile.reviewCount}'),
+                  child: _Metric(label: AppLocalizations.of(context).reviewsMetric, value: '${profile.reviewCount}'),
                 ),
                 Expanded(
                   child: InkWell(
@@ -177,7 +178,7 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                         ? null
                         : () => _openRelationships(true),
                     child: _Metric(
-                      label: '粉丝',
+                      label: AppLocalizations.of(context).followers,
                       value: '${profile.followerCount}',
                     ),
                   ),
@@ -189,40 +190,40 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                         ? null
                         : () => _openRelationships(false),
                     child: _Metric(
-                      label: '关注',
+                      label: AppLocalizations.of(context).followingUsers,
                       value: '${profile.followingCount}',
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             if (!isSelf && widget.canFollow)
               Row(
                 children: [
                   Expanded(
                     child: FilledButton(
                       onPressed: _saving ? null : () => _toggle(profile),
-                      child: Text(profile.followedByCurrentUser ? '已关注' : '关注'),
+                      child: Text(profile.followedByCurrentUser ? AppLocalizations.of(context).followed : AppLocalizations.of(context).followingUsers),
                     ),
                   ),
                   if (widget.onMessage != null) ...[
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => widget.onMessage!(profile.id),
                         icon: const Icon(Icons.chat_bubble_outline_rounded),
-                        label: const Text('发私信'),
+                        label: Text(AppLocalizations.of(context).sendDirectMessage),
                       ),
                     ),
                   ],
                 ],
               ),
             if (!isSelf && !widget.canFollow)
-              const Card(
+              Card(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('登录后可以关注这位用户。'),
+                  padding: const EdgeInsets.all(16),
+                  child: Text(AppLocalizations.of(context).loginToFollowUser),
                 ),
               ),
           ],
@@ -335,7 +336,7 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多用户失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreUsersFailed(error))));
       }
     } finally {
       if (mounted) setState(() => loadingMore = false);
@@ -344,7 +345,7 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.followers ? '粉丝' : '关注')),
+    appBar: AppBar(title: Text(widget.followers ? AppLocalizations.of(context).followers : AppLocalizations.of(context).followingUsers)),
     body: FutureBuilder<SocialUserPage>(
       future: page,
       builder: (context, snapshot) {
@@ -354,13 +355,13 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('关系列表加载失败：${snapshot.error}'),
-                      const SizedBox(height: 12),
+                      Text(AppLocalizations.of(context).relationListLoadFailed(snapshot.error!)),
+                      SizedBox(height: 12),
                       FilledButton.tonalIcon(
                         key: const Key('relationships-retry'),
                         onPressed: reloading ? null : reload,
                         icon: const Icon(Icons.refresh),
-                        label: Text(reloading ? '处理中...' : '重试'),
+                        label: Text(reloading ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
                       ),
                     ],
                   ),
@@ -370,7 +371,7 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
         final current = snapshot.data!;
         final items = current.items;
         if (items.isEmpty) {
-          return Center(child: Text(widget.followers ? '暂无粉丝' : '暂无关注'));
+          return Center(child: Text(widget.followers ? AppLocalizations.of(context).noFollowers : AppLocalizations.of(context).noFollowing));
         }
         return ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -388,7 +389,7 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.expand_more),
-                  label: Text(loadingMore ? '加载中...' : '加载更多'),
+                  label: Text(loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
                 ),
               );
             }
@@ -398,7 +399,7 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
                 title: Text(user.nickname),
                 subtitle: Text(
                   user.signature.isEmpty
-                      ? 'Lv.${user.level} · 粉丝 ${user.followerCount}'
+                      ? AppLocalizations.of(context).levelFollowersMeta(level: user.level, count: user.followerCount)
                       : user.signature,
                 ),
                 trailing: const Icon(Icons.chevron_right),

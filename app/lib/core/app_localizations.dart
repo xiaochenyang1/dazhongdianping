@@ -551,6 +551,93 @@ class AppLocalizations {
     'deviceEnabled': '启用',
     'deviceDisabled': '已停用',
     'deviceLoggedOut': '已登出',
+    'publicProfile': '公开主页',
+    'publicProfileLoadFailed': '用户主页加载失败：{error}',
+    'sendDirectMessage': '发私信',
+    'loginToFollowUser': '登录后可以关注这位用户。',
+    'loadMoreUsersFailed': '加载更多用户失败：{error}',
+    'relationListLoadFailed': '关系列表加载失败：{error}',
+    'followers': '粉丝',
+    'followingUsers': '关注',
+    'noRelationUsers': '暂无用户',
+    'collectionLoadFailed': '加载失败：{error}',
+    'noCollectionData': '暂无数据',
+    'favoritedAt': '收藏于 {time}',
+    'postLabel': '帖子',
+    'shopDetail': '门店详情',
+    'shopDetailLoadFailed': '门店详情加载失败：{error}',
+    'favoriteActionFailed': '收藏操作失败：{error}',
+    'shareCopied': '分享文案已复制',
+    'viewAll': '查看全部',
+    'shopReviewsLoadFailed': '门店点评加载失败：{error}',
+    'noPublicReviews': '暂无公开点评',
+    'similarShopsLoadFailed': '相似门店加载失败：{error}',
+    'noSimilarShops': '暂无相似门店',
+    'sortLatest': '最新',
+    'sortHottest': '最热',
+    'sortBestRated': '好评优先',
+    'minScoreFour': '4 分以上',
+    'withPhotosOnly': '只看带图',
+    'alreadyAtEnd': '已经到底了',
+    'refreshBrowseHistoryFailed': '刷新足迹失败：{error}',
+    'loadMoreBrowseHistoryFailed': '加载更多足迹失败：{error}',
+    'clearBrowseHistoryFailed': '清空足迹失败：{error}',
+    'deleteBrowseHistoryFailed': '删除足迹失败：{error}',
+    'browseHistoryLoadFailed': '足迹加载失败：{error}',
+    'noBrowseHistory': '当前区域还没有浏览足迹',
+    'clearAll': '清空',
+    'postSubmittedForAudit': '帖子已提交审核',
+    'deletePost': '删除帖子',
+    'deletePostConfirm': '删除后不可恢复，确认删除这条帖子吗？',
+    'postDeleted': '帖子已删除',
+    'postEditorLoadFailed': '帖子编辑数据加载失败：{error}',
+    'publishToCircle': '发布到 {name}',
+    'circlePostNeedsAudit': '内容仍需经过现有社区审核。',
+    'titleLabel': '标题',
+    'bodyLabel': '正文',
+    'topicsCommaSeparated': '话题，用逗号分隔',
+    'submitForAudit': '提交审核',
+    'postDetail': '帖子详情',
+    'postLoadFailed': '帖子加载失败：{error}',
+    'reposted': '已转发',
+    'unreposted': '已取消转发',
+    'repostFailed': '转发操作失败：{error}',
+    'reportPost': '举报帖子',
+    'reportSubmitFailed': '举报提交失败：{error}',
+    'cancelReply': '取消回复',
+    'saySomethingUsefulShort': '说点有用的',
+    'likeCountLabel': '点赞 {count}',
+    'replyingToUser': '正在回复 {name}',
+    'simplifiedChinese': '简体中文',
+    'traditionalChinese': '繁體中文',
+    'englishLanguage': 'English',
+    'noSignature': '暂未填写签名',
+    'reviewsMetric': '点评',
+    'noFollowers': '暂无粉丝',
+    'noFollowing': '暂无关注',
+    'levelFollowersMeta': 'Lv.{level} · 粉丝 {count}',
+    'shopHash': '门店 #{id}',
+    'postHash': '帖子 #{id}',
+    'recordHash': '记录 #{id}',
+    'shopLabel': '门店',
+    'unfavoritePost': '取消收藏',
+    'favoritePost': '收藏帖子',
+    'unrepostWithCount': '取消转发 {count}',
+    'repostWithCount': '转发 {count}',
+    'editPost': '编辑帖子',
+    'publishPost': '发布帖子',
+    'pleaseEnterTitle': '请输入标题',
+    'pleaseEnterBody': '请输入正文',
+    'postSaveFailed': '帖子保存失败：{error}',
+    'unfavoriteShop': '取消收藏',
+    'favoriteShop': '收藏门店',
+    'favoriteStatusLoading': '收藏状态加载中...',
+    'sharing': '分享中...',
+    'shareShop': '分享门店',
+    'shopReviewsSection': '门店点评',
+    'similarShopsSection': '相似门店',
+    'retryReviews': '重试点评',
+    'retryRecommendations': '重试推荐',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -1089,6 +1176,93 @@ class AppLocalizations {
     'deviceEnabled': '啟用',
     'deviceDisabled': '已停用',
     'deviceLoggedOut': '已登出',
+    'publicProfile': '公開主頁',
+    'publicProfileLoadFailed': '使用者主頁載入失敗：{error}',
+    'sendDirectMessage': '發私信',
+    'loginToFollowUser': '登入後可以追蹤這位使用者。',
+    'loadMoreUsersFailed': '載入更多使用者失敗：{error}',
+    'relationListLoadFailed': '關係列表載入失敗：{error}',
+    'followers': '粉絲',
+    'followingUsers': '追蹤',
+    'noRelationUsers': '暫無使用者',
+    'collectionLoadFailed': '載入失敗：{error}',
+    'noCollectionData': '暫無資料',
+    'favoritedAt': '收藏於 {time}',
+    'postLabel': '貼文',
+    'shopDetail': '店家詳情',
+    'shopDetailLoadFailed': '店家詳情載入失敗：{error}',
+    'favoriteActionFailed': '收藏操作失敗：{error}',
+    'shareCopied': '分享文案已複製',
+    'viewAll': '查看全部',
+    'shopReviewsLoadFailed': '店家評論載入失敗：{error}',
+    'noPublicReviews': '暫無公開評論',
+    'similarShopsLoadFailed': '相似店家載入失敗：{error}',
+    'noSimilarShops': '暫無相似店家',
+    'sortLatest': '最新',
+    'sortHottest': '最熱',
+    'sortBestRated': '好評優先',
+    'minScoreFour': '4 分以上',
+    'withPhotosOnly': '只看帶圖',
+    'alreadyAtEnd': '已經到底了',
+    'refreshBrowseHistoryFailed': '重新整理足跡失敗：{error}',
+    'loadMoreBrowseHistoryFailed': '載入更多足跡失敗：{error}',
+    'clearBrowseHistoryFailed': '清空足跡失敗：{error}',
+    'deleteBrowseHistoryFailed': '刪除足跡失敗：{error}',
+    'browseHistoryLoadFailed': '足跡載入失敗：{error}',
+    'noBrowseHistory': '目前區域還沒有瀏覽足跡',
+    'clearAll': '清空',
+    'postSubmittedForAudit': '貼文已提交審核',
+    'deletePost': '刪除貼文',
+    'deletePostConfirm': '刪除後不可恢復，確認刪除這則貼文嗎？',
+    'postDeleted': '貼文已刪除',
+    'postEditorLoadFailed': '貼文編輯資料載入失敗：{error}',
+    'publishToCircle': '發布到 {name}',
+    'circlePostNeedsAudit': '內容仍需經過現有社群審核。',
+    'titleLabel': '標題',
+    'bodyLabel': '正文',
+    'topicsCommaSeparated': '話題，用逗號分隔',
+    'submitForAudit': '提交審核',
+    'postDetail': '貼文詳情',
+    'postLoadFailed': '貼文載入失敗：{error}',
+    'reposted': '已轉發',
+    'unreposted': '已取消轉發',
+    'repostFailed': '轉發操作失敗：{error}',
+    'reportPost': '檢舉貼文',
+    'reportSubmitFailed': '檢舉提交失敗：{error}',
+    'cancelReply': '取消回覆',
+    'saySomethingUsefulShort': '說點有用的',
+    'likeCountLabel': '按讚 {count}',
+    'replyingToUser': '正在回覆 {name}',
+    'simplifiedChinese': '简体中文',
+    'traditionalChinese': '繁體中文',
+    'englishLanguage': 'English',
+    'noSignature': '暫未填寫簽名',
+    'reviewsMetric': '評論',
+    'noFollowers': '暫無粉絲',
+    'noFollowing': '暫無追蹤',
+    'levelFollowersMeta': 'Lv.{level} · 粉絲 {count}',
+    'shopHash': '店家 #{id}',
+    'postHash': '貼文 #{id}',
+    'recordHash': '記錄 #{id}',
+    'shopLabel': '店家',
+    'unfavoritePost': '取消收藏',
+    'favoritePost': '收藏貼文',
+    'unrepostWithCount': '取消轉發 {count}',
+    'repostWithCount': '轉發 {count}',
+    'editPost': '編輯貼文',
+    'publishPost': '發布貼文',
+    'pleaseEnterTitle': '請輸入標題',
+    'pleaseEnterBody': '請輸入正文',
+    'postSaveFailed': '貼文儲存失敗：{error}',
+    'unfavoriteShop': '取消收藏',
+    'favoriteShop': '收藏店家',
+    'favoriteStatusLoading': '收藏狀態載入中...',
+    'sharing': '分享中...',
+    'shareShop': '分享店家',
+    'shopReviewsSection': '店家評論',
+    'similarShopsSection': '相似店家',
+    'retryReviews': '重試評論',
+    'retryRecommendations': '重試推薦',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -1655,6 +1829,93 @@ class AppLocalizations {
     'deviceEnabled': 'Active',
     'deviceDisabled': 'Deactivated',
     'deviceLoggedOut': 'Signed out',
+    'publicProfile': 'Public profile',
+    'publicProfileLoadFailed': 'Could not load profile: {error}',
+    'sendDirectMessage': 'Message',
+    'loginToFollowUser': 'Sign in to follow this user.',
+    'loadMoreUsersFailed': 'Could not load more users: {error}',
+    'relationListLoadFailed': 'Could not load relation list: {error}',
+    'followers': 'Followers',
+    'followingUsers': 'Following',
+    'noRelationUsers': 'No users yet',
+    'collectionLoadFailed': 'Could not load: {error}',
+    'noCollectionData': 'No data yet',
+    'favoritedAt': 'Saved {time}',
+    'postLabel': 'Post',
+    'shopDetail': 'Place details',
+    'shopDetailLoadFailed': 'Could not load place details: {error}',
+    'favoriteActionFailed': 'Could not update favorite: {error}',
+    'shareCopied': 'Share text copied',
+    'viewAll': 'View all',
+    'shopReviewsLoadFailed': 'Could not load place reviews: {error}',
+    'noPublicReviews': 'No public reviews yet',
+    'similarShopsLoadFailed': 'Could not load similar places: {error}',
+    'noSimilarShops': 'No similar places yet',
+    'sortLatest': 'Latest',
+    'sortHottest': 'Top',
+    'sortBestRated': 'Best rated',
+    'minScoreFour': '4+ stars',
+    'withPhotosOnly': 'With photos',
+    'alreadyAtEnd': 'You have reached the end',
+    'refreshBrowseHistoryFailed': 'Could not refresh history: {error}',
+    'loadMoreBrowseHistoryFailed': 'Could not load more history: {error}',
+    'clearBrowseHistoryFailed': 'Could not clear history: {error}',
+    'deleteBrowseHistoryFailed': 'Could not delete history item: {error}',
+    'browseHistoryLoadFailed': 'Could not load history: {error}',
+    'noBrowseHistory': 'No browse history in this region yet',
+    'clearAll': 'Clear all',
+    'postSubmittedForAudit': 'Post submitted for review',
+    'deletePost': 'Delete post',
+    'deletePostConfirm': 'This cannot be undone. Delete this post?',
+    'postDeleted': 'Post deleted',
+    'postEditorLoadFailed': 'Could not load post editor data: {error}',
+    'publishToCircle': 'Post to {name}',
+    'circlePostNeedsAudit': 'Content still goes through community review.',
+    'titleLabel': 'Title',
+    'bodyLabel': 'Body',
+    'topicsCommaSeparated': 'Topics, comma separated',
+    'submitForAudit': 'Submit for review',
+    'postDetail': 'Post details',
+    'postLoadFailed': 'Could not load post: {error}',
+    'reposted': 'Reposted',
+    'unreposted': 'Repost removed',
+    'repostFailed': 'Could not update repost: {error}',
+    'reportPost': 'Report post',
+    'reportSubmitFailed': 'Could not submit report: {error}',
+    'cancelReply': 'Cancel reply',
+    'saySomethingUsefulShort': 'Say something useful',
+    'likeCountLabel': '{count} likes',
+    'replyingToUser': 'Replying to {name}',
+    'simplifiedChinese': '简体中文',
+    'traditionalChinese': '繁體中文',
+    'englishLanguage': 'English',
+    'noSignature': 'No bio yet',
+    'reviewsMetric': 'Reviews',
+    'noFollowers': 'No followers yet',
+    'noFollowing': 'Not following anyone yet',
+    'levelFollowersMeta': 'Lv.{level} · {count} followers',
+    'shopHash': 'Place #{id}',
+    'postHash': 'Post #{id}',
+    'recordHash': 'Record #{id}',
+    'shopLabel': 'Place',
+    'unfavoritePost': 'Remove favorite',
+    'favoritePost': 'Save post',
+    'unrepostWithCount': 'Undo repost {count}',
+    'repostWithCount': 'Repost {count}',
+    'editPost': 'Edit post',
+    'publishPost': 'Publish post',
+    'pleaseEnterTitle': 'Enter a title',
+    'pleaseEnterBody': 'Enter the body',
+    'postSaveFailed': 'Could not save post: {error}',
+    'unfavoriteShop': 'Remove favorite',
+    'favoriteShop': 'Save place',
+    'favoriteStatusLoading': 'Loading favorite status...',
+    'sharing': 'Sharing...',
+    'shareShop': 'Share place',
+    'shopReviewsSection': 'Reviews',
+    'similarShopsSection': 'Similar places',
+    'retryReviews': 'Retry reviews',
+    'retryRecommendations': 'Retry recommendations',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -2428,6 +2689,119 @@ class AppLocalizations {
   String get deviceEnabled => _text('deviceEnabled');
   String get deviceDisabled => _text('deviceDisabled');
   String get deviceLoggedOut => _text('deviceLoggedOut');
+
+  String get publicProfile => _text('publicProfile');
+  String publicProfileLoadFailed(Object error) =>
+      _withError('publicProfileLoadFailed', error);
+  String get sendDirectMessage => _text('sendDirectMessage');
+  String get loginToFollowUser => _text('loginToFollowUser');
+  String loadMoreUsersFailed(Object error) =>
+      _withError('loadMoreUsersFailed', error);
+  String relationListLoadFailed(Object error) =>
+      _withError('relationListLoadFailed', error);
+  String get followers => _text('followers');
+  String get followingUsers => _text('followingUsers');
+  String get noRelationUsers => _text('noRelationUsers');
+  String collectionLoadFailed(Object error) =>
+      _withError('collectionLoadFailed', error);
+  String get noCollectionData => _text('noCollectionData');
+  String favoritedAt(String time) =>
+      _text('favoritedAt').replaceFirst('{time}', time);
+  String get postLabel => _text('postLabel');
+  String get shopDetail => _text('shopDetail');
+  String shopDetailLoadFailed(Object error) =>
+      _withError('shopDetailLoadFailed', error);
+  String favoriteActionFailed(Object error) =>
+      _withError('favoriteActionFailed', error);
+  String get shareCopied => _text('shareCopied');
+  String get viewAll => _text('viewAll');
+  String shopReviewsLoadFailed(Object error) =>
+      _withError('shopReviewsLoadFailed', error);
+  String get noPublicReviews => _text('noPublicReviews');
+  String similarShopsLoadFailed(Object error) =>
+      _withError('similarShopsLoadFailed', error);
+  String get noSimilarShops => _text('noSimilarShops');
+  String get sortLatest => _text('sortLatest');
+  String get sortHottest => _text('sortHottest');
+  String get sortBestRated => _text('sortBestRated');
+  String get minScoreFour => _text('minScoreFour');
+  String get withPhotosOnly => _text('withPhotosOnly');
+  String get alreadyAtEnd => _text('alreadyAtEnd');
+  String refreshBrowseHistoryFailed(Object error) =>
+      _withError('refreshBrowseHistoryFailed', error);
+  String loadMoreBrowseHistoryFailed(Object error) =>
+      _withError('loadMoreBrowseHistoryFailed', error);
+  String clearBrowseHistoryFailed(Object error) =>
+      _withError('clearBrowseHistoryFailed', error);
+  String deleteBrowseHistoryFailed(Object error) =>
+      _withError('deleteBrowseHistoryFailed', error);
+  String browseHistoryLoadFailed(Object error) =>
+      _withError('browseHistoryLoadFailed', error);
+  String get noBrowseHistory => _text('noBrowseHistory');
+  String get clearAll => _text('clearAll');
+  String get postSubmittedForAudit => _text('postSubmittedForAudit');
+  String get deletePost => _text('deletePost');
+  String get deletePostConfirm => _text('deletePostConfirm');
+  String get postDeleted => _text('postDeleted');
+  String postEditorLoadFailed(Object error) =>
+      _withError('postEditorLoadFailed', error);
+  String publishToCircle(String name) =>
+      _text('publishToCircle').replaceFirst('{name}', name);
+  String get circlePostNeedsAudit => _text('circlePostNeedsAudit');
+  String get titleLabel => _text('titleLabel');
+  String get bodyLabel => _text('bodyLabel');
+  String get topicsCommaSeparated => _text('topicsCommaSeparated');
+  String get submitForAudit => _text('submitForAudit');
+  String get postDetail => _text('postDetail');
+  String postLoadFailed(Object error) => _withError('postLoadFailed', error);
+  String get reposted => _text('reposted');
+  String get unreposted => _text('unreposted');
+  String repostFailed(Object error) => _withError('repostFailed', error);
+  String get reportPost => _text('reportPost');
+  String reportSubmitFailed(Object error) =>
+      _withError('reportSubmitFailed', error);
+  String get cancelReply => _text('cancelReply');
+  String get saySomethingUsefulShort => _text('saySomethingUsefulShort');
+  String likeCountLabel(int count) => _withCount('likeCountLabel', count);
+  String replyingToUser(String name) =>
+      _text('replyingToUser').replaceFirst('{name}', name);
+  String get simplifiedChinese => _text('simplifiedChinese');
+  String get traditionalChinese => _text('traditionalChinese');
+  String get englishLanguage => _text('englishLanguage');
+
+  String get noSignature => _text('noSignature');
+  String get reviewsMetric => _text('reviewsMetric');
+  String get noFollowers => _text('noFollowers');
+  String get noFollowing => _text('noFollowing');
+  String levelFollowersMeta({required int level, required int count}) =>
+      _text('levelFollowersMeta')
+          .replaceFirst('{level}', '$level')
+          .replaceFirst('{count}', '$count');
+  String shopHash(Object id) => _text('shopHash').replaceFirst('{id}', '$id');
+  String postHash(Object id) => _text('postHash').replaceFirst('{id}', '$id');
+  String recordHash(Object id) => _text('recordHash').replaceFirst('{id}', '$id');
+  String get shopLabel => _text('shopLabel');
+
+  String get unfavoritePost => _text('unfavoritePost');
+  String get favoritePost => _text('favoritePost');
+  String unrepostWithCount(int count) => _withCount('unrepostWithCount', count);
+  String repostWithCount(int count) => _withCount('repostWithCount', count);
+  String get editPost => _text('editPost');
+  String get publishPost => _text('publishPost');
+  String get pleaseEnterTitle => _text('pleaseEnterTitle');
+  String get pleaseEnterBody => _text('pleaseEnterBody');
+  String postSaveFailed(Object error) => _withError('postSaveFailed', error);
+
+  String get unfavoriteShop => _text('unfavoriteShop');
+  String get favoriteShop => _text('favoriteShop');
+  String get favoriteStatusLoading => _text('favoriteStatusLoading');
+  String get sharing => _text('sharing');
+  String get shareShop => _text('shareShop');
+  String get shopReviewsSection => _text('shopReviewsSection');
+  String get similarShopsSection => _text('similarShopsSection');
+
+  String get retryReviews => _text('retryReviews');
+  String get retryRecommendations => _text('retryRecommendations');
   String statusWithRedeemability(String status, bool usable) =>
       '$status · ${usable ? redeemable : notRedeemable}';
 }
