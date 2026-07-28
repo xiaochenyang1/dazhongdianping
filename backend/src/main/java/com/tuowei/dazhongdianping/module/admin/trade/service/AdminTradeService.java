@@ -1,7 +1,9 @@
 package com.tuowei.dazhongdianping.module.admin.trade.service;
 
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
 import com.tuowei.dazhongdianping.common.admin.AdminSession;
 import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
+import com.tuowei.dazhongdianping.common.api.ForbiddenException;
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
@@ -23,6 +25,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -55,8 +58,11 @@ public class AdminTradeService {
         validateDateRange(query.getDateFrom(), query.getDateTo());
         LocalDate dateToExclusive = query.getDateTo() == null ? null : query.getDateTo().plusDays(1);
         String region = RegionContext.getRegion().name();
-        long total = mapper.countOrders(region, query, dateToExclusive);
-        List<AdminOrderResponse> list = mapper.selectOrders(region, query, dateToExclusive).stream()
+        AdminCityScope scope = currentScope(region);
+        long total = mapper.countOrders(
+                region, query, dateToExclusive, scope.allCities(), scope.cityIds(), scope.shopIds());
+        List<AdminOrderResponse> list = mapper.selectOrders(
+                        region, query, dateToExclusive, scope.allCities(), scope.cityIds(), scope.shopIds()).stream()
                 .map(this::toResponse)
                 .toList();
         return new PageResult<>(
@@ -71,7 +77,9 @@ public class AdminTradeService {
     @Transactional
     public AdminOrderResponse auditRefund(Long orderId, AdminRefundAuditRequest request, String requestIp) {
         String region = RegionContext.getRegion().name();
-        AdminOrderRow order = mapper.selectOrderById(region, orderId);
+        AdminCityScope scope = currentScope(region);
+        AdminOrderRow order = mapper.selectOrderById(
+                region, orderId, scope.allCities(), scope.cityIds(), scope.shopIds());
         if (order == null) {
             throw new NotFoundException("订单不存在");
         }
@@ -106,7 +114,8 @@ public class AdminTradeService {
                 StringUtils.hasText(requestIp) ? requestIp.trim() : ""
         );
         notifyRefundResult(order, approved, reason);
-        return toResponse(mapper.selectOrderById(region, orderId));
+        return toResponse(mapper.selectOrderById(
+                region, orderId, scope.allCities(), scope.cityIds(), scope.shopIds()));
     }
 
     private void notifyRefundResult(AdminOrderRow order, boolean approved, String reason) {
@@ -134,6 +143,10 @@ public class AdminTradeService {
     @Transactional
     public AdminTradeReconcileResponse reconcile(String requestIp) {
         AdminSession admin = currentAdmin();
+        AdminCityScope scope = currentScope(RegionContext.getRegion().name());
+        if (!scope.allCities()) {
+            throw new ForbiddenException("仅区域全量管理员可执行全量订单对账");
+        }
         TradeReconcileResult result = tradeCompensationService.reconcile();
         adminAuditMapper.insertAuditLog(
                 admin.adminId(),
@@ -163,6 +176,11 @@ public class AdminTradeService {
             throw new UnauthorizedException("管理员登录状态不存在");
         }
         return session;
+    }
+
+    private AdminCityScope currentScope(String region) {
+        AdminCityScope scope = currentAdmin().cityScopes().get(region);
+        return scope == null ? new AdminCityScope(false, Set.of(), Set.of()) : scope;
     }
 
     private AdminOrderResponse toResponse(AdminOrderRow row) {

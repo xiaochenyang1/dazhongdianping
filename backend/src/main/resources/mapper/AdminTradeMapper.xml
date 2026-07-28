@@ -42,6 +42,28 @@
         <if test="dateToExclusive != null">
             AND o.created_at &lt; #{dateToExclusive}
         </if>
+        <include refid="orderDataScope"/>
+    </sql>
+
+    <sql id="orderDataScope">
+        <if test="allCities == false">
+            AND (
+            <if test="cityIds != null and !cityIds.isEmpty()">
+                s.city_id IN
+                <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">
+                    #{cityId}
+                </foreach>
+            </if>
+            <if test="cityIds != null and !cityIds.isEmpty() and shopIds != null and !shopIds.isEmpty()"> OR </if>
+            <if test="shopIds != null and !shopIds.isEmpty()">
+                s.id IN
+                <foreach collection="shopIds" item="shopId" open="(" separator="," close=")">
+                    #{shopId}
+                </foreach>
+            </if>
+            <if test="(cityIds == null or cityIds.isEmpty()) and (shopIds == null or shopIds.isEmpty())">1 = 0</if>
+            )
+        </if>
     </sql>
 
     <select id="countOrders" resultType="long">
@@ -100,6 +122,7 @@
         WHERE o.id = #{id}
           AND o.region = #{region}
           AND s.region = #{region}
+        <include refid="orderDataScope"/>
     </select>
 
     <select id="selectRefundByOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">

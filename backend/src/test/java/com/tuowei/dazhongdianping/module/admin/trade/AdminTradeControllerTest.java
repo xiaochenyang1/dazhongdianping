@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc
 class AdminTradeControllerTest {
+
+    private static final String ADMIN_PASSWORD_HASH = "$2a$10$jqOjtTNxITz7WmpfstWxMebmoVjEFr08kLMVWRbDH3GezWSJfnqhC";
+    private static final AtomicLong ADMIN_SEQUENCE = new AtomicLong(50_000);
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -169,6 +173,49 @@ class AdminTradeControllerTest {
     }
 
     @Test
+    void shouldFilterOrdersByCityAndShopWhitelistScopes() throws Exception {
+        jdbc.update("UPDATE shop SET city_id=2, area_id=21 WHERE id=10002");
+        insertPaidOrder(9304, "ADMIN-ORDER-004", 10002);
+
+        String cityToken = scopedAdminToken("city", 1L, null);
+        mockMvc.perform(get("/api/admin/v1/orders")
+                        .header("Authorization", bearer(cityToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.list[0].shopId").value(10001));
+
+        String shopToken = scopedAdminToken("shop", null, 10002L);
+        mockMvc.perform(get("/api/admin/v1/orders")
+                        .header("Authorization", bearer(shopToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].orderNo").value("ADMIN-ORDER-004"));
+    }
+
+    @Test
+    void shouldHideOutOfScopeRefundAndForbidGlobalReconcile() throws Exception {
+        String token = scopedAdminToken("restricted", null, 10002L);
+
+        mockMvc.perform(post("/api/admin/v1/orders/9302/refund-audit")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"decision":"approve","reason":"越权请求不应生效"}
+                                """))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/admin/v1/orders/reconcile")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isForbidden());
+
+        Integer refundStatus = jdbc.queryForObject("SELECT status FROM refund WHERE id=9502", Integer.class);
+        org.assertj.core.api.Assertions.assertThat(refundStatus).isZero();
+    }
+
+    @Test
     void shouldReconcileExpiredUnpaidOrdersAndPendingPayments() throws Exception {
         jdbc.update(
                 """
@@ -224,6 +271,38 @@ class AdminTradeControllerTest {
         return objectMapper.readTree(result.getResponse().getContentAsString())
                 .at("/data/accessToken")
                 .asText();
+    }
+
+    private void insertPaidOrder(long id, String orderNo, long shopId) {
+        jdbc.update(
+                """
+                INSERT INTO `order`(
+                    id, order_no, user_id, deal_id, shop_id, region, quantity,
+                    unit_price, amount, currency, pay_method, pay_status, status,
+                    paid_at, created_at, updated_at
+                ) VALUES (?, ?, 9001, 40001, ?, 'CN', 1, 88.00, 88.00, 'CNY', 'alipay_mock', 1, 1,
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """,
+                id, orderNo, shopId
+        );
+    }
+
+    private String scopedAdminToken(String suffix, Long cityId, Long shopId) throws Exception {
+        long adminId = ADMIN_SEQUENCE.incrementAndGet();
+        String account = "order.scope." + suffix + "." + adminId;
+        jdbc.update(
+                "INSERT INTO admin_user(id,account,password_hash,name,status) VALUES (?,?,?,?,1)",
+                adminId, account, ADMIN_PASSWORD_HASH, "订单范围测试管理员"
+        );
+        jdbc.update("INSERT INTO admin_user_role(admin_id,role_id) VALUES (?,5)", adminId);
+        jdbc.update("INSERT INTO admin_region_scope(admin_id,region,all_cities) VALUES (?,'CN',FALSE)", adminId);
+        if (cityId != null) {
+            jdbc.update("INSERT INTO admin_city_scope(admin_id,region,city_id) VALUES (?,'CN',?)", adminId, cityId);
+        }
+        if (shopId != null) {
+            jdbc.update("INSERT INTO admin_shop_scope(admin_id,region,shop_id) VALUES (?,'CN',?)", adminId, shopId);
+        }
+        return login(account, "admin123456");
     }
 
     private String bearer(String token) {

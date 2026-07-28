@@ -5,6 +5,7 @@ import com.tuowei.dazhongdianping.module.admin.trade.model.AdminOrderRow;
 import com.tuowei.dazhongdianping.module.trade.model.RefundRow;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -13,13 +14,23 @@ public interface AdminTradeMapper {
 
     long countOrders(@Param("region") String region,
                      @Param("query") AdminOrderQuery query,
-                     @Param("dateToExclusive") LocalDate dateToExclusive);
+                     @Param("dateToExclusive") LocalDate dateToExclusive,
+                     @Param("allCities") boolean allCities,
+                     @Param("cityIds") Set<Long> cityIds,
+                     @Param("shopIds") Set<Long> shopIds);
 
     List<AdminOrderRow> selectOrders(@Param("region") String region,
                                      @Param("query") AdminOrderQuery query,
-                                     @Param("dateToExclusive") LocalDate dateToExclusive);
+                                     @Param("dateToExclusive") LocalDate dateToExclusive,
+                                     @Param("allCities") boolean allCities,
+                                     @Param("cityIds") Set<Long> cityIds,
+                                     @Param("shopIds") Set<Long> shopIds);
 
-    AdminOrderRow selectOrderById(@Param("region") String region, @Param("id") Long id);
+    AdminOrderRow selectOrderById(@Param("region") String region,
+                                  @Param("id") Long id,
+                                  @Param("allCities") boolean allCities,
+                                  @Param("cityIds") Set<Long> cityIds,
+                                  @Param("shopIds") Set<Long> shopIds);
 
     RefundRow selectRefundByOrder(@Param("orderId") Long orderId);
 
