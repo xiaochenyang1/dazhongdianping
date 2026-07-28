@@ -155,6 +155,36 @@ class AppLocalizations {
     'loadMoreMembersFailed': '加载更多成员失败：{error}',
     'circleMembersTitle': '{name}成员',
     'membersLoadFailed': '成员加载失败：{error}',
+    'directMessages': '私信',
+    'refreshConversationsFailed': '刷新会话失败：{error}',
+    'loadMoreConversationsFailed': '加载更多会话失败：{error}',
+    'conversationsLoadFailed': '会话加载失败：{error}',
+    'noDirectMessages': '还没有私信，去公开主页打个招呼吧。',
+    'messageMarkReadFailed': '已读状态同步失败：{error}',
+    'loadEarlierMessagesFailed': '加载更早消息失败：{error}',
+    'sendFailed': '发送失败：{error}',
+    'actionFailed': '操作失败：{error}',
+    'reportConversation': '举报会话',
+    'blockUser': '拉黑用户',
+    'unblockUser': '解除拉黑',
+    'reportSubmitted': '举报已提交',
+    'blockedBothWays': '已拉黑，双方无法继续发送',
+    'unblocked': '已解除拉黑',
+    'chatHistoryLoadFailed': '聊天记录加载失败：{error}',
+    'loadEarlierMessages': '加载更早消息',
+    'blockedComposerHint': '已拉黑，解除后可继续发送',
+    'messageHint': '写点什么…',
+    'send': '发送',
+    'harassmentOrInappropriate': '骚扰或不当内容',
+    'refreshBlockedUsersFailed': '刷新黑名单失败：{error}',
+    'loadMoreBlockedUsersFailed': '加载更多黑名单失败：{error}',
+    'unblockedUser': '已解除对 {name} 的拉黑',
+    'unblockFailed': '解除拉黑失败：{error}',
+    'blockedUsersLoadFailed': '黑名单加载失败：{error}',
+    'blockedUsersEmpty': '黑名单为空',
+    'blockedAt': '拉黑时间：{time}',
+    'userFallback': '用户 {id}',
+    'anonymousPeer': 'TA',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -297,6 +327,36 @@ class AppLocalizations {
     'loadMoreMembersFailed': '載入更多成員失敗：{error}',
     'circleMembersTitle': '{name}成員',
     'membersLoadFailed': '成員載入失敗：{error}',
+    'directMessages': '私信',
+    'refreshConversationsFailed': '重新整理對話失敗：{error}',
+    'loadMoreConversationsFailed': '載入更多對話失敗：{error}',
+    'conversationsLoadFailed': '對話載入失敗：{error}',
+    'noDirectMessages': '還沒有私信，去公開主頁打個招呼吧。',
+    'messageMarkReadFailed': '已讀狀態同步失敗：{error}',
+    'loadEarlierMessagesFailed': '載入更早訊息失敗：{error}',
+    'sendFailed': '傳送失敗：{error}',
+    'actionFailed': '操作失敗：{error}',
+    'reportConversation': '檢舉對話',
+    'blockUser': '封鎖使用者',
+    'unblockUser': '解除封鎖',
+    'reportSubmitted': '檢舉已提交',
+    'blockedBothWays': '已封鎖，雙方無法繼續傳送',
+    'unblocked': '已解除封鎖',
+    'chatHistoryLoadFailed': '聊天紀錄載入失敗：{error}',
+    'loadEarlierMessages': '載入更早訊息',
+    'blockedComposerHint': '已封鎖，解除後可繼續傳送',
+    'messageHint': '寫點什麼…',
+    'send': '傳送',
+    'harassmentOrInappropriate': '騷擾或不當內容',
+    'refreshBlockedUsersFailed': '重新整理黑名單失敗：{error}',
+    'loadMoreBlockedUsersFailed': '載入更多黑名單失敗：{error}',
+    'unblockedUser': '已解除對 {name} 的封鎖',
+    'unblockFailed': '解除封鎖失敗：{error}',
+    'blockedUsersLoadFailed': '黑名單載入失敗：{error}',
+    'blockedUsersEmpty': '黑名單為空',
+    'blockedAt': '封鎖時間：{time}',
+    'userFallback': '使用者 {id}',
+    'anonymousPeer': 'TA',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -444,6 +504,37 @@ class AppLocalizations {
     'loadMoreMembersFailed': 'Could not load more members: {error}',
     'circleMembersTitle': '{name} members',
     'membersLoadFailed': 'Could not load members: {error}',
+    'directMessages': 'Messages',
+    'refreshConversationsFailed': 'Could not refresh conversations: {error}',
+    'loadMoreConversationsFailed': 'Could not load more conversations: {error}',
+    'conversationsLoadFailed': 'Could not load conversations: {error}',
+    'noDirectMessages':
+        'No messages yet. Say hello from a public profile.',
+    'messageMarkReadFailed': 'Could not sync read status: {error}',
+    'loadEarlierMessagesFailed': 'Could not load earlier messages: {error}',
+    'sendFailed': 'Could not send: {error}',
+    'actionFailed': 'Could not complete the action: {error}',
+    'reportConversation': 'Report conversation',
+    'blockUser': 'Block user',
+    'unblockUser': 'Unblock',
+    'reportSubmitted': 'Report submitted',
+    'blockedBothWays': 'Blocked. Neither side can send messages.',
+    'unblocked': 'Unblocked',
+    'chatHistoryLoadFailed': 'Could not load chat history: {error}',
+    'loadEarlierMessages': 'Load earlier messages',
+    'blockedComposerHint': 'Blocked. Unblock to keep chatting.',
+    'messageHint': 'Write a message…',
+    'send': 'Send',
+    'harassmentOrInappropriate': 'Harassment or inappropriate content',
+    'refreshBlockedUsersFailed': 'Could not refresh blocked users: {error}',
+    'loadMoreBlockedUsersFailed': 'Could not load more blocked users: {error}',
+    'unblockedUser': 'Unblocked {name}',
+    'unblockFailed': 'Could not unblock: {error}',
+    'blockedUsersLoadFailed': 'Could not load blocked users: {error}',
+    'blockedUsersEmpty': 'No blocked users',
+    'blockedAt': 'Blocked at: {time}',
+    'userFallback': 'User {id}',
+    'anonymousPeer': 'Someone',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -676,6 +767,48 @@ class AppLocalizations {
       _text('circleMembersTitle').replaceFirst('{name}', name);
   String membersLoadFailed(Object error) =>
       _withError('membersLoadFailed', error);
+  String get directMessages => _text('directMessages');
+  String refreshConversationsFailed(Object error) =>
+      _withError('refreshConversationsFailed', error);
+  String loadMoreConversationsFailed(Object error) =>
+      _withError('loadMoreConversationsFailed', error);
+  String conversationsLoadFailed(Object error) =>
+      _withError('conversationsLoadFailed', error);
+  String get noDirectMessages => _text('noDirectMessages');
+  String messageMarkReadFailed(Object error) =>
+      _withError('messageMarkReadFailed', error);
+  String loadEarlierMessagesFailed(Object error) =>
+      _withError('loadEarlierMessagesFailed', error);
+  String sendFailed(Object error) => _withError('sendFailed', error);
+  String actionFailed(Object error) => _withError('actionFailed', error);
+  String get reportConversation => _text('reportConversation');
+  String get blockUser => _text('blockUser');
+  String get unblockUser => _text('unblockUser');
+  String get reportSubmitted => _text('reportSubmitted');
+  String get blockedBothWays => _text('blockedBothWays');
+  String get unblocked => _text('unblocked');
+  String chatHistoryLoadFailed(Object error) =>
+      _withError('chatHistoryLoadFailed', error);
+  String get loadEarlierMessages => _text('loadEarlierMessages');
+  String get blockedComposerHint => _text('blockedComposerHint');
+  String get messageHint => _text('messageHint');
+  String get send => _text('send');
+  String get harassmentOrInappropriate => _text('harassmentOrInappropriate');
+  String refreshBlockedUsersFailed(Object error) =>
+      _withError('refreshBlockedUsersFailed', error);
+  String loadMoreBlockedUsersFailed(Object error) =>
+      _withError('loadMoreBlockedUsersFailed', error);
+  String unblockedUser(String name) =>
+      _text('unblockedUser').replaceFirst('{name}', name);
+  String unblockFailed(Object error) => _withError('unblockFailed', error);
+  String blockedUsersLoadFailed(Object error) =>
+      _withError('blockedUsersLoadFailed', error);
+  String get blockedUsersEmpty => _text('blockedUsersEmpty');
+  String blockedAt(String time) =>
+      _text('blockedAt').replaceFirst('{time}', time);
+  String userFallback(int id) =>
+      _text('userFallback').replaceFirst('{id}', '$id');
+  String get anonymousPeer => _text('anonymousPeer');
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

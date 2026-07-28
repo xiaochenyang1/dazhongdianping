@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/message/blocked_users_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
@@ -62,6 +64,26 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
 }
 
 void main() {
+
+  testWidgets('blocked users switch English chrome', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: BlockedUsersScreen(repository: MessageRepository(BlockedUsersFakeApi())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Blocked users'), findsOneWidget);
+  });
+
+
   testWidgets('blocked users load later pages and unblock a user', (
     tester,
   ) async {

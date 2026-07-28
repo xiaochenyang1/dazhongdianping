@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/message/conversation_list_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
@@ -142,6 +144,29 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
+
+  testWidgets('message screens switch English chrome', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: ConversationListScreen(
+          repository: MessageRepository(ScreenMessageApi()),
+          currentUserId: 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Messages'), findsOneWidget);
+  });
+
+
   testWidgets('conversation list opens chat and sends text', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

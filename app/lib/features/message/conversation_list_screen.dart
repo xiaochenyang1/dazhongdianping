@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -34,7 +35,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
       if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('刷新会话失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).refreshConversationsFailed(error))));
       }
     }
   }
@@ -75,7 +76,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
       if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多会话失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreConversationsFailed(error))));
       }
     } finally {
       if (mounted && revision == _pageRevision) {
@@ -107,7 +108,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('私信')),
+    appBar: AppBar(title: Text(AppLocalizations.of(context).directMessages)),
     body: FutureBuilder<ConversationPage>(
       future: _future,
       builder: (context, snapshot) {
@@ -116,13 +117,13 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('会话加载失败：${snapshot.error}', textAlign: TextAlign.center),
+                Text(AppLocalizations.of(context).conversationsLoadFailed(snapshot.error!), textAlign: TextAlign.center),
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   key: const Key('conversation-list-retry'),
                   onPressed: _retryInitialLoad,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重新加载'),
+                  label: Text(AppLocalizations.of(context).reload),
                 ),
               ],
             ),
@@ -133,7 +134,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
         }
         final page = snapshot.data!;
         if (page.items.isEmpty) {
-          return const Center(child: Text('还没有私信，去公开主页打个招呼吧。'));
+          return Center(child: Text(AppLocalizations.of(context).noDirectMessages));
         }
         return RefreshIndicator(
           onRefresh: _reload,
@@ -152,7 +153,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.expand_more),
-                    label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                    label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
                   ),
                 );
               }
@@ -165,7 +166,7 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                     backgroundColor: const Color(0xFFFFE4D6),
                     child: Text(
                       item.peerNickname.isEmpty
-                          ? 'TA'
+                          ? AppLocalizations.of(context).anonymousPeer
                           : item.peerNickname.substring(0, 1),
                     ),
                   ),
@@ -275,7 +276,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('已读状态同步失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).messageMarkReadFailed(error))));
       }
     }
   }
@@ -305,7 +306,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更早消息失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadEarlierMessagesFailed(error))));
       }
     } finally {
       if (mounted) setState(() => _loadingMore = false);
@@ -331,7 +332,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('发送失败：$e')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).sendFailed(e))));
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -346,7 +347,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (widget.conversation.id == 0) return;
         await widget.repository.reportConversation(
           widget.conversation.id,
-          '骚扰或不当内容',
+          AppLocalizations.of(context).harassmentOrInappropriate,
         );
       } else {
         final result = _blocked
@@ -359,8 +360,10 @@ class _ChatScreenState extends State<ChatScreen> {
           SnackBar(
             content: Text(
               value == 'report'
-                  ? '举报已提交'
-                  : (_blocked ? '已拉黑，双方无法继续发送' : '已解除拉黑'),
+                  ? AppLocalizations.of(context).reportSubmitted
+                  : (_blocked
+                      ? AppLocalizations.of(context).blockedBothWays
+                      : AppLocalizations.of(context).unblocked),
             ),
           ),
         );
@@ -369,7 +372,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('操作失败：$e')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).actionFailed(e))));
       }
     } finally {
       if (mounted) setState(() => _actionSaving = false);
@@ -391,10 +394,10 @@ class _ChatScreenState extends State<ChatScreen> {
           enabled: !_actionSaving,
           onSelected: _action,
           itemBuilder: (_) => [
-            const PopupMenuItem(value: 'report', child: Text('举报会话')),
+            PopupMenuItem(value: 'report', child: Text(AppLocalizations.of(context).reportConversation)),
             PopupMenuItem(
               value: 'block',
-              child: Text(_blocked ? '解除拉黑' : '拉黑用户'),
+              child: Text(_blocked ? AppLocalizations.of(context).unblockUser : AppLocalizations.of(context).blockUser),
             ),
           ],
         ),
@@ -410,13 +413,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('聊天记录加载失败：$_loadError', textAlign: TextAlign.center),
+                      Text(AppLocalizations.of(context).chatHistoryLoadFailed(_loadError!), textAlign: TextAlign.center),
                       const SizedBox(height: 12),
                       FilledButton.icon(
                         key: const Key('chat-history-retry'),
                         onPressed: _load,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('重新加载'),
+                        label: Text(AppLocalizations.of(context).reload),
                       ),
                     ],
                   ),
@@ -438,7 +441,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                 )
                               : const Icon(Icons.history),
-                          label: Text(_loadingMore ? '加载中...' : '加载更早消息'),
+                          label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadEarlierMessages),
                         ),
                       );
                     }
@@ -500,7 +503,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     minLines: 1,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: _blocked ? '已拉黑，解除后可继续发送' : '写点什么…',
+                      hintText: _blocked ? AppLocalizations.of(context).blockedComposerHint : AppLocalizations.of(context).messageHint,
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -520,7 +523,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.send_rounded),
-                  tooltip: '发送',
+                  tooltip: AppLocalizations.of(context).send,
                 ),
               ],
             ),

@@ -74,6 +74,13 @@ void main() {
       AppLocalizations.forTag('zh-CN').circleMeta(members: 3, posts: 5),
       '3 位成员 · 5 篇帖子',
     );
+    expect(AppLocalizations.forTag('en').directMessages, 'Messages');
+    expect(AppLocalizations.forTag('en').blockedUsers, 'Blocked users');
+    expect(AppLocalizations.forTag('zh-CN').unblockUser, '解除拉黑');
+    expect(
+      AppLocalizations.forTag('en').unblockedUser('Alex'),
+      'Unblocked Alex',
+    );
   });
 
   test('delegate supports every configured app locale', () async {

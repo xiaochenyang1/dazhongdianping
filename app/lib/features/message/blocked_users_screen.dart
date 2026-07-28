@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -30,7 +31,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('刷新黑名单失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).refreshBlockedUsersFailed(error))));
       }
     }
   }
@@ -72,7 +73,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('加载更多黑名单失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreBlockedUsersFailed(error))));
       }
     } finally {
       if (mounted && revision == _pageRevision) {
@@ -105,13 +106,13 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
         });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('已解除对 ${user.nickname} 的拉黑')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).unblockedUser(user.nickname))));
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('解除拉黑失败：$error')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).unblockFailed(error))));
       }
     } finally {
       if (mounted) setState(() => _unblocking.remove(user.id));
@@ -120,7 +121,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('黑名单管理')),
+    appBar: AppBar(title: Text(AppLocalizations.of(context).blockedUsers)),
     body: FutureBuilder<BlockedUserPage>(
       future: _page,
       builder: (context, snapshot) {
@@ -129,13 +130,13 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('黑名单加载失败：${snapshot.error}', textAlign: TextAlign.center),
+                Text(AppLocalizations.of(context).blockedUsersLoadFailed(snapshot.error!), textAlign: TextAlign.center),
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   key: const Key('blocked-users-retry'),
                   onPressed: _retryInitialLoad,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('重新加载'),
+                  label: Text(AppLocalizations.of(context).reload),
                 ),
               ],
             ),
@@ -156,9 +157,9 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, index) {
               if (page.items.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.only(top: 120),
-                  child: Center(child: Text('黑名单为空')),
+                return Padding(
+                  padding: const EdgeInsets.only(top: 120),
+                  child: Center(child: Text(AppLocalizations.of(context).blockedUsersEmpty)),
                 );
               }
               if (index == page.items.length) {
@@ -173,7 +174,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.expand_more),
-                      label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                      label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
                     ),
                   ),
                 );
@@ -183,23 +184,27 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                 leading: CircleAvatar(
                   child: Text(
                     user.nickname.isEmpty
-                        ? 'TA'
+                        ? AppLocalizations.of(context).anonymousPeer
                         : user.nickname.substring(0, 1),
                   ),
                 ),
                 title: Text(
-                  user.nickname.isEmpty ? '用户 ${user.id}' : user.nickname,
+                  user.nickname.isEmpty
+                      ? AppLocalizations.of(context).userFallback(user.id)
+                      : user.nickname,
                 ),
                 subtitle: user.blockedAt.isEmpty
                     ? null
-                    : Text('拉黑时间：${user.blockedAt}'),
+                    : Text(AppLocalizations.of(context).blockedAt(user.blockedAt)),
                 trailing: TextButton(
                   key: Key('blocked-user-unblock-${user.id}'),
                   onPressed: _unblocking.contains(user.id)
                       ? null
                       : () => _unblock(user),
                   child: Text(
-                    _unblocking.contains(user.id) ? '处理中...' : '解除拉黑',
+                    _unblocking.contains(user.id)
+                        ? AppLocalizations.of(context).processing
+                        : AppLocalizations.of(context).unblockUser,
                   ),
                 ),
               );
