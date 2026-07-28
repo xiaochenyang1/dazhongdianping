@@ -12,6 +12,7 @@ import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -150,11 +151,14 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${widget.region == AppRegion.eu ? 'Europe' : 'China'} · ${strings.homeTitle}',
+              '${widget.region == AppRegion.eu ? strings.europe : strings.china} · ${strings.homeTitle}',
             ),
-            const Text(
-              'Chinese-friendly places nearby',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            Text(
+              strings.homeSubtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+              ),
             ),
           ],
         ),
@@ -162,9 +166,15 @@ class _HomeScreenState extends State<HomeScreen> {
           PopupMenuButton<AppRegion>(
             initialValue: widget.region,
             onSelected: widget.onRegionChanged,
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: AppRegion.eu, child: Text('EU · Europe')),
-              PopupMenuItem(value: AppRegion.cn, child: Text('CN · China')),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: AppRegion.eu,
+                child: Text('EU · ${strings.europe}'),
+              ),
+              PopupMenuItem(
+                value: AppRegion.cn,
+                child: Text('CN · ${strings.china}'),
+              ),
             ],
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -180,23 +190,28 @@ class _HomeScreenState extends State<HomeScreen> {
               PopupMenuItem(value: 'en', child: Text('English')),
             ],
             icon: const Icon(Icons.language),
+            tooltip: strings.language,
           ),
           IconButton(
+            key: const Key('home-map-action'),
             onPressed: () {
-              final reason = widget.thirdPartyConfig.unavailableReason(
-                ThirdPartyFeature.maps,
-              );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(reason.isEmpty ? 'Google Maps 已配置' : reason),
+                  content: Text(
+                    widget.thirdPartyConfig.googleMapsEnabled
+                        ? strings.mapsConfigured
+                        : strings.mapsUnavailable,
+                  ),
                 ),
               );
             },
             icon: const Icon(Icons.map_outlined),
+            tooltip: strings.map,
           ),
           IconButton(
             key: const Key('home-notification-action'),
             onPressed: _openingNotifications ? null : _openNotifications,
+            tooltip: strings.notifications,
             icon: Badge(
               key: const Key('home-notification-badge'),
               isLabelVisible: _notificationUnreadCount > 0,
@@ -211,6 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             key: const Key('home-profile-action'),
             onPressed: () => widget.onProfileTap?.call(context),
+            tooltip: strings.account,
             icon: widget.currentUserLabel == null
                 ? const Icon(Icons.person_outline)
                 : CircleAvatar(
@@ -260,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ActionChip(
                     key: const Key('home-ranks-entry'),
                     avatar: const Icon(Icons.emoji_events_outlined, size: 18),
-                    label: const Text('城市榜单'),
+                    label: Text(strings.cityRankings),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => RankListScreen(
@@ -279,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ActionChip(
                     key: const Key('home-activities-entry'),
                     avatar: const Icon(Icons.campaign_outlined, size: 18),
-                    label: const Text('运营活动'),
+                    label: Text(strings.activities),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => ActivityListScreen(
@@ -315,10 +331,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   return Center(
                     child: Column(
                       children: [
-                        const Text('Could not load places'),
+                        Text(strings.placesLoadFailed),
                         TextButton(
                           onPressed: _retry,
-                          child: const Text('Retry'),
+                          child: Text(strings.retry),
                         ),
                       ],
                     ),
@@ -326,9 +342,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
                 final shops = snapshot.data ?? const [];
                 if (shops.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: Text('No places in this city yet')),
+                  return Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(child: Text(strings.noPlaces)),
                   );
                 }
                 return Column(
@@ -355,7 +371,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     : '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${shop.merchantCertificationLabel}',
                               ),
                               trailing: Text(
-                                '${shop.currency} ${shop.pricePerCapita}',
+                                formatMoney(
+                                  shop.pricePerCapita,
+                                  shop.currency,
+                                  locale: strings.tag,
+                                ),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -410,18 +430,18 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+          NavigationDestination(
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: strings.homeNavigation,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Explore',
+          NavigationDestination(
+            icon: const Icon(Icons.explore_outlined),
+            label: strings.exploreNavigation,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            label: 'Orders',
+          NavigationDestination(
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: strings.ordersNavigation,
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline),

@@ -25,6 +25,11 @@ class FakeBrowseRepository extends BrowseRepository {
   ];
 }
 
+class EmptyBrowseRepository extends BrowseRepository {
+  @override
+  Future<List<ShopSummary>> loadFeaturedShops() async => const [];
+}
+
 class RetryBrowseRepository extends BrowseRepository {
   int calls = 0;
 
@@ -129,9 +134,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Europe · Local life'), findsOneWidget);
     expect(find.text('London Hotpot'), findsOneWidget);
-    expect(find.text('GBP 35'), findsOneWidget);
-    expect(find.text('城市榜单'), findsOneWidget);
-    expect(find.text('运营活动'), findsOneWidget);
+    expect(find.text('£35.00'), findsOneWidget);
+    expect(find.text('City rankings'), findsOneWidget);
+    expect(find.text('Activities'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('Orders'), findsOneWidget);
   });
 
   testWidgets(
@@ -349,7 +357,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Orders'));
+    await tester.tap(find.text('订单'));
     await tester.pump();
     await tester.tap(find.text('我的'));
     await tester.pump();
@@ -371,9 +379,52 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Explore'));
+    await tester.tap(find.text('发现'));
     await tester.pumpAndSettle();
 
     expect(find.text('华人社区'), findsOneWidget);
+  });
+
+  testWidgets('Traditional Chinese home localizes navigation and empty state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          repository: EmptyBrowseRepository(),
+          localeTag: 'zh-TW',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('歐洲 · 在地生活'), findsOneWidget);
+    expect(find.text('探索附近更適合華人的好去處'), findsOneWidget);
+    expect(find.text('附近推薦'), findsOneWidget);
+    expect(find.text('目前城市暫無店家'), findsOneWidget);
+    expect(find.text('首頁'), findsOneWidget);
+    expect(find.text('探索'), findsOneWidget);
+    expect(find.text('訂單'), findsOneWidget);
+  });
+
+  testWidgets('English home explains unavailable maps in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(repository: FakeBrowseRepository(), localeTag: 'en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('home-map-action')));
+    await tester.pump();
+
+    expect(
+      find.text(
+        'Google Maps is not configured. City and list browsing remain available.',
+      ),
+      findsOneWidget,
+    );
   });
 }

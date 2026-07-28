@@ -19,6 +19,22 @@ class AppLocalizations {
     'searchHint': '搜索餐厅、超市和生活服务',
     'featured': '附近推荐',
     'profile': '我的',
+    'homeSubtitle': '发现附近更适合华人的好去处',
+    'europe': '欧洲',
+    'china': '中国',
+    'language': '切换语言',
+    'map': '地图',
+    'mapsConfigured': 'Google Maps 已配置',
+    'mapsUnavailable': 'Google Maps 未配置，仍可按城市和列表浏览。',
+    'notifications': '消息通知',
+    'account': '个人中心',
+    'cityRankings': '城市榜单',
+    'activities': '运营活动',
+    'placesLoadFailed': '附近门店加载失败',
+    'noPlaces': '当前城市暂无门店',
+    'homeNavigation': '首页',
+    'exploreNavigation': '发现',
+    'ordersNavigation': '订单',
     'searchTitle': '搜索结果',
     'searchSuggestionsLoading': '联想加载中...',
     'searchSuggestions': '搜索联想',
@@ -45,6 +61,22 @@ class AppLocalizations {
     'searchHint': '搜尋餐廳、超市和生活服務',
     'featured': '附近推薦',
     'profile': '我的',
+    'homeSubtitle': '探索附近更適合華人的好去處',
+    'europe': '歐洲',
+    'china': '中國',
+    'language': '切換語言',
+    'map': '地圖',
+    'mapsConfigured': 'Google Maps 已設定',
+    'mapsUnavailable': 'Google Maps 尚未設定，仍可依城市和列表瀏覽。',
+    'notifications': '訊息通知',
+    'account': '個人中心',
+    'cityRankings': '城市排行榜',
+    'activities': '精選活動',
+    'placesLoadFailed': '附近店家載入失敗',
+    'noPlaces': '目前城市暫無店家',
+    'homeNavigation': '首頁',
+    'exploreNavigation': '探索',
+    'ordersNavigation': '訂單',
     'searchTitle': '搜尋結果',
     'searchSuggestionsLoading': '聯想載入中...',
     'searchSuggestions': '搜尋聯想',
@@ -71,6 +103,23 @@ class AppLocalizations {
     'searchHint': 'Search restaurants, supermarkets and services',
     'featured': 'Featured near you',
     'profile': 'Me',
+    'homeSubtitle': 'Chinese-friendly places nearby',
+    'europe': 'Europe',
+    'china': 'China',
+    'language': 'Change language',
+    'map': 'Map',
+    'mapsConfigured': 'Google Maps is configured',
+    'mapsUnavailable':
+        'Google Maps is not configured. City and list browsing remain available.',
+    'notifications': 'Notifications',
+    'account': 'Profile',
+    'cityRankings': 'City rankings',
+    'activities': 'Activities',
+    'placesLoadFailed': 'Could not load nearby places',
+    'noPlaces': 'No places in this city yet',
+    'homeNavigation': 'Home',
+    'exploreNavigation': 'Explore',
+    'ordersNavigation': 'Orders',
     'searchTitle': 'Search results',
     'searchSuggestionsLoading': 'Loading suggestions...',
     'searchSuggestions': 'Suggestions',
@@ -126,6 +175,22 @@ class AppLocalizations {
   String get searchHint => _text('searchHint');
   String get featured => _text('featured');
   String get profile => _text('profile');
+  String get homeSubtitle => _text('homeSubtitle');
+  String get europe => _text('europe');
+  String get china => _text('china');
+  String get language => _text('language');
+  String get map => _text('map');
+  String get mapsConfigured => _text('mapsConfigured');
+  String get mapsUnavailable => _text('mapsUnavailable');
+  String get notifications => _text('notifications');
+  String get account => _text('account');
+  String get cityRankings => _text('cityRankings');
+  String get activities => _text('activities');
+  String get placesLoadFailed => _text('placesLoadFailed');
+  String get noPlaces => _text('noPlaces');
+  String get homeNavigation => _text('homeNavigation');
+  String get exploreNavigation => _text('exploreNavigation');
+  String get ordersNavigation => _text('ordersNavigation');
   String get searchTitle => _text('searchTitle');
   String get searchSuggestionsLoading => _text('searchSuggestionsLoading');
   String get searchSuggestions => _text('searchSuggestions');
