@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.module.admin.dashboard.service;
 
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
 import com.tuowei.dazhongdianping.common.admin.AdminSession;
 import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
@@ -46,11 +47,19 @@ public class AdminDashboardService {
         AdminSession session = currentAdmin();
         String region = RegionContext.getRegion().name();
         Set<String> permissions = session.permissions();
+        AdminCityScope scope = session.cityScopes().getOrDefault(
+                region, new AdminCityScope(false, Set.of(), Set.of()));
 
-        long shopCount = permissions.contains("data:shop:read") ? mapper.countShops(region) : 0L;
+        long shopCount = permissions.contains("data:shop:read")
+                ? mapper.countShops(region, scope.allCities(), scope.cityIds(), scope.shopIds())
+                : 0L;
         long importBatchCount = permissions.contains("data:import_batch:read") ? mapper.countImportBatches(region) : 0L;
-        long paidOrderCount = permissions.contains("data:order:read") ? mapper.countPaidOrders(region) : 0L;
-        long pendingRefundCount = permissions.contains("data:order:read") ? mapper.countPendingRefunds(region) : 0L;
+        long paidOrderCount = permissions.contains("data:order:read")
+                ? mapper.countPaidOrders(region, scope.allCities(), scope.cityIds(), scope.shopIds())
+                : 0L;
+        long pendingRefundCount = permissions.contains("data:order:read")
+                ? mapper.countPendingRefunds(region, scope.allCities(), scope.cityIds(), scope.shopIds())
+                : 0L;
         long userCount = permissions.contains("system:user:read") ? mapper.countUsers() : 0L;
 
         List<Integer> allowedBizTypes = new ArrayList<>();

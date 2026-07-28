@@ -4,11 +4,33 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.tuowei.dazhongdianping.module.admin.dashboard.mapper.AdminDashboardMapper">
 
+    <sql id="shopDataScope">
+        <if test="allCities == false">
+            AND (
+            <if test="cityIds != null and !cityIds.isEmpty()">
+                s.city_id IN
+                <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">
+                    #{cityId}
+                </foreach>
+            </if>
+            <if test="cityIds != null and !cityIds.isEmpty() and shopIds != null and !shopIds.isEmpty()"> OR </if>
+            <if test="shopIds != null and !shopIds.isEmpty()">
+                s.id IN
+                <foreach collection="shopIds" item="shopId" open="(" separator="," close=")">
+                    #{shopId}
+                </foreach>
+            </if>
+            <if test="(cityIds == null or cityIds.isEmpty()) and (shopIds == null or shopIds.isEmpty())">1 = 0</if>
+            )
+        </if>
+    </sql>
+
     <select id="countShops" resultType="long">
         SELECT COUNT(1)
-        FROM shop
-        WHERE region = #{region}
-          AND is_deleted = FALSE
+        FROM shop s
+        WHERE s.region = #{region}
+          AND s.is_deleted = FALSE
+        <include refid="shopDataScope"/>
     </select>
 
     <select id="countImportBatches" resultType="long">
@@ -19,17 +41,21 @@
 
     <select id="countPaidOrders" resultType="long">
         SELECT COUNT(1)
-        FROM `order`
-        WHERE region = #{region}
-          AND pay_status = 1
+        FROM `order` o
+        JOIN shop s ON s.id = o.shop_id AND s.region = #{region} AND s.is_deleted = FALSE
+        WHERE o.region = #{region}
+          AND o.pay_status = 1
+        <include refid="shopDataScope"/>
     </select>
 
     <select id="countPendingRefunds" resultType="long">
         SELECT COUNT(1)
         FROM refund r
         JOIN `order` o ON o.id = r.order_id
+        JOIN shop s ON s.id = o.shop_id AND s.region = #{region} AND s.is_deleted = FALSE
         WHERE o.region = #{region}
           AND r.status = 0
+        <include refid="shopDataScope"/>
     </select>
 
     <select id="countPendingAuditTasks" resultType="long">
