@@ -364,6 +364,71 @@ class AppLocalizations {
     'spendAndTags': '消费与标签',
     'spendTagsHint': '金额用于人均参考；多个标签请用逗号分隔。',
     'enterNonNegativeAmount': '请输入不小于 0 的金额',
+    'loginTitle': '登录大众点评',
+    'loginHero': '连接欧洲华人生活',
+    'loginSubtitle': '邮箱和手机号都能登录，别整第三方登录套娃。',
+    'passwordLogin': '密码登录',
+    'codeLogin': '验证码登录',
+    'emailOrPhone': '邮箱或手机号',
+    'password': '密码',
+    'verificationCode': '验证码',
+    'sendingCode': '发送中...',
+    'sendCode': '发送验证码',
+    'enterEmailOrPhone': '请输入邮箱或手机号',
+    'enterEmailOrPhoneFirst': '先输入邮箱或手机号',
+    'codeSent': '验证码已发送',
+    'localCodeHint': '本地验证码：{code}',
+    'accountBannedHint': '账号 {account} 当前处于封禁状态。如果认为是误封，可以提交申诉，运营复核通过后会自动解封。',
+    'submitBanAppeal': '提交封禁申诉',
+    'loginSuccess': '登录成功',
+    'loggingIn': '登录中...',
+    'login': '登录',
+    'registerAccount': '注册账号',
+    'passwordResetPleaseLogin': '密码已重置，请使用新密码登录',
+    'forgotPassword': '忘记密码',
+    'banAppeal': '封禁申诉',
+    'registerTitle': '注册账号',
+    'registerSubtitle': '邮箱或手机号都能注册，验证码只用于本次注册。',
+    'nicknameOptional': '昵称（可选）',
+    'registerCode': '注册验证码',
+    'setPassword': '设置密码',
+    'registering': '注册中...',
+    'registerAndLogin': '注册并登录',
+    'resetPasswordTitle': '找回密码',
+    'resetPasswordSubtitle': '用当前绑定邮箱或手机号验证身份，重置后再返回登录。',
+    'resetCode': '重置验证码',
+    'newPassword': '新密码',
+    'confirmNewPassword': '确认新密码',
+    'resetting': '重置中...',
+    'resetPassword': '重置密码',
+    'banAppealTitle': '封禁申诉',
+    'banAppealHero': '账号被封后的自助申诉入口',
+    'banAppealSubtitle': '用当前绑定邮箱或手机号验证身份。运营复核通过后会自动解封，再回登录页继续使用。',
+    'appealCode': '申诉验证码',
+    'appealReasonMin10': '申诉理由（至少 10 个字）',
+    'banReasonLabel': '封禁原因：{value}',
+    'appealContentLabel': '申诉内容：{value}',
+    'rejectReasonLabel': '驳回说明：{value}',
+    'submittedAtLabel': '提交时间：{value}',
+    'processedAtLabel': '处理时间：{value}',
+    'submittingAppeal': '提交中...',
+    'submitAppeal': '提交申诉',
+    'querying': '查询中...',
+    'queryAppealProgress': '查询申诉进度',
+    'backToLogin': '返回登录',
+    'codeSentRetry': '验证码已发送，{seconds} 秒后可重发',
+    'fillAccountCodePassword': '账号、验证码和密码都得填',
+    'fillAccountCodeNewPassword': '账号、验证码和新密码都得填',
+    'passwordsDoNotMatch': '两次输入的新密码对不上',
+    'registerHero': '加入欧洲华人生活圈',
+    'resetPasswordHero': '重新设置登录密码',
+    'fillAccountAndCodeBeforeAppeal': '先填好账号和验证码，再提交申诉',
+    'appealReasonTooShort': '申诉理由至少写 10 个字，把误封的情况说清楚',
+    'appealSubmitted': '申诉 #{id} 已提交，运营会尽快复核',
+    'queryNeedsAccountAndCode': '查询进度也需要账号和一条新的验证码',
+    'appealProgressRefreshed': '已刷新申诉 #{id} 的最新进度',
+    'appealStatusTitle': '申诉 #{id} · {status}',
+    'appealApprovedHint': '申诉已通过，账号已解封。请返回登录页继续使用。',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -715,6 +780,71 @@ class AppLocalizations {
     'spendAndTags': '消費與標籤',
     'spendTagsHint': '金額用於人均參考；多個標籤請用逗號分隔。',
     'enterNonNegativeAmount': '請輸入不小於 0 的金額',
+    'loginTitle': '登入大眾點評',
+    'loginHero': '連接歐洲華人生活',
+    'loginSubtitle': '信箱和手機號都能登入，別整第三方登入套娃。',
+    'passwordLogin': '密碼登入',
+    'codeLogin': '驗證碼登入',
+    'emailOrPhone': '信箱或手機號',
+    'password': '密碼',
+    'verificationCode': '驗證碼',
+    'sendingCode': '發送中...',
+    'sendCode': '發送驗證碼',
+    'enterEmailOrPhone': '請輸入信箱或手機號',
+    'enterEmailOrPhoneFirst': '先輸入信箱或手機號',
+    'codeSent': '驗證碼已發送',
+    'localCodeHint': '本地驗證碼：{code}',
+    'accountBannedHint': '帳號 {account} 目前處於封禁狀態。如果認為是誤封，可以提交申訴，運營覆核通過後會自動解封。',
+    'submitBanAppeal': '提交封禁申訴',
+    'loginSuccess': '登入成功',
+    'loggingIn': '登入中...',
+    'login': '登入',
+    'registerAccount': '註冊帳號',
+    'passwordResetPleaseLogin': '密碼已重設，請使用新密碼登入',
+    'forgotPassword': '忘記密碼',
+    'banAppeal': '封禁申訴',
+    'registerTitle': '註冊帳號',
+    'registerSubtitle': '信箱或手機號都能註冊，驗證碼只用於本次註冊。',
+    'nicknameOptional': '暱稱（可選）',
+    'registerCode': '註冊驗證碼',
+    'setPassword': '設定密碼',
+    'registering': '註冊中...',
+    'registerAndLogin': '註冊並登入',
+    'resetPasswordTitle': '找回密碼',
+    'resetPasswordSubtitle': '用目前綁定信箱或手機號驗證身份，重設後再返回登入。',
+    'resetCode': '重設驗證碼',
+    'newPassword': '新密碼',
+    'confirmNewPassword': '確認新密碼',
+    'resetting': '重設中...',
+    'resetPassword': '重設密碼',
+    'banAppealTitle': '封禁申訴',
+    'banAppealHero': '帳號被封後的自助申訴入口',
+    'banAppealSubtitle': '用目前綁定信箱或手機號驗證身份。運營覆核通過後會自動解封，再回登入頁繼續使用。',
+    'appealCode': '申訴驗證碼',
+    'appealReasonMin10': '申訴理由（至少 10 個字）',
+    'banReasonLabel': '封禁原因：{value}',
+    'appealContentLabel': '申訴內容：{value}',
+    'rejectReasonLabel': '駁回說明：{value}',
+    'submittedAtLabel': '提交時間：{value}',
+    'processedAtLabel': '處理時間：{value}',
+    'submittingAppeal': '提交中...',
+    'submitAppeal': '提交申訴',
+    'querying': '查詢中...',
+    'queryAppealProgress': '查詢申訴進度',
+    'backToLogin': '返回登入',
+    'codeSentRetry': '驗證碼已發送，{seconds} 秒後可重發',
+    'fillAccountCodePassword': '帳號、驗證碼和密碼都得填',
+    'fillAccountCodeNewPassword': '帳號、驗證碼和新密碼都得填',
+    'passwordsDoNotMatch': '兩次輸入的新密碼對不上',
+    'registerHero': '加入歐洲華人生活圈',
+    'resetPasswordHero': '重新設定登入密碼',
+    'fillAccountAndCodeBeforeAppeal': '先填好帳號和驗證碼，再提交申訴',
+    'appealReasonTooShort': '申訴理由至少寫 10 個字，把誤封的情況說清楚',
+    'appealSubmitted': '申訴 #{id} 已提交，運營會盡快覆核',
+    'queryNeedsAccountAndCode': '查詢進度也需要帳號和一條新的驗證碼',
+    'appealProgressRefreshed': '已刷新申訴 #{id} 的最新進度',
+    'appealStatusTitle': '申訴 #{id} · {status}',
+    'appealApprovedHint': '申訴已通過，帳號已解封。請返回登入頁繼續使用。',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -1077,6 +1207,77 @@ class AppLocalizations {
     'spendAndTags': 'Spend and tags',
     'spendTagsHint': 'Amount helps average spend. Separate tags with commas.',
     'enterNonNegativeAmount': 'Enter an amount of 0 or more',
+    'loginTitle': 'Sign in to Dianping',
+    'loginHero': 'Chinese local life in Europe',
+    'loginSubtitle': 'Sign in with email or phone. No third-party login maze.',
+    'passwordLogin': 'Password',
+    'codeLogin': 'Code',
+    'emailOrPhone': 'Email or phone',
+    'password': 'Password',
+    'verificationCode': 'Verification code',
+    'sendingCode': 'Sending...',
+    'sendCode': 'Send code',
+    'enterEmailOrPhone': 'Enter email or phone',
+    'enterEmailOrPhoneFirst': 'Enter email or phone first',
+    'codeSent': 'Code sent',
+    'localCodeHint': 'Local code: {code}',
+    'accountBannedHint':
+        'Account {account} is banned. If this looks wrong, submit an appeal. Approval auto-unbans you.',
+    'submitBanAppeal': 'Submit ban appeal',
+    'loginSuccess': 'Signed in',
+    'loggingIn': 'Signing in...',
+    'login': 'Sign in',
+    'registerAccount': 'Create account',
+    'passwordResetPleaseLogin': 'Password reset. Sign in with the new password.',
+    'forgotPassword': 'Forgot password',
+    'banAppeal': 'Ban appeal',
+    'registerTitle': 'Create account',
+    'registerSubtitle':
+        'Register with email or phone. The code is only for this registration.',
+    'nicknameOptional': 'Nickname (optional)',
+    'registerCode': 'Registration code',
+    'setPassword': 'Set password',
+    'registering': 'Creating...',
+    'registerAndLogin': 'Register and sign in',
+    'resetPasswordTitle': 'Reset password',
+    'resetPasswordSubtitle':
+        'Verify your bound email or phone, then return to sign in.',
+    'resetCode': 'Reset code',
+    'newPassword': 'New password',
+    'confirmNewPassword': 'Confirm new password',
+    'resetting': 'Resetting...',
+    'resetPassword': 'Reset password',
+    'banAppealTitle': 'Ban appeal',
+    'banAppealHero': 'Self-service appeal after a ban',
+    'banAppealSubtitle':
+        'Verify with your bound email or phone. Approval auto-unbans you so you can sign in again.',
+    'appealCode': 'Appeal code',
+    'appealReasonMin10': 'Appeal reason (at least 10 characters)',
+    'banReasonLabel': 'Ban reason: {value}',
+    'appealContentLabel': 'Appeal: {value}',
+    'rejectReasonLabel': 'Rejection note: {value}',
+    'submittedAtLabel': 'Submitted: {value}',
+    'processedAtLabel': 'Processed: {value}',
+    'submittingAppeal': 'Submitting...',
+    'submitAppeal': 'Submit appeal',
+    'querying': 'Checking...',
+    'queryAppealProgress': 'Check appeal status',
+    'backToLogin': 'Back to sign in',
+    'codeSentRetry': 'Code sent. Retry in {seconds}s',
+    'fillAccountCodePassword': 'Account, code and password are required',
+    'fillAccountCodeNewPassword': 'Account, code and new password are required',
+    'passwordsDoNotMatch': 'New passwords do not match',
+    'registerHero': 'Join Chinese local life in Europe',
+    'resetPasswordHero': 'Set a new sign-in password',
+    'fillAccountAndCodeBeforeAppeal': 'Fill account and code before submitting',
+    'appealReasonTooShort':
+        'Write at least 10 characters explaining the mistaken ban',
+    'appealSubmitted': 'Appeal #{id} submitted. Ops will review soon',
+    'queryNeedsAccountAndCode': 'Progress checks also need account and a fresh code',
+    'appealProgressRefreshed': 'Refreshed progress for appeal #{id}',
+    'appealStatusTitle': 'Appeal #{id} · {status}',
+    'appealApprovedHint':
+        'Appeal approved and account unbanned. Return to sign in.',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -1612,6 +1813,87 @@ class AppLocalizations {
   String get spendAndTags => _text('spendAndTags');
   String get spendTagsHint => _text('spendTagsHint');
   String get enterNonNegativeAmount => _text('enterNonNegativeAmount');
+
+  String get loginTitle => _text('loginTitle');
+  String get loginHero => _text('loginHero');
+  String get loginSubtitle => _text('loginSubtitle');
+  String get passwordLogin => _text('passwordLogin');
+  String get codeLogin => _text('codeLogin');
+  String get emailOrPhone => _text('emailOrPhone');
+  String get password => _text('password');
+  String get verificationCode => _text('verificationCode');
+  String get sendingCode => _text('sendingCode');
+  String get sendCode => _text('sendCode');
+  String get enterEmailOrPhone => _text('enterEmailOrPhone');
+  String get enterEmailOrPhoneFirst => _text('enterEmailOrPhoneFirst');
+  String get codeSent => _text('codeSent');
+  String localCodeHint(String code) =>
+      _text('localCodeHint').replaceFirst('{code}', code);
+  String accountBannedHint(String account) =>
+      _text('accountBannedHint').replaceFirst('{account}', account);
+  String get submitBanAppeal => _text('submitBanAppeal');
+  String get loginSuccess => _text('loginSuccess');
+  String get loggingIn => _text('loggingIn');
+  String get login => _text('login');
+  String get registerAccount => _text('registerAccount');
+  String get passwordResetPleaseLogin => _text('passwordResetPleaseLogin');
+  String get forgotPassword => _text('forgotPassword');
+  String get banAppeal => _text('banAppeal');
+  String get registerTitle => _text('registerTitle');
+  String get registerSubtitle => _text('registerSubtitle');
+  String get nicknameOptional => _text('nicknameOptional');
+  String get registerCode => _text('registerCode');
+  String get setPassword => _text('setPassword');
+  String get registering => _text('registering');
+  String get registerAndLogin => _text('registerAndLogin');
+  String get resetPasswordTitle => _text('resetPasswordTitle');
+  String get resetPasswordSubtitle => _text('resetPasswordSubtitle');
+  String get resetCode => _text('resetCode');
+  String get newPassword => _text('newPassword');
+  String get confirmNewPassword => _text('confirmNewPassword');
+  String get resetting => _text('resetting');
+  String get resetPassword => _text('resetPassword');
+  String get banAppealTitle => _text('banAppealTitle');
+  String get banAppealHero => _text('banAppealHero');
+  String get banAppealSubtitle => _text('banAppealSubtitle');
+  String get appealCode => _text('appealCode');
+  String get appealReasonMin10 => _text('appealReasonMin10');
+  String banReasonLabel(String value) =>
+      _text('banReasonLabel').replaceFirst('{value}', value);
+  String appealContentLabel(String value) =>
+      _text('appealContentLabel').replaceFirst('{value}', value);
+  String rejectReasonLabel(String value) =>
+      _text('rejectReasonLabel').replaceFirst('{value}', value);
+  String submittedAtLabel(String value) =>
+      _text('submittedAtLabel').replaceFirst('{value}', value);
+  String processedAtLabel(String value) =>
+      _text('processedAtLabel').replaceFirst('{value}', value);
+  String get submittingAppeal => _text('submittingAppeal');
+  String get submitAppeal => _text('submitAppeal');
+  String get querying => _text('querying');
+  String get queryAppealProgress => _text('queryAppealProgress');
+  String get backToLogin => _text('backToLogin');
+
+  String codeSentRetry(int seconds) =>
+      _text('codeSentRetry').replaceFirst('{seconds}', '$seconds');
+  String get fillAccountCodePassword => _text('fillAccountCodePassword');
+  String get fillAccountCodeNewPassword => _text('fillAccountCodeNewPassword');
+  String get passwordsDoNotMatch => _text('passwordsDoNotMatch');
+  String get registerHero => _text('registerHero');
+  String get resetPasswordHero => _text('resetPasswordHero');
+  String get fillAccountAndCodeBeforeAppeal =>
+      _text('fillAccountAndCodeBeforeAppeal');
+  String get appealReasonTooShort => _text('appealReasonTooShort');
+  String appealSubmitted(int id) =>
+      _text('appealSubmitted').replaceFirst('{id}', '$id');
+  String get queryNeedsAccountAndCode => _text('queryNeedsAccountAndCode');
+  String appealProgressRefreshed(int id) =>
+      _text('appealProgressRefreshed').replaceFirst('{id}', '$id');
+  String appealStatusTitle({required int id, required String status}) =>
+      _text('appealStatusTitle')
+          .replaceFirst('{id}', '$id')
+          .replaceFirst('{status}', status);
+  String get appealApprovedHint => _text('appealApprovedHint');
   String statusWithRedeemability(String status, bool usable) =>
       '$status · ${usable ? redeemable : notRedeemable}';
 }

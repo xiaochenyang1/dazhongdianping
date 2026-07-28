@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/auth/reset_password_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ResetScreenApi implements JsonApi {
@@ -42,6 +44,24 @@ class ResetScreenApi implements JsonApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('reset password screen sends a reset verification code', (
     tester,
@@ -52,7 +72,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ResetPasswordScreen(controller: controller, onReset: () {}),
       ),
     );
@@ -84,7 +104,7 @@ void main() {
     );
     var reset = false;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ResetPasswordScreen(
           controller: controller,
           onReset: () => reset = true,
@@ -127,7 +147,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ResetPasswordScreen(controller: controller, onReset: () {}),
       ),
     );
@@ -161,7 +181,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ResetPasswordScreen(controller: controller, onReset: () {}),
       ),
     );
@@ -187,7 +207,7 @@ void main() {
     );
     var resetCalls = 0;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: ResetPasswordScreen(
           controller: controller,
           onReset: () => resetCalls++,

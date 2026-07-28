@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/auth/ban_appeal_screen.dart';
@@ -50,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (widget.controller.busy) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => localError = '请输入邮箱或手机号');
+      setState(() => localError = AppLocalizations.of(context).enterEmailOrPhone);
       return;
     }
     try {
@@ -89,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => localError = '先输入邮箱或手机号');
+      setState(() => localError = AppLocalizations.of(context).enterEmailOrPhoneFirst);
       return;
     }
     setState(() => sendingCode = true);
@@ -101,8 +102,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() {
           codeHint = result.mockCode.isEmpty
-              ? '验证码已发送'
-              : '本地验证码：${result.mockCode}';
+              ? AppLocalizations.of(context).codeSent
+              : AppLocalizations.of(context).localCodeHint(result.mockCode);
           localError = null;
         });
       }
@@ -127,24 +128,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('登录大众点评')),
+      appBar: AppBar(title: Text(strings.loginTitle)),
       body: AnimatedBuilder(
         animation: widget.controller,
         builder: (context, _) => ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            const Text(
-              '连接欧洲华人生活',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            Text(
+              strings.loginHero,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text('邮箱和手机号都能登录，别整第三方登录套娃。'),
+            Text(strings.loginSubtitle),
             const SizedBox(height: 24),
             SegmentedButton<LoginMode>(
-              segments: const [
-                ButtonSegment(value: LoginMode.password, label: Text('密码登录')),
-                ButtonSegment(value: LoginMode.code, label: Text('验证码登录')),
+              segments: [
+                ButtonSegment(value: LoginMode.password, label: Text(strings.passwordLogin)),
+                ButtonSegment(value: LoginMode.code, label: Text(strings.codeLogin)),
               ],
               selected: {mode},
               onSelectionChanged: (values) =>
@@ -155,9 +157,9 @@ class _LoginScreenState extends State<LoginScreen> {
               key: const Key('login-account'),
               controller: accountController,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: '邮箱或手机号',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: strings.emailOrPhone,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -166,9 +168,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 key: const Key('login-password'),
                 controller: passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: '密码',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: strings.password,
+                  border: const OutlineInputBorder(),
                 ),
               )
             else ...[
@@ -177,11 +179,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: codeController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: '验证码',
+                  labelText: strings.verificationCode,
                   border: const OutlineInputBorder(),
                   suffixIcon: TextButton(
                     onPressed: sendingCode ? null : sendCode,
-                    child: Text(sendingCode ? '发送中...' : '发送验证码'),
+                    child: Text(sendingCode ? strings.sendingCode : strings.sendCode),
                   ),
                 ),
               ),
@@ -210,14 +212,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '账号 $bannedAccount 当前处于封禁状态。如果认为是误封，可以提交申诉，运营复核通过后会自动解封。',
-                        ),
+                        Text(strings.accountBannedHint(bannedAccount!)),
                         const SizedBox(height: 12),
                         FilledButton.tonal(
                           key: const Key('login-open-ban-appeal'),
                           onPressed: openBanAppeal,
-                          child: const Text('提交封禁申诉'),
+                          child: Text(strings.submitBanAppeal),
                         ),
                       ],
                     ),
@@ -225,14 +225,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             if (success)
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: Text('登录成功', style: TextStyle(color: Colors.green)),
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(strings.loginSuccess, style: const TextStyle(color: Colors.green)),
               ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: widget.controller.busy ? null : submit,
-              child: Text(widget.controller.busy ? '登录中...' : '登录'),
+              child: Text(widget.controller.busy ? strings.loggingIn : strings.login),
             ),
             const SizedBox(height: 12),
             TextButton(
@@ -247,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              child: const Text('注册账号'),
+              child: Text(strings.registerAccount),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
@@ -257,19 +257,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     onReset: () {
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('密码已重置，请使用新密码登录')),
+                        SnackBar(content: Text(AppLocalizations.of(context).passwordResetPleaseLogin)),
                       );
                     },
                   ),
                 ),
               ),
-              child: const Text('忘记密码'),
+              child: Text(strings.forgotPassword),
             ),
             TextButton(
               key: const Key('login-ban-appeal-entry'),
               onPressed: () =>
                   openBanAppeal(account: accountController.text.trim()),
-              child: const Text('封禁申诉'),
+              child: Text(strings.banAppeal),
             ),
           ],
         ),

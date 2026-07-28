@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -41,7 +42,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => errorMessage = '先输入邮箱或手机号');
+      setState(() => errorMessage = AppLocalizations.of(context).enterEmailOrPhoneFirst);
       return;
     }
     setState(() {
@@ -57,8 +58,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (mounted) {
         setState(() {
           codeHint = result.mockCode.isEmpty
-              ? '验证码已发送，${result.nextRetrySeconds} 秒后可重发'
-              : '本地验证码：${result.mockCode}';
+              ? AppLocalizations.of(context).codeSentRetry(result.nextRetrySeconds)
+              : AppLocalizations.of(context).localCodeHint(result.mockCode);
         });
       }
     } catch (error) {
@@ -74,11 +75,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final code = codeController.text.trim();
     final password = passwordController.text;
     if (account.isEmpty || code.isEmpty || password.isEmpty) {
-      setState(() => errorMessage = '账号、验证码和新密码都得填');
+      setState(() => errorMessage = AppLocalizations.of(context).fillAccountCodeNewPassword);
       return;
     }
     if (password != confirmPasswordController.text) {
-      setState(() => errorMessage = '两次输入的新密码对不上');
+      setState(() => errorMessage = AppLocalizations.of(context).passwordsDoNotMatch);
       return;
     }
     setState(() {
@@ -102,24 +103,25 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('找回密码')),
+      appBar: AppBar(title: Text(strings.resetPasswordTitle)),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Text(
-            '重新设置登录密码',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+          Text(
+            strings.resetPasswordHero,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          const Text('用当前绑定邮箱或手机号验证身份，重置后再返回登录。'),
+          Text(strings.resetPasswordSubtitle),
           const SizedBox(height: 24),
           TextField(
             key: const Key('reset-account'),
             controller: accountController,
-            decoration: const InputDecoration(
-              labelText: '邮箱或手机号',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: strings.emailOrPhone,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -128,11 +130,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             controller: codeController,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
-              labelText: '重置验证码',
+              labelText: strings.resetCode,
               border: const OutlineInputBorder(),
               suffixIcon: TextButton(
                 onPressed: sendingCode ? null : sendCode,
-                child: Text(sendingCode ? '发送中...' : '发送验证码'),
+                child: Text(sendingCode ? strings.sendingCode : strings.sendCode),
               ),
             ),
           ),
@@ -141,9 +143,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             key: const Key('reset-password'),
             controller: passwordController,
             obscureText: true,
-            decoration: const InputDecoration(
-              labelText: '新密码',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: strings.newPassword,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -151,9 +153,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             key: const Key('reset-confirm-password'),
             controller: confirmPasswordController,
             obscureText: true,
-            decoration: const InputDecoration(
-              labelText: '确认新密码',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: strings.confirmNewPassword,
+              border: const OutlineInputBorder(),
             ),
           ),
           if (codeHint != null) ...[const SizedBox(height: 8), Text(codeHint!)],
@@ -164,7 +166,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           const SizedBox(height: 20),
           FilledButton(
             onPressed: submitting ? null : submit,
-            child: Text(submitting ? '重置中...' : '重置密码'),
+            child: Text(submitting ? strings.resetting : strings.resetPassword),
           ),
         ],
       ),

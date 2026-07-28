@@ -91,6 +91,9 @@ void main() {
     expect(AppLocalizations.forTag('en').writeReview, 'Write a review');
     expect(AppLocalizations.forTag('en').reviewDetail, 'Review details');
     expect(AppLocalizations.forTag('zh-CN').like, '点赞');
+    expect(AppLocalizations.forTag('en').login, 'Sign in');
+    expect(AppLocalizations.forTag('en').registerAccount, 'Create account');
+    expect(AppLocalizations.forTag('zh-CN').banAppeal, '封禁申诉');
   });
 
   test('delegate supports every configured app locale', () async {

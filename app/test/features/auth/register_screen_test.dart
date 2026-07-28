@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/auth/register_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class RegisterScreenApi implements JsonApi {
@@ -51,6 +53,24 @@ class RegisterScreenApi implements JsonApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('register screen sends a register verification code', (
     tester,
@@ -61,7 +81,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: RegisterScreen(controller: controller, onAuthenticated: (_) {}),
       ),
     );
@@ -93,7 +113,7 @@ void main() {
     );
     AuthUser? authenticated;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: RegisterScreen(
           controller: controller,
           onAuthenticated: (user) => authenticated = user,
@@ -131,7 +151,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: RegisterScreen(controller: controller, onAuthenticated: (_) {}),
       ),
     );
@@ -156,7 +176,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: RegisterScreen(controller: controller, onAuthenticated: (_) {}),
       ),
     );

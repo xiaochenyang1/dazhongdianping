@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/auth/login_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class LoginFakeApi implements JsonApi {
@@ -57,6 +59,24 @@ class LoginFakeApi implements JsonApi {
   }
 }
 
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('password login closes screen with authenticated user', (
     tester,
@@ -67,7 +87,7 @@ void main() {
     );
     AuthUser? result;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: LoginScreen(
           controller: controller,
           onAuthenticated: (user) => result = user,
@@ -96,7 +116,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: LoginScreen(controller: controller, onAuthenticated: (_) {}),
       ),
     );
@@ -113,7 +133,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: LoginScreen(controller: controller, onAuthenticated: (_) {}),
       ),
     );
@@ -132,7 +152,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: LoginScreen(controller: controller, onAuthenticated: (_) {}),
       ),
     );
@@ -171,7 +191,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: LoginScreen(controller: controller, onAuthenticated: (_) {}),
       ),
     );
@@ -191,7 +211,7 @@ void main() {
       store: MemorySessionStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: LoginScreen(controller: controller, onAuthenticated: (_) {}),
       ),
     );
@@ -220,7 +240,7 @@ void main() {
     );
     var authenticatedCalls = 0;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedApp(
         home: LoginScreen(
           controller: controller,
           onAuthenticated: (_) => authenticatedCalls++,

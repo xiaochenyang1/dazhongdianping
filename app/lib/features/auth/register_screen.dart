@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:flutter/material.dart';
@@ -42,7 +43,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => errorMessage = '先输入邮箱或手机号');
+      setState(() => errorMessage = AppLocalizations.of(context).enterEmailOrPhoneFirst);
       return;
     }
     setState(() {
@@ -58,8 +59,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         setState(() {
           codeHint = result.mockCode.isEmpty
-              ? '验证码已发送，${result.nextRetrySeconds} 秒后可重发'
-              : '本地验证码：${result.mockCode}';
+              ? AppLocalizations.of(context).codeSentRetry(result.nextRetrySeconds)
+              : AppLocalizations.of(context).localCodeHint(result.mockCode);
         });
       }
     } catch (error) {
@@ -75,7 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final code = codeController.text.trim();
     final password = passwordController.text;
     if (account.isEmpty || code.isEmpty || password.isEmpty) {
-      setState(() => errorMessage = '账号、验证码和密码都得填');
+      setState(() => errorMessage = AppLocalizations.of(context).fillAccountCodePassword);
       return;
     }
     setState(() {
@@ -102,34 +103,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('注册账号')),
+      appBar: AppBar(title: Text(strings.registerTitle)),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Text(
-            '加入欧洲华人生活圈',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+          Text(
+            strings.registerHero,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          const Text('邮箱或手机号都能注册，验证码只用于本次注册。'),
+          Text(strings.registerSubtitle),
           const SizedBox(height: 24),
           TextField(
             key: const Key('register-account'),
             controller: accountController,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: '邮箱或手机号',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: strings.emailOrPhone,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             key: const Key('register-nickname'),
             controller: nicknameController,
-            decoration: const InputDecoration(
-              labelText: '昵称（可选）',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: strings.nicknameOptional,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -138,11 +140,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             controller: codeController,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
-              labelText: '注册验证码',
+              labelText: strings.registerCode,
               border: const OutlineInputBorder(),
               suffixIcon: TextButton(
                 onPressed: sendingCode ? null : sendCode,
-                child: Text(sendingCode ? '发送中...' : '发送验证码'),
+                child: Text(sendingCode ? strings.sendingCode : strings.sendCode),
               ),
             ),
           ),
@@ -151,9 +153,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             key: const Key('register-password'),
             controller: passwordController,
             obscureText: true,
-            decoration: const InputDecoration(
-              labelText: '设置密码',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: strings.setPassword,
+              border: const OutlineInputBorder(),
             ),
           ),
           if (codeHint != null) ...[const SizedBox(height: 8), Text(codeHint!)],
@@ -164,7 +166,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 20),
           FilledButton(
             onPressed: submitting ? null : submit,
-            child: Text(submitting ? '注册中...' : '注册并登录'),
+            child: Text(submitting ? strings.registering : strings.registerAndLogin),
           ),
         ],
       ),

@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:flutter/material.dart';
@@ -48,7 +49,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
     if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => errorMessage = '先输入邮箱或手机号');
+      setState(() => errorMessage = AppLocalizations.of(context).enterEmailOrPhoneFirst);
       return;
     }
     setState(() {
@@ -65,8 +66,8 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
       if (!mounted) return;
       setState(() {
         codeHint = result.mockCode.isEmpty
-            ? '验证码已发送，${result.nextRetrySeconds} 秒后可重发'
-            : '本地验证码：${result.mockCode}';
+            ? AppLocalizations.of(context).codeSentRetry(result.nextRetrySeconds)
+            : AppLocalizations.of(context).localCodeHint(result.mockCode);
       });
     } catch (error) {
       if (mounted) setState(() => errorMessage = '$error');
@@ -81,11 +82,11 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
     final code = codeController.text.trim();
     final reason = reasonController.text.trim();
     if (account.isEmpty || code.isEmpty) {
-      setState(() => errorMessage = '先填好账号和验证码，再提交申诉');
+      setState(() => errorMessage = AppLocalizations.of(context).fillAccountAndCodeBeforeAppeal);
       return;
     }
     if (reason.length < 10) {
-      setState(() => errorMessage = '申诉理由至少写 10 个字，把误封的情况说清楚');
+      setState(() => errorMessage = AppLocalizations.of(context).appealReasonTooShort);
       return;
     }
     setState(() {
@@ -104,7 +105,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
         appealStatus = status;
         codeController.clear();
         reasonController.clear();
-        successMessage = '申诉 #${status.id} 已提交，运营会尽快复核';
+        successMessage = AppLocalizations.of(context).appealSubmitted(status.id);
       });
     } catch (error) {
       if (mounted) setState(() => errorMessage = '$error');
@@ -116,7 +117,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
     final account = accountController.text.trim();
     final code = codeController.text.trim();
     if (account.isEmpty || code.isEmpty) {
-      setState(() => errorMessage = '查询进度也需要账号和一条新的验证码');
+      setState(() => errorMessage = AppLocalizations.of(context).queryNeedsAccountAndCode);
       return;
     }
     setState(() {
@@ -134,7 +135,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
       setState(() {
         appealStatus = status;
         codeController.clear();
-        successMessage = '已刷新申诉 #${status.id} 的最新进度';
+        successMessage = AppLocalizations.of(context).appealProgressRefreshed(status.id);
       });
     } catch (error) {
       if (mounted) setState(() => errorMessage = '$error');
@@ -145,27 +146,28 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final status = appealStatus;
     return Scaffold(
-      appBar: AppBar(title: const Text('封禁申诉')),
+      appBar: AppBar(title: Text(strings.banAppealTitle)),
       body: AnimatedBuilder(
         animation: widget.controller,
         builder: (context, _) => ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            const Text(
-              '账号被封后的救济入口',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+            Text(
+              strings.banAppealHero,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
-            const Text('用当前绑定邮箱或手机号验证身份。运营复核通过后会自动解封，再回登录页继续使用。'),
+            Text(strings.banAppealSubtitle),
             const SizedBox(height: 24),
             TextField(
               key: const Key('appeal-account'),
               controller: accountController,
-              decoration: const InputDecoration(
-                labelText: '邮箱或手机号',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: strings.emailOrPhone,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -174,11 +176,11 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
               controller: codeController,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: '申诉验证码',
+                labelText: strings.appealCode,
                 border: const OutlineInputBorder(),
                 suffixIcon: TextButton(
                   onPressed: sendingCode ? null : sendCode,
-                  child: Text(sendingCode ? '发送中...' : '发送验证码'),
+                  child: Text(sendingCode ? strings.sendingCode : strings.sendCode),
                 ),
               ),
             ),
@@ -189,10 +191,10 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
               minLines: 4,
               maxLines: 6,
               maxLength: 500,
-              decoration: const InputDecoration(
-                labelText: '申诉理由（至少 10 个字）',
+              decoration: InputDecoration(
+                labelText: strings.appealReasonMin10,
                 alignLabelWithHint: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
             ),
             if (codeHint != null) ...[
@@ -225,34 +227,34 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '申诉 #${status.id} · ${status.statusText}',
+                        strings.appealStatusTitle(id: status.id, status: status.statusText),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       if (status.banReason.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Text('封禁原因：${status.banReason}'),
+                        Text(strings.banReasonLabel(status.banReason)),
                       ],
                       if (status.reason.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Text('申诉内容：${status.reason}'),
+                        Text(strings.appealContentLabel(status.reason)),
                       ],
                       if (status.rejectReason.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Text('驳回说明：${status.rejectReason}'),
+                        Text(strings.rejectReasonLabel(status.rejectReason)),
                       ],
                       if (status.submittedAt.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Text('提交时间：${status.submittedAt}'),
+                        Text(strings.submittedAtLabel(status.submittedAt)),
                       ],
                       if (status.auditedAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text('处理时间：${status.auditedAt}'),
+                        Text(strings.processedAtLabel(status.auditedAt)),
                       ],
                       if (status.isApproved) ...[
                         const SizedBox(height: 12),
-                        const Text(
-                          '申诉已通过，账号已解封。请返回登录页继续使用。',
-                          style: TextStyle(color: Colors.green),
+                        Text(
+                          strings.appealApprovedHint,
+                          style: const TextStyle(color: Colors.green),
                         ),
                       ],
                     ],
@@ -264,7 +266,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
             FilledButton(
               key: const Key('appeal-submit'),
               onPressed: widget.controller.busy ? null : submitAppeal,
-              child: Text(widget.controller.busy ? '提交中...' : '提交申诉'),
+              child: Text(widget.controller.busy ? strings.submittingAppeal : strings.submitAppeal),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
@@ -272,14 +274,14 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
               onPressed: querying || widget.controller.busy
                   ? null
                   : queryProgress,
-              child: Text(querying ? '查询中...' : '查询申诉进度'),
+              child: Text(querying ? strings.querying : strings.queryAppealProgress),
             ),
             if (status?.isApproved == true) ...[
               const SizedBox(height: 12),
               TextButton(
                 key: const Key('appeal-back-login'),
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('返回登录'),
+                child: Text(strings.backToLogin),
               ),
             ],
           ],
