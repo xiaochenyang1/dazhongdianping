@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/search_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class SearchFakeRepository extends BrowseRepository {
@@ -150,6 +152,27 @@ class SearchFakeRepository extends BrowseRepository {
 }
 
 void main() {
+  Widget localizedSearch({
+    required BrowseRepository repository,
+    required Locale locale,
+    String initialKeyword = '',
+  }) {
+    return MaterialApp(
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: SearchScreen(
+        repository: repository,
+        initialKeyword: initialKeyword,
+      ),
+    );
+  }
+
   testWidgets('search discovery retries an initial panel failure', (
     tester,
   ) async {
@@ -202,7 +225,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.textContaining('Search failed'), findsOneWidget);
+    expect(find.textContaining('搜索失败'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('search-results-retry')));
     await tester.pumpAndSettle();
@@ -264,7 +287,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Berlin Tea'), findsOneWidget);
-    expect(find.text('Search results'), findsOneWidget);
+    expect(find.text('搜索结果'), findsOneWidget);
   });
 
   testWidgets('shows hot words and search history before first query', (
@@ -481,5 +504,64 @@ void main() {
 
     expect(repository.searchedKeywords, contains('火锅'));
     expect(find.text('Berlin Tea'), findsOneWidget);
+  });
+
+  testWidgets('renders the complete discovery state in Traditional Chinese', (
+    tester,
+  ) async {
+    final repository = SearchFakeRepository(
+      hotWords: const [SearchHotWord(term: 'Brunch', score: 12)],
+      history: const [
+        SearchHistoryItem(
+          id: 1,
+          keyword: 'noodles',
+          region: 'EU',
+          updatedAt: '2026-07-25 10:00:00',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      localizedSearch(repository: repository, locale: const Locale('zh', 'TW')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('搜尋結果'), findsOneWidget);
+    expect(find.text('搜尋餐廳、超市和生活服務'), findsOneWidget);
+    expect(find.text('最近搜尋'), findsOneWidget);
+    expect(find.text('熱門搜尋'), findsOneWidget);
+    expect(find.text('清除'), findsOneWidget);
+  });
+
+  testWidgets('renders discovery and result states in English', (tester) async {
+    final repository = SearchFakeRepository(
+      hotWords: const [SearchHotWord(term: 'Brunch', score: 12)],
+      history: const [
+        SearchHistoryItem(
+          id: 1,
+          keyword: 'noodles',
+          region: 'EU',
+          updatedAt: '2026-07-25 10:00:00',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      localizedSearch(repository: repository, locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Search results'), findsOneWidget);
+    expect(
+      find.text('Search restaurants, supermarkets and services'),
+      findsOneWidget,
+    );
+    expect(find.text('Recent searches'), findsOneWidget);
+    expect(find.text('Popular searches'), findsOneWidget);
+    expect(find.text('Clear'), findsOneWidget);
+
+    await tester.tap(find.text('Brunch · 12'));
+    await tester.pumpAndSettle();
+    expect(find.text('€12.00'), findsOneWidget);
   });
 }

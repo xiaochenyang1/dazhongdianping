@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/app_settings.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
@@ -92,12 +93,9 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
           title: 'Local Life EU',
           debugShowCheckedModeBanner: false,
           locale: _localeFromTag(settings.localeTag),
-          supportedLocales: const [
-            Locale('zh', 'CN'),
-            Locale('zh', 'TW'),
-            Locale('en'),
-          ],
+          supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: const [
+            AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,

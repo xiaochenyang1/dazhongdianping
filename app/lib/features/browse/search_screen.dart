@@ -1,3 +1,5 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
@@ -235,9 +237,13 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _searchRequestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多门店失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreShopsFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && requestId == _searchRequestId) {
@@ -262,9 +268,11 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('清空搜索历史失败：$error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).clearHistoryFailed(error)),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _clearingHistory = false);
     }
@@ -294,9 +302,13 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('删除搜索历史失败：$error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).removeHistoryFailed(error),
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _removingHistoryIds.remove(item.id));
@@ -338,9 +350,13 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     } catch (error) {
       if (mounted && revision == _historyRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多搜索历史失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreHistoryFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && revision == _historyRevision) {
@@ -358,8 +374,9 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Search results')),
+      appBar: AppBar(title: Text(strings.searchTitle)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -370,7 +387,7 @@ class _SearchScreenState extends State<SearchScreen> {
               textInputAction: TextInputAction.search,
               onSubmitted: _search,
               decoration: InputDecoration(
-                hintText: 'Restaurant, supermarket, service',
+                hintText: strings.searchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
                   key: Key(
@@ -393,7 +410,9 @@ class _SearchScreenState extends State<SearchScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  _suggestLoading ? '联想加载中...' : '搜索联想',
+                  _suggestLoading
+                      ? strings.searchSuggestionsLoading
+                      : strings.searchSuggestions,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -458,7 +477,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Search failed: ${snapshot.error}'),
+                                Text(strings.searchFailed(snapshot.error!)),
                                 const SizedBox(height: 12),
                                 FilledButton.tonalIcon(
                                   key: const Key('search-results-retry'),
@@ -467,7 +486,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                       : _retrySearch,
                                   icon: const Icon(Icons.refresh),
                                   label: Text(
-                                    _retryingSearch ? '处理中...' : '重试',
+                                    _retryingSearch
+                                        ? strings.processing
+                                        : strings.retry,
                                   ),
                                 ),
                               ],
@@ -477,9 +498,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         final page = snapshot.data!;
                         final items = page.items;
                         if (items.isEmpty) {
-                          return const Center(
-                            child: Text('No matching places'),
-                          );
+                          return Center(child: Text(strings.noMatchingPlaces));
                         }
                         return ListView.separated(
                           itemCount: items.length + (page.hasMore ? 1 : 0),
@@ -500,7 +519,11 @@ class _SearchScreenState extends State<SearchScreen> {
                                           ),
                                         )
                                       : const Icon(Icons.expand_more),
-                                  label: Text(_loadingMore ? '加载中...' : '加载更多'),
+                                  label: Text(
+                                    _loadingMore
+                                        ? strings.loading
+                                        : strings.loadMore,
+                                  ),
                                 ),
                               );
                             }
@@ -513,7 +536,11 @@ class _SearchScreenState extends State<SearchScreen> {
                                     : '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${shop.merchantCertificationLabel}',
                               ),
                               trailing: Text(
-                                '${shop.currency} ${shop.pricePerCapita}',
+                                formatMoney(
+                                  shop.pricePerCapita,
+                                  shop.currency,
+                                  locale: strings.tag,
+                                ),
                               ),
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -543,6 +570,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildDiscoveryPanel() {
+    final strings = AppLocalizations.of(context);
     if (_panelLoading && _hotWords.isEmpty && _history.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -552,29 +580,34 @@ class _SearchScreenState extends State<SearchScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('搜索发现加载失败：$_panelError'),
+              Text(strings.discoveryFailed(_panelError!)),
               const SizedBox(height: 12),
               FilledButton.tonalIcon(
                 key: const Key('search-panel-retry'),
                 onPressed: _retryingPanel ? null : _retryPanel,
                 icon: const Icon(Icons.refresh),
-                label: Text(_retryingPanel ? '处理中...' : '重试'),
+                label: Text(
+                  _retryingPanel ? strings.processing : strings.retry,
+                ),
               ),
             ],
           ),
         );
       }
-      return const Center(child: Text('Enter a keyword to search'));
+      return Center(child: Text(strings.enterKeyword));
     }
     return ListView(
       children: [
         if (_history.isNotEmpty) ...[
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '最近搜过',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  strings.recentSearches,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
                 ),
               ),
               TextButton(
@@ -582,7 +615,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 onPressed: _clearingHistory || _removingHistoryIds.isNotEmpty
                     ? null
                     : _clearHistory,
-                child: Text(_clearingHistory ? '清空中...' : '清空'),
+                child: Text(
+                  _clearingHistory ? strings.clearing : strings.clear,
+                ),
               ),
             ],
           ),
@@ -626,16 +661,18 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.expand_more),
-                label: Text(_loadingMoreHistory ? '加载中...' : '更多历史'),
+                label: Text(
+                  _loadingMoreHistory ? strings.loading : strings.moreHistory,
+                ),
               ),
             ),
           ],
           const SizedBox(height: 20),
         ],
         if (_hotWords.isNotEmpty) ...[
-          const Text(
-            '当前热词',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          Text(
+            strings.hotSearches,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
           ),
           const SizedBox(height: 8),
           Wrap(
