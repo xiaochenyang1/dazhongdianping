@@ -640,6 +640,65 @@ class AdminManagementControllerTest {
     }
 
     @Test
+    void shouldLimitRestrictedAdminsToTheirOwnImportBatches() throws Exception {
+        String suffix = "import_batch_scope";
+        String token = cityScopedAdminToken(suffix, false, 101L);
+        Long adminId = jdbcTemplate.queryForObject(
+                "SELECT id FROM admin_user WHERE account=?", Long.class, suffix + "@example.com");
+        jdbcTemplate.update(
+                "INSERT INTO import_batch(admin_id,region,file_name,total,success,failed,status,error_file) "
+                        + "VALUES (?,'EU','own-eu-import.xlsx',1,1,0,1,'')",
+                adminId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO import_batch(admin_id,region,file_name,total,success,failed,status,error_file) "
+                        + "VALUES (1,'EU','other-admin-import.xlsx',1,0,1,2,'local-storage/import-errors/private.json')"
+        );
+
+        mockMvc.perform(get("/api/admin/v1/import/batches")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].fileName").value("own-eu-import.xlsx"))
+                .andExpect(jsonPath("$.data.list[0].errorFile").value(""));
+
+        mockMvc.perform(get("/api/admin/v1/import/batches")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "EU")
+                        .param("status", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0))
+                .andExpect(jsonPath("$.data.list").isEmpty());
+
+        mockMvc.perform(get("/api/admin/v1/import/batches")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "EU")
+                        .param("status", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].fileName").value("own-eu-import.xlsx"));
+    }
+
+    @Test
+    void shouldAllowUnrestrictedAdminsToReadOtherAdminsImportBatches() throws Exception {
+        String token = cityScopedAdminToken("import_batch_all_cities", true);
+        jdbcTemplate.update("DELETE FROM import_batch WHERE region='EU'");
+        jdbcTemplate.update(
+                "INSERT INTO import_batch(admin_id,region,file_name,total,success,failed,status,error_file) "
+                        + "VALUES (1,'EU','regional-import.xlsx',1,0,1,2,'regional-errors.json')"
+        );
+
+        mockMvc.perform(get("/api/admin/v1/import/batches")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "EU")
+                        .param("status", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].fileName").value("regional-import.xlsx"));
+    }
+
+    @Test
     void shouldRejectDisabledCategoryForShopCreate() throws Exception {
         String token = loginToken();
         jdbcTemplate.update("UPDATE category SET status=0 WHERE id=102");

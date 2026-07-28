@@ -958,6 +958,9 @@ CREATE TABLE IF NOT EXISTS import_batch (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX IF NOT EXISTS idx_import_batch_region_admin_status_id
+    ON import_batch(region, admin_id, status, id);
+
 CREATE TABLE IF NOT EXISTS rank_config (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     rank_type TINYINT NOT NULL,

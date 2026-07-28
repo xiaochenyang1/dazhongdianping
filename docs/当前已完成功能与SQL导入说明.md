@@ -206,7 +206,7 @@
 |---|---|---|---|---|
 | `M1` C 端浏览链路 | 已完成 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `category/city/area/merchant/shop/shop_photo/dish/home_banner/home_feed`；`02_seed_data.sql` 预置城市、分类、门店、Banner、Feed | 首页、列表、详情、城市/分类/商圈筛选、`CN/EU` 区域切换 |
 | 头部关键词搜索 / 联想 / 热词 / 搜索历史 | 已完成 MySQL 默认 + Elasticsearch 可切换链路 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `/search/shops` 支持 MySQL/ES provider；ES 已覆盖分词、拼音、纠错、筛选、距离排序、索引重建/增量同步与真实 smoke；热词优先读 `hot_keyword`，空表/全停用时回退当前 MySQL 统计；联想/历史仍复用当前 MySQL 数据；`search_history` 每用户每区域最多 20 条，写入后按最近使用裁剪；支持整区清空与单条删除 | 首页头部输入“火”展示联想并进入结果页；公开端热词默认展示运营配置，删空后回退统计结果；登录用户可查看/清空当前区域历史，也可删除单条，超额旧词自动淘汰；ES smoke 验证拼音、纠错与距离排序 |
-| 管理端门店管理 / 种子导入 | 已完成 | `README.md`、`docs/README.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `merchant/shop/import_batch`；`02_seed_data.sql` 预置门店与商户演示数据；`import_batch` 导入后默认留空,要实际导一次才有批次记录 | 管理员登录后看门店列表、编辑门店、导入种子数据 |
+| 管理端门店管理 / 种子导入 | 已完成 | `README.md`、`docs/README.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `merchant/shop/import_batch`；`02_seed_data.sql` 预置门店与商户演示数据；`import_batch` 导入后默认留空；区域全量管理员查看当前区域全部批次，城市/门店受限管理员只查看本人批次，既有库用 `04_admin_import_batch_scope_migration.sql` 补查询索引 | 管理员登录后看门店列表、编辑门店、导入种子数据 |
 | 管理端分类 / 城市 / 商圈治理 | 已完成（本地口径） | `README.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/权限矩阵.md`、`docs/测试清单与验收用例.md` | `category/city/area` 使用自增 ID、`status`、区域唯一约束和读取索引；`02_seed_data.sql` 预置 `data:geo:read/write` 并授予 `data_operator` | `/data/meta` 三页签 CRUD/启停/删除；C 端隐藏停用项；写入、审核和榜单发布窗口重新校验启用引用 |
 | `B` 端最小只读工作台 | 已完成最小骨架 | `README.md`、`docs/README.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 复用 `merchant/shop` 与现有浏览查询;一期商户账号绑定单区域,`X-Region` 与经营区域不一致直接 `401`;暂不新增 B 端员工 / 角色表 | `GET /api/b/v1/health`、`GET /api/b/v1/account/me`、`GET /api/b/v1/roles`、`GET /api/b/v1/shops` |
 | M5b3 门店完整草稿审核 | 已完成后端闭环 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/业务流程与状态机.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `merchant_shop_change/merchant_shop_change_photo/merchant_shop_change_dish`，并使 `shop_photo.id/dish.id` 自增；运行时提交产生 `audit_task.biz_type=5` | 创建/修改草稿、相册/菜单快照、提交审核、通过整体应用、驳回重提、版本冲突拦截 |
@@ -263,11 +263,13 @@
 
 `mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库并依次 `source` `01_schema.sql`、`02_seed_data.sql`;同名库已存在时会拒绝执行,避免 `01_schema.sql` 的重建逻辑误清业务数据。已准备好的数据库应使用 `-SkipImport`,确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符,并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
 
-### 3.2 三份 SQL 的作用
+### 3.2 初始化与迁移 SQL 的作用
 
 - `sql/mysql/00_all_in_one.sql`: 已退役的安全阻断桩,执行时直接报错,不再串联破坏性建表脚本。
 - `sql/mysql/01_schema.sql`: 当前代码口径的建表脚本,已包含 `review_like`、`review_comment`、`review_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`。
 - `sql/mysql/02_seed_data.sql`: 浏览数据、公开点评、待审/驳回审核案例、点评图片、点赞/评论演示数据、C 端演示账号。
+- `sql/mysql/03_admin_city_scope_migration.sql`: 既有数据库增加管理员城市/门店范围；只用于升级，不参与全新数据库初始化。
+- `sql/mysql/04_admin_import_batch_scope_migration.sql`: 既有数据库增加受限管理员本人导入批次查询索引；在 `03` 后执行一次。
 
 ### 3.3 导入后哪些表会直接有数据
 

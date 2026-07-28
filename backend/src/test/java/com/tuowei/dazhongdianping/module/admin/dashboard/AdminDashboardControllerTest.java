@@ -67,6 +67,21 @@ class AdminDashboardControllerTest {
     }
 
     @Test
+    void shouldCountOtherAdminsImportBatchesForUnrestrictedAdmin() throws Exception {
+        jdbc.update("DELETE FROM import_batch WHERE region='EU'");
+        jdbc.update(
+                "INSERT INTO import_batch(admin_id,region,file_name,total,success,failed,status,error_file) "
+                        + "VALUES (2,'EU','other-admin-eu-import.xlsx',1,1,0,1,'')"
+        );
+
+        mockMvc.perform(get("/api/admin/v1/dashboard/overview")
+                        .header("Authorization", bearer(login("admin", "admin123456")))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.importBatchCount").value(1));
+    }
+
+    @Test
     void shouldScopeShopAndTradeMetricsToAuthorizedCitiesAndShops() throws Exception {
         jdbc.update("UPDATE shop SET city_id=2, area_id=21 WHERE id=10002");
         insertPaidOrder(9802, "DASH-ORDER-002", 10001);
@@ -75,6 +90,10 @@ class AdminDashboardControllerTest {
                 "INSERT INTO refund(id,order_id,coupon_id,amount,reason,status,audit_by,audit_reason,created_at,updated_at) "
                         + "VALUES (9902,9802,0,88.00,'授权门店退款',0,0,'',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),"
                         + "(9903,9803,0,88.00,'未授权门店退款',0,0,'',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"
+        );
+        jdbc.update(
+                "INSERT INTO import_batch(admin_id,region,file_name,total,success,failed,status,error_file) "
+                        + "VALUES (1,'CN','other-admin-dashboard-import.xlsx',1,1,0,1,'')"
         );
 
         String cityToken = scopedAdminToken("city", 1L, null);
@@ -90,6 +109,7 @@ class AdminDashboardControllerTest {
                         .header("X-Region", "CN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.shopCount").value(1))
+                .andExpect(jsonPath("$.data.importBatchCount").value(1))
                 .andExpect(jsonPath("$.data.paidOrderCount").value(1))
                 .andExpect(jsonPath("$.data.pendingRefundCount").value(1));
     }
@@ -123,6 +143,11 @@ class AdminDashboardControllerTest {
         if (shopId != null) {
             jdbc.update("INSERT INTO admin_shop_scope(admin_id,region,shop_id) VALUES (?,'CN',?)", adminId, shopId);
         }
+        jdbc.update(
+                "INSERT INTO import_batch(admin_id,region,file_name,total,success,failed,status,error_file) "
+                        + "VALUES (?,'CN',?,1,1,0,1,'')",
+                adminId, "own-dashboard-import-" + adminId + ".xlsx"
+        );
         return login(account, "admin123456");
     }
 

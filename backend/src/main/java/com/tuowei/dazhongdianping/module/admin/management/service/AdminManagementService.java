@@ -178,9 +178,13 @@ public class AdminManagementService {
 
     public PageResult<AdminImportBatchResponse> listImportBatches(AdminImportBatchQuery query) {
         query.normalize();
-        query.setRegion(currentRegion().name());
-        long total = adminManagementMapper.countImportBatches(query);
-        List<AdminImportBatchResponse> items = adminManagementMapper.selectImportBatches(query).stream()
+        String region = currentRegion().name();
+        query.setRegion(region);
+        AdminSession session = currentAdmin();
+        boolean ownOnly = !currentCityScope(region).allCities();
+        long total = adminManagementMapper.countImportBatches(query, session.adminId(), ownOnly);
+        List<AdminImportBatchResponse> items = adminManagementMapper
+                .selectImportBatches(query, session.adminId(), ownOnly).stream()
                 .map(this::toAdminImportBatchResponse)
                 .toList();
         return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);

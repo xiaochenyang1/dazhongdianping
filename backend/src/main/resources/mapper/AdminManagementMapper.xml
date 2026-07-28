@@ -288,11 +288,14 @@
 
     <sql id="importBatchWhere">
         WHERE 1 = 1
-        <if test="region != null and region != ''">
-            AND region = #{region}
+        <if test="query.region != null and query.region != ''">
+            AND region = #{query.region}
         </if>
-        <if test="status != null">
-            AND status = #{status}
+        <if test="query.status != null">
+            AND status = #{query.status}
+        </if>
+        <if test="ownOnly">
+            AND admin_id = #{adminId}
         </if>
     </sql>
 
@@ -316,6 +319,6 @@
         FROM import_batch
         <include refid="importBatchWhere"/>
         ORDER BY id DESC
-        LIMIT #{pageSize} OFFSET #{offset}
+        LIMIT #{query.pageSize} OFFSET #{query.offset}
     </select>
 </mapper>

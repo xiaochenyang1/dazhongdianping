@@ -37,6 +37,9 @@
         SELECT COUNT(1)
         FROM import_batch
         WHERE region = #{region}
+        <if test="ownOnly">
+            AND admin_id = #{adminId}
+        </if>
     </select>
 
     <select id="countPaidOrders" resultType="long">

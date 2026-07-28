@@ -53,7 +53,9 @@ public class AdminDashboardService {
         long shopCount = permissions.contains("data:shop:read")
                 ? mapper.countShops(region, scope.allCities(), scope.cityIds(), scope.shopIds())
                 : 0L;
-        long importBatchCount = permissions.contains("data:import_batch:read") ? mapper.countImportBatches(region) : 0L;
+        long importBatchCount = permissions.contains("data:import_batch:read")
+                ? mapper.countImportBatches(region, session.adminId(), !scope.allCities())
+                : 0L;
         long paidOrderCount = permissions.contains("data:order:read")
                 ? mapper.countPaidOrders(region, scope.allCities(), scope.cityIds(), scope.shopIds())
                 : 0L;

@@ -984,7 +984,8 @@ CREATE TABLE `import_batch` (
   `error_file` VARCHAR(255) NOT NULL DEFAULT '',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `idx_import_batch_region_status_id` (`region`, `status`, `id`)
+  KEY `idx_import_batch_region_status_id` (`region`, `status`, `id`),
+  KEY `idx_import_batch_region_admin_status_id` (`region`, `admin_id`, `status`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `rank_config` (

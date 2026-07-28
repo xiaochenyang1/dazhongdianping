@@ -47,7 +47,11 @@ public interface AdminManagementMapper {
 
     int updateImportBatch(ImportBatchRow batchRow);
 
-    long countImportBatches(AdminImportBatchQuery query);
+    long countImportBatches(@Param("query") AdminImportBatchQuery query,
+                            @Param("adminId") Long adminId,
+                            @Param("ownOnly") boolean ownOnly);
 
-    List<ImportBatchRow> selectImportBatches(AdminImportBatchQuery query);
+    List<ImportBatchRow> selectImportBatches(@Param("query") AdminImportBatchQuery query,
+                                             @Param("adminId") Long adminId,
+                                             @Param("ownOnly") boolean ownOnly);
 }

@@ -13,7 +13,9 @@ public interface AdminDashboardMapper {
                     @Param("cityIds") Set<Long> cityIds,
                     @Param("shopIds") Set<Long> shopIds);
 
-    long countImportBatches(@Param("region") String region);
+    long countImportBatches(@Param("region") String region,
+                            @Param("adminId") Long adminId,
+                            @Param("ownOnly") boolean ownOnly);
 
     long countPaidOrders(@Param("region") String region,
                          @Param("allCities") boolean allCities,
