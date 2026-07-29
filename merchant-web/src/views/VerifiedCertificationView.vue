@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useMerchantSession } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 import {
   applyVerifiedCertification,
   fetchVerifiedCertification,
   type MerchantVerifiedCertificationStatus,
 } from '@/services/merchant'
 
+const { state } = useMerchantSession()
+const strings = computed(() => merchantStringsForRegion(state.region))
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
@@ -31,7 +35,7 @@ async function load() {
     status.value = await fetchVerifiedCertification()
     fillForm(status.value)
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '认证商户状态加载失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.verifiedMerchant.loadError
   } finally {
     loading.value = false
   }
@@ -40,7 +44,7 @@ async function load() {
 async function submit() {
   const reason = form.reason.trim()
   if (!reason) {
-    error.value = '请填写认证申请理由'
+    error.value = strings.value.verifiedMerchant.reasonRequired
     return
   }
   saving.value = true
@@ -55,9 +59,9 @@ async function submit() {
         .filter(Boolean),
     })
     fillForm(status.value)
-    success.value = '认证商户申请已提交，等待管理端审核。'
+    success.value = strings.value.verifiedMerchant.submitSuccess
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '认证商户申请提交失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.verifiedMerchant.submitError
   } finally {
     saving.value = false
   }
@@ -70,55 +74,70 @@ onMounted(load)
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Verified merchant</p>
-        <h1>认证商户</h1>
-        <p>资质审核通过后，可额外申请公开“认证商户”标识。待审或已通过时不可重复提交，驳回后可重提。</p>
+        <p class="eyebrow">{{ strings.verifiedMerchant.eyebrow }}</p>
+        <h1>{{ strings.verifiedMerchant.heading }}</h1>
+        <p>{{ strings.verifiedMerchant.description }}</p>
       </div>
-      <span v-if="status" class="status-pill" :class="`status-${status.status}`">{{ status.statusText }}</span>
+      <span v-if="status" class="status-pill" :class="`status-${status.status}`">
+        {{ strings.verifiedMerchant.statusText(status.status, status.statusText) }}
+      </span>
     </div>
 
-    <p v-if="loading" class="feedback">认证状态加载中...</p>
+    <p v-if="loading" class="feedback">{{ strings.verifiedMerchant.loading }}</p>
     <p v-else-if="error" class="feedback is-error" role="alert">{{ error }}</p>
     <p v-if="success" class="feedback is-success">{{ success }}</p>
 
     <template v-if="status && !loading">
       <article v-if="status.status === 2 && status.badge" class="card status-card status-card--success" data-testid="verified-result-approved">
-        <p class="eyebrow">审核结果 · 已通过</p>
+        <p class="eyebrow">{{ strings.verifiedMerchant.approvedEyebrow }}</p>
         <h2>
-          当前门店可展示
-          <span class="verified-badge">{{ status.badge.label }}</span>
+          {{ strings.verifiedMerchant.approvedHeading }}
+          <span class="verified-badge">{{ strings.verifiedMerchant.badgeLabel }}</span>
         </h2>
-        <p>通过时间：{{ status.auditedAt || '—' }}。公开门店详情、列表与搜索结果会同步挂标。</p>
-        <p v-if="status.effectiveStartAt" class="muted">生效开始：{{ status.effectiveStartAt }}</p>
+        <p>{{ strings.verifiedMerchant.approvedDescription(status.auditedAt) }}</p>
+        <p v-if="status.effectiveStartAt" class="muted">{{ strings.verifiedMerchant.effectiveStart(status.effectiveStartAt) }}</p>
       </article>
 
       <article v-else-if="status.status === 1" class="card status-card" data-testid="verified-result-pending">
-        <p class="eyebrow">审核中</p>
-        <h2>认证申请已进入审核队列</h2>
-        <p>提交时间：{{ status.submittedAt || '刚刚提交' }}。通过后会在门店详情公开挂标。</p>
-        <p v-if="status.reason"><strong>申请理由：</strong>{{ status.reason }}</p>
+        <p class="eyebrow">{{ strings.verifiedMerchant.pendingEyebrow }}</p>
+        <h2>{{ strings.verifiedMerchant.pendingHeading }}</h2>
+        <p>{{ strings.verifiedMerchant.pendingDescription(status.submittedAt) }}</p>
+        <p v-if="status.reason"><strong>{{ strings.verifiedMerchant.reasonLabel }}</strong>{{ status.reason }}</p>
       </article>
 
       <article v-else-if="status.status === 3" class="card status-card" data-testid="verified-result-rejected">
-        <p class="eyebrow">审核结果 · 已驳回</p>
-        <h2>请根据驳回原因修改后重提</h2>
-        <p><strong>驳回原因：</strong>{{ status.rejectReason || '未填写' }}</p>
-        <p v-if="status.auditedAt" class="muted">审核时间：{{ status.auditedAt }}</p>
+        <p class="eyebrow">{{ strings.verifiedMerchant.rejectedEyebrow }}</p>
+        <h2>{{ strings.verifiedMerchant.rejectedHeading }}</h2>
+        <p>
+          <strong>{{ strings.verifiedMerchant.rejectReasonLabel }}</strong>
+          {{ status.rejectReason || strings.verifiedMerchant.missingReason }}
+        </p>
+        <p v-if="status.auditedAt" class="muted">{{ strings.verifiedMerchant.auditedAt(status.auditedAt) }}</p>
       </article>
 
       <article v-if="canApply" class="card">
-        <h2>{{ status.status === 3 ? '重新提交认证申请' : '提交认证申请' }}</h2>
+        <h2>{{ status.status === 3 ? strings.verifiedMerchant.reapplyHeading : strings.verifiedMerchant.applyHeading }}</h2>
         <form class="settlement-form" @submit.prevent="submit">
           <label>
-            <span>申请理由</span>
-            <textarea v-model="form.reason" rows="4" maxlength="500" placeholder="说明经营合规、服务承诺或可核验材料" required />
+            <span>{{ strings.verifiedMerchant.labels.reason }}</span>
+            <textarea
+              v-model="form.reason"
+              rows="4"
+              maxlength="500"
+              :placeholder="strings.verifiedMerchant.placeholders.reason"
+              required
+            />
           </label>
           <label>
-            <span>证明材料链接（可选，每行一个）</span>
-            <textarea v-model="form.evidenceLines" rows="4" placeholder="https://..." />
+            <span>{{ strings.verifiedMerchant.labels.evidenceUrls }}</span>
+            <textarea
+              v-model="form.evidenceLines"
+              rows="4"
+              :placeholder="strings.verifiedMerchant.placeholders.evidenceUrls"
+            />
           </label>
           <button type="submit" class="primary-button" :disabled="saving">
-            {{ saving ? '提交中...' : '提交认证申请' }}
+            {{ saving ? strings.verifiedMerchant.submitting : strings.verifiedMerchant.submit }}
           </button>
         </form>
       </article>

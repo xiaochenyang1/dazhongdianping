@@ -292,6 +292,92 @@ export interface MerchantStrings {
     saving: string
     save: string
   }
+  staffManagement: {
+    eyebrow: string
+    heading: string
+    description: string
+    create: string
+    loadError: string
+    scopedShopRequired: string
+    roleRequired: string
+    saveError: string
+    statusError: string
+    loading: string
+    tableHeaders: {
+      staff: string
+      roles: string
+      shopScope: string
+      status: string
+      actions: string
+    }
+    allShops: string
+    scopedShops: (count: number) => string
+    statusText: (status: number) => string
+    edit: string
+    enable: string
+    disable: string
+    empty: string
+    dialogEyebrow: {
+      create: string
+      edit: string
+    }
+    dialogTitle: {
+      create: string
+      edit: string
+    }
+    close: string
+    labels: {
+      account: string
+      password: string
+      name: string
+      email: string
+      phone: string
+      roles: string
+      shopScope: string
+      manageableShops: string
+      allShops: string
+      selectedShops: string
+    }
+    saving: string
+    save: string
+  }
+  verifiedMerchant: {
+    eyebrow: string
+    heading: string
+    description: string
+    loadError: string
+    reasonRequired: string
+    submitError: string
+    submitSuccess: string
+    loading: string
+    badgeLabel: string
+    statusText: (status: number, fallback?: string) => string
+    approvedEyebrow: string
+    approvedHeading: string
+    approvedDescription: (auditedAt?: string) => string
+    effectiveStart: (effectiveStartAt: string) => string
+    pendingEyebrow: string
+    pendingHeading: string
+    pendingDescription: (submittedAt?: string) => string
+    reasonLabel: string
+    rejectedEyebrow: string
+    rejectedHeading: string
+    rejectReasonLabel: string
+    missingReason: string
+    auditedAt: (auditedAt: string) => string
+    applyHeading: string
+    reapplyHeading: string
+    labels: {
+      reason: string
+      evidenceUrls: string
+    }
+    placeholders: {
+      reason: string
+      evidenceUrls: string
+    }
+    submitting: string
+    submit: string
+  }
 }
 
 export type MerchantRouteTitleKey = keyof MerchantStrings['routeTitles']
@@ -600,6 +686,98 @@ const zhCnStrings: MerchantStrings = {
     saving: '保存中...',
     save: '保存时段',
   },
+  staffManagement: {
+    eyebrow: 'Access control',
+    heading: '员工与门店权限',
+    description: '账号能干什么、能碰哪家店，在这里说清楚，别靠口头传功。',
+    create: '新增员工',
+    loadError: '员工数据加载失败',
+    scopedShopRequired: '指定门店范围时至少选择一家门店',
+    roleRequired: '至少选择一个员工角色',
+    saveError: '员工保存失败',
+    statusError: '员工状态更新失败',
+    loading: '员工数据加载中...',
+    tableHeaders: {
+      staff: '员工',
+      roles: '角色',
+      shopScope: '门店范围',
+      status: '状态',
+      actions: '操作',
+    },
+    allShops: '全部门店',
+    scopedShops: (count) => `${count} 家指定门店`,
+    statusText: (status) => status === 1 ? '启用' : '停用',
+    edit: '编辑',
+    enable: '启用',
+    disable: '停用',
+    empty: '还没有员工账号。',
+    dialogEyebrow: {
+      create: 'New staff',
+      edit: 'Edit staff',
+    },
+    dialogTitle: {
+      create: '创建员工账号',
+      edit: '编辑员工权限',
+    },
+    close: '关闭',
+    labels: {
+      account: '登录账号',
+      password: '初始密码',
+      name: '员工姓名',
+      email: '邮箱',
+      phone: '联系电话',
+      roles: '角色',
+      shopScope: '门店范围',
+      manageableShops: '可管理门店',
+      allShops: '全部门店',
+      selectedShops: '指定门店',
+    },
+    saving: '保存中...',
+    save: '保存员工',
+  },
+  verifiedMerchant: {
+    eyebrow: 'Verified merchant',
+    heading: '认证商户',
+    description: '资质审核通过后，可额外申请公开“认证商户”标识。待审或已通过时不可重复提交，驳回后可重提。',
+    loadError: '认证商户状态加载失败',
+    reasonRequired: '请填写认证申请理由',
+    submitError: '认证商户申请提交失败',
+    submitSuccess: '认证商户申请已提交，等待管理端审核。',
+    loading: '认证状态加载中...',
+    badgeLabel: '认证商户',
+    statusText: (status, fallback) => {
+      if (status === 1) return '待审核'
+      if (status === 2) return '已通过'
+      if (status === 3) return '已驳回'
+      if (status === 0) return '未申请'
+      return fallback || `状态 ${status}`
+    },
+    approvedEyebrow: '审核结果 · 已通过',
+    approvedHeading: '当前门店可展示',
+    approvedDescription: (auditedAt) => `通过时间：${auditedAt || '—'}。公开门店详情、列表与搜索结果会同步挂标。`,
+    effectiveStart: (effectiveStartAt) => `生效开始：${effectiveStartAt}`,
+    pendingEyebrow: '审核中',
+    pendingHeading: '认证申请已进入审核队列',
+    pendingDescription: (submittedAt) => `提交时间：${submittedAt || '刚刚提交'}。通过后会在门店详情公开挂标。`,
+    reasonLabel: '申请理由：',
+    rejectedEyebrow: '审核结果 · 已驳回',
+    rejectedHeading: '请根据驳回原因修改后重提',
+    rejectReasonLabel: '驳回原因：',
+    missingReason: '未填写',
+    auditedAt: (auditedAt) => `审核时间：${auditedAt}`,
+    applyHeading: '提交认证申请',
+    reapplyHeading: '重新提交认证申请',
+    labels: {
+      reason: '申请理由',
+      evidenceUrls: '证明材料链接（可选，每行一个）',
+    },
+    placeholders: {
+      reason: '说明经营合规、服务承诺或可核验材料',
+      evidenceUrls: 'https://...',
+    },
+    submitting: '提交中...',
+    submit: '提交认证申请',
+  },
 }
 
 const enStrings: MerchantStrings = {
@@ -905,6 +1083,98 @@ const enStrings: MerchantStrings = {
     },
     saving: 'Saving...',
     save: 'Save slot',
+  },
+  staffManagement: {
+    eyebrow: 'Access control',
+    heading: 'Staff & shop permissions',
+    description: 'Define exactly what each account can do and which shops it can access. Do not leave this to informal handoffs.',
+    create: 'Add staff',
+    loadError: 'Failed to load staff data.',
+    scopedShopRequired: 'Select at least one shop when using scoped shop access.',
+    roleRequired: 'Select at least one staff role.',
+    saveError: 'Failed to save the staff account.',
+    statusError: 'Failed to update the staff status.',
+    loading: 'Loading staff data...',
+    tableHeaders: {
+      staff: 'Staff',
+      roles: 'Roles',
+      shopScope: 'Shop scope',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    allShops: 'All shops',
+    scopedShops: (count) => `${count} scoped shops`,
+    statusText: (status) => status === 1 ? 'Enabled' : 'Disabled',
+    edit: 'Edit',
+    enable: 'Enable',
+    disable: 'Disable',
+    empty: 'No staff accounts yet.',
+    dialogEyebrow: {
+      create: 'New staff',
+      edit: 'Edit staff',
+    },
+    dialogTitle: {
+      create: 'Create staff account',
+      edit: 'Edit staff permissions',
+    },
+    close: 'Close',
+    labels: {
+      account: 'Account',
+      password: 'Initial password',
+      name: 'Staff name',
+      email: 'Email',
+      phone: 'Phone',
+      roles: 'Roles',
+      shopScope: 'Shop scope',
+      manageableShops: 'Managed shops',
+      allShops: 'All shops',
+      selectedShops: 'Selected shops',
+    },
+    saving: 'Saving...',
+    save: 'Save staff',
+  },
+  verifiedMerchant: {
+    eyebrow: 'Verified merchant',
+    heading: 'Verified merchant',
+    description: 'After business verification is approved, you can additionally apply for the public "Verified Merchant" badge. Pending or approved applications cannot be submitted again, while rejected ones can be resubmitted.',
+    loadError: 'Failed to load the verified merchant status.',
+    reasonRequired: 'Enter the reason for this verified merchant application.',
+    submitError: 'Failed to submit the verified merchant application.',
+    submitSuccess: 'Verified merchant application submitted. Awaiting review.',
+    loading: 'Loading verification status...',
+    badgeLabel: 'Verified Merchant',
+    statusText: (status, fallback) => {
+      if (status === 1) return 'Pending review'
+      if (status === 2) return 'Approved'
+      if (status === 3) return 'Rejected'
+      if (status === 0) return 'Not applied'
+      return fallback || `Status ${status}`
+    },
+    approvedEyebrow: 'Review result · approved',
+    approvedHeading: 'This shop can now display',
+    approvedDescription: (auditedAt) => `Approved at: ${auditedAt || '—'}. The badge will appear on public shop details, listings, and search results.`,
+    effectiveStart: (effectiveStartAt) => `Effective from: ${effectiveStartAt}`,
+    pendingEyebrow: 'Under review',
+    pendingHeading: 'The verified merchant application is already in the review queue',
+    pendingDescription: (submittedAt) => `Submitted: ${submittedAt || 'just now'}. The badge will appear on the public shop detail page after approval.`,
+    reasonLabel: 'Reason:',
+    rejectedEyebrow: 'Review result · rejected',
+    rejectedHeading: 'Update the application based on the rejection reason and resubmit',
+    rejectReasonLabel: 'Rejection reason:',
+    missingReason: 'Not provided',
+    auditedAt: (auditedAt) => `Reviewed at: ${auditedAt}`,
+    applyHeading: 'Submit verified merchant application',
+    reapplyHeading: 'Resubmit verified merchant application',
+    labels: {
+      reason: 'Application reason',
+      evidenceUrls: 'Evidence links (optional, one per line)',
+    },
+    placeholders: {
+      reason: 'Explain compliance, service commitments, or verifiable proof',
+      evidenceUrls: 'https://...',
+    },
+    submitting: 'Submitting...',
+    submit: 'Submit verified merchant application',
   },
 }
 

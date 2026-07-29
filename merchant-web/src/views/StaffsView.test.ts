@@ -9,8 +9,12 @@ const mocks = vi.hoisted(() => ({
   updateStaff: vi.fn(),
   updateStaffStatus: vi.fn(),
 }))
+const sessionState = vi.hoisted(() => ({ region: 'EU' }))
 
 vi.mock('@/services/merchant', () => mocks)
+vi.mock('@/composables/useMerchantSession', () => ({
+  useMerchantSession: () => ({ state: sessionState }),
+}))
 
 import StaffsView from './StaffsView.vue'
 
@@ -56,7 +60,8 @@ describe('StaffsView', () => {
     const { app, host } = mountView()
     await flushView()
     expect(host.textContent).not.toContain('主账号')
-    click(host, '新增员工')
+    expect(host.textContent).toContain('Staff & shop permissions')
+    click(host, 'Add staff')
     await nextTick()
 
     const values: Record<string, string> = {
@@ -103,7 +108,7 @@ describe('StaffsView', () => {
   it('validates an empty shop scope and can disable an employee', async () => {
     const { app, host } = mountView()
     await flushView()
-    click(host, '新增员工')
+    click(host, 'Add staff')
     await nextTick()
     const scope = host.querySelector<HTMLSelectElement>('[name="shopScopeType"]')
     if (!scope) throw new Error('missing scope')
@@ -111,11 +116,11 @@ describe('StaffsView', () => {
     scope.dispatchEvent(new Event('change'))
     host.querySelector('form')?.dispatchEvent(new Event('submit'))
     await nextTick()
-    expect(host.textContent).toContain('至少选择一家门店')
+    expect(host.textContent).toContain('Select at least one shop when using scoped shop access.')
     expect(mocks.createStaff).not.toHaveBeenCalled()
 
-    click(host, '关闭')
-    click(host, '停用')
+    click(host, 'Close')
+    click(host, 'Disable')
     await flushView()
     expect(mocks.updateStaffStatus).toHaveBeenCalledWith(9, 2)
     app.unmount()
