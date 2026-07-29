@@ -2,10 +2,12 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { getAdminDashboardOverview, listImportBatches, listShops } from '@/services/admin'
 import type { AdminDashboardOverview, AdminImportBatch, AdminShopSummary } from '@/types/admin'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -25,6 +27,31 @@ const canReadShopChanges = computed(() => state.permissions.includes('audit:shop
 const canReadReviews = computed(() => state.permissions.includes('audit:review:read'))
 const canReadPosts = computed(() => state.permissions.includes('audit:post:read'))
 
+function pendingCountFor(bizType: number) {
+  return overview.value?.pendingAuditBreakdown.find((item) => item.bizType === bizType)?.count
+}
+
+function auditBreakdownLabel(bizType: number, fallback?: string) {
+  const labels = strings.value.dashboard.pendingAudit.bizTypeLabels
+  if (bizType === 2) return labels.deals
+  if (bizType === 3) return labels.reviews
+  if (bizType === 4) return labels.posts
+  if (bizType === 5) return labels.shopChanges
+  if (bizType === 6) return labels.reviewAppeals
+  if (bizType === 7) return labels.expertCertifications
+  if (bizType === 8) return labels.userAppeals
+  if (bizType === 9) return labels.verifiedMerchants
+  return fallback || strings.value.dashboard.pendingAudit.fallbackLabel(bizType)
+}
+
+function shopOpenStatus(openNow: boolean) {
+  return openNow ? strings.value.dashboard.recentShops.openNow : strings.value.dashboard.recentShops.closed
+}
+
+function importBatchStatusText(status: number, fallback?: string) {
+  return strings.value.dashboard.recentBatches.statusText(status, fallback)
+}
+
 const metrics = computed(() => {
   const items = [] as Array<{ label: string; value: number; note: string }>
   if (!overview.value) {
@@ -32,44 +59,44 @@ const metrics = computed(() => {
   }
   if (canReadShops.value) {
     items.push({
-      label: '当前区域门店数',
+      label: strings.value.dashboard.metrics.shopCount.label,
       value: overview.value.shopCount,
-      note: `区域 ${state.region} 下的最小可管理存量`,
+      note: strings.value.dashboard.metrics.shopCount.note(state.region),
     })
   }
   if (canReadImportBatches.value) {
     items.push({
-      label: '导入批次数',
+      label: strings.value.dashboard.metrics.importBatchCount.label,
       value: overview.value.importBatchCount,
-      note: '看得见批次，才谈得上运营回灌',
+      note: strings.value.dashboard.metrics.importBatchCount.note,
     })
   }
   if (canReadOrders.value) {
     items.push(
       {
-        label: '已支付订单',
+        label: strings.value.dashboard.metrics.paidOrderCount.label,
         value: overview.value.paidOrderCount,
-        note: '当前区域累计已支付订单',
+        note: strings.value.dashboard.metrics.paidOrderCount.note,
       },
       {
-        label: '待处理退款',
+        label: strings.value.dashboard.metrics.pendingRefundCount.label,
         value: overview.value.pendingRefundCount,
-        note: '需要商户或平台继续处理',
+        note: strings.value.dashboard.metrics.pendingRefundCount.note,
       },
     )
   }
   if (canReadDashboard.value) {
     items.push({
-      label: '待审任务',
+      label: strings.value.dashboard.metrics.pendingAuditTaskCount.label,
       value: overview.value.pendingAuditTaskCount,
-      note: '按当前账号审核权限汇总',
+      note: strings.value.dashboard.metrics.pendingAuditTaskCount.note,
     })
   }
   if (canReadUsers.value) {
     items.push({
-      label: 'C 端用户数',
+      label: strings.value.dashboard.metrics.userCount.label,
       value: overview.value.userCount,
-      note: '不含已注销匿名化用户',
+      note: strings.value.dashboard.metrics.userCount.note,
     })
   }
   return items
@@ -89,46 +116,46 @@ const auditRouteByBizType: Record<number, string> = {
 const quickLinks = computed(() => {
   const items = [] as Array<{ to: string; label: string; note: string; value?: number }>
   if (canReadDeals.value) {
-    const count = overview.value?.pendingAuditBreakdown.find((item) => item.bizType === 2)?.count
+    const count = pendingCountFor(2)
     items.push({
       to: '/audit/deals',
-      label: '待审团购',
-      note: '审核团购创建与重提',
+      label: strings.value.dashboard.quickLinks.pendingDeals.label,
+      note: strings.value.dashboard.quickLinks.pendingDeals.note,
       value: count,
     })
   }
   if (canReadShopChanges.value) {
-    const count = overview.value?.pendingAuditBreakdown.find((item) => item.bizType === 5)?.count
+    const count = pendingCountFor(5)
     items.push({
       to: '/audit/shop-changes',
-      label: '待审门店草稿',
-      note: '审核门店新建/修改快照',
+      label: strings.value.dashboard.quickLinks.pendingShopChanges.label,
+      note: strings.value.dashboard.quickLinks.pendingShopChanges.note,
       value: count,
     })
   }
   if (canReadReviews.value) {
-    const count = overview.value?.pendingAuditBreakdown.find((item) => item.bizType === 3)?.count
+    const count = pendingCountFor(3)
     items.push({
       to: '/audit/reviews',
-      label: '待审点评',
-      note: '处理用户点评审核',
+      label: strings.value.dashboard.quickLinks.pendingReviews.label,
+      note: strings.value.dashboard.quickLinks.pendingReviews.note,
       value: count,
     })
   }
   if (canReadPosts.value) {
-    const count = overview.value?.pendingAuditBreakdown.find((item) => item.bizType === 4)?.count
+    const count = pendingCountFor(4)
     items.push({
       to: '/audit/posts',
-      label: '待审帖子',
-      note: '处理社区内容审核',
+      label: strings.value.dashboard.quickLinks.pendingPosts.label,
+      note: strings.value.dashboard.quickLinks.pendingPosts.note,
       value: count,
     })
   }
   if (canReadOrders.value) {
     items.push({
       to: '/data/orders',
-      label: '待处理退款',
-      note: '进入订单退款页继续处理',
+      label: strings.value.dashboard.quickLinks.pendingRefunds.label,
+      note: strings.value.dashboard.quickLinks.pendingRefunds.note,
       value: overview.value?.pendingRefundCount,
     })
   }
@@ -140,6 +167,7 @@ const clickableAuditBreakdown = computed(() => {
   return overview.value.pendingAuditBreakdown
     .map((item) => ({
       ...item,
+      label: auditBreakdownLabel(item.bizType, item.label),
       to: auditRouteByBizType[item.bizType],
     }))
     .filter((item) => Boolean(item.to))
@@ -193,7 +221,7 @@ async function loadSnapshot() {
     }
   } catch (error) {
     if (requestId === snapshotRequestId) {
-      errorMessage.value = error instanceof Error ? error.message : '控制台数据加载失败'
+      errorMessage.value = error instanceof Error ? error.message : strings.value.dashboard.loadError
     }
   } finally {
     if (requestId === snapshotRequestId) {
@@ -215,22 +243,22 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">控制台概览</p>
-        <h1>当前区域 {{ state.region }} 的经营与审核状态，一眼看明白。</h1>
-        <p>汇总门店、导入、订单退款和待审任务，先保证运营能用。</p>
+        <p class="eyebrow">{{ strings.dashboard.eyebrow }}</p>
+        <h1>{{ strings.dashboard.heading(state.region) }}</h1>
+        <p>{{ strings.dashboard.description }}</p>
       </div>
 
       <div class="header-actions">
-        <RouterLink v-if="canReadShops" to="/data/shops" class="primary-link">去管门店</RouterLink>
-        <RouterLink v-if="canImportShops" to="/data/import" class="secondary-link">去做导入</RouterLink>
-        <RouterLink v-if="canReadOrders" to="/data/orders" class="secondary-link">看订单退款</RouterLink>
+        <RouterLink v-if="canReadShops" to="/data/shops" class="primary-link">{{ strings.dashboard.headerActions.manageShops }}</RouterLink>
+        <RouterLink v-if="canImportShops" to="/data/import" class="secondary-link">{{ strings.dashboard.headerActions.importShops }}</RouterLink>
+        <RouterLink v-if="canReadOrders" to="/data/orders" class="secondary-link">{{ strings.dashboard.headerActions.viewOrders }}</RouterLink>
       </div>
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="feedback">控制台数据刷新中...</p>
+    <p v-else-if="loading" class="feedback">{{ strings.dashboard.loading }}</p>
 
-    <p v-if="metrics.length === 0" class="feedback">当前账号暂无可查看的控制台数据。</p>
+    <p v-if="metrics.length === 0" class="feedback">{{ strings.dashboard.noData }}</p>
 
     <div v-if="metrics.length > 0" class="stat-grid">
       <article v-for="metric in metrics" :key="metric.label" class="stat-card">
@@ -243,8 +271,8 @@ watch(
     <section v-if="quickLinks.length" class="content-card" style="margin-top: 18px">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">快捷入口</p>
-          <h2>有待办就直接跳，别在菜单里翻半天。</h2>
+          <p class="eyebrow">{{ strings.dashboard.quickLinks.eyebrow }}</p>
+          <h2>{{ strings.dashboard.quickLinks.heading }}</h2>
         </div>
       </div>
       <div class="stat-grid">
@@ -266,13 +294,13 @@ watch(
       <section v-if="canReadShops" class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">最近门店</p>
-            <h2>谁刚被录进来，别装看不见。</h2>
+            <p class="eyebrow">{{ strings.dashboard.recentShops.eyebrow }}</p>
+            <h2>{{ strings.dashboard.recentShops.heading }}</h2>
           </div>
-          <RouterLink to="/data/shops" class="text-link">查看全部</RouterLink>
+          <RouterLink to="/data/shops" class="text-link">{{ strings.dashboard.recentShops.viewAll }}</RouterLink>
         </div>
 
-        <div v-if="recentShops.length === 0" class="empty-state">当前区域还没有门店，先去导一批数据。</div>
+        <div v-if="recentShops.length === 0" class="empty-state">{{ strings.dashboard.recentShops.empty }}</div>
 
         <div v-else class="stack-list">
           <article v-for="shop in recentShops" :key="shop.id" class="stack-list__item">
@@ -282,7 +310,7 @@ watch(
             </div>
             <div class="stack-list__meta">
               <span class="status-pill" :class="shop.openNow ? 'status-pill--good' : 'status-pill--muted'">
-                {{ shop.openNow ? '营业中' : '休息中' }}
+                {{ shopOpenStatus(shop.openNow) }}
               </span>
               <span>{{ shop.createdAt }}</span>
             </div>
@@ -293,26 +321,26 @@ watch(
       <section v-if="canReadImportBatches" class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">最近批次</p>
-            <h2>批次结果得明明白白，不然导入失败都没人知道。</h2>
+            <p class="eyebrow">{{ strings.dashboard.recentBatches.eyebrow }}</p>
+            <h2>{{ strings.dashboard.recentBatches.heading }}</h2>
           </div>
-          <RouterLink v-if="canImportShops" to="/data/import" class="text-link">查看批次</RouterLink>
+          <RouterLink v-if="canImportShops" to="/data/import" class="text-link">{{ strings.dashboard.recentBatches.viewAll }}</RouterLink>
         </div>
 
-        <div v-if="recentBatches.length === 0" class="empty-state">当前区域还没有导入批次，去导一包种子商户试试。</div>
+        <div v-if="recentBatches.length === 0" class="empty-state">{{ strings.dashboard.recentBatches.empty }}</div>
 
         <div v-else class="stack-list">
           <article v-for="batch in recentBatches" :key="batch.id" class="stack-list__item">
             <div>
               <strong>{{ batch.fileName }}</strong>
-              <p>成功 {{ batch.success }} / 失败 {{ batch.failed }} / 共 {{ batch.total }}</p>
+              <p>{{ strings.dashboard.recentBatches.batchSummary(batch.success, batch.failed, batch.total) }}</p>
             </div>
             <div class="stack-list__meta">
               <span
                 class="status-pill"
                 :class="batch.failed === 0 ? 'status-pill--good' : batch.success > 0 ? 'status-pill--warn' : 'status-pill--muted'"
               >
-                {{ batch.statusText }}
+                {{ importBatchStatusText(batch.status, batch.statusText) }}
               </span>
               <span>{{ batch.createdAt }}</span>
             </div>
@@ -323,11 +351,11 @@ watch(
       <section v-if="canReadDashboard && overview" class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">待审拆分</p>
-            <h2>按当前账号权限拆开看，别把没权限的任务也算进去。</h2>
+            <p class="eyebrow">{{ strings.dashboard.pendingAudit.eyebrow }}</p>
+            <h2>{{ strings.dashboard.pendingAudit.heading }}</h2>
           </div>
         </div>
-        <div v-if="!clickableAuditBreakdown.length" class="empty-state">当前账号没有可查看的待审任务。</div>
+        <div v-if="!clickableAuditBreakdown.length" class="empty-state">{{ strings.dashboard.pendingAudit.empty }}</div>
         <div v-else class="stack-list">
           <RouterLink
             v-for="item in clickableAuditBreakdown"
@@ -338,11 +366,11 @@ watch(
           >
             <div>
               <strong>{{ item.label }}</strong>
-              <p>bizType={{ item.bizType }} · 点击进入审核页</p>
+              <p>{{ strings.dashboard.pendingAudit.detailsNote(item.bizType) }}</p>
             </div>
             <div class="stack-list__meta">
               <span class="status-pill" :class="item.count > 0 ? 'status-pill--warn' : 'status-pill--good'">
-                {{ item.count }} 条
+                {{ strings.dashboard.pendingAudit.countSummary(item.count) }}
               </span>
             </div>
           </RouterLink>

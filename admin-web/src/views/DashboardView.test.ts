@@ -18,7 +18,7 @@ vi.mock('@/composables/useAdminSession', () => ({
   }),
 }))
 vi.mock('vue-router', () => ({
-  RouterLink: { template: '<a><slot /></a>' },
+  RouterLink: { props: ['to'], template: '<a :data-to="to"><slot /></a>' },
 }))
 
 import DashboardView from './DashboardView.vue'
@@ -74,10 +74,10 @@ describe('DashboardView', () => {
     expect(mocks.listShops).not.toHaveBeenCalled()
     expect(mocks.listImportBatches).not.toHaveBeenCalled()
     expect(mocks.getAdminDashboardOverview).not.toHaveBeenCalled()
-    expect(host.textContent).not.toContain('当前区域门店数')
-    expect(host.textContent).not.toContain('导入批次数')
-    expect(host.textContent).not.toContain('去管门店')
-    expect(host.textContent).not.toContain('去做导入')
+    expect(host.textContent).not.toContain('Shops in region')
+    expect(host.textContent).not.toContain('Import batches')
+    expect(host.textContent).not.toContain('Manage shops')
+    expect(host.textContent).not.toContain('Run imports')
 
     app.unmount()
   })
@@ -115,20 +115,20 @@ describe('DashboardView', () => {
     expect(mocks.listShops).toHaveBeenCalledWith({ region: 'EU', page: 1, pageSize: 5 })
     expect(mocks.listImportBatches).toHaveBeenCalledWith({ region: 'EU', page: 1, pageSize: 5 })
     expect(mocks.getAdminDashboardOverview).toHaveBeenCalled()
-    expect(host.textContent).toContain('当前区域门店数')
-    expect(host.textContent).toContain('导入批次数')
-    expect(host.textContent).toContain('已支付订单')
-    expect(host.textContent).toContain('待处理退款')
-    expect(host.textContent).toContain('待审任务')
-    expect(host.textContent).toContain('团购审核')
-    expect(host.textContent).toContain('待审团购')
-    expect(host.textContent).toContain('待审门店草稿')
-    expect(host.textContent).toContain('去管门店')
-    expect(host.textContent).toContain('去做导入')
+    expect(host.textContent).toContain('Shops in region')
+    expect(host.textContent).toContain('Import batches')
+    expect(host.textContent).toContain('Paid orders')
+    expect(host.textContent).toContain('Pending refunds')
+    expect(host.textContent).toContain('Pending audits')
+    expect(host.textContent).toContain('Deal audit')
+    expect(host.textContent).toContain('Pending deals')
+    expect(host.textContent).toContain('Pending shop drafts')
+    expect(host.textContent).toContain('Manage shops')
+    expect(host.textContent).toContain('Run imports')
     expect(host.querySelectorAll('[data-testid="dashboard-quick-link"]').length).toBeGreaterThanOrEqual(3)
     const breakdownLinks = [...host.querySelectorAll('[data-testid="dashboard-audit-breakdown-link"]')]
     expect(breakdownLinks.length).toBeGreaterThanOrEqual(2)
-    expect(breakdownLinks.some((link) => link.getAttribute('href') === '/audit/deals' || link.getAttribute('to') === '/audit/deals' || (link as HTMLElement).dataset.to === '/audit/deals' || link.outerHTML.includes('/audit/deals'))).toBe(true)
+    expect(breakdownLinks.some((link) => (link as HTMLElement).dataset.to === '/audit/deals')).toBe(true)
 
     app.unmount()
   })

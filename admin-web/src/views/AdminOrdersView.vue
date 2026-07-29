@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { auditAdminOrderRefund, listAdminOrders, reconcileAdminOrders } from '@/services/admin'
 import type { AdminOrder, PageResult } from '@/types/admin'
 
 const { state, hasPermission } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const canAuditRefund = hasPermission('data:order:write')
 const pageSize = 20
 const loading = ref(false)
@@ -47,15 +49,26 @@ function normalizeDate(value: string) {
 }
 
 function paymentSummary(item: AdminOrder) {
-  const channel = item.paymentChannel || item.payMethod || '--'
+  const channel = item.paymentChannel || item.payMethod || strings.value.adminOrders.paymentChannelFallback
   return item.paymentChannelTxn ? `${channel} / ${item.paymentChannelTxn}` : channel
+}
+
+function payStatusText(item: AdminOrder) {
+  return strings.value.adminOrders.payStatusText(item.payStatus, item.payStatusText)
+}
+
+function refundStatusText(item: AdminOrder) {
+  return strings.value.adminOrders.refundStatusText(item.refundStatus ?? 0, item.refundStatusText)
 }
 
 function refundSummary(item: AdminOrder) {
   if (!item.refundId) {
-    return '无退款申请'
+    return strings.value.adminOrders.noRefundRequest
   }
-  return `${item.refundStatusText || '申请中'} · ${item.refundReason || '无原因'}`
+  return strings.value.adminOrders.refundSummary(
+    refundStatusText(item),
+    item.refundReason || strings.value.adminOrders.noReason,
+  )
 }
 
 async function load() {
@@ -75,7 +88,7 @@ async function load() {
       pageSize,
     })
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '订单数据加载失败'
+    errorMessage.value = error instanceof Error ? error.message : strings.value.adminOrders.loadError
   } finally {
     loading.value = false
   }
@@ -110,7 +123,7 @@ async function submitAudit(decision: 'approve' | 'reject') {
   }
   const reason = auditReason.value.trim()
   if (!reason) {
-    auditError.value = '退款仲裁必须填写原因'
+    auditError.value = strings.value.adminOrders.auditReasonRequired
     return
   }
   auditSubmitting.value = true
@@ -123,10 +136,10 @@ async function submitAudit(decision: 'approve' | 'reject') {
         list: pageState.value.list.map((item) => (item.id === updated.id ? updated : item)),
       }
     }
-    auditNotice.value = `订单 ${updated.orderNo} 退款已${decision === 'approve' ? '通过' : '驳回'}`
+    auditNotice.value = strings.value.adminOrders.auditNotice(updated.orderNo, decision)
     closeAudit()
   } catch (error) {
-    auditError.value = error instanceof Error ? error.message : '退款仲裁提交失败'
+    auditError.value = error instanceof Error ? error.message : strings.value.adminOrders.auditSubmitError
   } finally {
     auditSubmitting.value = false
   }
@@ -137,12 +150,14 @@ async function runReconcile() {
   errorMessage.value = ''
   try {
     const result = await reconcileAdminOrders()
-    auditNotice.value =
-      `对账补偿完成：关闭超时未支付订单 ${result.closedOrders} 笔，` +
-      `恢复库存 ${result.restoredStockOrders} 笔，标记失败支付流水 ${result.failedPayments} 笔`
+    auditNotice.value = strings.value.adminOrders.reconcileNotice(
+      result.closedOrders,
+      result.restoredStockOrders,
+      result.failedPayments,
+    )
     await load()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '对账补偿执行失败'
+    errorMessage.value = error instanceof Error ? error.message : strings.value.adminOrders.reconcileError
   } finally {
     reconcileSubmitting.value = false
   }
@@ -157,13 +172,13 @@ onMounted(() => {
   <section class="page-section system-page">
     <header class="page-header">
       <div>
-        <p class="eyebrow">Orders & Reconciliation</p>
-        <h1>订单退款</h1>
-        <p>当前区域 {{ state.region }}。支持平台退款仲裁、超时未支付关单与待回调支付流水补偿。</p>
+        <p class="eyebrow">{{ strings.adminOrders.eyebrow }}</p>
+        <h1>{{ strings.adminOrders.heading }}</h1>
+        <p>{{ strings.adminOrders.description(state.region) }}</p>
       </div>
       <div v-if="canAuditRefund" class="toolbar-actions">
         <button type="button" class="primary-button" :disabled="reconcileSubmitting" @click="runReconcile">
-          {{ reconcileSubmitting ? '补偿执行中...' : '执行对账补偿' }}
+          {{ reconcileSubmitting ? strings.adminOrders.reconcileRunning : strings.adminOrders.reconcileRun }}
         </button>
       </div>
     </header>
@@ -173,56 +188,75 @@ onMounted(() => {
 
     <article class="content-card system-table-card">
       <div class="system-table-card__meta">
-        <span>{{ loading ? '加载中...' : `共 ${pageState?.total ?? 0} 条订单` }}</span>
-        <span>支持按商户、门店、用户、支付/退款状态、订单号和日期范围筛选。</span>
+        <span>{{ loading ? strings.adminOrders.metaLoading : strings.adminOrders.metaSummary(pageState?.total ?? 0) }}</span>
+        <span>{{ strings.adminOrders.metaDescription }}</span>
       </div>
 
       <div class="toolbar-grid toolbar-grid--filters">
         <label class="field">
-          <span>商户 ID</span>
-          <input name="admin-order-merchant-id" v-model="filters.merchantId" inputmode="numeric" placeholder="例如 1001" />
+          <span>{{ strings.adminOrders.filters.merchantId }}</span>
+          <input
+            name="admin-order-merchant-id"
+            v-model="filters.merchantId"
+            inputmode="numeric"
+            :placeholder="strings.adminOrders.placeholders.merchantId"
+          />
         </label>
         <label class="field">
-          <span>门店 ID</span>
-          <input name="admin-order-shop-id" v-model="filters.shopId" inputmode="numeric" placeholder="例如 10001" />
+          <span>{{ strings.adminOrders.filters.shopId }}</span>
+          <input
+            name="admin-order-shop-id"
+            v-model="filters.shopId"
+            inputmode="numeric"
+            :placeholder="strings.adminOrders.placeholders.shopId"
+          />
         </label>
         <label class="field">
-          <span>用户 ID</span>
-          <input name="admin-order-user-id" v-model="filters.userId" inputmode="numeric" placeholder="例如 9001" />
+          <span>{{ strings.adminOrders.filters.userId }}</span>
+          <input
+            name="admin-order-user-id"
+            v-model="filters.userId"
+            inputmode="numeric"
+            :placeholder="strings.adminOrders.placeholders.userId"
+          />
         </label>
         <label class="field">
-          <span>支付状态</span>
+          <span>{{ strings.adminOrders.filters.payStatus }}</span>
           <select name="admin-order-pay-status" v-model="filters.payStatus">
-            <option value="">全部</option>
-            <option value="0">待支付</option>
-            <option value="1">已支付</option>
-            <option value="2">已退款</option>
-            <option value="3">部分退款</option>
+            <option value="">{{ strings.adminOrders.payStatusOptions.all }}</option>
+            <option value="0">{{ strings.adminOrders.payStatusOptions.pending }}</option>
+            <option value="1">{{ strings.adminOrders.payStatusOptions.paid }}</option>
+            <option value="2">{{ strings.adminOrders.payStatusOptions.refunded }}</option>
+            <option value="3">{{ strings.adminOrders.payStatusOptions.partialRefund }}</option>
           </select>
         </label>
         <label class="field">
-          <span>退款状态</span>
+          <span>{{ strings.adminOrders.filters.refundStatus }}</span>
           <select name="admin-order-refund-status" v-model="filters.refundStatus">
-            <option value="">全部</option>
-            <option value="0">申请中</option>
-            <option value="1">退款成功</option>
-            <option value="2">已驳回</option>
+            <option value="">{{ strings.adminOrders.refundStatusOptions.all }}</option>
+            <option value="0">{{ strings.adminOrders.refundStatusOptions.pending }}</option>
+            <option value="1">{{ strings.adminOrders.refundStatusOptions.success }}</option>
+            <option value="2">{{ strings.adminOrders.refundStatusOptions.rejected }}</option>
           </select>
         </label>
         <label class="field">
-          <span>订单号</span>
-          <input name="admin-order-order-no" v-model="filters.orderNo" placeholder="例如 ADMIN-ORDER-001" />
+          <span>{{ strings.adminOrders.filters.orderNo }}</span>
+          <input
+            name="admin-order-order-no"
+            v-model="filters.orderNo"
+            :placeholder="strings.adminOrders.placeholders.orderNo"
+          />
         </label>
         <label class="field">
-          <span>起始日期</span>
+          <span>{{ strings.adminOrders.filters.dateFrom }}</span>
           <input name="admin-order-date-from" v-model="filters.dateFrom" type="date" />
         </label>
         <label class="field">
-          <span>结束日期</span>
+          <span>{{ strings.adminOrders.filters.dateTo }}</span>
           <input name="admin-order-date-to" v-model="filters.dateTo" type="date" />
         </label>
         <div class="toolbar-actions">
-          <button type="button" class="primary-button" @click="applyFilters">应用筛选</button>
+          <button type="button" class="primary-button" @click="applyFilters">{{ strings.adminOrders.applyFilters }}</button>
         </div>
       </div>
 
@@ -230,54 +264,54 @@ onMounted(() => {
         <table class="data-table">
           <thead>
             <tr>
-              <th>时间</th>
-              <th>订单</th>
-              <th>商户 / 门店</th>
-              <th>用户</th>
-              <th>金额</th>
-              <th>支付</th>
-              <th>退款</th>
-              <th v-if="canAuditRefund">操作</th>
+              <th>{{ strings.adminOrders.tableHeaders.time }}</th>
+              <th>{{ strings.adminOrders.tableHeaders.order }}</th>
+              <th>{{ strings.adminOrders.tableHeaders.merchantShop }}</th>
+              <th>{{ strings.adminOrders.tableHeaders.user }}</th>
+              <th>{{ strings.adminOrders.tableHeaders.amount }}</th>
+              <th>{{ strings.adminOrders.tableHeaders.payment }}</th>
+              <th>{{ strings.adminOrders.tableHeaders.refund }}</th>
+              <th v-if="canAuditRefund">{{ strings.adminOrders.tableHeaders.actions }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td :colspan="canAuditRefund ? 8 : 7" class="table-empty">订单数据加载中...</td>
+              <td :colspan="canAuditRefund ? 8 : 7" class="table-empty">{{ strings.adminOrders.loadingRow }}</td>
             </tr>
             <tr v-else-if="!(pageState?.list.length)">
-              <td :colspan="canAuditRefund ? 8 : 7" class="table-empty">当前筛选下没有订单，条件别拧得太邪乎。</td>
+              <td :colspan="canAuditRefund ? 8 : 7" class="table-empty">{{ strings.adminOrders.empty }}</td>
             </tr>
             <tr v-for="item in pageState?.list" :key="item.id">
               <td class="numeric-cell">{{ item.createdAt }}</td>
               <td>
                 <strong>{{ item.orderNo }}</strong>
-                <p class="inline-note">{{ item.dealTitle || `deal:${item.dealId}` }}</p>
+                <p class="inline-note">{{ item.dealTitle || strings.adminOrders.dealFallback(item.dealId) }}</p>
               </td>
               <td>
-                <strong>{{ item.merchantName || `merchant:${item.merchantId}` }}</strong>
-                <p class="code-box">{{ item.shopName || `shop:${item.shopId}` }}</p>
+                <strong>{{ item.merchantName || strings.adminOrders.merchantFallback(item.merchantId) }}</strong>
+                <p class="code-box">{{ item.shopName || strings.adminOrders.shopFallback(item.shopId) }}</p>
               </td>
               <td>
-                <strong>{{ item.userNickname || `user:${item.userId}` }}</strong>
-                <p class="code-box">{{ item.account || `user:${item.userId}` }}</p>
+                <strong>{{ item.userNickname || strings.adminOrders.userFallback(item.userId) }}</strong>
+                <p class="code-box">{{ item.account || strings.adminOrders.userFallback(item.userId) }}</p>
               </td>
               <td>
                 <strong>{{ item.amount }} {{ item.currency }}</strong>
-                <p class="inline-note">x{{ item.quantity }} · 单价 {{ item.unitPrice }}</p>
+                <p class="inline-note">{{ strings.adminOrders.amountSummary(item.quantity, item.unitPrice) }}</p>
               </td>
               <td>
                 <span class="status-pill" :class="item.payStatus === 1 || item.payStatus === 2 ? 'status-pill--good' : 'status-pill--warn'">
-                  {{ item.payStatusText }}
+                  {{ payStatusText(item) }}
                 </span>
                 <p class="inline-note">{{ paymentSummary(item) }}</p>
-                <p class="inline-note" v-if="item.paidAt">支付时间：{{ item.paidAt }}</p>
+                <p class="inline-note" v-if="item.paidAt">{{ strings.adminOrders.paidAt(item.paidAt) }}</p>
               </td>
               <td>
                 <span class="status-pill" :class="item.refundId ? (item.refundStatus === 1 ? 'status-pill--good' : item.refundStatus === 2 ? 'status-pill--muted' : 'status-pill--warn') : 'status-pill--muted'">
-                  {{ item.refundId ? item.refundStatusText : '无退款' }}
+                  {{ item.refundId ? refundStatusText(item) : strings.adminOrders.noRefund }}
                 </span>
                 <p class="inline-note">{{ refundSummary(item) }}</p>
-                <p class="inline-note" v-if="item.refundAuditReason">审核备注：{{ item.refundAuditReason }}</p>
+                <p class="inline-note" v-if="item.refundAuditReason">{{ strings.adminOrders.auditRemarkLabel(item.refundAuditReason) }}</p>
               </td>
               <td v-if="canAuditRefund">
                 <template v-if="item.refundId && item.refundStatus === 0">
@@ -287,28 +321,28 @@ onMounted(() => {
                     class="ghost-button"
                     @click="openAudit(item)"
                   >
-                    退款仲裁
+                    {{ strings.adminOrders.refundArbitration }}
                   </button>
                   <div v-else class="field">
                     <textarea
                       name="admin-refund-audit-reason"
                       v-model="auditReason"
                       rows="2"
-                      placeholder="填写仲裁原因（必填）"
+                      :placeholder="strings.adminOrders.placeholders.auditReason"
                     ></textarea>
                     <p v-if="auditError" class="feedback is-error">{{ auditError }}</p>
                     <div class="toolbar-actions">
                       <button type="button" class="primary-button" :disabled="auditSubmitting" @click="submitAudit('approve')">
-                        通过退款
+                        {{ strings.adminOrders.approveRefund }}
                       </button>
                       <button type="button" class="ghost-button" :disabled="auditSubmitting" @click="submitAudit('reject')">
-                        驳回退款
+                        {{ strings.adminOrders.rejectRefund }}
                       </button>
-                      <button type="button" class="ghost-button" :disabled="auditSubmitting" @click="closeAudit">取消</button>
+                      <button type="button" class="ghost-button" :disabled="auditSubmitting" @click="closeAudit">{{ strings.common.cancel }}</button>
                     </div>
                   </div>
                 </template>
-                <span v-else class="inline-note">无待处理退款</span>
+                <span v-else class="inline-note">{{ strings.adminOrders.noPendingRefund }}</span>
               </td>
             </tr>
           </tbody>
@@ -317,11 +351,11 @@ onMounted(() => {
 
       <div class="pager">
         <button type="button" class="ghost-button system-pager-button" :disabled="filters.page <= 1" @click="goPage(filters.page - 1)">
-          上一页
+          {{ strings.adminOrders.previousPage }}
         </button>
-        <span class="numeric-cell">第 {{ filters.page }} 页</span>
+        <span class="numeric-cell">{{ strings.adminOrders.page(filters.page) }}</span>
         <button type="button" class="ghost-button system-pager-button" :disabled="!pageState?.hasMore" @click="goPage(filters.page + 1)">
-          下一页
+          {{ strings.adminOrders.nextPage }}
         </button>
       </div>
     </article>

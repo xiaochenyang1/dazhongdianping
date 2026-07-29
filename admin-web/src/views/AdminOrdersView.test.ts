@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/services/admin', () => mocks)
 vi.mock('@/composables/useAdminSession', () => ({
   useAdminSession: () => ({
-    state: { permissions: ['data:order:read', 'data:order:write'], region: 'CN' },
+    state: { permissions: ['data:order:read', 'data:order:write'], region: 'EU' },
     hasPermission: (permission: string) => ['data:order:read', 'data:order:write'].includes(permission),
   }),
 }))
@@ -150,7 +150,8 @@ describe('AdminOrdersView', () => {
       pageSize: 20,
     })
     expect(host.textContent).toContain('ADMIN-ORDER-001')
-    expect(host.textContent).toContain('退款成功')
+    expect(host.textContent).toContain('Orders and refunds')
+    expect(host.textContent).toContain('Refunded')
 
     input(host, 'admin-order-merchant-id', '1001')
     input(host, 'admin-order-shop-id', '10001')
@@ -161,7 +162,7 @@ describe('AdminOrdersView', () => {
     input(host, 'admin-order-date-from', '2026-07-20')
     input(host, 'admin-order-date-to', '2026-07-20')
     await nextTick()
-    click(host, '应用筛选')
+    click(host, 'Apply filters')
     await flush()
 
     expect(mocks.listAdminOrders).toHaveBeenLastCalledWith({
@@ -191,14 +192,14 @@ describe('AdminOrdersView', () => {
     const { app, host } = mount()
     await flush()
 
-    expect(host.textContent).toContain('退款仲裁')
-    click(host, '退款仲裁')
+    expect(host.textContent).toContain('Refund arbitration')
+    click(host, 'Refund arbitration')
     await nextTick()
 
-    click(host, '通过退款')
+    click(host, 'Approve refund')
     await flush()
     expect(mocks.auditAdminOrderRefund).not.toHaveBeenCalled()
-    expect(host.textContent).toContain('退款仲裁必须填写原因')
+    expect(host.textContent).toContain('Refund arbitration requires a reason.')
 
     const reasonInput = host.querySelector<HTMLTextAreaElement>('[name="admin-refund-audit-reason"]')
     if (!reasonInput) throw new Error('missing audit reason textarea')
@@ -206,16 +207,16 @@ describe('AdminOrdersView', () => {
     reasonInput.dispatchEvent(new Event('input'))
     await nextTick()
 
-    click(host, '通过退款')
+    click(host, 'Approve refund')
     await flush()
 
     expect(mocks.auditAdminOrderRefund).toHaveBeenCalledWith(9302, {
       decision: 'approve',
       reason: '平台仲裁退款',
     })
-    expect(host.textContent).toContain('订单 ADMIN-ORDER-002 退款已通过')
-    expect(host.textContent).toContain('退款成功')
-    expect(host.textContent).toContain('无待处理退款')
+    expect(host.textContent).toContain('Refund for order ADMIN-ORDER-002 was approved.')
+    expect(host.textContent).toContain('Refunded')
+    expect(host.textContent).toContain('No pending refund')
     app.unmount()
   })
 
@@ -228,12 +229,12 @@ describe('AdminOrdersView', () => {
     const { app, host } = mount()
     await flush()
 
-    click(host, '执行对账补偿')
+    click(host, 'Run reconciliation')
     await flush()
 
     expect(mocks.reconcileAdminOrders).toHaveBeenCalledTimes(1)
-    expect(host.textContent).toContain('关闭超时未支付订单 2 笔')
-    expect(host.textContent).toContain('标记失败支付流水 1 笔')
+    expect(host.textContent).toContain('closed 2 overdue unpaid orders')
+    expect(host.textContent).toContain('marked 1 payment flows as failed')
     expect(mocks.listAdminOrders).toHaveBeenCalledTimes(2)
     app.unmount()
   })
