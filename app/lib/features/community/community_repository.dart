@@ -412,11 +412,20 @@ class CommunityRepository {
 
   JsonMutationApi get _mutationApi => api is JsonMutationApi
       ? api as JsonMutationApi
-      : throw unsupportedApiClientCapability('PUT requests');
+      : throw unsupportedApiClientCapability(
+          'PUT requests',
+          languageTag: apiClientLanguageTag(api),
+        );
   JsonDeleteApi get _deleteApi => api is JsonDeleteApi
       ? api as JsonDeleteApi
-      : throw unsupportedApiClientCapability('DELETE requests');
+      : throw unsupportedApiClientCapability(
+          'DELETE requests',
+          languageTag: apiClientLanguageTag(api),
+        );
   FileUploadApi get _uploadApi => api is FileUploadApi
       ? api as FileUploadApi
-      : throw unsupportedApiClientCapability('file uploads');
+      : throw unsupportedApiClientCapability(
+          'file uploads',
+          languageTag: apiClientLanguageTag(api),
+        );
 }

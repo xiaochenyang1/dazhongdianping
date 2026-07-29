@@ -298,7 +298,10 @@ class PrivacyRepository {
 
   Future<Uint8List> downloadExport(int taskId) {
     if (api is! BinaryApi) {
-      throw unsupportedApiClientCapability('file downloads');
+      throw unsupportedApiClientCapability(
+        'file downloads',
+        languageTag: apiClientLanguageTag(api),
+      );
     }
     return (api as BinaryApi).getBytes(
       '/api/c/v1/privacy/export-tasks/$taskId/download',
@@ -400,7 +403,10 @@ class PrivacyRepository {
 
   Future<UserDevice> logoutDevice(int deviceId) async {
     if (api is! JsonDeleteApi) {
-      throw unsupportedApiClientCapability('device logout');
+      throw unsupportedApiClientCapability(
+        'device logout',
+        languageTag: apiClientLanguageTag(api),
+      );
     }
     final result = await (api as JsonDeleteApi).deleteJson(
       '/api/c/v1/devices/$deviceId',

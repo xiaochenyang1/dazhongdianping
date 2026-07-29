@@ -232,20 +232,20 @@ void main() {
     expect(
       () => repository.downloadExport(8),
       throwsA(
-        isA<StateError>().having(
+        isA<ApiException>().having(
           (error) => error.message,
           'message',
-          'This API client does not support file downloads.',
+          '当前 API 客户端不支持 file downloads',
         ),
       ),
     );
     expect(
       () => repository.logoutDevice(7),
       throwsA(
-        isA<StateError>().having(
+        isA<ApiException>().having(
           (error) => error.message,
           'message',
-          'This API client does not support device logout.',
+          '当前 API 客户端不支持 device logout',
         ),
       ),
     );

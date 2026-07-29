@@ -230,20 +230,20 @@ void main() {
     expect(
       () => repository.updatePost(7, input),
       throwsA(
-        isA<StateError>().having(
+        isA<ApiException>().having(
           (error) => error.message,
           'message',
-          'This API client does not support PUT requests.',
+          '当前 API 客户端不支持 PUT requests',
         ),
       ),
     );
     expect(
       () => repository.deletePost(7),
       throwsA(
-        isA<StateError>().having(
+        isA<ApiException>().having(
           (error) => error.message,
           'message',
-          'This API client does not support DELETE requests.',
+          '当前 API 客户端不支持 DELETE requests',
         ),
       ),
     );
@@ -256,10 +256,10 @@ void main() {
         ),
       ),
       throwsA(
-        isA<StateError>().having(
+        isA<ApiException>().having(
           (error) => error.message,
           'message',
-          'This API client does not support file uploads.',
+          '当前 API 客户端不支持 file uploads',
         ),
       ),
     );

@@ -470,12 +470,18 @@ class UserRepository {
 
   JsonMutationApi get _mutationApi {
     if (api is! JsonMutationApi) {
-      throw unsupportedApiClientCapability('PUT requests');
+      throw unsupportedApiClientCapability(
+        'PUT requests',
+        languageTag: apiClientLanguageTag(api),
+      );
     }
     return api as JsonMutationApi;
   }
 
   JsonDeleteApi get _deleteApi => api is JsonDeleteApi
       ? api as JsonDeleteApi
-      : throw unsupportedApiClientCapability('DELETE requests');
+      : throw unsupportedApiClientCapability(
+          'DELETE requests',
+          languageTag: apiClientLanguageTag(api),
+        );
 }

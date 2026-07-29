@@ -21,6 +21,18 @@ void main() {
       AppLocalizations.forTag('en').activityDetailTitle,
       'Activity details',
     );
+    expect(AppLocalizations.forTag('zh-CN').requestFailed, '请求失败');
+    expect(AppLocalizations.forTag('zh-TW').invalidApiResponse, '服務回傳格式異常');
+    expect(
+      AppLocalizations.forTag('en').invalidApiResponse,
+      'The server returned invalid data',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).unsupportedApiClientCapability('PUT requests'),
+      'This API client does not support PUT requests',
+    );
     expect(AppLocalizations.forTag('zh-CN').shopCount(10), '10 家门店');
     expect(AppLocalizations.forTag('en').shopCount(10), '10 places');
     expect(

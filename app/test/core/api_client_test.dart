@@ -159,4 +159,58 @@ void main() {
       expect(error.traceId, 'trace-ban');
     }
   });
+
+  test('api client localizes missing error messages by language tag', () async {
+    final client = ApiClient(
+      config: const AppConfig(),
+      tokenProvider: () async => null,
+      languageProvider: () => 'zh-TW',
+      transport: MockClient((request) async {
+        return http.Response(
+          '{"code":500,"message":"","data":null}',
+          500,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    try {
+      await client.getJson('/api/c/v1/home/feed');
+      fail('expected ApiException');
+    } on ApiException catch (error) {
+      expect(error.message, '請求失敗');
+      expect(error.statusCode, 500);
+    }
+  });
+
+  test('api client localizes invalid api response fallback', () async {
+    final client = ApiClient(
+      config: const AppConfig(),
+      tokenProvider: () async => null,
+      languageProvider: () => 'en',
+      transport: MockClient((request) async {
+        return http.Response(
+          'gateway timeout',
+          502,
+          headers: const {'content-type': 'text/plain; charset=utf-8'},
+        );
+      }),
+    );
+
+    try {
+      await client.getJson('/api/c/v1/home/feed');
+      fail('expected ApiException');
+    } on ApiException catch (error) {
+      expect(error.message, 'The server returned invalid data');
+      expect(error.statusCode, 502);
+    }
+  });
+
+  test('unsupported capability fallback uses localized api exception', () {
+    final error = unsupportedApiClientCapability(
+      'PUT requests',
+      languageTag: 'zh-CN',
+    );
+    expect(error.message, '当前 API 客户端不支持 PUT requests');
+  });
 }

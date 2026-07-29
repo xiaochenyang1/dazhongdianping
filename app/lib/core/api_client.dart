@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dazhongdianping_app/core/app_config.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
@@ -39,8 +40,17 @@ abstract interface class FileUploadApi {
   });
 }
 
-StateError unsupportedApiClientCapability(String capability) =>
-    StateError('This API client does not support $capability.');
+ApiException unsupportedApiClientCapability(
+  String capability, {
+  String languageTag = 'zh-CN',
+}) => ApiException(
+  AppLocalizations.forTag(
+    languageTag,
+  ).unsupportedApiClientCapability(capability),
+);
+
+String apiClientLanguageTag(Object api, {String fallback = 'zh-CN'}) =>
+    api is ApiClient ? api.languageProvider() : fallback;
 
 class ApiException implements Exception {
   const ApiException(
@@ -80,6 +90,8 @@ class ApiClient
   final RegionProvider regionProvider;
   final LanguageProvider languageProvider;
   final http.Client transport;
+
+  AppLocalizations get _strings => AppLocalizations.forTag(languageProvider());
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -177,11 +189,12 @@ class ApiClient
   }
 
   Map<String, dynamic> _decode(http.Response response) {
-    final root = jsonDecode(response.body) as Map<String, dynamic>;
+    final root = _decodeRoot(response);
     final code = root['code'] as int? ?? response.statusCode;
     if (response.statusCode < 200 || response.statusCode >= 300 || code != 0) {
+      final message = (root['message'] as String?)?.trim();
       throw ApiException(
-        root['message'] as String? ?? 'Request failed',
+        message == null || message.isEmpty ? _strings.requestFailed : message,
         statusCode: response.statusCode,
         messageKey: root['messageKey'] as String?,
         traceId: root['traceId'] as String?,
@@ -191,5 +204,27 @@ class ApiClient
     return data is Map<String, dynamic>
         ? data
         : <String, dynamic>{'value': data};
+  }
+
+  Map<String, dynamic> _decodeRoot(http.Response response) {
+    final decodedBody = _tryDecodeBody(response.body);
+    if (decodedBody is Map<String, dynamic>) {
+      return decodedBody;
+    }
+    if (decodedBody is Map) {
+      return decodedBody.cast<String, dynamic>();
+    }
+    throw ApiException(
+      _strings.invalidApiResponse,
+      statusCode: response.statusCode,
+    );
+  }
+
+  Object? _tryDecodeBody(String body) {
+    try {
+      return jsonDecode(body);
+    } on FormatException {
+      return null;
+    }
   }
 }

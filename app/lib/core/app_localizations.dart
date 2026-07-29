@@ -43,6 +43,9 @@ class AppLocalizations {
     'searchFailed': '搜索失败：{error}',
     'processing': '处理中...',
     'retry': '重试',
+    'requestFailed': '请求失败',
+    'invalidApiResponse': '服务返回格式异常',
+    'unsupportedApiClientCapability': '当前 API 客户端不支持 {capability}',
     'noMatchingPlaces': '没有匹配的门店',
     'loading': '加载中...',
     'loadMore': '加载更多',
@@ -724,6 +727,9 @@ class AppLocalizations {
     'searchFailed': '搜尋失敗：{error}',
     'processing': '處理中...',
     'retry': '重試',
+    'requestFailed': '請求失敗',
+    'invalidApiResponse': '服務回傳格式異常',
+    'unsupportedApiClientCapability': '目前 API 客戶端不支援 {capability}',
     'noMatchingPlaces': '沒有符合條件的店家',
     'loading': '載入中...',
     'loadMore': '載入更多',
@@ -1408,6 +1414,10 @@ class AppLocalizations {
     'searchFailed': 'Search failed: {error}',
     'processing': 'Working...',
     'retry': 'Retry',
+    'requestFailed': 'Request failed',
+    'invalidApiResponse': 'The server returned invalid data',
+    'unsupportedApiClientCapability':
+        'This API client does not support {capability}',
     'noMatchingPlaces': 'No matching places',
     'loading': 'Loading...',
     'loadMore': 'Load more',
@@ -2154,6 +2164,11 @@ class AppLocalizations {
   String searchFailed(Object error) => _withError('searchFailed', error);
   String get processing => _text('processing');
   String get retry => _text('retry');
+  String get requestFailed => _text('requestFailed');
+  String get invalidApiResponse => _text('invalidApiResponse');
+  String unsupportedApiClientCapability(String capability) => _text(
+    'unsupportedApiClientCapability',
+  ).replaceFirst('{capability}', capability);
   String get noMatchingPlaces => _text('noMatchingPlaces');
   String get loading => _text('loading');
   String get loadMore => _text('loadMore');

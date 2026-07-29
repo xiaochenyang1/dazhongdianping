@@ -510,21 +510,30 @@ class ReviewRepository {
 
   JsonMutationApi get _mutationApi {
     if (api is! JsonMutationApi) {
-      throw unsupportedApiClientCapability('PUT requests');
+      throw unsupportedApiClientCapability(
+        'PUT requests',
+        languageTag: apiClientLanguageTag(api),
+      );
     }
     return api as JsonMutationApi;
   }
 
   JsonDeleteApi get _deleteApi {
     if (api is! JsonDeleteApi) {
-      throw unsupportedApiClientCapability('DELETE requests');
+      throw unsupportedApiClientCapability(
+        'DELETE requests',
+        languageTag: apiClientLanguageTag(api),
+      );
     }
     return api as JsonDeleteApi;
   }
 
   FileUploadApi get _fileUploadApi {
     if (api is! FileUploadApi) {
-      throw unsupportedApiClientCapability('file uploads');
+      throw unsupportedApiClientCapability(
+        'file uploads',
+        languageTag: apiClientLanguageTag(api),
+      );
     }
     return api as FileUploadApi;
   }
