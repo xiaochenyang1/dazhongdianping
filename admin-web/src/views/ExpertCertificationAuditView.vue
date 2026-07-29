@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { listAuditTasks, passAuditTask, rejectAuditTask } from '@/services/admin'
 import type { AdminAuditTask, PageResult } from '@/types/admin'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const loading = ref(false)
 const acting = ref(false)
 const errorMessage = ref('')
@@ -15,13 +17,33 @@ const approveRemark = ref('')
 const rejectReason = ref('')
 const filters = reactive({ status: '0', keyword: '', page: 1, pageSize: 10 })
 
-const selectedTask = computed(() =>
-  pageState.value?.list.find((task) => task.id === selectedTaskId.value)
-  ?? pageState.value?.list[0]
-  ?? null,
+const selectedTask = computed(
+  () => pageState.value?.list.find((task) => task.id === selectedTaskId.value) ?? pageState.value?.list[0] ?? null,
 )
 const canWrite = computed(() => state.permissions.includes('audit:expert_certification:write'))
 const canHandleSelected = computed(() => canWrite.value && selectedTask.value?.status === 0)
+
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+function taskStatusText(task: AdminAuditTask) {
+  return strings.value.expertCertificationAudit.statusText(task.status, task.statusText)
+}
+
+function actionLabel(taskId: number) {
+  return selectedTaskId.value === taskId
+    ? strings.value.expertCertificationAudit.selected
+    : strings.value.expertCertificationAudit.view
+}
+
+function selectTask(taskId: number) {
+  selectedTaskId.value = taskId
+  approveRemark.value = ''
+  rejectReason.value = ''
+  errorMessage.value = ''
+  successMessage.value = ''
+}
 
 async function loadTasks() {
   loading.value = true
@@ -38,36 +60,28 @@ async function loadTasks() {
     if (!pageState.value.list.some((task) => task.id === selectedTaskId.value)) {
       selectedTaskId.value = pageState.value.list[0]?.id ?? null
     }
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '达人认证任务加载失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.expertCertificationAudit.loadError)
   } finally {
     loading.value = false
   }
 }
 
-function selectTask(taskId: number) {
-  selectedTaskId.value = taskId
-  approveRemark.value = ''
-  rejectReason.value = ''
-  errorMessage.value = ''
-  successMessage.value = ''
-}
-
 async function handlePass() {
   const task = selectedTask.value
-  if (!canWrite.value || task?.status !== 0) return
+  if (!canHandleSelected.value || !task) return
 
   acting.value = true
   errorMessage.value = ''
   successMessage.value = ''
   try {
     await passAuditTask(task.id, { remark: approveRemark.value.trim() || undefined })
-    successMessage.value = `达人认证任务 #${task.id} 已通过。`
+    successMessage.value = strings.value.expertCertificationAudit.passed(task.id)
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '达人认证通过失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.expertCertificationAudit.passError)
   } finally {
     acting.value = false
   }
@@ -75,11 +89,11 @@ async function handlePass() {
 
 async function handleReject() {
   const task = selectedTask.value
-  if (!canWrite.value || task?.status !== 0) return
+  if (!canHandleSelected.value || !task) return
 
   const reason = rejectReason.value.trim()
   if (!reason) {
-    errorMessage.value = '驳回原因不能为空。'
+    errorMessage.value = strings.value.expertCertificationAudit.rejectReasonRequired
     return
   }
 
@@ -88,12 +102,12 @@ async function handleReject() {
   successMessage.value = ''
   try {
     await rejectAuditTask(task.id, { reason })
-    successMessage.value = `达人认证任务 #${task.id} 已驳回。`
+    successMessage.value = strings.value.expertCertificationAudit.rejected(task.id)
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '达人认证驳回失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.expertCertificationAudit.rejectError)
   } finally {
     acting.value = false
   }
@@ -119,11 +133,11 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">达人认证</p>
-        <h1>达人认证必须后台审核，别让用户自己封自己。</h1>
-        <p>当前区域 {{ state.region }}，这里只处理达人认证申请；通过后公开资料和作者信息才会挂标。</p>
+        <p class="eyebrow">{{ strings.expertCertificationAudit.eyebrow }}</p>
+        <h1>{{ strings.expertCertificationAudit.heading }}</h1>
+        <p>{{ strings.expertCertificationAudit.description(state.region) }}</p>
       </div>
-      <button type="button" class="secondary-button" @click="loadTasks">刷新任务</button>
+      <button type="button" class="secondary-button" @click="loadTasks">{{ strings.expertCertificationAudit.refresh }}</button>
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
@@ -133,93 +147,155 @@ watch(
       <section class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">任务列表</p>
-            <h2>申请理由和提交人直接摊开看，别让审核员靠猜。</h2>
+            <p class="eyebrow">{{ strings.expertCertificationAudit.listEyebrow }}</p>
+            <h2>{{ strings.expertCertificationAudit.listHeading }}</h2>
           </div>
-          <span class="inline-note">共 {{ pageState?.total ?? 0 }} 条达人认证任务</span>
+          <span class="inline-note">{{ strings.expertCertificationAudit.listSummary(pageState?.total ?? 0) }}</span>
         </div>
 
         <div class="toolbar-grid toolbar-grid--filters">
           <label class="field">
-            <span>状态</span>
+            <span>{{ strings.expertCertificationAudit.filters.status }}</span>
             <select v-model="filters.status">
-              <option value="">全部状态</option>
-              <option value="0">待人审</option>
-              <option value="1">通过</option>
-              <option value="2">驳回</option>
+              <option value="">{{ strings.expertCertificationAudit.statusOptions.all }}</option>
+              <option value="0">{{ strings.expertCertificationAudit.statusOptions.pending }}</option>
+              <option value="1">{{ strings.expertCertificationAudit.statusOptions.approved }}</option>
+              <option value="2">{{ strings.expertCertificationAudit.statusOptions.rejected }}</option>
             </select>
           </label>
           <label class="field">
-            <span>关键词</span>
+            <span>{{ strings.expertCertificationAudit.filters.keyword }}</span>
             <input
               v-model="filters.keyword"
               name="expert-keyword-filter"
               data-testid="expert-keyword-filter"
-              placeholder="申请人 / 申请摘要"
+              :placeholder="strings.expertCertificationAudit.keywordPlaceholder"
             />
           </label>
           <div class="toolbar-actions">
-            <button type="button" class="primary-button" @click="applyFilters">应用筛选</button>
+            <button type="button" class="primary-button" @click="applyFilters">
+              {{ strings.expertCertificationAudit.applyFilters }}
+            </button>
           </div>
         </div>
 
         <div class="table-shell">
           <table class="data-table">
             <thead>
-              <tr><th>任务</th><th>申请人</th><th>申请摘要</th><th>状态</th><th>操作</th></tr>
+              <tr>
+                <th>{{ strings.expertCertificationAudit.tableHeaders.task }}</th>
+                <th>{{ strings.expertCertificationAudit.tableHeaders.applicant }}</th>
+                <th>{{ strings.expertCertificationAudit.tableHeaders.summary }}</th>
+                <th>{{ strings.expertCertificationAudit.tableHeaders.status }}</th>
+                <th>{{ strings.expertCertificationAudit.tableHeaders.actions }}</th>
+              </tr>
             </thead>
             <tbody>
-              <tr v-if="loading"><td colspan="5" class="table-empty">达人认证任务加载中...</td></tr>
-              <tr v-else-if="!pageState?.list.length"><td colspan="5" class="table-empty">当前没有达人认证任务。</td></tr>
+              <tr v-if="loading">
+                <td colspan="5" class="table-empty">{{ strings.expertCertificationAudit.loading }}</td>
+              </tr>
+              <tr v-else-if="!pageState?.list.length">
+                <td colspan="5" class="table-empty">{{ strings.expertCertificationAudit.empty }}</td>
+              </tr>
               <tr v-for="task in pageState?.list" :key="task.id">
-                <td><strong>#{{ task.id }}</strong><p>申请 #{{ task.bizId }}</p></td>
-                <td>{{ task.submittedBy || '匿名' }}</td>
-                <td>{{ task.summary || '暂无申请摘要' }}</td>
-                <td><span class="status-pill" :class="task.status === 0 ? 'status-pill--warn' : task.status === 1 ? 'status-pill--good' : 'status-pill--muted'">{{ task.statusText }}</span></td>
-                <td><button type="button" class="table-action" @click="selectTask(task.id)">{{ selectedTaskId === task.id ? '已选中' : '查看' }}</button></td>
+                <td>
+                  <strong>#{{ task.id }}</strong>
+                  <p>{{ strings.expertCertificationAudit.taskLabel(task.bizId) }}</p>
+                </td>
+                <td>{{ task.submittedBy || strings.expertCertificationAudit.applicantFallback }}</td>
+                <td>{{ task.summary || strings.expertCertificationAudit.summaryFallback }}</td>
+                <td>
+                  <span
+                    class="status-pill"
+                    :class="task.status === 0 ? 'status-pill--warn' : task.status === 1 ? 'status-pill--good' : 'status-pill--muted'"
+                  >
+                    {{ taskStatusText(task) }}
+                  </span>
+                </td>
+                <td><button type="button" class="table-action" @click="selectTask(task.id)">{{ actionLabel(task.id) }}</button></td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <div class="pager">
-          <button type="button" class="ghost-button" :disabled="filters.page <= 1" @click="filters.page--; loadTasks()">上一页</button>
-          <span>第 {{ filters.page }} 页</span>
-          <button type="button" class="ghost-button" :disabled="!pageState?.hasMore" @click="filters.page++; loadTasks()">下一页</button>
+          <button type="button" class="ghost-button" :disabled="filters.page <= 1" @click="filters.page--; loadTasks()">
+            {{ strings.expertCertificationAudit.previousPage }}
+          </button>
+          <span>{{ strings.expertCertificationAudit.page(filters.page) }}</span>
+          <button type="button" class="ghost-button" :disabled="!pageState?.hasMore" @click="filters.page++; loadTasks()">
+            {{ strings.expertCertificationAudit.nextPage }}
+          </button>
         </div>
       </section>
 
       <section class="content-card editor-card">
         <template v-if="selectedTask">
           <div class="editor-header">
-            <div><p class="eyebrow">任务处理</p><h2>任务 #{{ selectedTask.id }}</h2></div>
-            <span class="inline-note">{{ selectedTask.statusText }}</span>
+            <div>
+              <p class="eyebrow">{{ strings.expertCertificationAudit.editorEyebrow }}</p>
+              <h2>{{ strings.expertCertificationAudit.editorHeading(selectedTask.id) }}</h2>
+            </div>
+            <span class="inline-note">{{ taskStatusText(selectedTask) }}</span>
           </div>
+
           <div class="meta-grid">
-            <div><span>申请</span><strong>#{{ selectedTask.bizId }}</strong></div>
-            <div><span>申请人</span><strong>{{ selectedTask.submittedBy || '匿名' }}</strong></div>
-            <div><span>区域</span><strong>{{ selectedTask.region }}</strong></div>
-            <div><span>提交时间</span><strong>{{ selectedTask.createdAt }}</strong></div>
+            <div>
+              <span>{{ strings.expertCertificationAudit.metaLabels.application }}</span>
+              <strong>#{{ selectedTask.bizId }}</strong>
+            </div>
+            <div>
+              <span>{{ strings.expertCertificationAudit.metaLabels.applicant }}</span>
+              <strong>{{ selectedTask.submittedBy || strings.expertCertificationAudit.applicantFallback }}</strong>
+            </div>
+            <div>
+              <span>{{ strings.expertCertificationAudit.metaLabels.region }}</span>
+              <strong>{{ selectedTask.region }}</strong>
+            </div>
+            <div>
+              <span>{{ strings.expertCertificationAudit.metaLabels.submittedAt }}</span>
+              <strong>{{ selectedTask.createdAt }}</strong>
+            </div>
           </div>
-          <div class="hint-card"><strong>申请摘要</strong><p>{{ selectedTask.summary || '暂无申请摘要' }}</p></div>
+
+          <div class="hint-card">
+            <strong>{{ strings.expertCertificationAudit.summaryLabel }}</strong>
+            <p>{{ selectedTask.summary || strings.expertCertificationAudit.summaryFallback }}</p>
+          </div>
+
           <template v-if="canHandleSelected">
             <label class="field field--full">
-              <span>通过备注</span>
-              <textarea v-model="approveRemark" name="approve-remark" rows="4" placeholder="可选，记录为什么给这人挂标。" />
+              <span>{{ strings.expertCertificationAudit.approveRemarkLabel }}</span>
+              <textarea
+                v-model="approveRemark"
+                name="approve-remark"
+                rows="4"
+                :placeholder="strings.expertCertificationAudit.approveRemarkPlaceholder"
+              />
             </label>
             <label class="field field--full">
-              <span>驳回原因</span>
-              <textarea v-model="rejectReason" name="reject-reason" rows="4" placeholder="必填，用户端会看到这段原因。" />
+              <span>{{ strings.expertCertificationAudit.rejectReasonLabel }}</span>
+              <textarea
+                v-model="rejectReason"
+                name="reject-reason"
+                rows="4"
+                :placeholder="strings.expertCertificationAudit.rejectReasonPlaceholder"
+              />
             </label>
             <div class="form-actions">
-              <button type="button" class="primary-button" :disabled="acting" @click="handlePass">通过认证</button>
-              <button type="button" class="secondary-button" :disabled="acting" @click="handleReject">驳回申请</button>
+              <button type="button" class="primary-button" :disabled="acting" @click="handlePass">
+                {{ strings.expertCertificationAudit.approve }}
+              </button>
+              <button type="button" class="secondary-button" :disabled="acting" @click="handleReject">
+                {{ strings.expertCertificationAudit.reject }}
+              </button>
             </div>
           </template>
-          <p v-else-if="!canWrite" class="inline-note">当前账号只有查看权限，无法处理认证。</p>
-          <p v-else class="inline-note">当前任务已经处理，只保留查看。</p>
+          <p v-else-if="!canWrite" class="inline-note">{{ strings.expertCertificationAudit.readOnly }}</p>
+          <p v-else class="inline-note">{{ strings.expertCertificationAudit.handled }}</p>
         </template>
-        <div v-else class="empty-state">请先选择一条达人认证任务。</div>
+
+        <div v-else class="empty-state">{{ strings.expertCertificationAudit.emptyState }}</div>
       </section>
     </div>
   </section>

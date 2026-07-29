@@ -322,6 +322,236 @@ export interface AdminStrings {
     page: (page: number) => string
     nextPage: string
   }
+  reviewAppealAudit: {
+    loadError: string
+    actionError: string
+    rejectReasonRequired: string
+    passed: (taskId: number) => string
+    rejected: (taskId: number) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    filters: {
+      status: string
+      keyword: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    keywordPlaceholder: string
+    applyFilters: string
+    tableHeaders: {
+      task: string
+      shop: string
+      summary: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    taskLabel: (bizId: number) => string
+    shopFallback: string
+    summaryFallback: string
+    statusText: (status: number, fallback?: string) => string
+    selected: string
+    view: string
+    previousPage: string
+    pageSummary: (page: number, total: number) => string
+    nextPage: string
+    editorEyebrow: string
+    editorHeading: (taskId: number) => string
+    editorSummaryLabel: string
+    passRemarkLabel: string
+    rejectReasonLabel: string
+    pass: string
+    reject: string
+    readOnly: string
+    handled: string
+    emptyState: string
+  }
+  userAppealAudit: {
+    loadError: string
+    actionError: string
+    rejectReasonRequired: string
+    passed: (taskId: number) => string
+    rejected: (taskId: number) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    filters: {
+      status: string
+      keyword: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    keywordPlaceholder: string
+    applyFilters: string
+    tableHeaders: {
+      task: string
+      user: string
+      reason: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    taskLabel: (bizId: number) => string
+    userFallback: string
+    reasonFallback: string
+    statusText: (status: number, fallback?: string) => string
+    view: string
+    previousPage: string
+    pageSummary: (page: number, total: number) => string
+    nextPage: string
+    editorEyebrow: string
+    editorHeading: (taskId: number) => string
+    detailLabels: {
+      user: string
+      reason: string
+    }
+    passRemarkLabel: string
+    rejectReasonLabel: string
+    pass: string
+    reject: string
+    readOnly: string
+    handled: string
+    emptyState: string
+  }
+  expertCertificationAudit: {
+    loadError: string
+    passError: string
+    rejectError: string
+    rejectReasonRequired: string
+    passed: (taskId: number) => string
+    rejected: (taskId: number) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    listEyebrow: string
+    listHeading: string
+    listSummary: (total: number) => string
+    filters: {
+      status: string
+      keyword: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    keywordPlaceholder: string
+    applyFilters: string
+    tableHeaders: {
+      task: string
+      applicant: string
+      summary: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    taskLabel: (bizId: number) => string
+    applicantFallback: string
+    summaryFallback: string
+    statusText: (status: number, fallback?: string) => string
+    selected: string
+    view: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    editorEyebrow: string
+    editorHeading: (taskId: number) => string
+    metaLabels: {
+      application: string
+      applicant: string
+      region: string
+      submittedAt: string
+    }
+    summaryLabel: string
+    approveRemarkLabel: string
+    approveRemarkPlaceholder: string
+    rejectReasonLabel: string
+    rejectReasonPlaceholder: string
+    approve: string
+    reject: string
+    readOnly: string
+    handled: string
+    emptyState: string
+  }
+  verifiedMerchantAudit: {
+    loadError: string
+    passError: string
+    rejectError: string
+    rejectReasonRequired: string
+    passed: (taskId: number) => string
+    rejected: (taskId: number) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    listEyebrow: string
+    listHeading: string
+    listSummary: (total: number) => string
+    filters: {
+      status: string
+      keyword: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    keywordPlaceholder: string
+    applyFilters: string
+    tableHeaders: {
+      task: string
+      applicant: string
+      summary: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    taskLabel: (bizId: number) => string
+    applicantFallback: string
+    summaryFallback: string
+    statusText: (status: number, fallback?: string) => string
+    selected: string
+    view: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    editorEyebrow: string
+    editorHeading: (taskId: number) => string
+    metaLabels: {
+      application: string
+      applicant: string
+      region: string
+      submittedAt: string
+    }
+    summaryLabel: string
+    approveRemarkLabel: string
+    approveRemarkPlaceholder: string
+    rejectReasonLabel: string
+    rejectReasonPlaceholder: string
+    approve: string
+    reject: string
+    readOnly: string
+    handled: string
+    emptyState: string
+  }
   circles: {
     loadError: string
     saveError: string
@@ -980,6 +1210,20 @@ const MENU_GROUP_KEYS = {
   system: 'system',
 } as const
 
+function zhAuditTaskStatusText(status: number, fallback?: string) {
+  if (status === 0) return '待人审'
+  if (status === 1) return '通过'
+  if (status === 2) return '驳回'
+  return fallback || `状态 ${status}`
+}
+
+function enAuditTaskStatusText(status: number, fallback?: string) {
+  if (status === 0) return 'Pending review'
+  if (status === 1) return 'Approved'
+  if (status === 2) return 'Rejected'
+  return fallback || `Status ${status}`
+}
+
 const zhCnStrings: AdminStrings = {
   tag: 'zh-CN',
   brand: '大众点评后台',
@@ -1316,6 +1560,237 @@ const zhCnStrings: AdminStrings = {
     previousPage: '上一页',
     page: (page) => `第 ${page} 页`,
     nextPage: '下一页',
+  },
+  reviewAppealAudit: {
+    loadError: '申诉任务加载失败',
+    actionError: '审核失败',
+    rejectReasonRequired: '驳回原因不能为空。',
+    passed: (taskId) => `申诉任务 #${taskId} 已通过，点评已隐藏。`,
+    rejected: (taskId) => `申诉任务 #${taskId} 已驳回。`,
+    eyebrow: '商户点评申诉',
+    heading: '恶意点评申诉单独审，别和普通点评混成一锅粥。',
+    description: (region) => `当前区域 ${region}，审核通过后会隐藏点评并重算门店评分。`,
+    refresh: '刷新',
+    filters: {
+      status: '状态',
+      keyword: '关键词',
+    },
+    statusOptions: {
+      all: '全部',
+      pending: '待人审',
+      approved: '通过',
+      rejected: '驳回',
+    },
+    keywordPlaceholder: '商户名 / 门店名 / 申诉摘要',
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      task: '任务',
+      shop: '门店',
+      summary: '申诉摘要',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '加载中...',
+    empty: '当前没有申诉任务。',
+    taskLabel: (bizId) => `申诉 #${bizId}`,
+    shopFallback: '--',
+    summaryFallback: '暂无摘要',
+    statusText: zhAuditTaskStatusText,
+    selected: '已选中',
+    view: '查看',
+    previousPage: '上一页',
+    pageSummary: (page, total) => `第 ${page} 页 / 共 ${total} 条`,
+    nextPage: '下一页',
+    editorEyebrow: '申诉处理',
+    editorHeading: (taskId) => `任务 #${taskId}`,
+    editorSummaryLabel: '申诉摘要',
+    passRemarkLabel: '通过备注',
+    rejectReasonLabel: '驳回原因',
+    pass: '通过申诉',
+    reject: '驳回申诉',
+    readOnly: '当前账号仅可查看，无申诉处理权限。',
+    handled: '当前任务已经处理，只保留查看。',
+    emptyState: '请先选择一条申诉任务。',
+  },
+  userAppealAudit: {
+    loadError: '申诉任务加载失败',
+    actionError: '审核失败',
+    rejectReasonRequired: '驳回原因不能为空。',
+    passed: (taskId) => `申诉任务 #${taskId} 已通过，用户已自动解封。`,
+    rejected: (taskId) => `申诉任务 #${taskId} 已驳回，用户保持封禁。`,
+    eyebrow: '用户封禁申诉',
+    heading: '误封要能翻案，恶意申诉也要拦得住。',
+    description: (region) =>
+      `当前区域 ${region}，通过申诉会立即解封该用户并写入审计日志；驳回后用户保持封禁，可补充材料重新申诉。`,
+    refresh: '刷新',
+    filters: {
+      status: '状态',
+      keyword: '关键词',
+    },
+    statusOptions: {
+      all: '全部',
+      pending: '待人审',
+      approved: '通过',
+      rejected: '驳回',
+    },
+    keywordPlaceholder: '用户昵称 / 账号 / 申诉理由',
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      task: '任务',
+      user: '申诉用户',
+      reason: '申诉理由',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '加载中...',
+    empty: '当前没有封禁申诉任务。',
+    taskLabel: (bizId) => `申诉 #${bizId}`,
+    userFallback: '--',
+    reasonFallback: '暂无理由',
+    statusText: zhAuditTaskStatusText,
+    view: '查看',
+    previousPage: '上一页',
+    pageSummary: (page, total) => `第 ${page} 页 / 共 ${total} 条`,
+    nextPage: '下一页',
+    editorEyebrow: '申诉处理',
+    editorHeading: (taskId) => `任务 #${taskId}`,
+    detailLabels: {
+      user: '申诉用户',
+      reason: '申诉理由',
+    },
+    passRemarkLabel: '通过备注（通过后立即解封）',
+    rejectReasonLabel: '驳回原因（会展示给用户）',
+    pass: '通过并解封',
+    reject: '驳回申诉',
+    readOnly: '当前账号只有查看权限，无法处理申诉。',
+    handled: '当前任务已经处理，只保留查看。',
+    emptyState: '请先选择一条申诉任务。',
+  },
+  expertCertificationAudit: {
+    loadError: '达人认证任务加载失败',
+    passError: '达人认证通过失败',
+    rejectError: '达人认证驳回失败',
+    rejectReasonRequired: '驳回原因不能为空。',
+    passed: (taskId) => `达人认证任务 #${taskId} 已通过。`,
+    rejected: (taskId) => `达人认证任务 #${taskId} 已驳回。`,
+    eyebrow: '达人认证',
+    heading: '达人认证必须后台审核，别让用户自己封自己。',
+    description: (region) => `当前区域 ${region}，这里只处理达人认证申请；通过后公开资料和作者信息才会挂标。`,
+    refresh: '刷新任务',
+    listEyebrow: '任务列表',
+    listHeading: '申请理由和提交人直接摊开看，别让审核员靠猜。',
+    listSummary: (total) => `共 ${total} 条达人认证任务`,
+    filters: {
+      status: '状态',
+      keyword: '关键词',
+    },
+    statusOptions: {
+      all: '全部状态',
+      pending: '待人审',
+      approved: '通过',
+      rejected: '驳回',
+    },
+    keywordPlaceholder: '申请人 / 申请摘要',
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      task: '任务',
+      applicant: '申请人',
+      summary: '申请摘要',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '达人认证任务加载中...',
+    empty: '当前没有达人认证任务。',
+    taskLabel: (bizId) => `申请 #${bizId}`,
+    applicantFallback: '匿名',
+    summaryFallback: '暂无申请摘要',
+    statusText: zhAuditTaskStatusText,
+    selected: '已选中',
+    view: '查看',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    editorEyebrow: '任务处理',
+    editorHeading: (taskId) => `任务 #${taskId}`,
+    metaLabels: {
+      application: '申请',
+      applicant: '申请人',
+      region: '区域',
+      submittedAt: '提交时间',
+    },
+    summaryLabel: '申请摘要',
+    approveRemarkLabel: '通过备注',
+    approveRemarkPlaceholder: '可选，记录为什么给这人挂标。',
+    rejectReasonLabel: '驳回原因',
+    rejectReasonPlaceholder: '必填，用户端会看到这段原因。',
+    approve: '通过认证',
+    reject: '驳回申请',
+    readOnly: '当前账号只有查看权限，无法处理认证。',
+    handled: '当前任务已经处理，只保留查看。',
+    emptyState: '请先选择一条达人认证任务。',
+  },
+  verifiedMerchantAudit: {
+    loadError: '认证商户任务加载失败',
+    passError: '认证商户通过失败',
+    rejectError: '认证商户驳回失败',
+    rejectReasonRequired: '驳回原因不能为空。',
+    passed: (taskId) => `认证商户任务 #${taskId} 已通过。`,
+    rejected: (taskId) => `认证商户任务 #${taskId} 已驳回。`,
+    eyebrow: '认证商户',
+    heading: '认证商户必须后台审核，别让商户自己给自己挂标。',
+    description: (region) => `当前区域 ${region}，这里只处理认证商户申请；通过后公开资料和作者信息才会挂标。`,
+    refresh: '刷新任务',
+    listEyebrow: '任务列表',
+    listHeading: '认证理由和提交人直接摊开看，别让审核员靠猜。',
+    listSummary: (total) => `共 ${total} 条认证商户任务`,
+    filters: {
+      status: '状态',
+      keyword: '关键词',
+    },
+    statusOptions: {
+      all: '全部状态',
+      pending: '待人审',
+      approved: '通过',
+      rejected: '驳回',
+    },
+    keywordPlaceholder: '申请人 / 申请摘要',
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      task: '任务',
+      applicant: '申请人',
+      summary: '申请摘要',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '认证商户任务加载中...',
+    empty: '当前没有认证商户任务。',
+    taskLabel: (bizId) => `申请 #${bizId}`,
+    applicantFallback: '匿名',
+    summaryFallback: '暂无申请摘要',
+    statusText: zhAuditTaskStatusText,
+    selected: '已选中',
+    view: '查看',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    editorEyebrow: '任务处理',
+    editorHeading: (taskId) => `任务 #${taskId}`,
+    metaLabels: {
+      application: '申请',
+      applicant: '申请人',
+      region: '区域',
+      submittedAt: '提交时间',
+    },
+    summaryLabel: '申请摘要',
+    approveRemarkLabel: '通过备注',
+    approveRemarkPlaceholder: '可选，记录为什么给这家商户挂标。',
+    rejectReasonLabel: '驳回原因',
+    rejectReasonPlaceholder: '必填，商户端会看到这段原因。',
+    approve: '通过认证',
+    reject: '驳回申请',
+    readOnly: '当前账号只有查看权限，无法处理认证。',
+    handled: '当前任务已经处理，只保留查看。',
+    emptyState: '请先选择一条认证商户任务。',
   },
   circles: {
     loadError: '圈子加载失败',
@@ -2361,6 +2836,239 @@ const enStrings: AdminStrings = {
     previousPage: 'Previous',
     page: (page) => `Page ${page}`,
     nextPage: 'Next',
+  },
+  reviewAppealAudit: {
+    loadError: 'Failed to load appeal tasks.',
+    actionError: 'Failed to process the appeal.',
+    rejectReasonRequired: 'A rejection reason is required.',
+    passed: (taskId) => `Appeal task #${taskId} approved. The review has been hidden.`,
+    rejected: (taskId) => `Appeal task #${taskId} rejected.`,
+    eyebrow: 'Merchant Review Appeals',
+    heading: 'Handle malicious-review appeals separately instead of mixing them into standard review moderation.',
+    description: (region) => `Current region ${region}. Approving an appeal hides the review and recalculates the shop score.`,
+    refresh: 'Refresh',
+    filters: {
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    statusOptions: {
+      all: 'All',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    keywordPlaceholder: 'Merchant / shop / appeal summary',
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      task: 'Task',
+      shop: 'Shop',
+      summary: 'Appeal summary',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading...',
+    empty: 'No appeal tasks.',
+    taskLabel: (bizId) => `Appeal #${bizId}`,
+    shopFallback: '--',
+    summaryFallback: 'No summary',
+    statusText: enAuditTaskStatusText,
+    selected: 'Selected',
+    view: 'View',
+    previousPage: 'Previous',
+    pageSummary: (page, total) => `Page ${page} / ${total} total`,
+    nextPage: 'Next',
+    editorEyebrow: 'Appeal Review',
+    editorHeading: (taskId) => `Task #${taskId}`,
+    editorSummaryLabel: 'Appeal summary',
+    passRemarkLabel: 'Approval note',
+    rejectReasonLabel: 'Rejection reason',
+    pass: 'Approve appeal',
+    reject: 'Reject appeal',
+    readOnly: 'This account can only view appeals.',
+    handled: 'This task has already been processed. View only.',
+    emptyState: 'Select an appeal task first.',
+  },
+  userAppealAudit: {
+    loadError: 'Failed to load appeal tasks.',
+    actionError: 'Failed to process the appeal.',
+    rejectReasonRequired: 'A rejection reason is required.',
+    passed: (taskId) => `Appeal task #${taskId} approved. The user was unbanned automatically.`,
+    rejected: (taskId) => `Appeal task #${taskId} rejected. The ban stays in place.`,
+    eyebrow: 'User Ban Appeals',
+    heading: 'Reversible mistakes need a path back, and abusive appeals still need to be blocked.',
+    description: (region) =>
+      `Current region ${region}. Approving an appeal unbans the user immediately and writes an audit log. Rejections keep the ban in place until new evidence arrives.`,
+    refresh: 'Refresh',
+    filters: {
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    statusOptions: {
+      all: 'All',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    keywordPlaceholder: 'Nickname / account / appeal reason',
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      task: 'Task',
+      user: 'Appeal user',
+      reason: 'Appeal reason',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading...',
+    empty: 'No ban appeal tasks.',
+    taskLabel: (bizId) => `Appeal #${bizId}`,
+    userFallback: '--',
+    reasonFallback: 'No reason provided',
+    statusText: enAuditTaskStatusText,
+    view: 'View',
+    previousPage: 'Previous',
+    pageSummary: (page, total) => `Page ${page} / ${total} total`,
+    nextPage: 'Next',
+    editorEyebrow: 'Appeal Review',
+    editorHeading: (taskId) => `Task #${taskId}`,
+    detailLabels: {
+      user: 'Appeal user',
+      reason: 'Appeal reason',
+    },
+    passRemarkLabel: 'Approval note (unbans immediately)',
+    rejectReasonLabel: 'Rejection reason (shown to the user)',
+    pass: 'Approve and unban',
+    reject: 'Reject appeal',
+    readOnly: 'This account is read-only and cannot process appeals.',
+    handled: 'This task has already been processed. View only.',
+    emptyState: 'Select an appeal task first.',
+  },
+  expertCertificationAudit: {
+    loadError: 'Failed to load expert certification tasks.',
+    passError: 'Failed to approve the certification.',
+    rejectError: 'Failed to reject the certification.',
+    rejectReasonRequired: 'A rejection reason is required.',
+    passed: (taskId) => `Expert certification task #${taskId} approved.`,
+    rejected: (taskId) => `Expert certification task #${taskId} rejected.`,
+    eyebrow: 'Expert Certifications',
+    heading: 'Expert badges require admin review. Do not let users certify themselves.',
+    description: (region) =>
+      `Current region ${region}. This queue only handles expert certification applications. Approved tasks publish the badge in public profiles and author cards.`,
+    refresh: 'Refresh tasks',
+    listEyebrow: 'Task list',
+    listHeading: 'Put the applicant and summary in front of the reviewer instead of making them guess.',
+    listSummary: (total) => `${total} expert certification tasks`,
+    filters: {
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    keywordPlaceholder: 'Applicant / application summary',
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      task: 'Task',
+      applicant: 'Applicant',
+      summary: 'Application summary',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading expert certification tasks...',
+    empty: 'No expert certification tasks.',
+    taskLabel: (bizId) => `Application #${bizId}`,
+    applicantFallback: 'Anonymous',
+    summaryFallback: 'No application summary',
+    statusText: enAuditTaskStatusText,
+    selected: 'Selected',
+    view: 'View',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    editorEyebrow: 'Task Handling',
+    editorHeading: (taskId) => `Task #${taskId}`,
+    metaLabels: {
+      application: 'Application',
+      applicant: 'Applicant',
+      region: 'Region',
+      submittedAt: 'Submitted at',
+    },
+    summaryLabel: 'Application summary',
+    approveRemarkLabel: 'Approval note',
+    approveRemarkPlaceholder: 'Optional. Explain why the badge is being granted.',
+    rejectReasonLabel: 'Rejection reason',
+    rejectReasonPlaceholder: 'Required. This text is shown to the applicant.',
+    approve: 'Approve certification',
+    reject: 'Reject application',
+    readOnly: 'This account is read-only and cannot process certifications.',
+    handled: 'This task has already been processed. View only.',
+    emptyState: 'Select an expert certification task first.',
+  },
+  verifiedMerchantAudit: {
+    loadError: 'Failed to load verified merchant tasks.',
+    passError: 'Failed to approve the verification.',
+    rejectError: 'Failed to reject the verification.',
+    rejectReasonRequired: 'A rejection reason is required.',
+    passed: (taskId) => `Verified merchant task #${taskId} approved.`,
+    rejected: (taskId) => `Verified merchant task #${taskId} rejected.`,
+    eyebrow: 'Verified Merchants',
+    heading: 'Verified merchant badges require admin review. Do not let merchants certify themselves.',
+    description: (region) =>
+      `Current region ${region}. This queue only handles verified merchant applications. Approved tasks publish the badge in merchant-facing public surfaces.`,
+    refresh: 'Refresh tasks',
+    listEyebrow: 'Task list',
+    listHeading: 'Keep the applicant and summary side by side so the reviewer is not guessing.',
+    listSummary: (total) => `${total} verified merchant tasks`,
+    filters: {
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    keywordPlaceholder: 'Applicant / application summary',
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      task: 'Task',
+      applicant: 'Applicant',
+      summary: 'Application summary',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading verified merchant tasks...',
+    empty: 'No verified merchant tasks.',
+    taskLabel: (bizId) => `Application #${bizId}`,
+    applicantFallback: 'Anonymous',
+    summaryFallback: 'No application summary',
+    statusText: enAuditTaskStatusText,
+    selected: 'Selected',
+    view: 'View',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    editorEyebrow: 'Task Handling',
+    editorHeading: (taskId) => `Task #${taskId}`,
+    metaLabels: {
+      application: 'Application',
+      applicant: 'Applicant',
+      region: 'Region',
+      submittedAt: 'Submitted at',
+    },
+    summaryLabel: 'Application summary',
+    approveRemarkLabel: 'Approval note',
+    approveRemarkPlaceholder: 'Optional. Explain why the verification is being granted.',
+    rejectReasonLabel: 'Rejection reason',
+    rejectReasonPlaceholder: 'Required. This text is shown to the merchant.',
+    approve: 'Approve verification',
+    reject: 'Reject application',
+    readOnly: 'This account is read-only and cannot process merchant verification tasks.',
+    handled: 'This task has already been processed. View only.',
+    emptyState: 'Select a verified merchant task first.',
   },
   circles: {
     loadError: 'Failed to load circles.',

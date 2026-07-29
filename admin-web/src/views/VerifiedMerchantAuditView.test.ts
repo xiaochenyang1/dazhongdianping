@@ -85,10 +85,11 @@ describe('VerifiedMerchantAuditView', () => {
       page: 1,
       pageSize: 10,
     })
+    expect(host.textContent).toContain('Verified Merchants')
     expect(host.textContent).toContain('Maison Sichuan SARL')
 
     const passButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
-      button.textContent?.includes('通过认证'),
+      button.textContent?.includes('Approve verification'),
     )
     if (!passButton) throw new Error('找不到认证商户通过按钮')
     passButton.click()
@@ -103,10 +104,10 @@ describe('VerifiedMerchantAuditView', () => {
     await flushView()
 
     const passButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
-      button.textContent?.includes('通过认证'),
+      button.textContent?.includes('Approve verification'),
     )
     const rejectButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
-      button.textContent?.includes('驳回申请'),
+      button.textContent?.includes('Reject application'),
     )
     const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
     if (!passButton || !rejectButton || !reason) throw new Error('找不到认证商户处理控件')
@@ -121,7 +122,7 @@ describe('VerifiedMerchantAuditView', () => {
     expect(adminMocks.passAuditTask).not.toHaveBeenCalled()
     expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
     expect(host.textContent).toContain('Maison Sichuan SARL')
-    expect(host.textContent).toContain('当前账号只有查看权限')
+    expect(host.textContent).toContain('This account is read-only and cannot process merchant verification tasks.')
     expect(host.querySelector('textarea[name="approve-remark"]')).toBeNull()
     expect(host.querySelector('textarea[name="reject-reason"]')).toBeNull()
     app.unmount()

@@ -89,6 +89,8 @@ describe('ReviewAppealAuditView', () => {
       page: 1,
       pageSize: 10,
     })
+    expect(host.textContent).toContain('Merchant Review Appeals')
+    expect(host.textContent).toContain('Approve appeal')
     expect(host.textContent).toContain('巴黎川味馆')
     expect(host.textContent).toContain('该点评包含与实际消费无关的恶意辱骂。')
 
@@ -105,7 +107,7 @@ describe('ReviewAppealAuditView', () => {
     await flushView()
 
     expect(adminMocks.passAuditTask).toHaveBeenCalledWith(76, { remark: '商户证据完整' })
-    expect(host.textContent).toContain('点评已隐藏')
+    expect(host.textContent).toContain('The review has been hidden')
     app.unmount()
   })
 
@@ -128,7 +130,7 @@ describe('ReviewAppealAuditView', () => {
 
     rejectButton.click()
     await flushView()
-    expect(host.textContent).toContain('驳回原因不能为空')
+    expect(host.textContent).toContain('A rejection reason is required.')
     expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
 
     reason.value = '点评内容未违反平台规则'
@@ -150,7 +152,7 @@ describe('ReviewAppealAuditView', () => {
     expect(adminMocks.listAuditTasks).toHaveBeenCalledTimes(1)
     expect(host.textContent).toContain('巴黎川味馆')
     expect(host.textContent).toContain('该点评包含与实际消费无关的恶意辱骂。')
-    expect(host.textContent).toContain('当前账号仅可查看，无申诉处理权限。')
+    expect(host.textContent).toContain('This account can only view appeals.')
     expect(host.querySelector('textarea[name="review-appeal-pass-remark"]')).toBeNull()
     expect(host.querySelector('textarea[name="review-appeal-reject-reason"]')).toBeNull()
     expect(host.querySelector('[data-testid="review-appeal-pass"]')).toBeNull()
@@ -179,7 +181,7 @@ describe('ReviewAppealAuditView', () => {
     expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
     expect(host.querySelector('[data-testid="review-appeal-pass"]')).toBeNull()
     expect(host.querySelector('[data-testid="review-appeal-reject"]')).toBeNull()
-    expect(host.textContent).toContain('当前账号仅可查看，无申诉处理权限。')
+    expect(host.textContent).toContain('This account can only view appeals.')
     app.unmount()
   })
 })
