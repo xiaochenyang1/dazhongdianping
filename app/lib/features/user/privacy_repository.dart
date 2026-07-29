@@ -298,7 +298,7 @@ class PrivacyRepository {
 
   Future<Uint8List> downloadExport(int taskId) {
     if (api is! BinaryApi) {
-      throw StateError('当前 API 客户端不支持文件下载');
+      throw unsupportedApiClientCapability('file downloads');
     }
     return (api as BinaryApi).getBytes(
       '/api/c/v1/privacy/export-tasks/$taskId/download',
@@ -400,7 +400,7 @@ class PrivacyRepository {
 
   Future<UserDevice> logoutDevice(int deviceId) async {
     if (api is! JsonDeleteApi) {
-      throw StateError('当前 API 客户端不支持设备登出');
+      throw unsupportedApiClientCapability('device logout');
     }
     final result = await (api as JsonDeleteApi).deleteJson(
       '/api/c/v1/devices/$deviceId',

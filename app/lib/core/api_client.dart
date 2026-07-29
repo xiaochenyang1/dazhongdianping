@@ -39,6 +39,9 @@ abstract interface class FileUploadApi {
   });
 }
 
+StateError unsupportedApiClientCapability(String capability) =>
+    StateError('This API client does not support $capability.');
+
 class ApiException implements Exception {
   const ApiException(
     this.message, {

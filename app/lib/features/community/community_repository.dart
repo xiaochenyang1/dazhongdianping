@@ -412,11 +412,11 @@ class CommunityRepository {
 
   JsonMutationApi get _mutationApi => api is JsonMutationApi
       ? api as JsonMutationApi
-      : throw StateError('当前 API 客户端不支持 PUT 请求');
+      : throw unsupportedApiClientCapability('PUT requests');
   JsonDeleteApi get _deleteApi => api is JsonDeleteApi
       ? api as JsonDeleteApi
-      : throw StateError('当前 API 客户端不支持 DELETE 请求');
+      : throw unsupportedApiClientCapability('DELETE requests');
   FileUploadApi get _uploadApi => api is FileUploadApi
       ? api as FileUploadApi
-      : throw StateError('当前 API 客户端不支持文件上传');
+      : throw unsupportedApiClientCapability('file uploads');
 }

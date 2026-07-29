@@ -183,12 +183,12 @@ class AuthController extends ChangeNotifier {
     try {
       await deviceLifecycle?.logoutCurrentDevice();
     } catch (_) {
-      // 设备解绑失败不阻塞本地退出，服务端会话仍会继续注销。
+      // Do not block local sign-out if device logout fails.
     }
     try {
       await repository.logout();
     } catch (_) {
-      // 本地清理优先，服务端会话若已经失效不阻塞退出。
+      // Prefer local cleanup even if the server session is already gone.
     }
     await store.clear();
     currentUser = null;
@@ -199,7 +199,7 @@ class AuthController extends ChangeNotifier {
     try {
       await deviceLifecycle?.registerCurrentDevice();
     } catch (_) {
-      // 推送或设备登记不可用时不阻塞认证主流程。
+      // Do not block auth if push or device registration is unavailable.
     }
   }
 }

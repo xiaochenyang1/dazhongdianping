@@ -213,7 +213,44 @@ class PrivacyFakeApi implements JsonApi, BinaryApi, JsonDeleteApi {
   }
 }
 
+class PrivacyReadOnlyApi implements JsonApi {
+  @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, Object?>? query,
+  }) async => const {};
+
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
+      const {};
+}
+
 void main() {
+  test('privacy repository reports unsupported binary and delete features', () {
+    final repository = PrivacyRepository(PrivacyReadOnlyApi());
+
+    expect(
+      () => repository.downloadExport(8),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support file downloads.',
+        ),
+      ),
+    );
+    expect(
+      () => repository.logoutDevice(7),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support device logout.',
+        ),
+      ),
+    );
+  });
+
   test('privacy repository maps overview rules and latest tasks', () async {
     final repository = PrivacyRepository(PrivacyFakeApi());
 

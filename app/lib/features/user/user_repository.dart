@@ -470,12 +470,12 @@ class UserRepository {
 
   JsonMutationApi get _mutationApi {
     if (api is! JsonMutationApi) {
-      throw StateError('当前 API 客户端不支持 PUT 请求');
+      throw unsupportedApiClientCapability('PUT requests');
     }
     return api as JsonMutationApi;
   }
 
   JsonDeleteApi get _deleteApi => api is JsonDeleteApi
       ? api as JsonDeleteApi
-      : throw StateError('当前 API 客户端不支持 DELETE 请求');
+      : throw unsupportedApiClientCapability('DELETE requests');
 }

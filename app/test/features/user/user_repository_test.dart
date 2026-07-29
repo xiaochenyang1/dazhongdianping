@@ -194,7 +194,49 @@ class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   }
 }
 
+class UserReadOnlyApi implements JsonApi {
+  @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, Object?>? query,
+  }) async => const {};
+
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
+      const {};
+}
+
 void main() {
+  test('user repository reports unsupported write capabilities', () {
+    final repository = UserRepository(UserReadOnlyApi());
+
+    expect(
+      () => repository.updateProfile(
+        nickname: 'EU User',
+        avatar: '',
+        gender: 1,
+        signature: 'Bonjour',
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support PUT requests.',
+        ),
+      ),
+    );
+    expect(
+      () => repository.unfollow(9),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support DELETE requests.',
+        ),
+      ),
+    );
+  });
+
   test('user repository loads profile and authenticated collections', () async {
     final repository = UserRepository(UserFakeApi());
     final profile = await repository.loadProfile();

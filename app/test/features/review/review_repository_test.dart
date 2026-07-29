@@ -193,6 +193,18 @@ class ReviewFakeApi
   }
 }
 
+class ReviewReadOnlyApi implements JsonApi {
+  @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, Object?>? query,
+  }) async => const {};
+
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
+      const {};
+}
+
 const input = ReviewSaveInput(
   shopId: 7,
   content: '茶香很足，服务也利落。',
@@ -207,6 +219,47 @@ const input = ReviewSaveInput(
 );
 
 void main() {
+  test('review repository reports unsupported write capabilities', () {
+    final repository = ReviewRepository(ReviewReadOnlyApi());
+
+    expect(
+      () => repository.updateReview(12, input),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support PUT requests.',
+        ),
+      ),
+    );
+    expect(
+      () => repository.deleteReview(12),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support DELETE requests.',
+        ),
+      ),
+    );
+    expect(
+      () => repository.uploadImage(
+        ReviewImageUpload(
+          bytes: Uint8List.fromList([1]),
+          fileName: 'tea.jpg',
+          contentType: 'image/jpeg',
+        ),
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support file uploads.',
+        ),
+      ),
+    );
+  });
+
   test(
     'review repository loads owned detail and normalizes image urls',
     () async {

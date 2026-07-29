@@ -165,6 +165,18 @@ class CommunityFakeApi
   }
 }
 
+class CommunityReadOnlyApi implements JsonApi {
+  @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, Object?>? query,
+  }) async => const {};
+
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
+      const {};
+}
+
 const input = CommunityPostInput(
   title: '伦敦周末市场指南',
   content: '周六上午去选择最多。',
@@ -210,6 +222,47 @@ void main() {
     final feed = await repository.loadFollowingFeed();
     expect(api.path, '/api/c/v1/posts/following');
     expect(feed.single.userName, '伦敦小王');
+  });
+
+  test('community repository reports unsupported write capabilities', () {
+    final repository = CommunityRepository(CommunityReadOnlyApi());
+
+    expect(
+      () => repository.updatePost(7, input),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support PUT requests.',
+        ),
+      ),
+    );
+    expect(
+      () => repository.deletePost(7),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support DELETE requests.',
+        ),
+      ),
+    );
+    expect(
+      () => repository.uploadImage(
+        CommunityImageUpload(
+          bytes: Uint8List.fromList([1]),
+          fileName: 'cover.jpg',
+          contentType: 'image/jpeg',
+        ),
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'This API client does not support file uploads.',
+        ),
+      ),
+    );
   });
 
   test(

@@ -510,21 +510,21 @@ class ReviewRepository {
 
   JsonMutationApi get _mutationApi {
     if (api is! JsonMutationApi) {
-      throw StateError('当前 API 客户端不支持 PUT 请求');
+      throw unsupportedApiClientCapability('PUT requests');
     }
     return api as JsonMutationApi;
   }
 
   JsonDeleteApi get _deleteApi {
     if (api is! JsonDeleteApi) {
-      throw StateError('当前 API 客户端不支持 DELETE 请求');
+      throw unsupportedApiClientCapability('DELETE requests');
     }
     return api as JsonDeleteApi;
   }
 
   FileUploadApi get _fileUploadApi {
     if (api is! FileUploadApi) {
-      throw StateError('当前 API 客户端不支持文件上传');
+      throw unsupportedApiClientCapability('file uploads');
     }
     return api as FileUploadApi;
   }
