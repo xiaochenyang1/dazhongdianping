@@ -345,6 +345,7 @@ class AppLocalizations {
     'scoreTaste': '口味',
     'scoreEnv': '环境',
     'scoreService': '服务',
+    'averageSpendLabel': '人均 {currency} {amount}',
     'replyToPreview': '回复 {name}：{content}',
     'likeCommentStats': '点赞 {likes} · 评论 {comments}',
     'loadMoreComments': '加载更多评论',
@@ -1017,6 +1018,7 @@ class AppLocalizations {
     'scoreTaste': '口味',
     'scoreEnv': '環境',
     'scoreService': '服務',
+    'averageSpendLabel': '人均 {currency} {amount}',
     'replyToPreview': '回覆 {name}：{content}',
     'likeCommentStats': '按讚 {likes} · 評論 {comments}',
     'loadMoreComments': '載入更多評論',
@@ -1699,6 +1701,7 @@ class AppLocalizations {
     'scoreTaste': 'Taste',
     'scoreEnv': 'Environment',
     'scoreService': 'Service',
+    'averageSpendLabel': 'Avg spend {currency} {amount}',
     'replyToPreview': 'Reply to {name}: {content}',
     'likeCommentStats': '{likes} likes · {comments} comments',
     'loadMoreComments': 'Load more comments',
@@ -2569,6 +2572,12 @@ class AppLocalizations {
   String get scoreTaste => _text('scoreTaste');
   String get scoreEnv => _text('scoreEnv');
   String get scoreService => _text('scoreService');
+  String averageSpendLabel({
+    required String currency,
+    required String amount,
+  }) => _text(
+    'averageSpendLabel',
+  ).replaceFirst('{currency}', currency).replaceFirst('{amount}', amount);
 
   String replyToPreview({required String name, required String content}) =>
       _text(

@@ -101,14 +101,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     try {
       final result = await widget.repository.toggleLike(widget.postId);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(result.liked ? AppLocalizations.of(context).liked : AppLocalizations.of(context).unliked)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.liked
+                ? AppLocalizations.of(context).liked
+                : AppLocalizations.of(context).unliked,
+          ),
+        ),
+      );
       setState(
         () => _post = Future.value(post.copyWith(likeCount: result.likeCount)),
       );
     } catch (error) {
-      if (mounted) _showMessage('点赞失败：$error');
+      if (mounted) _showMessage(AppLocalizations.of(context).likeFailed(error));
     } finally {
       if (mounted) setState(() => _likeSaving = false);
     }
@@ -137,7 +143,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _loadingMoreComments = false;
       });
     } catch (error) {
-      if (mounted) _showMessage('评论失败：$error');
+      if (mounted) {
+        _showMessage(AppLocalizations.of(context).commentFailed(error));
+      }
     } finally {
       if (mounted) setState(() => _commentSaving = false);
     }
@@ -176,9 +184,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _commentRequestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreCommentsFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreCommentsFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && requestId == _commentRequestId) {
@@ -207,9 +219,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (mounted) setState(() => _favorited = !_favorited);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).favoriteActionFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).favoriteActionFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _favoriteSaving = false);
@@ -233,14 +249,22 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           );
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result.reposted ? AppLocalizations.of(context).reposted : AppLocalizations.of(context).unreposted)),
+          SnackBar(
+            content: Text(
+              result.reposted
+                  ? AppLocalizations.of(context).reposted
+                  : AppLocalizations.of(context).unreposted,
+            ),
+          ),
         );
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).repostFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).repostFailed(error)),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _repostSaving = false);
@@ -261,7 +285,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             controller: _reportController,
             maxLength: 255,
             maxLines: 4,
-            decoration: InputDecoration(labelText: AppLocalizations.of(context).reportReason),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context).reportReason,
+            ),
           ),
           actions: [
             TextButton(
@@ -286,73 +312,78 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       await widget.repository.reportPost(widget.postId, reason);
       if (mounted) {
         _reportController.clear();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reportSubmitted)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).reportSubmitted)),
+        );
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reportSubmitFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).reportSubmitFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _reportSaving = false);
     }
   }
 
-  Widget _buildCommentItem(
-    CommunityComment comment, {
-    double indent = 0,
-  }) => Padding(
-    padding: EdgeInsets.only(left: indent),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(comment.userName),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (comment.replyTo != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    AppLocalizations.of(context).replyToPreview(name: comment.replyTo!.userName, content: comment.replyTo!.content),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              Text(comment.content),
-              const SizedBox(height: 4),
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
+  Widget _buildCommentItem(CommunityComment comment, {double indent = 0}) =>
+      Padding(
+        padding: EdgeInsets.only(left: indent),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(comment.userName),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(comment.createdAt),
-                  if (widget.canInteract)
-                    TextButton(
-                      key: Key('comment-reply-${comment.id}'),
-                      onPressed: () => _selectReply(comment),
-                      child: Text(AppLocalizations.of(context).reply),
+                  if (comment.replyTo != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        AppLocalizations.of(context).replyToPreview(
+                          name: comment.replyTo!.userName,
+                          content: comment.replyTo!.content,
+                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
+                  Text(comment.content),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    children: [
+                      Text(comment.createdAt),
+                      if (widget.canInteract)
+                        TextButton(
+                          key: Key('comment-reply-${comment.id}'),
+                          onPressed: () => _selectReply(comment),
+                          child: Text(AppLocalizations.of(context).reply),
+                        ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
-        if (comment.replies.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 20),
-            child: Column(
-              children: comment.replies
-                  .map((reply) => _buildCommentItem(reply, indent: 8))
-                  .toList(),
             ),
-          ),
-      ],
-    ),
-  );
+            if (comment.replies.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Column(
+                  children: comment.replies
+                      .map((reply) => _buildCommentItem(reply, indent: 8))
+                      .toList(),
+                ),
+              ),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -368,13 +399,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppLocalizations.of(context).postLoadFailed(snapshot.error!)),
+                Text(
+                  AppLocalizations.of(context).postLoadFailed(snapshot.error!),
+                ),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('post-detail-retry'),
                   onPressed: _reloadingInitial ? null : _loadInitial,
                   icon: const Icon(Icons.refresh),
-                  label: Text(_reloadingInitial ? '处理中...' : '重试'),
+                  label: Text(
+                    _reloadingInitial
+                        ? AppLocalizations.of(context).processing
+                        : AppLocalizations.of(context).retry,
+                  ),
                 ),
               ],
             ),
@@ -455,22 +492,34 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     key: const Key('post-like-button'),
                     onPressed: _likeSaving ? null : () => _like(post),
                     icon: const Icon(Icons.favorite_border),
-                    label: Text(AppLocalizations.of(context).likeCountLabel(post.likeCount)),
+                    label: Text(
+                      AppLocalizations.of(
+                        context,
+                      ).likeCountLabel(post.likeCount),
+                    ),
                   ),
                   OutlinedButton.icon(
                     onPressed: _favoriteSaving ? null : _toggleFavorite,
                     icon: Icon(
                       _favorited ? Icons.bookmark : Icons.bookmark_border,
                     ),
-                    label: Text(_favorited ? AppLocalizations.of(context).unfavoritePost : AppLocalizations.of(context).favoritePost),
+                    label: Text(
+                      _favorited
+                          ? AppLocalizations.of(context).unfavoritePost
+                          : AppLocalizations.of(context).favoritePost,
+                    ),
                   ),
                   OutlinedButton.icon(
                     onPressed: _repostSaving ? null : () => _toggleRepost(post),
                     icon: const Icon(Icons.repeat),
                     label: Text(
                       post.repostedByCurrentUser
-                          ? AppLocalizations.of(context).unrepostWithCount(post.repostCount)
-                          : AppLocalizations.of(context).repostWithCount(post.repostCount),
+                          ? AppLocalizations.of(
+                              context,
+                            ).unrepostWithCount(post.repostCount)
+                          : AppLocalizations.of(
+                              context,
+                            ).repostWithCount(post.repostCount),
                     ),
                   ),
                   TextButton.icon(
@@ -495,7 +544,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
                     children: [
-                      Expanded(child: Text(AppLocalizations.of(context).replyingToUser(_replyTarget!.userName))),
+                      Expanded(
+                        child: Text(
+                          AppLocalizations.of(
+                            context,
+                          ).replyingToUser(_replyTarget!.userName),
+                        ),
+                      ),
                       TextButton(
                         onPressed: _clearReply,
                         child: Text(AppLocalizations.of(context).cancelReply),
@@ -508,7 +563,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   Expanded(
                     child: TextField(
                       controller: _commentController,
-                      decoration: InputDecoration(hintText: AppLocalizations.of(context).saySomethingUsefulShort),
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(
+                          context,
+                        ).saySomethingUsefulShort,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -532,7 +591,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        Text(AppLocalizations.of(context).commentsLoadFailed(snapshot.error!)),
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          ).commentsLoadFailed(snapshot.error!),
+                        ),
                         SizedBox(height: 8),
                         FilledButton.tonalIcon(
                           key: const Key('post-comments-retry'),
@@ -540,7 +603,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               ? null
                               : _reloadComments,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_reloadingComments ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retryComments),
+                          label: Text(
+                            _reloadingComments
+                                ? AppLocalizations.of(context).processing
+                                : AppLocalizations.of(context).retryComments,
+                          ),
                         ),
                       ],
                     ),
@@ -570,7 +637,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 ),
                               )
                             : const Icon(Icons.expand_more),
-                        label: Text(_loadingMoreComments ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMoreComments),
+                        label: Text(
+                          _loadingMoreComments
+                              ? AppLocalizations.of(context).loading
+                              : AppLocalizations.of(context).loadMoreComments,
+                        ),
                       ),
                   ],
                 );

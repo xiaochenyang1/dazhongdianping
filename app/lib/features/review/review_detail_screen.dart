@@ -130,14 +130,20 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
           likeCount: result.likeCount,
         );
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(result.liked ? AppLocalizations.of(context).liked : AppLocalizations.of(context).unliked)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.liked
+                ? AppLocalizations.of(context).liked
+                : AppLocalizations.of(context).unliked,
+          ),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).likeFailed(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).likeFailed(error))),
+      );
     } finally {
       if (mounted) setState(() => _likeSaving = false);
     }
@@ -162,14 +168,16 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
         _comments = _loadComments();
         _visibleReview = detail.copyWith(commentCount: detail.commentCount + 1);
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).commentPublished)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).commentPublished)),
+      );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).commentFailed(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).commentFailed(error)),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _commentSaving = false);
     }
@@ -202,9 +210,13 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _commentRequestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreCommentsFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreCommentsFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && requestId == _commentRequestId) {
@@ -227,7 +239,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
             controller: _reportController,
             maxLength: 200,
             maxLines: 4,
-            decoration: InputDecoration(labelText: AppLocalizations.of(context).reportReason),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context).reportReason,
+            ),
           ),
           actions: [
             TextButton(
@@ -252,14 +266,16 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       await widget.repository.reportReview(widget.reviewId, reason);
       if (!mounted) return;
       _reportController.clear();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reportSubmitted)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).reportSubmitted)),
+      );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reportFailed(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).reportFailed(error)),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _reportSaving = false);
     }
@@ -314,80 +330,85 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     try {
       await widget.repository.deleteReview(widget.reviewId);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reviewDeleted)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).reviewDeleted)),
+      );
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteFailed(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).deleteFailed(error)),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _deleteSaving = false);
     }
   }
 
-  Widget _buildCommentItem(
-    ReviewComment comment, {
-    double indent = 0,
-  }) => Padding(
-    padding: EdgeInsets.only(left: indent),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(comment.userName),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (comment.replyTo != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    AppLocalizations.of(context).replyToPreview(
-                      name: comment.replyTo!.userName,
-                      content: comment.replyTo!.content,
-                    ),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              Text(comment.content),
-              const SizedBox(height: 4),
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
+  Widget _buildCommentItem(ReviewComment comment, {double indent = 0}) =>
+      Padding(
+        padding: EdgeInsets.only(left: indent),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(comment.userName),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(comment.createdAt),
-                  if (widget.canInteract && !widget.owned)
-                    TextButton(
-                      key: Key('review-comment-reply-${comment.id}'),
-                      onPressed: () => setState(() => _replyTarget = comment),
-                      child: Text(AppLocalizations.of(context).reply),
+                  if (comment.replyTo != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        AppLocalizations.of(context).replyToPreview(
+                          name: comment.replyTo!.userName,
+                          content: comment.replyTo!.content,
+                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
+                  Text(comment.content),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    children: [
+                      Text(comment.createdAt),
+                      if (widget.canInteract && !widget.owned)
+                        TextButton(
+                          key: Key('review-comment-reply-${comment.id}'),
+                          onPressed: () =>
+                              setState(() => _replyTarget = comment),
+                          child: Text(AppLocalizations.of(context).reply),
+                        ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
-        if (comment.replies.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 20),
-            child: Column(
-              children: comment.replies
-                  .map((reply) => _buildCommentItem(reply, indent: 8))
-                  .toList(),
             ),
-          ),
-      ],
-    ),
-  );
+            if (comment.replies.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Column(
+                  children: comment.replies
+                      .map((reply) => _buildCommentItem(reply, indent: 8))
+                      .toList(),
+                ),
+              ),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.owned ? AppLocalizations.of(context).myReviewDetail : AppLocalizations.of(context).reviewDetail),
+      title: Text(
+        widget.owned
+            ? AppLocalizations.of(context).myReviewDetail
+            : AppLocalizations.of(context).reviewDetail,
+      ),
       actions: [
         if (widget.owned) ...[
           TextButton(
@@ -402,7 +423,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
             onPressed: _deleteSaving || _deleteDialogOpen
                 ? null
                 : _deleteOwnedReview,
-            child: Text(_deleteSaving ? AppLocalizations.of(context).deleting : AppLocalizations.of(context).delete),
+            child: Text(
+              _deleteSaving
+                  ? AppLocalizations.of(context).deleting
+                  : AppLocalizations.of(context).delete,
+            ),
           ),
         ],
       ],
@@ -418,13 +443,21 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppLocalizations.of(context).reviewDetailLoadFailed(snapshot.error!)),
+                Text(
+                  AppLocalizations.of(
+                    context,
+                  ).reviewDetailLoadFailed(snapshot.error!),
+                ),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('review-detail-retry'),
                   onPressed: _reloadingReview ? null : _reloadReview,
                   icon: const Icon(Icons.refresh),
-                  label: Text(_reloadingReview ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
+                  label: Text(
+                    _reloadingReview
+                        ? AppLocalizations.of(context).processing
+                        : AppLocalizations.of(context).retry,
+                  ),
                 ),
               ],
             ),
@@ -447,7 +480,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
-                  review.userName.isEmpty ? '匿名用户' : review.userName,
+                  review.userName.isEmpty
+                      ? AppLocalizations.of(context).anonymousUser
+                      : review.userName,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 if (review.authorCertificationLabel != null)
@@ -466,7 +501,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                 color: const Color(0xFFFFF7ED),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Text(AppLocalizations.of(context).auditRemarkLabel(review.auditRemark)),
+                  child: Text(
+                    AppLocalizations.of(
+                      context,
+                    ).auditRemarkLabel(review.auditRemark),
+                  ),
                 ),
               ),
             ],
@@ -503,8 +542,8 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
             ],
             const SizedBox(height: 12),
             Text(
-              '口味 ${review.scoreTaste.toStringAsFixed(1)} · 环境 ${review.scoreEnv.toStringAsFixed(1)} · 服务 ${review.scoreService.toStringAsFixed(1)}'
-              '${review.cost > 0 ? ' · 人均 ${review.currency} ${review.cost.toStringAsFixed(0)}' : ''}',
+              '${AppLocalizations.of(context).scoreTaste} ${review.scoreTaste.toStringAsFixed(1)} · ${AppLocalizations.of(context).scoreEnv} ${review.scoreEnv.toStringAsFixed(1)} · ${AppLocalizations.of(context).scoreService} ${review.scoreService.toStringAsFixed(1)}'
+              '${review.cost > 0 ? ' · ${AppLocalizations.of(context).averageSpendLabel(currency: review.currency, amount: review.cost.toStringAsFixed(0))}' : ''}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             if (review.merchantReply != null) ...[
@@ -513,9 +552,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(
-                    AppLocalizations.of(context).merchantReplyLabel(
-                      review.merchantReply!,
-                    ),
+                    AppLocalizations.of(
+                      context,
+                    ).merchantReplyLabel(review.merchantReply!),
                   ),
                 ),
               ),
@@ -537,7 +576,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                             ? Icons.favorite
                             : Icons.favorite_border,
                       ),
-                      label: Text(review.likedByCurrentUser ? AppLocalizations.of(context).liked : AppLocalizations.of(context).like),
+                      label: Text(
+                        review.likedByCurrentUser
+                            ? AppLocalizations.of(context).liked
+                            : AppLocalizations.of(context).like,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -571,7 +614,10 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
               const SizedBox(height: 24),
               Text(
                 AppLocalizations.of(context).commentsSection,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 12),
               if (showInteraction) ...[
@@ -582,13 +628,17 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            AppLocalizations.of(context).replyingTo(_replyTarget!.userName),
+                            AppLocalizations.of(
+                              context,
+                            ).replyingTo(_replyTarget!.userName),
                             key: const Key('review-reply-target'),
                           ),
                         ),
                         TextButton(
                           onPressed: () => setState(() => _replyTarget = null),
-                          child: Text(AppLocalizations.of(context).cancelAction),
+                          child: Text(
+                            AppLocalizations.of(context).cancelAction,
+                          ),
                         ),
                       ],
                     ),
@@ -611,7 +661,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                     onPressed: _commentSaving
                         ? null
                         : () => _submitComment(review),
-                    child: Text(_commentSaving ? AppLocalizations.of(context).publishing : AppLocalizations.of(context).publishComment),
+                    child: Text(
+                      _commentSaving
+                          ? AppLocalizations.of(context).publishing
+                          : AppLocalizations.of(context).publishComment,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -630,7 +684,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(AppLocalizations.of(context).commentsLoadFailed(commentSnapshot.error!)),
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          ).commentsLoadFailed(commentSnapshot.error!),
+                        ),
                         const SizedBox(height: 8),
                         FilledButton.tonalIcon(
                           key: const Key('review-comments-retry'),
@@ -638,7 +696,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                               ? null
                               : _reloadComments,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_reloadingComments ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retryComments),
+                          label: Text(
+                            _reloadingComments
+                                ? AppLocalizations.of(context).processing
+                                : AppLocalizations.of(context).retryComments,
+                          ),
                         ),
                       ],
                     );

@@ -175,7 +175,6 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   }
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),
@@ -300,6 +299,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.detailRequests, 2);
     expect(find.text('柏林茶馆'), findsOneWidget);
+  });
+
+  testWidgets('public review detail localizes English chrome', (tester) async {
+    final api = DetailFakeApi();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Review details'), findsOneWidget);
+    expect(
+      find.text('Taste 5.0 · Environment 4.0 · Service 4.5 · Avg spend EUR 19'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('3 likes · 1 comments'), findsOneWidget);
   });
 
   testWidgets('public review detail loads later comment pages', (tester) async {

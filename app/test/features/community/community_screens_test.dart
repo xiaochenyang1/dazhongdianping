@@ -320,7 +320,6 @@ class CommunityTopicApi extends CommunityScreenApi {
 }
 
 void main() {
-
   testWidgets('community feed switches English chrome', (tester) async {
     final api = CommunityScreenApi();
     await tester.pumpWidget(
@@ -345,7 +344,6 @@ void main() {
     expect(find.text('Following'), findsOneWidget);
     expect(find.text('Post'), findsOneWidget);
   });
-
 
   testWidgets('community feed retries an initial load failure', (tester) async {
     final api = CommunityScreenApi()..failNextFeed = true;
@@ -417,6 +415,39 @@ void main() {
     expect(api.postRequests, 2);
     expect(api.requestedCommentPages, [1, 1]);
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
+  });
+
+  testWidgets('post detail switches English chrome', (tester) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Post details'), findsOneWidget);
+    expect(find.text('3 likes'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Save post'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Save post'), findsOneWidget);
+    expect(find.text('Report'), findsOneWidget);
+    expect(find.text('Repost 2'), findsOneWidget);
   });
 
   testWidgets('post detail guards duplicate initial retries', (tester) async {
