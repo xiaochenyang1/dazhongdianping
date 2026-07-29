@@ -186,6 +186,112 @@ export interface MerchantStrings {
     noAction: string
     empty: string
   }
+  coupons: {
+    eyebrow: string
+    heading: string
+    description: string
+    missingPermission: (permission: string) => string
+    codeRequired: string
+    verifyError: string
+    verifySuccess: (code: string) => string
+    codeLabel: string
+    codePlaceholder: string
+    verifying: string
+    verify: string
+    latestResultHeading: string
+    dealFallback: (dealId: number) => string
+    shopFallback: (shopId: number) => string
+    fieldLabels: {
+      code: string
+      shop: string
+      status: string
+      verifiedAt: string
+      expireAt: string
+    }
+    historyHeaders: {
+      code: string
+      deal: string
+      shop: string
+      status: string
+      verifiedAt: string
+    }
+    statusText: (status: number, fallback?: string) => string
+  }
+  reviews: {
+    summary: string
+    loadError: string
+    replyRequired: string
+    replyError: string
+    appealMinLength: string
+    appealError: string
+    headers: {
+      user: string
+      score: string
+      content: string
+      reply: string
+      appeal: string
+    }
+    replyPlaceholder: string
+    saveReply: string
+    noReply: string
+    appealPlaceholder: string
+    submitAppeal: string
+    noAppeal: string
+    empty: string
+    appealStatusText: (status: number, fallback?: string) => string
+  }
+  reservationSlots: {
+    filters: {
+      shop: string
+      allShops: string
+      startDate: string
+      endDate: string
+      status: string
+      all: string
+      enabled: string
+      disabled: string
+    }
+    create: string
+    summary: string
+    missingPermission: (permission: string) => string
+    successCreated: string
+    successUpdated: string
+    successEnabled: string
+    successDisabled: string
+    tableHeaders: {
+      shop: string
+      date: string
+      slot: string
+      capacity: string
+      confirmMode: string
+      status: string
+      actions: string
+    }
+    capacitySummary: (reserved: number, capacity: number, remaining: number) => string
+    confirmModeLabel: (confirmMode: number) => string
+    confirmModeSummary: (confirmMode: number, cancelBeforeMinutes: number) => string
+    statusText: (enabled: boolean) => string
+    edit: string
+    enable: string
+    disable: string
+    empty: string
+    editorTitles: {
+      create: string
+      edit: string
+    }
+    editorLabels: {
+      shop: string
+      date: string
+      start: string
+      end: string
+      capacity: string
+      confirmMode: string
+      cancelBefore: string
+      enabled: string
+    }
+    saving: string
+    save: string
+  }
 }
 
 export type MerchantRouteTitleKey = keyof MerchantStrings['routeTitles']
@@ -374,6 +480,126 @@ const zhCnStrings: MerchantStrings = {
     noAction: '无需处理',
     empty: '当前筛选下没有订单。',
   },
+  coupons: {
+    eyebrow: 'Coupon verify',
+    heading: '到店券码核销',
+    description: '录入顾客出示的券码；成功后券状态变为已使用，重复核销会被拒绝。',
+    missingPermission: (permission) => `当前账号缺少 \`${permission}\` 权限，不能核销券码。`,
+    codeRequired: '请输入券码',
+    verifyError: '券码核销失败',
+    verifySuccess: (code) => `券码 ${code} 已核销成功`,
+    codeLabel: '券码',
+    codePlaceholder: '例如 VERIFYME001',
+    verifying: '核销中...',
+    verify: '确认核销',
+    latestResultHeading: '最近一次核销',
+    dealFallback: (dealId) => `deal:${dealId}`,
+    shopFallback: (shopId) => `shop:${shopId}`,
+    fieldLabels: {
+      code: '券码：',
+      shop: '门店：',
+      status: '状态：',
+      verifiedAt: '核销时间：',
+      expireAt: '有效期至：',
+    },
+    historyHeaders: {
+      code: '券码',
+      deal: '团购',
+      shop: '门店',
+      status: '状态',
+      verifiedAt: '核销时间',
+    },
+    statusText: (status, fallback) => {
+      if (status === 2) return '已使用'
+      if (status === 3) return '已过期'
+      if (status === 4) return '已退款'
+      if (status === 1) return '待使用'
+      return fallback || `状态 ${status}`
+    },
+  },
+  reviews: {
+    summary: '回复可持续维护；申诉提交审核后转为只读状态。',
+    loadError: '点评加载失败',
+    replyRequired: '商家回复不能为空',
+    replyError: '回复失败',
+    appealMinLength: '申诉理由至少 10 个字。',
+    appealError: '申诉失败',
+    headers: {
+      user: '用户',
+      score: '评分',
+      content: '内容',
+      reply: '商家回复',
+      appeal: '点评申诉',
+    },
+    replyPlaceholder: '输入公开回复',
+    saveReply: '保存回复',
+    noReply: '暂无回复',
+    appealPlaceholder: '至少 10 个字，说明恶意或失实点',
+    submitAppeal: '提交申诉',
+    noAppeal: '暂无申诉',
+    empty: '当前筛选下没有点评。',
+    appealStatusText: (status, fallback) => {
+      if (status === 1) return '待审核'
+      if (status === 2) return '已通过'
+      if (status === 3) return '已驳回'
+      if (status === 4) return '已失效'
+      if (status === 0) return '草稿'
+      return fallback || `状态 ${status}`
+    },
+  },
+  reservationSlots: {
+    filters: {
+      shop: '门店',
+      allShops: '全部门店',
+      startDate: '开始日期',
+      endDate: '结束日期',
+      status: '状态',
+      all: '全部',
+      enabled: '启用',
+      disabled: '停用',
+    },
+    create: '新建时段',
+    summary: '配置门店可订时段：容量、自动/人工确认、取消截止分钟数。停用后 C 端不可再订该时段。',
+    missingPermission: (permission) => `当前账号缺少 \`${permission}\` 权限。`,
+    successCreated: '时段已创建',
+    successUpdated: '时段已更新',
+    successEnabled: '时段已启用',
+    successDisabled: '时段已停用',
+    tableHeaders: {
+      shop: '门店',
+      date: '日期',
+      slot: '时段',
+      capacity: '容量',
+      confirmMode: '确认方式',
+      status: '状态',
+      actions: '操作',
+    },
+    capacitySummary: (reserved, capacity, remaining) => `${reserved}/${capacity}（余 ${remaining}）`,
+    confirmModeLabel: (confirmMode) => confirmMode === 1 ? '自动确认' : '人工确认',
+    confirmModeSummary: (confirmMode, cancelBeforeMinutes) =>
+      `${confirmMode === 1 ? '自动确认' : '人工确认'} · 取消前 ${cancelBeforeMinutes} 分`,
+    statusText: (enabled) => enabled ? '启用' : '停用',
+    edit: '编辑',
+    enable: '启用',
+    disable: '停用',
+    empty: '当前筛选下没有时段。',
+    editorTitles: {
+      create: '新建时段',
+      edit: '编辑时段',
+    },
+    editorLabels: {
+      shop: '门店',
+      date: '日期',
+      start: '开始',
+      end: '结束',
+      capacity: '容量',
+      confirmMode: '确认方式',
+      cancelBefore: '取消截止(分钟)',
+      enabled: '启用',
+    },
+    saving: '保存中...',
+    save: '保存时段',
+  },
 }
 
 const enStrings: MerchantStrings = {
@@ -559,6 +785,126 @@ const enStrings: MerchantStrings = {
     reject: 'Reject',
     noAction: 'No action required',
     empty: 'No orders match the current filter.',
+  },
+  coupons: {
+    eyebrow: 'Coupon verification',
+    heading: 'Verify in-store coupon codes',
+    description: 'Enter the code shown by the customer. Successful verification marks the coupon as used, and duplicate verification attempts are rejected.',
+    missingPermission: (permission) => `This account does not have the \`${permission}\` permission and cannot verify coupons.`,
+    codeRequired: 'Enter a coupon code.',
+    verifyError: 'Failed to verify the coupon.',
+    verifySuccess: (code) => `Coupon ${code} verified successfully.`,
+    codeLabel: 'Coupon code',
+    codePlaceholder: 'For example: VERIFYME001',
+    verifying: 'Verifying...',
+    verify: 'Verify coupon',
+    latestResultHeading: 'Latest verification',
+    dealFallback: (dealId) => `deal:${dealId}`,
+    shopFallback: (shopId) => `shop:${shopId}`,
+    fieldLabels: {
+      code: 'Code:',
+      shop: 'Shop:',
+      status: 'Status:',
+      verifiedAt: 'Verified at:',
+      expireAt: 'Valid until:',
+    },
+    historyHeaders: {
+      code: 'Code',
+      deal: 'Deal',
+      shop: 'Shop',
+      status: 'Status',
+      verifiedAt: 'Verified at',
+    },
+    statusText: (status, fallback) => {
+      if (status === 2) return 'Used'
+      if (status === 3) return 'Expired'
+      if (status === 4) return 'Refunded'
+      if (status === 1) return 'Unused'
+      return fallback || `Status ${status}`
+    },
+  },
+  reviews: {
+    summary: 'Replies stay editable. Appeals become read-only after submission for review.',
+    loadError: 'Failed to load reviews.',
+    replyRequired: 'Merchant reply cannot be empty.',
+    replyError: 'Failed to save the reply.',
+    appealMinLength: 'Appeal reason must be at least 10 characters.',
+    appealError: 'Failed to submit the appeal.',
+    headers: {
+      user: 'User',
+      score: 'Score',
+      content: 'Content',
+      reply: 'Merchant reply',
+      appeal: 'Review appeal',
+    },
+    replyPlaceholder: 'Enter a public reply',
+    saveReply: 'Save reply',
+    noReply: 'No reply yet',
+    appealPlaceholder: 'At least 10 characters explaining why the review is malicious or inaccurate',
+    submitAppeal: 'Submit appeal',
+    noAppeal: 'No appeal',
+    empty: 'No reviews match the current filter.',
+    appealStatusText: (status, fallback) => {
+      if (status === 1) return 'Pending review'
+      if (status === 2) return 'Approved'
+      if (status === 3) return 'Rejected'
+      if (status === 4) return 'Invalidated'
+      if (status === 0) return 'Draft'
+      return fallback || `Status ${status}`
+    },
+  },
+  reservationSlots: {
+    filters: {
+      shop: 'Shop',
+      allShops: 'All shops',
+      startDate: 'Start date',
+      endDate: 'End date',
+      status: 'Status',
+      all: 'All',
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+    },
+    create: 'New slot',
+    summary: 'Configure bookable shop slots: capacity, automatic or manual confirmation, and the cancellation cutoff. Disabled slots are no longer bookable on the consumer side.',
+    missingPermission: (permission) => `This account does not have the \`${permission}\` permission.`,
+    successCreated: 'Slot created.',
+    successUpdated: 'Slot updated.',
+    successEnabled: 'Slot enabled.',
+    successDisabled: 'Slot disabled.',
+    tableHeaders: {
+      shop: 'Shop',
+      date: 'Date',
+      slot: 'Slot',
+      capacity: 'Capacity',
+      confirmMode: 'Confirmation',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    capacitySummary: (reserved, capacity, remaining) => `${reserved}/${capacity} (${remaining} remaining)`,
+    confirmModeLabel: (confirmMode) => confirmMode === 1 ? 'Auto-confirm' : 'Manual confirmation',
+    confirmModeSummary: (confirmMode, cancelBeforeMinutes) =>
+      `${confirmMode === 1 ? 'Auto-confirm' : 'Manual confirmation'} · cancel ${cancelBeforeMinutes} min before`,
+    statusText: (enabled) => enabled ? 'Enabled' : 'Disabled',
+    edit: 'Edit',
+    enable: 'Enable',
+    disable: 'Disable',
+    empty: 'No slots match the current filter.',
+    editorTitles: {
+      create: 'New slot',
+      edit: 'Edit slot',
+    },
+    editorLabels: {
+      shop: 'Shop',
+      date: 'Date',
+      start: 'Start',
+      end: 'End',
+      capacity: 'Capacity',
+      confirmMode: 'Confirmation',
+      cancelBefore: 'Cancel cutoff (minutes)',
+      enabled: 'Enabled',
+    },
+    saving: 'Saving...',
+    save: 'Save slot',
   },
 }
 

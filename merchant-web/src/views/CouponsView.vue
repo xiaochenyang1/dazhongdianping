@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useMerchantSession } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 import { verifyCoupon, type MerchantCoupon } from '@/services/merchant'
 
 const props = withDefaults(defineProps<{ permissions?: string[] }>(), {
   permissions: () => [],
 })
 
+const { state } = useMerchantSession()
+const strings = computed(() => merchantStringsForRegion(state.region))
 const code = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -14,14 +18,26 @@ const result = ref<MerchantCoupon | null>(null)
 const history = ref<MerchantCoupon[]>([])
 const canVerify = computed(() => props.permissions.includes('coupon:verify'))
 
+function couponStatusText(coupon: MerchantCoupon) {
+  return strings.value.coupons.statusText(coupon.status, coupon.statusText)
+}
+
+function dealLabel(coupon: MerchantCoupon) {
+  return coupon.dealTitle || strings.value.coupons.dealFallback(coupon.dealId)
+}
+
+function shopLabel(coupon: MerchantCoupon) {
+  return coupon.shopName || strings.value.coupons.shopFallback(coupon.shopId)
+}
+
 async function submit() {
   if (!canVerify.value) {
-    error.value = '当前账号没有券码核销权限'
+    error.value = strings.value.coupons.missingPermission('coupon:verify')
     return
   }
   const normalized = code.value.trim()
   if (!normalized) {
-    error.value = '请输入券码'
+    error.value = strings.value.coupons.codeRequired
     return
   }
   loading.value = true
@@ -31,11 +47,11 @@ async function submit() {
     const coupon = await verifyCoupon(normalized)
     result.value = coupon
     history.value = [coupon, ...history.value.filter((item) => item.code !== coupon.code)].slice(0, 8)
-    notice.value = `券码 ${coupon.code} 已核销成功`
+    notice.value = strings.value.coupons.verifySuccess(coupon.code)
     code.value = ''
   } catch (cause) {
     result.value = null
-    error.value = cause instanceof Error ? cause.message : '券码核销失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.coupons.verifyError
   } finally {
     loading.value = false
   }
@@ -46,27 +62,27 @@ async function submit() {
   <section>
     <div class="toolbar">
       <div>
-        <p class="eyebrow">Coupon verify</p>
-        <strong>到店券码核销</strong>
-        <p class="muted">录入顾客出示的券码；成功后券状态变为已使用，重复核销会被拒绝。</p>
+        <p class="eyebrow">{{ strings.coupons.eyebrow }}</p>
+        <strong>{{ strings.coupons.heading }}</strong>
+        <p class="muted">{{ strings.coupons.description }}</p>
       </div>
     </div>
 
-    <p v-if="!canVerify" class="error" role="alert">当前账号缺少 `coupon:verify` 权限，不能核销券码。</p>
+    <p v-if="!canVerify" class="error" role="alert">{{ strings.coupons.missingPermission('coupon:verify') }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="notice" class="success-text">{{ notice }}</p>
 
     <article class="card verify-card">
       <form class="verify-form" @submit.prevent="submit">
         <label>
-          <span>券码</span>
+          <span>{{ strings.coupons.codeLabel }}</span>
           <input
             v-model="code"
             name="coupon-code"
             data-testid="coupon-code-input"
             maxlength="64"
             autocomplete="off"
-            placeholder="例如 VERIFYME001"
+            :placeholder="strings.coupons.codePlaceholder"
             :disabled="!canVerify || loading"
           />
         </label>
@@ -76,38 +92,38 @@ async function submit() {
           data-testid="coupon-verify-submit"
           :disabled="!canVerify || loading"
         >
-          {{ loading ? '核销中...' : '确认核销' }}
+          {{ loading ? strings.coupons.verifying : strings.coupons.verify }}
         </button>
       </form>
     </article>
 
     <article v-if="result" class="card result-card" data-testid="coupon-verify-result">
-      <p class="eyebrow">最近一次核销</p>
-      <h3>{{ result.dealTitle || `deal:${result.dealId}` }}</h3>
-      <p><strong>券码：</strong>{{ result.code }}</p>
-      <p><strong>门店：</strong>{{ result.shopName || `shop:${result.shopId}` }}</p>
-      <p><strong>状态：</strong>{{ result.statusText || (result.status === 2 ? '已使用' : `状态 ${result.status}`) }}</p>
-      <p v-if="result.verifyAt"><strong>核销时间：</strong>{{ result.verifyAt }}</p>
-      <p v-if="result.expireAt"><strong>有效期至：</strong>{{ result.expireAt }}</p>
+      <p class="eyebrow">{{ strings.coupons.latestResultHeading }}</p>
+      <h3>{{ dealLabel(result) }}</h3>
+      <p><strong>{{ strings.coupons.fieldLabels.code }}</strong>{{ result.code }}</p>
+      <p><strong>{{ strings.coupons.fieldLabels.shop }}</strong>{{ shopLabel(result) }}</p>
+      <p><strong>{{ strings.coupons.fieldLabels.status }}</strong>{{ couponStatusText(result) }}</p>
+      <p v-if="result.verifyAt"><strong>{{ strings.coupons.fieldLabels.verifiedAt }}</strong>{{ result.verifyAt }}</p>
+      <p v-if="result.expireAt"><strong>{{ strings.coupons.fieldLabels.expireAt }}</strong>{{ result.expireAt }}</p>
     </article>
 
     <article v-if="history.length" class="card table-wrap">
       <table class="table">
         <thead>
           <tr>
-            <th>券码</th>
-            <th>团购</th>
-            <th>门店</th>
-            <th>状态</th>
-            <th>核销时间</th>
+            <th>{{ strings.coupons.historyHeaders.code }}</th>
+            <th>{{ strings.coupons.historyHeaders.deal }}</th>
+            <th>{{ strings.coupons.historyHeaders.shop }}</th>
+            <th>{{ strings.coupons.historyHeaders.status }}</th>
+            <th>{{ strings.coupons.historyHeaders.verifiedAt }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in history" :key="`${item.id}-${item.code}`">
             <td>{{ item.code }}</td>
-            <td>{{ item.dealTitle || `deal:${item.dealId}` }}</td>
-            <td>{{ item.shopName || `shop:${item.shopId}` }}</td>
-            <td>{{ item.statusText || (item.status === 2 ? '已使用' : item.status) }}</td>
+            <td>{{ dealLabel(item) }}</td>
+            <td>{{ shopLabel(item) }}</td>
+            <td>{{ couponStatusText(item) }}</td>
             <td>{{ item.verifyAt || '--' }}</td>
           </tr>
         </tbody>

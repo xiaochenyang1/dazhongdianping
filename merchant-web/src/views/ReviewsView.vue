@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useMerchantSession } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 import {
   createAppealDraft,
   fetchReviews,
@@ -13,6 +15,8 @@ const props = withDefaults(defineProps<{ permissions?: string[] }>(), {
   permissions: () => [],
 })
 
+const { state } = useMerchantSession()
+const strings = computed(() => merchantStringsForRegion(state.region))
 const loading = ref(true)
 const error = ref('')
 const items = ref<MerchantReview[]>([])
@@ -30,7 +34,7 @@ async function load() {
       items.value.map((item) => [item.id, item.merchantReply?.content ?? '']),
     )
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '点评加载失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.reviews.loadError
   } finally {
     loading.value = false
   }
@@ -44,7 +48,7 @@ async function reply(item: MerchantReview) {
   if (!canReply.value) return
   const content = (replyDrafts.value[item.id] ?? '').trim()
   if (!content) {
-    error.value = '商家回复不能为空'
+    error.value = strings.value.reviews.replyRequired
     return
   }
   error.value = ''
@@ -52,7 +56,7 @@ async function reply(item: MerchantReview) {
     await saveReply(item.id, content)
     await load()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '回复失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.reviews.replyError
   }
 }
 
@@ -60,7 +64,7 @@ async function appeal(item: MerchantReview) {
   if (!canSubmitAppeal.value) return
   const reason = (appealReasons.value[item.id] ?? '').trim()
   if (reason.length < 10) {
-    error.value = '申诉理由至少 10 个字。'
+    error.value = strings.value.reviews.appealMinLength
     return
   }
   error.value = ''
@@ -73,7 +77,7 @@ async function appeal(item: MerchantReview) {
     delete appealReasons.value[item.id]
     await load()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '申诉失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.reviews.appealError
   }
 }
 
@@ -83,14 +87,22 @@ onMounted(load)
 <template>
   <section>
     <div class="toolbar">
-      <span class="muted">回复可持续维护；申诉提交审核后转为只读状态。</span>
-      <button type="button" @click="load">刷新</button>
+      <span class="muted">{{ strings.reviews.summary }}</span>
+      <button type="button" @click="load">{{ strings.common.refresh }}</button>
     </div>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
-    <p v-if="loading" class="muted">加载中...</p>
+    <p v-if="loading" class="muted">{{ strings.common.loading }}</p>
     <div v-else class="card table-wrap">
       <table class="table">
-        <thead><tr><th>用户</th><th>评分</th><th>内容</th><th>商家回复</th><th>点评申诉</th></tr></thead>
+        <thead>
+          <tr>
+            <th>{{ strings.reviews.headers.user }}</th>
+            <th>{{ strings.reviews.headers.score }}</th>
+            <th>{{ strings.reviews.headers.content }}</th>
+            <th>{{ strings.reviews.headers.reply }}</th>
+            <th>{{ strings.reviews.headers.appeal }}</th>
+          </tr>
+        </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
             <td>{{ item.userName }}</td>
@@ -102,12 +114,12 @@ onMounted(load)
                   v-model="replyDrafts[item.id]"
                   :name="`reply-${item.id}`"
                   maxlength="500"
-                  placeholder="输入公开回复"
+                  :placeholder="strings.reviews.replyPlaceholder"
                   rows="3"
                 />
-                <button type="button" @click="reply(item)">保存回复</button>
+                <button type="button" @click="reply(item)">{{ strings.reviews.saveReply }}</button>
               </div>
-              <span v-else class="muted">{{ item.merchantReply?.content ?? '暂无回复' }}</span>
+              <span v-else class="muted">{{ item.merchantReply?.content ?? strings.reviews.noReply }}</span>
             </td>
             <td>
               <div v-if="canSubmitAppeal && canAppeal(item)" :data-testid="`appeal-actions-${item.id}`">
@@ -115,16 +127,20 @@ onMounted(load)
                   v-model="appealReasons[item.id]"
                   :name="`appeal-reason-${item.id}`"
                   maxlength="500"
-                  placeholder="至少 10 个字，说明恶意或失实点"
+                  :placeholder="strings.reviews.appealPlaceholder"
                   rows="3"
                 />
-                <button type="button" :data-testid="`submit-appeal-${item.id}`" @click="appeal(item)">提交申诉</button>
+                <button type="button" :data-testid="`submit-appeal-${item.id}`" @click="appeal(item)">
+                  {{ strings.reviews.submitAppeal }}
+                </button>
               </div>
-              <span v-else-if="item.appeal" class="status-pill status-0">{{ item.appeal.statusText }}</span>
-              <span v-else class="muted">暂无申诉</span>
+              <span v-else-if="item.appeal" class="status-pill status-0">
+                {{ strings.reviews.appealStatusText(item.appeal.status, item.appeal.statusText) }}
+              </span>
+              <span v-else class="muted">{{ strings.reviews.noAppeal }}</span>
             </td>
           </tr>
-          <tr v-if="items.length === 0"><td colspan="5" class="feedback">当前筛选下没有点评。</td></tr>
+          <tr v-if="items.length === 0"><td colspan="5" class="feedback">{{ strings.reviews.empty }}</td></tr>
         </tbody>
       </table>
     </div>

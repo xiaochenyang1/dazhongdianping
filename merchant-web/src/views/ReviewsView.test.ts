@@ -8,8 +8,12 @@ const mocks = vi.hoisted(() => ({
   saveAppeal: vi.fn(),
   submitAppeal: vi.fn(),
 }))
+const sessionState = vi.hoisted(() => ({ region: 'EU' }))
 
 vi.mock('@/services/merchant', () => mocks)
+vi.mock('@/composables/useMerchantSession', () => ({
+  useMerchantSession: () => ({ state: sessionState }),
+}))
 
 import ReviewsView from './ReviewsView.vue'
 
@@ -68,7 +72,7 @@ describe('ReviewsView', () => {
     expect(host.textContent).not.toContain('[object Object]')
     expect(host.querySelector<HTMLTextAreaElement>('[name="reply-7"]')?.value).toBe('感谢支持，欢迎再来。')
     expect(host.querySelector('[data-testid="appeal-actions-7"]')).toBeNull()
-    expect(host.textContent).toContain('待审核')
+    expect(host.textContent).toContain('Pending review')
     app.unmount()
   })
 

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useMerchantSession } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 import {
   createReservationSlot,
   fetchReservationSlots,
@@ -15,6 +17,8 @@ const props = withDefaults(defineProps<{ permissions?: string[] }>(), {
   permissions: () => [],
 })
 
+const { state } = useMerchantSession()
+const strings = computed(() => merchantStringsForRegion(state.region))
 const canView = computed(() => props.permissions.includes('reservation:view'))
 const canEdit = computed(() => props.permissions.includes('reservation:confirm'))
 
@@ -31,11 +35,16 @@ const filters = reactive({
   dateTo: '',
   enabled: '' as '' | 'true' | 'false',
 })
+const enabledOptions = computed(() => [
+  { value: '', label: strings.value.reservationSlots.filters.all },
+  { value: 'true', label: strings.value.reservationSlots.filters.enabled },
+  { value: 'false', label: strings.value.reservationSlots.filters.disabled },
+])
 
 const editor = ref<(MerchantReservationSlotPayload & { id?: number }) | null>(null)
 
 function messageOf(cause: unknown) {
-  return cause instanceof Error ? cause.message : '请求失败'
+  return cause instanceof Error ? cause.message : strings.value.common.requestFailed
 }
 
 async function loadShops() {
@@ -124,10 +133,10 @@ async function submitEditor() {
   try {
     if (editor.value.id) {
       await updateReservationSlot(editor.value.id, payload)
-      success.value = '时段已更新'
+      success.value = strings.value.reservationSlots.successUpdated
     } else {
       await createReservationSlot(payload)
-      success.value = '时段已创建'
+      success.value = strings.value.reservationSlots.successCreated
     }
     editor.value = null
     await load()
@@ -145,7 +154,9 @@ async function toggleEnabled(item: MerchantReservationSlot) {
   success.value = ''
   try {
     await updateReservationSlotStatus(item.id, !item.enabled)
-    success.value = item.enabled ? '时段已停用' : '时段已启用'
+    success.value = item.enabled
+      ? strings.value.reservationSlots.successDisabled
+      : strings.value.reservationSlots.successEnabled
     await load()
   } catch (cause) {
     error.value = messageOf(cause)
@@ -176,52 +187,54 @@ watch(
     <div class="toolbar">
       <div class="row-actions">
         <label>
-          <span class="muted">门店</span>
+          <span class="muted">{{ strings.reservationSlots.filters.shop }}</span>
           <select v-model="filters.shopId" data-testid="slot-shop-filter">
-            <option value="">全部门店</option>
+            <option value="">{{ strings.reservationSlots.filters.allShops }}</option>
             <option v-for="shop in shops" :key="shop.id" :value="shop.id">{{ shop.name }}</option>
           </select>
         </label>
         <label>
-          <span class="muted">开始日期</span>
+          <span class="muted">{{ strings.reservationSlots.filters.startDate }}</span>
           <input v-model="filters.dateFrom" type="date" data-testid="slot-date-from" />
         </label>
         <label>
-          <span class="muted">结束日期</span>
+          <span class="muted">{{ strings.reservationSlots.filters.endDate }}</span>
           <input v-model="filters.dateTo" type="date" data-testid="slot-date-to" />
         </label>
         <label>
-          <span class="muted">状态</span>
+          <span class="muted">{{ strings.reservationSlots.filters.status }}</span>
           <select v-model="filters.enabled" data-testid="slot-enabled-filter">
-            <option value="">全部</option>
-            <option value="true">启用</option>
-            <option value="false">停用</option>
+            <option v-for="option in enabledOptions" :key="option.value || 'all'" :value="option.value">
+              {{ option.label }}
+            </option>
           </select>
         </label>
       </div>
       <div class="row-actions">
-        <button type="button" @click="load">刷新</button>
-        <button v-if="canEdit" type="button" data-testid="create-slot" @click="openCreate">新建时段</button>
+        <button type="button" @click="load">{{ strings.common.refresh }}</button>
+        <button v-if="canEdit" type="button" data-testid="create-slot" @click="openCreate">
+          {{ strings.reservationSlots.create }}
+        </button>
       </div>
     </div>
 
-    <p class="muted">配置门店可订时段：容量、自动/人工确认、取消截止分钟数。停用后 C 端不可再订该时段。</p>
-    <p v-if="!canView" class="error" role="alert">当前账号缺少 `reservation:view` 权限。</p>
+    <p class="muted">{{ strings.reservationSlots.summary }}</p>
+    <p v-if="!canView" class="error" role="alert">{{ strings.reservationSlots.missingPermission('reservation:view') }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="success" class="muted" data-testid="slot-success">{{ success }}</p>
-    <p v-if="loading" class="muted">加载中...</p>
+    <p v-if="loading" class="muted">{{ strings.common.loading }}</p>
 
     <div v-else class="card table-wrap">
       <table class="table">
         <thead>
           <tr>
-            <th>门店</th>
-            <th>日期</th>
-            <th>时段</th>
-            <th>容量</th>
-            <th>确认方式</th>
-            <th>状态</th>
-            <th v-if="canEdit">操作</th>
+            <th>{{ strings.reservationSlots.tableHeaders.shop }}</th>
+            <th>{{ strings.reservationSlots.tableHeaders.date }}</th>
+            <th>{{ strings.reservationSlots.tableHeaders.slot }}</th>
+            <th>{{ strings.reservationSlots.tableHeaders.capacity }}</th>
+            <th>{{ strings.reservationSlots.tableHeaders.confirmMode }}</th>
+            <th>{{ strings.reservationSlots.tableHeaders.status }}</th>
+            <th v-if="canEdit">{{ strings.reservationSlots.tableHeaders.actions }}</th>
           </tr>
         </thead>
         <tbody>
@@ -229,57 +242,59 @@ watch(
             <td>{{ item.shopName || item.shopId }}</td>
             <td>{{ item.bizDate }}</td>
             <td>{{ item.startTime }} - {{ item.endTime }}</td>
-            <td>{{ item.reservedCount }}/{{ item.capacity }}（余 {{ item.remainingCount }}）</td>
-            <td>{{ item.confirmModeText }} · 取消前 {{ item.cancelBeforeMinutes }} 分</td>
-            <td>{{ item.enabled ? '启用' : '停用' }}</td>
+            <td>{{ strings.reservationSlots.capacitySummary(item.reservedCount, item.capacity, item.remainingCount) }}</td>
+            <td>{{ strings.reservationSlots.confirmModeSummary(item.confirmMode, item.cancelBeforeMinutes) }}</td>
+            <td>{{ strings.reservationSlots.statusText(item.enabled) }}</td>
             <td v-if="canEdit" class="row-actions">
-              <button type="button" :data-testid="`edit-slot-${item.id}`" @click="openEdit(item)">编辑</button>
+              <button type="button" :data-testid="`edit-slot-${item.id}`" @click="openEdit(item)">
+                {{ strings.reservationSlots.edit }}
+              </button>
               <button type="button" :data-testid="`toggle-slot-${item.id}`" @click="toggleEnabled(item)">
-                {{ item.enabled ? '停用' : '启用' }}
+                {{ item.enabled ? strings.reservationSlots.disable : strings.reservationSlots.enable }}
               </button>
             </td>
           </tr>
           <tr v-if="items.length === 0">
-            <td :colspan="canEdit ? 7 : 6" class="feedback">当前筛选下没有时段。</td>
+            <td :colspan="canEdit ? 7 : 6" class="feedback">{{ strings.reservationSlots.empty }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <div v-if="editor && canEdit" class="card" style="margin-top: 16px">
-      <h3>{{ editor.id ? '编辑时段' : '新建时段' }}</h3>
+      <h3>{{ editor.id ? strings.reservationSlots.editorTitles.edit : strings.reservationSlots.editorTitles.create }}</h3>
       <form class="row-actions" style="flex-wrap: wrap; gap: 12px" data-testid="slot-editor" @submit.prevent="submitEditor">
         <label>
-          <span class="muted">门店</span>
+          <span class="muted">{{ strings.reservationSlots.editorLabels.shop }}</span>
           <select v-model.number="editor.shopId" name="slot-shop" required :disabled="!!editor.id">
             <option v-for="shop in shops" :key="shop.id" :value="shop.id">{{ shop.name }}</option>
           </select>
         </label>
         <label>
-          <span class="muted">日期</span>
+          <span class="muted">{{ strings.reservationSlots.editorLabels.date }}</span>
           <input v-model="editor.bizDate" name="slot-date" type="date" required />
         </label>
         <label>
-          <span class="muted">开始</span>
+          <span class="muted">{{ strings.reservationSlots.editorLabels.start }}</span>
           <input v-model="editor.startTime" name="slot-start" type="time" step="1" required />
         </label>
         <label>
-          <span class="muted">结束</span>
+          <span class="muted">{{ strings.reservationSlots.editorLabels.end }}</span>
           <input v-model="editor.endTime" name="slot-end" type="time" step="1" required />
         </label>
         <label>
-          <span class="muted">容量</span>
+          <span class="muted">{{ strings.reservationSlots.editorLabels.capacity }}</span>
           <input v-model.number="editor.capacity" name="slot-capacity" type="number" min="1" max="500" required />
         </label>
         <label>
-          <span class="muted">确认方式</span>
+          <span class="muted">{{ strings.reservationSlots.editorLabels.confirmMode }}</span>
           <select v-model.number="editor.confirmMode" name="slot-confirm-mode">
-            <option :value="1">自动确认</option>
-            <option :value="2">人工确认</option>
+            <option :value="1">{{ strings.reservationSlots.confirmModeLabel(1) }}</option>
+            <option :value="2">{{ strings.reservationSlots.confirmModeLabel(2) }}</option>
           </select>
         </label>
         <label>
-          <span class="muted">取消截止(分钟)</span>
+          <span class="muted">{{ strings.reservationSlots.editorLabels.cancelBefore }}</span>
           <input
             v-model.number="editor.cancelBeforeMinutes"
             name="slot-cancel-before"
@@ -290,11 +305,11 @@ watch(
           />
         </label>
         <label>
-          <span class="muted">启用</span>
+          <span class="muted">{{ strings.reservationSlots.editorLabels.enabled }}</span>
           <input v-model="editor.enabled" name="slot-enabled" type="checkbox" />
         </label>
-        <button type="submit" :disabled="saving">{{ saving ? '保存中...' : '保存时段' }}</button>
-        <button type="button" class="ghost" @click="editor = null">取消</button>
+        <button type="submit" :disabled="saving">{{ saving ? strings.reservationSlots.saving : strings.reservationSlots.save }}</button>
+        <button type="button" class="ghost" @click="editor = null">{{ strings.common.cancel }}</button>
       </form>
     </div>
   </section>

@@ -4,8 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   verifyCoupon: vi.fn(),
 }))
+const sessionState = vi.hoisted(() => ({ region: 'EU' }))
 
 vi.mock('@/services/merchant', () => mocks)
+vi.mock('@/composables/useMerchantSession', () => ({
+  useMerchantSession: () => ({ state: sessionState }),
+}))
 
 import CouponsView from './CouponsView.vue'
 
@@ -53,10 +57,10 @@ describe('CouponsView', () => {
     await flush()
 
     expect(mocks.verifyCoupon).toHaveBeenCalledWith('VERIFYME001')
-    expect(host.textContent).toContain('券码 VERIFYME001 已核销成功')
+    expect(host.textContent).toContain('Coupon VERIFYME001 verified successfully.')
     expect(host.textContent).toContain('双人套餐')
     expect(host.textContent).toContain('巴黎川味馆')
-    expect(host.textContent).toContain('已使用')
+    expect(host.textContent).toContain('Used')
     app.unmount()
   })
 
@@ -71,7 +75,7 @@ describe('CouponsView', () => {
     const { app, host } = mount()
     host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flush()
-    expect(host.textContent).toContain('请输入券码')
+    expect(host.textContent).toContain('Enter a coupon code.')
     expect(mocks.verifyCoupon).not.toHaveBeenCalled()
     app.unmount()
   })

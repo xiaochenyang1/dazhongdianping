@@ -8,8 +8,12 @@ const mocks = vi.hoisted(() => ({
   updateReservationSlot: vi.fn(),
   updateReservationSlotStatus: vi.fn(),
 }))
+const sessionState = vi.hoisted(() => ({ region: 'EU' }))
 
 vi.mock('@/services/merchant', () => mocks)
+vi.mock('@/composables/useMerchantSession', () => ({
+  useMerchantSession: () => ({ state: sessionState }),
+}))
 
 import ReservationSlotsView from './ReservationSlotsView.vue'
 
@@ -73,6 +77,7 @@ describe('ReservationSlotsView', () => {
     expect(mocks.fetchReservationSlots).toHaveBeenCalled()
     expect(host.textContent).toContain('巴黎川味馆')
     expect(host.textContent).toContain('18:00:00')
+    expect(host.textContent).toContain('Manual confirmation')
 
     host.querySelector<HTMLButtonElement>('[data-testid="create-slot"]')?.click()
     await nextTick()
@@ -81,6 +86,7 @@ describe('ReservationSlotsView', () => {
     await flush()
 
     expect(mocks.createReservationSlot).toHaveBeenCalled()
+    expect(host.textContent).toContain('Slot created.')
     app.unmount()
   })
 
@@ -90,6 +96,7 @@ describe('ReservationSlotsView', () => {
     host.querySelector<HTMLButtonElement>('[data-testid="toggle-slot-9"]')?.click()
     await flush()
     expect(mocks.updateReservationSlotStatus).toHaveBeenCalledWith(9, false)
+    expect(host.textContent).toContain('Slot disabled.')
     app.unmount()
   })
 
