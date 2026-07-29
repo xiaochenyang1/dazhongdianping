@@ -26,13 +26,16 @@ describe('admin router permissions', () => {
   it('redirects direct navigation without the route permission to the dashboard', async () => {
     await router.push('/system/admins')
     expect(router.currentRoute.value.path).toBe('/dashboard')
+    expect(document.title).toBe('Dashboard | Dazhong Dianping Admin')
 
     await router.push('/system/audit-logs')
     expect(router.currentRoute.value.path).toBe('/dashboard')
+    expect(document.title).toBe('Dashboard | Dazhong Dianping Admin')
 
     await router.push('/audit/reviews')
     expect(router.currentRoute.value.path).toBe('/audit/reviews')
     expect(scrollTo).toHaveBeenCalledWith({ top: 0 })
+    expect(document.title).toBe('Review Audit | Dazhong Dianping Admin')
   })
 
   it('guards the basic data route with the geodata read permission', async () => {

@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion, localeForRegion } from '@/core/admin_localizations'
 
 interface ApiEnvelope<T> {
   code: number
@@ -24,7 +25,7 @@ function enrichMessage(message: string, traceId?: string) {
 function buildHeaders() {
   const { state } = useAdminSession()
   const headers: Record<string, string> = {
-    'Accept-Language': 'zh-CN',
+    'Accept-Language': localeForRegion(state.region),
     'X-Region': state.region,
   }
 
@@ -36,6 +37,8 @@ function buildHeaders() {
 }
 
 async function request<T>(config: AxiosRequestConfig) {
+  const { state } = useAdminSession()
+  const strings = adminStringsForRegion(state.region)
   try {
     const response = await http.request<ApiEnvelope<T>>({
       ...config,
@@ -46,7 +49,7 @@ async function request<T>(config: AxiosRequestConfig) {
     })
 
     if (response.data.code !== 0) {
-      throw new Error(enrichMessage(response.data.message || '请求失败', response.data.traceId))
+      throw new Error(enrichMessage(response.data.message || strings.common.requestFailed, response.data.traceId))
     }
 
     return response.data.data
@@ -64,12 +67,12 @@ async function request<T>(config: AxiosRequestConfig) {
         clearSession()
       }
 
-      const message = typeof envelope?.message === 'string' ? envelope.message : error.message || '请求失败'
+      const message = typeof envelope?.message === 'string' ? envelope.message : error.message || strings.common.requestFailed
       const traceId = typeof envelope?.traceId === 'string' ? envelope.traceId : undefined
       throw new Error(enrichMessage(message, traceId))
     }
 
-    throw new Error('请求失败')
+    throw new Error(strings.common.requestFailed)
   }
 }
 

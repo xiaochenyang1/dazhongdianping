@@ -2,12 +2,14 @@
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { loginAdmin } from '@/services/admin'
 import type { Region } from '@/types/admin'
 
 const route = useRoute()
 const router = useRouter()
 const { state, setSession, setRegion } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 
 const form = reactive({
   account: 'admin',
@@ -21,53 +23,57 @@ const redirectTarget = computed(() =>
   typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard',
 )
 
+function regionOptionLabel(region: Region) {
+  return `${region} · ${strings.value.common.regionLabel(region)}`
+}
+
 const spotlightCards = computed(() => [
   {
-    label: '登录凭据',
-    value: 'admin / admin123456',
-    detail: '示例账号来自数据库种子；请使用已启用且已分配角色的管理员账号登录。',
+    label: strings.value.auth.spotlightCredentialsLabel,
+    value: strings.value.auth.spotlightCredentialsValue,
+    detail: strings.value.auth.spotlightCredentialsDetail,
   },
   {
-    label: '区域范围',
-    value: state.region,
-    detail: '登录响应会载入管理员资料、权限与区域范围，并按授权更新工作视角。',
+    label: strings.value.auth.spotlightRegionScopeLabel,
+    value: strings.value.auth.spotlightRegionScopeValue(state.region),
+    detail: strings.value.auth.spotlightRegionScopeDetail,
   },
   {
-    label: '授权模型',
-    value: '数据库 RBAC 授权',
-    detail: '管理员、角色和权限由服务端持久化管理，后台能力按授权加载。',
+    label: strings.value.auth.spotlightAuthModelLabel,
+    value: strings.value.auth.spotlightAuthModelValue,
+    detail: strings.value.auth.spotlightAuthModelDetail,
   },
 ])
 
 const entryFacts = computed(() => [
   {
-    label: '目标路由',
+    label: strings.value.auth.entryTargetRouteLabel,
     value: redirectTarget.value,
   },
   {
-    label: '会话模式',
-    value: '数据库 RBAC 授权',
+    label: strings.value.auth.entrySessionModeLabel,
+    value: strings.value.auth.entrySessionModeValue,
   },
   {
-    label: '区域视角',
-    value: state.region,
+    label: strings.value.auth.entryRegionPerspectiveLabel,
+    value: regionOptionLabel(state.region),
   },
 ])
 
-const consoleNotes = [
+const consoleNotes = computed(() => [
   {
-    title: '区域范围',
-    detail: '登录响应会载入管理员资料、权限与区域范围；进入后台后按账号授权选择工作视角。',
+    title: strings.value.auth.noteRegionScopeTitle,
+    detail: strings.value.auth.noteRegionScopeDetail,
   },
   {
-    title: '实时权限',
-    detail: '进入后台后通过 auth/me 实时水合管理员资料、权限与区域范围。',
+    title: strings.value.auth.noteLivePermissionsTitle,
+    detail: strings.value.auth.noteLivePermissionsDetail,
   },
   {
-    title: '管理员与角色管理',
-    detail: '管理员账号、角色、权限和区域范围由数据库维护，页面能力以服务端实时核验为准。',
+    title: strings.value.auth.noteAdminRbacTitle,
+    detail: strings.value.auth.noteAdminRbacDetail,
   },
-]
+])
 
 async function handleSubmit() {
   loading.value = true
@@ -83,7 +89,7 @@ async function handleSubmit() {
 
     await router.replace(redirectTarget.value)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '登录失败'
+    errorMessage.value = error instanceof Error ? error.message : strings.value.auth.loginError
   } finally {
     loading.value = false
   }
@@ -97,23 +103,20 @@ async function handleSubmit() {
         <div class="auth-copy__brand">
           <span class="auth-copy__mark">DP</span>
           <div class="auth-copy__brand-text">
-            <p class="eyebrow">Admin Concierge</p>
-            <strong>运营控制席</strong>
+            <p class="eyebrow">{{ strings.auth.brandEyebrow }}</p>
+            <strong>{{ strings.auth.brandHeading }}</strong>
           </div>
         </div>
 
         <div class="auth-copy__headline">
-          <h1>管理员身份、角色权限与区域范围由数据库统一管理。</h1>
-          <p>
-            登录响应会载入管理员资料、权限与区域范围；进入后台后通过 auth/me 实时水合，
-            页面能力以服务端核验为准。
-          </p>
+          <h1>{{ strings.auth.heroTitle }}</h1>
+          <p>{{ strings.auth.heroDescription }}</p>
         </div>
 
         <div class="auth-copy__ribbon">
-          <span>当前区域 {{ state.region }}</span>
-          <span>数据库 RBAC</span>
-          <span>实时权限核验</span>
+          <span>{{ strings.auth.ribbonRegion(state.region) }}</span>
+          <span>{{ strings.auth.ribbonDatabaseRbac }}</span>
+          <span>{{ strings.auth.ribbonLivePermissions }}</span>
         </div>
 
         <div class="tip-stack tip-stack--admin">
@@ -135,16 +138,13 @@ async function handleSubmit() {
       <form class="auth-card auth-card--admin" @submit.prevent="handleSubmit">
         <div class="auth-card__topline">
           <div>
-            <p class="eyebrow">管理员登录</p>
-            <h2>先进去把数据管起来。</h2>
+            <p class="eyebrow">{{ strings.auth.formEyebrow }}</p>
+            <h2>{{ strings.auth.formHeading }}</h2>
           </div>
-          <span class="auth-card__badge">Control Entry</span>
+          <span class="auth-card__badge">{{ strings.auth.formBadge }}</span>
         </div>
 
-        <p class="auth-card__summary">
-          登录后会跳到 <span class="code-box">{{ redirectTarget }}</span>，系统根据数据库 RBAC 授权载入管理员资料、权限与区域范围，
-          并在进入后台后实时核验。
-        </p>
+        <p class="auth-card__summary">{{ strings.auth.formSummary(redirectTarget) }}</p>
 
         <div class="auth-card__facts">
           <article v-for="fact in entryFacts" :key="fact.label" class="auth-card__fact">
@@ -156,38 +156,41 @@ async function handleSubmit() {
         <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
 
         <label class="field">
-          <span>区域视角</span>
+          <span>{{ strings.auth.regionFieldLabel }}</span>
           <select :value="state.region" @change="setRegion(($event.target as HTMLSelectElement).value as Region)">
-            <option value="CN">CN</option>
-            <option value="EU">EU</option>
+            <option value="CN">{{ strings.auth.regionOptionCn }}</option>
+            <option value="EU">{{ strings.auth.regionOptionEu }}</option>
           </select>
         </label>
 
         <label class="field">
-          <span>账号</span>
-          <input v-model="form.account" type="text" placeholder="请输入管理员账号" autocomplete="username" />
+          <span>{{ strings.auth.accountLabel }}</span>
+          <input
+            v-model="form.account"
+            type="text"
+            :placeholder="strings.auth.accountPlaceholder"
+            autocomplete="username"
+          />
         </label>
 
         <label class="field">
-          <span>密码</span>
+          <span>{{ strings.auth.passwordLabel }}</span>
           <input
             v-model="form.password"
             type="password"
-            placeholder="请输入管理员密码"
+            :placeholder="strings.auth.passwordPlaceholder"
             autocomplete="current-password"
           />
         </label>
 
         <button type="submit" class="primary-button primary-button--block" :disabled="loading">
-          {{ loading ? '登录中...' : '进入后台' }}
+          {{ loading ? strings.auth.loginSubmitting : strings.auth.loginButton }}
         </button>
 
         <div class="auth-card__footer">
-          <span>管理员与角色管理、权限和区域范围由服务端实时核验，后台能力以数据库授权为准。</span>
+          <span>{{ strings.auth.footerText }}</span>
           <div class="auth-card__chips">
-            <span>管理员管理</span>
-            <span>角色与权限</span>
-            <span>区域范围</span>
+            <span v-for="chip in strings.auth.footerChips" :key="chip">{{ chip }}</span>
           </div>
         </div>
       </form>

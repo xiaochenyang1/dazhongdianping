@@ -1,5 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAdminSession } from '@/composables/useAdminSession'
+import {
+  adminRouteTitleKey,
+  adminStringsForRegion,
+  type AdminRouteTitleKey,
+} from '@/core/admin_localizations'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -9,7 +14,7 @@ const router = createRouter({
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
       meta: {
-        title: '管理员登录',
+        titleKey: 'login',
       },
     },
     {
@@ -29,7 +34,7 @@ const router = createRouter({
           component: () => import('@/views/DashboardView.vue'),
           meta: {
             requiresAuth: true,
-            title: '控制台',
+            titleKey: 'dashboard',
           },
         },
         {
@@ -38,7 +43,7 @@ const router = createRouter({
           component: () => import('@/views/ShopManagementView.vue'),
           meta: {
             requiresAuth: true,
-            title: '商户管理',
+            titleKey: 'shopManagement',
             requiredPermission: 'data:shop:read',
           },
         },
@@ -48,7 +53,7 @@ const router = createRouter({
           component: () => import('@/views/BasicDataManagementView.vue'),
           meta: {
             requiresAuth: true,
-            title: '基础数据',
+            titleKey: 'basicDataManagement',
             requiredPermission: 'data:geo:read',
           },
         },
@@ -58,7 +63,7 @@ const router = createRouter({
           component: () => import('@/views/AdminOrdersView.vue'),
           meta: {
             requiresAuth: true,
-            title: '订单退款',
+            titleKey: 'dataOrders',
             requiredPermission: 'data:order:read',
           },
         },
@@ -68,7 +73,7 @@ const router = createRouter({
           component: () => import('@/views/AuditReviewView.vue'),
           meta: {
             requiresAuth: true,
-            title: '点评审核',
+            titleKey: 'auditReviews',
             requiredPermission: 'audit:review:read',
           },
         },
@@ -78,7 +83,7 @@ const router = createRouter({
           component: () => import('@/views/ReviewAppealAuditView.vue'),
           meta: {
             requiresAuth: true,
-            title: '商户点评申诉',
+            titleKey: 'auditReviewAppeals',
             requiredPermission: 'audit:review_appeal:read',
           },
         },
@@ -88,7 +93,7 @@ const router = createRouter({
           component: () => import('@/views/PostAuditView.vue'),
           meta: {
             requiresAuth: true,
-            title: '帖子审核',
+            titleKey: 'auditPosts',
             requiredPermission: 'audit:post:read',
           },
         },
@@ -98,7 +103,7 @@ const router = createRouter({
           component: () => import('@/views/ExpertCertificationAuditView.vue'),
           meta: {
             requiresAuth: true,
-            title: '达人认证',
+            titleKey: 'auditExpertCertifications',
             requiredPermission: 'audit:expert_certification:read',
           },
         },
@@ -108,7 +113,7 @@ const router = createRouter({
           component: () => import('@/views/VerifiedMerchantAuditView.vue'),
           meta: {
             requiresAuth: true,
-            title: '认证商户',
+            titleKey: 'auditVerifiedMerchants',
             requiredPermission: 'audit:merchant_verification:read',
           },
         },
@@ -116,7 +121,7 @@ const router = createRouter({
           path: 'audit/reports',
           name: 'audit-reports',
           component: () => import('@/views/ReportManagementView.vue'),
-          meta: { requiresAuth: true, title: '内容举报', requiredPermission: 'audit:report:read' },
+          meta: { requiresAuth: true, titleKey: 'auditReports', requiredPermission: 'audit:report:read' },
         },
         {
           path: 'audit/user-appeals',
@@ -124,7 +129,7 @@ const router = createRouter({
           component: () => import('@/views/UserAppealAuditView.vue'),
           meta: {
             requiresAuth: true,
-            title: '用户封禁申诉',
+            titleKey: 'auditUserAppeals',
             requiredPermission: 'audit:user_appeal:read',
           },
         },
@@ -132,7 +137,7 @@ const router = createRouter({
           path: 'audit/merchant-applications',
           name: 'audit-merchant-applications',
           component: () => import('@/views/MerchantApplicationAuditView.vue'),
-          meta: { requiresAuth: true, title: '商户资质审核', requiredPermission: 'audit:merchant_application:read' },
+          meta: { requiresAuth: true, titleKey: 'auditMerchantApplications', requiredPermission: 'audit:merchant_application:read' },
         },
         {
           path: 'audit/shop-changes',
@@ -140,7 +145,7 @@ const router = createRouter({
           component: () => import('@/views/ShopChangeAuditView.vue'),
           meta: {
             requiresAuth: true,
-            title: '门店草稿审核',
+            titleKey: 'auditShopChanges',
             requiredPermission: 'audit:shop_change:read',
           },
         },
@@ -150,7 +155,7 @@ const router = createRouter({
           component: () => import('@/views/DealAuditView.vue'),
           meta: {
             requiresAuth: true,
-            title: '团购审核',
+            titleKey: 'auditDeals',
             requiredPermission: 'audit:deal:read',
           },
         },
@@ -160,7 +165,7 @@ const router = createRouter({
           component: () => import('@/views/ImportView.vue'),
           meta: {
             requiresAuth: true,
-            title: '种子导入',
+            titleKey: 'shopImport',
             requiredPermission: 'data:shop:import',
           },
         },
@@ -168,44 +173,44 @@ const router = createRouter({
           path: 'operations/ranks',
           name: 'rank-config',
           component: () => import('@/views/RankConfigView.vue'),
-          meta: { requiresAuth: true, title: '榜单规则', requiredPermission: 'operations:rank:read' },
+          meta: { requiresAuth: true, titleKey: 'rankConfig', requiredPermission: 'operations:rank:read' },
         },
-        { path: 'operations/growth', name: 'growth-config', component: () => import('@/views/GrowthConfigView.vue'), meta: { requiresAuth: true, title: '成长规则', requiredPermission: 'operations:growth:read' } },
-        { path: 'operations/circles', name: 'circle-management', component: () => import('@/views/CircleManagementView.vue'), meta: { requiresAuth: true, title: '官方圈子', requiredPermission: 'operations:circle:read' } },
-        { path: 'operations/topics', name: 'topic-management', component: () => import('@/views/TopicManagementView.vue'), meta: { requiresAuth: true, title: '话题治理', requiredPermission: 'operations:topic:read' } },
-        { path: 'operations/banners', name: 'banner-management', component: () => import('@/views/BannerManagementView.vue'), meta: { requiresAuth: true, title: 'Banner 配置', requiredPermission: 'operations:banner:read' } },
-        { path: 'operations/hotwords', name: 'hotword-management', component: () => import('@/views/HotWordManagementView.vue'), meta: { requiresAuth: true, title: '搜索热词', requiredPermission: 'operations:hotword:read' } },
-        { path: 'operations/sensitive-words', name: 'sensitive-word-management', component: () => import('@/views/SensitiveWordManagementView.vue'), meta: { requiresAuth: true, title: '敏感词库', requiredPermission: 'operations:sensitive_word:read' } },
-        { path: 'operations/activities', name: 'activity-management', component: () => import('@/views/OperationActivityManagementView.vue'), meta: { requiresAuth: true, title: '运营活动', requiredPermission: 'operations:activity:read' } },
+        { path: 'operations/growth', name: 'growth-config', component: () => import('@/views/GrowthConfigView.vue'), meta: { requiresAuth: true, titleKey: 'growthConfig', requiredPermission: 'operations:growth:read' } },
+        { path: 'operations/circles', name: 'circle-management', component: () => import('@/views/CircleManagementView.vue'), meta: { requiresAuth: true, titleKey: 'circleManagement', requiredPermission: 'operations:circle:read' } },
+        { path: 'operations/topics', name: 'topic-management', component: () => import('@/views/TopicManagementView.vue'), meta: { requiresAuth: true, titleKey: 'topicManagement', requiredPermission: 'operations:topic:read' } },
+        { path: 'operations/banners', name: 'banner-management', component: () => import('@/views/BannerManagementView.vue'), meta: { requiresAuth: true, titleKey: 'bannerManagement', requiredPermission: 'operations:banner:read' } },
+        { path: 'operations/hotwords', name: 'hotword-management', component: () => import('@/views/HotWordManagementView.vue'), meta: { requiresAuth: true, titleKey: 'hotwordManagement', requiredPermission: 'operations:hotword:read' } },
+        { path: 'operations/sensitive-words', name: 'sensitive-word-management', component: () => import('@/views/SensitiveWordManagementView.vue'), meta: { requiresAuth: true, titleKey: 'sensitiveWordManagement', requiredPermission: 'operations:sensitive_word:read' } },
+        { path: 'operations/activities', name: 'activity-management', component: () => import('@/views/OperationActivityManagementView.vue'), meta: { requiresAuth: true, titleKey: 'activityManagement', requiredPermission: 'operations:activity:read' } },
         {
           path: 'system/admins',
           name: 'system-admins',
           component: () => import('@/views/AdminAccountsView.vue'),
-          meta: { requiresAuth: true, title: '管理员账号', requiredPermission: 'system:admin:read' },
+          meta: { requiresAuth: true, titleKey: 'systemAdmins', requiredPermission: 'system:admin:read' },
         },
         {
           path: 'system/roles',
           name: 'system-roles',
           component: () => import('@/views/AdminRolesView.vue'),
-          meta: { requiresAuth: true, title: '角色与权限', requiredPermission: 'system:role:read' },
+          meta: { requiresAuth: true, titleKey: 'systemRoles', requiredPermission: 'system:role:read' },
         },
         {
           path: 'system/users',
           name: 'system-users',
           component: () => import('@/views/UserManagementView.vue'),
-          meta: { requiresAuth: true, title: '用户管理', requiredPermission: 'system:user:read' },
+          meta: { requiresAuth: true, titleKey: 'systemUsers', requiredPermission: 'system:user:read' },
         },
         {
           path: 'system/audit-logs',
           name: 'system-audit-logs',
           component: () => import('@/views/AdminAuditLogsView.vue'),
-          meta: { requiresAuth: true, title: '审计日志', requiredPermission: 'system:audit_log:read' },
+          meta: { requiresAuth: true, titleKey: 'systemAuditLogs', requiredPermission: 'system:audit_log:read' },
         },
         {
           path: 'system/privacy-tasks',
           name: 'system-privacy-tasks',
           component: () => import('@/views/AdminPrivacyTasksView.vue'),
-          meta: { requiresAuth: true, title: '隐私任务', requiredPermission: 'system:privacy_task:read' },
+          meta: { requiresAuth: true, titleKey: 'systemPrivacyTasks', requiredPermission: 'system:privacy_task:read' },
         },
       ],
     },
@@ -241,9 +246,15 @@ router.beforeEach((to) => {
   return true
 })
 
+function routeTitleKey(titleKey: unknown): AdminRouteTitleKey {
+  return adminRouteTitleKey(titleKey)
+}
+
 router.afterEach((to) => {
-  const title = typeof to.meta.title === 'string' ? to.meta.title : '管理端'
-  document.title = `${title} | 大众点评后台`
+  const { state } = useAdminSession()
+  const strings = adminStringsForRegion(state.region)
+  const title = strings.routeTitles[routeTitleKey(to.meta.titleKey)]
+  document.title = `${title} | ${strings.brand}`
 })
 
 export default router

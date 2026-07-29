@@ -82,7 +82,7 @@ describe('AdminLayout', () => {
     mocks.setRegion.mockReset()
     mocks.updateIdentity.mockReset()
     mocks.route = reactive({
-      meta: { requiredPermission: 'system:admin:read' },
+      meta: { requiredPermission: 'system:admin:read', titleKey: 'systemAdmins' },
       path: '/system/admins',
       fullPath: '/system/admins',
     })
@@ -130,6 +130,7 @@ describe('AdminLayout', () => {
     expect(mocks.router.replace).toHaveBeenCalledWith('/dashboard')
     await flush()
     expect(host.querySelector('[data-testid="router-view"]')).not.toBeNull()
+    expect(host.textContent).toContain('Admin Console')
 
     app.unmount()
   })
@@ -225,26 +226,26 @@ describe('AdminLayout', () => {
 
     const { app, host } = mount()
     await flush()
-    expect(host.textContent).toContain('点评审核')
+    expect(host.textContent).toContain('Review Audit')
 
     mocks.route.path = '/audit/reviews'
     mocks.route.fullPath = '/audit/reviews'
-    mocks.route.meta = { requiredPermission: 'audit:review:read' }
+    mocks.route.meta = { requiredPermission: 'audit:review:read', titleKey: 'auditReviews' }
     await flush()
-    expect(host.textContent).not.toContain('点评审核')
-    expect(host.textContent).toContain('菜单加载中...')
+    expect(host.querySelectorAll('a')).toHaveLength(0)
+    expect(host.textContent).toContain('Loading menus...')
 
     mocks.route.fullPath = '/audit/reviews?tab=latest'
     await nextTick()
     staleMenuResponse.resolve(auditMenu)
     await flush()
 
-    expect(host.textContent).not.toContain('点评审核')
-    expect(host.textContent).toContain('菜单加载中...')
+    expect(host.querySelectorAll('a')).toHaveLength(0)
+    expect(host.textContent).toContain('Loading menus...')
 
     newestIdentity.resolve(auditIdentity)
     await flush()
-    expect(host.textContent).not.toContain('菜单加载中...')
+    expect(host.textContent).not.toContain('Loading menus...')
 
     app.unmount()
   })
