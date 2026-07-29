@@ -205,6 +205,168 @@ export interface AdminStrings {
       countSummary: (count: number) => string
     }
   }
+  basicDataManagement: {
+    eyebrow: (region: Region) => string
+    heading: string
+    description: string
+    writable: string
+    readOnly: string
+    tabsAriaLabel: string
+    tabs: {
+      categories: string
+      cities: string
+      areas: string
+    }
+    loading: (region: Region) => string
+    actions: {
+      save: string
+      edit: string
+      enable: string
+      disable: string
+      delete: string
+    }
+    statusText: (status: number) => string
+    category: {
+      heading: string
+      summary: (count: number) => string
+      create: string
+      labels: {
+        parent: string
+        name: string
+        sort: string
+      }
+      root: string
+      tableHeaders: {
+        name: string
+        parent: string
+        sort: string
+        status: string
+        actions: string
+      }
+      empty: string
+      createSuccess: string
+      updateSuccess: string
+      enableSuccess: string
+      disableSuccess: string
+      deleteSuccess: string
+      deleteConfirm: (name: string) => string
+      editTitle: string
+    }
+    city: {
+      heading: string
+      summary: (count: number) => string
+      create: string
+      labels: {
+        code: string
+        name: string
+        sort: string
+      }
+      tableHeaders: {
+        city: string
+        code: string
+        sort: string
+        status: string
+        actions: string
+      }
+      empty: string
+      createSuccess: string
+      updateSuccess: string
+      enableSuccess: string
+      disableSuccess: string
+      deleteSuccess: string
+      deleteConfirm: (name: string) => string
+    }
+    area: {
+      heading: string
+      summary: string
+      create: string
+      cityFilterLabel: string
+      selectCity: string
+      disabledSuffix: string
+      labels: {
+        city: string
+        name: string
+        sort: string
+      }
+      tableHeaders: {
+        area: string
+        city: string
+        sort: string
+        status: string
+        actions: string
+      }
+      loading: string
+      emptySelectCity: string
+      empty: string
+      createSuccess: string
+      updateSuccess: string
+      enableSuccess: string
+      disableSuccess: string
+      deleteSuccess: string
+      deleteConfirm: (name: string) => string
+    }
+  }
+  shopImport: {
+    loadError: string
+    importError: string
+    invalidRecords: string
+    importSuccess: (success: number, failed: number) => string
+    eyebrow: string
+    heading: string
+    description: string
+    resetExample: string
+    importing: string
+    startImport: string
+    requestEyebrow: string
+    requestHeading: (region: Region) => string
+    requestNote: string
+    labels: {
+      fileName: string
+      region: string
+      records: string
+    }
+    fileNamePlaceholder: string
+    recordsPlaceholder: string
+    validIdsTitle: string
+    validIds: (region: Region) => string
+    resultEyebrow: string
+    resultHeading: string
+    resultCards: {
+      total: string
+      batch: (batchId: number) => string
+      success: string
+      failure: string
+      noErrorFile: string
+    }
+    batchesEyebrow: string
+    batchesHeading: string
+    batchesSummary: (total: number) => string
+    filters: {
+      status: string
+    }
+    statusOptions: {
+      all: string
+      processing: string
+      completed: string
+      failed: string
+    }
+    applyFilters: string
+    refresh: string
+    tableHeaders: {
+      batch: string
+      fileName: string
+      result: string
+      status: string
+      errorFile: string
+    }
+    loading: string
+    empty: string
+    resultSummary: (success: number, failed: number) => string
+    statusText: (status: number, fallback?: string) => string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+  }
   auditLogs: {
     eyebrow: string
     heading: string
@@ -1735,6 +1897,28 @@ function enReportTargetStatusText(
   return 'Pending review'
 }
 
+function zhEnabledStatusText(status: number) {
+  return status === 1 ? '启用' : '停用'
+}
+
+function enEnabledStatusText(status: number) {
+  return status === 1 ? 'Enabled' : 'Disabled'
+}
+
+function zhImportBatchStatusText(status: number, fallback?: string) {
+  if (status === 1) return '完成'
+  if (status === 2) return '失败'
+  if (status === 0) return '处理中'
+  return fallback || `状态 ${status}`
+}
+
+function enImportBatchStatusText(status: number, fallback?: string) {
+  if (status === 1) return 'Completed'
+  if (status === 2) return 'Failed'
+  if (status === 0) return 'Processing'
+  return fallback || `Status ${status}`
+}
+
 const zhCnStrings: AdminStrings = {
   tag: 'zh-CN',
   brand: '大众点评后台',
@@ -1917,12 +2101,7 @@ const zhCnStrings: AdminStrings = {
       viewAll: '查看批次',
       empty: '当前区域还没有导入批次，去导一包种子商户试试。',
       batchSummary: (success, failed, total) => `成功 ${success} / 失败 ${failed} / 共 ${total}`,
-      statusText: (status, fallback) => {
-        if (status === 1) return '完成'
-        if (status === 2) return '失败'
-        if (status === 0) return '处理中'
-        return fallback || `状态 ${status}`
-      },
+      statusText: zhImportBatchStatusText,
     },
     pendingAudit: {
       eyebrow: '待审拆分',
@@ -1942,6 +2121,169 @@ const zhCnStrings: AdminStrings = {
       detailsNote: (bizType) => `bizType=${bizType} · 点击进入审核页`,
       countSummary: (count) => `${count} 条`,
     },
+  },
+  basicDataManagement: {
+    eyebrow: (region) => `当前区域 ${region}`,
+    heading: '基础数据',
+    description: '维护分类、城市和商圈。停用项不会继续出现在 C 端筛选中，历史门店信息仍会保留。',
+    writable: '可维护',
+    readOnly: '只读',
+    tabsAriaLabel: '基础数据类型',
+    tabs: {
+      categories: '分类',
+      cities: '城市',
+      areas: '商圈',
+    },
+    loading: (region) => `正在加载 ${region} 区域数据...`,
+    actions: {
+      save: '保存',
+      edit: '编辑',
+      enable: '启用',
+      disable: '停用',
+      delete: '删除',
+    },
+    statusText: zhEnabledStatusText,
+    category: {
+      heading: '分类',
+      summary: (count) => `${count} 条，按父级与排序值展示`,
+      create: '新增分类',
+      labels: {
+        parent: '父分类',
+        name: '名称',
+        sort: '排序',
+      },
+      root: '根分类',
+      tableHeaders: {
+        name: '名称',
+        parent: '父级',
+        sort: '排序',
+        status: '状态',
+        actions: '操作',
+      },
+      empty: '当前区域暂无分类',
+      createSuccess: '分类已创建',
+      updateSuccess: '分类已更新',
+      enableSuccess: '分类已启用',
+      disableSuccess: '分类已停用',
+      deleteSuccess: '分类已删除',
+      deleteConfirm: (name) => `确认删除分类「${name}」？被业务引用时服务端会拒绝。`,
+      editTitle: '编辑分类',
+    },
+    city: {
+      heading: '城市',
+      summary: (count) => `${count} 条，城市编码在区域内唯一`,
+      create: '新增城市',
+      labels: {
+        code: '编码',
+        name: '名称',
+        sort: '排序',
+      },
+      tableHeaders: {
+        city: '城市',
+        code: '编码',
+        sort: '排序',
+        status: '状态',
+        actions: '操作',
+      },
+      empty: '当前区域暂无城市',
+      createSuccess: '城市已创建',
+      updateSuccess: '城市已更新',
+      enableSuccess: '城市已启用',
+      disableSuccess: '城市已停用',
+      deleteSuccess: '城市已删除',
+      deleteConfirm: (name) => `确认删除城市「${name}」？被业务引用时服务端会拒绝。`,
+    },
+    area: {
+      heading: '商圈',
+      summary: '先选择城市，再维护其下商圈',
+      create: '新增商圈',
+      cityFilterLabel: '城市',
+      selectCity: '请选择城市',
+      disabledSuffix: '（停用）',
+      labels: {
+        city: '城市',
+        name: '名称',
+        sort: '排序',
+      },
+      tableHeaders: {
+        area: '商圈',
+        city: '城市',
+        sort: '排序',
+        status: '状态',
+        actions: '操作',
+      },
+      loading: '正在加载商圈...',
+      emptySelectCity: '请选择城市',
+      empty: '当前城市暂无商圈',
+      createSuccess: '商圈已创建',
+      updateSuccess: '商圈已更新',
+      enableSuccess: '商圈已启用',
+      disableSuccess: '商圈已停用',
+      deleteSuccess: '商圈已删除',
+      deleteConfirm: (name) => `确认删除商圈「${name}」？被业务引用时服务端会拒绝。`,
+    },
+  },
+  shopImport: {
+    loadError: '导入批次加载失败',
+    importError: '导入失败',
+    invalidRecords: '导入记录必须是非空 JSON 数组。',
+    importSuccess: (success, failed) => `导入完成：成功 ${success}，失败 ${failed}。`,
+    eyebrow: '种子导入',
+    heading: '先让运营有办法造数，不然前台页面再漂亮也是空壳子。',
+    description: '这版用 JSON 文本直连导入接口，目的很实在：先把批次、失败明细、回灌动作跑通。',
+    resetExample: '恢复示例',
+    importing: '导入中...',
+    startImport: '开始导入',
+    requestEyebrow: '导入请求',
+    requestHeading: (region) => `当前区域 ${region} 的导入 payload，别靠脑补拼字段。`,
+    requestNote: '把 `categoryId` 改成不存在的值，就能演示失败明细。',
+    labels: {
+      fileName: '文件名',
+      region: '区域',
+      records: '记录 JSON',
+    },
+    fileNamePlaceholder: 'seed-cn-shops.json',
+    recordsPlaceholder: '请填写 JSON 数组',
+    validIdsTitle: '当前区域有效示例 ID',
+    validIds: (region) =>
+      region === 'CN' ? '分类 `102`，城市 `1`，商圈 `11`。' : '分类 `201`，城市 `101`，商圈 `1011`。',
+    resultEyebrow: '最近一次结果',
+    resultHeading: '导入结果别藏着掖着，成功失败都摆出来。',
+    resultCards: {
+      total: '总记录',
+      batch: (batchId) => `批次 #${batchId}`,
+      success: '成功',
+      failure: '失败',
+      noErrorFile: '无错误文件',
+    },
+    batchesEyebrow: '导入批次',
+    batchesHeading: '批次记录得能翻，运营回头查错不至于抓瞎。',
+    batchesSummary: (total) => `当前区域共 ${total} 个批次`,
+    filters: {
+      status: '状态',
+    },
+    statusOptions: {
+      all: '全部状态',
+      processing: '处理中',
+      completed: '完成',
+      failed: '失败',
+    },
+    applyFilters: '应用筛选',
+    refresh: '刷新',
+    tableHeaders: {
+      batch: '批次',
+      fileName: '文件名',
+      result: '结果',
+      status: '状态',
+      errorFile: '错误文件',
+    },
+    loading: '导入批次加载中...',
+    empty: '还没有批次记录，先导一包再说。',
+    resultSummary: (success, failed) => `成功 ${success} / 失败 ${failed}`,
+    statusText: zhImportBatchStatusText,
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
   },
   auditLogs: {
     eyebrow: 'Audit Trail',
@@ -3614,12 +3956,7 @@ const enStrings: AdminStrings = {
       viewAll: 'View batches',
       empty: 'There are no import batches in this region yet. Try importing a seed merchant package.',
       batchSummary: (success, failed, total) => `Success ${success} / Failed ${failed} / Total ${total}`,
-      statusText: (status, fallback) => {
-        if (status === 1) return 'Completed'
-        if (status === 2) return 'Failed'
-        if (status === 0) return 'Processing'
-        return fallback || `Status ${status}`
-      },
+      statusText: enImportBatchStatusText,
     },
     pendingAudit: {
       eyebrow: 'Pending audit breakdown',
@@ -3639,6 +3976,177 @@ const enStrings: AdminStrings = {
       detailsNote: (bizType) => `bizType=${bizType} · open the matching audit view`,
       countSummary: (count) => `${count} tasks`,
     },
+  },
+  basicDataManagement: {
+    eyebrow: (region) => `Current region ${region}`,
+    heading: 'Basic Data',
+    description:
+      'Maintain categories, cities, and areas. Disabled entries stop appearing in consumer filters, while historical shop data stays intact.',
+    writable: 'Writable',
+    readOnly: 'Read-only',
+    tabsAriaLabel: 'Basic data types',
+    tabs: {
+      categories: 'Categories',
+      cities: 'Cities',
+      areas: 'Areas',
+    },
+    loading: (region) => `Loading data for region ${region}...`,
+    actions: {
+      save: 'Save',
+      edit: 'Edit',
+      enable: 'Enable',
+      disable: 'Disable',
+      delete: 'Delete',
+    },
+    statusText: enEnabledStatusText,
+    category: {
+      heading: 'Categories',
+      summary: (count) => `${count} entries, grouped by parent and sort order`,
+      create: 'New category',
+      labels: {
+        parent: 'Parent category',
+        name: 'Name',
+        sort: 'Sort',
+      },
+      root: 'Root category',
+      tableHeaders: {
+        name: 'Name',
+        parent: 'Parent',
+        sort: 'Sort',
+        status: 'Status',
+        actions: 'Actions',
+      },
+      empty: 'No categories exist for this region.',
+      createSuccess: 'Category created.',
+      updateSuccess: 'Category updated.',
+      enableSuccess: 'Category enabled.',
+      disableSuccess: 'Category disabled.',
+      deleteSuccess: 'Category deleted.',
+      deleteConfirm: (name) =>
+        `Delete category "${name}"? The server will reject it if business data still references it.`,
+      editTitle: 'Edit category',
+    },
+    city: {
+      heading: 'Cities',
+      summary: (count) => `${count} entries, with codes unique inside the current region`,
+      create: 'New city',
+      labels: {
+        code: 'Code',
+        name: 'Name',
+        sort: 'Sort',
+      },
+      tableHeaders: {
+        city: 'City',
+        code: 'Code',
+        sort: 'Sort',
+        status: 'Status',
+        actions: 'Actions',
+      },
+      empty: 'No cities exist for this region.',
+      createSuccess: 'City created.',
+      updateSuccess: 'City updated.',
+      enableSuccess: 'City enabled.',
+      disableSuccess: 'City disabled.',
+      deleteSuccess: 'City deleted.',
+      deleteConfirm: (name) =>
+        `Delete city "${name}"? The server will reject it if business data still references it.`,
+    },
+    area: {
+      heading: 'Areas',
+      summary: 'Select a city first, then maintain the areas underneath it.',
+      create: 'New area',
+      cityFilterLabel: 'City',
+      selectCity: 'Select a city',
+      disabledSuffix: ' (disabled)',
+      labels: {
+        city: 'City',
+        name: 'Name',
+        sort: 'Sort',
+      },
+      tableHeaders: {
+        area: 'Area',
+        city: 'City',
+        sort: 'Sort',
+        status: 'Status',
+        actions: 'Actions',
+      },
+      loading: 'Loading areas...',
+      emptySelectCity: 'Select a city first.',
+      empty: 'No areas exist for the selected city.',
+      createSuccess: 'Area created.',
+      updateSuccess: 'Area updated.',
+      enableSuccess: 'Area enabled.',
+      disableSuccess: 'Area disabled.',
+      deleteSuccess: 'Area deleted.',
+      deleteConfirm: (name) =>
+        `Delete area "${name}"? The server will reject it if business data still references it.`,
+    },
+  },
+  shopImport: {
+    loadError: 'Failed to load import batches.',
+    importError: 'Failed to import shops.',
+    invalidRecords: 'Import records must be a non-empty JSON array.',
+    importSuccess: (success, failed) => `Import complete: ${success} succeeded, ${failed} failed.`,
+    eyebrow: 'Seed Imports',
+    heading: 'Operations need a way to generate data, or the frontend is just an empty shell.',
+    description:
+      'This version sends JSON text directly to the import API so the batch flow, failure details, and replay loop are all working first.',
+    resetExample: 'Restore example',
+    importing: 'Importing...',
+    startImport: 'Start import',
+    requestEyebrow: 'Import request',
+    requestHeading: (region) =>
+      `Use an explicit import payload for region ${region}. Do not guess the fields.`,
+    requestNote: 'Change `categoryId` to a missing value if you want to demonstrate failure details.',
+    labels: {
+      fileName: 'File name',
+      region: 'Region',
+      records: 'Record JSON',
+    },
+    fileNamePlaceholder: 'seed-cn-shops.json',
+    recordsPlaceholder: 'Enter a JSON array',
+    validIdsTitle: 'Valid sample IDs for the current region',
+    validIds: (region) =>
+      region === 'CN'
+        ? 'Category `102`, city `1`, area `11`.'
+        : 'Category `201`, city `101`, area `1011`.',
+    resultEyebrow: 'Latest result',
+    resultHeading: 'Import results must stay visible so both success and failure are obvious.',
+    resultCards: {
+      total: 'Total records',
+      batch: (batchId) => `Batch #${batchId}`,
+      success: 'Succeeded',
+      failure: 'Failed',
+      noErrorFile: 'No error file',
+    },
+    batchesEyebrow: 'Import batches',
+    batchesHeading: 'Batch history must be easy to scan when operations comes back to investigate.',
+    batchesSummary: (total) => `${total} batches in the current region`,
+    filters: {
+      status: 'Status',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      processing: 'Processing',
+      completed: 'Completed',
+      failed: 'Failed',
+    },
+    applyFilters: 'Apply filters',
+    refresh: 'Refresh',
+    tableHeaders: {
+      batch: 'Batch',
+      fileName: 'File name',
+      result: 'Result',
+      status: 'Status',
+      errorFile: 'Error file',
+    },
+    loading: 'Loading import batches...',
+    empty: 'There are no import batches yet. Start one first.',
+    resultSummary: (success, failed) => `Success ${success} / Failed ${failed}`,
+    statusText: enImportBatchStatusText,
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
   },
   auditLogs: {
     eyebrow: 'Audit Trail',

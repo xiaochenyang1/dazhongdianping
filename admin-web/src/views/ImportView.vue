@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { importShops, listImportBatches } from '@/services/admin'
 import type {
   AdminImportBatch,
@@ -17,6 +18,7 @@ interface BatchFilters {
 }
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 
 const importing = ref(false)
 const loading = ref(false)
@@ -47,7 +49,7 @@ function buildExampleRecord(region: Region): AdminImportRecord {
       companyName: 'Paris Seed Import SARL',
       contactName: 'Lina',
       contactPhone: '+33111112222',
-      shopName: '巴黎导入测试川菜馆',
+      shopName: 'Paris Seed Import Sichuan Bistro',
       categoryId: 201,
       cityId: 101,
       areaId: 1011,
@@ -58,7 +60,7 @@ function buildExampleRecord(region: Region): AdminImportRecord {
       businessHours: '11:30-22:00',
       pricePerCapita: 34,
       coverUrl: 'https://placehold.co/1200x720/1d4ed8/f8fafc?text=EU+Import',
-      summary: '给欧洲区演示导入链路用的样例门店。',
+      summary: 'Sample shop used to demonstrate the EU import flow.',
       score: 4.4,
       tasteScore: 4.5,
       envScore: 4.2,
@@ -102,6 +104,14 @@ function buildExampleText(region: Region) {
   return JSON.stringify([buildExampleRecord(region)], null, 2)
 }
 
+function batchStatusText(batch: AdminImportBatch) {
+  return strings.value.shopImport.statusText(batch.status, batch.statusText)
+}
+
+function resultStatusText(result: AdminImportResult) {
+  return strings.value.shopImport.statusText(result.status, result.statusText)
+}
+
 function resetExample() {
   form.fileName = defaultFileName(state.region)
   form.recordsText = buildExampleText(state.region)
@@ -120,7 +130,7 @@ async function loadBatches() {
       pageSize: batchFilters.pageSize,
     })
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '导入批次加载失败'
+    errorMessage.value = error instanceof Error ? error.message : strings.value.shopImport.loadError
   } finally {
     loading.value = false
   }
@@ -134,7 +144,7 @@ async function submitImport() {
   try {
     const parsed = JSON.parse(form.recordsText) as AdminImportRecord[]
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      throw new Error('导入记录必须是非空 JSON 数组。')
+      throw new Error(strings.value.shopImport.invalidRecords)
     }
 
     const result = await importShops({
@@ -144,11 +154,11 @@ async function submitImport() {
     })
 
     lastResult.value = result
-    successMessage.value = `导入完成：成功 ${result.success}，失败 ${result.failed}。`
+    successMessage.value = strings.value.shopImport.importSuccess(result.success, result.failed)
     batchFilters.page = 1
     await loadBatches()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '导入失败'
+    errorMessage.value = error instanceof Error ? error.message : strings.value.shopImport.importError
   } finally {
     importing.value = false
   }
@@ -160,19 +170,13 @@ function applyBatchFilter() {
 }
 
 function goPrevPage() {
-  if (!batchesPage.value || batchesPage.value.page <= 1) {
-    return
-  }
-
+  if (!batchesPage.value || batchesPage.value.page <= 1) return
   batchFilters.page -= 1
   void loadBatches()
 }
 
 function goNextPage() {
-  if (!batchesPage.value?.hasMore) {
-    return
-  }
-
+  if (!batchesPage.value?.hasMore) return
   batchFilters.page += 1
   void loadBatches()
 }
@@ -195,15 +199,23 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">种子导入</p>
-        <h1>先让运营有办法造数，不然前台页面再漂亮也是空壳子。</h1>
-        <p>这版用 JSON 文本直连导入接口，目的很实在：先把批次、失败明细、回灌动作跑通。</p>
+        <p class="eyebrow">{{ strings.shopImport.eyebrow }}</p>
+        <h1>{{ strings.shopImport.heading }}</h1>
+        <p>{{ strings.shopImport.description }}</p>
       </div>
 
       <div class="header-actions">
-        <button type="button" class="secondary-button" @click="resetExample">恢复示例</button>
-        <button type="button" class="primary-button" :disabled="importing" @click="submitImport">
-          {{ importing ? '导入中...' : '开始导入' }}
+        <button type="button" class="secondary-button" @click="resetExample">
+          {{ strings.shopImport.resetExample }}
+        </button>
+        <button
+          type="button"
+          class="primary-button"
+          data-testid="import-submit"
+          :disabled="importing"
+          @click="submitImport"
+        >
+          {{ importing ? strings.shopImport.importing : strings.shopImport.startImport }}
         </button>
       </div>
     </div>
@@ -215,63 +227,67 @@ watch(
       <section class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">导入请求</p>
-            <h2>当前区域 {{ state.region }} 的导入 payload，别靠脑补拼字段。</h2>
+            <p class="eyebrow">{{ strings.shopImport.requestEyebrow }}</p>
+            <h2>{{ strings.shopImport.requestHeading(state.region) }}</h2>
           </div>
-          <span class="inline-note">把 `categoryId` 改成不存在的值，就能演示失败明细。</span>
+          <span class="inline-note">{{ strings.shopImport.requestNote }}</span>
         </div>
 
         <div class="toolbar-grid toolbar-grid--filters">
           <label class="field">
-            <span>文件名</span>
-            <input v-model="form.fileName" type="text" placeholder="seed-cn-shops.json" />
+            <span>{{ strings.shopImport.labels.fileName }}</span>
+            <input
+              v-model="form.fileName"
+              type="text"
+              :placeholder="strings.shopImport.fileNamePlaceholder"
+            />
           </label>
 
           <label class="field">
-            <span>区域</span>
+            <span>{{ strings.shopImport.labels.region }}</span>
             <input :value="state.region" type="text" readonly />
           </label>
         </div>
 
         <label class="field field--full">
-          <span>记录 JSON</span>
+          <span>{{ strings.shopImport.labels.records }}</span>
           <textarea
             v-model="form.recordsText"
+            data-testid="import-records-textarea"
             rows="18"
             spellcheck="false"
-            placeholder="请填写 JSON 数组"
+            :placeholder="strings.shopImport.recordsPlaceholder"
           />
         </label>
 
         <div class="hint-card">
-          <strong>当前区域有效示例 ID</strong>
-          <p v-if="state.region === 'CN'">分类 `102`，城市 `1`，商圈 `11`。</p>
-          <p v-else>分类 `201`，城市 `101`，商圈 `1011`。</p>
+          <strong>{{ strings.shopImport.validIdsTitle }}</strong>
+          <p>{{ strings.shopImport.validIds(state.region) }}</p>
         </div>
 
         <section v-if="lastResult" class="result-panel">
           <div class="section-headline">
             <div>
-              <p class="eyebrow">最近一次结果</p>
-              <h2>导入结果别藏着掖着，成功失败都摆出来。</h2>
+              <p class="eyebrow">{{ strings.shopImport.resultEyebrow }}</p>
+              <h2>{{ strings.shopImport.resultHeading }}</h2>
             </div>
           </div>
 
           <div class="stat-grid stat-grid--compact">
             <article class="stat-card">
-              <p>总记录</p>
+              <p>{{ strings.shopImport.resultCards.total }}</p>
               <strong>{{ lastResult.total }}</strong>
-              <span>批次 #{{ lastResult.batchId }}</span>
+              <span>{{ strings.shopImport.resultCards.batch(lastResult.batchId) }}</span>
             </article>
             <article class="stat-card">
-              <p>成功</p>
+              <p>{{ strings.shopImport.resultCards.success }}</p>
               <strong>{{ lastResult.success }}</strong>
-              <span>{{ lastResult.statusText }}</span>
+              <span>{{ resultStatusText(lastResult) }}</span>
             </article>
             <article class="stat-card">
-              <p>失败</p>
+              <p>{{ strings.shopImport.resultCards.failure }}</p>
               <strong>{{ lastResult.failed }}</strong>
-              <span>{{ lastResult.errorFile || '无错误文件' }}</span>
+              <span>{{ lastResult.errorFile || strings.shopImport.resultCards.noErrorFile }}</span>
             </article>
           </div>
 
@@ -284,26 +300,30 @@ watch(
       <section class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">导入批次</p>
-            <h2>批次记录得能翻，运营回头查错不至于抓瞎。</h2>
+            <p class="eyebrow">{{ strings.shopImport.batchesEyebrow }}</p>
+            <h2>{{ strings.shopImport.batchesHeading }}</h2>
           </div>
-          <span class="inline-note">当前区域共 {{ batchesPage?.total ?? 0 }} 个批次</span>
+          <span class="inline-note">{{ strings.shopImport.batchesSummary(batchesPage?.total ?? 0) }}</span>
         </div>
 
         <div class="toolbar-grid toolbar-grid--filters">
           <label class="field">
-            <span>状态</span>
+            <span>{{ strings.shopImport.filters.status }}</span>
             <select v-model="batchFilters.status">
-              <option value="">全部状态</option>
-              <option value="0">处理中</option>
-              <option value="1">完成</option>
-              <option value="2">失败</option>
+              <option value="">{{ strings.shopImport.statusOptions.all }}</option>
+              <option value="0">{{ strings.shopImport.statusOptions.processing }}</option>
+              <option value="1">{{ strings.shopImport.statusOptions.completed }}</option>
+              <option value="2">{{ strings.shopImport.statusOptions.failed }}</option>
             </select>
           </label>
 
           <div class="toolbar-actions">
-            <button type="button" class="primary-button" @click="applyBatchFilter">应用筛选</button>
-            <button type="button" class="ghost-button" @click="loadBatches">刷新</button>
+            <button type="button" class="primary-button" @click="applyBatchFilter">
+              {{ strings.shopImport.applyFilters }}
+            </button>
+            <button type="button" class="ghost-button" @click="loadBatches">
+              {{ strings.shopImport.refresh }}
+            </button>
           </div>
         </div>
 
@@ -311,34 +331,45 @@ watch(
           <table class="data-table">
             <thead>
               <tr>
-                <th>批次</th>
-                <th>文件名</th>
-                <th>结果</th>
-                <th>状态</th>
-                <th>错误文件</th>
+                <th>{{ strings.shopImport.tableHeaders.batch }}</th>
+                <th>{{ strings.shopImport.tableHeaders.fileName }}</th>
+                <th>{{ strings.shopImport.tableHeaders.result }}</th>
+                <th>{{ strings.shopImport.tableHeaders.status }}</th>
+                <th>{{ strings.shopImport.tableHeaders.errorFile }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="5" class="table-empty">导入批次加载中...</td>
+                <td colspan="5" class="table-empty">{{ strings.shopImport.loading }}</td>
               </tr>
               <tr v-else-if="!batchesPage || batchesPage.list.length === 0">
-                <td colspan="5" class="table-empty">还没有批次记录，先导一包再说。</td>
+                <td colspan="5" class="table-empty">{{ strings.shopImport.empty }}</td>
               </tr>
               <tr v-for="batch in batchesPage?.list" :key="batch.id">
-                <td>#{{ batch.id }}<p>{{ batch.createdAt }}</p></td>
+                <td>
+                  #{{ batch.id }}
+                  <p>{{ batch.createdAt }}</p>
+                </td>
                 <td>{{ batch.fileName }}</td>
-                <td>成功 {{ batch.success }} / 失败 {{ batch.failed }}</td>
+                <td>{{ strings.shopImport.resultSummary(batch.success, batch.failed) }}</td>
                 <td>
                   <span
                     class="status-pill"
-                    :class="batch.failed === 0 ? 'status-pill--good' : batch.success > 0 ? 'status-pill--warn' : 'status-pill--muted'"
+                    :class="
+                      batch.failed === 0
+                        ? 'status-pill--good'
+                        : batch.success > 0
+                          ? 'status-pill--warn'
+                          : 'status-pill--muted'
+                    "
                   >
-                    {{ batch.statusText }}
+                    {{ batchStatusText(batch) }}
                   </span>
                 </td>
                 <td>
-                  <code class="code-box">{{ batch.errorFile || '--' }}</code>
+                  <code class="code-box">
+                    {{ batch.errorFile || strings.shopImport.resultCards.noErrorFile }}
+                  </code>
                 </td>
               </tr>
             </tbody>
@@ -346,12 +377,22 @@ watch(
         </div>
 
         <div class="pager">
-          <button type="button" class="ghost-button" :disabled="(batchesPage?.page ?? 1) <= 1" @click="goPrevPage">
-            上一页
+          <button
+            type="button"
+            class="ghost-button"
+            :disabled="(batchesPage?.page ?? 1) <= 1"
+            @click="goPrevPage"
+          >
+            {{ strings.shopImport.previousPage }}
           </button>
-          <span>第 {{ batchesPage?.page ?? 1 }} 页</span>
-          <button type="button" class="ghost-button" :disabled="!batchesPage?.hasMore" @click="goNextPage">
-            下一页
+          <span>{{ strings.shopImport.page(batchesPage?.page ?? 1) }}</span>
+          <button
+            type="button"
+            class="ghost-button"
+            :disabled="!batchesPage?.hasMore"
+            @click="goNextPage"
+          >
+            {{ strings.shopImport.nextPage }}
           </button>
         </div>
       </section>

@@ -91,7 +91,8 @@ describe('BasicDataManagementView', () => {
 
     expect(mocks.listGeoCategories).toHaveBeenCalledTimes(1)
     expect(mocks.listGeoCities).toHaveBeenCalledTimes(1)
-    expect(host.textContent).toContain('分类')
+    expect(host.textContent).toContain('Basic Data')
+    expect(host.textContent).toContain('Categories')
     expect(host.textContent).toContain('Dining')
     host.querySelector<HTMLButtonElement>('[data-testid="tab-cities"]')?.click()
     await nextTick()
@@ -139,14 +140,14 @@ describe('BasicDataManagementView', () => {
     citySelect.value = '101'
     citySelect.dispatchEvent(new Event('change'))
     await nextTick()
-    expect(host.textContent).toContain('正在加载商圈')
+    expect(host.textContent).toContain('Loading areas...')
 
     citySelect.value = ''
     citySelect.dispatchEvent(new Event('change'))
     resolveAreas(areas)
     await flush()
 
-    expect(host.textContent).not.toContain('正在加载商圈')
+    expect(host.textContent).not.toContain('Loading areas...')
     app.unmount()
   })
 
@@ -165,13 +166,13 @@ describe('BasicDataManagementView', () => {
     citySelect.value = '101'
     citySelect.dispatchEvent(new Event('change'))
     await nextTick()
-    expect(host.textContent).toContain('正在加载商圈')
+    expect(host.textContent).toContain('Loading areas...')
 
     sessionMock.state.region = 'CN'
     resolveAreas(areas)
     await flush()
 
-    expect(host.textContent).not.toContain('正在加载商圈')
+    expect(host.textContent).not.toContain('Loading areas...')
     app.unmount()
   })
 
