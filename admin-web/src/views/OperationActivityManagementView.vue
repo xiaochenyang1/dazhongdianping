@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import {
   createAdminOperationActivity,
   createAdminOperationActivityItem,
@@ -37,42 +38,39 @@ type ItemEditor = Omit<AdminOperationActivityItemPayload, 'extra'> & {
   url: string
 }
 
-const activityStatusOptions = [
-  { value: 0, label: '草稿' },
-  { value: 1, label: '待上线' },
-  { value: 2, label: '上线中' },
-  { value: 3, label: '已下线' },
-  { value: 4, label: '已结束' },
-]
-
-const channelOptions = [
-  { value: 1, label: '首页' },
-  { value: 2, label: '搜索' },
-  { value: 3, label: '频道' },
-  { value: 4, label: '活动页' },
-  { value: 5, label: '社区' },
-]
-
-const typeOptions = [
-  { value: 1, label: '专题活动' },
-  { value: 2, label: '节日活动' },
-  { value: 3, label: '新客活动' },
-  { value: 4, label: '商户扶持' },
-  { value: 5, label: '内容话题' },
-]
-
-const targetTypeOptions = [
-  { value: 1, label: '店铺' },
-  { value: 2, label: '团购' },
-  { value: 3, label: '帖子' },
-  { value: 4, label: '榜单' },
-  { value: 5, label: '话题' },
-  { value: 6, label: '外链' },
-]
-
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const canWrite = computed(() => state.permissions.includes('operations:activity:write'))
 const currentActivity = computed(() => activities.value.find((item) => item.id === selectedActivityId.value) ?? null)
+const activityStatusOptions = computed(() => [
+  { value: 0, label: strings.value.operationActivities.statusOptions.draft },
+  { value: 1, label: strings.value.operationActivities.statusOptions.scheduled },
+  { value: 2, label: strings.value.operationActivities.statusOptions.live },
+  { value: 3, label: strings.value.operationActivities.statusOptions.offline },
+  { value: 4, label: strings.value.operationActivities.statusOptions.ended },
+])
+const channelOptions = computed(() => [
+  { value: 1, label: strings.value.operationActivities.channelOptions.home },
+  { value: 2, label: strings.value.operationActivities.channelOptions.search },
+  { value: 3, label: strings.value.operationActivities.channelOptions.channel },
+  { value: 4, label: strings.value.operationActivities.channelOptions.activityPage },
+  { value: 5, label: strings.value.operationActivities.channelOptions.community },
+])
+const typeOptions = computed(() => [
+  { value: 1, label: strings.value.operationActivities.typeOptions.campaign },
+  { value: 2, label: strings.value.operationActivities.typeOptions.festival },
+  { value: 3, label: strings.value.operationActivities.typeOptions.newcomer },
+  { value: 4, label: strings.value.operationActivities.typeOptions.merchantSupport },
+  { value: 5, label: strings.value.operationActivities.typeOptions.contentTopic },
+])
+const targetTypeOptions = computed(() => [
+  { value: 1, label: strings.value.operationActivities.targetTypeOptions.shop },
+  { value: 2, label: strings.value.operationActivities.targetTypeOptions.deal },
+  { value: 3, label: strings.value.operationActivities.targetTypeOptions.post },
+  { value: 4, label: strings.value.operationActivities.targetTypeOptions.rank },
+  { value: 5, label: strings.value.operationActivities.targetTypeOptions.topic },
+  { value: 6, label: strings.value.operationActivities.targetTypeOptions.external },
+])
 
 const cities = ref<City[]>([])
 const activities = ref<AdminOperationActivity[]>([])
@@ -92,7 +90,7 @@ let activityRequestId = 0
 let itemRequestId = 0
 
 function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : '请求失败'
+  return error instanceof Error ? error.message : strings.value.common.requestFailed
 }
 
 function resetMessages() {
@@ -101,10 +99,7 @@ function resetMessages() {
 }
 
 function scopeText(item: AdminOperationActivity) {
-  if (item.cityId === 0) {
-    return '区域通用'
-  }
-  return item.cityName || `城市 #${item.cityId}`
+  return strings.value.operationActivities.scopeText(item.cityId, item.cityName)
 }
 
 function textOf(record: Record<string, unknown>, key: string) {
@@ -118,6 +113,26 @@ function prettyJson(value: Record<string, unknown>) {
 
 function extraUrl(item: AdminOperationActivityItem) {
   return item.extra ? textOf(item.extra, 'url') : ''
+}
+
+function activityChannelText(channel: number, fallback?: string) {
+  return strings.value.operationActivities.channelText(channel, fallback)
+}
+
+function activityTypeText(type: number, fallback?: string) {
+  return strings.value.operationActivities.typeText(type, fallback)
+}
+
+function activityStatusText(status: number, fallback?: string) {
+  return strings.value.operationActivities.activityStatusText(status, fallback)
+}
+
+function itemStatusText(status: number, fallback?: string) {
+  return strings.value.operationActivities.itemStatusText(status, fallback)
+}
+
+function targetTypeText(targetType: number, fallback?: string) {
+  return strings.value.operationActivities.targetTypeText(targetType, fallback)
 }
 
 async function loadActivities() {
@@ -227,10 +242,10 @@ function parseObjectText(value: string, label: string) {
   try {
     parsed = JSON.parse(source)
   } catch {
-    throw new Error(`${label} 必须是合法 JSON`)
+    throw new Error(strings.value.operationActivities.jsonParseError(label))
   }
   if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
-    throw new Error(`${label} 必须是 JSON 对象`)
+    throw new Error(strings.value.operationActivities.jsonObjectError(label))
   }
   return parsed as Record<string, unknown>
 }
@@ -244,7 +259,7 @@ function buildActivityPayload(current: ActivityEditor): AdminOperationActivityPa
     type: Number(current.type),
     cover: current.cover.trim(),
     landingUrl: current.landingUrl.trim(),
-    rule: parseObjectText(current.ruleText, '规则 JSON'),
+    rule: parseObjectText(current.ruleText, strings.value.operationActivities.activityLabels.rule),
     startAt: current.startAt.trim() || null,
     endAt: current.endAt.trim() || null,
   }
@@ -259,10 +274,10 @@ async function submitActivityEditor() {
     const payload = buildActivityPayload(current)
     if (current.id) {
       await updateAdminOperationActivity(current.id, payload)
-      successMessage.value = '活动已更新'
+      successMessage.value = strings.value.operationActivities.updated
     } else {
       await createAdminOperationActivity(payload)
-      successMessage.value = '活动已创建'
+      successMessage.value = strings.value.operationActivities.created
     }
     activityEditor.value = null
     await loadActivities()
@@ -279,7 +294,7 @@ async function applyActivityStatus(item: AdminOperationActivity) {
   saving.value = true
   try {
     await updateAdminOperationActivityStatus(item.id, Number(activityStatusDrafts.value[item.id] ?? item.status))
-    successMessage.value = '活动状态已更新'
+    successMessage.value = strings.value.operationActivities.statusUpdated
     await loadActivities()
   } catch (error) {
     errorMessage.value = messageOf(error)
@@ -290,13 +305,13 @@ async function applyActivityStatus(item: AdminOperationActivity) {
 
 async function deleteActivity(item: AdminOperationActivity) {
   if (!canWrite.value || saving.value) return
-  const confirmed = window.confirm(`确认删除活动「${item.name}」？活动主体和资源项会一起删除。`)
+  const confirmed = window.confirm(strings.value.operationActivities.deleteActivityConfirm(item.name))
   if (!confirmed) return
   resetMessages()
   saving.value = true
   try {
     await removeAdminOperationActivity(item.id)
-    successMessage.value = '活动已删除'
+    successMessage.value = strings.value.operationActivities.deleted
     await loadActivities()
   } catch (error) {
     errorMessage.value = messageOf(error)
@@ -340,7 +355,7 @@ function buildItemPayload(current: ItemEditor): AdminOperationActivityItemPayloa
   if (current.trackCode.trim()) extra.trackCode = current.trackCode.trim()
   if (current.url.trim()) extra.url = current.url.trim()
   if (current.targetType === 6 && !current.url.trim()) {
-    throw new Error('外链资源必须填写 URL')
+    throw new Error(strings.value.operationActivities.externalUrlRequired)
   }
   return {
     targetType: Number(current.targetType),
@@ -362,10 +377,10 @@ async function submitItemEditor() {
     const payload = buildItemPayload(current)
     if (current.id) {
       await updateAdminOperationActivityItem(currentActivity.value.id, current.id, payload)
-      successMessage.value = '资源项已更新'
+      successMessage.value = strings.value.operationActivities.itemUpdated
     } else {
       await createAdminOperationActivityItem(currentActivity.value.id, payload)
-      successMessage.value = '资源项已创建'
+      successMessage.value = strings.value.operationActivities.itemCreated
     }
     itemEditor.value = null
     await loadItems(currentActivity.value.id)
@@ -387,7 +402,7 @@ async function toggleItem(item: AdminOperationActivityItem) {
       item.id,
       item.status === 1 ? 2 : 1,
     )
-    successMessage.value = item.status === 1 ? '资源项已停用' : '资源项已启用'
+    successMessage.value = item.status === 1 ? strings.value.operationActivities.itemDisabled : strings.value.operationActivities.itemEnabled
     await loadItems(currentActivity.value.id)
   } catch (error) {
     errorMessage.value = messageOf(error)
@@ -398,13 +413,13 @@ async function toggleItem(item: AdminOperationActivityItem) {
 
 async function deleteItem(item: AdminOperationActivityItem) {
   if (!currentActivity.value || !canWrite.value || saving.value) return
-  const confirmed = window.confirm(`确认删除资源项「${item.title}」？删除后活动页会立刻少一块内容。`)
+  const confirmed = window.confirm(strings.value.operationActivities.deleteItemConfirm(item.title))
   if (!confirmed) return
   resetMessages()
   saving.value = true
   try {
     await removeAdminOperationActivityItem(currentActivity.value.id, item.id)
-    successMessage.value = '资源项已删除'
+    successMessage.value = strings.value.operationActivities.itemDeleted
     await loadItems(currentActivity.value.id)
     await loadActivities()
   } catch (error) {
@@ -432,11 +447,11 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">活动运营</p>
-        <h1>活动主体和挂载资源走真表，别再拿文档目标态当已上线。</h1>
-        <p>当前区域 {{ state.region }}。活动主体负责范围、时间和投放规则；资源项负责挂店铺、团购、帖子、榜单、话题或外链，两个层面都在这里收口。</p>
+        <p class="eyebrow">{{ strings.operationActivities.eyebrow }}</p>
+        <h1>{{ strings.operationActivities.heading }}</h1>
+        <p>{{ strings.operationActivities.description(state.region) }}</p>
       </div>
-      <button v-if="canWrite" data-testid="create-activity" class="secondary-button" type="button" @click="openActivityEditor()">新建活动</button>
+      <button v-if="canWrite" data-testid="create-activity" class="secondary-button" type="button" @click="openActivityEditor()">{{ strings.operationActivities.create }}</button>
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
@@ -445,31 +460,31 @@ watch(
     <section class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">筛选范围</p>
-          <h2>先按城市和状态看当前活动池，再决定挂什么资源</h2>
+          <p class="eyebrow">{{ strings.operationActivities.filtersEyebrow }}</p>
+          <h2>{{ strings.operationActivities.filtersHeading }}</h2>
         </div>
       </div>
 
       <form class="editor-form" @submit.prevent="loadActivities">
         <div class="form-grid form-grid--two">
           <label class="field">
-            <span>城市筛选</span>
+            <span>{{ strings.operationActivities.filterLabels.city }}</span>
             <select v-model="filterCityId" name="activity-city-filter">
-              <option :value="''">全部活动（含区域通用）</option>
+              <option :value="''">{{ strings.operationActivities.filterOptions.allCities }}</option>
               <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
             </select>
           </label>
           <label class="field">
-            <span>状态筛选</span>
+            <span>{{ strings.operationActivities.filterLabels.status }}</span>
             <select v-model="filterStatus" name="activity-status-filter">
-              <option :value="''">全部状态</option>
+              <option :value="''">{{ strings.operationActivities.filterOptions.allStatuses }}</option>
               <option v-for="option in activityStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </label>
         </div>
         <div class="form-actions">
           <button data-testid="apply-activity-filter" class="primary-button" type="submit" :disabled="loading">
-            {{ loading ? '加载中...' : '应用筛选' }}
+            {{ loading ? strings.operationActivities.loading : strings.operationActivities.applyFilters }}
           </button>
         </div>
       </form>
@@ -478,8 +493,8 @@ watch(
     <section class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">活动列表</p>
-          <h2>主体管范围和时间，资源项数量能直接看出这个活动是不是空壳</h2>
+          <p class="eyebrow">{{ strings.operationActivities.listEyebrow }}</p>
+          <h2>{{ strings.operationActivities.listHeading }}</h2>
         </div>
       </div>
 
@@ -487,20 +502,20 @@ watch(
         <table class="data-table">
           <thead>
             <tr>
-              <th>范围 / 编码</th>
-              <th>活动信息</th>
-              <th>投放</th>
-              <th>资源项</th>
-              <th>状态</th>
-              <th v-if="canWrite">操作</th>
+              <th>{{ strings.operationActivities.tableHeaders.scopeCode }}</th>
+              <th>{{ strings.operationActivities.tableHeaders.activity }}</th>
+              <th>{{ strings.operationActivities.tableHeaders.delivery }}</th>
+              <th>{{ strings.operationActivities.tableHeaders.items }}</th>
+              <th>{{ strings.operationActivities.tableHeaders.status }}</th>
+              <th v-if="canWrite">{{ strings.operationActivities.tableHeaders.actions }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td :colspan="canWrite ? 6 : 5" class="table-empty">加载中...</td>
+              <td :colspan="canWrite ? 6 : 5" class="table-empty">{{ strings.operationActivities.loading }}</td>
             </tr>
             <tr v-else-if="!activities.length">
-              <td :colspan="canWrite ? 6 : 5" class="table-empty">当前筛选下没有活动。</td>
+              <td :colspan="canWrite ? 6 : 5" class="table-empty">{{ strings.operationActivities.empty }}</td>
             </tr>
             <tr v-for="item in activities" :key="item.id">
               <td>
@@ -509,24 +524,24 @@ watch(
               </td>
               <td>
                 <strong>{{ item.name }}</strong>
-                <p>{{ item.typeText }}</p>
+                <p>{{ activityTypeText(item.type, item.typeText) }}</p>
                 <p class="muted">{{ item.cover }}</p>
               </td>
               <td>
-                <p>{{ item.channelText }}</p>
-                <p>{{ item.startAt || '未设开始时间' }}</p>
-                <p>{{ item.endAt || '未设结束时间' }}</p>
+                <p>{{ activityChannelText(item.channel, item.channelText) }}</p>
+                <p>{{ item.startAt || strings.operationActivities.startFallback }}</p>
+                <p>{{ item.endAt || strings.operationActivities.endFallback }}</p>
               </td>
               <td>{{ item.itemCount }}</td>
-              <td><span class="status-pill">{{ item.statusText }}</span></td>
+              <td><span class="status-pill">{{ activityStatusText(item.status, item.statusText) }}</span></td>
               <td v-if="canWrite" class="table-actions">
-                <button :data-testid="`select-activity-${item.id}`" class="table-action" type="button" @click="selectActivity(item)">管资源</button>
-                <button :data-testid="`edit-activity-${item.id}`" class="table-action" type="button" @click="openActivityEditor(item)">编辑</button>
+                <button :data-testid="`select-activity-${item.id}`" class="table-action" type="button" @click="selectActivity(item)">{{ strings.operationActivities.manageItems }}</button>
+                <button :data-testid="`edit-activity-${item.id}`" class="table-action" type="button" @click="openActivityEditor(item)">{{ strings.operationActivities.edit }}</button>
                 <select v-model.number="activityStatusDrafts[item.id]" :name="`activity-status-${item.id}`">
                   <option v-for="option in activityStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                 </select>
-                <button :data-testid="`status-activity-${item.id}`" class="table-action" type="button" @click="applyActivityStatus(item)">改状态</button>
-                <button :data-testid="`delete-activity-${item.id}`" class="table-action danger-action" type="button" @click="deleteActivity(item)">删除</button>
+                <button :data-testid="`status-activity-${item.id}`" class="table-action" type="button" @click="applyActivityStatus(item)">{{ strings.operationActivities.changeStatus }}</button>
+                <button :data-testid="`delete-activity-${item.id}`" class="table-action danger-action" type="button" @click="deleteActivity(item)">{{ strings.operationActivities.delete }}</button>
               </td>
             </tr>
           </tbody>
@@ -537,64 +552,64 @@ watch(
     <section v-if="activityEditor && canWrite" class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">{{ activityEditor.id ? '编辑活动主体' : '新建活动主体' }}</p>
-          <h2>{{ activityEditor.id ? '改范围、时间和规则，资源项不会被重置' : '先建主体，再去挂店铺、团购、榜单或外链' }}</h2>
+          <p class="eyebrow">{{ strings.operationActivities.activityEditorEyebrow(Boolean(activityEditor.id)) }}</p>
+          <h2>{{ strings.operationActivities.activityEditorHeading(Boolean(activityEditor.id)) }}</h2>
         </div>
       </div>
 
       <form data-testid="activity-editor" class="editor-form" @submit.prevent="submitActivityEditor">
         <div class="form-grid form-grid--two">
           <label class="field">
-            <span>城市范围</span>
+            <span>{{ strings.operationActivities.activityLabels.cityScope }}</span>
             <select v-model="activityEditor.cityId" name="activity-city">
-              <option :value="''">区域通用</option>
+              <option :value="''">{{ strings.operationActivities.scopeText(0, '') }}</option>
               <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
             </select>
           </label>
           <label class="field">
-            <span>投放频道</span>
+            <span>{{ strings.operationActivities.activityLabels.channel }}</span>
             <select v-model.number="activityEditor.channel" name="activity-channel">
               <option v-for="option in channelOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </label>
           <label class="field">
-            <span>活动类型</span>
+            <span>{{ strings.operationActivities.activityLabels.type }}</span>
             <select v-model.number="activityEditor.type" name="activity-type">
               <option v-for="option in typeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </label>
           <label class="field">
-            <span>开始时间</span>
-            <input v-model="activityEditor.startAt" name="activity-start-at" type="text" placeholder="2026-09-01 00:00:00" />
+            <span>{{ strings.operationActivities.activityLabels.startAt }}</span>
+            <input v-model="activityEditor.startAt" name="activity-start-at" type="text" :placeholder="strings.operationActivities.activityPlaceholders.startAt" />
           </label>
           <label class="field field--full">
-            <span>活动名称</span>
+            <span>{{ strings.operationActivities.activityLabels.name }}</span>
             <input v-model="activityEditor.name" name="activity-name" type="text" maxlength="128" required />
           </label>
           <label class="field field--full">
-            <span>活动编码</span>
+            <span>{{ strings.operationActivities.activityLabels.code }}</span>
             <input v-model="activityEditor.code" name="activity-code" type="text" maxlength="64" required />
           </label>
           <label class="field field--full">
-            <span>封面 URL</span>
+            <span>{{ strings.operationActivities.activityLabels.cover }}</span>
             <input v-model="activityEditor.cover" name="activity-cover" type="text" maxlength="255" required />
           </label>
           <label class="field field--full">
-            <span>落地地址</span>
+            <span>{{ strings.operationActivities.activityLabels.landingUrl }}</span>
             <input v-model="activityEditor.landingUrl" name="activity-landing-url" type="text" maxlength="255" required />
           </label>
           <label class="field">
-            <span>结束时间</span>
-            <input v-model="activityEditor.endAt" name="activity-end-at" type="text" placeholder="2026-09-30 23:59:59" />
+            <span>{{ strings.operationActivities.activityLabels.endAt }}</span>
+            <input v-model="activityEditor.endAt" name="activity-end-at" type="text" :placeholder="strings.operationActivities.activityPlaceholders.endAt" />
           </label>
           <label class="field field--full">
-            <span>规则 JSON</span>
-            <textarea v-model="activityEditor.ruleText" name="activity-rule" rows="6" placeholder='{"audience":["student"],"sort":"manual"}'></textarea>
+            <span>{{ strings.operationActivities.activityLabels.rule }}</span>
+            <textarea v-model="activityEditor.ruleText" name="activity-rule" rows="6" :placeholder="strings.operationActivities.activityPlaceholders.rule"></textarea>
           </label>
         </div>
         <div class="form-actions">
-          <button class="primary-button" type="submit" :disabled="saving">{{ saving ? '保存中...' : '保存活动' }}</button>
-          <button class="secondary-button" type="button" @click="activityEditor = null">取消</button>
+          <button class="primary-button" type="submit" :disabled="saving">{{ saving ? strings.operationActivities.saving : strings.operationActivities.saveActivity }}</button>
+          <button class="secondary-button" type="button" @click="activityEditor = null">{{ strings.common.cancel }}</button>
         </div>
       </form>
     </section>
@@ -602,52 +617,52 @@ watch(
     <section class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">资源项管理</p>
-          <h2>{{ currentActivity ? `给「${currentActivity.name}」挂资源` : '先选中一个活动，再管理资源项' }}</h2>
-          <p v-if="currentActivity">当前范围 {{ scopeText(currentActivity) }}，状态 {{ currentActivity.statusText }}，可以混挂店铺、团购、帖子、榜单、话题和外链。</p>
+          <p class="eyebrow">{{ strings.operationActivities.itemsEyebrow }}</p>
+          <h2>{{ strings.operationActivities.itemsHeading(currentActivity ? currentActivity.name : null) }}</h2>
+          <p v-if="currentActivity">{{ strings.operationActivities.itemsDescription(scopeText(currentActivity), activityStatusText(currentActivity.status, currentActivity.statusText)) }}</p>
         </div>
-        <button v-if="canWrite && currentActivity" data-testid="create-activity-item" class="secondary-button" type="button" @click="openItemEditor()">新增资源项</button>
+        <button v-if="canWrite && currentActivity" data-testid="create-activity-item" class="secondary-button" type="button" @click="openItemEditor()">{{ strings.operationActivities.createItem }}</button>
       </div>
 
-      <p v-if="!currentActivity" class="table-empty">当前筛选下还没有活动可管理资源项。</p>
+      <p v-if="!currentActivity" class="table-empty">{{ strings.operationActivities.noActivitySelected }}</p>
 
       <div v-else class="table-shell">
         <table class="data-table">
           <thead>
             <tr>
-              <th>资源</th>
-              <th>展示文案</th>
-              <th>排序</th>
-              <th>状态</th>
-              <th v-if="canWrite">操作</th>
+              <th>{{ strings.operationActivities.itemTableHeaders.resource }}</th>
+              <th>{{ strings.operationActivities.itemTableHeaders.copy }}</th>
+              <th>{{ strings.operationActivities.itemTableHeaders.sort }}</th>
+              <th>{{ strings.operationActivities.itemTableHeaders.status }}</th>
+              <th v-if="canWrite">{{ strings.operationActivities.itemTableHeaders.actions }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="itemLoading">
-              <td :colspan="canWrite ? 5 : 4" class="table-empty">加载中...</td>
+              <td :colspan="canWrite ? 5 : 4" class="table-empty">{{ strings.operationActivities.itemsLoading }}</td>
             </tr>
             <tr v-else-if="!items.length">
-              <td :colspan="canWrite ? 5 : 4" class="table-empty">这个活动还没有资源项。</td>
+              <td :colspan="canWrite ? 5 : 4" class="table-empty">{{ strings.operationActivities.itemEmpty }}</td>
             </tr>
             <tr v-for="item in items" :key="item.id">
               <td>
-                <strong>{{ item.targetTypeText }}</strong>
-                <p>{{ item.targetName || `目标 #${item.targetId}` }}</p>
+                <strong>{{ targetTypeText(item.targetType, item.targetTypeText) }}</strong>
+                <p>{{ item.targetName || strings.operationActivities.targetFallback(item.targetId) }}</p>
                 <p v-if="extraUrl(item)" class="muted">{{ extraUrl(item) }}</p>
               </td>
               <td>
                 <strong>{{ item.title }}</strong>
-                <p>{{ item.subtitle || '无副标题' }}</p>
+                <p>{{ item.subtitle || strings.operationActivities.subtitleFallback }}</p>
                 <p class="muted">{{ item.image }}</p>
               </td>
               <td>{{ item.sort }}</td>
-              <td><span class="status-pill">{{ item.statusText }}</span></td>
+              <td><span class="status-pill">{{ itemStatusText(item.status, item.statusText) }}</span></td>
               <td v-if="canWrite" class="table-actions">
-                <button :data-testid="`edit-activity-item-${item.id}`" class="table-action" type="button" @click="openItemEditor(item)">编辑</button>
+                <button :data-testid="`edit-activity-item-${item.id}`" class="table-action" type="button" @click="openItemEditor(item)">{{ strings.operationActivities.edit }}</button>
                 <button :data-testid="`toggle-activity-item-${item.id}`" class="table-action" type="button" @click="toggleItem(item)">
-                  {{ item.status === 1 ? '停用' : '启用' }}
+                  {{ item.status === 1 ? strings.operationActivities.itemDisable : strings.operationActivities.itemEnable }}
                 </button>
-                <button :data-testid="`delete-activity-item-${item.id}`" class="table-action danger-action" type="button" @click="deleteItem(item)">删除</button>
+                <button :data-testid="`delete-activity-item-${item.id}`" class="table-action danger-action" type="button" @click="deleteItem(item)">{{ strings.operationActivities.delete }}</button>
               </td>
             </tr>
           </tbody>
@@ -658,55 +673,55 @@ watch(
     <section v-if="itemEditor && canWrite && currentActivity" class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">{{ itemEditor.id ? '编辑资源项' : '新建资源项' }}</p>
-          <h2>{{ itemEditor.id ? '改目标或文案后，活动位展示会立即跟着变' : `把资源挂到「${currentActivity.name}」底下` }}</h2>
+          <p class="eyebrow">{{ strings.operationActivities.itemEditorEyebrow(Boolean(itemEditor.id)) }}</p>
+          <h2>{{ strings.operationActivities.itemEditorHeading(currentActivity.name, Boolean(itemEditor.id)) }}</h2>
         </div>
       </div>
 
       <form data-testid="activity-item-editor" class="editor-form" @submit.prevent="submitItemEditor">
         <div class="form-grid form-grid--two">
           <label class="field">
-            <span>资源类型</span>
+            <span>{{ strings.operationActivities.itemLabels.targetType }}</span>
             <select v-model.number="itemEditor.targetType" name="item-target-type">
               <option v-for="option in targetTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </label>
           <label class="field">
-            <span>目标 ID</span>
+            <span>{{ strings.operationActivities.itemLabels.targetId }}</span>
             <input v-model.number="itemEditor.targetId" name="item-target-id" type="number" min="0" :disabled="itemEditor.targetType === 6" />
           </label>
           <label class="field field--full">
-            <span>标题</span>
+            <span>{{ strings.operationActivities.itemLabels.title }}</span>
             <input v-model="itemEditor.title" name="item-title" type="text" maxlength="128" required />
           </label>
           <label class="field field--full">
-            <span>副标题</span>
+            <span>{{ strings.operationActivities.itemLabels.subtitle }}</span>
             <input v-model="itemEditor.subtitle" name="item-subtitle" type="text" maxlength="255" />
           </label>
           <label class="field field--full">
-            <span>图片 URL</span>
+            <span>{{ strings.operationActivities.itemLabels.image }}</span>
             <input v-model="itemEditor.image" name="item-image" type="text" maxlength="255" required />
           </label>
           <label class="field">
-            <span>排序</span>
+            <span>{{ strings.operationActivities.itemLabels.sort }}</span>
             <input v-model.number="itemEditor.sort" name="item-sort" type="number" min="0" />
           </label>
           <label class="field">
-            <span>角标</span>
+            <span>{{ strings.operationActivities.itemLabels.badge }}</span>
             <input v-model="itemEditor.badge" name="item-badge" type="text" maxlength="32" />
           </label>
           <label class="field">
-            <span>埋点编码</span>
+            <span>{{ strings.operationActivities.itemLabels.trackCode }}</span>
             <input v-model="itemEditor.trackCode" name="item-track-code" type="text" maxlength="64" />
           </label>
           <label class="field field--full">
-            <span>外链 URL</span>
-            <input v-model="itemEditor.url" name="item-url" type="text" maxlength="255" placeholder="targetType=6 时必填" />
+            <span>{{ strings.operationActivities.itemLabels.url }}</span>
+            <input v-model="itemEditor.url" name="item-url" type="text" maxlength="255" :placeholder="strings.operationActivities.itemUrlPlaceholder" />
           </label>
         </div>
         <div class="form-actions">
-          <button class="primary-button" type="submit" :disabled="saving">{{ saving ? '保存中...' : '保存资源项' }}</button>
-          <button class="secondary-button" type="button" @click="itemEditor = null">取消</button>
+          <button class="primary-button" type="submit" :disabled="saving">{{ saving ? strings.operationActivities.saving : strings.operationActivities.saveItem }}</button>
+          <button class="secondary-button" type="button" @click="itemEditor = null">{{ strings.common.cancel }}</button>
         </div>
       </form>
     </section>

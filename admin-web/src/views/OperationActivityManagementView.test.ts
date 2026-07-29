@@ -172,6 +172,9 @@ describe('OperationActivityManagementView', () => {
     expect(adminMocks.listAdminOperationActivityItems).toHaveBeenCalledWith(1)
     expect(host.textContent).toContain('巴黎开学季活动')
     expect(host.textContent).toContain('留学生火锅局')
+    expect(host.textContent).toContain('Current region EU')
+    expect(host.textContent).toContain('New activity')
+    expect(host.textContent).toContain('Manage items')
 
     const cityFilter = host.querySelector<HTMLSelectElement>('[name="activity-city-filter"]')
     if (!cityFilter) throw new Error('missing activity city filter')
@@ -255,6 +258,7 @@ describe('OperationActivityManagementView', () => {
       extra: { trackCode: 'eu_school_rank_31001' },
     })
 
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="toggle-activity-item-11"]')?.textContent?.trim()).toBe('Disable')
     host.querySelector<HTMLButtonElement>('[data-testid="toggle-activity-item-11"]')?.click()
     await flush()
     expect(adminMocks.updateAdminOperationActivityItemStatus).toHaveBeenCalledWith(1, 11, 2)

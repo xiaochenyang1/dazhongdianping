@@ -570,6 +570,195 @@ export interface AdminStrings {
     mergeConfirm: string
     mergeConfirmPrompt: (sourceName: string, targetName: string) => string
   }
+  banners: {
+    created: string
+    updated: string
+    enabled: string
+    disabled: string
+    deleted: string
+    deleteConfirm: (title: string) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    create: string
+    filterEyebrow: string
+    filterHeading: string
+    filterCityLabel: string
+    filterCityAll: string
+    filterHelpLabel: string
+    filterHelpText: string
+    loading: string
+    applyFilter: string
+    listEyebrow: string
+    listHeading: string
+    tableHeaders: {
+      scope: string
+      title: string
+      link: string
+      sort: string
+      status: string
+      actions: string
+    }
+    empty: string
+    scopeText: (cityId: number | null, cityName: string) => string
+    subtitleFallback: string
+    statusText: (enabled: boolean) => string
+    edit: string
+    enable: string
+    disable: string
+    delete: string
+    editorEyebrow: (editing: boolean) => string
+    editorHeading: (editing: boolean) => string
+    labels: {
+      cityScope: string
+      sort: string
+      title: string
+      subtitle: string
+      imageUrl: string
+      linkUrl: string
+    }
+    cityScopeAll: string
+    saving: string
+    save: string
+  }
+  operationActivities: {
+    created: string
+    updated: string
+    statusUpdated: string
+    deleted: string
+    itemCreated: string
+    itemUpdated: string
+    itemEnabled: string
+    itemDisabled: string
+    itemDeleted: string
+    jsonParseError: (label: string) => string
+    jsonObjectError: (label: string) => string
+    externalUrlRequired: string
+    deleteActivityConfirm: (name: string) => string
+    deleteItemConfirm: (title: string) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    create: string
+    filtersEyebrow: string
+    filtersHeading: string
+    filterLabels: {
+      city: string
+      status: string
+    }
+    filterOptions: {
+      allCities: string
+      allStatuses: string
+    }
+    loading: string
+    applyFilters: string
+    listEyebrow: string
+    listHeading: string
+    tableHeaders: {
+      scopeCode: string
+      activity: string
+      delivery: string
+      items: string
+      status: string
+      actions: string
+    }
+    empty: string
+    scopeText: (cityId: number, cityName: string) => string
+    channelText: (channel: number, fallback?: string) => string
+    typeText: (type: number, fallback?: string) => string
+    activityStatusText: (status: number, fallback?: string) => string
+    itemStatusText: (status: number, fallback?: string) => string
+    startFallback: string
+    endFallback: string
+    manageItems: string
+    edit: string
+    changeStatus: string
+    delete: string
+    activityEditorEyebrow: (editing: boolean) => string
+    activityEditorHeading: (editing: boolean) => string
+    activityLabels: {
+      cityScope: string
+      channel: string
+      type: string
+      startAt: string
+      name: string
+      code: string
+      cover: string
+      landingUrl: string
+      endAt: string
+      rule: string
+    }
+    activityPlaceholders: {
+      startAt: string
+      endAt: string
+      rule: string
+    }
+    saving: string
+    saveActivity: string
+    itemsEyebrow: string
+    itemsHeading: (activityName: string | null) => string
+    itemsDescription: (scopeText: string, statusText: string) => string
+    createItem: string
+    noActivitySelected: string
+    itemTableHeaders: {
+      resource: string
+      copy: string
+      sort: string
+      status: string
+      actions: string
+    }
+    itemsLoading: string
+    itemEmpty: string
+    targetTypeText: (targetType: number, fallback?: string) => string
+    targetFallback: (targetId: number) => string
+    subtitleFallback: string
+    itemEditorEyebrow: (editing: boolean) => string
+    itemEditorHeading: (activityName: string, editing: boolean) => string
+    itemLabels: {
+      targetType: string
+      targetId: string
+      title: string
+      subtitle: string
+      image: string
+      sort: string
+      badge: string
+      trackCode: string
+      url: string
+    }
+    itemUrlPlaceholder: string
+    saveItem: string
+    statusOptions: {
+      draft: string
+      scheduled: string
+      live: string
+      offline: string
+      ended: string
+    }
+    channelOptions: {
+      home: string
+      search: string
+      channel: string
+      activityPage: string
+      community: string
+    }
+    typeOptions: {
+      campaign: string
+      festival: string
+      newcomer: string
+      merchantSupport: string
+      contentTopic: string
+    }
+    targetTypeOptions: {
+      shop: string
+      deal: string
+      post: string
+      rank: string
+      topic: string
+      external: string
+    }
+    itemEnable: string
+    itemDisable: string
+  }
   privacyTasks: {
     eyebrow: string
     heading: string
@@ -1282,6 +1471,234 @@ const zhCnStrings: AdminStrings = {
     mergeConfirmPrompt: (sourceName, targetName) =>
       `将「${sourceName}」合并到「${targetName}」。帖子与关注会迁移，源话题将被屏蔽；该操作不可逆。`,
   },
+  banners: {
+    created: 'Banner 已创建',
+    updated: 'Banner 已更新',
+    enabled: 'Banner 已启用',
+    disabled: 'Banner 已停用',
+    deleted: 'Banner 已删除',
+    deleteConfirm: (title) => `确认删除 Banner「${title}」？删除后首页会立即下线。`,
+    eyebrow: '首页运营',
+    heading: 'Banner 走真表，别再改种子 SQL 冒充运营配置。',
+    description: (region) => `当前区域 ${region}。不筛城市时展示当前区域全部 Banner；按城市筛选时会同时展示区域通用和城市专属 Banner，便于对照 C 端首页结果。`,
+    create: '新建 Banner',
+    filterEyebrow: '展示范围',
+    filterHeading: '先按城市看当前首页会吃到哪些 Banner',
+    filterCityLabel: '城市筛选',
+    filterCityAll: '全部 Banner（含区域通用和城市专属）',
+    filterHelpLabel: '说明',
+    filterHelpText: '`linkUrl` 当前只支持站内相对路径，例如 `/shops?cityId=101`。',
+    loading: '加载中...',
+    applyFilter: '查看当前城市效果',
+    listEyebrow: 'Banner 列表',
+    listHeading: '排序越小越靠前，停用后公开首页立即不再返回',
+    tableHeaders: {
+      scope: '范围',
+      title: '标题',
+      link: '落点',
+      sort: '排序',
+      status: '状态',
+      actions: '操作',
+    },
+    empty: '当前没有 Banner。',
+    scopeText: (cityId, cityName) => {
+      if (cityId == null || cityId === 0) return '区域通用'
+      return cityName || `城市 #${cityId}`
+    },
+    subtitleFallback: '无副标题',
+    statusText: (enabled) => enabled ? '启用' : '停用',
+    edit: '编辑',
+    enable: '启用',
+    disable: '停用',
+    delete: '删除',
+    editorEyebrow: (editing) => editing ? '编辑 Banner' : '新建 Banner',
+    editorHeading: (editing) => editing ? '改完立即影响后续返回结果' : '新建后按排序插入首页返回序列',
+    labels: {
+      cityScope: '城市范围',
+      sort: '排序',
+      title: '标题',
+      subtitle: '副标题',
+      imageUrl: '图片 URL',
+      linkUrl: '站内落点',
+    },
+    cityScopeAll: '区域通用',
+    saving: '保存中...',
+    save: '保存 Banner',
+  },
+  operationActivities: {
+    created: '活动已创建',
+    updated: '活动已更新',
+    statusUpdated: '活动状态已更新',
+    deleted: '活动已删除',
+    itemCreated: '资源项已创建',
+    itemUpdated: '资源项已更新',
+    itemEnabled: '资源项已启用',
+    itemDisabled: '资源项已停用',
+    itemDeleted: '资源项已删除',
+    jsonParseError: (label) => `${label} 必须是合法 JSON`,
+    jsonObjectError: (label) => `${label} 必须是 JSON 对象`,
+    externalUrlRequired: '外链资源必须填写 URL',
+    deleteActivityConfirm: (name) => `确认删除活动「${name}」？活动主体和资源项会一起删除。`,
+    deleteItemConfirm: (title) => `确认删除资源项「${title}」？删除后活动页会立刻少一块内容。`,
+    eyebrow: '活动运营',
+    heading: '活动主体和挂载资源走真表，别再拿文档目标态当已上线。',
+    description: (region) => `当前区域 ${region}。活动主体负责范围、时间和投放规则；资源项负责挂店铺、团购、帖子、榜单、话题或外链，两个层面都在这里收口。`,
+    create: '新建活动',
+    filtersEyebrow: '筛选范围',
+    filtersHeading: '先按城市和状态看当前活动池，再决定挂什么资源',
+    filterLabels: {
+      city: '城市筛选',
+      status: '状态筛选',
+    },
+    filterOptions: {
+      allCities: '全部活动（含区域通用）',
+      allStatuses: '全部状态',
+    },
+    loading: '加载中...',
+    applyFilters: '应用筛选',
+    listEyebrow: '活动列表',
+    listHeading: '主体管范围和时间，资源项数量能直接看出这个活动是不是空壳',
+    tableHeaders: {
+      scopeCode: '范围 / 编码',
+      activity: '活动信息',
+      delivery: '投放',
+      items: '资源项',
+      status: '状态',
+      actions: '操作',
+    },
+    empty: '当前筛选下没有活动。',
+    scopeText: (cityId, cityName) => {
+      if (cityId === 0) return '区域通用'
+      return cityName || `城市 #${cityId}`
+    },
+    channelText: (channel, fallback) => {
+      if (channel === 1) return '首页'
+      if (channel === 2) return '搜索'
+      if (channel === 3) return '频道'
+      if (channel === 4) return '活动页'
+      if (channel === 5) return '社区'
+      return fallback || `频道 ${channel}`
+    },
+    typeText: (type, fallback) => {
+      if (type === 1) return '专题活动'
+      if (type === 2) return '节日活动'
+      if (type === 3) return '新客活动'
+      if (type === 4) return '商户扶持'
+      if (type === 5) return '内容话题'
+      return fallback || `类型 ${type}`
+    },
+    activityStatusText: (status, fallback) => {
+      if (status === 0) return '草稿'
+      if (status === 1) return '待上线'
+      if (status === 2) return '上线中'
+      if (status === 3) return '已下线'
+      if (status === 4) return '已结束'
+      return fallback || `状态 ${status}`
+    },
+    itemStatusText: (status, fallback) => {
+      if (status === 1) return '启用'
+      if (status === 2) return '停用'
+      return fallback || `状态 ${status}`
+    },
+    startFallback: '未设开始时间',
+    endFallback: '未设结束时间',
+    manageItems: '管资源',
+    edit: '编辑',
+    changeStatus: '改状态',
+    delete: '删除',
+    activityEditorEyebrow: (editing) => editing ? '编辑活动主体' : '新建活动主体',
+    activityEditorHeading: (editing) => editing ? '改范围、时间和规则，资源项不会被重置' : '先建主体，再去挂店铺、团购、榜单或外链',
+    activityLabels: {
+      cityScope: '城市范围',
+      channel: '投放频道',
+      type: '活动类型',
+      startAt: '开始时间',
+      name: '活动名称',
+      code: '活动编码',
+      cover: '封面 URL',
+      landingUrl: '落地地址',
+      endAt: '结束时间',
+      rule: '规则 JSON',
+    },
+    activityPlaceholders: {
+      startAt: '2026-09-01 00:00:00',
+      endAt: '2026-09-30 23:59:59',
+      rule: '{"audience":["student"],"sort":"manual"}',
+    },
+    saving: '保存中...',
+    saveActivity: '保存活动',
+    itemsEyebrow: '资源项管理',
+    itemsHeading: (activityName) => activityName ? `给「${activityName}」挂资源` : '先选中一个活动，再管理资源项',
+    itemsDescription: (scopeText, statusText) => `当前范围 ${scopeText}，状态 ${statusText}，可以混挂店铺、团购、帖子、榜单、话题和外链。`,
+    createItem: '新增资源项',
+    noActivitySelected: '当前筛选下还没有活动可管理资源项。',
+    itemTableHeaders: {
+      resource: '资源',
+      copy: '展示文案',
+      sort: '排序',
+      status: '状态',
+      actions: '操作',
+    },
+    itemsLoading: '加载中...',
+    itemEmpty: '这个活动还没有资源项。',
+    targetTypeText: (targetType, fallback) => {
+      if (targetType === 1) return '店铺'
+      if (targetType === 2) return '团购'
+      if (targetType === 3) return '帖子'
+      if (targetType === 4) return '榜单'
+      if (targetType === 5) return '话题'
+      if (targetType === 6) return '外链'
+      return fallback || `资源 ${targetType}`
+    },
+    targetFallback: (targetId) => `目标 #${targetId}`,
+    subtitleFallback: '无副标题',
+    itemEditorEyebrow: (editing) => editing ? '编辑资源项' : '新建资源项',
+    itemEditorHeading: (activityName, editing) => editing ? '改目标或文案后，活动位展示会立即跟着变' : `把资源挂到「${activityName}」底下`,
+    itemLabels: {
+      targetType: '资源类型',
+      targetId: '目标 ID',
+      title: '标题',
+      subtitle: '副标题',
+      image: '图片 URL',
+      sort: '排序',
+      badge: '角标',
+      trackCode: '埋点编码',
+      url: '外链 URL',
+    },
+    itemUrlPlaceholder: 'targetType=6 时必填',
+    saveItem: '保存资源项',
+    statusOptions: {
+      draft: '草稿',
+      scheduled: '待上线',
+      live: '上线中',
+      offline: '已下线',
+      ended: '已结束',
+    },
+    channelOptions: {
+      home: '首页',
+      search: '搜索',
+      channel: '频道',
+      activityPage: '活动页',
+      community: '社区',
+    },
+    typeOptions: {
+      campaign: '专题活动',
+      festival: '节日活动',
+      newcomer: '新客活动',
+      merchantSupport: '商户扶持',
+      contentTopic: '内容话题',
+    },
+    targetTypeOptions: {
+      shop: '店铺',
+      deal: '团购',
+      post: '帖子',
+      rank: '榜单',
+      topic: '话题',
+      external: '外链',
+    },
+    itemEnable: '启用',
+    itemDisable: '停用',
+  },
   privacyTasks: {
     eyebrow: 'Privacy Operations',
     heading: '隐私任务',
@@ -1974,6 +2391,234 @@ const enStrings: AdminStrings = {
     mergeConfirm: 'Confirm irreversible merge',
     mergeConfirmPrompt: (sourceName, targetName) =>
       `Merge "${sourceName}" into "${targetName}". Posts and follows will move, the source topic will be blocked, and this action cannot be undone.`,
+  },
+  banners: {
+    created: 'Banner created.',
+    updated: 'Banner updated.',
+    enabled: 'Banner enabled.',
+    disabled: 'Banner disabled.',
+    deleted: 'Banner deleted.',
+    deleteConfirm: (title) => `Delete banner "${title}"? It will disappear from the homepage immediately.`,
+    eyebrow: 'Homepage operations',
+    heading: 'Use a real banner table instead of pretending seed SQL is operations config.',
+    description: (region) => `Current region ${region}. Without a city filter you see every banner in the region. With one, you see both region-wide and city-specific banners so the public homepage result is easy to compare.`,
+    create: 'New banner',
+    filterEyebrow: 'Display scope',
+    filterHeading: 'Filter by city first so you can see which banners the homepage will actually receive.',
+    filterCityLabel: 'City filter',
+    filterCityAll: 'All banners (region-wide + city-specific)',
+    filterHelpLabel: 'Note',
+    filterHelpText: '`linkUrl` currently supports only in-app relative paths, for example `/shops?cityId=101`.',
+    loading: 'Loading...',
+    applyFilter: 'Preview current city output',
+    listEyebrow: 'Banner list',
+    listHeading: 'Lower sort values rank first, and disabling a banner removes it from the public homepage immediately.',
+    tableHeaders: {
+      scope: 'Scope',
+      title: 'Title',
+      link: 'Destination',
+      sort: 'Sort',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    empty: 'There are no banners right now.',
+    scopeText: (cityId, cityName) => {
+      if (cityId == null || cityId === 0) return 'Region-wide'
+      return cityName || `City #${cityId}`
+    },
+    subtitleFallback: 'No subtitle',
+    statusText: (enabled) => enabled ? 'Enabled' : 'Disabled',
+    edit: 'Edit',
+    enable: 'Enable',
+    disable: 'Disable',
+    delete: 'Delete',
+    editorEyebrow: (editing) => editing ? 'Edit banner' : 'New banner',
+    editorHeading: (editing) => editing ? 'Changes affect subsequent API results immediately.' : 'New banners are inserted into the homepage sequence by sort order.',
+    labels: {
+      cityScope: 'Scope',
+      sort: 'Sort',
+      title: 'Title',
+      subtitle: 'Subtitle',
+      imageUrl: 'Image URL',
+      linkUrl: 'In-app destination',
+    },
+    cityScopeAll: 'Region-wide',
+    saving: 'Saving...',
+    save: 'Save banner',
+  },
+  operationActivities: {
+    created: 'Activity created.',
+    updated: 'Activity updated.',
+    statusUpdated: 'Activity status updated.',
+    deleted: 'Activity deleted.',
+    itemCreated: 'Item created.',
+    itemUpdated: 'Item updated.',
+    itemEnabled: 'Item enabled.',
+    itemDisabled: 'Item disabled.',
+    itemDeleted: 'Item deleted.',
+    jsonParseError: (label) => `${label} must be valid JSON.`,
+    jsonObjectError: (label) => `${label} must be a JSON object.`,
+    externalUrlRequired: 'External-link resources must include a URL.',
+    deleteActivityConfirm: (name) => `Delete activity "${name}"? The shell and all mounted items will be removed together.`,
+    deleteItemConfirm: (title) => `Delete item "${title}"? The activity page will lose that slot immediately.`,
+    eyebrow: 'Activity operations',
+    heading: 'Store activity shells and mounted resources in real tables instead of pretending the target-state doc is already live.',
+    description: (region) => `Current region ${region}. Activity shells define scope, timing, and delivery rules. Items attach shops, deals, posts, rankings, topics, or external links. Both layers are managed here.`,
+    create: 'New activity',
+    filtersEyebrow: 'Filters',
+    filtersHeading: 'Filter by city and status first, then decide which resources to mount.',
+    filterLabels: {
+      city: 'City filter',
+      status: 'Status filter',
+    },
+    filterOptions: {
+      allCities: 'All activities (including region-wide)',
+      allStatuses: 'All statuses',
+    },
+    loading: 'Loading...',
+    applyFilters: 'Apply filters',
+    listEyebrow: 'Activity list',
+    listHeading: 'The shell defines scope and timing. The item count tells you immediately whether the activity is empty.',
+    tableHeaders: {
+      scopeCode: 'Scope / code',
+      activity: 'Activity',
+      delivery: 'Delivery',
+      items: 'Items',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    empty: 'No activities match the current filters.',
+    scopeText: (cityId, cityName) => {
+      if (cityId === 0) return 'Region-wide'
+      return cityName || `City #${cityId}`
+    },
+    channelText: (channel, fallback) => {
+      if (channel === 1) return 'Home'
+      if (channel === 2) return 'Search'
+      if (channel === 3) return 'Channel'
+      if (channel === 4) return 'Activity page'
+      if (channel === 5) return 'Community'
+      return fallback || `Channel ${channel}`
+    },
+    typeText: (type, fallback) => {
+      if (type === 1) return 'Campaign'
+      if (type === 2) return 'Festival'
+      if (type === 3) return 'Newcomer'
+      if (type === 4) return 'Merchant support'
+      if (type === 5) return 'Content topic'
+      return fallback || `Type ${type}`
+    },
+    activityStatusText: (status, fallback) => {
+      if (status === 0) return 'Draft'
+      if (status === 1) return 'Scheduled'
+      if (status === 2) return 'Live'
+      if (status === 3) return 'Offline'
+      if (status === 4) return 'Ended'
+      return fallback || `Status ${status}`
+    },
+    itemStatusText: (status, fallback) => {
+      if (status === 1) return 'Enabled'
+      if (status === 2) return 'Disabled'
+      return fallback || `Status ${status}`
+    },
+    startFallback: 'No start time',
+    endFallback: 'No end time',
+    manageItems: 'Manage items',
+    edit: 'Edit',
+    changeStatus: 'Update status',
+    delete: 'Delete',
+    activityEditorEyebrow: (editing) => editing ? 'Edit activity shell' : 'New activity shell',
+    activityEditorHeading: (editing) => editing ? 'Update scope, timing, or rules without resetting mounted items.' : 'Create the shell first, then attach shops, deals, rankings, or links.',
+    activityLabels: {
+      cityScope: 'Scope',
+      channel: 'Delivery channel',
+      type: 'Activity type',
+      startAt: 'Start time',
+      name: 'Activity name',
+      code: 'Activity code',
+      cover: 'Cover URL',
+      landingUrl: 'Landing URL',
+      endAt: 'End time',
+      rule: 'Rule JSON',
+    },
+    activityPlaceholders: {
+      startAt: '2026-09-01 00:00:00',
+      endAt: '2026-09-30 23:59:59',
+      rule: '{"audience":["student"],"sort":"manual"}',
+    },
+    saving: 'Saving...',
+    saveActivity: 'Save activity',
+    itemsEyebrow: 'Item management',
+    itemsHeading: (activityName) => activityName ? `Mounted items for "${activityName}"` : 'Select an activity before managing its items.',
+    itemsDescription: (scopeText, statusText) => `Current scope ${scopeText}, status ${statusText}. You can mix shops, deals, posts, rankings, topics, and external links in one activity.`,
+    createItem: 'New item',
+    noActivitySelected: 'There is no activity selected under the current filters.',
+    itemTableHeaders: {
+      resource: 'Resource',
+      copy: 'Copy',
+      sort: 'Sort',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    itemsLoading: 'Loading...',
+    itemEmpty: 'This activity has no items yet.',
+    targetTypeText: (targetType, fallback) => {
+      if (targetType === 1) return 'Shop'
+      if (targetType === 2) return 'Deal'
+      if (targetType === 3) return 'Post'
+      if (targetType === 4) return 'Ranking'
+      if (targetType === 5) return 'Topic'
+      if (targetType === 6) return 'External link'
+      return fallback || `Resource ${targetType}`
+    },
+    targetFallback: (targetId) => `Target #${targetId}`,
+    subtitleFallback: 'No subtitle',
+    itemEditorEyebrow: (editing) => editing ? 'Edit item' : 'New item',
+    itemEditorHeading: (activityName, editing) => editing ? 'Changing the target or copy updates the slot output immediately.' : `Attach a resource under "${activityName}"`,
+    itemLabels: {
+      targetType: 'Resource type',
+      targetId: 'Target ID',
+      title: 'Title',
+      subtitle: 'Subtitle',
+      image: 'Image URL',
+      sort: 'Sort',
+      badge: 'Badge',
+      trackCode: 'Track code',
+      url: 'External URL',
+    },
+    itemUrlPlaceholder: 'Required when targetType=6',
+    saveItem: 'Save item',
+    statusOptions: {
+      draft: 'Draft',
+      scheduled: 'Scheduled',
+      live: 'Live',
+      offline: 'Offline',
+      ended: 'Ended',
+    },
+    channelOptions: {
+      home: 'Home',
+      search: 'Search',
+      channel: 'Channel',
+      activityPage: 'Activity page',
+      community: 'Community',
+    },
+    typeOptions: {
+      campaign: 'Campaign',
+      festival: 'Festival',
+      newcomer: 'Newcomer',
+      merchantSupport: 'Merchant support',
+      contentTopic: 'Content topic',
+    },
+    targetTypeOptions: {
+      shop: 'Shop',
+      deal: 'Deal',
+      post: 'Post',
+      rank: 'Ranking',
+      topic: 'Topic',
+      external: 'External link',
+    },
+    itemEnable: 'Enable',
+    itemDisable: 'Disable',
   },
   privacyTasks: {
     eyebrow: 'Privacy Operations',

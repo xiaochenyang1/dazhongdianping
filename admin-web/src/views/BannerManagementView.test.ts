@@ -124,6 +124,8 @@ describe('BannerManagementView', () => {
     expect(adminMocks.listAdminBanners).toHaveBeenCalledWith(undefined)
     expect(host.textContent).toContain('欧洲首页 Banner')
     expect(host.textContent).toContain('Paris 专属 Banner')
+    expect(host.textContent).toContain('Current region EU')
+    expect(host.textContent).toContain('New banner')
 
     const cityFilter = host.querySelector<HTMLSelectElement>('[name="banner-city-filter"]')
     if (!cityFilter) throw new Error('missing banner city filter')
@@ -168,6 +170,7 @@ describe('BannerManagementView', () => {
     const { app, host } = mount()
     await flush()
 
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="toggle-banner-2"]')?.textContent?.trim()).toBe('Enable')
     host.querySelector<HTMLButtonElement>('[data-testid="toggle-banner-2"]')?.click()
     await flush()
     expect(adminMocks.updateAdminBannerStatus).toHaveBeenCalledWith(2, true)

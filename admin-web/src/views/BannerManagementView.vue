@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { createAdminBanner, listAdminBanners, removeAdminBanner, updateAdminBanner, updateAdminBannerStatus } from '@/services/admin'
 import { fetchCities } from '@/services/meta'
 import type { AdminBanner, AdminBannerPayload, City } from '@/types/admin'
@@ -11,6 +12,7 @@ type BannerEditor = Omit<AdminBannerPayload, 'cityId'> & {
 }
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const canWrite = computed(() => state.permissions.includes('operations:banner:write'))
 
 const cities = ref<City[]>([])
@@ -24,7 +26,7 @@ const successMessage = ref('')
 let requestId = 0
 
 function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : '请求失败'
+  return error instanceof Error ? error.message : strings.value.common.requestFailed
 }
 
 function resetMessages() {
@@ -33,10 +35,7 @@ function resetMessages() {
 }
 
 function scopeText(item: AdminBanner) {
-  if (item.cityId == null) {
-    return '区域通用'
-  }
-  return item.cityName || `城市 #${item.cityId}`
+  return strings.value.banners.scopeText(item.cityId, item.cityName)
 }
 
 async function load() {
@@ -104,10 +103,10 @@ async function submitEditor() {
   try {
     if (current.id) {
       await updateAdminBanner(current.id, payload)
-      successMessage.value = 'Banner 已更新'
+      successMessage.value = strings.value.banners.updated
     } else {
       await createAdminBanner(payload)
-      successMessage.value = 'Banner 已创建'
+      successMessage.value = strings.value.banners.created
     }
     editor.value = null
     await load()
@@ -124,7 +123,7 @@ async function toggleBanner(item: AdminBanner) {
   saving.value = true
   try {
     await updateAdminBannerStatus(item.id, !item.enabled)
-    successMessage.value = item.enabled ? 'Banner 已停用' : 'Banner 已启用'
+    successMessage.value = item.enabled ? strings.value.banners.disabled : strings.value.banners.enabled
     await load()
   } catch (error) {
     errorMessage.value = messageOf(error)
@@ -135,13 +134,13 @@ async function toggleBanner(item: AdminBanner) {
 
 async function deleteBanner(item: AdminBanner) {
   if (!canWrite.value || saving.value) return
-  const confirmed = window.confirm(`确认删除 Banner「${item.title}」？删除后首页会立即下线。`)
+  const confirmed = window.confirm(strings.value.banners.deleteConfirm(item.title))
   if (!confirmed) return
   resetMessages()
   saving.value = true
   try {
     await removeAdminBanner(item.id)
-    successMessage.value = 'Banner 已删除'
+    successMessage.value = strings.value.banners.deleted
     await load()
   } catch (error) {
     errorMessage.value = messageOf(error)
@@ -165,11 +164,11 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">首页运营</p>
-        <h1>Banner 走真表，别再改种子 SQL 冒充运营配置。</h1>
-        <p>当前区域 {{ state.region }}。不筛城市时展示当前区域全部 Banner；按城市筛选时会同时展示区域通用和城市专属 Banner，便于对照 C 端首页结果。</p>
+        <p class="eyebrow">{{ strings.banners.eyebrow }}</p>
+        <h1>{{ strings.banners.heading }}</h1>
+        <p>{{ strings.banners.description(state.region) }}</p>
       </div>
-      <button v-if="canWrite" data-testid="create-banner" class="secondary-button" type="button" @click="openEditor()">新建 Banner</button>
+      <button v-if="canWrite" data-testid="create-banner" class="secondary-button" type="button" @click="openEditor()">{{ strings.banners.create }}</button>
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
@@ -178,28 +177,28 @@ watch(
     <section class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">展示范围</p>
-          <h2>先按城市看当前首页会吃到哪些 Banner</h2>
+          <p class="eyebrow">{{ strings.banners.filterEyebrow }}</p>
+          <h2>{{ strings.banners.filterHeading }}</h2>
         </div>
       </div>
 
       <form class="editor-form" @submit.prevent="load">
         <div class="form-grid form-grid--two">
           <label class="field">
-            <span>城市筛选</span>
+            <span>{{ strings.banners.filterCityLabel }}</span>
             <select v-model="filterCityId" name="banner-city-filter">
-              <option :value="''">全部 Banner（含区域通用和城市专属）</option>
+              <option :value="''">{{ strings.banners.filterCityAll }}</option>
               <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
             </select>
           </label>
           <div class="field">
-            <span>说明</span>
-            <p class="muted">`linkUrl` 当前只支持站内相对路径，例如 `/shops?cityId=101`。</p>
+            <span>{{ strings.banners.filterHelpLabel }}</span>
+            <p class="muted">{{ strings.banners.filterHelpText }}</p>
           </div>
         </div>
         <div class="form-actions">
           <button data-testid="apply-filter" class="primary-button" type="submit" :disabled="loading">
-            {{ loading ? '加载中...' : '查看当前城市效果' }}
+            {{ loading ? strings.banners.loading : strings.banners.applyFilter }}
           </button>
         </div>
       </form>
@@ -208,8 +207,8 @@ watch(
     <section class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">Banner 列表</p>
-          <h2>排序越小越靠前，停用后公开首页立即不再返回</h2>
+          <p class="eyebrow">{{ strings.banners.listEyebrow }}</p>
+          <h2>{{ strings.banners.listHeading }}</h2>
         </div>
       </div>
 
@@ -217,37 +216,37 @@ watch(
         <table class="data-table">
           <thead>
             <tr>
-              <th>范围</th>
-              <th>标题</th>
-              <th>落点</th>
-              <th>排序</th>
-              <th>状态</th>
-              <th v-if="canWrite">操作</th>
+              <th>{{ strings.banners.tableHeaders.scope }}</th>
+              <th>{{ strings.banners.tableHeaders.title }}</th>
+              <th>{{ strings.banners.tableHeaders.link }}</th>
+              <th>{{ strings.banners.tableHeaders.sort }}</th>
+              <th>{{ strings.banners.tableHeaders.status }}</th>
+              <th v-if="canWrite">{{ strings.banners.tableHeaders.actions }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td :colspan="canWrite ? 6 : 5" class="table-empty">加载中...</td>
+              <td :colspan="canWrite ? 6 : 5" class="table-empty">{{ strings.banners.loading }}</td>
             </tr>
             <tr v-else-if="!banners.length">
-              <td :colspan="canWrite ? 6 : 5" class="table-empty">当前没有 Banner。</td>
+              <td :colspan="canWrite ? 6 : 5" class="table-empty">{{ strings.banners.empty }}</td>
             </tr>
             <tr v-for="item in banners" :key="item.id">
               <td>{{ scopeText(item) }}</td>
               <td>
                 <strong>{{ item.title }}</strong>
-                <p>{{ item.subtitle || '无副标题' }}</p>
+                <p>{{ item.subtitle || strings.banners.subtitleFallback }}</p>
                 <p class="muted">{{ item.imageUrl }}</p>
               </td>
               <td><code>{{ item.linkUrl }}</code></td>
               <td>{{ item.sortNo }}</td>
-              <td><span class="status-pill">{{ item.enabled ? '启用' : '停用' }}</span></td>
+              <td><span class="status-pill">{{ strings.banners.statusText(item.enabled) }}</span></td>
               <td v-if="canWrite" class="table-actions">
-                <button :data-testid="`edit-banner-${item.id}`" class="table-action" type="button" @click="openEditor(item)">编辑</button>
+                <button :data-testid="`edit-banner-${item.id}`" class="table-action" type="button" @click="openEditor(item)">{{ strings.banners.edit }}</button>
                 <button :data-testid="`toggle-banner-${item.id}`" class="table-action" type="button" @click="toggleBanner(item)">
-                  {{ item.enabled ? '停用' : '启用' }}
+                  {{ item.enabled ? strings.banners.disable : strings.banners.enable }}
                 </button>
-                <button :data-testid="`delete-banner-${item.id}`" class="table-action danger-action" type="button" @click="deleteBanner(item)">删除</button>
+                <button :data-testid="`delete-banner-${item.id}`" class="table-action danger-action" type="button" @click="deleteBanner(item)">{{ strings.banners.delete }}</button>
               </td>
             </tr>
           </tbody>
@@ -258,44 +257,44 @@ watch(
     <section v-if="editor && canWrite" class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">{{ editor.id ? '编辑 Banner' : '新建 Banner' }}</p>
-          <h2>{{ editor.id ? '改完立即影响后续返回结果' : '新建后按排序插入首页返回序列' }}</h2>
+          <p class="eyebrow">{{ strings.banners.editorEyebrow(Boolean(editor.id)) }}</p>
+          <h2>{{ strings.banners.editorHeading(Boolean(editor.id)) }}</h2>
         </div>
       </div>
 
       <form data-testid="banner-editor" class="editor-form" @submit.prevent="submitEditor">
         <div class="form-grid form-grid--two">
           <label class="field">
-            <span>城市范围</span>
+            <span>{{ strings.banners.labels.cityScope }}</span>
             <select v-model="editor.cityId" name="banner-city">
-              <option :value="''">区域通用</option>
+              <option :value="''">{{ strings.banners.cityScopeAll }}</option>
               <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
             </select>
           </label>
           <label class="field">
-            <span>排序</span>
+            <span>{{ strings.banners.labels.sort }}</span>
             <input v-model.number="editor.sortNo" name="banner-sort-no" type="number" min="0" />
           </label>
           <label class="field field--full">
-            <span>标题</span>
+            <span>{{ strings.banners.labels.title }}</span>
             <input v-model="editor.title" name="banner-title" type="text" maxlength="128" required />
           </label>
           <label class="field field--full">
-            <span>副标题</span>
+            <span>{{ strings.banners.labels.subtitle }}</span>
             <input v-model="editor.subtitle" name="banner-subtitle" type="text" maxlength="255" />
           </label>
           <label class="field field--full">
-            <span>图片 URL</span>
+            <span>{{ strings.banners.labels.imageUrl }}</span>
             <input v-model="editor.imageUrl" name="banner-image-url" type="text" maxlength="255" required />
           </label>
           <label class="field field--full">
-            <span>站内落点</span>
+            <span>{{ strings.banners.labels.linkUrl }}</span>
             <input v-model="editor.linkUrl" name="banner-link-url" type="text" maxlength="255" required />
           </label>
         </div>
         <div class="form-actions">
-          <button class="primary-button" type="submit" :disabled="saving">{{ saving ? '保存中...' : '保存 Banner' }}</button>
-          <button class="secondary-button" type="button" @click="editor = null">取消</button>
+          <button class="primary-button" type="submit" :disabled="saving">{{ saving ? strings.banners.saving : strings.banners.save }}</button>
+          <button class="secondary-button" type="button" @click="editor = null">{{ strings.common.cancel }}</button>
         </div>
       </form>
     </section>
