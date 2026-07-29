@@ -118,7 +118,6 @@ class OrderDetailApi implements JsonApi {
   }
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),
@@ -477,5 +476,41 @@ void main() {
     expect(find.text('使用规则'), findsOneWidget);
     expect(find.text('周末通用'), findsOneWidget);
     expect(find.textContaining('详情刷新失败'), findsNothing);
+  });
+
+  testWidgets('coupon fallback localizes English refresh errors', (
+    tester,
+  ) async {
+    final api = OrderDetailApi(failFirstCoupon: true);
+    const coupon = Coupon(
+      id: 21,
+      orderId: 10,
+      code: 'CP-DEMO-2026',
+      status: 1,
+      statusText: '待使用',
+      dealTitle: 'Dinner for two',
+      shopName: 'Berlin Tea House',
+      expireAt: '2026-12-31',
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CouponDetailScreen(
+          repository: TradeRepository(api),
+          code: coupon.code,
+          initialCoupon: coupon,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Coupon details'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Could not refresh details: Bad state: network unavailable',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Reload full details'), findsOneWidget);
   });
 }

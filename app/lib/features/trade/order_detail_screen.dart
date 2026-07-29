@@ -71,19 +71,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         builder: (context) {
           final strings = AppLocalizations.of(context);
           return AlertDialog(
-          title: Text(strings.cancelOrder),
-          content: Text(strings.cancelOrderConfirm),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(strings.keepOrder),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(strings.confirmCancel),
-            ),
-          ],
-        );
+            title: Text(strings.cancelOrder),
+            content: Text(strings.cancelOrderConfirm),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(strings.keepOrder),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(strings.confirmCancel),
+              ),
+            ],
+          );
         },
       );
     } finally {
@@ -109,26 +109,26 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             _refundReasonController.text = strings.defaultRefundReason;
           }
           return AlertDialog(
-          title: Text(strings.applyRefund),
-          content: TextField(
-            key: const Key('order-refund-reason'),
-            controller: _refundReasonController,
-            autofocus: true,
-            decoration: InputDecoration(labelText: strings.refundReason),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(strings.cancelAction),
+            title: Text(strings.applyRefund),
+            content: TextField(
+              key: const Key('order-refund-reason'),
+              controller: _refundReasonController,
+              autofocus: true,
+              decoration: InputDecoration(labelText: strings.refundReason),
             ),
-            FilledButton(
-              onPressed: () => Navigator.of(
-                context,
-              ).pop(_refundReasonController.text.trim()),
-              child: Text(strings.submitApplication),
-            ),
-          ],
-        );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(strings.cancelAction),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(
+                  context,
+                ).pop(_refundReasonController.text.trim()),
+                child: Text(strings.submitApplication),
+              ),
+            ],
+          );
         },
       );
     } finally {
@@ -141,8 +141,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       AppLocalizations.of(context).refundSubmitted,
     );
     if (succeeded && mounted) {
-      _refundReasonController.text =
-          AppLocalizations.of(context).defaultRefundReason;
+      _refundReasonController.text = AppLocalizations.of(
+        context,
+      ).defaultRefundReason;
     }
   }
 
@@ -185,7 +186,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       _showMessage(successMessage);
       return true;
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).actionFailed(error));
+      if (mounted)
+        _showMessage(AppLocalizations.of(context).actionFailed(error));
       return false;
     } finally {
       if (mounted) setState(() => _acting = false);
@@ -244,7 +246,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Text(strings.orderShopMeta(shop: order.shopName, orderNo: order.orderNo)),
+                Text(
+                  strings.orderShopMeta(
+                    shop: order.shopName,
+                    orderNo: order.orderNo,
+                  ),
+                ),
               ],
             ),
           ),
@@ -255,7 +262,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             padding: const EdgeInsets.all(18),
             child: Column(
               children: [
-                _DetailRow(label: strings.quantitySimple, value: '${order.quantity}'),
+                _DetailRow(
+                  label: strings.quantitySimple,
+                  value: '${order.quantity}',
+                ),
                 _DetailRow(
                   label: strings.unitPrice,
                   value: formatMoney(order.unitPrice, order.currency),
@@ -423,7 +433,9 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                     key: const Key('coupon-detail-retry'),
                     onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloading ? strings.processing : strings.retry),
+                    label: Text(
+                      _reloading ? strings.processing : strings.retry,
+                    ),
                   ),
                 ],
               ),
@@ -432,7 +444,9 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
           final detail = snapshot.data;
           final coupon = detail ?? widget.initialCoupon!;
           final usable = detail?.usable;
-          final verifyHint = detail?.verifyHint.isNotEmpty == true ? detail!.verifyHint : strings.defaultVerifyHint;
+          final verifyHint = detail?.verifyHint.isNotEmpty == true
+              ? detail!.verifyHint
+              : strings.defaultVerifyHint;
           final qrImageUrl = detail?.qrImageUrl ?? '';
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -468,7 +482,11 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                             ? null
                             : () => _copyCode(coupon.code),
                         icon: const Icon(Icons.copy_outlined),
-                        label: Text(_copyingCode ? strings.copying : strings.copyCouponCode),
+                        label: Text(
+                          _copyingCode
+                              ? strings.copying
+                              : strings.copyCouponCode,
+                        ),
                       ),
                       if (qrImageUrl.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -564,7 +582,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '详情刷新失败：${snapshot.error}',
+                        strings.detailRefreshFailed(snapshot.error!),
                         style: const TextStyle(color: Color(0xFFB45309)),
                       ),
                       const SizedBox(height: 8),
@@ -572,7 +590,11 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                         key: const Key('coupon-detail-fallback-retry'),
                         onPressed: _reloading ? null : _reload,
                         icon: const Icon(Icons.refresh),
-                        label: Text(_reloading ? strings.processing : strings.reloadFullDetail),
+                        label: Text(
+                          _reloading
+                              ? strings.processing
+                              : strings.reloadFullDetail,
+                        ),
                       ),
                     ],
                   ),

@@ -82,7 +82,6 @@ class CouponsApi implements JsonApi {
       const {};
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),
@@ -101,7 +100,6 @@ Widget localizedApp({
 }
 
 void main() {
-
   testWidgets('coupons screen switches English chrome', (tester) async {
     await tester.pumpWidget(
       localizedApp(
@@ -112,8 +110,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Coupons'), findsOneWidget);
     expect(find.text('Available'), findsOneWidget);
+    expect(find.textContaining('Valid until 2026-12-31'), findsOneWidget);
   });
-
 
   testWidgets('coupons screen retries an initial load failure', (tester) async {
     final api = CouponsApi(failFirst: true);

@@ -97,9 +97,13 @@ class _CouponsScreenState extends State<CouponsScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _requestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreCouponsFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreCouponsFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && requestId == _requestId) {
@@ -191,7 +195,9 @@ class _CouponsScreenState extends State<CouponsScreen> {
                           key: const Key('coupons-retry'),
                           onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_retrying ? strings.processing : strings.retry),
+                          label: Text(
+                            _retrying ? strings.processing : strings.retry,
+                          ),
                         ),
                       ],
                     ),
@@ -222,13 +228,22 @@ class _CouponsScreenState extends State<CouponsScreen> {
                                   ),
                                 )
                               : const Icon(Icons.expand_more),
-                          label: Text(_loadingMore ? strings.loading : strings.loadMore),
+                          label: Text(
+                            _loadingMore ? strings.loading : strings.loadMore,
+                          ),
                         ),
                       );
                     }
                     final coupon = items[index];
                     final isHighlight =
                         highlight.isNotEmpty && highlight == coupon.code;
+                    final statusText = strings.couponStatusLabel(
+                      status: coupon.status,
+                      fallback: coupon.statusText,
+                    );
+                    final expiryText = coupon.expireAt.isEmpty
+                        ? strings.noExpiry
+                        : strings.validUntilDate(coupon.expireAt);
                     return Card(
                       key: Key('coupon-card-${coupon.code}'),
                       color: isHighlight
@@ -241,7 +256,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                               : coupon.dealTitle,
                         ),
                         subtitle: Text(
-                          '${coupon.code}\n${coupon.shopName} · ${coupon.statusText} · 有效期至 ${coupon.expireAt.isEmpty ? '不限期' : coupon.expireAt}',
+                          '${coupon.code}\n${coupon.shopName} · $statusText · $expiryText',
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),
