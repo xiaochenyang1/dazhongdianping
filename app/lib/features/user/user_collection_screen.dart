@@ -98,8 +98,10 @@ class UserCollectionScreen extends StatelessWidget {
       }
       final targetType = item['targetType'];
       final targetId = item['targetId'];
-      if (targetType == 1) return AppLocalizations.of(context).shopHash(targetId);
-      if (targetType == 2) return AppLocalizations.of(context).postHash(targetId);
+      if (targetType == 1)
+        return AppLocalizations.of(context).shopHash(targetId);
+      if (targetType == 2)
+        return AppLocalizations.of(context).postHash(targetId);
     }
     return '${item['title'] ?? item['name'] ?? item['orderNo'] ?? item['reservationNo'] ?? item['code'] ?? item['shopName'] ?? item['content'] ?? AppLocalizations.of(context).recordHash(item['id'] ?? index + 1)}';
   }
@@ -154,17 +156,39 @@ class UserCollectionScreen extends StatelessWidget {
   }
 
   String _subtitle(BuildContext context, Map<String, dynamic> item) {
+    final strings = AppLocalizations.of(context);
+    final auditStatus = strings.auditStatusLabel(
+      status: (item['auditStatus'] as num?)?.toInt(),
+      fallback: item['auditStatusText'] as String?,
+    );
+    final payStatus = strings.payStatusLabel(
+      status: (item['payStatus'] as num?)?.toInt(),
+      fallback: item['payStatusText'] as String?,
+    );
+    final couponStatus = strings.couponStatusLabel(
+      status: (item['status'] as num?)?.toInt(),
+      fallback: item['statusText'] as String?,
+    );
+    final reservationStatus = strings.reservationStatusLabel(
+      status: (item['status'] as num?)?.toInt(),
+      fallback: item['statusText'] as String?,
+    );
+    final auditRemark = item['auditRemark'] as String? ?? '';
     return switch (collection) {
-      UserCollection.reviews =>
-        '${item['content'] ?? ''}\n${item['auditStatusText'] ?? ''}',
-      UserCollection.posts =>
-        '${item['content'] ?? ''}\n${item['auditStatusText'] ?? ''}${item['auditRemark'] == null || item['auditRemark'] == '' ? '' : '：${item['auditRemark']}'}',
+      UserCollection.reviews => '${item['content'] ?? ''}\n$auditStatus',
+      UserCollection.posts => [
+        '${item['content'] ?? ''}',
+        [
+          auditStatus,
+          if (auditRemark.isNotEmpty) auditRemark,
+        ].where((part) => part.isNotEmpty).join(' · '),
+      ].where((part) => part.isNotEmpty).join('\n'),
       UserCollection.orders =>
-        '${item['dealTitle'] ?? ''} · ${item['shopName'] ?? ''} · ${item['payStatusText'] ?? ''}',
+        '${item['dealTitle'] ?? ''} · ${item['shopName'] ?? ''} · $payStatus',
       UserCollection.coupons =>
-        '${item['dealTitle'] ?? ''} · ${item['shopName'] ?? ''} · ${item['statusText'] ?? ''} · ${item['expireAt'] ?? ''}',
+        '${item['dealTitle'] ?? ''} · ${item['shopName'] ?? ''} · $couponStatus · ${item['expireAt'] ?? ''}',
       UserCollection.reservations =>
-        '${(item['shop'] as Map<String, dynamic>?)?['name'] ?? ''} · ${item['reserveTime'] ?? ''} · ${item['statusText'] ?? ''}',
+        '${(item['shop'] as Map<String, dynamic>?)?['name'] ?? ''} · ${item['reserveTime'] ?? ''} · $reservationStatus',
       UserCollection.favorites => _favoriteSubtitle(context, item),
     };
   }
@@ -183,11 +207,16 @@ class UserCollectionScreen extends StatelessWidget {
         AppLocalizations.of(context).shopLabel,
         if (location.isNotEmpty) location,
         if (score != null) '★ $score',
-        if ('$createdAt'.isNotEmpty) AppLocalizations.of(context).favoritedAt('$createdAt'),
+        if ('$createdAt'.isNotEmpty)
+          AppLocalizations.of(context).favoritedAt('$createdAt'),
       ].join(' · ');
     }
     if (targetType == 2) {
-      return [AppLocalizations.of(context).postLabel, if ('$createdAt'.isNotEmpty) AppLocalizations.of(context).favoritedAt('$createdAt')].join(' · ');
+      return [
+        AppLocalizations.of(context).postLabel,
+        if ('$createdAt'.isNotEmpty)
+          AppLocalizations.of(context).favoritedAt('$createdAt'),
+      ].join(' · ');
     }
     return jsonEncode(item);
   }
@@ -267,9 +296,11 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
       });
     } catch (error) {
       if (mounted && requestId == _requestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).loadMoreFailed(error)),
+          ),
+        );
       }
     } finally {
       if (mounted && requestId == _requestId) {
@@ -280,6 +311,7 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return FutureBuilder<UserCollectionPage>(
       future: _page,
       builder: (context, snapshot) {
@@ -291,20 +323,21 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppLocalizations.of(context).collectionLoadFailed(snapshot.error!)),
+                Text(strings.collectionLoadFailed(snapshot.error!)),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('user-collection-retry'),
                   onPressed: _retrying ? null : _reload,
                   icon: const Icon(Icons.refresh),
-                  label: Text(_retrying ? '处理中...' : '重试'),
+                  label: Text(_retrying ? strings.processing : strings.retry),
                 ),
               ],
             ),
           );
         }
         final page = snapshot.data!;
-        if (page.items.isEmpty) return Center(child: Text(AppLocalizations.of(context).noCollectionData));
+        if (page.items.isEmpty)
+          return Center(child: Text(strings.noCollectionData));
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: page.items.length + (page.hasMore ? 1 : 0),
@@ -321,7 +354,9 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.expand_more),
-                  label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
+                  label: Text(
+                    _loadingMore ? strings.loading : strings.loadMore,
+                  ),
                 ),
               );
             }

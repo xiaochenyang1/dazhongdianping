@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/user_collection_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class CollectionApi implements JsonApi {
@@ -271,6 +273,23 @@ class CollectionApi implements JsonApi {
       const {};
 }
 
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('user collection retries an initial load failure', (
     tester,
@@ -478,5 +497,24 @@ void main() {
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
     expect(find.textContaining('门店'), findsOneWidget);
     expect(find.textContaining('帖子'), findsOneWidget);
+  });
+
+  testWidgets('user collection localizes raw backend statuses in English', (
+    tester,
+  ) async {
+    final api = CollectionApi();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: UserCollectionScreen(
+          repository: UserRepository(api),
+          collection: UserCollection.reviews,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('My reviews'), findsOneWidget);
+    expect(find.textContaining('Pending review'), findsOneWidget);
   });
 }

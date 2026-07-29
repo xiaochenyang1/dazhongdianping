@@ -257,7 +257,6 @@ Future<void> scrollTo(WidgetTester tester, Finder target) async {
   await tester.pumpAndSettle();
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),

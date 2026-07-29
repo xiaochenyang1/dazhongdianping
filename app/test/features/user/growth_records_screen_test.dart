@@ -119,7 +119,6 @@ class GrowthRecordsApi implements JsonApi {
       const {};
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),

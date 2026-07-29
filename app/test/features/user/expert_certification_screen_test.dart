@@ -69,7 +69,6 @@ class ExpertCertApi implements JsonApi {
   }
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),

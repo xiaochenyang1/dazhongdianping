@@ -132,8 +132,7 @@ class AppLocalizations {
     'followingTopicsLoginRequired': '登录后查看关注的话题，不会额外生成独立动态流。',
     'goLogin': '去登录',
     'hotScore': '热度 {score}',
-    'topicSevenDayStats':
-        '7 天：{posts} 帖 · {likes} 赞 · {comments} 评论',
+    'topicSevenDayStats': '7 天：{posts} 帖 · {likes} 赞 · {comments} 评论',
     'topicFollowMeta': '{followers} 人关注 · {posts} 篇公开帖子',
     'topicFollowerCount': '{count} 人关注',
     'followStatusUpdateFailed': '关注状态更新失败：{error}',
@@ -501,8 +500,53 @@ class AppLocalizations {
     'expertReasonHint': '说明你在本地区的内容贡献、探店经验或持续输出计划',
     'expertPendingHint': '申请审核中，请耐心等待结果。',
     'expertApprovedHint': '你已通过本地达人认证，公开内容会展示达人标识。',
+    'expertStatusNotApplied': '未申请',
+    'expertStatusPendingReview': '待审核',
+    'expertStatusApproved': '已通过',
+    'expertStatusRejected': '已驳回',
+    'expertReasonRequired': '请先填写申请理由',
+    'expertReasonTooLong': '申请理由不能超过 500 字',
+    'localExpertBadge': '本地达人',
+    'applicationReason': '申请理由',
     'growthRecordsLoadFailed': '流水加载失败：{error}',
     'noGrowthRecords': '还没有成长值 / 积分流水',
+    'refreshGrowthRecordsFailed': '刷新流水失败：{error}',
+    'growthTypeValue': '成长值',
+    'growthTypePoints': '积分',
+    'growthActionReviewCreate': '发布点评',
+    'growthActionReviewLiked': '点评获赞',
+    'growthActionReviewImage': '带图点评',
+    'growthActionOrderComplete': '完成订单',
+    'growthRewardReviewCreate': '发点评奖励',
+    'growthRewardReviewLiked': '点评获赞奖励',
+    'growthRewardReviewImage': '带图点评奖励',
+    'growthRewardOrderComplete': '完成订单奖励',
+    'balanceAfterLabel': '余额 {value}',
+    'privacyHero': '你的数据，由你说了算',
+    'exportDailyLimit': '每天最多 {count} 次',
+    'exportFileRetention': '文件保留 {hours} 小时',
+    'canCancelBeforeDeadline': '到期前可以撤销',
+    'creatingExport': '创建中...',
+    'recordingAcceptance': '记录中...',
+    'deactivatingDevice': '停用中...',
+    'exportTaskTitle': '任务 #{id}',
+    'downloadZip': '下载 ZIP',
+    'downloadingZip': '下载中...',
+    'exportStatusPending': '待处理',
+    'exportStatusProcessing': '处理中',
+    'exportStatusReady': '可下载',
+    'exportStatusExpired': '已过期',
+    'exportStatusFailed': '失败',
+    'exportStatusCanceled': '已取消',
+    'deleteStatusPendingConfirm': '待确认',
+    'deleteStatusCoolingOff': '冷静期中',
+    'deleteStatusProcessing': '处理中',
+    'deleteStatusCompleted': '已完成',
+    'deleteStatusCanceled': '已取消',
+    'deleteStatusRejected': '已驳回',
+    'cancellingDelete': '撤销中...',
+    'cookieMarketingNotice': 'Cookie/营销告知',
+    'lastActiveAt': '最近活跃 {time}',
     'profileSaved': '资料已保存',
     'saveProfileFailed': '保存资料失败：{error}',
     'fillTargetFirst': '请先填写{target}',
@@ -757,8 +801,7 @@ class AppLocalizations {
     'followingTopicsLoginRequired': '登入後查看追蹤的話題，不會額外產生獨立動態流。',
     'goLogin': '去登入',
     'hotScore': '熱度 {score}',
-    'topicSevenDayStats':
-        '7 天：{posts} 帖 · {likes} 讚 · {comments} 評論',
+    'topicSevenDayStats': '7 天：{posts} 帖 · {likes} 讚 · {comments} 評論',
     'topicFollowMeta': '{followers} 人追蹤 · {posts} 篇公開貼文',
     'topicFollowerCount': '{count} 人追蹤',
     'followStatusUpdateFailed': '追蹤狀態更新失敗：{error}',
@@ -1126,8 +1169,53 @@ class AppLocalizations {
     'expertReasonHint': '說明你在本地區的內容貢獻、探店經驗或持續輸出計畫',
     'expertPendingHint': '申請審核中，請耐心等待結果。',
     'expertApprovedHint': '你已通過在地達人認證，公開內容會展示達人標識。',
+    'expertStatusNotApplied': '未申請',
+    'expertStatusPendingReview': '待審核',
+    'expertStatusApproved': '已通過',
+    'expertStatusRejected': '已駁回',
+    'expertReasonRequired': '請先填寫申請理由',
+    'expertReasonTooLong': '申請理由不能超過 500 字',
+    'localExpertBadge': '在地達人',
+    'applicationReason': '申請理由',
     'growthRecordsLoadFailed': '流水載入失敗：{error}',
     'noGrowthRecords': '還沒有成長值 / 積分流水',
+    'refreshGrowthRecordsFailed': '重新整理流水失敗：{error}',
+    'growthTypeValue': '成長值',
+    'growthTypePoints': '積分',
+    'growthActionReviewCreate': '發布評論',
+    'growthActionReviewLiked': '評論獲讚',
+    'growthActionReviewImage': '帶圖評論',
+    'growthActionOrderComplete': '完成訂單',
+    'growthRewardReviewCreate': '發評論獎勵',
+    'growthRewardReviewLiked': '評論獲讚獎勵',
+    'growthRewardReviewImage': '帶圖評論獎勵',
+    'growthRewardOrderComplete': '完成訂單獎勵',
+    'balanceAfterLabel': '餘額 {value}',
+    'privacyHero': '你的資料，由你說了算',
+    'exportDailyLimit': '每天最多 {count} 次',
+    'exportFileRetention': '檔案保留 {hours} 小時',
+    'canCancelBeforeDeadline': '到期前可以撤銷',
+    'creatingExport': '建立中...',
+    'recordingAcceptance': '記錄中...',
+    'deactivatingDevice': '停用中...',
+    'exportTaskTitle': '任務 #{id}',
+    'downloadZip': '下載 ZIP',
+    'downloadingZip': '下載中...',
+    'exportStatusPending': '待處理',
+    'exportStatusProcessing': '處理中',
+    'exportStatusReady': '可下載',
+    'exportStatusExpired': '已過期',
+    'exportStatusFailed': '失敗',
+    'exportStatusCanceled': '已取消',
+    'deleteStatusPendingConfirm': '待確認',
+    'deleteStatusCoolingOff': '冷靜期中',
+    'deleteStatusProcessing': '處理中',
+    'deleteStatusCompleted': '已完成',
+    'deleteStatusCanceled': '已取消',
+    'deleteStatusRejected': '已駁回',
+    'cancellingDelete': '撤銷中...',
+    'cookieMarketingNotice': 'Cookie/行銷告知',
+    'lastActiveAt': '最近活躍 {time}',
     'profileSaved': '資料已儲存',
     'saveProfileFailed': '儲存資料失敗：{error}',
     'fillTargetFirst': '請先填寫{target}',
@@ -1351,10 +1439,10 @@ class AppLocalizations {
     'accountSettings': 'Account settings',
     'accountSettingsSubtitle': 'Profile, linked accounts, password',
     'localExpertCertification': 'Local expert certification',
-    'localExpertCertificationSubtitle': 'Submit or resubmit a local expert application',
+    'localExpertCertificationSubtitle':
+        'Submit or resubmit a local expert application',
     'growthRecords': 'Growth history',
-    'growthRecordsSubtitle':
-        'Lv.{level} · growth {growth} · points {points}',
+    'growthRecordsSubtitle': 'Lv.{level} · growth {growth} · points {points}',
     'myMessages': 'Messages',
     'blockedUsers': 'Blocked users',
     'myCircles': 'My circles',
@@ -1414,8 +1502,7 @@ class AppLocalizations {
     'refreshConversationsFailed': 'Could not refresh conversations: {error}',
     'loadMoreConversationsFailed': 'Could not load more conversations: {error}',
     'conversationsLoadFailed': 'Could not load conversations: {error}',
-    'noDirectMessages':
-        'No messages yet. Say hello from a public profile.',
+    'noDirectMessages': 'No messages yet. Say hello from a public profile.',
     'messageMarkReadFailed': 'Could not sync read status: {error}',
     'loadEarlierMessagesFailed': 'Could not load earlier messages: {error}',
     'sendFailed': 'Could not send: {error}',
@@ -1646,7 +1733,8 @@ class AppLocalizations {
     'loggingIn': 'Signing in...',
     'login': 'Sign in',
     'registerAccount': 'Create account',
-    'passwordResetPleaseLogin': 'Password reset. Sign in with the new password.',
+    'passwordResetPleaseLogin':
+        'Password reset. Sign in with the new password.',
     'forgotPassword': 'Forgot password',
     'banAppeal': 'Ban appeal',
     'registerTitle': 'Create account',
@@ -1691,7 +1779,8 @@ class AppLocalizations {
     'appealReasonTooShort':
         'Write at least 10 characters explaining the mistaken ban',
     'appealSubmitted': 'Appeal #{id} submitted. Ops will review soon',
-    'queryNeedsAccountAndCode': 'Progress checks also need account and a fresh code',
+    'queryNeedsAccountAndCode':
+        'Progress checks also need account and a fresh code',
     'appealProgressRefreshed': 'Refreshed progress for appeal #{id}',
     'appealStatusTitle': 'Appeal #{id} · {status}',
     'appealApprovedHint':
@@ -1730,7 +1819,8 @@ class AppLocalizations {
     'createExportFailed': 'Could not create export task: {error}',
     'deleteRequestCanceled': 'Delete request canceled. Account stays active',
     'cancelDeleteFailed': 'Could not cancel delete request: {error}',
-    'fillAccountAndDeleteReason': 'Bound account and delete reason are required',
+    'fillAccountAndDeleteReason':
+        'Bound account and delete reason are required',
     'codeNotFilled': 'Verification code is missing',
     'passwordNotFilled': 'Login password is missing',
     'deleteEnteredCoolingOff':
@@ -1777,8 +1867,53 @@ class AppLocalizations {
     'expertPendingHint': 'Application is under review. Please wait.',
     'expertApprovedHint':
         'You are a local expert. Public content can show the expert badge.',
+    'expertStatusNotApplied': 'Not applied',
+    'expertStatusPendingReview': 'Pending review',
+    'expertStatusApproved': 'Approved',
+    'expertStatusRejected': 'Rejected',
+    'expertReasonRequired': 'Please enter an application reason',
+    'expertReasonTooLong': 'Application reason cannot exceed 500 characters',
+    'localExpertBadge': 'Local expert',
+    'applicationReason': 'Application reason',
     'growthRecordsLoadFailed': 'Could not load growth history: {error}',
     'noGrowthRecords': 'No growth or points history yet',
+    'refreshGrowthRecordsFailed': 'Could not refresh growth history: {error}',
+    'growthTypeValue': 'Growth value',
+    'growthTypePoints': 'Points',
+    'growthActionReviewCreate': 'Review published',
+    'growthActionReviewLiked': 'Review liked',
+    'growthActionReviewImage': 'Photo review',
+    'growthActionOrderComplete': 'Order completed',
+    'growthRewardReviewCreate': 'Review publishing reward',
+    'growthRewardReviewLiked': 'Review like reward',
+    'growthRewardReviewImage': 'Photo review reward',
+    'growthRewardOrderComplete': 'Order completion reward',
+    'balanceAfterLabel': 'Balance {value}',
+    'privacyHero': 'Your data, your call',
+    'exportDailyLimit': 'Up to {count} times per day',
+    'exportFileRetention': 'Files kept for {hours} hours',
+    'canCancelBeforeDeadline': 'You can cancel before the deadline',
+    'creatingExport': 'Creating...',
+    'recordingAcceptance': 'Recording...',
+    'deactivatingDevice': 'Deactivating...',
+    'exportTaskTitle': 'Task #{id}',
+    'downloadZip': 'Download ZIP',
+    'downloadingZip': 'Downloading...',
+    'exportStatusPending': 'Pending',
+    'exportStatusProcessing': 'Processing',
+    'exportStatusReady': 'Ready to download',
+    'exportStatusExpired': 'Expired',
+    'exportStatusFailed': 'Failed',
+    'exportStatusCanceled': 'Canceled',
+    'deleteStatusPendingConfirm': 'Pending confirmation',
+    'deleteStatusCoolingOff': 'Cooling-off period',
+    'deleteStatusProcessing': 'Processing',
+    'deleteStatusCompleted': 'Completed',
+    'deleteStatusCanceled': 'Canceled',
+    'deleteStatusRejected': 'Rejected',
+    'cancellingDelete': 'Cancelling...',
+    'cookieMarketingNotice': 'Cookie / marketing notice',
+    'lastActiveAt': 'Last active {time}',
     'profileSaved': 'Profile saved',
     'saveProfileFailed': 'Could not save profile: {error}',
     'fillTargetFirst': 'Enter {target} first',
@@ -2101,7 +2236,8 @@ class AppLocalizations {
   String get followingTopicsTab => _text('followingTopicsTab');
   String loadMoreTopicsFailed(Object error) =>
       _withError('loadMoreTopicsFailed', error);
-  String topicsLoadFailed(Object error) => _withError('topicsLoadFailed', error);
+  String topicsLoadFailed(Object error) =>
+      _withError('topicsLoadFailed', error);
   String get followingTopicsLoginRequired =>
       _text('followingTopicsLoginRequired');
   String get goLogin => _text('goLogin');
@@ -2201,7 +2337,8 @@ class AppLocalizations {
   String get couponRefunded => _text('couponRefunded');
   String loadMoreOrdersFailed(Object error) =>
       _withError('loadMoreOrdersFailed', error);
-  String ordersLoadFailed(Object error) => _withError('ordersLoadFailed', error);
+  String ordersLoadFailed(Object error) =>
+      _withError('ordersLoadFailed', error);
   String get noOrdersForFilter => _text('noOrdersForFilter');
   String loadMoreCouponsFailed(Object error) =>
       _withError('loadMoreCouponsFailed', error);
@@ -2219,16 +2356,14 @@ class AppLocalizations {
   String createOrderFailed(Object error) =>
       _withError('createOrderFailed', error);
   String orderCreatedOpenDetailFailed(String orderNo, Object error) => _text(
-        'orderCreatedOpenDetailFailed',
-      )
-      .replaceFirst('{orderNo}', orderNo)
-      .replaceFirst('{error}', '$error');
+    'orderCreatedOpenDetailFailed',
+  ).replaceFirst('{orderNo}', orderNo).replaceFirst('{error}', '$error');
   String get dealDetail => _text('dealDetail');
   String dealDetailLoadFailed(Object error) =>
       _withError('dealDetailLoadFailed', error);
   String soldAndStock({required int sold, required int stock}) => _text(
-        'soldAndStock',
-      ).replaceFirst('{sold}', '$sold').replaceFirst('{stock}', '$stock');
+    'soldAndStock',
+  ).replaceFirst('{sold}', '$sold').replaceFirst('{stock}', '$stock');
   String validUntil(String range) =>
       _text('validUntil').replaceFirst('{range}', range);
   String get noPackageItems => _text('noPackageItems');
@@ -2242,7 +2377,8 @@ class AppLocalizations {
   String get submitApplication => _text('submitApplication');
   String get cancelAction => _text('cancelAction');
   String get orderLoadFailedTapRetry => _text('orderLoadFailedTapRetry');
-  String orderShopMeta({required String shop, required String orderNo}) => _text(
+  String orderShopMeta({required String shop, required String orderNo}) =>
+      _text(
         'orderShopMeta',
       ).replaceFirst('{shop}', shop).replaceFirst('{orderNo}', orderNo);
   String get startPayment => _text('startPayment');
@@ -2257,8 +2393,8 @@ class AppLocalizations {
       _text('verifiedAt').replaceFirst('{time}', time);
   String get showCodeToMerchant => _text('showCodeToMerchant');
   String priceSoldMeta({required String price, required int count}) => _text(
-        'priceSoldMeta',
-      ).replaceFirst('{price}', price).replaceFirst('{count}', '$count');
+    'priceSoldMeta',
+  ).replaceFirst('{price}', price).replaceFirst('{count}', '$count');
 
   String get usageRules => _text('usageRules');
   String get packageContents => _text('packageContents');
@@ -2283,9 +2419,9 @@ class AppLocalizations {
       _text('validUntilDate').replaceFirst('{date}', date);
   String get noExpiry => _text('noExpiry');
   String dealValidityRange({required String start, required String end}) =>
-      _text('dealValidityRange')
-          .replaceFirst('{start}', start)
-          .replaceFirst('{end}', end);
+      _text(
+        'dealValidityRange',
+      ).replaceFirst('{start}', start).replaceFirst('{end}', end);
   String get noExtraRules => _text('noExtraRules');
   String get defaultVerifyHint => _text('defaultVerifyHint');
 
@@ -2317,9 +2453,9 @@ class AppLocalizations {
   String get onlineReservation => _text('onlineReservation');
   String get selectSlotFirst => _text('selectSlotFirst');
   String reservationCreated({required String no, required String status}) =>
-      _text('reservationCreated')
-          .replaceFirst('{no}', no)
-          .replaceFirst('{status}', status);
+      _text(
+        'reservationCreated',
+      ).replaceFirst('{no}', no).replaceFirst('{status}', status);
   String reservationFailed(Object error) =>
       _withError('reservationFailed', error);
   String dateLabel(String date) =>
@@ -2351,9 +2487,9 @@ class AppLocalizations {
   String get reservationRescheduled => _text('reservationRescheduled');
   String get rescheduleReason => _text('rescheduleReason');
   String reservationTimePeople({required String time, required int people}) =>
-      _text('reservationTimePeople')
-          .replaceFirst('{time}', time)
-          .replaceFirst('{people}', '$people');
+      _text(
+        'reservationTimePeople',
+      ).replaceFirst('{time}', time).replaceFirst('{people}', '$people');
   String rescheduleSlotMeta({
     required String start,
     required String mode,
@@ -2425,13 +2561,12 @@ class AppLocalizations {
   String get scoreService => _text('scoreService');
 
   String replyToPreview({required String name, required String content}) =>
-      _text('replyToPreview')
-          .replaceFirst('{name}', name)
-          .replaceFirst('{content}', content);
-  String likeCommentStats({required int likes, required int comments}) =>
-      _text('likeCommentStats')
-          .replaceFirst('{likes}', '$likes')
-          .replaceFirst('{comments}', '$comments');
+      _text(
+        'replyToPreview',
+      ).replaceFirst('{name}', name).replaceFirst('{content}', content);
+  String likeCommentStats({required int likes, required int comments}) => _text(
+    'likeCommentStats',
+  ).replaceFirst('{likes}', '$likes').replaceFirst('{comments}', '$comments');
   String get loadMoreComments => _text('loadMoreComments');
 
   String get maxNineImages => _text('maxNineImages');
@@ -2527,14 +2662,14 @@ class AppLocalizations {
   String get queryNeedsAccountAndCode => _text('queryNeedsAccountAndCode');
   String appealProgressRefreshed(int id) =>
       _text('appealProgressRefreshed').replaceFirst('{id}', '$id');
-  String appealStatusTitle({required int id, required String status}) =>
-      _text('appealStatusTitle')
-          .replaceFirst('{id}', '$id')
-          .replaceFirst('{status}', status);
+  String appealStatusTitle({required int id, required String status}) => _text(
+    'appealStatusTitle',
+  ).replaceFirst('{id}', '$id').replaceFirst('{status}', status);
   String get appealApprovedHint => _text('appealApprovedHint');
 
   String get privacySubtitle => _text('privacySubtitle');
-  String privacyLoadFailed(Object error) => _withError('privacyLoadFailed', error);
+  String privacyLoadFailed(Object error) =>
+      _withError('privacyLoadFailed', error);
   String get exportModuleAccount => _text('exportModuleAccount');
   String get exportModuleReviews => _text('exportModuleReviews');
   String get exportModuleOrders => _text('exportModuleOrders');
@@ -2627,12 +2762,253 @@ class AppLocalizations {
   String get expertReasonHint => _text('expertReasonHint');
   String get expertPendingHint => _text('expertPendingHint');
   String get expertApprovedHint => _text('expertApprovedHint');
+  String get expertStatusNotApplied => _text('expertStatusNotApplied');
+  String get expertStatusPendingReview => _text('expertStatusPendingReview');
+  String get expertStatusApproved => _text('expertStatusApproved');
+  String get expertStatusRejected => _text('expertStatusRejected');
+  String get expertReasonRequired => _text('expertReasonRequired');
+  String get expertReasonTooLong => _text('expertReasonTooLong');
+  String get localExpertBadge => _text('localExpertBadge');
+  String get applicationReason => _text('applicationReason');
   String growthRecordsLoadFailed(Object error) =>
       _withError('growthRecordsLoadFailed', error);
   String get noGrowthRecords => _text('noGrowthRecords');
+  String refreshGrowthRecordsFailed(Object error) =>
+      _withError('refreshGrowthRecordsFailed', error);
+  String get growthTypeValue => _text('growthTypeValue');
+  String get growthTypePoints => _text('growthTypePoints');
+  String get growthActionReviewCreate => _text('growthActionReviewCreate');
+  String get growthActionReviewLiked => _text('growthActionReviewLiked');
+  String get growthActionReviewImage => _text('growthActionReviewImage');
+  String get growthActionOrderComplete => _text('growthActionOrderComplete');
+  String get growthRewardReviewCreate => _text('growthRewardReviewCreate');
+  String get growthRewardReviewLiked => _text('growthRewardReviewLiked');
+  String get growthRewardReviewImage => _text('growthRewardReviewImage');
+  String get growthRewardOrderComplete => _text('growthRewardOrderComplete');
+  String balanceAfterLabel(Object value) =>
+      _text('balanceAfterLabel').replaceFirst('{value}', '$value');
+  String get privacyHero => _text('privacyHero');
+  String exportDailyLimit(int count) =>
+      _text('exportDailyLimit').replaceFirst('{count}', '$count');
+  String exportFileRetention(int hours) =>
+      _text('exportFileRetention').replaceFirst('{hours}', '$hours');
+  String get canCancelBeforeDeadline => _text('canCancelBeforeDeadline');
+  String get creatingExport => _text('creatingExport');
+  String get recordingAcceptance => _text('recordingAcceptance');
+  String get deactivatingDevice => _text('deactivatingDevice');
+  String exportTaskTitle(Object id) =>
+      _text('exportTaskTitle').replaceFirst('{id}', '$id');
+  String get downloadZip => _text('downloadZip');
+  String get downloadingZip => _text('downloadingZip');
+  String get exportStatusPending => _text('exportStatusPending');
+  String get exportStatusProcessing => _text('exportStatusProcessing');
+  String get exportStatusReady => _text('exportStatusReady');
+  String get exportStatusExpired => _text('exportStatusExpired');
+  String get exportStatusFailed => _text('exportStatusFailed');
+  String get exportStatusCanceled => _text('exportStatusCanceled');
+  String get deleteStatusPendingConfirm => _text('deleteStatusPendingConfirm');
+  String get deleteStatusCoolingOff => _text('deleteStatusCoolingOff');
+  String get deleteStatusProcessing => _text('deleteStatusProcessing');
+  String get deleteStatusCompleted => _text('deleteStatusCompleted');
+  String get deleteStatusCanceled => _text('deleteStatusCanceled');
+  String get deleteStatusRejected => _text('deleteStatusRejected');
+  String get cancellingDelete => _text('cancellingDelete');
+  String get cookieMarketingNotice => _text('cookieMarketingNotice');
+  String lastActiveAt(String time) =>
+      _text('lastActiveAt').replaceFirst('{time}', time);
+  String expertCertificationStatusLabel(int status, {String? fallback}) {
+    return switch (status) {
+      0 => expertStatusNotApplied,
+      1 => expertStatusPendingReview,
+      2 => expertStatusApproved,
+      3 => expertStatusRejected,
+      _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+    };
+  }
+
+  String growthRecordTypeLabel(int type, {String? fallback}) {
+    return switch (type) {
+      1 => growthTypeValue,
+      2 => growthTypePoints,
+      _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+    };
+  }
+
+  String growthRecordActionLabel(String action, {String? fallback}) {
+    final localizedFallback = _growthRecordActionLabelFromFallback(fallback);
+    if (localizedFallback != null) return localizedFallback;
+    return switch (action) {
+      'review_create' => growthActionReviewCreate,
+      'review_liked' => growthActionReviewLiked,
+      'review_image' => growthActionReviewImage,
+      'order_complete' => growthActionOrderComplete,
+      _ => fallback != null && fallback.isNotEmpty ? fallback : action,
+    };
+  }
+
+  String growthRecordRemarkLabel(String action, {String? fallback}) {
+    final localizedFallback = _growthRecordRemarkLabelFromFallback(fallback);
+    if (localizedFallback != null) return localizedFallback;
+    return switch (action) {
+      'review_create' => growthRewardReviewCreate,
+      'review_liked' => growthRewardReviewLiked,
+      'review_image' => growthRewardReviewImage,
+      'order_complete' => growthRewardOrderComplete,
+      _ => fallback != null && fallback.isNotEmpty ? fallback : action,
+    };
+  }
+
+  String? _growthRecordActionLabelFromFallback(String? fallback) {
+    return switch (fallback) {
+      '发布点评' || '發布評論' || 'Review published' => growthActionReviewCreate,
+      '点评获赞' || '評論獲讚' || 'Review liked' => growthActionReviewLiked,
+      '带图点评' || '帶圖評論' || 'Photo review' => growthActionReviewImage,
+      '完成订单' || '完成訂單' || 'Order completed' => growthActionOrderComplete,
+      final value when value != null && value.isNotEmpty => value,
+      _ => null,
+    };
+  }
+
+  String? _growthRecordRemarkLabelFromFallback(String? fallback) {
+    return switch (fallback) {
+      '发点评奖励' ||
+      '發評論獎勵' ||
+      'Review publishing reward' => growthRewardReviewCreate,
+      '点评获赞奖励' || '評論獲讚獎勵' || 'Review like reward' => growthRewardReviewLiked,
+      '带图点评奖励' || '帶圖評論獎勵' || 'Photo review reward' => growthRewardReviewImage,
+      '完成订单奖励' ||
+      '完成訂單獎勵' ||
+      'Order completion reward' => growthRewardOrderComplete,
+      final value when value != null && value.isNotEmpty => value,
+      _ => null,
+    };
+  }
+
+  String exportModuleLabel(String module) {
+    return switch (module) {
+      'account' => exportModuleAccount,
+      'reviews' => exportModuleReviews,
+      'orders' => exportModuleOrders,
+      'posts' => exportModulePosts,
+      'reservations' => exportModuleReservations,
+      'favorites' => exportModuleFavorites,
+      'follows' => exportModuleFollows,
+      'messages' => exportModuleMessages,
+      'circles' => exportModuleCircles,
+      'topics' => exportModuleTopics,
+      _ => module,
+    };
+  }
+
+  String privacyExportTaskStatusLabel(int status, {String? fallback}) {
+    return switch (status) {
+      0 => exportStatusPending,
+      1 => exportStatusProcessing,
+      2 => exportStatusReady,
+      3 => exportStatusExpired,
+      4 => exportStatusFailed,
+      5 => exportStatusCanceled,
+      _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+    };
+  }
+
+  String privacyDeleteTaskStatusLabel(int status, {String? fallback}) {
+    return switch (status) {
+      0 => deleteStatusPendingConfirm,
+      1 => deleteStatusCoolingOff,
+      2 => deleteStatusProcessing,
+      3 => deleteStatusCompleted,
+      4 => deleteStatusCanceled,
+      5 => deleteStatusRejected,
+      _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+    };
+  }
+
+  String auditStatusLabel({int? status, String? fallback}) {
+    if (status != null) {
+      return switch (status) {
+        0 => expertStatusPendingReview,
+        1 => expertStatusApproved,
+        2 => expertStatusRejected,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+      };
+    }
+    return switch (fallback) {
+      '待审核' || '待審核' || 'Pending review' => expertStatusPendingReview,
+      '审核通过' || '審核通過' || '已通过' || '已通過' || 'Approved' => expertStatusApproved,
+      '审核驳回' || '審核駁回' || '已驳回' || '已駁回' || 'Rejected' => expertStatusRejected,
+      final value when value != null && value.isNotEmpty => value,
+      _ => unknownStatus,
+    };
+  }
+
+  String payStatusLabel({int? status, String? fallback}) {
+    if (status != null) {
+      return switch (status) {
+        0 => payPending,
+        1 => payPaid,
+        2 => payRefunded,
+        3 => payPartialRefund,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+      };
+    }
+    return switch (fallback) {
+      '待支付' || '待付款' || 'Pending payment' => payPending,
+      '已支付' || 'Paid' => payPaid,
+      '已退款' || 'Refunded' => payRefunded,
+      '部分退款' || 'Partially refunded' => payPartialRefund,
+      final value when value != null && value.isNotEmpty => value,
+      _ => unknownStatus,
+    };
+  }
+
+  String couponStatusLabel({int? status, String? fallback}) {
+    if (status != null) {
+      return switch (status) {
+        1 => couponPending,
+        2 => couponUsed,
+        3 => couponExpired,
+        4 => couponRefunded,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+      };
+    }
+    return switch (fallback) {
+      '待使用' || 'Pending use' => couponPending,
+      '已使用' || 'Used' => couponUsed,
+      '已过期' || '已過期' || 'Expired' => couponExpired,
+      '已退款' || 'Refunded' => couponRefunded,
+      final value when value != null && value.isNotEmpty => value,
+      _ => unknownStatus,
+    };
+  }
+
+  String reservationStatusLabel({int? status, String? fallback}) {
+    if (status != null) {
+      return switch (status) {
+        0 => reservationPending,
+        1 => reservationConfirmed,
+        2 => reservationArrived,
+        3 => reservationUserCanceled,
+        4 => reservationMerchantRejected,
+        5 => reservationNoShow,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+      };
+    }
+    return switch (fallback) {
+      '待确认' || '待確認' || 'Pending' => reservationPending,
+      '已确认' || '已確認' || 'Confirmed' => reservationConfirmed,
+      '已到店' || 'Arrived' => reservationArrived,
+      '用户取消' || '使用者取消' || 'Canceled by user' => reservationUserCanceled,
+      '商户拒绝' || '商家拒絕' || 'Rejected by merchant' => reservationMerchantRejected,
+      '爽约' || 'No-show' => reservationNoShow,
+      final value when value != null && value.isNotEmpty => value,
+      _ => unknownStatus,
+    };
+  }
 
   String get profileSaved => _text('profileSaved');
-  String saveProfileFailed(Object error) => _withError('saveProfileFailed', error);
+  String saveProfileFailed(Object error) =>
+      _withError('saveProfileFailed', error);
   String fillTargetFirst(String target) =>
       _text('fillTargetFirst').replaceFirst('{target}', target);
   String codeSentWithLocal(String code) =>
@@ -2675,10 +3051,9 @@ class AppLocalizations {
   String get userAgreement => _text('userAgreement');
   String get unknownAgreement => _text('unknownAgreement');
   String get unknownDevice => _text('unknownDevice');
-  String deleteTaskTitle({required int id, required String status}) =>
-      _text('deleteTaskTitle')
-          .replaceFirst('{id}', '$id')
-          .replaceFirst('{status}', status);
+  String deleteTaskTitle({required int id, required String status}) => _text(
+    'deleteTaskTitle',
+  ).replaceFirst('{id}', '$id').replaceFirst('{status}', status);
   String get cancelDeleteRequest => _text('cancelDeleteRequest');
   String get submitDeleteRequest => _text('submitDeleteRequest');
   String get sendDeleteCode => _text('sendDeleteCode');
@@ -2773,13 +3148,13 @@ class AppLocalizations {
   String get reviewsMetric => _text('reviewsMetric');
   String get noFollowers => _text('noFollowers');
   String get noFollowing => _text('noFollowing');
-  String levelFollowersMeta({required int level, required int count}) =>
-      _text('levelFollowersMeta')
-          .replaceFirst('{level}', '$level')
-          .replaceFirst('{count}', '$count');
+  String levelFollowersMeta({required int level, required int count}) => _text(
+    'levelFollowersMeta',
+  ).replaceFirst('{level}', '$level').replaceFirst('{count}', '$count');
   String shopHash(Object id) => _text('shopHash').replaceFirst('{id}', '$id');
   String postHash(Object id) => _text('postHash').replaceFirst('{id}', '$id');
-  String recordHash(Object id) => _text('recordHash').replaceFirst('{id}', '$id');
+  String recordHash(Object id) =>
+      _text('recordHash').replaceFirst('{id}', '$id');
   String get shopLabel => _text('shopLabel');
 
   String get unfavoritePost => _text('unfavoritePost');

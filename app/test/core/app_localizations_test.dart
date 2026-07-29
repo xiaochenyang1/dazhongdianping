@@ -44,16 +44,10 @@ void main() {
       'All notifications marked as read',
     );
     expect(AppLocalizations.forTag('en').filterUnreadOnly, 'Unread only');
-    expect(
-      AppLocalizations.forTag('zh-CN').markAllReadWithCount(3),
-      '全部已读（3）',
-    );
+    expect(AppLocalizations.forTag('zh-CN').markAllReadWithCount(3), '全部已读（3）');
     expect(AppLocalizations.forTag('en').accountSettings, 'Account settings');
     expect(AppLocalizations.forTag('en').privacyCenter, 'Privacy center');
-    expect(
-      AppLocalizations.forTag('zh-CN').growthValueLabel(350),
-      '350 成长值',
-    );
+    expect(AppLocalizations.forTag('zh-CN').growthValueLabel(350), '350 成长值');
     expect(AppLocalizations.forTag('en').communityTitle, 'Community');
     expect(AppLocalizations.forTag('en').createPost, 'Post');
     expect(AppLocalizations.forTag('zh-CN').recommendedTab, '推荐');
@@ -97,6 +91,39 @@ void main() {
     expect(AppLocalizations.forTag('en').privacyCenter, 'Privacy center');
     expect(AppLocalizations.forTag('en').accountSettings, 'Account settings');
     expect(AppLocalizations.forTag('zh-CN').exportModuleAccount, '账号数据');
+    expect(AppLocalizations.forTag('zh-CN').privacyHero, '你的数据，由你说了算');
+    expect(AppLocalizations.forTag('en').downloadZip, 'Download ZIP');
+    expect(AppLocalizations.forTag('zh-CN').exportTaskTitle(7), '任务 #7');
+    expect(
+      AppLocalizations.forTag('en').exportDailyLimit(3),
+      'Up to 3 times per day',
+    );
+    expect(AppLocalizations.forTag('zh-CN').applicationReason, '申请理由');
+    expect(AppLocalizations.forTag('en').balanceAfterLabel(95), 'Balance 95');
+    expect(
+      AppLocalizations.forTag('en').auditStatusLabel(fallback: '待审核'),
+      'Pending review',
+    );
+    expect(
+      AppLocalizations.forTag('en').privacyExportTaskStatusLabel(2),
+      'Ready to download',
+    );
+    expect(
+      AppLocalizations.forTag('en').couponStatusLabel(fallback: '待使用'),
+      'Available',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).growthRecordActionLabel('review_create', fallback: '发布点评'),
+      'Review published',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'zh-CN',
+      ).growthRecordActionLabel('review_create', fallback: '完善资料'),
+      '完善资料',
+    );
   });
 
   test('delegate supports every configured app locale', () async {

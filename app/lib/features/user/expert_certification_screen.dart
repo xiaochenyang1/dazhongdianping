@@ -51,13 +51,14 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
   }
 
   Future<void> _submit(ExpertCertificationStatus current) async {
+    final strings = AppLocalizations.of(context);
     final reason = _reasonController.text.trim();
     if (reason.isEmpty) {
-      setState(() => _error = '请先填写申请理由');
+      setState(() => _error = strings.expertReasonRequired);
       return;
     }
     if (reason.length > 500) {
-      setState(() => _error = '申请理由不能超过 500 字');
+      setState(() => _error = strings.expertReasonTooLong);
       return;
     }
     if (!current.canApply || _submitting) return;
@@ -73,9 +74,13 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
         _statusFuture = Future.value(updated);
         _submitting = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).expertApplicationSubmitted)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).expertApplicationSubmitted,
+          ),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -102,8 +107,9 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context).localExpertCertification)),
+      appBar: AppBar(title: Text(strings.localExpertCertification)),
       body: FutureBuilder<ExpertCertificationStatus>(
         future: _statusFuture,
         builder: (context, snapshot) {
@@ -115,12 +121,14 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(AppLocalizations.of(context).expertStatusLoadFailed(snapshot.error!)),
+                  Text(strings.expertStatusLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('expert-cert-retry'),
                     onPressed: _reloading ? null : _reload,
-                    child: Text(_reloading ? '处理中...' : '重试'),
+                    child: Text(
+                      _reloading ? strings.processing : strings.retry,
+                    ),
                   ),
                 ],
               ),
@@ -138,9 +146,9 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        status.badgeLabel.isNotEmpty
-                            ? status.badgeLabel
-                            : '本地达人',
+                        status.badgeCode == 'local_expert' || status.isApproved
+                            ? strings.localExpertBadge
+                            : status.badgeLabel,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
@@ -148,7 +156,10 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        status.statusText,
+                        strings.expertCertificationStatusLabel(
+                          status.status,
+                          fallback: status.statusText,
+                        ),
                         style: TextStyle(
                           color: _statusColor(status.status),
                           fontWeight: FontWeight.w700,
@@ -156,24 +167,26 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                       ),
                       if (status.submittedAt.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Text(AppLocalizations.of(context).submittedAtLabel(status.submittedAt)),
+                        Text(strings.submittedAtLabel(status.submittedAt)),
                       ],
                       if (status.reviewedAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(AppLocalizations.of(context).reviewedAtLabel(status.reviewedAt)),
+                        Text(strings.reviewedAtLabel(status.reviewedAt)),
                       ],
                       if (status.effectiveStartAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(AppLocalizations.of(context).effectiveStartLabel(status.effectiveStartAt)),
+                        Text(
+                          strings.effectiveStartLabel(status.effectiveStartAt),
+                        ),
                       ],
                       if (status.effectiveEndAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(AppLocalizations.of(context).effectiveEndLabel(status.effectiveEndAt)),
+                        Text(strings.effectiveEndLabel(status.effectiveEndAt)),
                       ],
                       if (status.rejectReason.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Text(
-                          '驳回原因：${status.rejectReason}',
+                          strings.rejectReasonLabel(status.rejectReason),
                           style: const TextStyle(color: Color(0xFFB91C1C)),
                         ),
                       ],
@@ -182,9 +195,12 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                '申请理由',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              Text(
+                strings.applicationReason,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -194,7 +210,7 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                 maxLength: 500,
                 enabled: status.canApply && !_submitting,
                 decoration: InputDecoration(
-                  hintText: AppLocalizations.of(context).expertReasonHint,
+                  hintText: strings.expertReasonHint,
                   border: const OutlineInputBorder(),
                 ),
               ),
@@ -206,12 +222,16 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
               if (status.canApply)
                 FilledButton(
                   onPressed: _submitting ? null : () => _submit(status),
-                  child: Text(_submitting ? '提交中...' : '提交申请'),
+                  child: Text(
+                    _submitting
+                        ? strings.submitting
+                        : strings.submitApplication,
+                  ),
                 )
               else if (status.isPending)
-                Text(AppLocalizations.of(context).expertPendingHint)
+                Text(strings.expertPendingHint)
               else if (status.isApproved)
-                Text(AppLocalizations.of(context).expertApprovedHint),
+                Text(strings.expertApprovedHint),
             ],
           );
         },

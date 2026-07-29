@@ -148,6 +148,7 @@ class ExpertCertificationStatus {
     required this.id,
     required this.status,
     required this.statusText,
+    required this.badgeCode,
     required this.reason,
     required this.rejectReason,
     required this.badgeLabel,
@@ -160,6 +161,7 @@ class ExpertCertificationStatus {
   final int id;
   final int status;
   final String statusText;
+  final String badgeCode;
   final String reason;
   final String rejectReason;
   final String badgeLabel;
@@ -174,15 +176,19 @@ class ExpertCertificationStatus {
 
   factory ExpertCertificationStatus.fromJson(Map<String, dynamic> json) {
     final badge = json['badge'];
+    String badgeCode = '';
     String badgeLabel = '';
     if (badge is Map<String, dynamic>) {
+      final code = badge['code'];
       final value = badge['label'];
+      if (code is String) badgeCode = code;
       if (value is String) badgeLabel = value;
     }
     return ExpertCertificationStatus(
       id: (json['id'] as num?)?.toInt() ?? 0,
       status: (json['status'] as num?)?.toInt() ?? 0,
-      statusText: json['statusText'] as String? ?? '未申请',
+      statusText: json['statusText'] as String? ?? '',
+      badgeCode: badgeCode,
       reason: json['reason'] as String? ?? '',
       rejectReason: json['rejectReason'] as String? ?? '',
       badgeLabel: badgeLabel,

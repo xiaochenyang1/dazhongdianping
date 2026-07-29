@@ -132,9 +132,13 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       });
     } catch (error) {
       if (mounted && revision == _dataRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreExportTasksFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreExportTasksFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && revision == _dataRevision) {
@@ -154,14 +158,18 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       );
       if (!mounted) return;
       _reload();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).agreementRecorded)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).agreementRecorded)),
+      );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).agreementRecordFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).agreementRecordFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -177,14 +185,18 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       await widget.repository.logoutDevice(device.id);
       if (!mounted) return;
       _reload();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deviceDeactivated)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).deviceDeactivated)),
+      );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deviceDeactivateFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).deviceDeactivateFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -200,15 +212,21 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       final bytes = await widget.repository.downloadExport(task.id);
       final path = await widget.saver.save(task.id, bytes);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).exportSaved(path))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).exportSaved(path)),
+          ),
+        );
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).exportDownloadFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).exportDownloadFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -232,9 +250,11 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       if (_includeTopics) 'topics',
     ];
     if (modules.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).selectExportModule)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).selectExportModule),
+        ),
+      );
       return;
     }
     setState(() => _creatingExport = true);
@@ -242,14 +262,18 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       await widget.repository.createExportTask(modules);
       if (!mounted) return;
       _reload();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).exportTaskCreated)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).exportTaskCreated)),
+      );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).createExportFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).createExportFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -265,14 +289,20 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       await widget.repository.cancelDeleteTask(task.id);
       if (!mounted) return;
       _reload();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteRequestCanceled)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).deleteRequestCanceled),
+        ),
+      );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).cancelDeleteFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).cancelDeleteFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -288,21 +318,25 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     final code = _codeController.text.trim();
     final password = _passwordController.text;
     if (account.isEmpty || reason.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).fillAccountAndDeleteReason)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).fillAccountAndDeleteReason,
+          ),
+        ),
+      );
       return;
     }
     if (_verifyType == 'code' && code.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).codeNotFilled)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).codeNotFilled)),
+      );
       return;
     }
     if (_verifyType == 'password' && password.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).passwordNotFilled)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).passwordNotFilled)),
+      );
       return;
     }
     setState(() => _submittingDelete = true);
@@ -318,14 +352,20 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       _codeController.clear();
       _passwordController.clear();
       _reload();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteEnteredCoolingOff)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).deleteEnteredCoolingOff),
+        ),
+      );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).submitDeleteFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).submitDeleteFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -338,9 +378,11 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     if (_sendingDeleteCode) return;
     final account = (_selectedAccount ?? _accountController.text).trim();
     if (account.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).fillBoundAccountFirst)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).fillBoundAccountFirst),
+        ),
+      );
       return;
     }
     setState(() {
@@ -352,14 +394,20 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       if (!mounted) return;
       setState(() {
         _codeHint = result.mockCode.isEmpty
-            ? '${result.nextRetrySeconds} 秒后可重新发送'
+            ? AppLocalizations.of(
+                context,
+              ).codeSentRetry(result.nextRetrySeconds)
             : AppLocalizations.of(context).localCodeOnly(result.mockCode);
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).sendDeleteCodeFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).sendDeleteCodeFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -383,13 +431,21 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(AppLocalizations.of(context).privacyLoadFailed(snapshot.error!)),
+                  Text(
+                    AppLocalizations.of(
+                      context,
+                    ).privacyLoadFailed(snapshot.error!),
+                  ),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('privacy-overview-retry'),
                     onPressed: _retrying ? null : _retry,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_retrying ? '处理中...' : '重试'),
+                    label: Text(
+                      _retrying
+                          ? AppLocalizations.of(context).processing
+                          : AppLocalizations.of(context).retry,
+                    ),
                   ),
                 ],
               ),
@@ -400,9 +456,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Text(
-                '你的数据，由你说了算',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+              Text(
+                AppLocalizations.of(context).privacyHero,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               Text(AppLocalizations.of(context).privacySubtitle),
@@ -413,8 +472,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                     child: _RuleCard(
                       icon: Icons.archive_outlined,
                       title: AppLocalizations.of(context).dataExport,
-                      value: '每天最多 ${overview.exportRule.dailyLimit} 次',
-                      detail: '文件保留 ${overview.exportRule.expireHours} 小时',
+                      value: AppLocalizations.of(
+                        context,
+                      ).exportDailyLimit(overview.exportRule.dailyLimit),
+                      detail: AppLocalizations.of(
+                        context,
+                      ).exportFileRetention(overview.exportRule.expireHours),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -422,8 +485,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                     child: _RuleCard(
                       icon: Icons.schedule_outlined,
                       title: AppLocalizations.of(context).accountDeletion,
-                      value: AppLocalizations.of(context).coolingOffDays(overview.deleteRule.coolingOffDays),
-                      detail: '到期前可以撤销',
+                      value: AppLocalizations.of(
+                        context,
+                      ).coolingOffDays(overview.deleteRule.coolingOffDays),
+                      detail: AppLocalizations.of(
+                        context,
+                      ).canCancelBeforeDeadline,
                     ),
                   ),
                 ],
@@ -439,21 +506,27 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 runSpacing: 8,
                 children: [
                   FilterChip(
-                    label: Text(AppLocalizations.of(context).exportModuleAccount),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleAccount,
+                    ),
                     selected: _includeAccount,
                     onSelected: (selected) {
                       setState(() => _includeAccount = selected);
                     },
                   ),
                   FilterChip(
-                    label: Text(AppLocalizations.of(context).exportModuleReviews),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleReviews,
+                    ),
                     selected: _includeReviews,
                     onSelected: (selected) {
                       setState(() => _includeReviews = selected);
                     },
                   ),
                   FilterChip(
-                    label: Text(AppLocalizations.of(context).exportModuleOrders),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleOrders,
+                    ),
                     selected: _includeOrders,
                     onSelected: (selected) {
                       setState(() => _includeOrders = selected);
@@ -467,42 +540,54 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                     },
                   ),
                   FilterChip(
-                    label: Text(AppLocalizations.of(context).exportModuleReservations),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleReservations,
+                    ),
                     selected: _includeReservations,
                     onSelected: (selected) {
                       setState(() => _includeReservations = selected);
                     },
                   ),
                   FilterChip(
-                    label: Text(AppLocalizations.of(context).exportModuleFavorites),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleFavorites,
+                    ),
                     selected: _includeFavorites,
                     onSelected: (selected) {
                       setState(() => _includeFavorites = selected);
                     },
                   ),
                   FilterChip(
-                    label: Text(AppLocalizations.of(context).exportModuleFollows),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleFollows,
+                    ),
                     selected: _includeFollows,
                     onSelected: (selected) {
                       setState(() => _includeFollows = selected);
                     },
                   ),
                   FilterChip(
-                    label: Text(AppLocalizations.of(context).exportModuleMessages),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleMessages,
+                    ),
                     selected: _includeMessages,
                     onSelected: (selected) {
                       setState(() => _includeMessages = selected);
                     },
                   ),
                   FilterChip(
-                    label: Text(AppLocalizations.of(context).exportModuleCircles),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleCircles,
+                    ),
                     selected: _includeCircles,
                     onSelected: (selected) {
                       setState(() => _includeCircles = selected);
                     },
                   ),
                   FilterChip(
-                    label: Text(AppLocalizations.of(context).exportModuleTopics),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleTopics,
+                    ),
                     selected: _includeTopics,
                     onSelected: (selected) {
                       setState(() => _includeTopics = selected);
@@ -517,7 +602,11 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 key: const Key('privacy-create-export'),
                 onPressed: _creatingExport ? null : _createExport,
                 icon: const Icon(Icons.archive_outlined),
-                label: Text(_creatingExport ? '创建中...' : AppLocalizations.of(context).createExportTask),
+                label: Text(
+                  _creatingExport
+                      ? AppLocalizations.of(context).creatingExport
+                      : AppLocalizations.of(context).createExportTask,
+                ),
               ),
               const SizedBox(height: 16),
               ...data.exportTasks.map(_buildExportTask),
@@ -534,13 +623,19 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.expand_more),
-                    label: Text(_loadingMoreExports ? '加载中...' : AppLocalizations.of(context).loadMoreExportTasks),
+                    label: Text(
+                      _loadingMoreExports
+                          ? AppLocalizations.of(context).loading
+                          : AppLocalizations.of(context).loadMoreExportTasks,
+                    ),
                   ),
                 ),
               if (data.exportTasks.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text(AppLocalizations.of(context).noExportTasks)),
+                  child: Center(
+                    child: Text(AppLocalizations.of(context).noExportTasks),
+                  ),
                 ),
               const SizedBox(height: 28),
               Text(
@@ -560,7 +655,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                         ? () => _acceptPolicy(1)
                         : null,
                     child: Text(
-                      _acceptingPolicyTypes.contains(1) ? '记录中...' : AppLocalizations.of(context).confirmPrivacyPolicy,
+                      _acceptingPolicyTypes.contains(1)
+                          ? AppLocalizations.of(context).recordingAcceptance
+                          : AppLocalizations.of(context).confirmPrivacyPolicy,
                     ),
                   ),
                   OutlinedButton(
@@ -569,7 +666,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                         ? () => _acceptPolicy(2)
                         : null,
                     child: Text(
-                      _acceptingPolicyTypes.contains(2) ? '记录中...' : AppLocalizations.of(context).confirmUserAgreement,
+                      _acceptingPolicyTypes.contains(2)
+                          ? AppLocalizations.of(context).recordingAcceptance
+                          : AppLocalizations.of(context).confirmUserAgreement,
                     ),
                   ),
                 ],
@@ -608,7 +707,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                       '${_platformName(device.platform)} · ${device.appVersion}',
                     ),
                     subtitle: Text(
-                      '${device.deviceUid}\n${_deviceStatusText(AppLocalizations.of(context), device.status)} · 最近活跃 ${device.lastActiveAt ?? '—'}',
+                      '${device.deviceUid}\n${_deviceStatusText(AppLocalizations.of(context), device.status)} · ${AppLocalizations.of(context).lastActiveAt(device.lastActiveAt ?? '—')}',
                     ),
                     isThreeLine: true,
                     trailing: device.active
@@ -619,11 +718,20 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                                 : null,
                             child: Text(
                               _loggingOutDeviceIds.contains(device.id)
-                                  ? '停用中...'
-                                  : AppLocalizations.of(context).deactivateThisDevice,
+                                  ? AppLocalizations.of(
+                                      context,
+                                    ).deactivatingDevice
+                                  : AppLocalizations.of(
+                                      context,
+                                    ).deactivateThisDevice,
                             ),
                           )
-                        : Text(_deviceStatusText(AppLocalizations.of(context), device.status)),
+                        : Text(
+                            _deviceStatusText(
+                              AppLocalizations.of(context),
+                              device.status,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -655,7 +763,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     return switch (policyType) {
       1 => AppLocalizations.of(context).privacyPolicy,
       2 => AppLocalizations.of(context).userAgreement,
-      3 => 'Cookie/营销告知',
+      3 => AppLocalizations.of(context).cookieMarketingNotice,
       _ => AppLocalizations.of(context).unknownAgreement,
     };
   }
@@ -679,6 +787,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   }
 
   Widget _buildExportTask(PrivacyExportTask task) {
+    final strings = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Card(
@@ -691,17 +800,23 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      '任务 #${task.id}',
+                      strings.exportTaskTitle(task.id),
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
-                  Text(task.statusText),
+                  Text(
+                    strings.privacyExportTaskStatusLabel(
+                      task.status,
+                      fallback: task.statusText,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(task.modules.join(' / ')),
-              Text(AppLocalizations.of(context).createdAtLabel(task.createdAt)),
-              if (task.expireAt != null) Text(AppLocalizations.of(context).expiresAtLabel('${task.expireAt}')),
+              Text(task.modules.map(strings.exportModuleLabel).join(' / ')),
+              Text(strings.createdAtLabel(task.createdAt)),
+              if (task.expireAt != null)
+                Text(strings.expiresAtLabel('${task.expireAt}')),
               if (task.failReason.isNotEmpty)
                 Text(
                   task.failReason,
@@ -716,7 +831,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                       : () => _download(task),
                   icon: const Icon(Icons.download_outlined),
                   label: Text(
-                    _downloadingTaskIds.contains(task.id) ? '下载中...' : '下载 ZIP',
+                    _downloadingTaskIds.contains(task.id)
+                        ? strings.downloadingZip
+                        : strings.downloadZip,
                   ),
                 ),
               ],
@@ -728,6 +845,11 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   }
 
   Widget _buildDeleteTask(PrivacyDeleteTask task) {
+    final strings = AppLocalizations.of(context);
+    final statusText = strings.privacyDeleteTaskStatusLabel(
+      task.status,
+      fallback: task.statusText,
+    );
     return Card(
       color: const Color(0xFFFFF1EC),
       child: Padding(
@@ -736,18 +858,22 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              AppLocalizations.of(context).deleteTaskTitle(id: task.id, status: task.statusText),
+              strings.deleteTaskTitle(id: task.id, status: statusText),
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
-            Text(AppLocalizations.of(context).reasonLabel(task.reason)),
-            Text(AppLocalizations.of(context).coolingOffDeadline(task.coolingOffExpireAt ?? '—')),
+            Text(strings.reasonLabel(task.reason)),
+            Text(strings.coolingOffDeadline(task.coolingOffExpireAt ?? '—')),
             if (task.canCancel) ...[
               const SizedBox(height: 12),
               OutlinedButton(
                 key: Key('privacy-cancel-delete-${task.id}'),
                 onPressed: _cancellingDelete ? null : () => _cancelDelete(task),
-                child: Text(_cancellingDelete ? '撤销中...' : AppLocalizations.of(context).cancelDeleteRequest),
+                child: Text(
+                  _cancellingDelete
+                      ? strings.cancellingDelete
+                      : strings.cancelDeleteRequest,
+                ),
               ),
             ],
           ],
@@ -770,8 +896,14 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
             const SizedBox(height: 12),
             SegmentedButton<String>(
               segments: [
-                ButtonSegment(value: 'code', label: Text(AppLocalizations.of(context).verifyByCode)),
-                ButtonSegment(value: 'password', label: Text(AppLocalizations.of(context).verifyByPassword)),
+                ButtonSegment(
+                  value: 'code',
+                  label: Text(AppLocalizations.of(context).verifyByCode),
+                ),
+                ButtonSegment(
+                  value: 'password',
+                  label: Text(AppLocalizations.of(context).verifyByPassword),
+                ),
               ],
               selected: {_verifyType},
               onSelectionChanged: (selection) {
@@ -815,7 +947,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                     key: const Key('privacy-delete-code'),
                     controller: _codeController,
                     decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).deleteVerificationCode,
+                      labelText: AppLocalizations.of(
+                        context,
+                      ).deleteVerificationCode,
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -823,7 +957,11 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                   OutlinedButton(
                     key: const Key('privacy-send-delete-code'),
                     onPressed: _sendingDeleteCode ? null : _sendDeleteCode,
-                    child: Text(_sendingDeleteCode ? '发送中...' : AppLocalizations.of(context).sendDeleteCode),
+                    child: Text(
+                      _sendingDeleteCode
+                          ? AppLocalizations.of(context).sendingCode
+                          : AppLocalizations.of(context).sendDeleteCode,
+                    ),
                   ),
                   if (_codeHint.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -852,7 +990,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            Text(AppLocalizations.of(context).coolingOffIntro(rule.coolingOffDays)),
+            Text(
+              AppLocalizations.of(context).coolingOffIntro(rule.coolingOffDays),
+            ),
             const SizedBox(height: 12),
             FilledButton(
               key: const Key('privacy-delete-submit'),
@@ -860,7 +1000,11 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 backgroundColor: Colors.red.shade700,
               ),
               onPressed: _submittingDelete ? null : _submitDelete,
-              child: Text(_submittingDelete ? '提交中...' : AppLocalizations.of(context).submitDeleteRequest),
+              child: Text(
+                _submittingDelete
+                    ? AppLocalizations.of(context).submitting
+                    : AppLocalizations.of(context).submitDeleteRequest,
+              ),
             ),
           ],
         ),

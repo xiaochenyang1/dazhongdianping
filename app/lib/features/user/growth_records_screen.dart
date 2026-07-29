@@ -78,7 +78,11 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
       await _load(reset: true, revision: revision);
     } catch (error) {
       if (mounted && revision == _pageRevision) {
-        setState(() => _error = '刷新流水失败：$error');
+        setState(
+          () => _error = AppLocalizations.of(
+            context,
+          ).refreshGrowthRecordsFailed(error),
+        );
       }
     } finally {
       if (mounted && revision == _pageRevision) {
@@ -97,7 +101,7 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
       if (!mounted || revision != _pageRevision) return;
       setState(() {
         _loadingMore = false;
-        _error = '加载更多失败：$error';
+        _error = AppLocalizations.of(context).loadMoreFailed(error);
       });
     }
   }
@@ -112,8 +116,9 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context).growthRecords)),
+      appBar: AppBar(title: Text(strings.growthRecords)),
       body: FutureBuilder<UserGrowthRecordPage>(
         future: _pageFuture,
         builder: (context, snapshot) {
@@ -126,12 +131,14 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(AppLocalizations.of(context).growthRecordsLoadFailed(snapshot.error!)),
+                  Text(strings.growthRecordsLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('growth-records-retry'),
                     onPressed: _reloading ? null : _reload,
-                    child: Text(_reloading ? '处理中...' : '重试'),
+                    child: Text(
+                      _reloading ? strings.processing : strings.retry,
+                    ),
                   ),
                 ],
               ),
@@ -159,7 +166,11 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Lv.${_profile!.level} · 成长值 ${_profile!.growthValue} · 积分 ${_profile!.points}',
+                            strings.growthRecordsSubtitle(
+                              level: _profile!.level,
+                              growth: _profile!.growthValue,
+                              points: _profile!.points,
+                            ),
                           ),
                         ],
                       ),
@@ -177,24 +188,34 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
                 if (_items.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 48),
-                    child: Center(child: Text(AppLocalizations.of(context).noGrowthRecords)),
+                    child: Center(child: Text(strings.noGrowthRecords)),
                   )
                 else
-                  ..._items.map(
-                    (item) => Card(
+                  ..._items.map((item) {
+                    final typeText = strings.growthRecordTypeLabel(
+                      item.type,
+                      fallback: item.typeText,
+                    );
+                    final actionText = strings.growthRecordActionLabel(
+                      item.action,
+                      fallback: item.actionText,
+                    );
+                    final remarkText = item.remark.isNotEmpty
+                        ? strings.growthRecordRemarkLabel(
+                            item.action,
+                            fallback: item.remark,
+                          )
+                        : '';
+                    return Card(
                       margin: const EdgeInsets.only(bottom: 10),
                       child: ListTile(
-                        title: Text(
-                          item.actionText.isNotEmpty
-                              ? item.actionText
-                              : item.action,
-                        ),
+                        title: Text(actionText),
                         subtitle: Text(
                           [
-                            if (item.typeText.isNotEmpty) item.typeText,
-                            if (item.remark.isNotEmpty) item.remark,
+                            if (typeText.isNotEmpty) typeText,
+                            if (remarkText.isNotEmpty) remarkText,
                             if (item.createdAt.isNotEmpty) item.createdAt,
-                            '余额 ${item.balanceAfter}',
+                            strings.balanceAfterLabel(item.balanceAfter),
                           ].where((part) => part.isNotEmpty).join(' · '),
                         ),
                         trailing: Text(
@@ -206,15 +227,17 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
                           ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  }),
                 if (_hasMore)
                   Padding(
                     padding: const EdgeInsets.only(top: 8, bottom: 24),
                     child: Center(
                       child: FilledButton.tonal(
                         onPressed: _loadingMore ? null : _loadMore,
-                        child: Text(_loadingMore ? '加载中...' : '加载更多'),
+                        child: Text(
+                          _loadingMore ? strings.loading : strings.loadMore,
+                        ),
                       ),
                     ),
                   ),
