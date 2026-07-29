@@ -759,6 +759,118 @@ export interface AdminStrings {
     itemEnable: string
     itemDisable: string
   }
+  adminAccounts: {
+    loadError: string
+    saveError: string
+    statusUpdateError: string
+    resetPasswordError: string
+    roleRequired: string
+    regionRequired: string
+    cityRequired: (region: Region) => string
+    passwordMin: string
+    resetPasswordMin: string
+    statusConfirm: (name: string, action: 'enable' | 'disable') => string
+    eyebrow: string
+    heading: string
+    description: string
+    create: string
+    metaLoading: string
+    metaSummary: (total: number) => string
+    metaOperator: (name: string) => string
+    tableHeaders: {
+      account: string
+      roles: string
+      scope: string
+      lastLogin: string
+      status: string
+      actions: string
+    }
+    roleFallback: string
+    scopeAllCities: string
+    scopeEntry: (region: Region, detail: string) => string
+    neverLoggedIn: string
+    statusText: (status: number) => string
+    edit: string
+    resetPassword: string
+    enable: string
+    disable: string
+    selfDisableTitle: string
+    empty: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    formEyebrow: string
+    formHeading: (editing: boolean) => string
+    labels: {
+      account: string
+      password: string
+      name: string
+      roles: string
+      regions: string
+      cityScopes: string
+    }
+    scopeModeText: (mode: 'all' | 'cities' | 'shops') => string
+    scopeModeOptions: {
+      all: string
+      cities: string
+      shops: string
+    }
+    noCities: string
+    noShops: string
+    saving: string
+    save: string
+    resetEyebrow: string
+    resetHeading: (name: string) => string
+    resetLabel: string
+    resetSubmit: string
+  }
+  adminRoles: {
+    loadError: string
+    saveError: string
+    statusUpdateError: string
+    deleteError: string
+    permissionRequired: string
+    statusConfirm: (name: string, action: 'enable' | 'disable') => string
+    deleteConfirm: (name: string) => string
+    eyebrow: string
+    heading: string
+    description: string
+    create: string
+    metaLoading: string
+    metaSummary: (total: number) => string
+    metaDescription: string
+    tableHeaders: {
+      role: string
+      permissions: string
+      admins: string
+      status: string
+      actions: string
+    }
+    statusText: (status: number) => string
+    edit: string
+    enable: string
+    disable: string
+    delete: string
+    superAdminDisabledTitle: string
+    empty: string
+    formEyebrow: string
+    formHeading: (editing: boolean, roleName?: string) => string
+    labels: {
+      code: string
+      name: string
+      description: string
+    }
+    permissionHeading: string
+    permissionDescription: string
+    permissionGroupLabels: {
+      audit: string
+      data: string
+      operations: string
+      system: string
+    }
+    saving: string
+    save: string
+  }
   privacyTasks: {
     eyebrow: string
     heading: string
@@ -1699,6 +1811,130 @@ const zhCnStrings: AdminStrings = {
     itemEnable: '启用',
     itemDisable: '停用',
   },
+  adminAccounts: {
+    loadError: '管理员列表加载失败',
+    saveError: '管理员保存失败',
+    statusUpdateError: '管理员状态更新失败',
+    resetPasswordError: '密码重置失败',
+    roleRequired: '至少选择一个角色',
+    regionRequired: '至少选择一个区域',
+    cityRequired: (region) => `${region} 至少选择一个城市或门店`,
+    passwordMin: '初始密码至少 8 位',
+    resetPasswordMin: '新密码至少 8 位',
+    statusConfirm: (name, action) => `确认${action === 'disable' ? '停用' : '启用'}管理员「${name}」吗？`,
+    eyebrow: '系统权限',
+    heading: '管理员账号',
+    description: '账号、角色、区域与城市范围由服务端实时读取，停用后旧会话会在下一次请求失效。',
+    create: '新建管理员',
+    metaLoading: '加载中...',
+    metaSummary: (total) => `共 ${total} 个管理员`,
+    metaOperator: (name) => `当前操作者：${name}`,
+    tableHeaders: {
+      account: '账号',
+      roles: '角色',
+      scope: '区域 / 城市',
+      lastLogin: '最近登录',
+      status: '状态',
+      actions: '操作',
+    },
+    roleFallback: '--',
+    scopeAllCities: '全部城市',
+    scopeEntry: (region, detail) => `${region}: ${detail}`,
+    neverLoggedIn: '从未登录',
+    statusText: (status) => {
+      if (status === 1) return '启用'
+      if (status === 2) return '已停用'
+      return `状态 ${status}`
+    },
+    edit: '编辑',
+    resetPassword: '重置密码',
+    enable: '启用',
+    disable: '停用',
+    selfDisableTitle: '当前账号不能停用自己',
+    empty: '暂无管理员账号',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    formEyebrow: '账号表单',
+    formHeading: (editing) => editing ? '编辑管理员' : '新建管理员',
+    labels: {
+      account: '登录账号',
+      password: '初始密码',
+      name: '显示名称',
+      roles: '角色',
+      regions: '区域范围',
+      cityScopes: '城市范围',
+    },
+    scopeModeText: (mode) => {
+      if (mode === 'all') return '全部城市'
+      if (mode === 'shops') return '指定门店'
+      return '指定城市'
+    },
+    scopeModeOptions: {
+      all: '全部城市',
+      cities: '指定城市',
+      shops: '指定门店',
+    },
+    noCities: '当前区域没有可分配城市。',
+    noShops: '当前区域没有可分配门店。',
+    saving: '保存中...',
+    save: '保存管理员',
+    resetEyebrow: '密码重置',
+    resetHeading: (name) => `重置 ${name} 的密码`,
+    resetLabel: '新密码',
+    resetSubmit: '确认重置',
+  },
+  adminRoles: {
+    loadError: '角色与权限加载失败',
+    saveError: '角色保存失败',
+    statusUpdateError: '角色状态更新失败',
+    deleteError: '角色删除失败',
+    permissionRequired: '至少选择一个权限',
+    statusConfirm: (name, action) => `确认${action === 'disable' ? '停用' : '启用'}角色「${name}」吗？`,
+    deleteConfirm: (name) => `确认删除角色「${name}」吗？该操作不能撤销。`,
+    eyebrow: '权限注册表',
+    heading: '角色与权限',
+    description: '权限点由代码与数据库种子共同维护；角色可授权，权限码本身不允许在页面里随手造。',
+    create: '新建角色',
+    metaLoading: '加载中...',
+    metaSummary: (total) => `共 ${total} 个角色`,
+    metaDescription: '内置角色保留稳定编码，自定义角色可删除。',
+    tableHeaders: {
+      role: '角色',
+      permissions: '权限数',
+      admins: '管理员引用',
+      status: '状态',
+      actions: '操作',
+    },
+    statusText: (status) => {
+      if (status === 1) return '启用'
+      if (status === 2) return '已停用'
+      return `状态 ${status}`
+    },
+    edit: '编辑',
+    enable: '启用',
+    disable: '停用',
+    delete: '删除',
+    superAdminDisabledTitle: '超级管理员角色不可停用',
+    empty: '暂无角色',
+    formEyebrow: '角色编辑',
+    formHeading: (editing, roleName) => editing ? (roleName ? `编辑 ${roleName}` : '编辑角色') : '新建角色',
+    labels: {
+      code: '角色编码',
+      name: '角色名称',
+      description: '说明',
+    },
+    permissionHeading: '权限集合',
+    permissionDescription: '超级管理员权限集合固定，其他角色按业务域最小授权。',
+    permissionGroupLabels: {
+      audit: '审核中心',
+      data: '数据管理',
+      operations: '运营配置',
+      system: '系统管理',
+    },
+    saving: '保存中...',
+    save: '保存角色',
+  },
   privacyTasks: {
     eyebrow: 'Privacy Operations',
     heading: '隐私任务',
@@ -2619,6 +2855,130 @@ const enStrings: AdminStrings = {
     },
     itemEnable: 'Enable',
     itemDisable: 'Disable',
+  },
+  adminAccounts: {
+    loadError: 'Failed to load admin accounts.',
+    saveError: 'Failed to save the admin account.',
+    statusUpdateError: 'Failed to update the admin status.',
+    resetPasswordError: 'Failed to reset the password.',
+    roleRequired: 'Select at least one role.',
+    regionRequired: 'Select at least one region.',
+    cityRequired: (region) => `Select at least one city or shop for ${region}.`,
+    passwordMin: 'The initial password must be at least 8 characters.',
+    resetPasswordMin: 'The new password must be at least 8 characters.',
+    statusConfirm: (name, action) => `Are you sure you want to ${action === 'disable' ? 'disable' : 'enable'} admin "${name}"?`,
+    eyebrow: 'System Access',
+    heading: 'Admin accounts',
+    description: 'Accounts, roles, regional scope, and city scope are read live from the server. Once disabled, stale sessions fail on the next request.',
+    create: 'New admin',
+    metaLoading: 'Loading...',
+    metaSummary: (total) => `${total} admins`,
+    metaOperator: (name) => `Current operator: ${name}`,
+    tableHeaders: {
+      account: 'Account',
+      roles: 'Roles',
+      scope: 'Region / city',
+      lastLogin: 'Last login',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    roleFallback: '--',
+    scopeAllCities: 'All cities',
+    scopeEntry: (region, detail) => `${region}: ${detail}`,
+    neverLoggedIn: 'Never signed in',
+    statusText: (status) => {
+      if (status === 1) return 'Enabled'
+      if (status === 2) return 'Disabled'
+      return `Status ${status}`
+    },
+    edit: 'Edit',
+    resetPassword: 'Reset password',
+    enable: 'Enable',
+    disable: 'Disable',
+    selfDisableTitle: 'You cannot disable your own account',
+    empty: 'No admin accounts.',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    formEyebrow: 'Account Form',
+    formHeading: (editing) => editing ? 'Edit admin' : 'New admin',
+    labels: {
+      account: 'Sign-in account',
+      password: 'Initial password',
+      name: 'Display name',
+      roles: 'Roles',
+      regions: 'Region scope',
+      cityScopes: 'City scope',
+    },
+    scopeModeText: (mode) => {
+      if (mode === 'all') return 'All cities'
+      if (mode === 'shops') return 'Specific shops'
+      return 'Specific cities'
+    },
+    scopeModeOptions: {
+      all: 'All cities',
+      cities: 'Specific cities',
+      shops: 'Specific shops',
+    },
+    noCities: 'No assignable cities are available for this region.',
+    noShops: 'No assignable shops are available for this region.',
+    saving: 'Saving...',
+    save: 'Save admin',
+    resetEyebrow: 'Password Reset',
+    resetHeading: (name) => `Reset password for ${name}`,
+    resetLabel: 'New password',
+    resetSubmit: 'Confirm reset',
+  },
+  adminRoles: {
+    loadError: 'Failed to load roles and permissions.',
+    saveError: 'Failed to save the role.',
+    statusUpdateError: 'Failed to update the role status.',
+    deleteError: 'Failed to delete the role.',
+    permissionRequired: 'Select at least one permission.',
+    statusConfirm: (name, action) => `Are you sure you want to ${action === 'disable' ? 'disable' : 'enable'} role "${name}"?`,
+    deleteConfirm: (name) => `Delete role "${name}"? This action cannot be undone.`,
+    eyebrow: 'Permission Registry',
+    heading: 'Roles & permissions',
+    description: 'Permission entries are maintained by code and seed data. Roles can grant them, but permission codes themselves are not created from this page.',
+    create: 'New role',
+    metaLoading: 'Loading...',
+    metaSummary: (total) => `${total} roles`,
+    metaDescription: 'Built-in roles keep stable codes. Custom roles can be removed.',
+    tableHeaders: {
+      role: 'Role',
+      permissions: 'Permissions',
+      admins: 'Assigned admins',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    statusText: (status) => {
+      if (status === 1) return 'Enabled'
+      if (status === 2) return 'Disabled'
+      return `Status ${status}`
+    },
+    edit: 'Edit',
+    enable: 'Enable',
+    disable: 'Disable',
+    delete: 'Delete',
+    superAdminDisabledTitle: 'The super admin role cannot be disabled',
+    empty: 'No roles.',
+    formEyebrow: 'Role Editor',
+    formHeading: (editing, roleName) => editing ? `Edit ${roleName ?? 'role'}` : 'New role',
+    labels: {
+      code: 'Role code',
+      name: 'Role name',
+      description: 'Description',
+    },
+    permissionHeading: 'Permission set',
+    permissionDescription: 'The super admin permission set is fixed. Other roles should receive the minimum access needed for their domain.',
+    permissionGroupLabels: {
+      audit: 'Audit center',
+      data: 'Data management',
+      operations: 'Operations config',
+      system: 'System management',
+    },
+    saving: 'Saving...',
+    save: 'Save role',
   },
   privacyTasks: {
     eyebrow: 'Privacy Operations',

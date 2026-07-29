@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import {
   createAdminRole,
   listAdminPermissions,
@@ -12,6 +13,7 @@ import {
 import type { AdminPermissionItem, AdminRole, AdminRolePayload } from '@/types/admin'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 
 const roles = ref<AdminRole[]>([])
 const permissions = ref<AdminPermissionItem[]>([])
@@ -31,20 +33,32 @@ const form = reactive<AdminRolePayload>({
 const canWrite = computed(() => state.permissions.includes('system:role:write'))
 const isSuperAdmin = computed(() => editingRole.value?.code === 'super_admin')
 const permissionGroups = computed(() => {
-  const labels: Record<string, string> = {
-    audit: '审核中心',
-    data: '数据管理',
-    operations: '运营配置',
-    system: '系统管理',
-  }
+  const labels = strings.value.adminRoles.permissionGroupLabels
   const groups = new Map<string, AdminPermissionItem[]>()
   permissions.value.forEach((permission) => {
     const list = groups.get(permission.category) ?? []
     list.push(permission)
     groups.set(permission.category, list)
   })
-  return [...groups.entries()].map(([category, items]) => ({ category, label: labels[category] ?? category, items }))
+  return [...groups.entries()].map(([category, items]) => {
+    const label = category in labels
+      ? labels[category as keyof typeof labels]
+      : category
+    return { category, label, items }
+  })
 })
+
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+function roleStatusText(status: number) {
+  return strings.value.adminRoles.statusText(status)
+}
+
+function roleStatusAction(status: number) {
+  return status === 1 ? strings.value.adminRoles.disable : strings.value.adminRoles.enable
+}
 
 function resetForm() {
   form.code = ''
@@ -55,12 +69,14 @@ function resetForm() {
 }
 
 function openCreate() {
+  if (!canWrite.value) return
   editingRole.value = null
   resetForm()
   dialogOpen.value = true
 }
 
 function openEdit(role: AdminRole) {
+  if (!canWrite.value) return
   editingRole.value = role
   form.code = role.code
   form.name = role.name
@@ -84,15 +100,16 @@ async function load() {
     roles.value = roleResult
     permissions.value = permissionResult
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '角色与权限加载失败'
+    errorMessage.value = messageOf(error, strings.value.adminRoles.loadError)
   } finally {
     loading.value = false
   }
 }
 
 async function submitForm() {
+  if (!canWrite.value || saving.value) return
   if (form.permissionIds.length === 0) {
-    errorMessage.value = '至少选择一个权限'
+    errorMessage.value = strings.value.adminRoles.permissionRequired
     return
   }
   saving.value = true
@@ -112,7 +129,7 @@ async function submitForm() {
     dialogOpen.value = false
     await load()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '角色保存失败'
+    errorMessage.value = messageOf(error, strings.value.adminRoles.saveError)
   } finally {
     saving.value = false
   }
@@ -123,8 +140,8 @@ async function changeStatus(role: AdminRole) {
     return
   }
   const nextStatus = role.status === 1 ? 2 : 1
-  const action = nextStatus === 2 ? '停用' : '启用'
-  if (!window.confirm(`确认${action}角色「${role.name}」吗？`)) {
+  const action = nextStatus === 2 ? 'disable' : 'enable'
+  if (!window.confirm(strings.value.adminRoles.statusConfirm(role.name, action))) {
     return
   }
   errorMessage.value = ''
@@ -132,7 +149,7 @@ async function changeStatus(role: AdminRole) {
     await updateAdminRoleStatus(role.id, nextStatus)
     await load()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '角色状态更新失败'
+    errorMessage.value = messageOf(error, strings.value.adminRoles.statusUpdateError)
   }
 }
 
@@ -140,7 +157,7 @@ async function removeRole(role: AdminRole) {
   if (!canWrite.value || role.builtIn) {
     return
   }
-  if (!window.confirm(`确认删除角色「${role.name}」吗？该操作不能撤销。`)) {
+  if (!window.confirm(strings.value.adminRoles.deleteConfirm(role.name))) {
     return
   }
   errorMessage.value = ''
@@ -148,7 +165,7 @@ async function removeRole(role: AdminRole) {
     await removeAdminRole(role.id)
     await load()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '角色删除失败'
+    errorMessage.value = messageOf(error, strings.value.adminRoles.deleteError)
   }
 }
 
@@ -161,12 +178,12 @@ onMounted(() => {
   <section class="page-section system-page">
     <header class="page-header">
       <div>
-        <p class="eyebrow">Permission Registry</p>
-        <h1>角色与权限</h1>
-        <p>权限点由代码与数据库种子共同维护；角色可授权，权限码本身不允许在页面里随手造。</p>
+        <p class="eyebrow">{{ strings.adminRoles.eyebrow }}</p>
+        <h1>{{ strings.adminRoles.heading }}</h1>
+        <p>{{ strings.adminRoles.description }}</p>
       </div>
       <div class="header-actions">
-        <button v-if="canWrite" type="button" class="primary-button" @click="openCreate">新建角色</button>
+        <button v-if="canWrite" type="button" class="primary-button" @click="openCreate">{{ strings.adminRoles.create }}</button>
       </div>
     </header>
 
@@ -174,18 +191,18 @@ onMounted(() => {
 
     <article class="content-card system-table-card">
       <div class="system-table-card__meta">
-        <span>{{ loading ? '加载中...' : `共 ${roles.length} 个角色` }}</span>
-        <span>内置角色保留稳定编码，自定义角色可删除。</span>
+        <span>{{ loading ? strings.adminRoles.metaLoading : strings.adminRoles.metaSummary(roles.length) }}</span>
+        <span>{{ strings.adminRoles.metaDescription }}</span>
       </div>
       <div class="table-shell">
         <table class="data-table">
           <thead>
             <tr>
-              <th>角色</th>
-              <th>权限数</th>
-              <th>管理员引用</th>
-              <th>状态</th>
-              <th v-if="canWrite">操作</th>
+              <th>{{ strings.adminRoles.tableHeaders.role }}</th>
+              <th>{{ strings.adminRoles.tableHeaders.permissions }}</th>
+              <th>{{ strings.adminRoles.tableHeaders.admins }}</th>
+              <th>{{ strings.adminRoles.tableHeaders.status }}</th>
+              <th v-if="canWrite">{{ strings.adminRoles.tableHeaders.actions }}</th>
             </tr>
           </thead>
           <tbody>
@@ -198,29 +215,29 @@ onMounted(() => {
               <td class="numeric-cell">{{ role.adminCount }}</td>
               <td>
                 <span class="status-pill" :class="role.status === 1 ? 'status-pill--good' : 'status-pill--muted'">
-                  {{ role.status === 1 ? '启用' : '已停用' }}
+                  {{ roleStatusText(role.status) }}
                 </span>
               </td>
               <td v-if="canWrite">
                 <div class="table-actions">
-                  <button type="button" class="table-action" @click="openEdit(role)">编辑</button>
+                  <button type="button" class="table-action" @click="openEdit(role)">{{ strings.adminRoles.edit }}</button>
                   <button
                     :data-testid="`role-status-${role.id}`"
                     type="button"
                     class="table-action"
                     :class="{ 'table-action--danger': role.status === 1 }"
                     :disabled="role.code === 'super_admin'"
-                    :title="role.code === 'super_admin' ? '超级管理员角色不可停用' : ''"
+                    :title="role.code === 'super_admin' ? strings.adminRoles.superAdminDisabledTitle : ''"
                     @click="changeStatus(role)"
                   >
-                    {{ role.status === 1 ? '停用' : '启用' }}
+                    {{ roleStatusAction(role.status) }}
                   </button>
-                  <button type="button" class="table-action table-action--danger" :disabled="role.builtIn" @click="removeRole(role)">删除</button>
+                  <button type="button" class="table-action table-action--danger" :disabled="role.builtIn" @click="removeRole(role)">{{ strings.adminRoles.delete }}</button>
                 </div>
               </td>
             </tr>
             <tr v-if="!loading && roles.length === 0">
-              <td class="table-empty" :colspan="canWrite ? 5 : 4">暂无角色</td>
+              <td class="table-empty" :colspan="canWrite ? 5 : 4">{{ strings.adminRoles.empty }}</td>
             </tr>
           </tbody>
         </table>
@@ -231,25 +248,25 @@ onMounted(() => {
       <form class="dialog-panel system-dialog system-dialog--wide" data-testid="role-form" @submit.prevent="submitForm">
         <header class="dialog-panel__header">
           <div>
-            <p class="eyebrow">Role Editor</p>
-            <h2>{{ editingRole ? `编辑 ${editingRole.name}` : '新建角色' }}</h2>
+            <p class="eyebrow">{{ strings.adminRoles.formEyebrow }}</p>
+            <h2>{{ strings.adminRoles.formHeading(Boolean(editingRole), editingRole?.name) }}</h2>
           </div>
-          <button type="button" class="dialog-close" aria-label="关闭" :disabled="saving" @click="closeDialog">×</button>
+          <button type="button" class="dialog-close" :aria-label="strings.common.cancel" :disabled="saving" @click="closeDialog">×</button>
         </header>
 
         <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
 
         <div class="form-grid form-grid--two">
           <label class="field">
-            <span>角色编码</span>
+            <span>{{ strings.adminRoles.labels.code }}</span>
             <input name="role-code" v-model="form.code" :disabled="Boolean(editingRole?.builtIn)" required />
           </label>
           <label class="field">
-            <span>角色名称</span>
+            <span>{{ strings.adminRoles.labels.name }}</span>
             <input name="role-name" v-model="form.name" required />
           </label>
           <label class="field field--full">
-            <span>说明</span>
+            <span>{{ strings.adminRoles.labels.description }}</span>
             <input name="role-description" v-model="form.description" />
           </label>
         </div>
@@ -257,8 +274,8 @@ onMounted(() => {
         <section class="permission-matrix" :class="{ 'is-readonly': isSuperAdmin }">
           <header class="permission-matrix__header">
             <div>
-              <h3>权限集合</h3>
-              <p>超级管理员权限集合固定，其他角色按业务域最小授权。</p>
+              <h3>{{ strings.adminRoles.permissionHeading }}</h3>
+              <p>{{ strings.adminRoles.permissionDescription }}</p>
             </div>
           </header>
           <div class="permission-matrix__groups">
@@ -279,8 +296,8 @@ onMounted(() => {
         </section>
 
         <footer class="form-actions dialog-panel__footer">
-          <button type="button" class="ghost-button" :disabled="saving" @click="closeDialog">取消</button>
-          <button type="submit" class="primary-button" :disabled="saving">{{ saving ? '保存中...' : '保存角色' }}</button>
+          <button type="button" class="ghost-button" :disabled="saving" @click="closeDialog">{{ strings.common.cancel }}</button>
+          <button type="submit" class="primary-button" :disabled="saving">{{ saving ? strings.adminRoles.saving : strings.adminRoles.save }}</button>
         </footer>
       </form>
     </div>

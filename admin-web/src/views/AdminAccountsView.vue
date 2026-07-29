@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import {
   createAdminAccount,
   listAdminAccounts,
@@ -14,6 +15,7 @@ import {
 import type { AdminAccount, AdminCityScope, AdminRole, AdminScopeCity, AdminScopeShop, Region } from '@/types/admin'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 
 const accounts = ref<AdminAccount[]>([])
 const roles = ref<AdminRole[]>([])
@@ -31,6 +33,7 @@ const resetTarget = ref<AdminAccount | null>(null)
 const resetPassword = ref('')
 const resetError = ref('')
 const regions: Region[] = ['CN', 'EU']
+type ScopeMode = 'all' | 'cities' | 'shops'
 
 const form = reactive({
   account: '',
@@ -48,7 +51,7 @@ const selectedShopRegions = reactive<Record<Region, boolean>>({ CN: false, EU: f
 const canWrite = computed(() => state.permissions.includes('system:admin:write'))
 const activeRoles = computed(() => roles.value.filter((role) => role.status === 1))
 const hasMore = computed(() => page.value * pageSize < total.value)
-const dialogTitle = computed(() => editingAccount.value ? '编辑管理员' : '新建管理员')
+const dialogTitle = computed(() => strings.value.adminAccounts.formHeading(Boolean(editingAccount.value)))
 
 function resetCityScope(region: Region) {
   form.cityScopes[region].allCities = true
@@ -69,11 +72,27 @@ function shopsForRegion(region: Region) {
   return scopeShops.value.filter((shop) => shop.region === region)
 }
 
-function scopeMode(region: Region) {
+function scopeMode(region: Region): ScopeMode {
   const scope = form.cityScopes[region]
   if (scope.allCities) return 'all'
   if (selectedShopRegions[region] || (scope.shopIds.length > 0 && scope.cityIds.length === 0)) return 'shops'
   return 'cities'
+}
+
+function scopeModeText(region: Region) {
+  return strings.value.adminAccounts.scopeModeText(scopeMode(region))
+}
+
+function accountStatusText(status: number) {
+  return strings.value.adminAccounts.statusText(status)
+}
+
+function accountStatusAction(status: number) {
+  return status === 1 ? strings.value.adminAccounts.disable : strings.value.adminAccounts.enable
+}
+
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }
 
 function onRegionToggle(region: Region) {
@@ -109,12 +128,17 @@ function buildCityScopes(): AdminCityScope[] {
 
 function formatCityScopes(account: AdminAccount) {
   return account.cityScopes.map((scope) => {
-    if (scope.allCities) return `${scope.region}: 全部城市`
+    if (scope.allCities) {
+      return strings.value.adminAccounts.scopeEntry(scope.region, strings.value.adminAccounts.scopeAllCities)
+    }
     const names = scope.cityIds.map((cityId) =>
       scopeCities.value.find((city) => city.id === cityId && city.region === scope.region)?.name ?? `#${cityId}`)
     const shopNames = (scope.shopIds ?? []).map((shopId) =>
       scopeShops.value.find((shop) => shop.id === shopId && shop.region === scope.region)?.name ?? `#${shopId}`)
-    return `${scope.region}: ${[...names, ...shopNames].join(' / ')}`
+    return strings.value.adminAccounts.scopeEntry(
+      scope.region,
+      [...names, ...shopNames].join(' / ') || '--',
+    )
   }).join(' · ')
 }
 
@@ -176,7 +200,7 @@ async function load() {
     scopeCities.value = cityResult
     scopeShops.value = shopResult
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '管理员列表加载失败'
+    errorMessage.value = messageOf(error, strings.value.adminAccounts.loadError)
   } finally {
     loading.value = false
   }
@@ -185,21 +209,21 @@ async function load() {
 async function submitForm() {
   if (!canWrite.value || saving.value) return
   if (form.roleIds.length === 0) {
-    errorMessage.value = '至少选择一个角色'
+    errorMessage.value = strings.value.adminAccounts.roleRequired
     return
   }
   if (form.regions.length === 0) {
-    errorMessage.value = '至少选择一个区域'
+    errorMessage.value = strings.value.adminAccounts.regionRequired
     return
   }
   const incompleteRegion = form.regions.find((region) =>
     !form.cityScopes[region].allCities && form.cityScopes[region].cityIds.length === 0 && form.cityScopes[region].shopIds.length === 0)
   if (incompleteRegion) {
-    errorMessage.value = `${incompleteRegion} 至少选择一个城市`
+    errorMessage.value = strings.value.adminAccounts.cityRequired(incompleteRegion)
     return
   }
   if (!editingAccount.value && form.password.length < 8) {
-    errorMessage.value = '初始密码至少 8 位'
+    errorMessage.value = strings.value.adminAccounts.passwordMin
     return
   }
 
@@ -226,7 +250,7 @@ async function submitForm() {
     dialogOpen.value = false
     await load()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '管理员保存失败'
+    errorMessage.value = messageOf(error, strings.value.adminAccounts.saveError)
   } finally {
     saving.value = false
   }
@@ -237,8 +261,8 @@ async function changeStatus(account: AdminAccount) {
     return
   }
   const nextStatus = account.status === 1 ? 2 : 1
-  const action = nextStatus === 2 ? '停用' : '启用'
-  if (!window.confirm(`确认${action}管理员「${account.name}」吗？`)) {
+  const action = nextStatus === 2 ? 'disable' : 'enable'
+  if (!window.confirm(strings.value.adminAccounts.statusConfirm(account.name, action))) {
     return
   }
   if (!canWrite.value) return
@@ -247,7 +271,7 @@ async function changeStatus(account: AdminAccount) {
     await updateAdminAccountStatus(account.id, nextStatus)
     await load()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '管理员状态更新失败'
+    errorMessage.value = messageOf(error, strings.value.adminAccounts.statusUpdateError)
   }
 }
 
@@ -263,7 +287,7 @@ async function submitPasswordReset() {
     return
   }
   if (resetPassword.value.length < 8) {
-    resetError.value = '新密码至少 8 位'
+    resetError.value = strings.value.adminAccounts.resetPasswordMin
     return
   }
   resetError.value = ''
@@ -271,7 +295,7 @@ async function submitPasswordReset() {
     await resetAdminAccountPassword(resetTarget.value.id, resetPassword.value)
     resetTarget.value = null
   } catch (error) {
-    resetError.value = error instanceof Error ? error.message : '密码重置失败'
+    resetError.value = messageOf(error, strings.value.adminAccounts.resetPasswordError)
   }
 }
 
@@ -296,12 +320,12 @@ watch(canWrite, (allowed) => {
   <section class="page-section system-page">
     <header class="page-header">
       <div>
-        <p class="eyebrow">System Access</p>
-        <h1>管理员账号</h1>
-        <p>账号、角色、区域与城市范围由服务端实时读取，停用后旧会话会在下一次请求失效。</p>
+        <p class="eyebrow">{{ strings.adminAccounts.eyebrow }}</p>
+        <h1>{{ strings.adminAccounts.heading }}</h1>
+        <p>{{ strings.adminAccounts.description }}</p>
       </div>
       <div class="header-actions">
-        <button v-if="canWrite" type="button" class="primary-button" @click="openCreate">新建管理员</button>
+        <button v-if="canWrite" type="button" class="primary-button" @click="openCreate">{{ strings.adminAccounts.create }}</button>
       </div>
     </header>
 
@@ -309,19 +333,19 @@ watch(canWrite, (allowed) => {
 
     <article class="content-card system-table-card">
       <div class="system-table-card__meta">
-        <span>{{ loading ? '加载中...' : `共 ${total} 个管理员` }}</span>
-        <span>当前操作者：{{ state.profile?.name ?? '--' }}</span>
+        <span>{{ loading ? strings.adminAccounts.metaLoading : strings.adminAccounts.metaSummary(total) }}</span>
+        <span>{{ strings.adminAccounts.metaOperator(state.profile?.name ?? '--') }}</span>
       </div>
       <div class="table-shell">
         <table class="data-table">
           <thead>
             <tr>
-              <th>账号</th>
-              <th>角色</th>
-              <th>区域 / 城市</th>
-              <th>最近登录</th>
-              <th>状态</th>
-              <th v-if="canWrite">操作</th>
+              <th>{{ strings.adminAccounts.tableHeaders.account }}</th>
+              <th>{{ strings.adminAccounts.tableHeaders.roles }}</th>
+              <th>{{ strings.adminAccounts.tableHeaders.scope }}</th>
+              <th>{{ strings.adminAccounts.tableHeaders.lastLogin }}</th>
+              <th>{{ strings.adminAccounts.tableHeaders.status }}</th>
+              <th v-if="canWrite">{{ strings.adminAccounts.tableHeaders.actions }}</th>
             </tr>
           </thead>
           <tbody>
@@ -330,42 +354,42 @@ watch(canWrite, (allowed) => {
                 <strong>{{ account.name }}</strong>
                 <p class="code-box">{{ account.account }}</p>
               </td>
-              <td><span class="tag-list">{{ account.roleNames.join(' / ') || '--' }}</span></td>
+              <td><span class="tag-list">{{ account.roleNames.join(' / ') || strings.adminAccounts.roleFallback }}</span></td>
               <td><span class="region-list">{{ formatCityScopes(account) }}</span></td>
-              <td class="numeric-cell">{{ account.lastLoginAt || '从未登录' }}</td>
+              <td class="numeric-cell">{{ account.lastLoginAt || strings.adminAccounts.neverLoggedIn }}</td>
               <td>
                 <span class="status-pill" :class="account.status === 1 ? 'status-pill--good' : 'status-pill--muted'">
-                  {{ account.status === 1 ? '启用' : '已停用' }}
+                  {{ accountStatusText(account.status) }}
                 </span>
               </td>
               <td v-if="canWrite">
                 <div class="table-actions">
-                  <button type="button" class="table-action" @click="openEdit(account)">编辑</button>
-                  <button type="button" class="table-action" @click="openPasswordReset(account)">重置密码</button>
+                  <button type="button" class="table-action" @click="openEdit(account)">{{ strings.adminAccounts.edit }}</button>
+                  <button type="button" class="table-action" @click="openPasswordReset(account)">{{ strings.adminAccounts.resetPassword }}</button>
                   <button
                     :data-testid="`status-admin-${account.id}`"
                     type="button"
                     class="table-action"
                     :class="{ 'table-action--danger': account.status === 1 }"
                     :disabled="account.id === state.profile?.id"
-                    :title="account.id === state.profile?.id ? '当前账号不能停用自己' : ''"
+                    :title="account.id === state.profile?.id ? strings.adminAccounts.selfDisableTitle : ''"
                     @click="changeStatus(account)"
                   >
-                    {{ account.status === 1 ? '停用' : '启用' }}
+                    {{ accountStatusAction(account.status) }}
                   </button>
                 </div>
               </td>
             </tr>
             <tr v-if="!loading && accounts.length === 0">
-              <td class="table-empty" :colspan="canWrite ? 6 : 5">暂无管理员账号</td>
+              <td class="table-empty" :colspan="canWrite ? 6 : 5">{{ strings.adminAccounts.empty }}</td>
             </tr>
           </tbody>
         </table>
       </div>
       <div class="pager">
-        <button type="button" class="ghost-button system-pager-button" :disabled="page === 1" @click="goPage(page - 1)">上一页</button>
-        <span class="numeric-cell">第 {{ page }} 页</span>
-        <button type="button" class="ghost-button system-pager-button" :disabled="!hasMore" @click="goPage(page + 1)">下一页</button>
+        <button type="button" class="ghost-button system-pager-button" :disabled="page === 1" @click="goPage(page - 1)">{{ strings.adminAccounts.previousPage }}</button>
+        <span class="numeric-cell">{{ strings.adminAccounts.page(page) }}</span>
+        <button type="button" class="ghost-button system-pager-button" :disabled="!hasMore" @click="goPage(page + 1)">{{ strings.adminAccounts.nextPage }}</button>
       </div>
     </article>
 
@@ -373,31 +397,31 @@ watch(canWrite, (allowed) => {
       <form class="dialog-panel system-dialog system-dialog--wide" data-testid="admin-form" @submit.prevent="submitForm">
         <header class="dialog-panel__header">
           <div>
-            <p class="eyebrow">Account Form</p>
+            <p class="eyebrow">{{ strings.adminAccounts.formEyebrow }}</p>
             <h2>{{ dialogTitle }}</h2>
           </div>
-          <button type="button" class="dialog-close" aria-label="关闭" :disabled="saving" @click="closeDialog">×</button>
+          <button type="button" class="dialog-close" :aria-label="strings.common.cancel" :disabled="saving" @click="closeDialog">×</button>
         </header>
 
         <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
 
         <div class="form-grid form-grid--two">
           <label class="field">
-            <span>登录账号</span>
+            <span>{{ strings.adminAccounts.labels.account }}</span>
             <input name="admin-account" v-model="form.account" :disabled="Boolean(editingAccount)" autocomplete="username" required />
           </label>
           <label v-if="!editingAccount" class="field">
-            <span>初始密码</span>
+            <span>{{ strings.adminAccounts.labels.password }}</span>
             <input name="admin-password" v-model="form.password" type="password" autocomplete="new-password" required />
           </label>
           <label class="field" :class="{ 'field--full': editingAccount }">
-            <span>显示名称</span>
+            <span>{{ strings.adminAccounts.labels.name }}</span>
             <input name="admin-name" v-model="form.name" required />
           </label>
         </div>
 
         <fieldset class="selection-fieldset">
-          <legend>角色</legend>
+          <legend>{{ strings.adminAccounts.labels.roles }}</legend>
           <label v-for="role in activeRoles" :key="role.id" class="selection-option">
             <input :name="`role-${role.id}`" v-model="form.roleIds" type="checkbox" :value="role.id" />
             <span><strong>{{ role.name }}</strong><small>{{ role.code }}</small></span>
@@ -405,7 +429,7 @@ watch(canWrite, (allowed) => {
         </fieldset>
 
         <fieldset class="selection-fieldset selection-fieldset--regions">
-          <legend>区域范围</legend>
+          <legend>{{ strings.adminAccounts.labels.regions }}</legend>
           <label v-for="region in regions" :key="region" class="selection-option selection-option--compact">
             <input :name="`region-${region}`" v-model="form.regions" type="checkbox" :value="region" @change="onRegionToggle(region)" />
             <span><strong>{{ region }}</strong></span>
@@ -413,24 +437,24 @@ watch(canWrite, (allowed) => {
         </fieldset>
 
         <fieldset v-if="form.regions.length > 0" class="selection-fieldset city-scope-fieldset">
-          <legend>城市范围</legend>
+          <legend>{{ strings.adminAccounts.labels.cityScopes }}</legend>
           <section v-for="region in form.regions" :key="region" class="city-scope-section">
             <div class="city-scope-section__header">
               <strong>{{ region }}</strong>
-              <span>{{ scopeMode(region) === 'all' ? '全部城市' : scopeMode(region) === 'shops' ? '指定门店' : '指定城市' }}</span>
+              <span>{{ scopeModeText(region) }}</span>
             </div>
             <div class="city-scope-modes">
               <label class="selection-option selection-option--compact">
                 <input :name="`city-scope-${region}`" :data-testid="`city-scope-all-${region}`" v-model="cityScope(region).allCities" type="radio" :value="true" @change="selectAllCities(region)" />
-                <span><strong>全部城市</strong></span>
+                <span><strong>{{ strings.adminAccounts.scopeModeOptions.all }}</strong></span>
               </label>
               <label class="selection-option selection-option--compact">
                 <input :name="`city-scope-${region}`" :data-testid="`city-scope-selected-${region}`" :checked="scopeMode(region) === 'cities'" type="radio" :value="false" @change="selectCities(region)" />
-                <span><strong>指定城市</strong></span>
+                <span><strong>{{ strings.adminAccounts.scopeModeOptions.cities }}</strong></span>
               </label>
               <label class="selection-option selection-option--compact">
                 <input :name="`city-scope-${region}`" :data-testid="`city-scope-shops-${region}`" :checked="scopeMode(region) === 'shops'" type="radio" :value="false" @change="selectShops(region)" />
-                <span><strong>指定门店</strong></span>
+                <span><strong>{{ strings.adminAccounts.scopeModeOptions.shops }}</strong></span>
               </label>
             </div>
             <div v-if="scopeMode(region) === 'cities'" class="city-scope-cities">
@@ -438,21 +462,21 @@ watch(canWrite, (allowed) => {
                 <input :name="`city-${region}-${city.id}`" v-model="cityScope(region).cityIds" type="checkbox" :value="city.id" />
                 <span><strong>{{ city.name }}</strong><small>#{{ city.id }}</small></span>
               </label>
-              <p v-if="citiesForRegion(region).length === 0" class="inline-note">当前区域没有可分配城市。</p>
+              <p v-if="citiesForRegion(region).length === 0" class="inline-note">{{ strings.adminAccounts.noCities }}</p>
             </div>
             <div v-if="scopeMode(region) === 'shops'" class="city-scope-cities">
               <label v-for="shop in shopsForRegion(region)" :key="shop.id" class="selection-option selection-option--compact">
                 <input :name="`shop-${region}-${shop.id}`" v-model="cityScope(region).shopIds" type="checkbox" :value="shop.id" />
                 <span><strong>{{ shop.name }}</strong><small>{{ shop.cityName }} · #{{ shop.id }}</small></span>
               </label>
-              <p v-if="shopsForRegion(region).length === 0" class="inline-note">当前区域没有可分配门店。</p>
+              <p v-if="shopsForRegion(region).length === 0" class="inline-note">{{ strings.adminAccounts.noShops }}</p>
             </div>
           </section>
         </fieldset>
 
         <footer class="form-actions dialog-panel__footer">
-          <button type="button" class="ghost-button" :disabled="saving" @click="closeDialog">取消</button>
-          <button type="submit" class="primary-button" :disabled="saving">{{ saving ? '保存中...' : '保存管理员' }}</button>
+          <button type="button" class="ghost-button" :disabled="saving" @click="closeDialog">{{ strings.common.cancel }}</button>
+          <button type="submit" class="primary-button" :disabled="saving">{{ saving ? strings.adminAccounts.saving : strings.adminAccounts.save }}</button>
         </footer>
       </form>
     </div>
@@ -461,19 +485,19 @@ watch(canWrite, (allowed) => {
       <form class="dialog-panel system-dialog system-dialog--compact" @submit.prevent="submitPasswordReset">
         <header class="dialog-panel__header">
           <div>
-            <p class="eyebrow">Password Reset</p>
-            <h2>重置 {{ resetTarget.name }} 的密码</h2>
+            <p class="eyebrow">{{ strings.adminAccounts.resetEyebrow }}</p>
+            <h2>{{ strings.adminAccounts.resetHeading(resetTarget.name) }}</h2>
           </div>
-          <button type="button" class="dialog-close" aria-label="关闭" @click="resetTarget = null">×</button>
+          <button type="button" class="dialog-close" :aria-label="strings.common.cancel" @click="resetTarget = null">×</button>
         </header>
         <p v-if="resetError" class="feedback is-error">{{ resetError }}</p>
         <label class="field">
-          <span>新密码</span>
+          <span>{{ strings.adminAccounts.resetLabel }}</span>
           <input name="reset-password" v-model="resetPassword" type="password" autocomplete="new-password" required />
         </label>
         <footer class="form-actions dialog-panel__footer">
-          <button type="button" class="ghost-button" @click="resetTarget = null">取消</button>
-          <button type="submit" class="primary-button">确认重置</button>
+          <button type="button" class="ghost-button" @click="resetTarget = null">{{ strings.common.cancel }}</button>
+          <button type="submit" class="primary-button">{{ strings.adminAccounts.resetSubmit }}</button>
         </footer>
       </form>
     </div>

@@ -10,10 +10,22 @@ const mocks = vi.hoisted(() => ({
   removeAdminRole: vi.fn(),
 }))
 
-vi.mock('@/services/admin', () => mocks)
-vi.mock('@/composables/useAdminSession', () => ({
-  useAdminSession: () => ({ state: { permissions: ['system:role:write'] } }),
+const sessionMock = vi.hoisted(() => ({
+  state: undefined as unknown as {
+    permissions: string[]
+    region: 'CN' | 'EU'
+  },
 }))
+
+vi.mock('@/services/admin', () => mocks)
+vi.mock('@/composables/useAdminSession', async () => {
+  const { reactive } = await import('vue')
+  sessionMock.state = reactive({
+    permissions: ['system:role:write'],
+    region: 'EU' as const,
+  })
+  return { useAdminSession: () => ({ state: sessionMock.state }) }
+})
 
 import AdminRolesView from './AdminRolesView.vue'
 
@@ -56,6 +68,8 @@ function check(host: HTMLElement, name: string) {
 describe('AdminRolesView', () => {
   beforeEach(() => {
     Object.values(mocks).forEach((mock) => mock.mockReset())
+    sessionMock.state.permissions = ['system:role:write']
+    sessionMock.state.region = 'EU'
     mocks.listAdminPermissions.mockResolvedValue(permissions)
     mocks.listAdminRoles.mockResolvedValue(roles)
     mocks.createAdminRole.mockResolvedValue({ ...roles[1], id: 3, code: 'eu_reader', name: 'EU 只读员' })
@@ -69,11 +83,13 @@ describe('AdminRolesView', () => {
     await flush()
 
     expect(host.querySelector<HTMLButtonElement>('[data-testid="role-status-1"]')?.disabled).toBe(true)
+    expect(host.textContent).toContain('Roles & permissions')
+    expect(host.textContent).toContain('New role')
 
-    click(host, '新建角色')
+    click(host, 'New role')
     await flush()
-    expect(host.textContent).toContain('审核中心')
-    expect(host.textContent).toContain('数据管理')
+    expect(host.textContent).toContain('Audit center')
+    expect(host.textContent).toContain('Data management')
     const code = host.querySelector<HTMLInputElement>('[name="role-code"]')
     if (!code) throw new Error('missing role-code')
     code.value = 'eu_reader'
@@ -101,7 +117,7 @@ describe('AdminRolesView', () => {
     mocks.createAdminRole.mockRejectedValue(new Error('角色编码已存在'))
     const { app, host } = mount()
     await flush()
-    click(host, '新建角色')
+    click(host, 'New role')
     await flush()
     const code = host.querySelector<HTMLInputElement>('[name="role-code"]')
     if (!code) throw new Error('missing role-code')

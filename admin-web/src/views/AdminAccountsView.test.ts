@@ -16,6 +16,7 @@ const sessionMock = vi.hoisted(() => ({
   state: undefined as unknown as {
     profile: { id: number; account: string; name: string }
     permissions: string[]
+    region: 'CN' | 'EU'
   },
 }))
 
@@ -25,6 +26,7 @@ vi.mock('@/composables/useAdminSession', async () => {
   sessionMock.state = reactive({
     profile: { id: 1, account: 'admin', name: '系统管理员' },
     permissions: ['system:admin:read', 'system:admin:write'],
+    region: 'EU' as const,
   })
   return { useAdminSession: () => ({ state: sessionMock.state }) }
 })
@@ -115,6 +117,7 @@ describe('AdminAccountsView', () => {
   beforeEach(() => {
     Object.values(mocks).forEach((mock) => mock.mockReset())
     sessionMock.state.permissions = ['system:admin:read', 'system:admin:write']
+    sessionMock.state.region = 'EU'
     mocks.listAdminAccounts.mockResolvedValue({ list: accounts, total: 2, page: 1, pageSize: 20, hasMore: false })
     mocks.listAdminRoles.mockResolvedValue(roles)
     mocks.listAdminScopeCities.mockResolvedValue(scopeCities)
@@ -133,13 +136,16 @@ describe('AdminAccountsView', () => {
     expect(mocks.listAdminRoles).toHaveBeenCalledTimes(1)
     expect(mocks.listAdminScopeCities).toHaveBeenCalledTimes(1)
     expect(mocks.listAdminScopeShops).toHaveBeenCalledTimes(1)
+    expect(host.textContent).toContain('Admin accounts')
+    expect(host.textContent).toContain('New admin')
     expect(host.textContent).toContain('系统管理员')
-    expect(host.textContent).toContain('CN: 全部城市')
+    expect(host.textContent).toContain('CN: All cities')
     expect(host.textContent).toContain('EU: Paris')
+    expect(host.textContent).toContain('Never signed in')
     const selfStatusButton = host.querySelector<HTMLButtonElement>('[data-testid="status-admin-1"]')
     expect(selfStatusButton?.disabled).toBe(true)
 
-    click(host, '新建管理员')
+    click(host, 'New admin')
     await nextTick()
     input(host, 'admin-account', 'eu.new')
     input(host, 'admin-password', 'Reader#123456')
@@ -167,7 +173,7 @@ describe('AdminAccountsView', () => {
     const { app, host } = mount()
     await flush()
 
-    click(host, '新建管理员')
+    click(host, 'New admin')
     await nextTick()
     input(host, 'admin-account', 'taken.account')
     input(host, 'admin-password', 'Reader#123456')
@@ -188,7 +194,7 @@ describe('AdminAccountsView', () => {
     const { app, host } = mount()
     await flush()
 
-    click(host, '新建管理员')
+    click(host, 'New admin')
     await nextTick()
     input(host, 'admin-account', 'paris.reader')
     input(host, 'admin-password', 'Reader#123456')
@@ -206,7 +212,7 @@ describe('AdminAccountsView', () => {
       ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await nextTick()
 
-    expect(host.textContent).toContain('EU 至少选择一个城市')
+    expect(host.textContent).toContain('Select at least one city or shop for EU.')
     expect(mocks.createAdminAccount).not.toHaveBeenCalled()
 
     check(host, 'city-EU-101')
@@ -232,7 +238,7 @@ describe('AdminAccountsView', () => {
     const accountRow = [...host.querySelectorAll('tbody tr')]
       .find((row) => row.textContent?.includes('eu.reader'))
     const editButton = [...(accountRow?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
-      .find((button) => button.textContent?.trim() === '编辑')
+      .find((button) => button.textContent?.trim() === 'Edit')
     if (!editButton) throw new Error('missing EU reader edit button')
     editButton.click()
     await nextTick()
@@ -257,7 +263,7 @@ describe('AdminAccountsView', () => {
     const { app, host } = mount()
     await flush()
 
-    click(host, '新建管理员')
+    click(host, 'New admin')
     await nextTick()
     input(host, 'admin-account', 'shop.reader')
     input(host, 'admin-password', 'Reader#123456')
@@ -292,12 +298,12 @@ describe('AdminAccountsView', () => {
     await flush()
 
     const createButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('新建管理员'))
+      .find((button) => button.textContent?.includes('New admin'))
     const accountRow = [...host.querySelectorAll('tbody tr')]
       .find((row) => row.textContent?.includes('eu.reader'))
     const statusButton = accountRow?.querySelector<HTMLButtonElement>('[data-testid="status-admin-7"]')
     const resetButton = [...(accountRow?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
-      .find((button) => button.textContent?.includes('重置密码'))
+      .find((button) => button.textContent?.includes('Reset password'))
     if (!createButton || !statusButton || !resetButton) throw new Error('missing admin mutation controls')
 
     resetButton.click()
