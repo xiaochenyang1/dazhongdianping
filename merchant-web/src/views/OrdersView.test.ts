@@ -5,8 +5,12 @@ const mocks = vi.hoisted(() => ({
   fetchOrders: vi.fn(),
   auditRefund: vi.fn(),
 }))
+const sessionState = vi.hoisted(() => ({ region: 'EU' }))
 
 vi.mock('@/services/merchant', () => mocks)
+vi.mock('@/composables/useMerchantSession', () => ({
+  useMerchantSession: () => ({ state: sessionState }),
+}))
 
 import OrdersView from './OrdersView.vue'
 
@@ -66,6 +70,7 @@ describe('OrdersView', () => {
     })
     expect(host.querySelector('[data-testid="refund-actions-81"]')).not.toBeNull()
     expect(host.querySelector('[data-testid="refund-actions-82"]')).toBeNull()
+    expect(host.textContent).toContain('Approve refund')
 
     const reason = host.querySelector<HTMLInputElement>('[name="refund-reason-81"]')
     if (!reason) throw new Error('missing refund reason')
@@ -84,7 +89,7 @@ describe('OrdersView', () => {
     host.querySelector<HTMLButtonElement>('[data-testid="reject-refund-81"]')?.click()
     await nextTick()
 
-    expect(host.textContent).toContain('请填写退款审核原因')
+    expect(host.textContent).toContain('Enter a refund audit reason.')
     expect(mocks.auditRefund).not.toHaveBeenCalled()
     app.unmount()
   })

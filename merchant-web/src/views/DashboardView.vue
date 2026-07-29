@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useMerchantSession } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 import { fetchAccount, fetchDashboard, type MerchantAccount } from '@/services/merchant'
 
+const { state } = useMerchantSession()
 const loading = ref(true)
 const error = ref('')
 const account = ref<MerchantAccount | null>(null)
 const dashboard = ref<Record<string, unknown>>({})
+const region = computed(() => account.value?.merchant.region ?? state.region)
+const strings = computed(() => merchantStringsForRegion(region.value))
 
 const permissions = computed(() => account.value?.permissions ?? [])
 const canViewDashboard = computed(() => permissions.value.includes('dashboard:view'))
@@ -30,60 +35,84 @@ function nestedNumber(parent: string, key: string) {
 }
 
 const metrics = computed(() => [
-  { label: '浏览量', value: number('views') || number('viewCount'), note: '统计周期内门店浏览' },
-  { label: '支付订单', value: number('paidOrders') || number('paidOrderCount'), note: '已支付订单数' },
-  { label: '支付金额', value: number('paidAmount'), note: '已支付订单金额' },
-  { label: '核销券', value: number('verifiedCoupons') || number('verifiedCouponCount'), note: '到店核销成功券数' },
-  { label: '评分', value: nestedNumber('rating', 'score') || number('score'), note: '门店平均评分' },
-  { label: '点评数', value: nestedNumber('rating', 'reviewCount') || number('reviewCount'), note: '累计公开点评' },
+  {
+    label: strings.value.dashboard.metrics.views.label,
+    value: number('views') || number('viewCount'),
+    note: strings.value.dashboard.metrics.views.note,
+  },
+  {
+    label: strings.value.dashboard.metrics.paidOrders.label,
+    value: number('paidOrders') || number('paidOrderCount'),
+    note: strings.value.dashboard.metrics.paidOrders.note,
+  },
+  {
+    label: strings.value.dashboard.metrics.paidAmount.label,
+    value: number('paidAmount'),
+    note: strings.value.dashboard.metrics.paidAmount.note,
+  },
+  {
+    label: strings.value.dashboard.metrics.verifiedCoupons.label,
+    value: number('verifiedCoupons') || number('verifiedCouponCount'),
+    note: strings.value.dashboard.metrics.verifiedCoupons.note,
+  },
+  {
+    label: strings.value.dashboard.metrics.rating.label,
+    value: nestedNumber('rating', 'score') || number('score'),
+    note: strings.value.dashboard.metrics.rating.note,
+  },
+  {
+    label: strings.value.dashboard.metrics.reviewCount.label,
+    value: nestedNumber('rating', 'reviewCount') || number('reviewCount'),
+    note: strings.value.dashboard.metrics.reviewCount.note,
+  },
 ])
 
 const todos = computed(() => [
   {
     key: 'pendingReservations',
-    label: '待确认预订',
+    label: strings.value.dashboard.todoLabels.pendingReservations,
     value: nestedNumber('reservations', 'pending'),
     to: '/reservations',
     show: canViewReservations.value,
   },
   {
     key: 'confirmedReservations',
-    label: '已确认预订',
+    label: strings.value.dashboard.todoLabels.confirmedReservations,
     value: nestedNumber('reservations', 'confirmed'),
     to: '/reservations',
     show: canViewReservations.value,
   },
   {
     key: 'pendingRefunds',
-    label: '待处理退款',
+    label: strings.value.dashboard.todoLabels.pendingRefunds,
     value: number('pendingRefunds'),
     to: '/orders',
     show: canViewOrders.value,
   },
   {
     key: 'pendingDeals',
-    label: '待审团购',
+    label: strings.value.dashboard.todoLabels.pendingDeals,
     value: number('pendingDeals'),
     to: '/deals',
     show: canEditDeals.value,
   },
   {
     key: 'rejectedDeals',
-    label: '被驳回团购',
+    label: strings.value.dashboard.todoLabels.rejectedDeals,
     value: number('rejectedDeals'),
     to: '/deals',
     show: canEditDeals.value,
   },
   {
     key: 'pendingShopChanges',
-    label: '待审门店草稿',
+    label: strings.value.dashboard.todoLabels.pendingShopChanges,
     value: number('pendingShopChanges'),
     to: '/shops',
     show: canEditShops.value,
   },
   {
     key: 'rejectedShopChanges',
-    label: '被驳回门店草稿',
+    label: strings.value.dashboard.todoLabels.rejectedShopChanges,
     value: number('rejectedShopChanges'),
     to: '/shops',
     show: canEditShops.value,
@@ -93,22 +122,46 @@ const todos = computed(() => [
 const quickLinks = computed(() => {
   const items = [] as Array<{ to: string; label: string; note: string }>
   if (canViewReservations.value) {
-    items.push({ to: '/reservations', label: '预订处理', note: '确认、拒绝、到店、爽约' })
+    items.push({
+      to: '/reservations',
+      label: strings.value.routeTitles.reservations,
+      note: strings.value.dashboard.quickLinkNotes.reservations,
+    })
   }
   if (canViewOrders.value) {
-    items.push({ to: '/orders', label: '订单退款', note: '处理用户退款申请' })
+    items.push({
+      to: '/orders',
+      label: strings.value.routeTitles.orders,
+      note: strings.value.dashboard.quickLinkNotes.orders,
+    })
   }
   if (canVerifyCoupons.value) {
-    items.push({ to: '/coupons', label: '券码核销', note: '到店录码核销' })
+    items.push({
+      to: '/coupons',
+      label: strings.value.routeTitles.coupons,
+      note: strings.value.dashboard.quickLinkNotes.coupons,
+    })
   }
   if (canEditDeals.value) {
-    items.push({ to: '/deals', label: '团购管理', note: '创建/编辑并提交审核' })
+    items.push({
+      to: '/deals',
+      label: strings.value.routeTitles.deals,
+      note: strings.value.dashboard.quickLinkNotes.deals,
+    })
   }
   if (canEditShops.value) {
-    items.push({ to: '/shops', label: '门店草稿', note: '新建/修改门店资料' })
+    items.push({
+      to: '/shops',
+      label: strings.value.routeTitles.shops,
+      note: strings.value.dashboard.quickLinkNotes.shops,
+    })
   }
   if (canManageStaffs.value) {
-    items.push({ to: '/staffs', label: '员工管理', note: '角色与门店范围' })
+    items.push({
+      to: '/staffs',
+      label: strings.value.routeTitles.staffs,
+      note: strings.value.dashboard.quickLinkNotes.staffs,
+    })
   }
   return items
 })
@@ -121,7 +174,7 @@ onMounted(async () => {
     account.value = accountData
     dashboard.value = dashboardData
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '加载失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.dashboard.loadError
   } finally {
     loading.value = false
   }
@@ -132,22 +185,22 @@ onMounted(async () => {
   <section>
     <div class="toolbar">
       <div>
-        <p class="eyebrow">Merchant dashboard</p>
+        <p class="eyebrow">{{ strings.dashboard.eyebrow }}</p>
         <strong>
-          {{ account?.merchant.companyName ?? '商户' }}
+          {{ account?.merchant.companyName ?? strings.dashboard.merchantFallbackName }}
           <template v-if="account?.operator.name"> · {{ account.operator.name }}</template>
         </strong>
-        <p class="muted">
-          统计区间：{{ String(dashboard.dateFrom || '-') }} ~ {{ String(dashboard.dateTo || '-') }}
-        </p>
+        <p class="muted">{{ strings.dashboard.dateRange(dashboard.dateFrom, dashboard.dateTo) }}</p>
       </div>
     </div>
 
-    <p v-if="loading" class="muted">加载中...</p>
+    <p v-if="loading" class="muted">{{ strings.common.loading }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
 
     <template v-if="!loading && !error">
-      <p v-if="!canViewDashboard" class="error" role="alert">当前账号缺少 `dashboard:view` 权限。</p>
+      <p v-if="!canViewDashboard" class="error" role="alert">
+        {{ strings.dashboard.missingPermission('dashboard:view') }}
+      </p>
 
       <div class="grid">
         <div v-for="metric in metrics" :key="metric.label" class="card">
@@ -159,7 +212,7 @@ onMounted(async () => {
 
       <article class="card" style="margin-top: 18px">
         <div class="toolbar">
-          <strong>待办与状态</strong>
+          <strong>{{ strings.dashboard.todosHeading }}</strong>
         </div>
         <div class="grid">
           <div
@@ -170,14 +223,14 @@ onMounted(async () => {
           >
             <p class="muted">{{ item.label }}</p>
             <div class="stat">{{ item.value }}</div>
-            <RouterLink :to="item.to" class="primary-link">去处理</RouterLink>
+            <RouterLink :to="item.to" class="primary-link">{{ strings.dashboard.todoAction }}</RouterLink>
           </div>
         </div>
       </article>
 
       <article v-if="quickLinks.length" class="card" style="margin-top: 18px">
         <div class="toolbar">
-          <strong>快捷入口</strong>
+          <strong>{{ strings.dashboard.quickLinksHeading }}</strong>
         </div>
         <div class="grid">
           <RouterLink
@@ -188,7 +241,7 @@ onMounted(async () => {
             data-testid="merchant-quick-link"
           >
             <p class="muted">{{ link.label }}</p>
-            <div class="stat" style="font-size: 20px">进入</div>
+            <div class="stat" style="font-size: 20px">{{ strings.dashboard.quickLinkEnter }}</div>
             <p class="muted">{{ link.note }}</p>
           </RouterLink>
         </div>

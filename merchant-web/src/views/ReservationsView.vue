@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useMerchantSession } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 import {
   arriveReservation,
   confirmReservation,
@@ -13,6 +15,8 @@ const props = withDefaults(defineProps<{ permissions?: string[] }>(), {
   permissions: () => [],
 })
 
+const { state } = useMerchantSession()
+const strings = computed(() => merchantStringsForRegion(state.region))
 const loading = ref(true)
 const actingId = ref<number | null>(null)
 const error = ref('')
@@ -26,6 +30,15 @@ const canArriveReservations = computed(
 const filters = reactive({
   status: '0',
 })
+const statusOptions = computed(() => [
+  { value: '', label: strings.value.reservations.statusOptions.all },
+  { value: '0', label: strings.value.reservations.statusOptions.pending },
+  { value: '1', label: strings.value.reservations.statusOptions.confirmed },
+  { value: '2', label: strings.value.reservations.statusOptions.arrived },
+  { value: '3', label: strings.value.reservations.statusOptions.userCancelled },
+  { value: '4', label: strings.value.reservations.statusOptions.merchantRejected },
+  { value: '5', label: strings.value.reservations.statusOptions.noShow },
+])
 
 async function load() {
   loading.value = true
@@ -39,7 +52,7 @@ async function load() {
       })
     ).list
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '预订加载失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.reservations.loadError
   } finally {
     loading.value = false
   }
@@ -69,25 +82,25 @@ async function act(
     if (type === 'reject') {
       const reason = (rejectReasons[item.id] ?? '').trim()
       if (!reason) {
-        error.value = '请填写拒绝原因'
+        error.value = strings.value.reservations.rejectReasonRequired
         return
       }
       await rejectReservation(item.id, reason)
-      success.value = `预订 ${item.reservationNo} 已拒绝`
+      success.value = strings.value.reservations.successRejected(item.reservationNo)
     } else if (type === 'confirm') {
       await confirmReservation(item.id)
-      success.value = `预订 ${item.reservationNo} 已确认`
+      success.value = strings.value.reservations.successConfirmed(item.reservationNo)
     } else if (type === 'arrive') {
       await arriveReservation(item.id)
-      success.value = `预订 ${item.reservationNo} 已确认到店`
+      success.value = strings.value.reservations.successArrived(item.reservationNo)
     } else {
       await markReservationNoShow(item.id)
-      success.value = `预订 ${item.reservationNo} 已标记爽约`
+      success.value = strings.value.reservations.successNoShow(item.reservationNo)
     }
     delete rejectReasons[item.id]
     await load()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '预订操作失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.reservations.actionError
   } finally {
     actingId.value = null
   }
@@ -101,39 +114,35 @@ onMounted(load)
     <div class="toolbar">
       <div class="row-actions">
         <label>
-          <span class="muted">状态</span>
+          <span class="muted">{{ strings.reservations.statusLabel }}</span>
           <select
             v-model="filters.status"
             name="reservation-status-filter"
             data-testid="reservation-status-filter"
             @change="load"
           >
-            <option value="">全部</option>
-            <option value="0">待确认</option>
-            <option value="1">已确认</option>
-            <option value="2">已到店</option>
-            <option value="3">用户取消</option>
-            <option value="4">商户拒绝</option>
-            <option value="5">爽约</option>
+            <option v-for="option in statusOptions" :key="option.value || 'all'" :value="option.value">
+              {{ option.label }}
+            </option>
           </select>
         </label>
       </div>
-      <button type="button" @click="load">刷新</button>
+      <button type="button" @click="load">{{ strings.common.refresh }}</button>
     </div>
-    <p class="muted">默认看待确认；已确认预订可继续做到店确认或标记爽约。</p>
+    <p class="muted">{{ strings.reservations.summary }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="success" class="muted" data-testid="reservation-success">{{ success }}</p>
-    <p v-if="loading" class="muted">加载中...</p>
+    <p v-if="loading" class="muted">{{ strings.common.loading }}</p>
     <div v-else class="card table-wrap">
       <table class="table">
         <thead>
           <tr>
-            <th>预订号</th>
-            <th>门店</th>
-            <th>时间</th>
-            <th>联系人</th>
-            <th>状态</th>
-            <th>操作</th>
+            <th>{{ strings.reservations.headers.reservationNo }}</th>
+            <th>{{ strings.reservations.headers.shop }}</th>
+            <th>{{ strings.reservations.headers.time }}</th>
+            <th>{{ strings.reservations.headers.contact }}</th>
+            <th>{{ strings.reservations.headers.status }}</th>
+            <th>{{ strings.reservations.headers.actions }}</th>
           </tr>
         </thead>
         <tbody>
@@ -142,7 +151,7 @@ onMounted(load)
             <td>{{ item.shop.name }}</td>
             <td>
               {{ item.reserveTime }}
-              <div v-if="item.peopleCount" class="muted">{{ item.peopleCount }} 人</div>
+              <div v-if="item.peopleCount" class="muted">{{ strings.reservations.peopleCount(item.peopleCount) }}</div>
             </td>
             <td>
               <template v-if="item.contactName || item.contactPhone">
@@ -163,7 +172,7 @@ onMounted(load)
                   v-model="rejectReasons[item.id]"
                   :name="`reservation-reason-${item.id}`"
                   maxlength="255"
-                  placeholder="填写拒绝原因"
+                  :placeholder="strings.reservations.rejectPlaceholder"
                 />
                 <button
                   v-if="canManageReservations && item.canConfirm"
@@ -172,7 +181,7 @@ onMounted(load)
                   :disabled="actingId === item.id"
                   @click="act(item, 'confirm')"
                 >
-                  确认
+                  {{ strings.reservations.confirm }}
                 </button>
                 <button
                   v-if="canManageReservations && item.canReject"
@@ -182,7 +191,7 @@ onMounted(load)
                   :disabled="actingId === item.id"
                   @click="act(item, 'reject')"
                 >
-                  拒绝
+                  {{ strings.reservations.reject }}
                 </button>
                 <button
                   v-if="canArriveReservations && item.canArrive"
@@ -191,7 +200,7 @@ onMounted(load)
                   :disabled="actingId === item.id"
                   @click="act(item, 'arrive')"
                 >
-                  确认到店
+                  {{ strings.reservations.arrive }}
                 </button>
                 <button
                   v-if="canArriveReservations && item.canNoShow"
@@ -201,14 +210,14 @@ onMounted(load)
                   :disabled="actingId === item.id"
                   @click="act(item, 'no-show')"
                 >
-                  标记爽约
+                  {{ strings.reservations.noShow }}
                 </button>
               </div>
-              <span v-else class="muted">无需处理</span>
+              <span v-else class="muted">{{ strings.reservations.noAction }}</span>
             </td>
           </tr>
           <tr v-if="items.length === 0">
-            <td colspan="6" class="feedback">当前筛选下没有预订。</td>
+            <td colspan="6" class="feedback">{{ strings.reservations.empty }}</td>
           </tr>
         </tbody>
       </table>

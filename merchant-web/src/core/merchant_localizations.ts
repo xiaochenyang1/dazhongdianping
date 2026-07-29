@@ -87,6 +87,105 @@ export interface MerchantStrings {
     submitting: string
     fallbackPendingStatusText: string
   }
+  dashboard: {
+    eyebrow: string
+    merchantFallbackName: string
+    dateRange: (dateFrom: unknown, dateTo: unknown) => string
+    loadError: string
+    missingPermission: (permission: string) => string
+    metrics: {
+      views: { label: string; note: string }
+      paidOrders: { label: string; note: string }
+      paidAmount: { label: string; note: string }
+      verifiedCoupons: { label: string; note: string }
+      rating: { label: string; note: string }
+      reviewCount: { label: string; note: string }
+    }
+    todosHeading: string
+    todoAction: string
+    todoLabels: {
+      pendingReservations: string
+      confirmedReservations: string
+      pendingRefunds: string
+      pendingDeals: string
+      rejectedDeals: string
+      pendingShopChanges: string
+      rejectedShopChanges: string
+    }
+    quickLinksHeading: string
+    quickLinkEnter: string
+    quickLinkNotes: {
+      reservations: string
+      orders: string
+      coupons: string
+      deals: string
+      shops: string
+      staffs: string
+    }
+  }
+  reservations: {
+    loadError: string
+    actionError: string
+    rejectReasonRequired: string
+    successRejected: (reservationNo: string) => string
+    successConfirmed: (reservationNo: string) => string
+    successArrived: (reservationNo: string) => string
+    successNoShow: (reservationNo: string) => string
+    statusLabel: string
+    statusOptions: {
+      all: string
+      pending: string
+      confirmed: string
+      arrived: string
+      userCancelled: string
+      merchantRejected: string
+      noShow: string
+    }
+    summary: string
+    headers: {
+      reservationNo: string
+      shop: string
+      time: string
+      contact: string
+      status: string
+      actions: string
+    }
+    peopleCount: (count: number) => string
+    rejectPlaceholder: string
+    confirm: string
+    reject: string
+    arrive: string
+    noShow: string
+    noAction: string
+    empty: string
+  }
+  orders: {
+    loadError: string
+    auditError: string
+    auditReasonRequired: string
+    refundStatusLabel: string
+    refundStatusOptions: {
+      all: string
+      pending: string
+      success: string
+      rejected: string
+    }
+    summary: string
+    headers: {
+      orderNo: string
+      shop: string
+      amount: string
+      payment: string
+      refund: string
+      audit: string
+    }
+    noRefund: string
+    auditPlaceholder: string
+    approve: string
+    reject: string
+    noAction: string
+    empty: string
+  }
 }
 
 export type MerchantRouteTitleKey = keyof MerchantStrings['routeTitles']
@@ -176,6 +275,105 @@ const zhCnStrings: MerchantStrings = {
     submitting: '提交中...',
     fallbackPendingStatusText: '待审核',
   },
+  dashboard: {
+    eyebrow: 'Merchant dashboard',
+    merchantFallbackName: '商户',
+    dateRange: (dateFrom, dateTo) => `统计区间：${String(dateFrom || '-')} ~ ${String(dateTo || '-')}`,
+    loadError: '加载失败',
+    missingPermission: (permission) => `当前账号缺少 \`${permission}\` 权限。`,
+    metrics: {
+      views: { label: '浏览量', note: '统计周期内门店浏览' },
+      paidOrders: { label: '支付订单', note: '已支付订单数' },
+      paidAmount: { label: '支付金额', note: '已支付订单金额' },
+      verifiedCoupons: { label: '核销券', note: '到店核销成功券数' },
+      rating: { label: '评分', note: '门店平均评分' },
+      reviewCount: { label: '点评数', note: '累计公开点评' },
+    },
+    todosHeading: '待办与状态',
+    todoAction: '去处理',
+    todoLabels: {
+      pendingReservations: '待确认预订',
+      confirmedReservations: '已确认预订',
+      pendingRefunds: '待处理退款',
+      pendingDeals: '待审团购',
+      rejectedDeals: '被驳回团购',
+      pendingShopChanges: '待审门店草稿',
+      rejectedShopChanges: '被驳回门店草稿',
+    },
+    quickLinksHeading: '快捷入口',
+    quickLinkEnter: '进入',
+    quickLinkNotes: {
+      reservations: '确认、拒绝、到店、爽约',
+      orders: '处理用户退款申请',
+      coupons: '到店录码核销',
+      deals: '创建/编辑并提交审核',
+      shops: '新建/修改门店资料',
+      staffs: '角色与门店范围',
+    },
+  },
+  reservations: {
+    loadError: '预订加载失败',
+    actionError: '预订操作失败',
+    rejectReasonRequired: '请填写拒绝原因',
+    successRejected: (reservationNo) => `预订 ${reservationNo} 已拒绝`,
+    successConfirmed: (reservationNo) => `预订 ${reservationNo} 已确认`,
+    successArrived: (reservationNo) => `预订 ${reservationNo} 已确认到店`,
+    successNoShow: (reservationNo) => `预订 ${reservationNo} 已标记爽约`,
+    statusLabel: '状态',
+    statusOptions: {
+      all: '全部',
+      pending: '待确认',
+      confirmed: '已确认',
+      arrived: '已到店',
+      userCancelled: '用户取消',
+      merchantRejected: '商户拒绝',
+      noShow: '爽约',
+    },
+    summary: '默认看待确认；已确认预订可继续做到店确认或标记爽约。',
+    headers: {
+      reservationNo: '预订号',
+      shop: '门店',
+      time: '时间',
+      contact: '联系人',
+      status: '状态',
+      actions: '操作',
+    },
+    peopleCount: (count) => `${count} 人`,
+    rejectPlaceholder: '填写拒绝原因',
+    confirm: '确认',
+    reject: '拒绝',
+    arrive: '确认到店',
+    noShow: '标记爽约',
+    noAction: '无需处理',
+    empty: '当前筛选下没有预订。',
+  },
+  orders: {
+    loadError: '订单加载失败',
+    auditError: '退款审核失败',
+    auditReasonRequired: '请填写退款审核原因',
+    refundStatusLabel: '退款状态',
+    refundStatusOptions: {
+      all: '全部',
+      pending: '申请中',
+      success: '退款成功',
+      rejected: '已驳回',
+    },
+    summary: '默认看“申请中”的退款；可切换查看历史审核结果。',
+    headers: {
+      orderNo: '订单号',
+      shop: '门店',
+      amount: '金额',
+      payment: '支付',
+      refund: '退款',
+      audit: '审核',
+    },
+    noRefund: '无退款申请',
+    auditPlaceholder: '填写审核原因',
+    approve: '通过退款',
+    reject: '驳回',
+    noAction: '无需处理',
+    empty: '当前筛选下没有订单。',
+  },
 }
 
 const enStrings: MerchantStrings = {
@@ -262,6 +460,105 @@ const enStrings: MerchantStrings = {
     submitReview: 'Submit for review',
     submitting: 'Submitting...',
     fallbackPendingStatusText: 'Pending review',
+  },
+  dashboard: {
+    eyebrow: 'Merchant dashboard',
+    merchantFallbackName: 'Merchant',
+    dateRange: (dateFrom, dateTo) => `Reporting period: ${String(dateFrom || '-')} to ${String(dateTo || '-')}`,
+    loadError: 'Failed to load dashboard data.',
+    missingPermission: (permission) => `This account does not have the \`${permission}\` permission.`,
+    metrics: {
+      views: { label: 'Views', note: 'Shop page views during the selected period' },
+      paidOrders: { label: 'Paid orders', note: 'Number of paid orders' },
+      paidAmount: { label: 'Paid amount', note: 'Total paid order amount' },
+      verifiedCoupons: { label: 'Verified coupons', note: 'Coupons successfully redeemed in store' },
+      rating: { label: 'Rating', note: 'Average shop rating' },
+      reviewCount: { label: 'Reviews', note: 'Public review count' },
+    },
+    todosHeading: 'To-dos & status',
+    todoAction: 'Review',
+    todoLabels: {
+      pendingReservations: 'Pending reservations',
+      confirmedReservations: 'Confirmed reservations',
+      pendingRefunds: 'Pending refunds',
+      pendingDeals: 'Pending deals',
+      rejectedDeals: 'Rejected deals',
+      pendingShopChanges: 'Pending shop drafts',
+      rejectedShopChanges: 'Rejected shop drafts',
+    },
+    quickLinksHeading: 'Quick links',
+    quickLinkEnter: 'Open',
+    quickLinkNotes: {
+      reservations: 'Confirm, reject, mark arrival, or no-show.',
+      orders: 'Review customer refund requests.',
+      coupons: 'Verify in-store coupon codes.',
+      deals: 'Create, edit, and resubmit deals.',
+      shops: 'Create or revise shop information.',
+      staffs: 'Manage roles and shop scope.',
+    },
+  },
+  reservations: {
+    loadError: 'Failed to load reservations.',
+    actionError: 'Failed to update the reservation.',
+    rejectReasonRequired: 'Enter a rejection reason.',
+    successRejected: (reservationNo) => `Reservation ${reservationNo} rejected.`,
+    successConfirmed: (reservationNo) => `Reservation ${reservationNo} confirmed.`,
+    successArrived: (reservationNo) => `Reservation ${reservationNo} marked as arrived.`,
+    successNoShow: (reservationNo) => `Reservation ${reservationNo} marked as no-show.`,
+    statusLabel: 'Status',
+    statusOptions: {
+      all: 'All',
+      pending: 'Pending confirmation',
+      confirmed: 'Confirmed',
+      arrived: 'Arrived',
+      userCancelled: 'Cancelled by customer',
+      merchantRejected: 'Rejected by merchant',
+      noShow: 'No-show',
+    },
+    summary: 'Pending reservations are shown by default. Confirmed bookings can still be marked as arrived or no-show.',
+    headers: {
+      reservationNo: 'Reservation',
+      shop: 'Shop',
+      time: 'Time',
+      contact: 'Contact',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    peopleCount: (count) => `${count} guests`,
+    rejectPlaceholder: 'Enter rejection reason',
+    confirm: 'Confirm',
+    reject: 'Reject',
+    arrive: 'Mark arrived',
+    noShow: 'Mark no-show',
+    noAction: 'No action required',
+    empty: 'No reservations match the current filter.',
+  },
+  orders: {
+    loadError: 'Failed to load orders.',
+    auditError: 'Failed to audit the refund.',
+    auditReasonRequired: 'Enter a refund audit reason.',
+    refundStatusLabel: 'Refund status',
+    refundStatusOptions: {
+      all: 'All',
+      pending: 'Pending',
+      success: 'Refunded',
+      rejected: 'Rejected',
+    },
+    summary: 'Pending refund requests are shown by default. Switch filters to review earlier decisions.',
+    headers: {
+      orderNo: 'Order',
+      shop: 'Shop',
+      amount: 'Amount',
+      payment: 'Payment',
+      refund: 'Refund',
+      audit: 'Audit',
+    },
+    noRefund: 'No refund request',
+    auditPlaceholder: 'Enter audit reason',
+    approve: 'Approve refund',
+    reject: 'Reject',
+    noAction: 'No action required',
+    empty: 'No orders match the current filter.',
   },
 }
 

@@ -2,7 +2,11 @@ import { createApp, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ fetchAccount: vi.fn(), fetchDashboard: vi.fn() }))
+const sessionState = vi.hoisted(() => ({ region: 'EU' }))
 vi.mock('@/services/merchant', () => mocks)
+vi.mock('@/composables/useMerchantSession', () => ({
+  useMerchantSession: () => ({ state: sessionState }),
+}))
 vi.mock('vue-router', () => ({
   RouterLink: { props: ['to'], template: '<a :data-to="to"><slot /></a>' },
 }))
@@ -65,16 +69,16 @@ describe('DashboardView', () => {
     await flush()
 
     expect(host.textContent).toContain('North Star Foods')
-    expect(host.textContent).toContain('支付金额')
+    expect(host.textContent).toContain('Paid amount')
     expect(host.textContent).toContain('188.5')
-    expect(host.textContent).toContain('待确认预订')
-    expect(host.textContent).toContain('待处理退款')
-    expect(host.textContent).toContain('待审团购')
-    expect(host.textContent).toContain('被驳回门店草稿')
+    expect(host.textContent).toContain('Pending reservations')
+    expect(host.textContent).toContain('Pending refunds')
+    expect(host.textContent).toContain('Pending deals')
+    expect(host.textContent).toContain('Rejected shop drafts')
     expect(host.textContent).toContain('4')
-    expect(host.textContent).toContain('待办与状态')
-    expect(host.textContent).toContain('券码核销')
-    expect(host.textContent).toContain('团购管理')
+    expect(host.textContent).toContain('To-dos & status')
+    expect(host.textContent).toContain('Coupon Verification')
+    expect(host.textContent).toContain('Deals')
     expect(host.querySelectorAll('[data-testid="merchant-todo-card"]').length).toBeGreaterThanOrEqual(5)
     expect(host.querySelectorAll('[data-testid="merchant-quick-link"]').length).toBeGreaterThanOrEqual(4)
 

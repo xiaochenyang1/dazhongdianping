@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useMerchantSession } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 import { auditRefund, fetchOrders, type MerchantOrder } from '@/services/merchant'
 
 const props = withDefaults(defineProps<{ permissions?: string[] }>(), {
   permissions: () => [],
 })
 
+const { state } = useMerchantSession()
+const strings = computed(() => merchantStringsForRegion(state.region))
 const loading = ref(true)
 const error = ref('')
 const auditingId = ref<number | null>(null)
@@ -15,6 +19,12 @@ const canAuditRefund = computed(() => props.permissions.includes('order:refund')
 const filters = reactive({
   refundStatus: '0',
 })
+const refundStatusOptions = computed(() => [
+  { value: '', label: strings.value.orders.refundStatusOptions.all },
+  { value: '0', label: strings.value.orders.refundStatusOptions.pending },
+  { value: '1', label: strings.value.orders.refundStatusOptions.success },
+  { value: '2', label: strings.value.orders.refundStatusOptions.rejected },
+])
 
 async function load() {
   loading.value = true
@@ -28,7 +38,7 @@ async function load() {
       })
     ).list
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '订单加载失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.orders.loadError
   } finally {
     loading.value = false
   }
@@ -38,7 +48,7 @@ async function audit(item: MerchantOrder, decision: 'approve' | 'reject') {
   if (!canAuditRefund.value) return
   const reason = (refundReasons[item.id] ?? '').trim()
   if (!reason) {
-    error.value = '请填写退款审核原因'
+    error.value = strings.value.orders.auditReasonRequired
     return
   }
   auditingId.value = item.id
@@ -48,7 +58,7 @@ async function audit(item: MerchantOrder, decision: 'approve' | 'reject') {
     delete refundReasons[item.id]
     await load()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '退款审核失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.orders.auditError
   } finally {
     auditingId.value = null
   }
@@ -62,42 +72,50 @@ onMounted(load)
     <div class="toolbar">
       <div class="row-actions">
         <label>
-          <span class="muted">退款状态</span>
+          <span class="muted">{{ strings.orders.refundStatusLabel }}</span>
           <select
             v-model="filters.refundStatus"
             name="order-refund-status-filter"
             data-testid="order-refund-status-filter"
             @change="load"
           >
-            <option value="">全部</option>
-            <option value="0">申请中</option>
-            <option value="1">退款成功</option>
-            <option value="2">已驳回</option>
+            <option v-for="option in refundStatusOptions" :key="option.value || 'all'" :value="option.value">
+              {{ option.label }}
+            </option>
           </select>
         </label>
       </div>
-      <button type="button" @click="load">刷新</button>
+      <button type="button" @click="load">{{ strings.common.refresh }}</button>
     </div>
-    <p class="muted">默认看“申请中”的退款；可切换查看历史审核结果。</p>
+    <p class="muted">{{ strings.orders.summary }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
-    <p v-if="loading" class="muted">加载中...</p>
+    <p v-if="loading" class="muted">{{ strings.common.loading }}</p>
     <div v-else class="card table-wrap">
       <table class="table">
-        <thead><tr><th>订单号</th><th>门店</th><th>金额</th><th>支付</th><th>退款</th><th>审核</th></tr></thead>
+        <thead>
+          <tr>
+            <th>{{ strings.orders.headers.orderNo }}</th>
+            <th>{{ strings.orders.headers.shop }}</th>
+            <th>{{ strings.orders.headers.amount }}</th>
+            <th>{{ strings.orders.headers.payment }}</th>
+            <th>{{ strings.orders.headers.refund }}</th>
+            <th>{{ strings.orders.headers.audit }}</th>
+          </tr>
+        </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
             <td>{{ item.orderNo }}</td>
             <td>{{ item.shopName }}</td>
             <td>{{ item.amount }} {{ item.currency }}</td>
             <td>{{ item.payStatusText }}</td>
-            <td>{{ item.refund?.statusText ?? '无退款申请' }}</td>
+            <td>{{ item.refund?.statusText ?? strings.orders.noRefund }}</td>
             <td>
               <div v-if="canAuditRefund && item.refund?.status === 0" class="refund-audit" :data-testid="`refund-actions-${item.id}`">
                 <input
                   v-model="refundReasons[item.id]"
                   :name="`refund-reason-${item.id}`"
                   maxlength="255"
-                  placeholder="填写审核原因"
+                  :placeholder="strings.orders.auditPlaceholder"
                 />
                 <div class="row-actions">
                   <button
@@ -105,20 +123,20 @@ onMounted(load)
                     :data-testid="`approve-refund-${item.id}`"
                     :disabled="auditingId === item.id"
                     @click="audit(item, 'approve')"
-                  >通过退款</button>
+                  >{{ strings.orders.approve }}</button>
                   <button
                     type="button"
                     class="danger-action"
                     :data-testid="`reject-refund-${item.id}`"
                     :disabled="auditingId === item.id"
                     @click="audit(item, 'reject')"
-                  >驳回</button>
+                  >{{ strings.orders.reject }}</button>
                 </div>
               </div>
-              <span v-else class="muted">无需处理</span>
+              <span v-else class="muted">{{ strings.orders.noAction }}</span>
             </td>
           </tr>
-          <tr v-if="items.length === 0"><td colspan="6" class="feedback">当前筛选下没有订单。</td></tr>
+          <tr v-if="items.length === 0"><td colspan="6" class="feedback">{{ strings.orders.empty }}</td></tr>
         </tbody>
       </table>
     </div>

@@ -8,8 +8,12 @@ const mocks = vi.hoisted(() => ({
   arriveReservation: vi.fn(),
   markReservationNoShow: vi.fn(),
 }))
+const sessionState = vi.hoisted(() => ({ region: 'EU' }))
 
 vi.mock('@/services/merchant', () => mocks)
+vi.mock('@/composables/useMerchantSession', () => ({
+  useMerchantSession: () => ({ state: sessionState }),
+}))
 
 import ReservationsView from './ReservationsView.vue'
 
@@ -97,6 +101,7 @@ describe('ReservationsView', () => {
     expect(host.textContent).toContain('巴黎川味馆')
     expect(host.textContent).toContain('2026-07-22T18:30:00')
     expect(host.textContent).toContain('Lina')
+    expect(host.textContent).toContain('2 guests')
     expect(host.querySelector('[data-testid="reservation-actions-31"]')).not.toBeNull()
     expect(host.querySelector('[data-testid="reservation-actions-33"]')).not.toBeNull()
     expect(host.querySelector('[data-testid="reservation-actions-32"]')).toBeNull()
@@ -106,6 +111,7 @@ describe('ReservationsView', () => {
     host.querySelector<HTMLButtonElement>('[data-testid="confirm-reservation-31"]')?.click()
     await flushView()
     expect(mocks.confirmReservation).toHaveBeenCalledWith(31)
+    expect(host.querySelector('[data-testid="reservation-success"]')?.textContent).toContain('Reservation RSV-31 confirmed.')
     app.unmount()
   })
 
@@ -114,7 +120,7 @@ describe('ReservationsView', () => {
     await flushView()
     host.querySelector<HTMLButtonElement>('[data-testid="reject-reservation-31"]')?.click()
     await nextTick()
-    expect(host.textContent).toContain('请填写拒绝原因')
+    expect(host.textContent).toContain('Enter a rejection reason.')
     expect(mocks.rejectReservation).not.toHaveBeenCalled()
 
     const reason = host.querySelector<HTMLInputElement>('[name="reservation-reason-31"]')
