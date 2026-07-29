@@ -100,6 +100,8 @@ describe('SensitiveWordManagementView', () => {
     expect(host.textContent).toContain('违禁演示词')
     expect(host.textContent).toContain('旧词')
     expect(host.textContent).toContain('当前区域 CN')
+    expect(host.textContent).toContain('新建敏感词')
+    expect(host.textContent).toContain('—')
     app.unmount()
   })
 
@@ -128,6 +130,7 @@ describe('SensitiveWordManagementView', () => {
     const { app, host } = mount()
     await flush()
 
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="toggle-sensitive-word-2"]')?.textContent?.trim()).toBe('启用')
     host.querySelector<HTMLButtonElement>('[data-testid="toggle-sensitive-word-2"]')?.click()
     await flush()
     expect(adminMocks.updateAdminSensitiveWordStatus).toHaveBeenCalledWith(2, true)

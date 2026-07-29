@@ -96,7 +96,8 @@ describe('HotWordManagementView', () => {
     expect(adminMocks.listAdminHotWords).toHaveBeenCalledTimes(1)
     expect(host.textContent).toContain('Cafe')
     expect(host.textContent).toContain('Chinese')
-    expect(host.textContent).toContain('当前区域 EU')
+    expect(host.textContent).toContain('Current region EU')
+    expect(host.textContent).toContain('New hot keyword')
     app.unmount()
   })
 
@@ -125,6 +126,7 @@ describe('HotWordManagementView', () => {
     const { app, host } = mount()
     await flush()
 
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="toggle-hotword-2"]')?.textContent?.trim()).toBe('Enable')
     host.querySelector<HTMLButtonElement>('[data-testid="toggle-hotword-2"]')?.click()
     await flush()
     expect(adminMocks.updateAdminHotWordStatus).toHaveBeenCalledWith(2, true)

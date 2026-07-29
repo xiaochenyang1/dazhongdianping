@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { createAdminHotWord, listAdminHotWords, removeAdminHotWord, updateAdminHotWord, updateAdminHotWordStatus } from '@/services/admin'
 import type { AdminHotWord, AdminHotWordPayload } from '@/types/admin'
 
@@ -9,6 +10,7 @@ type HotWordEditor = AdminHotWordPayload & {
 }
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const canWrite = computed(() => state.permissions.includes('operations:hotword:write'))
 
 const hotWords = ref<AdminHotWord[]>([])
@@ -20,7 +22,7 @@ const successMessage = ref('')
 let requestId = 0
 
 function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : '请求失败'
+  return error instanceof Error ? error.message : strings.value.common.requestFailed
 }
 
 function resetMessages() {
@@ -74,10 +76,10 @@ async function submitEditor() {
   try {
     if (current.id) {
       await updateAdminHotWord(current.id, payload)
-      successMessage.value = '热词已更新'
+      successMessage.value = strings.value.hotWords.updated
     } else {
       await createAdminHotWord(payload)
-      successMessage.value = '热词已创建'
+      successMessage.value = strings.value.hotWords.created
     }
     editor.value = null
     await load()
@@ -94,7 +96,7 @@ async function toggleHotWord(item: AdminHotWord) {
   saving.value = true
   try {
     await updateAdminHotWordStatus(item.id, !item.enabled)
-    successMessage.value = item.enabled ? '热词已停用' : '热词已启用'
+    successMessage.value = item.enabled ? strings.value.hotWords.disabled : strings.value.hotWords.enabled
     await load()
   } catch (error) {
     errorMessage.value = messageOf(error)
@@ -105,13 +107,13 @@ async function toggleHotWord(item: AdminHotWord) {
 
 async function deleteHotWord(item: AdminHotWord) {
   if (!canWrite.value || saving.value) return
-  const confirmed = window.confirm(`确认删除热词「${item.keyword}」？删除后公开端可能回退到统计结果。`)
+  const confirmed = window.confirm(strings.value.hotWords.deleteConfirm(item.keyword))
   if (!confirmed) return
   resetMessages()
   saving.value = true
   try {
     await removeAdminHotWord(item.id)
-    successMessage.value = '热词已删除'
+    successMessage.value = strings.value.hotWords.deleted
     await load()
   } catch (error) {
     errorMessage.value = messageOf(error)
@@ -134,11 +136,11 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">搜索运营</p>
-        <h1>热词走真表，别再让 fallback 统计冒充运营决定。</h1>
-        <p>当前区域 {{ state.region }}。只要存在启用热词，公开端 `/search/hot` 就优先按这里的排序返回；删空后才回退到分类和标签统计。</p>
+        <p class="eyebrow">{{ strings.hotWords.eyebrow }}</p>
+        <h1>{{ strings.hotWords.heading }}</h1>
+        <p>{{ strings.hotWords.description(state.region) }}</p>
       </div>
-      <button v-if="canWrite" data-testid="create-hotword" class="secondary-button" type="button" @click="openEditor()">新建热词</button>
+      <button v-if="canWrite" data-testid="create-hotword" class="secondary-button" type="button" @click="openEditor()">{{ strings.hotWords.create }}</button>
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
@@ -147,8 +149,8 @@ watch(
     <section class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">热词列表</p>
-          <h2>排序越小越靠前，停用后公开端会立刻忽略这条配置</h2>
+          <p class="eyebrow">{{ strings.hotWords.listEyebrow }}</p>
+          <h2>{{ strings.hotWords.listHeading }}</h2>
         </div>
       </div>
 
@@ -156,29 +158,29 @@ watch(
         <table class="data-table">
           <thead>
             <tr>
-              <th>关键词</th>
-              <th>排序</th>
-              <th>状态</th>
-              <th v-if="canWrite">操作</th>
+              <th>{{ strings.hotWords.tableHeaders.keyword }}</th>
+              <th>{{ strings.hotWords.tableHeaders.sort }}</th>
+              <th>{{ strings.hotWords.tableHeaders.status }}</th>
+              <th v-if="canWrite">{{ strings.hotWords.tableHeaders.actions }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td :colspan="canWrite ? 4 : 3" class="table-empty">加载中...</td>
+              <td :colspan="canWrite ? 4 : 3" class="table-empty">{{ strings.hotWords.loading }}</td>
             </tr>
             <tr v-else-if="!hotWords.length">
-              <td :colspan="canWrite ? 4 : 3" class="table-empty">当前区域还没有配置热词，会回退到统计结果。</td>
+              <td :colspan="canWrite ? 4 : 3" class="table-empty">{{ strings.hotWords.empty }}</td>
             </tr>
             <tr v-for="item in hotWords" :key="item.id">
               <td><strong>{{ item.keyword }}</strong></td>
               <td>{{ item.sortNo }}</td>
-              <td><span class="status-pill">{{ item.enabled ? '启用' : '停用' }}</span></td>
+              <td><span class="status-pill">{{ strings.hotWords.statusText(item.enabled) }}</span></td>
               <td v-if="canWrite" class="table-actions">
-                <button :data-testid="`edit-hotword-${item.id}`" class="table-action" type="button" @click="openEditor(item)">编辑</button>
+                <button :data-testid="`edit-hotword-${item.id}`" class="table-action" type="button" @click="openEditor(item)">{{ strings.hotWords.edit }}</button>
                 <button :data-testid="`toggle-hotword-${item.id}`" class="table-action" type="button" @click="toggleHotWord(item)">
-                  {{ item.enabled ? '停用' : '启用' }}
+                  {{ item.enabled ? strings.hotWords.disable : strings.hotWords.enable }}
                 </button>
-                <button :data-testid="`delete-hotword-${item.id}`" class="table-action danger-action" type="button" @click="deleteHotWord(item)">删除</button>
+                <button :data-testid="`delete-hotword-${item.id}`" class="table-action danger-action" type="button" @click="deleteHotWord(item)">{{ strings.hotWords.delete }}</button>
               </td>
             </tr>
           </tbody>
@@ -189,25 +191,25 @@ watch(
     <section v-if="editor && canWrite" class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">{{ editor.id ? '编辑热词' : '新建热词' }}</p>
-          <h2>{{ editor.id ? '改完即影响公开搜索面板' : '新建后会按排序进入公开端热词列表' }}</h2>
+          <p class="eyebrow">{{ strings.hotWords.editorEyebrow(Boolean(editor.id)) }}</p>
+          <h2>{{ strings.hotWords.editorHeading(Boolean(editor.id)) }}</h2>
         </div>
       </div>
 
       <form data-testid="hotword-editor" class="editor-form" @submit.prevent="submitEditor">
         <div class="form-grid form-grid--two">
           <label class="field field--full">
-            <span>关键词</span>
+            <span>{{ strings.hotWords.labels.keyword }}</span>
             <input v-model="editor.keyword" name="hotword-keyword" type="text" maxlength="64" required />
           </label>
           <label class="field">
-            <span>排序</span>
+            <span>{{ strings.hotWords.labels.sort }}</span>
             <input v-model.number="editor.sortNo" name="hotword-sort-no" type="number" min="0" />
           </label>
         </div>
         <div class="form-actions">
-          <button class="primary-button" type="submit" :disabled="saving">{{ saving ? '保存中...' : '保存热词' }}</button>
-          <button class="secondary-button" type="button" @click="editor = null">取消</button>
+          <button class="primary-button" type="submit" :disabled="saving">{{ saving ? strings.hotWords.saving : strings.hotWords.save }}</button>
+          <button class="secondary-button" type="button" @click="editor = null">{{ strings.common.cancel }}</button>
         </div>
       </form>
     </section>

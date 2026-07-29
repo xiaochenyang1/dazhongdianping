@@ -322,6 +322,106 @@ export interface AdminStrings {
     page: (page: number) => string
     nextPage: string
   }
+  circles: {
+    loadError: string
+    saveError: string
+    toggleError: string
+    eyebrow: string
+    heading: string
+    description: string
+    keywordPlaceholder: string
+    statusOptions: {
+      all: string
+      enabled: string
+      disabled: string
+    }
+    query: string
+    editorPlaceholders: {
+      name: string
+      description: string
+      coverUrl: string
+      sort: string
+    }
+    saveUpdate: string
+    create: string
+    emptyDescription: string
+    statusText: (status: number) => string
+    summary: (memberCount: number, postCount: number, sort: number) => string
+    edit: string
+    enable: string
+    disable: string
+  }
+  hotWords: {
+    created: string
+    updated: string
+    enabled: string
+    disabled: string
+    deleted: string
+    deleteConfirm: (keyword: string) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    create: string
+    listEyebrow: string
+    listHeading: string
+    tableHeaders: {
+      keyword: string
+      sort: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    statusText: (enabled: boolean) => string
+    edit: string
+    enable: string
+    disable: string
+    delete: string
+    editorEyebrow: (editing: boolean) => string
+    editorHeading: (editing: boolean) => string
+    labels: {
+      keyword: string
+      sort: string
+    }
+    saving: string
+    save: string
+  }
+  sensitiveWords: {
+    created: string
+    updated: string
+    enabled: string
+    disabled: string
+    deleted: string
+    deleteConfirm: (word: string) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    create: string
+    listEyebrow: string
+    listHeading: string
+    tableHeaders: {
+      word: string
+      remark: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    remarkFallback: string
+    statusText: (enabled: boolean) => string
+    edit: string
+    enable: string
+    disable: string
+    delete: string
+    editorEyebrow: (editing: boolean) => string
+    editorHeading: (editing: boolean) => string
+    labels: {
+      word: string
+      remark: string
+    }
+    saving: string
+    save: string
+  }
   privacyTasks: {
     eyebrow: string
     heading: string
@@ -768,6 +868,106 @@ const zhCnStrings: AdminStrings = {
     page: (page) => `第 ${page} 页`,
     nextPage: '下一页',
   },
+  circles: {
+    loadError: '圈子加载失败',
+    saveError: '保存失败',
+    toggleError: '状态更新失败',
+    eyebrow: '社区运营',
+    heading: '官方圈子',
+    description: '当前区域独立维护，停用后禁止新加入和发帖。',
+    keywordPlaceholder: '搜索圈子',
+    statusOptions: {
+      all: '全部状态',
+      enabled: '启用',
+      disabled: '停用',
+    },
+    query: '查询',
+    editorPlaceholders: {
+      name: '圈子名称',
+      description: '圈子简介',
+      coverUrl: '封面地址（可空）',
+      sort: '排序',
+    },
+    saveUpdate: '保存修改',
+    create: '创建圈子',
+    emptyDescription: '暂无简介',
+    statusText: (status) => status === 1 ? '启用' : '停用',
+    summary: (memberCount, postCount, sort) => `成员 ${memberCount} · 帖子 ${postCount} · 排序 ${sort}`,
+    edit: '编辑',
+    enable: '启用',
+    disable: '停用',
+  },
+  hotWords: {
+    created: '热词已创建',
+    updated: '热词已更新',
+    enabled: '热词已启用',
+    disabled: '热词已停用',
+    deleted: '热词已删除',
+    deleteConfirm: (keyword) => `确认删除热词「${keyword}」？删除后公开端可能回退到统计结果。`,
+    eyebrow: '搜索运营',
+    heading: '热词走真表，别再让 fallback 统计冒充运营决定。',
+    description: (region) => `当前区域 ${region}。只要存在启用热词，公开端 /search/hot 就优先按这里的排序返回；删空后才回退到分类和标签统计。`,
+    create: '新建热词',
+    listEyebrow: '热词列表',
+    listHeading: '排序越小越靠前，停用后公开端会立刻忽略这条配置',
+    tableHeaders: {
+      keyword: '关键词',
+      sort: '排序',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '加载中...',
+    empty: '当前区域还没有配置热词，会回退到统计结果。',
+    statusText: (enabled) => enabled ? '启用' : '停用',
+    edit: '编辑',
+    enable: '启用',
+    disable: '停用',
+    delete: '删除',
+    editorEyebrow: (editing) => editing ? '编辑热词' : '新建热词',
+    editorHeading: (editing) => editing ? '改完即影响公开搜索面板' : '新建后会按排序进入公开端热词列表',
+    labels: {
+      keyword: '关键词',
+      sort: '排序',
+    },
+    saving: '保存中...',
+    save: '保存热词',
+  },
+  sensitiveWords: {
+    created: '敏感词已创建',
+    updated: '敏感词已更新',
+    enabled: '敏感词已启用',
+    disabled: '敏感词已停用',
+    deleted: '敏感词已删除',
+    deleteConfirm: (word) => `确认删除敏感词「${word}」？删除后对应拦截会立即失效。`,
+    eyebrow: '内容治理',
+    heading: '敏感词库先把机审底座立住，再谈第三方审核。',
+    description: (region) => `当前区域 ${region}。启用词会对点评、帖子、评论和私信写入做包含匹配拦截；停用或删除后立即失效。`,
+    create: '新建敏感词',
+    listEyebrow: '词库列表',
+    listHeading: '按区域维护，写入侧实时按启用词拦截',
+    tableHeaders: {
+      word: '敏感词',
+      remark: '备注',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '加载中...',
+    empty: '当前区域还没有敏感词。',
+    remarkFallback: '—',
+    statusText: (enabled) => enabled ? '启用' : '停用',
+    edit: '编辑',
+    enable: '启用',
+    disable: '停用',
+    delete: '删除',
+    editorEyebrow: (editing) => editing ? '编辑敏感词' : '新建敏感词',
+    editorHeading: (editing) => editing ? '改完立即影响当前区域拦截' : '新建后默认启用并参与拦截',
+    labels: {
+      word: '敏感词',
+      remark: '备注',
+    },
+    saving: '保存中...',
+    save: '保存敏感词',
+  },
   privacyTasks: {
     eyebrow: 'Privacy Operations',
     heading: '隐私任务',
@@ -1194,6 +1394,106 @@ const enStrings: AdminStrings = {
     previousPage: 'Previous',
     page: (page) => `Page ${page}`,
     nextPage: 'Next',
+  },
+  circles: {
+    loadError: 'Failed to load circles.',
+    saveError: 'Failed to save the circle.',
+    toggleError: 'Failed to update the circle status.',
+    eyebrow: 'Community operations',
+    heading: 'Official circles',
+    description: 'Each region maintains its own circles. Once disabled, new joins and posting are blocked.',
+    keywordPlaceholder: 'Search circles',
+    statusOptions: {
+      all: 'All statuses',
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+    },
+    query: 'Search',
+    editorPlaceholders: {
+      name: 'Circle name',
+      description: 'Circle summary',
+      coverUrl: 'Cover URL (optional)',
+      sort: 'Sort order',
+    },
+    saveUpdate: 'Save changes',
+    create: 'Create circle',
+    emptyDescription: 'No description yet',
+    statusText: (status) => status === 1 ? 'Enabled' : 'Disabled',
+    summary: (memberCount, postCount, sort) => `Members ${memberCount} · Posts ${postCount} · Sort ${sort}`,
+    edit: 'Edit',
+    enable: 'Enable',
+    disable: 'Disable',
+  },
+  hotWords: {
+    created: 'Hot keyword created.',
+    updated: 'Hot keyword updated.',
+    enabled: 'Hot keyword enabled.',
+    disabled: 'Hot keyword disabled.',
+    deleted: 'Hot keyword deleted.',
+    deleteConfirm: (keyword) => `Delete hot keyword "${keyword}"? Public search may fall back to derived statistics after removal.`,
+    eyebrow: 'Search operations',
+    heading: 'Use a real hot-keyword table instead of pretending fallback statistics are an operations strategy.',
+    description: (region) => `Current region ${region}. As long as enabled hot keywords exist, public /search/hot results follow this ordering first. Only an empty list falls back to category and tag statistics.`,
+    create: 'New hot keyword',
+    listEyebrow: 'Hot keywords',
+    listHeading: 'Lower sort values rank first, and disabling a keyword removes it from public search immediately.',
+    tableHeaders: {
+      keyword: 'Keyword',
+      sort: 'Sort',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading...',
+    empty: 'There are no configured hot keywords for this region. Public search will fall back to derived results.',
+    statusText: (enabled) => enabled ? 'Enabled' : 'Disabled',
+    edit: 'Edit',
+    enable: 'Enable',
+    disable: 'Disable',
+    delete: 'Delete',
+    editorEyebrow: (editing) => editing ? 'Edit hot keyword' : 'New hot keyword',
+    editorHeading: (editing) => editing ? 'Changes affect the public search panel immediately.' : 'New keywords enter the public hot-keyword list by sort order.',
+    labels: {
+      keyword: 'Keyword',
+      sort: 'Sort',
+    },
+    saving: 'Saving...',
+    save: 'Save hot keyword',
+  },
+  sensitiveWords: {
+    created: 'Sensitive word created.',
+    updated: 'Sensitive word updated.',
+    enabled: 'Sensitive word enabled.',
+    disabled: 'Sensitive word disabled.',
+    deleted: 'Sensitive word deleted.',
+    deleteConfirm: (word) => `Delete sensitive word "${word}"? The corresponding block rule stops applying immediately.`,
+    eyebrow: 'Content governance',
+    heading: 'Stand up the sensitive-word base layer first, then talk about third-party moderation.',
+    description: (region) => `Current region ${region}. Enabled words block writes by substring match across reviews, posts, comments, and direct messages. Disabling or deleting a word takes effect immediately.`,
+    create: 'New sensitive word',
+    listEyebrow: 'Word list',
+    listHeading: 'Managed by region, enforced immediately on the write path for enabled words.',
+    tableHeaders: {
+      word: 'Sensitive word',
+      remark: 'Remark',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading...',
+    empty: 'There are no sensitive words for this region yet.',
+    remarkFallback: '—',
+    statusText: (enabled) => enabled ? 'Enabled' : 'Disabled',
+    edit: 'Edit',
+    enable: 'Enable',
+    disable: 'Disable',
+    delete: 'Delete',
+    editorEyebrow: (editing) => editing ? 'Edit sensitive word' : 'New sensitive word',
+    editorHeading: (editing) => editing ? 'Changes affect interception in this region immediately.' : 'New entries are enabled by default and participate in interception immediately.',
+    labels: {
+      word: 'Sensitive word',
+      remark: 'Remark',
+    },
+    saving: 'Saving...',
+    save: 'Save sensitive word',
   },
   privacyTasks: {
     eyebrow: 'Privacy Operations',

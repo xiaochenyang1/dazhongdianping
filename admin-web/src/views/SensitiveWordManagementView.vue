@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import {
   createAdminSensitiveWord,
   listAdminSensitiveWords,
@@ -15,6 +16,7 @@ type SensitiveWordEditor = AdminSensitiveWordPayload & {
 }
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const canWrite = computed(() => state.permissions.includes('operations:sensitive_word:write'))
 
 const words = ref<AdminSensitiveWord[]>([])
@@ -26,7 +28,7 @@ const successMessage = ref('')
 let requestId = 0
 
 function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : '请求失败'
+  return error instanceof Error ? error.message : strings.value.common.requestFailed
 }
 
 function resetMessages() {
@@ -80,10 +82,10 @@ async function submitEditor() {
   try {
     if (current.id) {
       await updateAdminSensitiveWord(current.id, payload)
-      successMessage.value = '敏感词已更新'
+      successMessage.value = strings.value.sensitiveWords.updated
     } else {
       await createAdminSensitiveWord(payload)
-      successMessage.value = '敏感词已创建'
+      successMessage.value = strings.value.sensitiveWords.created
     }
     editor.value = null
     await load()
@@ -100,7 +102,7 @@ async function toggleWord(item: AdminSensitiveWord) {
   saving.value = true
   try {
     await updateAdminSensitiveWordStatus(item.id, !item.enabled)
-    successMessage.value = item.enabled ? '敏感词已停用' : '敏感词已启用'
+    successMessage.value = item.enabled ? strings.value.sensitiveWords.disabled : strings.value.sensitiveWords.enabled
     await load()
   } catch (error) {
     errorMessage.value = messageOf(error)
@@ -111,13 +113,13 @@ async function toggleWord(item: AdminSensitiveWord) {
 
 async function deleteWord(item: AdminSensitiveWord) {
   if (!canWrite.value || saving.value) return
-  const confirmed = window.confirm(`确认删除敏感词「${item.word}」？删除后对应拦截会立即失效。`)
+  const confirmed = window.confirm(strings.value.sensitiveWords.deleteConfirm(item.word))
   if (!confirmed) return
   resetMessages()
   saving.value = true
   try {
     await removeAdminSensitiveWord(item.id)
-    successMessage.value = '敏感词已删除'
+    successMessage.value = strings.value.sensitiveWords.deleted
     await load()
   } catch (error) {
     errorMessage.value = messageOf(error)
@@ -140,11 +142,9 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">内容治理</p>
-        <h1>敏感词库先把机审底座立住，再谈第三方审核。</h1>
-        <p>
-          当前区域 {{ state.region }}。启用词会对点评、帖子、评论和私信写入做包含匹配拦截；停用或删除后立即失效。
-        </p>
+        <p class="eyebrow">{{ strings.sensitiveWords.eyebrow }}</p>
+        <h1>{{ strings.sensitiveWords.heading }}</h1>
+        <p>{{ strings.sensitiveWords.description(state.region) }}</p>
       </div>
       <button
         v-if="canWrite"
@@ -153,7 +153,7 @@ watch(
         type="button"
         @click="openEditor()"
       >
-        新建敏感词
+        {{ strings.sensitiveWords.create }}
       </button>
     </div>
 
@@ -163,8 +163,8 @@ watch(
     <section class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">词库列表</p>
-          <h2>按区域维护，写入侧实时按启用词拦截</h2>
+          <p class="eyebrow">{{ strings.sensitiveWords.listEyebrow }}</p>
+          <h2>{{ strings.sensitiveWords.listHeading }}</h2>
         </div>
       </div>
 
@@ -172,23 +172,23 @@ watch(
         <table class="data-table">
           <thead>
             <tr>
-              <th>敏感词</th>
-              <th>备注</th>
-              <th>状态</th>
-              <th v-if="canWrite">操作</th>
+              <th>{{ strings.sensitiveWords.tableHeaders.word }}</th>
+              <th>{{ strings.sensitiveWords.tableHeaders.remark }}</th>
+              <th>{{ strings.sensitiveWords.tableHeaders.status }}</th>
+              <th v-if="canWrite">{{ strings.sensitiveWords.tableHeaders.actions }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td :colspan="canWrite ? 4 : 3" class="table-empty">加载中...</td>
+              <td :colspan="canWrite ? 4 : 3" class="table-empty">{{ strings.sensitiveWords.loading }}</td>
             </tr>
             <tr v-else-if="!words.length">
-              <td :colspan="canWrite ? 4 : 3" class="table-empty">当前区域还没有敏感词。</td>
+              <td :colspan="canWrite ? 4 : 3" class="table-empty">{{ strings.sensitiveWords.empty }}</td>
             </tr>
             <tr v-for="item in words" :key="item.id">
               <td><strong>{{ item.word }}</strong></td>
-              <td>{{ item.remark || '—' }}</td>
-              <td><span class="status-pill">{{ item.enabled ? '启用' : '停用' }}</span></td>
+              <td>{{ item.remark || strings.sensitiveWords.remarkFallback }}</td>
+              <td><span class="status-pill">{{ strings.sensitiveWords.statusText(item.enabled) }}</span></td>
               <td v-if="canWrite" class="table-actions">
                 <button
                   :data-testid="`edit-sensitive-word-${item.id}`"
@@ -196,7 +196,7 @@ watch(
                   type="button"
                   @click="openEditor(item)"
                 >
-                  编辑
+                  {{ strings.sensitiveWords.edit }}
                 </button>
                 <button
                   :data-testid="`toggle-sensitive-word-${item.id}`"
@@ -204,7 +204,7 @@ watch(
                   type="button"
                   @click="toggleWord(item)"
                 >
-                  {{ item.enabled ? '停用' : '启用' }}
+                  {{ item.enabled ? strings.sensitiveWords.disable : strings.sensitiveWords.enable }}
                 </button>
                 <button
                   :data-testid="`delete-sensitive-word-${item.id}`"
@@ -212,7 +212,7 @@ watch(
                   type="button"
                   @click="deleteWord(item)"
                 >
-                  删除
+                  {{ strings.sensitiveWords.delete }}
                 </button>
               </td>
             </tr>
@@ -224,27 +224,27 @@ watch(
     <section v-if="editor && canWrite" class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">{{ editor.id ? '编辑敏感词' : '新建敏感词' }}</p>
-          <h2>{{ editor.id ? '改完立即影响当前区域拦截' : '新建后默认启用并参与拦截' }}</h2>
+          <p class="eyebrow">{{ strings.sensitiveWords.editorEyebrow(Boolean(editor.id)) }}</p>
+          <h2>{{ strings.sensitiveWords.editorHeading(Boolean(editor.id)) }}</h2>
         </div>
       </div>
 
       <form data-testid="sensitive-word-editor" class="editor-form" @submit.prevent="submitEditor">
         <div class="form-grid form-grid--two">
           <label class="field field--full">
-            <span>敏感词</span>
+            <span>{{ strings.sensitiveWords.labels.word }}</span>
             <input v-model="editor.word" name="sensitive-word" type="text" maxlength="64" required />
           </label>
           <label class="field field--full">
-            <span>备注</span>
+            <span>{{ strings.sensitiveWords.labels.remark }}</span>
             <input v-model="editor.remark" name="sensitive-word-remark" type="text" maxlength="255" />
           </label>
         </div>
         <div class="form-actions">
           <button class="primary-button" type="submit" :disabled="saving">
-            {{ saving ? '保存中...' : '保存敏感词' }}
+            {{ saving ? strings.sensitiveWords.saving : strings.sensitiveWords.save }}
           </button>
-          <button class="secondary-button" type="button" @click="editor = null">取消</button>
+          <button class="secondary-button" type="button" @click="editor = null">{{ strings.common.cancel }}</button>
         </div>
       </form>
     </section>
