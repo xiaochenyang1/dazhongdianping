@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { listAuditTasks, passAuditTask, rejectAuditTask } from '@/services/admin'
 import type { AdminAuditTask, PageResult } from '@/types/admin'
 
@@ -12,6 +13,7 @@ interface AuditFilters {
 }
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const canWrite = computed(() => state.permissions.includes('audit:review:write'))
 
 const loading = ref(false)
@@ -31,14 +33,27 @@ const filters = reactive<AuditFilters>({
 })
 
 const selectedTask = computed(() => {
-  if (!pageState.value || pageState.value.list.length === 0) {
+  if (!pageState.value?.list.length) {
     return null
   }
-
   return pageState.value.list.find((item) => item.id === selectedTaskId.value) ?? pageState.value.list[0]
 })
 
 const canHandleSelected = computed(() => canWrite.value && selectedTask.value?.status === 0)
+
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+function taskStatusText(task: AdminAuditTask) {
+  return strings.value.reviewAudit.statusText(task.status, task.statusText)
+}
+
+function taskActionLabel(taskId: number) {
+  return selectedTaskId.value === taskId
+    ? strings.value.reviewAudit.selected
+    : strings.value.reviewAudit.view
+}
 
 async function loadTasks() {
   loading.value = true
@@ -56,8 +71,8 @@ async function loadTasks() {
 
     const exists = pageState.value.list.some((item) => item.id === selectedTaskId.value)
     selectedTaskId.value = exists ? selectedTaskId.value : (pageState.value.list[0]?.id ?? null)
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '审核任务加载失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.reviewAudit.loadError)
   } finally {
     loading.value = false
   }
@@ -73,9 +88,7 @@ function selectTask(taskId: number) {
 
 async function handlePass() {
   const task = selectedTask.value
-  if (!canWrite.value || !task || task.status !== 0) {
-    return
-  }
+  if (!canHandleSelected.value || !task) return
 
   acting.value = true
   errorMessage.value = ''
@@ -85,12 +98,12 @@ async function handlePass() {
     await passAuditTask(task.id, {
       remark: approveRemark.value.trim() || undefined,
     })
-    successMessage.value = `任务 #${task.id} 已审核通过。`
+    successMessage.value = strings.value.reviewAudit.passed(task.id)
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '审核通过失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.reviewAudit.passError)
   } finally {
     acting.value = false
   }
@@ -98,13 +111,11 @@ async function handlePass() {
 
 async function handleReject() {
   const task = selectedTask.value
-  if (!canWrite.value || !task || task.status !== 0) {
-    return
-  }
+  if (!canHandleSelected.value || !task) return
 
   const reason = rejectReason.value.trim()
   if (!reason) {
-    errorMessage.value = '驳回原因不能为空。'
+    errorMessage.value = strings.value.reviewAudit.rejectReasonRequired
     return
   }
 
@@ -114,12 +125,12 @@ async function handleReject() {
 
   try {
     await rejectAuditTask(task.id, { reason })
-    successMessage.value = `任务 #${task.id} 已驳回。`
+    successMessage.value = strings.value.reviewAudit.rejected(task.id)
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '审核驳回失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.reviewAudit.rejectError)
   } finally {
     acting.value = false
   }
@@ -131,19 +142,13 @@ function applyFilters() {
 }
 
 function goPrevPage() {
-  if (!pageState.value || pageState.value.page <= 1) {
-    return
-  }
-
+  if (!pageState.value || pageState.value.page <= 1) return
   filters.page -= 1
   void loadTasks()
 }
 
 function goNextPage() {
-  if (!pageState.value?.hasMore) {
-    return
-  }
-
+  if (!pageState.value?.hasMore) return
   filters.page += 1
   void loadTasks()
 }
@@ -167,13 +172,13 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">点评审核</p>
-        <h1>先把待审点评捋顺，别让内容审核全靠数据库手改。</h1>
-        <p>当前区域 {{ state.region }} 的点评审核任务都在这儿，先保住最小闭环。</p>
+        <p class="eyebrow">{{ strings.reviewAudit.eyebrow }}</p>
+        <h1>{{ strings.reviewAudit.heading }}</h1>
+        <p>{{ strings.reviewAudit.description(state.region) }}</p>
       </div>
 
       <div class="header-actions">
-        <button type="button" class="secondary-button" @click="loadTasks">刷新任务</button>
+        <button type="button" class="secondary-button" @click="loadTasks">{{ strings.reviewAudit.refresh }}</button>
       </div>
     </div>
 
@@ -184,35 +189,35 @@ watch(
       <section class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">任务列表</p>
-            <h2>先把待审任务抓出来，再谈审核效率。</h2>
+            <p class="eyebrow">{{ strings.reviewAudit.listEyebrow }}</p>
+            <h2>{{ strings.reviewAudit.listHeading }}</h2>
           </div>
-          <span class="inline-note">当前共 {{ pageState?.total ?? 0 }} 条点评审核任务</span>
+          <span class="inline-note">{{ strings.reviewAudit.listSummary(pageState?.total ?? 0) }}</span>
         </div>
 
         <div class="toolbar-grid toolbar-grid--filters">
           <label class="field">
-            <span>状态</span>
+            <span>{{ strings.reviewAudit.filters.status }}</span>
             <select v-model="filters.status">
-              <option value="">全部状态</option>
-              <option value="0">待人审</option>
-              <option value="1">通过</option>
-              <option value="2">驳回</option>
+              <option value="">{{ strings.reviewAudit.statusOptions.all }}</option>
+              <option value="0">{{ strings.reviewAudit.statusOptions.pending }}</option>
+              <option value="1">{{ strings.reviewAudit.statusOptions.approved }}</option>
+              <option value="2">{{ strings.reviewAudit.statusOptions.rejected }}</option>
             </select>
           </label>
           <label class="field">
-            <span>关键词</span>
+            <span>{{ strings.reviewAudit.filters.keyword }}</span>
             <input
               v-model="filters.keyword"
               name="review-keyword-filter"
               data-testid="review-keyword-filter"
-              placeholder="门店名 / 用户 / 点评内容"
+              :placeholder="strings.reviewAudit.keywordPlaceholder"
             />
           </label>
 
           <div class="toolbar-actions">
-            <button type="button" class="primary-button" @click="applyFilters">应用筛选</button>
-            <button type="button" class="ghost-button" @click="loadTasks">重置刷新</button>
+            <button type="button" class="primary-button" @click="applyFilters">{{ strings.reviewAudit.applyFilters }}</button>
+            <button type="button" class="ghost-button" @click="loadTasks">{{ strings.reviewAudit.resetRefresh }}</button>
           </div>
         </div>
 
@@ -220,44 +225,42 @@ watch(
           <table class="data-table">
             <thead>
               <tr>
-                <th>任务</th>
-                <th>门店</th>
-                <th>提交人</th>
-                <th>状态</th>
-                <th>提交时间</th>
-                <th>操作</th>
+                <th>{{ strings.reviewAudit.tableHeaders.task }}</th>
+                <th>{{ strings.reviewAudit.tableHeaders.shop }}</th>
+                <th>{{ strings.reviewAudit.tableHeaders.submitter }}</th>
+                <th>{{ strings.reviewAudit.tableHeaders.status }}</th>
+                <th>{{ strings.reviewAudit.tableHeaders.submittedAt }}</th>
+                <th>{{ strings.reviewAudit.tableHeaders.actions }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="6" class="table-empty">点评审核任务加载中...</td>
+                <td colspan="6" class="table-empty">{{ strings.reviewAudit.loading }}</td>
               </tr>
               <tr v-else-if="!pageState || pageState.list.length === 0">
-                <td colspan="6" class="table-empty">当前筛选下没有审核任务，别硬盯着空气发愣。</td>
+                <td colspan="6" class="table-empty">{{ strings.reviewAudit.empty }}</td>
               </tr>
               <tr v-for="task in pageState?.list" :key="task.id">
                 <td>
                   <strong>#{{ task.id }}</strong>
-                  <p>点评 #{{ task.bizId }}</p>
+                  <p>{{ strings.reviewAudit.taskLabel(task.bizId) }}</p>
                 </td>
                 <td>
-                  <strong>{{ task.shopName || '--' }}</strong>
-                  <p>{{ task.region }} · {{ task.bizTypeText }}</p>
+                  <strong>{{ task.shopName || strings.reviewAudit.shopFallback }}</strong>
+                  <p>{{ task.region }} · {{ strings.reviewAudit.taskTypeLabel }}</p>
                 </td>
-                <td>{{ task.submittedBy || '匿名' }}</td>
+                <td>{{ task.submittedBy || strings.reviewAudit.submitterFallback }}</td>
                 <td>
                   <span
                     class="status-pill"
                     :class="task.status === 0 ? 'status-pill--warn' : task.status === 1 ? 'status-pill--good' : 'status-pill--muted'"
                   >
-                    {{ task.statusText }}
+                    {{ taskStatusText(task) }}
                   </span>
                 </td>
                 <td>{{ task.createdAt }}</td>
                 <td class="table-actions">
-                  <button type="button" class="table-action" @click="selectTask(task.id)">
-                    {{ selectedTaskId === task.id ? '已选中' : '查看' }}
-                  </button>
+                  <button type="button" class="table-action" @click="selectTask(task.id)">{{ taskActionLabel(task.id) }}</button>
                 </td>
               </tr>
             </tbody>
@@ -266,11 +269,11 @@ watch(
 
         <div class="pager">
           <button type="button" class="ghost-button" :disabled="(pageState?.page ?? 1) <= 1" @click="goPrevPage">
-            上一页
+            {{ strings.reviewAudit.previousPage }}
           </button>
-          <span>第 {{ pageState?.page ?? 1 }} 页</span>
+          <span>{{ strings.reviewAudit.page(pageState?.page ?? 1) }}</span>
           <button type="button" class="ghost-button" :disabled="!pageState?.hasMore" @click="goNextPage">
-            下一页
+            {{ strings.reviewAudit.nextPage }}
           </button>
         </div>
       </section>
@@ -278,87 +281,74 @@ watch(
       <section class="content-card editor-card">
         <div class="editor-header">
           <div>
-            <p class="eyebrow">任务处理</p>
-            <h2>{{ selectedTask ? `任务 #${selectedTask.id}` : '先选一条任务' }}</h2>
+            <p class="eyebrow">{{ strings.reviewAudit.editorEyebrow }}</p>
+            <h2>{{ strings.reviewAudit.editorHeading(selectedTask?.id ?? null) }}</h2>
           </div>
-          <span class="inline-note">{{ selectedTask?.statusText ?? '暂无选中任务' }}</span>
+          <span class="inline-note">{{ selectedTask ? taskStatusText(selectedTask) : strings.reviewAudit.editorStatusFallback }}</span>
         </div>
 
         <template v-if="selectedTask">
           <div class="meta-grid">
             <div>
-              <span>门店</span>
-              <strong>{{ selectedTask.shopName || '--' }}</strong>
+              <span>{{ strings.reviewAudit.metaLabels.shop }}</span>
+              <strong>{{ selectedTask.shopName || strings.reviewAudit.shopFallback }}</strong>
             </div>
             <div>
-              <span>提交人</span>
-              <strong>{{ selectedTask.submittedBy || '匿名' }}</strong>
+              <span>{{ strings.reviewAudit.metaLabels.submitter }}</span>
+              <strong>{{ selectedTask.submittedBy || strings.reviewAudit.submitterFallback }}</strong>
             </div>
             <div>
-              <span>提交时间</span>
+              <span>{{ strings.reviewAudit.metaLabels.submittedAt }}</span>
               <strong>{{ selectedTask.createdAt }}</strong>
             </div>
             <div>
-              <span>最近处理</span>
-              <strong>{{ selectedTask.updatedAt || '--' }}</strong>
+              <span>{{ strings.reviewAudit.metaLabels.updatedAt }}</span>
+              <strong>{{ selectedTask.updatedAt || strings.reviewAudit.updatedAtFallback }}</strong>
             </div>
           </div>
 
           <div class="hint-card">
-            <strong>点评摘要</strong>
-            <p>{{ selectedTask.summary || '当前没有可展示的点评摘要。' }}</p>
+            <strong>{{ strings.reviewAudit.summaryLabel }}</strong>
+            <p>{{ selectedTask.summary || strings.reviewAudit.summaryFallback }}</p>
           </div>
 
           <template v-if="canHandleSelected">
             <label class="field field--full">
-              <span>通过备注</span>
+              <span>{{ strings.reviewAudit.approveRemarkLabel }}</span>
               <textarea
                 v-model="approveRemark"
                 name="approve-remark"
                 rows="4"
                 spellcheck="false"
-                placeholder="可选。比如：内容真实、表达完整。"
+                :placeholder="strings.reviewAudit.approveRemarkPlaceholder"
               />
             </label>
 
             <label class="field field--full">
-              <span>驳回原因</span>
+              <span>{{ strings.reviewAudit.rejectReasonLabel }}</span>
               <textarea
                 v-model="rejectReason"
                 name="reject-reason"
                 rows="4"
                 spellcheck="false"
-                placeholder="必填。别写成“自己体会”，那纯属摆烂。"
+                :placeholder="strings.reviewAudit.rejectReasonPlaceholder"
               />
             </label>
 
             <div class="form-actions">
-              <button
-                type="button"
-                class="primary-button"
-                :disabled="acting"
-                @click="handlePass"
-              >
-                {{ acting && canHandleSelected ? '处理中...' : '通过点评' }}
+              <button type="button" class="primary-button" :disabled="acting" @click="handlePass">
+                {{ acting ? strings.reviewAudit.acting : strings.reviewAudit.approve }}
               </button>
-              <button
-                type="button"
-                class="secondary-button"
-                :disabled="acting"
-                @click="handleReject"
-              >
-                {{ acting && canHandleSelected ? '处理中...' : '驳回点评' }}
+              <button type="button" class="secondary-button" :disabled="acting" @click="handleReject">
+                {{ acting ? strings.reviewAudit.acting : strings.reviewAudit.reject }}
               </button>
             </div>
-
           </template>
-          <p v-else-if="!canWrite" class="inline-note">当前账号只有查看权限，无法处理点评审核。</p>
-          <p v-else class="inline-note">当前任务已经处理过了，只能查看结果。</p>
+          <p v-else-if="!canWrite" class="inline-note">{{ strings.reviewAudit.readOnly }}</p>
+          <p v-else class="inline-note">{{ strings.reviewAudit.handled }}</p>
         </template>
 
-        <div v-else class="empty-state">
-          当前筛选下没有选中的审核任务。先从左边挑一条，别对着空白面板发功。
-        </div>
+        <div v-else class="empty-state">{{ strings.reviewAudit.emptyState }}</div>
       </section>
     </div>
   </section>

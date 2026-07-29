@@ -82,11 +82,12 @@ describe('AuditReviewView', () => {
       page: 1,
       pageSize: 10,
     })
+    expect(host.textContent).toContain('Review Audit')
     expect(host.textContent).toContain('服务细致，晚餐套餐搭配合理')
 
     const remark = host.querySelector<HTMLTextAreaElement>('textarea[name="approve-remark"]')
     const passButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('通过点评'))
+      .find((button) => button.textContent?.includes('Approve review'))
     if (!remark || !passButton) throw new Error('找不到点评审核通过控件')
     remark.value = '内容真实'
     remark.dispatchEvent(new Event('input'))
@@ -103,11 +104,11 @@ describe('AuditReviewView', () => {
     await flushView()
 
     const rejectButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('驳回点评'))
+      .find((button) => button.textContent?.includes('Reject review'))
     if (!rejectButton) throw new Error('找不到驳回点评按钮')
     rejectButton.click()
     await flushView()
-    expect(host.textContent).toContain('驳回原因不能为空')
+    expect(host.textContent).toContain('A rejection reason is required.')
     expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
 
     const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
@@ -129,11 +130,11 @@ describe('AuditReviewView', () => {
     expect(adminMocks.listAuditTasks).toHaveBeenCalledTimes(1)
     expect(host.textContent).toContain('Paris Bistro')
     expect(host.textContent).toContain('服务细致，晚餐套餐搭配合理')
-    expect(host.textContent).toContain('当前账号只有查看权限，无法处理点评审核')
+    expect(host.textContent).toContain('This account is read-only and cannot process review audits.')
     expect(host.querySelector('textarea[name="approve-remark"]')).toBeNull()
     expect(host.querySelector('textarea[name="reject-reason"]')).toBeNull()
-    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('通过点评'))).toBe(false)
-    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('驳回点评'))).toBe(false)
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Approve review'))).toBe(false)
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Reject review'))).toBe(false)
     app.unmount()
   })
 
@@ -142,9 +143,9 @@ describe('AuditReviewView', () => {
     await flushView()
 
     const passButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('通过点评'))
+      .find((button) => button.textContent?.includes('Approve review'))
     const rejectButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('驳回点评'))
+      .find((button) => button.textContent?.includes('Reject review'))
     const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
     if (!passButton || !rejectButton || !reason) throw new Error('找不到点评审核写入控件')
     reason.value = '点评包含广告引流'

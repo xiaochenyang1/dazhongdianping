@@ -82,13 +82,14 @@ describe('PostAuditView', () => {
       page: 1,
       pageSize: 10,
     })
+    expect(host.textContent).toContain('Post Audit')
     expect(host.textContent).toContain('伦敦周末市场指南')
 
     const keyword = host.querySelector<HTMLInputElement>('[data-testid="post-keyword-filter"]')
     if (!keyword) throw new Error('找不到关键词输入框')
     keyword.value = '伦敦'
     keyword.dispatchEvent(new Event('input'))
-    const applyButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('应用筛选'))
+    const applyButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Apply filters'))
     if (!applyButton) throw new Error('找不到应用筛选按钮')
     applyButton.click()
     await flushView()
@@ -101,7 +102,7 @@ describe('PostAuditView', () => {
       pageSize: 10,
     })
 
-    const passButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('通过帖子'))
+    const passButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Approve post'))
     if (!passButton) throw new Error('找不到通过帖子按钮')
     passButton.click()
     await flushView()
@@ -115,11 +116,11 @@ describe('PostAuditView', () => {
     const { app, host } = mountView()
     await flushView()
 
-    const rejectButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('驳回帖子'))
+    const rejectButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Reject post'))
     if (!rejectButton) throw new Error('找不到驳回帖子按钮')
     rejectButton.click()
     await flushView()
-    expect(host.textContent).toContain('驳回原因不能为空')
+    expect(host.textContent).toContain('A rejection reason is required.')
     expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
 
     const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
@@ -141,11 +142,11 @@ describe('PostAuditView', () => {
     expect(adminMocks.listAuditTasks).toHaveBeenCalledTimes(1)
     expect(host.textContent).toContain('伦敦周末市场指南')
     expect(host.textContent).toContain('伦敦小王')
-    expect(host.textContent).toContain('当前账号只有查看权限，无法处理帖子审核')
+    expect(host.textContent).toContain('This account is read-only and cannot process post audits.')
     expect(host.querySelector('textarea[name="approve-remark"]')).toBeNull()
     expect(host.querySelector('textarea[name="reject-reason"]')).toBeNull()
-    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('通过帖子'))).toBe(false)
-    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('驳回帖子'))).toBe(false)
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Approve post'))).toBe(false)
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Reject post'))).toBe(false)
     app.unmount()
   })
 
@@ -154,9 +155,9 @@ describe('PostAuditView', () => {
     await flushView()
 
     const passButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('通过帖子'))
+      .find((button) => button.textContent?.includes('Approve post'))
     const rejectButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('驳回帖子'))
+      .find((button) => button.textContent?.includes('Reject post'))
     const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
     if (!passButton || !rejectButton || !reason) throw new Error('找不到帖子审核写入控件')
     reason.value = '包含联系方式引流'

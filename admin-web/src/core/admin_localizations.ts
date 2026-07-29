@@ -322,6 +322,139 @@ export interface AdminStrings {
     page: (page: number) => string
     nextPage: string
   }
+  reviewAudit: {
+    loadError: string
+    passError: string
+    rejectError: string
+    rejectReasonRequired: string
+    passed: (taskId: number) => string
+    rejected: (taskId: number) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    listEyebrow: string
+    listHeading: string
+    listSummary: (total: number) => string
+    filters: {
+      status: string
+      keyword: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    keywordPlaceholder: string
+    applyFilters: string
+    resetRefresh: string
+    tableHeaders: {
+      task: string
+      shop: string
+      submitter: string
+      status: string
+      submittedAt: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    taskLabel: (bizId: number) => string
+    taskTypeLabel: string
+    shopFallback: string
+    submitterFallback: string
+    statusText: (status: number, fallback?: string) => string
+    selected: string
+    view: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    editorEyebrow: string
+    editorHeading: (taskId: number | null) => string
+    editorStatusFallback: string
+    metaLabels: {
+      shop: string
+      submitter: string
+      submittedAt: string
+      updatedAt: string
+    }
+    updatedAtFallback: string
+    summaryLabel: string
+    summaryFallback: string
+    approveRemarkLabel: string
+    approveRemarkPlaceholder: string
+    rejectReasonLabel: string
+    rejectReasonPlaceholder: string
+    acting: string
+    approve: string
+    reject: string
+    readOnly: string
+    handled: string
+    emptyState: string
+  }
+  postAudit: {
+    loadError: string
+    passError: string
+    rejectError: string
+    rejectReasonRequired: string
+    passed: (taskId: number) => string
+    rejected: (taskId: number) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    listEyebrow: string
+    listHeading: string
+    listSummary: (total: number) => string
+    filters: {
+      status: string
+      keyword: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    keywordPlaceholder: string
+    applyFilters: string
+    tableHeaders: {
+      task: string
+      author: string
+      summary: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    taskLabel: (bizId: number) => string
+    authorFallback: string
+    summaryFallback: string
+    statusText: (status: number, fallback?: string) => string
+    selected: string
+    view: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    editorEyebrow: string
+    editorHeading: (taskId: number) => string
+    metaLabels: {
+      post: string
+      author: string
+      region: string
+      submittedAt: string
+    }
+    detailLabel: string
+    approveRemarkLabel: string
+    approveRemarkPlaceholder: string
+    rejectReasonLabel: string
+    rejectReasonPlaceholder: string
+    approve: string
+    reject: string
+    readOnly: string
+    handled: string
+    emptyState: string
+  }
   reviewAppealAudit: {
     loadError: string
     actionError: string
@@ -1560,6 +1693,139 @@ const zhCnStrings: AdminStrings = {
     previousPage: '上一页',
     page: (page) => `第 ${page} 页`,
     nextPage: '下一页',
+  },
+  reviewAudit: {
+    loadError: '审核任务加载失败',
+    passError: '审核通过失败',
+    rejectError: '审核驳回失败',
+    rejectReasonRequired: '驳回原因不能为空。',
+    passed: (taskId) => `任务 #${taskId} 已审核通过。`,
+    rejected: (taskId) => `任务 #${taskId} 已驳回。`,
+    eyebrow: '点评审核',
+    heading: '先把待审点评捋顺，别让内容审核全靠数据库手改。',
+    description: (region) => `当前区域 ${region} 的点评审核任务都在这儿，先保住最小闭环。`,
+    refresh: '刷新任务',
+    listEyebrow: '任务列表',
+    listHeading: '先把待审任务抓出来，再谈审核效率。',
+    listSummary: (total) => `当前共 ${total} 条点评审核任务`,
+    filters: {
+      status: '状态',
+      keyword: '关键词',
+    },
+    statusOptions: {
+      all: '全部状态',
+      pending: '待人审',
+      approved: '通过',
+      rejected: '驳回',
+    },
+    keywordPlaceholder: '门店名 / 用户 / 点评内容',
+    applyFilters: '应用筛选',
+    resetRefresh: '重置刷新',
+    tableHeaders: {
+      task: '任务',
+      shop: '门店',
+      submitter: '提交人',
+      status: '状态',
+      submittedAt: '提交时间',
+      actions: '操作',
+    },
+    loading: '点评审核任务加载中...',
+    empty: '当前筛选下没有审核任务，别硬盯着空气发愣。',
+    taskLabel: (bizId) => `点评 #${bizId}`,
+    taskTypeLabel: '点评审核',
+    shopFallback: '--',
+    submitterFallback: '匿名',
+    statusText: zhAuditTaskStatusText,
+    selected: '已选中',
+    view: '查看',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    editorEyebrow: '任务处理',
+    editorHeading: (taskId) => taskId ? `任务 #${taskId}` : '先选一条任务',
+    editorStatusFallback: '暂无选中任务',
+    metaLabels: {
+      shop: '门店',
+      submitter: '提交人',
+      submittedAt: '提交时间',
+      updatedAt: '最近处理',
+    },
+    updatedAtFallback: '--',
+    summaryLabel: '点评摘要',
+    summaryFallback: '当前没有可展示的点评摘要。',
+    approveRemarkLabel: '通过备注',
+    approveRemarkPlaceholder: '可选。比如：内容真实、表达完整。',
+    rejectReasonLabel: '驳回原因',
+    rejectReasonPlaceholder: '必填。别写成“自己体会”，那纯属摆烂。',
+    acting: '处理中...',
+    approve: '通过点评',
+    reject: '驳回点评',
+    readOnly: '当前账号只有查看权限，无法处理点评审核。',
+    handled: '当前任务已经处理过了，只能查看结果。',
+    emptyState: '当前筛选下没有选中的审核任务。先从左边挑一条，别对着空白面板发功。',
+  },
+  postAudit: {
+    loadError: '帖子审核任务加载失败',
+    passError: '帖子审核通过失败',
+    rejectError: '帖子审核驳回失败',
+    rejectReasonRequired: '驳回原因不能为空。',
+    passed: (taskId) => `帖子审核任务 #${taskId} 已通过。`,
+    rejected: (taskId) => `帖子审核任务 #${taskId} 已驳回。`,
+    eyebrow: '帖子审核',
+    heading: '社区内容要过审，但别把审核做成数据库猜谜。',
+    description: (region) => `当前区域 ${region}，这里只处理帖子任务；通过后公开，驳回原因会回到作者端。`,
+    refresh: '刷新任务',
+    listEyebrow: '任务列表',
+    listHeading: '帖子审核与点评审核分开，别搅成一锅粥。',
+    listSummary: (total) => `共 ${total} 条帖子任务`,
+    filters: {
+      status: '状态',
+      keyword: '关键词',
+    },
+    statusOptions: {
+      all: '全部状态',
+      pending: '待人审',
+      approved: '通过',
+      rejected: '驳回',
+    },
+    keywordPlaceholder: '作者 / 内容摘要',
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      task: '任务',
+      author: '作者',
+      summary: '内容摘要',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '帖子审核任务加载中...',
+    empty: '当前没有帖子审核任务。',
+    taskLabel: (bizId) => `帖子 #${bizId}`,
+    authorFallback: '匿名',
+    summaryFallback: '暂无摘要',
+    statusText: zhAuditTaskStatusText,
+    selected: '已选中',
+    view: '查看',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    editorEyebrow: '任务处理',
+    editorHeading: (taskId) => `任务 #${taskId}`,
+    metaLabels: {
+      post: '帖子',
+      author: '作者',
+      region: '区域',
+      submittedAt: '提交时间',
+    },
+    detailLabel: '帖子摘要',
+    approveRemarkLabel: '通过备注',
+    approveRemarkPlaceholder: '可选，记录通过依据。',
+    rejectReasonLabel: '驳回原因',
+    rejectReasonPlaceholder: '必填，作者端会看到这段原因。',
+    approve: '通过帖子',
+    reject: '驳回帖子',
+    readOnly: '当前账号只有查看权限，无法处理帖子审核。',
+    handled: '当前任务已经处理，只保留查看。',
+    emptyState: '请先选择一条帖子审核任务。',
   },
   reviewAppealAudit: {
     loadError: '申诉任务加载失败',
@@ -2836,6 +3102,139 @@ const enStrings: AdminStrings = {
     previousPage: 'Previous',
     page: (page) => `Page ${page}`,
     nextPage: 'Next',
+  },
+  reviewAudit: {
+    loadError: 'Failed to load review audit tasks.',
+    passError: 'Failed to approve the review.',
+    rejectError: 'Failed to reject the review.',
+    rejectReasonRequired: 'A rejection reason is required.',
+    passed: (taskId) => `Task #${taskId} approved.`,
+    rejected: (taskId) => `Task #${taskId} rejected.`,
+    eyebrow: 'Review Audit',
+    heading: 'Clear the pending review queue instead of relying on database edits for moderation.',
+    description: (region) => `Review audit tasks for region ${region} are handled here so the minimum moderation loop stays intact.`,
+    refresh: 'Refresh tasks',
+    listEyebrow: 'Task list',
+    listHeading: 'Pull the pending work into view before talking about review throughput.',
+    listSummary: (total) => `${total} review audit tasks`,
+    filters: {
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    keywordPlaceholder: 'Shop / user / review content',
+    applyFilters: 'Apply filters',
+    resetRefresh: 'Reset + refresh',
+    tableHeaders: {
+      task: 'Task',
+      shop: 'Shop',
+      submitter: 'Submitted by',
+      status: 'Status',
+      submittedAt: 'Submitted at',
+      actions: 'Actions',
+    },
+    loading: 'Loading review audit tasks...',
+    empty: 'No review audit tasks match the current filters.',
+    taskLabel: (bizId) => `Review #${bizId}`,
+    taskTypeLabel: 'Review audit',
+    shopFallback: '--',
+    submitterFallback: 'Anonymous',
+    statusText: enAuditTaskStatusText,
+    selected: 'Selected',
+    view: 'View',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    editorEyebrow: 'Task Handling',
+    editorHeading: (taskId) => taskId ? `Task #${taskId}` : 'Select a task first',
+    editorStatusFallback: 'No task selected',
+    metaLabels: {
+      shop: 'Shop',
+      submitter: 'Submitted by',
+      submittedAt: 'Submitted at',
+      updatedAt: 'Last handled',
+    },
+    updatedAtFallback: '--',
+    summaryLabel: 'Review summary',
+    summaryFallback: 'No review summary is available for display.',
+    approveRemarkLabel: 'Approval note',
+    approveRemarkPlaceholder: 'Optional. For example: authentic content with complete context.',
+    rejectReasonLabel: 'Rejection reason',
+    rejectReasonPlaceholder: 'Required. Do not make the author guess what went wrong.',
+    acting: 'Processing...',
+    approve: 'Approve review',
+    reject: 'Reject review',
+    readOnly: 'This account is read-only and cannot process review audits.',
+    handled: 'This task has already been handled. View only.',
+    emptyState: 'No task is selected under the current filters. Pick one from the left panel first.',
+  },
+  postAudit: {
+    loadError: 'Failed to load post audit tasks.',
+    passError: 'Failed to approve the post.',
+    rejectError: 'Failed to reject the post.',
+    rejectReasonRequired: 'A rejection reason is required.',
+    passed: (taskId) => `Post audit task #${taskId} approved.`,
+    rejected: (taskId) => `Post audit task #${taskId} rejected.`,
+    eyebrow: 'Post Audit',
+    heading: 'Community posts need review, but moderation should not feel like database guesswork.',
+    description: (region) => `Current region ${region}. This queue only handles post tasks. Approved posts go public, and rejection reasons are returned to the author.`,
+    refresh: 'Refresh tasks',
+    listEyebrow: 'Task list',
+    listHeading: 'Keep post moderation separate from review moderation instead of mixing the two queues.',
+    listSummary: (total) => `${total} post tasks`,
+    filters: {
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    keywordPlaceholder: 'Author / content summary',
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      task: 'Task',
+      author: 'Author',
+      summary: 'Content summary',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading post audit tasks...',
+    empty: 'No post audit tasks.',
+    taskLabel: (bizId) => `Post #${bizId}`,
+    authorFallback: 'Anonymous',
+    summaryFallback: 'No summary',
+    statusText: enAuditTaskStatusText,
+    selected: 'Selected',
+    view: 'View',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    editorEyebrow: 'Task Handling',
+    editorHeading: (taskId) => `Task #${taskId}`,
+    metaLabels: {
+      post: 'Post',
+      author: 'Author',
+      region: 'Region',
+      submittedAt: 'Submitted at',
+    },
+    detailLabel: 'Post summary',
+    approveRemarkLabel: 'Approval note',
+    approveRemarkPlaceholder: 'Optional. Record the approval basis.',
+    rejectReasonLabel: 'Rejection reason',
+    rejectReasonPlaceholder: 'Required. The author sees this explanation.',
+    approve: 'Approve post',
+    reject: 'Reject post',
+    readOnly: 'This account is read-only and cannot process post audits.',
+    handled: 'This task has already been handled. View only.',
+    emptyState: 'Select a post audit task first.',
   },
   reviewAppealAudit: {
     loadError: 'Failed to load appeal tasks.',
