@@ -124,6 +124,9 @@ void main() {
       ).growthRecordActionLabel('review_create', fallback: '完善资料'),
       '完善资料',
     );
+    expect(AppLocalizations.forTag('en').anonymousUser, 'Anonymous user');
+    expect(AppLocalizations.forTag('en').browseViewCount(2), 'Viewed 2 times');
+    expect(AppLocalizations.forTag('zh-CN').deleteBrowseHistoryTooltip, '删除足迹');
   });
 
   test('delegate supports every configured app locale', () async {

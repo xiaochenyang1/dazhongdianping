@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class BrowseHistoryFakeRepository extends BrowseRepository {
@@ -97,6 +99,23 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
     await removeGates[shopId]?.future;
     history = history.where((item) => item.shopId != shopId).toList();
   }
+}
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
 }
 
 void main() {
@@ -282,5 +301,20 @@ void main() {
     expect(find.text('Paris Cafe'), findsOneWidget);
     expect(find.textContaining('刷新足迹失败'), findsOneWidget);
     expect(repository.requestedPages, [1, 1]);
+  });
+
+  testWidgets('browse history screen localizes English chrome', (tester) async {
+    final repository = BrowseHistoryFakeRepository();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: BrowseHistoryScreen(repository: repository),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Browse history'), findsOneWidget);
+    expect(find.textContaining('Viewed 2 times'), findsOneWidget);
+    expect(find.byTooltip('Delete history item'), findsNWidgets(2));
   });
 }

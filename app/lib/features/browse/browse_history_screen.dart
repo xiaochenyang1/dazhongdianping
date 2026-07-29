@@ -57,9 +57,13 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       }
     } catch (error) {
       if (mounted && revision == _historyRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).refreshBrowseHistoryFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).refreshBrowseHistoryFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       _refreshing = false;
@@ -101,9 +105,13 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       });
     } catch (error) {
       if (mounted && revision == _historyRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreBrowseHistoryFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreBrowseHistoryFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && revision == _historyRevision) {
@@ -135,9 +143,13 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).clearBrowseHistoryFailed(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).clearBrowseHistoryFailed(error),
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _clearing = false);
     }
@@ -170,9 +182,13 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteBrowseHistoryFailed(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).deleteBrowseHistoryFailed(error),
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _removingShopIds.remove(item.shopId));
@@ -182,16 +198,17 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context).myBrowseHistory),
+        title: Text(strings.myBrowseHistory),
         actions: [
           TextButton(
             key: const Key('browse-history-clear'),
             onPressed: _clearing || _removingShopIds.isNotEmpty
                 ? null
                 : _clearAll,
-            child: Text(_clearing ? AppLocalizations.of(context).clearing : AppLocalizations.of(context).clearAll),
+            child: Text(_clearing ? strings.clearing : strings.clearAll),
           ),
         ],
       ),
@@ -206,12 +223,12 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(AppLocalizations.of(context).browseHistoryLoadFailed(snapshot.error!)),
+                  Text(strings.browseHistoryLoadFailed(snapshot.error!)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('browse-history-retry'),
                     onPressed: _retryInitialLoad,
-                    child: Text(AppLocalizations.of(context).retry),
+                    child: Text(strings.retry),
                   ),
                 ],
               ),
@@ -220,7 +237,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
           final page = snapshot.data!;
           final items = page.items;
           if (items.isEmpty) {
-            return Center(child: Text(AppLocalizations.of(context).noBrowseHistory));
+            return Center(child: Text(strings.noBrowseHistory));
           }
           return RefreshIndicator(
             onRefresh: _reload,
@@ -245,7 +262,9 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.expand_more),
-                      label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
+                      label: Text(
+                        _loadingMore ? strings.loading : strings.loadMore,
+                      ),
                     ),
                   );
                 }
@@ -256,7 +275,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
                 ].where((part) => part.isNotEmpty).join(' · ');
                 final subtitle = [
                   if (location.isNotEmpty) location,
-                  '浏览 ${item.viewCount} 次',
+                  strings.browseViewCount(item.viewCount),
                   if (item.lastViewedAt.isNotEmpty) item.lastViewedAt,
                   if (item.merchantCertificationLabel != null)
                     item.merchantCertificationLabel!,
@@ -271,7 +290,7 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
                     ),
                     trailing: IconButton(
                       key: Key('browse-history-remove-${item.shopId}'),
-                      tooltip: '删除足迹',
+                      tooltip: strings.deleteBrowseHistoryTooltip,
                       onPressed:
                           _clearing || _removingShopIds.contains(item.shopId)
                           ? null

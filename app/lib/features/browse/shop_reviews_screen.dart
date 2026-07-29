@@ -139,7 +139,10 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.shopName.isEmpty ? '门店点评' : '${widget.shopName} · 点评';
+    final strings = AppLocalizations.of(context);
+    final title = widget.shopName.isEmpty
+        ? strings.shopReviewsSection
+        : '${widget.shopName} · ${strings.reviewsMetric}';
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: Column(
@@ -154,7 +157,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                   children: [
                     ChoiceChip(
                       key: const Key('shop-reviews-sort-latest'),
-                      label: Text(AppLocalizations.of(context).sortLatest),
+                      label: Text(strings.sortLatest),
                       selected: _sort == 'latest',
                       onSelected: (_) {
                         if (_sort == 'latest') return;
@@ -164,7 +167,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     ),
                     ChoiceChip(
                       key: const Key('shop-reviews-sort-popular'),
-                      label: Text(AppLocalizations.of(context).sortHottest),
+                      label: Text(strings.sortHottest),
                       selected: _sort == 'popular',
                       onSelected: (_) {
                         if (_sort == 'popular') return;
@@ -174,7 +177,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     ),
                     ChoiceChip(
                       key: const Key('shop-reviews-sort-score'),
-                      label: Text(AppLocalizations.of(context).sortBestRated),
+                      label: Text(strings.sortBestRated),
                       selected: _sort == 'score',
                       onSelected: (_) {
                         if (_sort == 'score') return;
@@ -184,13 +187,13 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   children: [
                     FilterChip(
                       key: const Key('shop-reviews-filter-score4'),
-                      label: Text(AppLocalizations.of(context).minScoreFour),
+                      label: Text(strings.minScoreFour),
                       selected: _minScore == 4,
                       onSelected: (selected) {
                         setState(() => _minScore = selected ? 4 : null);
@@ -199,7 +202,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     ),
                     FilterChip(
                       key: const Key('shop-reviews-filter-images'),
-                      label: Text(AppLocalizations.of(context).withPhotosOnly),
+                      label: Text(strings.withPhotosOnly),
                       selected: _hasImages == true,
                       onSelected: (selected) {
                         setState(() => _hasImages = selected ? true : null);
@@ -224,20 +227,22 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(AppLocalizations.of(context).shopReviewsLoadFailed(snapshot.error!)),
-                        SizedBox(height: 12),
+                        Text(strings.shopReviewsLoadFailed(snapshot.error!)),
+                        const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('shop-reviews-retry'),
                           onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_retrying ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
+                          label: Text(
+                            _retrying ? strings.processing : strings.retry,
+                          ),
                         ),
                       ],
                     ),
                   );
                 }
                 if (_items.isEmpty) {
-                  return Center(child: Text(AppLocalizations.of(context).noPublicReviews));
+                  return Center(child: Text(strings.noPublicReviews));
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -246,12 +251,12 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                   itemBuilder: (context, index) {
                     if (index == _items.length) {
                       if (_loadMoreError != null) {
-                        return Text(AppLocalizations.of(context).loadMoreFailed(_loadMoreError!));
+                        return Text(strings.loadMoreFailed(_loadMoreError!));
                       }
                       if (!_hasMore) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Center(child: Text(AppLocalizations.of(context).alreadyAtEnd)),
+                          child: Center(child: Text(strings.alreadyAtEnd)),
                         );
                       }
                       return Padding(
@@ -260,18 +265,23 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                           child: FilledButton.tonal(
                             key: const Key('shop-reviews-load-more'),
                             onPressed: _loadingMore ? null : _loadMore,
-                            child: Text(_loadingMore ? AppLocalizations.of(context).loading : '加载更多'),
+                            child: Text(
+                              _loadingMore ? strings.loading : strings.loadMore,
+                            ),
                           ),
                         ),
                       );
                     }
                     final item = _items[index];
+                    final userName = item.userName.isEmpty
+                        ? strings.anonymousUser
+                        : item.userName;
                     return Card(
                       child: ListTile(
                         title: Text(
                           item.authorCertificationLabel == null
-                              ? '${item.userName} · ★ ${item.score.toStringAsFixed(1)}'
-                              : '${item.userName} · ${item.authorCertificationLabel} · ★ ${item.score.toStringAsFixed(1)}',
+                              ? '$userName · ★ ${item.score.toStringAsFixed(1)}'
+                              : '$userName · ${item.authorCertificationLabel} · ★ ${item.score.toStringAsFixed(1)}',
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,7 +291,9 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                             if (item.merchantReply != null) ...[
                               const SizedBox(height: 8),
                               Text(
-                                '商家回复：${item.merchantReply}',
+                                strings.merchantReplyLabel(
+                                  item.merchantReply ?? '',
+                                ),
                                 style: const TextStyle(
                                   color: Color(0xFF4B5563),
                                 ),
@@ -289,7 +301,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                             ],
                             const SizedBox(height: 8),
                             Text(
-                              '点赞 ${item.likedCount} · 评论 ${item.commentCount}'
+                              '${strings.likeCommentStats(likes: item.likedCount, comments: item.commentCount)}'
                               '${item.createdAt.isEmpty ? '' : ' · ${item.createdAt}'}',
                               style: const TextStyle(fontSize: 12),
                             ),

@@ -153,9 +153,13 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
       setState(() => _favorited = !_favorited);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).favoriteActionFailed(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).favoriteActionFailed(error),
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _favoriteSaving = false);
     }
@@ -170,9 +174,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
     try {
       await Clipboard.setData(ClipboardData(text: shareText));
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).shareCopied)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).shareCopied)),
+      );
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
@@ -186,7 +190,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
         actions: [
           if (widget.enableFavorite)
             IconButton(
-              tooltip: _favorited ? AppLocalizations.of(context).unfavoriteShop : AppLocalizations.of(context).favoriteShop,
+              tooltip: _favorited
+                  ? AppLocalizations.of(context).unfavoriteShop
+                  : AppLocalizations.of(context).favoriteShop,
               onPressed: (_favoriteLoading || _favoriteSaving)
                   ? null
                   : _toggleFavorite,
@@ -208,13 +214,21 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(AppLocalizations.of(context).shopDetailLoadFailed(snapshot.error!)),
+                  Text(
+                    AppLocalizations.of(
+                      context,
+                    ).shopDetailLoadFailed(snapshot.error!),
+                  ),
                   SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('shop-detail-retry'),
                     onPressed: _reloadingDetail ? null : _reloadDetail,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloadingDetail ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
+                    label: Text(
+                      _reloadingDetail
+                          ? AppLocalizations.of(context).processing
+                          : AppLocalizations.of(context).retry,
+                    ),
                   ),
                 ],
               ),
@@ -281,7 +295,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     child: Text(
                       _favoriteLoading
                           ? AppLocalizations.of(context).favoriteStatusLoading
-                          : (_favorited ? AppLocalizations.of(context).unfavoriteShop : AppLocalizations.of(context).favoriteShop),
+                          : (_favorited
+                                ? AppLocalizations.of(context).unfavoriteShop
+                                : AppLocalizations.of(context).favoriteShop),
                     ),
                   ),
                 ),
@@ -293,7 +309,11 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 icon: const Icon(Icons.share_outlined),
                 label: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(_sharing ? AppLocalizations.of(context).sharing : AppLocalizations.of(context).shareShop),
+                  child: Text(
+                    _sharing
+                        ? AppLocalizations.of(context).sharing
+                        : AppLocalizations.of(context).shareShop,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -351,7 +371,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                           ),
                         ),
                         icon: const Icon(Icons.event_available_outlined),
-                        label: Text(AppLocalizations.of(context).onlineReservation),
+                        label: Text(
+                          AppLocalizations.of(context).onlineReservation,
+                        ),
                       ),
                     ),
                 ],
@@ -401,7 +423,11 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(AppLocalizations.of(context).shopReviewsLoadFailed(reviewSnapshot.error!)),
+                          Text(
+                            AppLocalizations.of(
+                              context,
+                            ).shopReviewsLoadFailed(reviewSnapshot.error!),
+                          ),
                           const SizedBox(height: 8),
                           FilledButton.tonalIcon(
                             key: const Key('shop-review-previews-retry'),
@@ -410,7 +436,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                                 : _reloadReviewPreviews,
                             icon: const Icon(Icons.refresh),
                             label: Text(
-                              _reloadingReviewPreviews ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retryReviews,
+                              _reloadingReviewPreviews
+                                  ? AppLocalizations.of(context).processing
+                                  : AppLocalizations.of(context).retryReviews,
                             ),
                           ),
                         ],
@@ -421,59 +449,60 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       return Text(AppLocalizations.of(context).noPublicReviews);
                     }
                     return Column(
-                      children: items
-                          .map(
-                            (item) => Card(
-                              child: ListTile(
-                                title: Text(
-                                  item.authorCertificationLabel == null
-                                      ? '${item.userName} · ★ ${item.score.toStringAsFixed(1)}'
-                                      : '${item.userName} · ${item.authorCertificationLabel} · ★ ${item.score.toStringAsFixed(1)}',
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 6),
-                                    Text(item.content),
-                                    if (item.merchantReply != null) ...[
-                                      SizedBox(height: 8),
-                                      Text(
-                                        AppLocalizations.of(context).merchantReplyLabel(
-                                          item.merchantReply ?? '',
-                                        ),
-                                        style: const TextStyle(
-                                          color: Color(0xFF4B5563),
-                                        ),
-                                      ),
-                                    ],
-                                    SizedBox(height: 8),
-                                    Text(
-                                      '${AppLocalizations.of(context).likeCommentStats(likes: item.likedCount, comments: item.commentCount)}${item.createdAt.isEmpty ? '' : ' · ${item.createdAt}'}',
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                                isThreeLine: true,
-                                trailing: widget.reviewRepository == null
-                                    ? null
-                                    : const Icon(Icons.chevron_right),
-                                onTap: widget.reviewRepository == null
-                                    ? null
-                                    : () => Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => ReviewDetailScreen(
-                                            repository:
-                                                widget.reviewRepository!,
-                                            reviewId: item.id,
-                                            canInteract:
-                                                widget.canInteractReviews,
-                                          ),
-                                        ),
-                                      ),
-                              ),
+                      children: items.map((item) {
+                        final userName = item.userName.isEmpty
+                            ? AppLocalizations.of(context).anonymousUser
+                            : item.userName;
+                        return Card(
+                          child: ListTile(
+                            title: Text(
+                              item.authorCertificationLabel == null
+                                  ? '$userName · ★ ${item.score.toStringAsFixed(1)}'
+                                  : '$userName · ${item.authorCertificationLabel} · ★ ${item.score.toStringAsFixed(1)}',
                             ),
-                          )
-                          .toList(),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 6),
+                                Text(item.content),
+                                if (item.merchantReply != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    ).merchantReplyLabel(
+                                      item.merchantReply ?? '',
+                                    ),
+                                    style: const TextStyle(
+                                      color: Color(0xFF4B5563),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${AppLocalizations.of(context).likeCommentStats(likes: item.likedCount, comments: item.commentCount)}${item.createdAt.isEmpty ? '' : ' · ${item.createdAt}'}',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                            isThreeLine: true,
+                            trailing: widget.reviewRepository == null
+                                ? null
+                                : const Icon(Icons.chevron_right),
+                            onTap: widget.reviewRepository == null
+                                ? null
+                                : () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => ReviewDetailScreen(
+                                        repository: widget.reviewRepository!,
+                                        reviewId: item.id,
+                                        canInteract: widget.canInteractReviews,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        );
+                      }).toList(),
                     );
                   },
                 ),
@@ -499,7 +528,11 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(AppLocalizations.of(context).similarShopsLoadFailed(similarSnapshot.error!)),
+                          Text(
+                            AppLocalizations.of(
+                              context,
+                            ).similarShopsLoadFailed(similarSnapshot.error!),
+                          ),
                           SizedBox(height: 8),
                           FilledButton.tonalIcon(
                             key: const Key('similar-shops-retry'),
@@ -507,7 +540,13 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                                 ? null
                                 : _reloadSimilar,
                             icon: const Icon(Icons.refresh),
-                            label: Text(_reloadingSimilar ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retryRecommendations),
+                            label: Text(
+                              _reloadingSimilar
+                                  ? AppLocalizations.of(context).processing
+                                  : AppLocalizations.of(
+                                      context,
+                                    ).retryRecommendations,
+                            ),
                           ),
                         ],
                       );

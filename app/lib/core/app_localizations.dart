@@ -317,6 +317,7 @@ class AppLocalizations {
     'reviewDetailLoadFailed': '点评详情加载失败：{error}',
     'auditRemarkLabel': '审核备注：{remark}',
     'merchantReplyLabel': '商家回复：{reply}',
+    'anonymousUser': '匿名用户',
     'report': '举报',
     'reviewLoginToInteract': '登录后可点赞、评论和举报这条点评。',
     'commentsSection': '评论',
@@ -629,6 +630,8 @@ class AppLocalizations {
     'deleteBrowseHistoryFailed': '删除足迹失败：{error}',
     'browseHistoryLoadFailed': '足迹加载失败：{error}',
     'noBrowseHistory': '当前区域还没有浏览足迹',
+    'browseViewCount': '浏览 {count} 次',
+    'deleteBrowseHistoryTooltip': '删除足迹',
     'clearAll': '清空',
     'postSubmittedForAudit': '帖子已提交审核',
     'deletePost': '删除帖子',
@@ -986,6 +989,7 @@ class AppLocalizations {
     'reviewDetailLoadFailed': '評論詳情載入失敗：{error}',
     'auditRemarkLabel': '審核備註：{remark}',
     'merchantReplyLabel': '商家回覆：{reply}',
+    'anonymousUser': '匿名使用者',
     'report': '檢舉',
     'reviewLoginToInteract': '登入後可按讚、評論和檢舉這則評論。',
     'commentsSection': '評論',
@@ -1298,6 +1302,8 @@ class AppLocalizations {
     'deleteBrowseHistoryFailed': '刪除足跡失敗：{error}',
     'browseHistoryLoadFailed': '足跡載入失敗：{error}',
     'noBrowseHistory': '目前區域還沒有瀏覽足跡',
+    'browseViewCount': '瀏覽 {count} 次',
+    'deleteBrowseHistoryTooltip': '刪除足跡',
     'clearAll': '清空',
     'postSubmittedForAudit': '貼文已提交審核',
     'deletePost': '刪除貼文',
@@ -1665,6 +1671,7 @@ class AppLocalizations {
     'reviewDetailLoadFailed': 'Could not load review details: {error}',
     'auditRemarkLabel': 'Audit note: {remark}',
     'merchantReplyLabel': 'Merchant reply: {reply}',
+    'anonymousUser': 'Anonymous user',
     'report': 'Report',
     'reviewLoginToInteract': 'Sign in to like, comment, or report this review.',
     'commentsSection': 'Comments',
@@ -1998,6 +2005,8 @@ class AppLocalizations {
     'deleteBrowseHistoryFailed': 'Could not delete history item: {error}',
     'browseHistoryLoadFailed': 'Could not load history: {error}',
     'noBrowseHistory': 'No browse history in this region yet',
+    'browseViewCount': 'Viewed {count} times',
+    'deleteBrowseHistoryTooltip': 'Delete history item',
     'clearAll': 'Clear all',
     'postSubmittedForAudit': 'Post submitted for review',
     'deletePost': 'Delete post',
@@ -2530,6 +2539,7 @@ class AppLocalizations {
       _text('auditRemarkLabel').replaceFirst('{remark}', remark);
   String merchantReplyLabel(String reply) =>
       _text('merchantReplyLabel').replaceFirst('{reply}', reply);
+  String get anonymousUser => _text('anonymousUser');
   String get report => _text('report');
   String get reviewLoginToInteract => _text('reviewLoginToInteract');
   String get commentsSection => _text('commentsSection');
@@ -3113,6 +3123,9 @@ class AppLocalizations {
   String browseHistoryLoadFailed(Object error) =>
       _withError('browseHistoryLoadFailed', error);
   String get noBrowseHistory => _text('noBrowseHistory');
+  String browseViewCount(int count) =>
+      _text('browseViewCount').replaceFirst('{count}', '$count');
+  String get deleteBrowseHistoryTooltip => _text('deleteBrowseHistoryTooltip');
   String get clearAll => _text('clearAll');
   String get postSubmittedForAudit => _text('postSubmittedForAudit');
   String get deletePost => _text('deletePost');

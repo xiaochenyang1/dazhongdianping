@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_reviews_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ReviewsFakeRepository extends BrowseRepository {
@@ -148,6 +150,23 @@ class ReviewsDetailApi implements JsonApi {
       const {};
 }
 
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('shop reviews screen retries an initial load failure', (
     tester,
@@ -281,5 +300,24 @@ void main() {
 
     expect(find.text('当前筛选结果'), findsOneWidget);
     expect(find.text('过期筛选结果'), findsNothing);
+  });
+
+  testWidgets('shop reviews screen localizes English chrome', (tester) async {
+    final repository = ReviewsFakeRepository();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ShopReviewsScreen(
+          repository: repository,
+          shopId: 7,
+          shopName: 'Berlin Tea House',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Berlin Tea House · Reviews'), findsOneWidget);
+    expect(find.text('Load more'), findsOneWidget);
+    expect(find.textContaining('2 likes · 1 comments'), findsOneWidget);
   });
 }

@@ -113,7 +113,7 @@ class ShopReviewPreview {
     }
     return ShopReviewPreview(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      userName: json['userName'] as String? ?? '匿名用户',
+      userName: json['userName'] as String? ?? '',
       score: (json['score'] as num? ?? 0).toDouble(),
       content: json['content'] as String? ?? '',
       likedCount: (json['likedCount'] as num?)?.toInt() ?? 0,
