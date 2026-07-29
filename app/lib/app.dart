@@ -91,7 +91,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
         final canInteract = authController.currentUser != null;
         final strings = AppLocalizations.forTag(settings.localeTag);
         return MaterialApp(
-          title: 'Local Life EU',
+          title: strings.homeTitle,
           debugShowCheckedModeBanner: false,
           locale: _localeFromTag(settings.localeTag),
           supportedLocales: AppLocalizations.supportedLocales,

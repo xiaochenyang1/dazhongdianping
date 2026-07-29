@@ -84,6 +84,9 @@ void main() {
     expect(AppLocalizations.forTag('zh-CN').cancelReservation, '取消预订');
     expect(AppLocalizations.forTag('en').writeReview, 'Write a review');
     expect(AppLocalizations.forTag('en').reviewDetail, 'Review details');
+    expect(AppLocalizations.forTag('zh-CN').address, '地址');
+    expect(AppLocalizations.forTag('zh-TW').openingHours, '營業時間');
+    expect(AppLocalizations.forTag('en').contactPhone, 'Contact phone');
     expect(AppLocalizations.forTag('zh-CN').like, '点赞');
     expect(AppLocalizations.forTag('en').login, 'Sign in');
     expect(AppLocalizations.forTag('en').registerAccount, 'Create account');

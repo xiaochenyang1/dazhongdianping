@@ -616,8 +616,10 @@ class AppLocalizations {
     'noCollectionData': '暂无数据',
     'favoritedAt': '收藏于 {time}',
     'postLabel': '帖子',
+    'address': '地址',
     'shopDetail': '门店详情',
     'shopDetailLoadFailed': '门店详情加载失败：{error}',
+    'openingHours': '营业时间',
     'favoriteActionFailed': '收藏操作失败：{error}',
     'shareCopied': '分享文案已复制',
     'viewAll': '查看全部',
@@ -1295,8 +1297,10 @@ class AppLocalizations {
     'noCollectionData': '暫無資料',
     'favoritedAt': '收藏於 {time}',
     'postLabel': '貼文',
+    'address': '地址',
     'shopDetail': '店家詳情',
     'shopDetailLoadFailed': '店家詳情載入失敗：{error}',
+    'openingHours': '營業時間',
     'favoriteActionFailed': '收藏操作失敗：{error}',
     'shareCopied': '分享文案已複製',
     'viewAll': '查看全部',
@@ -2009,8 +2013,10 @@ class AppLocalizations {
     'noCollectionData': 'No data yet',
     'favoritedAt': 'Saved {time}',
     'postLabel': 'Post',
+    'address': 'Address',
     'shopDetail': 'Place details',
     'shopDetailLoadFailed': 'Could not load place details: {error}',
+    'openingHours': 'Opening hours',
     'favoriteActionFailed': 'Could not update favorite: {error}',
     'shareCopied': 'Share text copied',
     'viewAll': 'View all',
@@ -3133,9 +3139,11 @@ class AppLocalizations {
   String favoritedAt(String time) =>
       _text('favoritedAt').replaceFirst('{time}', time);
   String get postLabel => _text('postLabel');
+  String get address => _text('address');
   String get shopDetail => _text('shopDetail');
   String shopDetailLoadFailed(Object error) =>
       _withError('shopDetailLoadFailed', error);
+  String get openingHours => _text('openingHours');
   String favoriteActionFailed(Object error) =>
       _withError('favoriteActionFailed', error);
   String get shareCopied => _text('shareCopied');

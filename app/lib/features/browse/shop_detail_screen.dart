@@ -184,15 +184,16 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context).shopDetail),
+        title: Text(strings.shopDetail),
         actions: [
           if (widget.enableFavorite)
             IconButton(
               tooltip: _favorited
-                  ? AppLocalizations.of(context).unfavoriteShop
-                  : AppLocalizations.of(context).favoriteShop,
+                  ? strings.unfavoriteShop
+                  : strings.favoriteShop,
               onPressed: (_favoriteLoading || _favoriteSaving)
                   ? null
                   : _toggleFavorite,
@@ -214,20 +215,14 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    AppLocalizations.of(
-                      context,
-                    ).shopDetailLoadFailed(snapshot.error!),
-                  ),
+                  Text(strings.shopDetailLoadFailed(snapshot.error!)),
                   SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('shop-detail-retry'),
                     onPressed: _reloadingDetail ? null : _reloadDetail,
                     icon: const Icon(Icons.refresh),
                     label: Text(
-                      _reloadingDetail
-                          ? AppLocalizations.of(context).processing
-                          : AppLocalizations.of(context).retry,
+                      _reloadingDetail ? strings.processing : strings.retry,
                     ),
                   ),
                 ],
@@ -258,17 +253,17 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               const SizedBox(height: 24),
               _InfoTile(
                 icon: Icons.location_on_outlined,
-                title: 'Address',
+                title: strings.address,
                 value: shop.address,
               ),
               _InfoTile(
                 icon: Icons.schedule_outlined,
-                title: 'Opening hours',
+                title: strings.openingHours,
                 value: shop.businessHours,
               ),
               _InfoTile(
                 icon: Icons.phone_outlined,
-                title: 'Phone',
+                title: strings.contactPhone,
                 value: shop.phone,
               ),
               const SizedBox(height: 20),
@@ -294,10 +289,10 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Text(
                       _favoriteLoading
-                          ? AppLocalizations.of(context).favoriteStatusLoading
+                          ? strings.favoriteStatusLoading
                           : (_favorited
-                                ? AppLocalizations.of(context).unfavoriteShop
-                                : AppLocalizations.of(context).favoriteShop),
+                                ? strings.unfavoriteShop
+                                : strings.favoriteShop),
                     ),
                   ),
                 ),
@@ -309,11 +304,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 icon: const Icon(Icons.share_outlined),
                 label: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    _sharing
-                        ? AppLocalizations.of(context).sharing
-                        : AppLocalizations.of(context).shareShop,
-                  ),
+                  child: Text(_sharing ? strings.sharing : strings.shareShop),
                 ),
               ),
               const SizedBox(height: 12),
@@ -333,7 +324,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   icon: const Icon(Icons.rate_review_outlined),
                   label: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(AppLocalizations.of(context).writeReview),
+                    child: Text(strings.writeReview),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -353,7 +344,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                           ),
                         ),
                         icon: const Icon(Icons.local_offer_outlined),
-                        label: Text(AppLocalizations.of(context).groupDeals),
+                        label: Text(strings.groupDeals),
                       ),
                     ),
                   if (widget.tradeRepository != null &&

@@ -345,6 +345,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('地址'), findsOneWidget);
+    expect(find.text('营业时间'), findsOneWidget);
+    expect(find.text('联系电话'), findsOneWidget);
     expect(find.text('Alexanderplatz'), findsOneWidget);
     expect(find.text('09:00-21:00'), findsOneWidget);
     expect(find.text('Berlin Tea'), findsOneWidget);
