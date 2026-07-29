@@ -90,15 +90,16 @@ describe('TopicManagementView', () => {
       pageSize: 20,
     })
     expect(host.textContent).toContain('伦敦咖啡')
-    expect(host.textContent).toContain('热度169')
-    expect(host.textContent).toContain('2 帖 · 3 赞 · 4 评论')
+    expect(host.textContent).toContain('Hot score169')
+    expect(host.textContent).toContain('2 posts · 3 likes · 4 comments')
+    expect(host.textContent).toContain('Topic operations · Current region EU')
 
-    const editButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('编辑名称'))
-    if (!editButton) throw new Error('缺少编辑名称按钮')
+    const editButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Rename'))
+    if (!editButton) throw new Error('missing rename button')
     editButton.click()
     await flush()
     const nameInput = host.querySelector<HTMLInputElement>('input[name="topic-name"]')
-    if (!nameInput) throw new Error('缺少话题名称输入框')
+    if (!nameInput) throw new Error('missing topic name input')
     nameInput.value = '伦敦咖啡馆'
     nameInput.dispatchEvent(new Event('input'))
     host.querySelector<HTMLFormElement>('form[data-testid="rename-form"]')
@@ -107,17 +108,17 @@ describe('TopicManagementView', () => {
     expect(mocks.updateTopic).toHaveBeenCalledWith(31, { name: '伦敦咖啡馆' })
 
     const pinInput = host.querySelector<HTMLInputElement>('input[name="pin-31"]')
-    if (!pinInput) throw new Error('缺少置顶排序输入框')
+    if (!pinInput) throw new Error('missing pinned sort input')
     pinInput.value = '60'
     pinInput.dispatchEvent(new Event('input'))
-    const recommendButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('推荐并置顶'))
-    if (!recommendButton) throw new Error('缺少推荐按钮')
+    const recommendButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Recommend + pin'))
+    if (!recommendButton) throw new Error('missing recommend button')
     recommendButton.click()
     await flush()
     expect(mocks.updateTopicRecommendation).toHaveBeenCalledWith(31, { recommended: true, pinnedSort: 60 })
 
-    const blockButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('屏蔽'))
-    if (!blockButton) throw new Error('缺少屏蔽按钮')
+    const blockButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Block'))
+    if (!blockButton) throw new Error('missing block button')
     blockButton.click()
     await flush()
     expect(mocks.updateTopicStatus).toHaveBeenCalledWith(31, 2)
@@ -129,21 +130,21 @@ describe('TopicManagementView', () => {
     const { host, app } = mount()
     await flush()
 
-    const mergeButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('合并话题'))
-    if (!mergeButton) throw new Error('缺少合并按钮')
+    const mergeButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Merge topic'))
+    if (!mergeButton) throw new Error('missing merge button')
     mergeButton.click()
     await flush()
     const targetSelect = host.querySelector<HTMLSelectElement>('select[name="merge-target"]')
-    if (!targetSelect) throw new Error('缺少合并目标选择器')
+    if (!targetSelect) throw new Error('missing merge target select')
     targetSelect.value = '32'
     targetSelect.dispatchEvent(new Event('change'))
-    const confirmButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('确认不可逆合并'))
-    if (!confirmButton) throw new Error('缺少合并确认按钮')
+    const confirmButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Confirm irreversible merge'))
+    if (!confirmButton) throw new Error('missing merge confirmation button')
     confirmButton.click()
     await flush()
 
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('将「伦敦咖啡」合并到「英国咖啡」'))
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('不可逆'))
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Merge "伦敦咖啡" into "英国咖啡"'))
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('cannot be undone'))
     expect(mocks.mergeTopic).toHaveBeenCalledWith(31, 32)
     app.unmount()
   })
@@ -153,8 +154,8 @@ describe('TopicManagementView', () => {
     const { host, app } = mount()
     await flush()
 
-    const recalculateButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('重算热榜'))
-    if (!recalculateButton) throw new Error('缺少重算按钮')
+    const recalculateButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Recalculate hot ranking'))
+    if (!recalculateButton) throw new Error('missing recalculate button')
     recalculateButton.click()
     await flush()
 
@@ -174,7 +175,7 @@ describe('TopicManagementView', () => {
     expect(host.querySelector('[data-testid="rename-form"]')).toBeNull()
     expect(host.querySelector('select[name="merge-target"]')).toBeNull()
     expect([...host.querySelectorAll('button')].map((button) => button.textContent?.trim())).toEqual([
-      '执行筛选',
+      'Run filters',
     ])
     app.unmount()
   })
@@ -186,24 +187,24 @@ describe('TopicManagementView', () => {
 
     const buttons = [...host.querySelectorAll<HTMLButtonElement>('button')]
     const findButton = (text: string) => buttons.find((button) => button.textContent?.includes(text))
-    findButton('编辑名称')?.click()
-    findButton('合并话题')?.click()
+    findButton('Rename')?.click()
+    findButton('Merge topic')?.click()
     await nextTick()
 
     const renameForm = host.querySelector<HTMLFormElement>('[data-testid="rename-form"]')
     const mergeTarget = host.querySelector<HTMLSelectElement>('select[name="merge-target"]')
     const mergeButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('确认不可逆合并'))
-    if (!renameForm || !mergeTarget || !mergeButton) throw new Error('缺少已打开的话题写入控件')
+      .find((button) => button.textContent?.includes('Confirm irreversible merge'))
+    if (!renameForm || !mergeTarget || !mergeButton) throw new Error('missing opened topic write controls')
     mergeTarget.value = '32'
     mergeTarget.dispatchEvent(new Event('change'))
 
     sessionMock.state.permissions = ['operations:topic:read']
     renameForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     mergeButton.click()
-    findButton('推荐并置顶')?.click()
-    findButton('屏蔽')?.click()
-    findButton('重算热榜')?.click()
+    findButton('Recommend + pin')?.click()
+    findButton('Block')?.click()
+    findButton('Recalculate hot ranking')?.click()
     await flush()
 
     expect(confirm).not.toHaveBeenCalled()

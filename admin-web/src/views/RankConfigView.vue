@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { createRankConfig, listRankConfigs, publishRankConfig, rollbackRankConfig } from '@/services/admin'
 import type { RankConfig } from '@/types/admin'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const configs = ref<RankConfig[]>([])
 const loading = ref(false)
 const saving = ref(false)
@@ -24,11 +26,23 @@ const form = reactive({
   minScore: 4,
 })
 
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+function rankTypeText(config: RankConfig) {
+  return strings.value.rankConfigs.rankTypeText(config.rankType, config.rankTypeText)
+}
+
+function rankStatusText(config: RankConfig) {
+  return strings.value.rankConfigs.statusText(config.status, config.statusText)
+}
+
 async function load() {
   loading.value = true
   errorMessage.value = ''
   try { configs.value = await listRankConfigs() }
-  catch (error) { errorMessage.value = error instanceof Error ? error.message : '榜单规则加载失败' }
+  catch (error) { errorMessage.value = messageOf(error, strings.value.rankConfigs.loadError) }
   finally { loading.value = false }
 }
 
@@ -39,16 +53,16 @@ async function createDraft() {
   successMessage.value = ''
   try {
     const total = form.scoreWeight + form.reviewWeight + form.dealWeight
-    if (Math.abs(total - 1) > 0.000001) throw new Error('三个权重之和必须等于 1。')
+    if (Math.abs(total - 1) > 0.000001) throw new Error(strings.value.rankConfigs.weightSumError)
     await createRankConfig({
       rankType: form.rankType, region: state.region, cityId: form.cityId, categoryId: form.categoryId,
       calcCycle: form.calcCycle,
       weight: { score: form.scoreWeight, reviewCount: form.reviewWeight, hasDeal: form.dealWeight },
       minReviewCount: form.minReviewCount, minScore: form.minScore, manualIntervene: true,
     })
-    successMessage.value = '新规则草稿已创建，未发布前不会影响线上榜单。'
+    successMessage.value = strings.value.rankConfigs.createSuccess
     await load()
-  } catch (error) { errorMessage.value = error instanceof Error ? error.message : '规则创建失败' }
+  } catch (error) { errorMessage.value = messageOf(error, strings.value.rankConfigs.createError) }
   finally { saving.value = false }
 }
 
@@ -56,18 +70,18 @@ async function publish(configId: number) {
   if (!canWrite.value) return
   try {
     const result = await publishRankConfig(configId)
-    successMessage.value = `发布成功：榜单 #${result.rankId}，共 ${result.itemCount} 家门店。`
+    successMessage.value = strings.value.rankConfigs.publishSuccess(result.rankId, result.itemCount)
     await load()
-  } catch (error) { errorMessage.value = error instanceof Error ? error.message : '发布失败' }
+  } catch (error) { errorMessage.value = messageOf(error, strings.value.rankConfigs.publishError) }
 }
 
 async function rollback(configId: number) {
   if (!canWrite.value) return
   try {
     const result = await rollbackRankConfig(configId)
-    successMessage.value = `已按历史规则生成新版本并发布，榜单 #${result.rankId}。`
+    successMessage.value = strings.value.rankConfigs.rollbackSuccess(result.rankId)
     await load()
-  } catch (error) { errorMessage.value = error instanceof Error ? error.message : '回滚失败' }
+  } catch (error) { errorMessage.value = messageOf(error, strings.value.rankConfigs.rollbackError) }
 }
 
 watch(() => state.region, () => {
@@ -79,31 +93,31 @@ watch(() => state.region, () => {
 
 <template>
   <section class="page-section">
-    <div class="page-header"><div><p class="eyebrow">榜单运营</p><h1>规则先存草稿，发布成功后再切榜单快照。</h1><p>重算翻车会保留旧榜单，不能让运营手一抖前台就黑屏。</p></div></div>
+    <div class="page-header"><div><p class="eyebrow">{{ strings.rankConfigs.eyebrow }}</p><h1>{{ strings.rankConfigs.heading }}</h1><p>{{ strings.rankConfigs.description }}</p></div></div>
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
     <p v-if="successMessage" class="feedback is-success">{{ successMessage }}</p>
     <div class="two-column-layout">
       <section class="content-card">
-        <div class="section-headline"><div><p class="eyebrow">规则版本</p><h2>区域 {{ state.region }} 的历史版本</h2></div></div>
-        <p v-if="loading" class="feedback">加载中...</p>
-        <div v-else class="table-shell"><table class="data-table"><thead><tr><th>类型</th><th>作用域</th><th>版本</th><th>状态</th><th v-if="canWrite">操作</th></tr></thead><tbody>
-          <tr v-for="config in configs" :key="config.id"><td>{{ config.rankTypeText }}</td><td>城市 {{ config.cityId }} / 分类 {{ config.categoryId }}</td><td>v{{ config.version }}</td><td><span class="status-pill">{{ config.statusText }}</span></td><td v-if="canWrite" class="table-actions"><button v-if="config.status === 0" type="button" class="table-action" :data-testid="`rank-publish-${config.id}`" @click="publish(config.id)">发布</button><button v-else type="button" class="table-action" :data-testid="`rank-rollback-${config.id}`" @click="rollback(config.id)">回滚到此规则</button></td></tr>
+        <div class="section-headline"><div><p class="eyebrow">{{ strings.rankConfigs.historyEyebrow }}</p><h2>{{ strings.rankConfigs.historyHeading(state.region) }}</h2></div></div>
+        <p v-if="loading" class="feedback">{{ strings.rankConfigs.loading }}</p>
+        <div v-else class="table-shell"><table class="data-table"><thead><tr><th>{{ strings.rankConfigs.tableHeaders.type }}</th><th>{{ strings.rankConfigs.tableHeaders.scope }}</th><th>{{ strings.rankConfigs.tableHeaders.version }}</th><th>{{ strings.rankConfigs.tableHeaders.status }}</th><th v-if="canWrite">{{ strings.rankConfigs.tableHeaders.actions }}</th></tr></thead><tbody>
+          <tr v-for="config in configs" :key="config.id"><td>{{ rankTypeText(config) }}</td><td>{{ strings.rankConfigs.scopeSummary(config.cityId, config.categoryId) }}</td><td>v{{ config.version }}</td><td><span class="status-pill">{{ rankStatusText(config) }}</span></td><td v-if="canWrite" class="table-actions"><button v-if="config.status === 0" type="button" class="table-action" :data-testid="`rank-publish-${config.id}`" @click="publish(config.id)">{{ strings.rankConfigs.publish }}</button><button v-else type="button" class="table-action" :data-testid="`rank-rollback-${config.id}`" @click="rollback(config.id)">{{ strings.rankConfigs.rollback }}</button></td></tr>
         </tbody></table></div>
       </section>
       <section class="content-card editor-card">
-        <div class="section-headline"><div><p class="eyebrow">新草稿</p><h2>创建下一版本</h2></div></div>
+        <div class="section-headline"><div><p class="eyebrow">{{ strings.rankConfigs.editorEyebrow }}</p><h2>{{ strings.rankConfigs.editorHeading }}</h2></div></div>
         <form v-if="canWrite" class="editor-form" data-testid="rank-draft-form" @submit.prevent="createDraft"><div class="form-grid form-grid--two">
-          <label class="field"><span>榜单类型</span><select v-model.number="form.rankType"><option :value="1">必吃榜</option><option :value="2">好评榜</option><option :value="3">热门榜</option></select></label>
-          <label class="field"><span>计算周期</span><select v-model.number="form.calcCycle"><option :value="1">日</option><option :value="2">周</option><option :value="3">月</option><option :value="4">季</option></select></label>
-          <label class="field"><span>城市 ID</span><input v-model.number="form.cityId" type="number" min="1" /></label>
-          <label class="field"><span>分类 ID</span><input v-model.number="form.categoryId" type="number" min="1" /></label>
-          <label class="field"><span>评分权重</span><input v-model.number="form.scoreWeight" type="number" min="0" max="1" step="0.05" /></label>
-          <label class="field"><span>点评量权重</span><input v-model.number="form.reviewWeight" type="number" min="0" max="1" step="0.05" /></label>
-          <label class="field"><span>优惠权重</span><input v-model.number="form.dealWeight" type="number" min="0" max="1" step="0.05" /></label>
-          <label class="field"><span>最低评分</span><input v-model.number="form.minScore" type="number" min="0" max="5" step="0.1" /></label>
-          <label class="field"><span>最低点评量</span><input v-model.number="form.minReviewCount" type="number" min="0" /></label>
-        </div><div class="form-actions"><button class="primary-button" type="submit" :disabled="saving">{{ saving ? '创建中...' : '保存草稿' }}</button></div></form>
-        <p v-else class="inline-note">当前账号仅可查看，无榜单配置权限。</p>
+          <label class="field"><span>{{ strings.rankConfigs.labels.rankType }}</span><select v-model.number="form.rankType"><option :value="1">{{ strings.rankConfigs.rankTypeOptions.mustEat }}</option><option :value="2">{{ strings.rankConfigs.rankTypeOptions.review }}</option><option :value="3">{{ strings.rankConfigs.rankTypeOptions.hot }}</option></select></label>
+          <label class="field"><span>{{ strings.rankConfigs.labels.calcCycle }}</span><select v-model.number="form.calcCycle"><option :value="1">{{ strings.rankConfigs.calcCycleOptions.day }}</option><option :value="2">{{ strings.rankConfigs.calcCycleOptions.week }}</option><option :value="3">{{ strings.rankConfigs.calcCycleOptions.month }}</option><option :value="4">{{ strings.rankConfigs.calcCycleOptions.quarter }}</option></select></label>
+          <label class="field"><span>{{ strings.rankConfigs.labels.cityId }}</span><input v-model.number="form.cityId" type="number" min="1" /></label>
+          <label class="field"><span>{{ strings.rankConfigs.labels.categoryId }}</span><input v-model.number="form.categoryId" type="number" min="1" /></label>
+          <label class="field"><span>{{ strings.rankConfigs.labels.scoreWeight }}</span><input v-model.number="form.scoreWeight" type="number" min="0" max="1" step="0.05" /></label>
+          <label class="field"><span>{{ strings.rankConfigs.labels.reviewWeight }}</span><input v-model.number="form.reviewWeight" type="number" min="0" max="1" step="0.05" /></label>
+          <label class="field"><span>{{ strings.rankConfigs.labels.dealWeight }}</span><input v-model.number="form.dealWeight" type="number" min="0" max="1" step="0.05" /></label>
+          <label class="field"><span>{{ strings.rankConfigs.labels.minScore }}</span><input v-model.number="form.minScore" type="number" min="0" max="5" step="0.1" /></label>
+          <label class="field"><span>{{ strings.rankConfigs.labels.minReviewCount }}</span><input v-model.number="form.minReviewCount" type="number" min="0" /></label>
+        </div><div class="form-actions"><button class="primary-button" type="submit" :disabled="saving">{{ saving ? strings.rankConfigs.saving : strings.rankConfigs.saveDraft }}</button></div></form>
+        <p v-else class="inline-note">{{ strings.rankConfigs.readOnly }}</p>
       </section>
     </div>
   </section>

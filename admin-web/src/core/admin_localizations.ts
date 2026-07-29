@@ -422,6 +422,154 @@ export interface AdminStrings {
     saving: string
     save: string
   }
+  rankConfigs: {
+    loadError: string
+    weightSumError: string
+    createSuccess: string
+    createError: string
+    publishSuccess: (rankId: number, itemCount: number) => string
+    publishError: string
+    rollbackSuccess: (rankId: number) => string
+    rollbackError: string
+    eyebrow: string
+    heading: string
+    description: string
+    historyEyebrow: string
+    historyHeading: (region: Region) => string
+    loading: string
+    tableHeaders: {
+      type: string
+      scope: string
+      version: string
+      status: string
+      actions: string
+    }
+    scopeSummary: (cityId: number, categoryId: number) => string
+    rankTypeText: (rankType: number, fallback?: string) => string
+    statusText: (status: number, fallback?: string) => string
+    publish: string
+    rollback: string
+    editorEyebrow: string
+    editorHeading: string
+    labels: {
+      rankType: string
+      calcCycle: string
+      cityId: string
+      categoryId: string
+      scoreWeight: string
+      reviewWeight: string
+      dealWeight: string
+      minScore: string
+      minReviewCount: string
+    }
+    rankTypeOptions: {
+      mustEat: string
+      review: string
+      hot: string
+    }
+    calcCycleOptions: {
+      day: string
+      week: string
+      month: string
+      quarter: string
+    }
+    saving: string
+    saveDraft: string
+    readOnly: string
+  }
+  growthConfigs: {
+    loadError: string
+    ruleUpdateError: string
+    levelUpdateError: string
+    ruleUpdated: (action: string) => string
+    levelUpdated: (level: number) => string
+    eyebrow: string
+    heading: string
+    description: string
+    rulesEyebrow: string
+    rulesHeading: string
+    levelsEyebrow: string
+    levelsHeading: string
+    ruleHeaders: {
+      action: string
+      growthValue: string
+      points: string
+      dailyLimit: string
+      enabled: string
+      actions: string
+    }
+    levelHeaders: {
+      level: string
+      name: string
+      minGrowth: string
+      enabled: string
+      actions: string
+    }
+    actionText: (action: string, fallback?: string) => string
+    levelLabel: (level: number) => string
+    save: string
+  }
+  topics: {
+    loadError: string
+    actionError: string
+    invalidMergeTarget: string
+    renamed: string
+    recommendationEnabled: string
+    recommendationDisabled: string
+    blocked: string
+    restored: string
+    merged: string
+    recalculated: (region: Region, calculatedAt: string) => string
+    headerEyebrow: (region: Region) => string
+    heading: string
+    description: string
+    recalculate: string
+    filters: {
+      keyword: string
+      status: string
+      recommended: string
+    }
+    keywordPlaceholder: string
+    statusOptions: {
+      all: string
+      live: string
+      blocked: string
+    }
+    recommendationOptions: {
+      all: string
+      recommended: string
+      notRecommended: string
+    }
+    query: string
+    loading: string
+    statusChipText: (status: number) => string
+    recommendedChip: string
+    mergedTo: (topicId: number) => string
+    metricLabels: {
+      hotScore: string
+      posts: string
+      followers: string
+    }
+    activitySummary: (posts: number, likes: number, comments: number) => string
+    calculatedAt: (value: string) => string
+    noSnapshot: string
+    pinLabel: string
+    rename: string
+    recommend: string
+    cancelRecommend: string
+    block: string
+    restore: string
+    merge: string
+    renameEyebrow: string
+    renameHeading: string
+    renameSave: string
+    mergeEyebrow: string
+    mergeHeading: (sourceName: string) => string
+    mergeDescription: string
+    mergeTargetPlaceholder: string
+    mergeConfirm: string
+    mergeConfirmPrompt: (sourceName: string, targetName: string) => string
+  }
   privacyTasks: {
     eyebrow: string
     heading: string
@@ -968,6 +1116,172 @@ const zhCnStrings: AdminStrings = {
     saving: '保存中...',
     save: '保存敏感词',
   },
+  rankConfigs: {
+    loadError: '榜单规则加载失败',
+    weightSumError: '三个权重之和必须等于 1。',
+    createSuccess: '新规则草稿已创建，未发布前不会影响线上榜单。',
+    createError: '规则创建失败',
+    publishSuccess: (rankId, itemCount) => `发布成功：榜单 #${rankId}，共 ${itemCount} 家门店。`,
+    publishError: '发布失败',
+    rollbackSuccess: (rankId) => `已按历史规则生成新版本并发布，榜单 #${rankId}。`,
+    rollbackError: '回滚失败',
+    eyebrow: '榜单运营',
+    heading: '规则先存草稿，发布成功后再切榜单快照。',
+    description: '重算翻车会保留旧榜单，不能让运营手一抖前台就黑屏。',
+    historyEyebrow: '规则版本',
+    historyHeading: (region) => `区域 ${region} 的历史版本`,
+    loading: '加载中...',
+    tableHeaders: {
+      type: '类型',
+      scope: '作用域',
+      version: '版本',
+      status: '状态',
+      actions: '操作',
+    },
+    scopeSummary: (cityId, categoryId) => `城市 ${cityId} / 分类 ${categoryId}`,
+    rankTypeText: (rankType, fallback) => {
+      if (rankType === 1) return '必吃榜'
+      if (rankType === 2) return '好评榜'
+      if (rankType === 3) return '热门榜'
+      return fallback || `榜单 ${rankType}`
+    },
+    statusText: (status, fallback) => {
+      if (status === 1) return '已发布'
+      if (status === 2) return '已归档'
+      if (status === 0) return '草稿'
+      return fallback || `状态 ${status}`
+    },
+    publish: '发布',
+    rollback: '回滚到此规则',
+    editorEyebrow: '新草稿',
+    editorHeading: '创建下一版本',
+    labels: {
+      rankType: '榜单类型',
+      calcCycle: '计算周期',
+      cityId: '城市 ID',
+      categoryId: '分类 ID',
+      scoreWeight: '评分权重',
+      reviewWeight: '点评量权重',
+      dealWeight: '优惠权重',
+      minScore: '最低评分',
+      minReviewCount: '最低点评量',
+    },
+    rankTypeOptions: {
+      mustEat: '必吃榜',
+      review: '好评榜',
+      hot: '热门榜',
+    },
+    calcCycleOptions: {
+      day: '日',
+      week: '周',
+      month: '月',
+      quarter: '季',
+    },
+    saving: '创建中...',
+    saveDraft: '保存草稿',
+    readOnly: '当前账号仅可查看，无榜单配置权限。',
+  },
+  growthConfigs: {
+    loadError: '配置加载失败',
+    ruleUpdateError: '规则更新失败',
+    levelUpdateError: '等级更新失败',
+    ruleUpdated: (action) => `${action} 已更新`,
+    levelUpdated: (level) => `Lv${level} 已更新`,
+    eyebrow: '成长体系',
+    heading: '奖励权重和等级门槛都从数据库读取。',
+    description: '改完只影响之后的行为，历史流水不回写，账不能越改越玄学。',
+    rulesEyebrow: '行为奖励',
+    rulesHeading: '成长值 / 积分 / 每日上限',
+    levelsEyebrow: '等级阈值',
+    levelsHeading: 'Lv1-Lv8 配置',
+    ruleHeaders: {
+      action: '行为',
+      growthValue: '成长值',
+      points: '积分',
+      dailyLimit: '每日上限',
+      enabled: '启用',
+      actions: '操作',
+    },
+    levelHeaders: {
+      level: '等级',
+      name: '名称',
+      minGrowth: '最低成长值',
+      enabled: '启用',
+      actions: '操作',
+    },
+    actionText: (action, fallback) => {
+      if (action === 'review_create') return '发布点评'
+      if (action === 'review_liked') return '点评获赞'
+      if (action === 'review_image') return '带图点评'
+      if (action === 'order_complete') return '完成订单'
+      if (action === 'favorite_shop') return '收藏门店'
+      return fallback || action
+    },
+    levelLabel: (level) => `Lv${level}`,
+    save: '保存',
+  },
+  topics: {
+    loadError: '话题加载失败',
+    actionError: '操作失败',
+    invalidMergeTarget: '请选择有效的合并目标',
+    renamed: '话题名称已更新',
+    recommendationEnabled: '推荐与置顶排序已更新',
+    recommendationDisabled: '已取消推荐',
+    blocked: '话题已屏蔽',
+    restored: '话题已恢复',
+    merged: '话题合并完成，关系与热榜已重算',
+    recalculated: (region, calculatedAt) => `${region} 热榜已重算：${calculatedAt}`,
+    headerEyebrow: (region) => `话题运营 · 当前区域 ${region}`,
+    heading: '话题治理作战台',
+    description: '推荐负责发现，置顶负责秩序，合并负责收拾重复命名留下的烂摊子。',
+    recalculate: '重算热榜',
+    filters: {
+      keyword: '关键词',
+      status: '状态',
+      recommended: '运营推荐',
+    },
+    keywordPlaceholder: '名称精确定位',
+    statusOptions: {
+      all: '全部状态',
+      live: '正常',
+      blocked: '屏蔽',
+    },
+    recommendationOptions: {
+      all: '全部',
+      recommended: '已推荐',
+      notRecommended: '未推荐',
+    },
+    query: '执行筛选',
+    loading: '正在读取区域话题...',
+    statusChipText: (status) => status === 1 ? '正常' : status === 2 ? '屏蔽' : `状态 ${status}`,
+    recommendedChip: '推荐',
+    mergedTo: (topicId) => `已合并至 #${topicId}`,
+    metricLabels: {
+      hotScore: '热度',
+      posts: '帖子',
+      followers: '关注',
+    },
+    activitySummary: (posts, likes, comments) => `${posts} 帖 · ${likes} 赞 · ${comments} 评论`,
+    calculatedAt: (value) => `最近计算 ${value}`,
+    noSnapshot: '尚未生成快照',
+    pinLabel: '置顶排序',
+    rename: '编辑名称',
+    recommend: '推荐并置顶',
+    cancelRecommend: '取消推荐',
+    block: '屏蔽',
+    restore: '恢复',
+    merge: '合并话题',
+    renameEyebrow: '编辑话题',
+    renameHeading: '修改公开名称',
+    renameSave: '保存名称',
+    mergeEyebrow: '不可逆合并',
+    mergeHeading: (sourceName) => `合并「${sourceName}」`,
+    mergeDescription: '源帖子与关注关系会去重迁移，源话题随后屏蔽。这个动作不可逆。',
+    mergeTargetPlaceholder: '选择目标话题',
+    mergeConfirm: '确认不可逆合并',
+    mergeConfirmPrompt: (sourceName, targetName) =>
+      `将「${sourceName}」合并到「${targetName}」。帖子与关注会迁移，源话题将被屏蔽；该操作不可逆。`,
+  },
   privacyTasks: {
     eyebrow: 'Privacy Operations',
     heading: '隐私任务',
@@ -1494,6 +1808,172 @@ const enStrings: AdminStrings = {
     },
     saving: 'Saving...',
     save: 'Save sensitive word',
+  },
+  rankConfigs: {
+    loadError: 'Failed to load ranking rules.',
+    weightSumError: 'The three weight values must add up to 1.',
+    createSuccess: 'New rule draft created. It will not affect the live ranking until published.',
+    createError: 'Failed to create the rule draft.',
+    publishSuccess: (rankId, itemCount) => `Published successfully: ranking #${rankId} with ${itemCount} shops.`,
+    publishError: 'Failed to publish the ranking.',
+    rollbackSuccess: (rankId) => `A new version was generated from the historical rule and published as ranking #${rankId}.`,
+    rollbackError: 'Failed to roll back the ranking rule.',
+    eyebrow: 'Ranking operations',
+    heading: 'Save rules as drafts first, then switch the ranking snapshot only after a successful publish.',
+    description: 'If recalculation fails, the previous ranking stays live. One shaky click should not black out the public feed.',
+    historyEyebrow: 'Rule history',
+    historyHeading: (region) => `Historical versions for region ${region}`,
+    loading: 'Loading...',
+    tableHeaders: {
+      type: 'Type',
+      scope: 'Scope',
+      version: 'Version',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    scopeSummary: (cityId, categoryId) => `City ${cityId} / Category ${categoryId}`,
+    rankTypeText: (rankType, fallback) => {
+      if (rankType === 1) return 'Must-eat'
+      if (rankType === 2) return 'Top rated'
+      if (rankType === 3) return 'Popular'
+      return fallback || `Ranking ${rankType}`
+    },
+    statusText: (status, fallback) => {
+      if (status === 1) return 'Published'
+      if (status === 2) return 'Archived'
+      if (status === 0) return 'Draft'
+      return fallback || `Status ${status}`
+    },
+    publish: 'Publish',
+    rollback: 'Rollback to this rule',
+    editorEyebrow: 'New draft',
+    editorHeading: 'Create the next version',
+    labels: {
+      rankType: 'Ranking type',
+      calcCycle: 'Calculation cycle',
+      cityId: 'City ID',
+      categoryId: 'Category ID',
+      scoreWeight: 'Score weight',
+      reviewWeight: 'Review-count weight',
+      dealWeight: 'Deal weight',
+      minScore: 'Minimum score',
+      minReviewCount: 'Minimum review count',
+    },
+    rankTypeOptions: {
+      mustEat: 'Must-eat',
+      review: 'Top rated',
+      hot: 'Popular',
+    },
+    calcCycleOptions: {
+      day: 'Day',
+      week: 'Week',
+      month: 'Month',
+      quarter: 'Quarter',
+    },
+    saving: 'Creating...',
+    saveDraft: 'Save draft',
+    readOnly: 'This account can view ranking history but cannot edit ranking rules.',
+  },
+  growthConfigs: {
+    loadError: 'Failed to load the growth configuration.',
+    ruleUpdateError: 'Failed to update the growth rule.',
+    levelUpdateError: 'Failed to update the level.',
+    ruleUpdated: (action) => `${action} updated.`,
+    levelUpdated: (level) => `Lv${level} updated.`,
+    eyebrow: 'Growth program',
+    heading: 'Reward weights and level thresholds come straight from the database.',
+    description: 'Changes affect future actions only. Historical ledgers are not rewritten.',
+    rulesEyebrow: 'Action rewards',
+    rulesHeading: 'Growth, points, and daily caps',
+    levelsEyebrow: 'Level thresholds',
+    levelsHeading: 'Lv1-Lv8 configuration',
+    ruleHeaders: {
+      action: 'Action',
+      growthValue: 'Growth',
+      points: 'Points',
+      dailyLimit: 'Daily limit',
+      enabled: 'Enabled',
+      actions: 'Actions',
+    },
+    levelHeaders: {
+      level: 'Level',
+      name: 'Name',
+      minGrowth: 'Minimum growth',
+      enabled: 'Enabled',
+      actions: 'Actions',
+    },
+    actionText: (action, fallback) => {
+      if (action === 'review_create') return 'Review published'
+      if (action === 'review_liked') return 'Review liked'
+      if (action === 'review_image') return 'Photo review'
+      if (action === 'order_complete') return 'Order completed'
+      if (action === 'favorite_shop') return 'Shop favorited'
+      return fallback || action
+    },
+    levelLabel: (level) => `Lv${level}`,
+    save: 'Save',
+  },
+  topics: {
+    loadError: 'Failed to load topics.',
+    actionError: 'Action failed.',
+    invalidMergeTarget: 'Select a valid merge target.',
+    renamed: 'Topic name updated.',
+    recommendationEnabled: 'Recommendation and pin order updated.',
+    recommendationDisabled: 'Recommendation removed.',
+    blocked: 'Topic blocked.',
+    restored: 'Topic restored.',
+    merged: 'Topic merge completed. Relationships and hot ranking were recalculated.',
+    recalculated: (region, calculatedAt) => `${region} hot ranking recalculated: ${calculatedAt}`,
+    headerEyebrow: (region) => `Topic operations · Current region ${region}`,
+    heading: 'Topic governance console',
+    description: 'Recommendations drive discovery, pinned sort enforces order, and merges clean up the duplicate-name mess.',
+    recalculate: 'Recalculate hot ranking',
+    filters: {
+      keyword: 'Keyword',
+      status: 'Status',
+      recommended: 'Recommendation',
+    },
+    keywordPlaceholder: 'Find by exact name',
+    statusOptions: {
+      all: 'All statuses',
+      live: 'Live',
+      blocked: 'Blocked',
+    },
+    recommendationOptions: {
+      all: 'All',
+      recommended: 'Recommended',
+      notRecommended: 'Not recommended',
+    },
+    query: 'Run filters',
+    loading: 'Loading topics for this region...',
+    statusChipText: (status) => status === 1 ? 'Live' : status === 2 ? 'Blocked' : `Status ${status}`,
+    recommendedChip: 'Recommended',
+    mergedTo: (topicId) => `Merged into #${topicId}`,
+    metricLabels: {
+      hotScore: 'Hot score',
+      posts: 'Posts',
+      followers: 'Followers',
+    },
+    activitySummary: (posts, likes, comments) => `${posts} posts · ${likes} likes · ${comments} comments`,
+    calculatedAt: (value) => `Last calculated ${value}`,
+    noSnapshot: 'No snapshot yet',
+    pinLabel: 'Pinned sort',
+    rename: 'Rename',
+    recommend: 'Recommend + pin',
+    cancelRecommend: 'Remove recommendation',
+    block: 'Block',
+    restore: 'Restore',
+    merge: 'Merge topic',
+    renameEyebrow: 'Rename topic',
+    renameHeading: 'Change public name',
+    renameSave: 'Save name',
+    mergeEyebrow: 'Irreversible merge',
+    mergeHeading: (sourceName) => `Merge "${sourceName}"`,
+    mergeDescription: 'Posts and follows move over after deduplication, then the source topic is blocked. This action cannot be undone.',
+    mergeTargetPlaceholder: 'Select target topic',
+    mergeConfirm: 'Confirm irreversible merge',
+    mergeConfirmPrompt: (sourceName, targetName) =>
+      `Merge "${sourceName}" into "${targetName}". Posts and follows will move, the source topic will be blocked, and this action cannot be undone.`,
   },
   privacyTasks: {
     eyebrow: 'Privacy Operations',

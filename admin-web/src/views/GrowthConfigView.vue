@@ -1,23 +1,34 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { fetchGrowthConfig, updateGrowthRule, updateLevelConfig } from '@/services/admin'
 import type { GrowthRule, LevelConfig } from '@/types/admin'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const canWrite = computed(() => state.permissions.includes('operations:growth:write'))
 const rules = ref<GrowthRule[]>([])
 const levels = ref<LevelConfig[]>([])
 const errorMessage = ref('')
 const successMessage = ref('')
 
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+function growthActionText(rule: GrowthRule) {
+  return strings.value.growthConfigs.actionText(rule.action, rule.actionName)
+}
+
 async function load() {
+  errorMessage.value = ''
   try {
     const data = await fetchGrowthConfig()
     rules.value = data.rules
     levels.value = data.levels
   } catch (cause) {
-    errorMessage.value = cause instanceof Error ? cause.message : '配置加载失败'
+    errorMessage.value = messageOf(cause, strings.value.growthConfigs.loadError)
   }
 }
 
@@ -32,10 +43,10 @@ async function saveRule(rule: GrowthRule) {
       dailyLimit: rule.dailyLimit,
       enabled: rule.enabled,
     })
-    successMessage.value = `${rule.actionName} 已更新`
+    successMessage.value = strings.value.growthConfigs.ruleUpdated(growthActionText(rule))
     await load()
   } catch (cause) {
-    errorMessage.value = cause instanceof Error ? cause.message : '规则更新失败'
+    errorMessage.value = messageOf(cause, strings.value.growthConfigs.ruleUpdateError)
   }
 }
 
@@ -49,23 +60,23 @@ async function saveLevel(level: LevelConfig) {
       privilegeJson: level.privilegeJson,
       enabled: level.enabled,
     })
-    successMessage.value = `Lv${level.level} 已更新`
+    successMessage.value = strings.value.growthConfigs.levelUpdated(level.level)
     await load()
   } catch (cause) {
-    errorMessage.value = cause instanceof Error ? cause.message : '等级更新失败'
+    errorMessage.value = messageOf(cause, strings.value.growthConfigs.levelUpdateError)
   }
 }
 
-onMounted(load)
+watch(() => state.region, () => { void load() }, { immediate: true })
 </script>
 
 <template>
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">成长体系</p>
-        <h1>奖励权重和等级门槛都从数据库读取。</h1>
-        <p>改完只影响之后的行为，历史流水不回写，账不能越改越玄学。</p>
+        <p class="eyebrow">{{ strings.growthConfigs.eyebrow }}</p>
+        <h1>{{ strings.growthConfigs.heading }}</h1>
+        <p>{{ strings.growthConfigs.description }}</p>
       </div>
     </div>
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
@@ -73,19 +84,19 @@ onMounted(load)
 
     <section class="content-card">
       <div class="section-headline">
-        <div><p class="eyebrow">行为奖励</p><h2>成长值 / 积分 / 每日上限</h2></div>
+        <div><p class="eyebrow">{{ strings.growthConfigs.rulesEyebrow }}</p><h2>{{ strings.growthConfigs.rulesHeading }}</h2></div>
       </div>
       <div class="table-shell">
         <table class="data-table">
-          <thead><tr><th>行为</th><th>成长值</th><th>积分</th><th>每日上限</th><th>启用</th><th v-if="canWrite">操作</th></tr></thead>
+          <thead><tr><th>{{ strings.growthConfigs.ruleHeaders.action }}</th><th>{{ strings.growthConfigs.ruleHeaders.growthValue }}</th><th>{{ strings.growthConfigs.ruleHeaders.points }}</th><th>{{ strings.growthConfigs.ruleHeaders.dailyLimit }}</th><th>{{ strings.growthConfigs.ruleHeaders.enabled }}</th><th v-if="canWrite">{{ strings.growthConfigs.ruleHeaders.actions }}</th></tr></thead>
           <tbody>
             <tr v-for="rule in rules" :key="rule.id">
-              <td><strong>{{ rule.actionName }}</strong><p>{{ rule.action }}</p></td>
+              <td><strong>{{ growthActionText(rule) }}</strong><p>{{ rule.action }}</p></td>
               <td><input v-model.number="rule.growthValue" :name="`rule-growth-value-${rule.id}`" type="number" min="0" :disabled="!canWrite"></td>
               <td><input v-model.number="rule.points" :name="`rule-points-${rule.id}`" type="number" min="0" :disabled="!canWrite"></td>
               <td><input v-model.number="rule.dailyLimit" :name="`rule-daily-limit-${rule.id}`" type="number" min="0" :disabled="!canWrite"></td>
               <td><input v-model="rule.enabled" :name="`rule-enabled-${rule.id}`" type="checkbox" :disabled="!canWrite"></td>
-              <td v-if="canWrite"><button class="table-action" type="button" :data-testid="`save-growth-rule-${rule.id}`" @click="saveRule(rule)">保存</button></td>
+              <td v-if="canWrite"><button class="table-action" type="button" :data-testid="`save-growth-rule-${rule.id}`" @click="saveRule(rule)">{{ strings.growthConfigs.save }}</button></td>
             </tr>
           </tbody>
         </table>
@@ -94,18 +105,18 @@ onMounted(load)
 
     <section class="content-card">
       <div class="section-headline">
-        <div><p class="eyebrow">等级阈值</p><h2>Lv1-Lv8 配置</h2></div>
+        <div><p class="eyebrow">{{ strings.growthConfigs.levelsEyebrow }}</p><h2>{{ strings.growthConfigs.levelsHeading }}</h2></div>
       </div>
       <div class="table-shell">
         <table class="data-table">
-          <thead><tr><th>等级</th><th>名称</th><th>最低成长值</th><th>启用</th><th v-if="canWrite">操作</th></tr></thead>
+          <thead><tr><th>{{ strings.growthConfigs.levelHeaders.level }}</th><th>{{ strings.growthConfigs.levelHeaders.name }}</th><th>{{ strings.growthConfigs.levelHeaders.minGrowth }}</th><th>{{ strings.growthConfigs.levelHeaders.enabled }}</th><th v-if="canWrite">{{ strings.growthConfigs.levelHeaders.actions }}</th></tr></thead>
           <tbody>
             <tr v-for="level in levels" :key="level.level">
-              <td>Lv{{ level.level }}</td>
+              <td>{{ strings.growthConfigs.levelLabel(level.level) }}</td>
               <td><input v-model="level.levelName" :name="`level-name-${level.level}`" type="text" :disabled="!canWrite"></td>
               <td><input v-model.number="level.minGrowth" :name="`level-min-growth-${level.level}`" type="number" min="0" :disabled="!canWrite"></td>
               <td><input v-model="level.enabled" :name="`level-enabled-${level.level}`" type="checkbox" :disabled="!canWrite"></td>
-              <td v-if="canWrite"><button class="table-action" type="button" :data-testid="`save-growth-level-${level.level}`" @click="saveLevel(level)">保存</button></td>
+              <td v-if="canWrite"><button class="table-action" type="button" :data-testid="`save-growth-level-${level.level}`" @click="saveLevel(level)">{{ strings.growthConfigs.save }}</button></td>
             </tr>
           </tbody>
         </table>

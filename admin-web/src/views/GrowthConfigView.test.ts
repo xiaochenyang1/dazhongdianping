@@ -125,7 +125,7 @@ describe('GrowthConfigView', () => {
     await flushView()
 
     expect(mocks.fetchGrowthConfig).toHaveBeenCalledTimes(1)
-    expect(host.textContent).toContain('发布评价')
+    expect(host.textContent).toContain('发布点评')
     expect(host.querySelector<HTMLInputElement>('[name="level-name-2"]')?.value).toBe('探店新秀')
     expect([...host.querySelectorAll<HTMLInputElement>('input')].every((input) => input.disabled)).toBe(true)
     expect(host.querySelector('[data-testid^="save-growth-rule-"]')).toBeNull()

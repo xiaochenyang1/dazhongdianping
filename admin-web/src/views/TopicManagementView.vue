@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import {
   listTopics,
   mergeTopic,
@@ -12,6 +13,7 @@ import {
 } from '@/services/topic'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const canWrite = computed(() => state.permissions.includes('operations:topic:write'))
 const rows = ref<AdminTopic[]>([])
 const loading = ref(false)
@@ -33,6 +35,18 @@ const mergeTargets = computed(() =>
   ),
 )
 
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+function topicStatusText(topicStatus: number) {
+  return strings.value.topics.statusChipText(topicStatus)
+}
+
+function calculatedAtText(value: string) {
+  return strings.value.topics.calculatedAt(value || strings.value.topics.noSnapshot)
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -45,9 +59,10 @@ async function load() {
       pageSize: 20,
     })
     rows.value = page.list
+    for (const key of Object.keys(pinDrafts)) delete pinDrafts[Number(key)]
     for (const row of rows.value) pinDrafts[row.id] = row.pinnedSort
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '话题加载失败'
+    error.value = messageOf(cause, strings.value.topics.loadError)
   } finally {
     loading.value = false
   }
@@ -65,7 +80,7 @@ async function saveRename() {
     await updateTopic(editingId.value!, { name: editingName.value.trim() })
     editingId.value = null
     editingName.value = ''
-    notice.value = '话题名称已更新'
+    notice.value = strings.value.topics.renamed
     await load()
   })
 }
@@ -77,7 +92,7 @@ async function toggleRecommendation(row: AdminTopic) {
       recommended: !row.recommended,
       pinnedSort: Math.max(0, Number(pinDrafts[row.id] ?? 0)),
     })
-    notice.value = row.recommended ? '已取消推荐' : '推荐与置顶排序已更新'
+    notice.value = row.recommended ? strings.value.topics.recommendationDisabled : strings.value.topics.recommendationEnabled
     await load()
   })
 }
@@ -86,7 +101,7 @@ async function toggleStatus(row: AdminTopic) {
   if (!canWrite.value) return
   await runAction(async () => {
     await updateTopicStatus(row.id, row.status === 1 ? 2 : 1)
-    notice.value = row.status === 1 ? '话题已屏蔽' : '话题已恢复'
+    notice.value = row.status === 1 ? strings.value.topics.blocked : strings.value.topics.restored
     await load()
   })
 }
@@ -102,18 +117,16 @@ async function confirmMerge() {
   const source = mergeSource.value
   const target = rows.value.find((row) => row.id === mergeTargetId.value)
   if (!source || !target) {
-    error.value = '请选择有效的合并目标'
+    error.value = strings.value.topics.invalidMergeTarget
     return
   }
-  const confirmed = window.confirm(
-    `将「${source.name}」合并到「${target.name}」。帖子与关注会迁移，源话题将被屏蔽；该操作不可逆。`,
-  )
+  const confirmed = window.confirm(strings.value.topics.mergeConfirmPrompt(source.name, target.name))
   if (!confirmed) return
   await runAction(async () => {
     await mergeTopic(source.id, target.id)
     mergeSource.value = null
     mergeTargetId.value = null
-    notice.value = '话题合并完成，关系与热榜已重算'
+    notice.value = strings.value.topics.merged
     await load()
   })
 }
@@ -122,7 +135,7 @@ async function recalculate() {
   if (!canWrite.value) return
   await runAction(async () => {
     const result = await recalculateTopicHot()
-    notice.value = `${result.region} 热榜已重算：${result.calculatedAt}`
+    notice.value = strings.value.topics.recalculated(result.region, result.calculatedAt)
     await load()
   })
 }
@@ -135,84 +148,94 @@ async function runAction(action: () => Promise<void>) {
   try {
     await action()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '操作失败'
+    error.value = messageOf(cause, strings.value.topics.actionError)
   } finally {
     actionBusy.value = false
   }
 }
 
-onMounted(load)
+watch(
+  () => state.region,
+  () => {
+    editingId.value = null
+    editingName.value = ''
+    mergeSource.value = null
+    mergeTargetId.value = null
+    void load()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <section class="topic-console">
     <header class="command-header stage-item">
       <div>
-        <p class="eyebrow">TOPIC OPERATIONS · {{ rows[0]?.region ?? 'CURRENT REGION' }}</p>
-        <h1>话题治理作战台</h1>
-        <p class="lede">推荐负责发现，置顶负责秩序，合并负责收拾重复命名留下的烂摊子。</p>
+        <p class="eyebrow">{{ strings.topics.headerEyebrow(state.region) }}</p>
+        <h1>{{ strings.topics.heading }}</h1>
+        <p class="lede">{{ strings.topics.description }}</p>
       </div>
       <button v-if="canWrite" class="recalculate-button" type="button" :disabled="actionBusy" @click="recalculate">
-        <span>↻</span> 重算热榜
+        <span>↻</span> {{ strings.topics.recalculate }}
       </button>
     </header>
 
     <form class="filter-deck stage-item" @submit.prevent="load">
       <label>
-        <span>关键词</span>
-        <input v-model="keyword" data-testid="topic-keyword" placeholder="名称精确定位" />
+        <span>{{ strings.topics.filters.keyword }}</span>
+        <input v-model="keyword" data-testid="topic-keyword" :placeholder="strings.topics.keywordPlaceholder" />
       </label>
       <label>
-        <span>状态</span>
+        <span>{{ strings.topics.filters.status }}</span>
         <select v-model="status" data-testid="topic-status">
-          <option :value="undefined">全部状态</option>
-          <option :value="1">正常</option>
-          <option :value="2">屏蔽</option>
+          <option :value="undefined">{{ strings.topics.statusOptions.all }}</option>
+          <option :value="1">{{ strings.topics.statusOptions.live }}</option>
+          <option :value="2">{{ strings.topics.statusOptions.blocked }}</option>
         </select>
       </label>
       <label>
-        <span>运营推荐</span>
+        <span>{{ strings.topics.filters.recommended }}</span>
         <select v-model="recommended" data-testid="topic-recommended">
-          <option :value="undefined">全部</option>
-          <option :value="true">已推荐</option>
-          <option :value="false">未推荐</option>
+          <option :value="undefined">{{ strings.topics.recommendationOptions.all }}</option>
+          <option :value="true">{{ strings.topics.recommendationOptions.recommended }}</option>
+          <option :value="false">{{ strings.topics.recommendationOptions.notRecommended }}</option>
         </select>
       </label>
-      <button class="query-button" type="submit">执行筛选</button>
+      <button class="query-button" type="submit">{{ strings.topics.query }}</button>
     </form>
 
     <p v-if="error" class="signal signal-error" role="alert">{{ error }}</p>
     <p v-if="notice" class="signal signal-success">{{ notice }}</p>
-    <p v-if="loading" class="loading-copy">正在读取区域话题...</p>
+    <p v-if="loading" class="loading-copy">{{ strings.topics.loading }}</p>
 
     <div v-else class="topic-grid stage-item">
       <article v-for="row in rows" :key="row.id" class="topic-card" :class="{ 'is-muted': row.status === 2 }">
         <div class="card-topline">
           <div class="status-stack">
             <span class="status-chip" :class="row.status === 1 ? 'is-live' : 'is-blocked'">
-              {{ row.status === 1 ? 'LIVE' : 'BLOCKED' }}
+              {{ topicStatusText(row.status) }}
             </span>
-            <span v-if="row.recommended" class="status-chip is-recommended">推荐</span>
+            <span v-if="row.recommended" class="status-chip is-recommended">{{ strings.topics.recommendedChip }}</span>
           </div>
           <strong class="topic-id">#{{ row.id }}</strong>
         </div>
 
         <div class="topic-title-block">
           <h2>{{ row.name }}</h2>
-          <p v-if="row.mergedToId" class="merged-note">已合并至 #{{ row.mergedToId }}</p>
+          <p v-if="row.mergedToId" class="merged-note">{{ strings.topics.mergedTo(row.mergedToId) }}</p>
         </div>
 
         <dl class="metric-rack">
-          <div><dt>热度</dt><dd>{{ row.hotScore }}</dd></div>
-          <div><dt>帖子</dt><dd>{{ row.postCount }}</dd></div>
-          <div><dt>关注</dt><dd>{{ row.followerCount }}</dd></div>
+          <div><dt>{{ strings.topics.metricLabels.hotScore }}</dt><dd>{{ row.hotScore }}</dd></div>
+          <div><dt>{{ strings.topics.metricLabels.posts }}</dt><dd>{{ row.postCount }}</dd></div>
+          <div><dt>{{ strings.topics.metricLabels.followers }}</dt><dd>{{ row.followerCount }}</dd></div>
         </dl>
 
-        <p class="formula-line">{{ row.postCount7d }} 帖 · {{ row.likeCount7d }} 赞 · {{ row.commentCount7d }} 评论</p>
-        <p class="calculated-at">最近计算 {{ row.calculatedAt || '尚未生成快照' }}</p>
+        <p class="formula-line">{{ strings.topics.activitySummary(row.postCount7d, row.likeCount7d, row.commentCount7d) }}</p>
+        <p class="calculated-at">{{ calculatedAtText(row.calculatedAt) }}</p>
 
         <div v-if="canWrite" class="pin-control">
-          <label :for="`pin-${row.id}`">置顶排序</label>
+          <label :for="`pin-${row.id}`">{{ strings.topics.pinLabel }}</label>
           <input
             :id="`pin-${row.id}`"
             v-model.number="pinDrafts[row.id]"
@@ -223,45 +246,43 @@ onMounted(load)
         </div>
 
         <div v-if="canWrite" class="card-actions">
-          <button type="button" @click="startRename(row)">编辑名称</button>
+          <button type="button" @click="startRename(row)">{{ strings.topics.rename }}</button>
           <button type="button" class="accent-action" @click="toggleRecommendation(row)">
-            {{ row.recommended ? '取消推荐' : '推荐并置顶' }}
+            {{ row.recommended ? strings.topics.cancelRecommend : strings.topics.recommend }}
           </button>
-          <button type="button" @click="toggleStatus(row)">{{ row.status === 1 ? '屏蔽' : '恢复' }}</button>
-          <button type="button" class="danger-action" :disabled="row.mergedToId != null" @click="startMerge(row)">
-            合并话题
-          </button>
+          <button type="button" @click="toggleStatus(row)">{{ row.status === 1 ? strings.topics.block : strings.topics.restore }}</button>
+          <button type="button" class="danger-action" :disabled="row.mergedToId != null" @click="startMerge(row)">{{ strings.topics.merge }}</button>
         </div>
       </article>
     </div>
 
     <aside v-if="editingId != null && canWrite" class="operation-drawer stage-item">
       <div>
-        <p class="eyebrow">RENAME TOPIC</p>
-        <h2>修改公开名称</h2>
+        <p class="eyebrow">{{ strings.topics.renameEyebrow }}</p>
+        <h2>{{ strings.topics.renameHeading }}</h2>
       </div>
       <form data-testid="rename-form" @submit.prevent="saveRename">
         <input v-model="editingName" name="topic-name" maxlength="64" required />
-        <button type="submit" :disabled="actionBusy">保存名称</button>
-        <button type="button" @click="editingId = null">取消</button>
+        <button type="submit" :disabled="actionBusy">{{ strings.topics.renameSave }}</button>
+        <button type="button" @click="editingId = null">{{ strings.common.cancel }}</button>
       </form>
     </aside>
 
     <aside v-if="mergeSource && canWrite" class="operation-drawer merge-drawer stage-item">
       <div>
-        <p class="eyebrow">IRREVERSIBLE MERGE</p>
-        <h2>合并「{{ mergeSource.name }}」</h2>
-        <p>源帖子与关注关系会去重迁移，源话题随后屏蔽。这个动作不可逆。</p>
+        <p class="eyebrow">{{ strings.topics.mergeEyebrow }}</p>
+        <h2>{{ strings.topics.mergeHeading(mergeSource.name) }}</h2>
+        <p>{{ strings.topics.mergeDescription }}</p>
       </div>
       <div class="merge-controls">
         <select v-model.number="mergeTargetId" name="merge-target">
-          <option :value="null">选择目标话题</option>
+          <option :value="null">{{ strings.topics.mergeTargetPlaceholder }}</option>
           <option v-for="target in mergeTargets" :key="target.id" :value="target.id">
             #{{ target.id }} {{ target.name }}
           </option>
         </select>
-        <button class="danger-action" type="button" :disabled="actionBusy" @click="confirmMerge">确认不可逆合并</button>
-        <button type="button" @click="mergeSource = null">取消</button>
+        <button class="danger-action" type="button" :disabled="actionBusy" @click="confirmMerge">{{ strings.topics.mergeConfirm }}</button>
+        <button type="button" @click="mergeSource = null">{{ strings.common.cancel }}</button>
       </div>
     </aside>
   </section>

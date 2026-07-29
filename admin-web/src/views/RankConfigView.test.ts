@@ -91,13 +91,13 @@ describe('RankConfigView', () => {
     await flushView()
 
     expect(adminMocks.listRankConfigs).toHaveBeenCalledTimes(1)
-    expect(host.textContent).toContain('必吃榜')
-    expect(host.textContent).toContain('城市 101 / 分类 201')
+    expect(host.textContent).toContain('Must-eat')
+    expect(host.textContent).toContain('City 101 / Category 201')
 
     const form = host.querySelector<HTMLFormElement>('[data-testid="rank-draft-form"]')
     const publishButton = host.querySelector<HTMLButtonElement>('[data-testid="rank-publish-31"]')
     const rollbackButton = host.querySelector<HTMLButtonElement>('[data-testid="rank-rollback-30"]')
-    if (!form || !publishButton || !rollbackButton) throw new Error('找不到榜单配置写入控件')
+    if (!form || !publishButton || !rollbackButton) throw new Error('missing rank configuration write controls')
 
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flushView()
@@ -129,17 +129,17 @@ describe('RankConfigView', () => {
     await flushView()
 
     expect(adminMocks.listRankConfigs).toHaveBeenCalledTimes(1)
-    expect(host.textContent).toContain('必吃榜')
-    expect(host.textContent).toContain('城市 101 / 分类 201')
-    expect(host.textContent).toContain('当前账号仅可查看，无榜单配置权限。')
+    expect(host.textContent).toContain('Must-eat')
+    expect(host.textContent).toContain('City 101 / Category 201')
+    expect(host.textContent).toContain('This account can view ranking history but cannot edit ranking rules.')
     expect(host.querySelector('[data-testid="rank-draft-form"]')).toBeNull()
     expect(host.querySelector('[data-testid="rank-publish-31"]')).toBeNull()
     expect(host.querySelector('[data-testid="rank-rollback-30"]')).toBeNull()
     expect([...host.querySelectorAll('th')].map((cell) => cell.textContent?.trim())).toEqual([
-      '类型',
-      '作用域',
-      '版本',
-      '状态',
+      'Type',
+      'Scope',
+      'Version',
+      'Status',
     ])
     app.unmount()
   })
@@ -151,7 +151,7 @@ describe('RankConfigView', () => {
     const form = host.querySelector<HTMLFormElement>('[data-testid="rank-draft-form"]')
     const publishButton = host.querySelector<HTMLButtonElement>('[data-testid="rank-publish-31"]')
     const rollbackButton = host.querySelector<HTMLButtonElement>('[data-testid="rank-rollback-30"]')
-    if (!form || !publishButton || !rollbackButton) throw new Error('找不到榜单配置写入控件')
+    if (!form || !publishButton || !rollbackButton) throw new Error('missing rank configuration write controls')
 
     sessionMock.state.permissions = ['operations:rank:read']
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
