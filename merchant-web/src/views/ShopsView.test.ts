@@ -66,7 +66,7 @@ describe('ShopsView', () => {
   beforeEach(() => {
     Object.values(mocks).forEach((mock) => mock.mockReset())
     mocks.fetchShops.mockResolvedValue({
-      list: [{ id: 20001, name: 'Maison Sichuan Paris', region: 'EU', cityName: 'Paris', score: 4.6, statusText: '营业中' }],
+      list: [{ id: 20001, name: 'Maison Sichuan Paris', region: 'EU', cityName: 'Paris', score: 4.6, statusText: '营业中', openNow: true }],
       total: 1,
       page: 1,
       pageSize: 50,
@@ -113,7 +113,8 @@ describe('ShopsView', () => {
     await flush()
 
     expect(mocks.createUpdateShopDraft).toHaveBeenCalledWith(20001)
-    expect(host.textContent).toContain('编辑草稿 #9001')
+    expect(host.textContent).toContain('Edit draft #9001')
+    expect(host.textContent).toContain('Open now')
 
     vm.form.name = 'Maison Sichuan Updated'
     vm.form.summary = '更新后的门店简介'
@@ -139,7 +140,7 @@ describe('ShopsView', () => {
       { name: '水煮鱼', price: 28, recommendReason: '招牌', sort: 1 },
     ])
     expect(mocks.submitShopChange).toHaveBeenCalledWith(9001)
-    expect(host.textContent).toContain('门店变更已提交审核')
+    expect(host.textContent).toContain('Shop changes submitted for review. The live shop stays unchanged until approval.')
     app.unmount()
   })
 
@@ -147,14 +148,14 @@ describe('ShopsView', () => {
     const { app, host } = mount()
     await flush()
 
-    expect(host.textContent).toContain('驳回：封面与营业执照主体不一致')
+    expect(host.textContent).toContain('Rejected:封面与营业执照主体不一致')
 
     host.querySelector<HTMLButtonElement>('[data-testid="shop-draft-open-9001"]')?.click()
     await flush()
 
     expect(mocks.fetchShopChange).toHaveBeenCalledWith(9001)
     expect(host.querySelector('[data-testid="shop-draft-editor"]')).not.toBeNull()
-    expect(host.textContent).toContain('驳回原因：封面与营业执照主体不一致')
+    expect(host.textContent).toContain('Rejection reason: 封面与营业执照主体不一致. Update the draft and save or resubmit it.')
     app.unmount()
   })
 })

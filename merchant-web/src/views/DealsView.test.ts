@@ -138,7 +138,7 @@ describe('DealsView', () => {
       rules: '',
       items: [{ name: '汤面', quantity: 2, price: 20, sort: 1 }],
     })
-    expect(host.textContent).toContain('团购已创建并提交审核')
+    expect(host.textContent).toContain('Deal created and submitted for review.')
     app.unmount()
   })
 
@@ -146,13 +146,13 @@ describe('DealsView', () => {
     const { app, host } = mount()
     await flush()
 
-    expect(host.textContent).toContain('驳回原因：价格与规则描述不一致')
+    expect(host.textContent).toContain('Rejection reason:价格与规则描述不一致')
 
     host.querySelector<HTMLButtonElement>('[data-testid="deal-edit-501"]')?.click()
     await flush()
 
     expect(mocks.fetchDeal).toHaveBeenCalledWith(501)
-    expect(host.textContent).toContain('最近驳回原因：价格与规则描述不一致')
+    expect(host.textContent).toContain('Latest rejection reason: 价格与规则描述不一致.')
     setInput(host, 'deal-title', '改版双人套餐')
     await nextTick()
     host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
@@ -166,7 +166,7 @@ describe('DealsView', () => {
         items: [{ name: '主菜', quantity: 1, price: 30, sort: 1 }],
       }),
     )
-    expect(host.textContent).toContain('团购已更新并重新提交审核')
+    expect(host.textContent).toContain('Deal updated and resubmitted for review.')
     app.unmount()
   })
 })

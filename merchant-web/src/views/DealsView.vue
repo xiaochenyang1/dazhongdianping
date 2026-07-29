@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useMerchantSession } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 import {
   createDeal,
   fetchDeal,
@@ -19,6 +20,7 @@ const props = withDefaults(defineProps<{ permissions?: string[] }>(), {
 })
 
 const { state } = useMerchantSession()
+const strings = computed(() => merchantStringsForRegion(state.region))
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
@@ -29,6 +31,14 @@ const editingId = ref<number | null>(null)
 const formOpen = ref(false)
 const canEdit = computed(() => props.permissions.includes('deal:edit'))
 const defaultCurrency = computed(() => (state.region === 'EU' ? 'EUR' : 'CNY'))
+const filterOptions = computed(() => [
+  { value: 'pending_or_rejected', label: strings.value.deals.filterOptions.pendingOrRejected },
+  { value: '', label: strings.value.deals.filterOptions.all },
+  { value: '0', label: strings.value.deals.filterOptions.pending },
+  { value: '1', label: strings.value.deals.filterOptions.approved },
+  { value: '2', label: strings.value.deals.filterOptions.rejected },
+])
+const editingItem = computed(() => items.value.find((item) => item.id === editingId.value) ?? null)
 const filters = reactive({
   auditStatus: 'pending_or_rejected',
 })
@@ -106,7 +116,7 @@ async function openEdit(deal: MerchantDeal) {
     )
     formOpen.value = true
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '团购详情加载失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.deals.detailLoadError
   } finally {
     saving.value = false
   }
@@ -131,19 +141,19 @@ function buildPayload(): MerchantDealPayload {
   const price = Number(form.price)
   const originalPrice = Number(form.originalPrice)
   const stock = Number(form.stock)
-  if (!Number.isFinite(shopId) || shopId <= 0) throw new Error('请选择门店')
-  if (!form.title.trim()) throw new Error('请填写团购标题')
-  if (!form.coverImage.trim()) throw new Error('请填写封面图 URL')
-  if (!Number.isFinite(price) || price <= 0) throw new Error('售价必须大于 0')
-  if (!Number.isFinite(originalPrice) || originalPrice <= 0) throw new Error('原价必须大于 0')
-  if (!Number.isFinite(stock) || stock < -1) throw new Error('库存不能小于 -1')
+  if (!Number.isFinite(shopId) || shopId <= 0) throw new Error(strings.value.deals.validations.shopRequired)
+  if (!form.title.trim()) throw new Error(strings.value.deals.validations.titleRequired)
+  if (!form.coverImage.trim()) throw new Error(strings.value.deals.validations.coverImageRequired)
+  if (!Number.isFinite(price) || price <= 0) throw new Error(strings.value.deals.validations.pricePositive)
+  if (!Number.isFinite(originalPrice) || originalPrice <= 0) throw new Error(strings.value.deals.validations.originalPricePositive)
+  if (!Number.isFinite(stock) || stock < -1) throw new Error(strings.value.deals.validations.stockMin)
   const itemsPayload = form.items.map((item, index) => {
     const quantity = Number(item.quantity)
     const itemPrice = Number(item.price)
     const sort = Number(item.sort)
-    if (!item.name.trim()) throw new Error(`第 ${index + 1} 个套餐项名称不能为空`)
-    if (!Number.isFinite(quantity) || quantity < 1) throw new Error(`第 ${index + 1} 个套餐项数量无效`)
-    if (!Number.isFinite(itemPrice) || itemPrice < 0) throw new Error(`第 ${index + 1} 个套餐项价格无效`)
+    if (!item.name.trim()) throw new Error(strings.value.deals.validations.itemNameRequired(index + 1))
+    if (!Number.isFinite(quantity) || quantity < 1) throw new Error(strings.value.deals.validations.itemQuantityInvalid(index + 1))
+    if (!Number.isFinite(itemPrice) || itemPrice < 0) throw new Error(strings.value.deals.validations.itemPriceInvalid(index + 1))
     return {
       name: item.name.trim(),
       quantity,
@@ -192,7 +202,7 @@ async function load() {
       form.shopId = String(shops.value[0].id)
     }
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '团购加载失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.deals.loadError
   } finally {
     loading.value = false
   }
@@ -207,16 +217,16 @@ async function save() {
     const payload = buildPayload()
     if (editingId.value == null) {
       await createDeal(payload)
-      notice.value = '团购已创建并提交审核'
+      notice.value = strings.value.deals.createNotice
     } else {
       await updateDeal(editingId.value, payload)
-      notice.value = '团购已更新并重新提交审核'
+      notice.value = strings.value.deals.updateNotice
     }
     formOpen.value = false
     resetForm()
     await load()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '团购保存失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.deals.saveError
   } finally {
     saving.value = false
   }
@@ -228,10 +238,10 @@ async function toggle(item: MerchantDeal) {
   notice.value = ''
   try {
     await updateDealStatus(item.id, item.status === 1 ? 0 : 1)
-    notice.value = item.status === 1 ? '团购已下架' : '团购已上架'
+    notice.value = item.status === 1 ? strings.value.deals.disabledNotice : strings.value.deals.enabledNotice
     await load()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '上下架失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.deals.toggleError
   }
 }
 
@@ -242,118 +252,154 @@ onMounted(load)
   <section>
     <div class="toolbar">
       <div>
-        <p class="eyebrow">Deal management</p>
-        <strong>团购创建与编辑</strong>
-        <p class="muted">默认看待审/被驳回；创建/编辑后会回到待审下架，审核通过后才能上架销售。</p>
+        <p class="eyebrow">{{ strings.deals.eyebrow }}</p>
+        <strong>{{ strings.deals.heading }}</strong>
+        <p class="muted">{{ strings.deals.description }}</p>
       </div>
       <div class="row-actions">
         <label>
-          <span class="muted">审核状态</span>
+          <span class="muted">{{ strings.deals.filterLabel }}</span>
           <select
             v-model="filters.auditStatus"
             name="deal-audit-status-filter"
             data-testid="deal-audit-status-filter"
             @change="load"
           >
-            <option value="pending_or_rejected">待审/被驳回</option>
-            <option value="">全部</option>
-            <option value="0">待审</option>
-            <option value="1">已通过</option>
-            <option value="2">已驳回</option>
+            <option v-for="option in filterOptions" :key="option.value || 'all'" :value="option.value">
+              {{ option.label }}
+            </option>
           </select>
         </label>
-        <button type="button" class="secondary-action" @click="load">刷新</button>
+        <button type="button" class="secondary-action" @click="load">{{ strings.common.refresh }}</button>
         <button v-if="canEdit" type="button" class="primary-action" data-testid="deal-create-open" @click="openCreate">
-          新建团购
+          {{ strings.deals.create }}
         </button>
       </div>
     </div>
 
-    <p v-if="!canEdit" class="error" role="alert">当前账号缺少 `deal:edit` 权限，只能查看列表。</p>
+    <p v-if="!canEdit" class="error" role="alert">{{ strings.deals.missingPermission('deal:edit') }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="notice" class="success-text">{{ notice }}</p>
-    <p v-if="loading" class="muted">加载中...</p>
+    <p v-if="loading" class="muted">{{ strings.common.loading }}</p>
 
     <article v-if="formOpen" class="card deal-form-card" data-testid="deal-form">
-      <h3>{{ editingId == null ? '新建团购' : `编辑团购 #${editingId}` }}</h3>
+      <h3>{{ editingId == null ? strings.deals.formTitles.create : strings.deals.formTitles.edit(editingId) }}</h3>
       <p
-        v-if="editingId != null && items.find((item) => item.id === editingId)?.auditStatus === 2"
+        v-if="editingItem?.auditStatus === 2"
         class="error"
         data-testid="deal-form-reject-reason"
       >
-        最近驳回原因：{{ items.find((item) => item.id === editingId)?.rejectReason || '未填写' }}。修改后保存会重新提交审核。
+        {{ strings.deals.rejectReasonSummary(editingItem?.rejectReason || strings.deals.missingRejectReason) }}
       </p>
       <form class="form-grid deal-form" @submit.prevent="save">
         <label>
-          <span>门店</span>
+          <span>{{ strings.deals.labels.shop }}</span>
           <select v-model="form.shopId" name="deal-shop-id" data-testid="deal-shop-id">
-            <option value="">请选择门店</option>
+            <option value="">{{ strings.deals.placeholders.selectShop }}</option>
             <option v-for="shop in shops" :key="shop.id" :value="String(shop.id)">{{ shop.name }}</option>
           </select>
         </label>
         <label>
-          <span>类型</span>
+          <span>{{ strings.deals.labels.type }}</span>
           <select v-model="form.type" name="deal-type">
-            <option value="1">团购套餐</option>
-            <option value="2">代金券</option>
+            <option value="1">{{ strings.deals.typeOptions.packageDeal }}</option>
+            <option value="2">{{ strings.deals.typeOptions.voucher }}</option>
           </select>
         </label>
         <label class="full-span">
-          <span>标题</span>
-          <input v-model="form.title" name="deal-title" data-testid="deal-title" maxlength="128" placeholder="例如 双人午市套餐" />
+          <span>{{ strings.deals.labels.title }}</span>
+          <input
+            v-model="form.title"
+            name="deal-title"
+            data-testid="deal-title"
+            maxlength="128"
+            :placeholder="strings.deals.placeholders.title"
+          />
         </label>
         <label class="full-span">
-          <span>封面图 URL</span>
+          <span>{{ strings.deals.labels.coverImage }}</span>
           <input v-model="form.coverImage" name="deal-cover" maxlength="255" placeholder="https://..." />
         </label>
         <label>
-          <span>售价</span>
+          <span>{{ strings.deals.labels.price }}</span>
           <input v-model="form.price" name="deal-price" data-testid="deal-price" inputmode="decimal" />
         </label>
         <label>
-          <span>原价</span>
+          <span>{{ strings.deals.labels.originalPrice }}</span>
           <input v-model="form.originalPrice" name="deal-original-price" data-testid="deal-original-price" inputmode="decimal" />
         </label>
         <label>
-          <span>币种</span>
+          <span>{{ strings.deals.labels.currency }}</span>
           <input v-model="form.currency" name="deal-currency" maxlength="3" />
         </label>
         <label>
-          <span>库存（-1 不限）</span>
+          <span>{{ strings.deals.labels.stock }}</span>
           <input v-model="form.stock" name="deal-stock" inputmode="numeric" />
         </label>
         <label>
-          <span>有效开始</span>
+          <span>{{ strings.deals.labels.validStart }}</span>
           <input v-model="form.validStart" name="deal-valid-start" type="date" />
         </label>
         <label>
-          <span>有效结束</span>
+          <span>{{ strings.deals.labels.validEnd }}</span>
           <input v-model="form.validEnd" name="deal-valid-end" type="date" />
         </label>
         <label class="full-span">
-          <span>使用规则</span>
-          <textarea v-model="form.rules" name="deal-rules" rows="3" maxlength="2000" placeholder="周末通用；需提前预约..." />
+          <span>{{ strings.deals.labels.rules }}</span>
+          <textarea
+            v-model="form.rules"
+            name="deal-rules"
+            rows="3"
+            maxlength="2000"
+            :placeholder="strings.deals.placeholders.rules"
+          />
         </label>
 
         <div class="full-span deal-items">
           <div class="toolbar">
-            <strong>套餐明细</strong>
-            <button type="button" class="secondary-action" data-testid="deal-item-add" @click="addItem">添加明细</button>
+            <strong>{{ strings.deals.itemSectionHeading }}</strong>
+            <button type="button" class="secondary-action" data-testid="deal-item-add" @click="addItem">
+              {{ strings.deals.addItem }}
+            </button>
           </div>
           <div v-for="(item, index) in form.items" :key="index" class="deal-item-row">
-            <input v-model="item.name" :name="`deal-item-name-${index}`" :data-testid="`deal-item-name-${index}`" placeholder="项目名称" />
-            <input v-model="item.quantity" :name="`deal-item-quantity-${index}`" inputmode="numeric" placeholder="数量" />
-            <input v-model="item.price" :name="`deal-item-price-${index}`" inputmode="decimal" placeholder="价格" />
-            <input v-model="item.sort" :name="`deal-item-sort-${index}`" inputmode="numeric" placeholder="排序" />
-            <button type="button" class="danger-action" :disabled="form.items.length <= 1" @click="removeItem(index)">删除</button>
+            <input
+              v-model="item.name"
+              :name="`deal-item-name-${index}`"
+              :data-testid="`deal-item-name-${index}`"
+              :placeholder="strings.deals.placeholders.itemName"
+            />
+            <input
+              v-model="item.quantity"
+              :name="`deal-item-quantity-${index}`"
+              inputmode="numeric"
+              :placeholder="strings.deals.placeholders.itemQuantity"
+            />
+            <input
+              v-model="item.price"
+              :name="`deal-item-price-${index}`"
+              inputmode="decimal"
+              :placeholder="strings.deals.placeholders.itemPrice"
+            />
+            <input
+              v-model="item.sort"
+              :name="`deal-item-sort-${index}`"
+              inputmode="numeric"
+              :placeholder="strings.deals.placeholders.itemSort"
+            />
+            <button type="button" class="danger-action" :disabled="form.items.length <= 1" @click="removeItem(index)">
+              {{ strings.deals.deleteItem }}
+            </button>
           </div>
         </div>
 
         <div class="full-span row-actions">
           <button type="submit" class="primary-action" data-testid="deal-save" :disabled="saving">
-            {{ saving ? '提交中...' : editingId == null ? '创建并提交审核' : '保存并重新提交' }}
+            {{ saving ? strings.deals.submitting : editingId == null ? strings.deals.submitCreate : strings.deals.submitUpdate }}
           </button>
-          <button type="button" class="secondary-action" :disabled="saving" @click="formOpen = false">取消</button>
+          <button type="button" class="secondary-action" :disabled="saving" @click="formOpen = false">
+            {{ strings.common.cancel }}
+          </button>
         </div>
       </form>
     </article>
@@ -362,30 +408,30 @@ onMounted(load)
       <table class="table">
         <thead>
           <tr>
-            <th>套餐</th>
-            <th>门店</th>
-            <th>价格</th>
-            <th>审核</th>
-            <th>上下架</th>
-            <th>操作</th>
+            <th>{{ strings.deals.tableHeaders.deal }}</th>
+            <th>{{ strings.deals.tableHeaders.shop }}</th>
+            <th>{{ strings.deals.tableHeaders.price }}</th>
+            <th>{{ strings.deals.tableHeaders.audit }}</th>
+            <th>{{ strings.deals.tableHeaders.availability }}</th>
+            <th>{{ strings.deals.tableHeaders.actions }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
             <td>
               <strong>{{ item.title }}</strong>
-              <span class="table-subtext">库存 {{ item.stock }} · 已售 {{ item.soldCount ?? 0 }}</span>
+              <span class="table-subtext">{{ strings.deals.stockSummary(item.stock, item.soldCount ?? 0) }}</span>
             </td>
             <td>{{ item.shopName || `shop:${item.shopId}` }}</td>
             <td>{{ item.price }} {{ item.currency }}</td>
             <td>
-              <div>{{ item.auditStatusText || item.auditStatus }}</div>
+              <div>{{ strings.deals.auditStatusText(item.auditStatus, item.auditStatusText) }}</div>
               <span
                 v-if="item.auditStatus === 2 && item.rejectReason"
                 class="table-subtext"
                 :data-testid="`deal-reject-reason-${item.id}`"
               >
-                驳回原因：{{ item.rejectReason }}
+                {{ strings.deals.rejectReasonLabel }}{{ item.rejectReason }}
               </span>
             </td>
             <td>
@@ -395,9 +441,9 @@ onMounted(load)
                 :data-testid="`deal-toggle-${item.id}`"
                 @click="toggle(item)"
               >
-                {{ item.status === 1 ? '下架' : '上架' }}
+                {{ item.status === 1 ? strings.deals.takeDown : strings.deals.goLive }}
               </button>
-              <span v-else class="muted">{{ item.statusText || item.status }}</span>
+              <span v-else class="muted">{{ strings.deals.liveStatusText(item.status, item.statusText) }}</span>
             </td>
             <td>
               <button
@@ -408,13 +454,13 @@ onMounted(load)
                 :disabled="saving"
                 @click="openEdit(item)"
               >
-                编辑
+                {{ strings.deals.edit }}
               </button>
-              <span v-else class="muted">只读</span>
+              <span v-else class="muted">{{ strings.deals.readOnly }}</span>
             </td>
           </tr>
           <tr v-if="items.length === 0">
-            <td colspan="6" class="feedback">还没有团购，先建一个吧。</td>
+            <td colspan="6" class="feedback">{{ strings.deals.empty }}</td>
           </tr>
         </tbody>
       </table>

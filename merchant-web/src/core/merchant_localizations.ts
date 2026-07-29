@@ -378,6 +378,217 @@ export interface MerchantStrings {
     submitting: string
     submit: string
   }
+  deals: {
+    eyebrow: string
+    heading: string
+    description: string
+    detailLoadError: string
+    validations: {
+      shopRequired: string
+      titleRequired: string
+      coverImageRequired: string
+      pricePositive: string
+      originalPricePositive: string
+      stockMin: string
+      itemNameRequired: (index: number) => string
+      itemQuantityInvalid: (index: number) => string
+      itemPriceInvalid: (index: number) => string
+    }
+    loadError: string
+    createNotice: string
+    updateNotice: string
+    saveError: string
+    enabledNotice: string
+    disabledNotice: string
+    toggleError: string
+    filterLabel: string
+    filterOptions: {
+      pendingOrRejected: string
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    create: string
+    missingPermission: (permission: string) => string
+    formTitles: {
+      create: string
+      edit: (dealId: number) => string
+    }
+    rejectReasonSummary: (reason: string) => string
+    missingRejectReason: string
+    labels: {
+      shop: string
+      type: string
+      title: string
+      coverImage: string
+      price: string
+      originalPrice: string
+      currency: string
+      stock: string
+      validStart: string
+      validEnd: string
+      rules: string
+    }
+    placeholders: {
+      selectShop: string
+      title: string
+      rules: string
+      itemName: string
+      itemQuantity: string
+      itemPrice: string
+      itemSort: string
+    }
+    typeOptions: {
+      packageDeal: string
+      voucher: string
+    }
+    itemSectionHeading: string
+    addItem: string
+    deleteItem: string
+    submitting: string
+    submitCreate: string
+    submitUpdate: string
+    tableHeaders: {
+      deal: string
+      shop: string
+      price: string
+      audit: string
+      availability: string
+      actions: string
+    }
+    stockSummary: (stock: number, soldCount: number) => string
+    auditStatusText: (status: number, fallback?: string) => string
+    rejectReasonLabel: string
+    liveStatusText: (status: number, fallback?: string) => string
+    goLive: string
+    takeDown: string
+    edit: string
+    readOnly: string
+    empty: string
+  }
+  shopDrafts: {
+    eyebrow: string
+    heading: string
+    description: string
+    loadError: string
+    draftLoadError: string
+    newDraftNotice: string
+    newDraftError: string
+    updateDraftOpened: string
+    currentDraftStatus: (statusText: string) => string
+    updateDraftError: string
+    validations: {
+      categoryRequired: string
+      cityRequired: string
+      areaRequired: string
+      nameRequired: string
+      coverUrlRequired: string
+      priceInvalid: string
+      addressRequired: string
+      businessHoursRequired: string
+      summaryRequired: string
+      latitudeInvalid: string
+      longitudeInvalid: string
+      photoUrlRequired: (index: number) => string
+      photoRequired: string
+      coverPhotoMismatch: string
+      dishNameRequired: (index: number) => string
+      dishPriceInvalid: (index: number) => string
+      noActiveDraft: string
+    }
+    saveNotice: string
+    saveError: string
+    submitNotice: string
+    submitError: string
+    areasLoadError: string
+    filterLabel: string
+    filterOptions: {
+      pendingOrRejected: string
+      all: string
+      draft: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    create: string
+    missingPermission: (permission: string) => string
+    loading: string
+    liveTableHeaders: {
+      shop: string
+      region: string
+      city: string
+      score: string
+      status: string
+      actions: string
+    }
+    liveShopStatusText: (openNow: boolean | null | undefined, fallback?: string) => string
+    createUpdateDraft: string
+    readOnly: string
+    noLiveShops: string
+    draftListHeading: string
+    draftTableHeaders: {
+      draft: string
+      type: string
+      targetShop: string
+      status: string
+      actions: string
+    }
+    draftFallbackName: (draftId: number) => string
+    changeTypeText: (changeType: number) => string
+    draftStatusText: (status: number, fallback?: string) => string
+    rejectReasonLabel: string
+    open: string
+    editorTitle: (draftId: number) => string
+    editorSubtitle: (changeType: number, targetShopId: number, statusText: string) => string
+    editorRejectSummary: (reason: string) => string
+    collapseEditor: string
+    labels: {
+      category: string
+      city: string
+      area: string
+      openStatus: string
+      name: string
+      coverUrl: string
+      phone: string
+      pricePerCapita: string
+      currency: string
+      businessHours: string
+      address: string
+      latitude: string
+      longitude: string
+      tags: string
+      summary: string
+    }
+    placeholders: {
+      selectCategory: string
+      selectCity: string
+      selectArea: string
+      tags: string
+      photoUrl: string
+      sort: string
+      dishName: string
+      dishPrice: string
+      dishReason: string
+    }
+    openStatusOptions: {
+      open: string
+      closed: string
+    }
+    photoSectionHeading: string
+    addPhoto: string
+    photoTypeOptions: {
+      cover: string
+      environment: string
+      dish: string
+    }
+    dishSectionHeading: string
+    addDish: string
+    delete: string
+    saving: string
+    saveDraft: string
+    submitReview: string
+  }
 }
 
 export type MerchantRouteTitleKey = keyof MerchantStrings['routeTitles']
@@ -778,6 +989,238 @@ const zhCnStrings: MerchantStrings = {
     submitting: '提交中...',
     submit: '提交认证申请',
   },
+  deals: {
+    eyebrow: 'Deal management',
+    heading: '团购创建与编辑',
+    description: '默认看待审/被驳回；创建/编辑后会回到待审下架，审核通过后才能上架销售。',
+    detailLoadError: '团购详情加载失败',
+    validations: {
+      shopRequired: '请选择门店',
+      titleRequired: '请填写团购标题',
+      coverImageRequired: '请填写封面图 URL',
+      pricePositive: '售价必须大于 0',
+      originalPricePositive: '原价必须大于 0',
+      stockMin: '库存不能小于 -1',
+      itemNameRequired: (index) => `第 ${index} 个套餐项名称不能为空`,
+      itemQuantityInvalid: (index) => `第 ${index} 个套餐项数量无效`,
+      itemPriceInvalid: (index) => `第 ${index} 个套餐项价格无效`,
+    },
+    loadError: '团购加载失败',
+    createNotice: '团购已创建并提交审核',
+    updateNotice: '团购已更新并重新提交审核',
+    saveError: '团购保存失败',
+    enabledNotice: '团购已上架',
+    disabledNotice: '团购已下架',
+    toggleError: '上下架失败',
+    filterLabel: '审核状态',
+    filterOptions: {
+      pendingOrRejected: '待审/被驳回',
+      all: '全部',
+      pending: '待审',
+      approved: '已通过',
+      rejected: '已驳回',
+    },
+    create: '新建团购',
+    missingPermission: (permission) => `当前账号缺少 \`${permission}\` 权限，只能查看列表。`,
+    formTitles: {
+      create: '新建团购',
+      edit: (dealId) => `编辑团购 #${dealId}`,
+    },
+    rejectReasonSummary: (reason) => `最近驳回原因：${reason}。修改后保存会重新提交审核。`,
+    missingRejectReason: '未填写',
+    labels: {
+      shop: '门店',
+      type: '类型',
+      title: '标题',
+      coverImage: '封面图 URL',
+      price: '售价',
+      originalPrice: '原价',
+      currency: '币种',
+      stock: '库存（-1 不限）',
+      validStart: '有效开始',
+      validEnd: '有效结束',
+      rules: '使用规则',
+    },
+    placeholders: {
+      selectShop: '请选择门店',
+      title: '例如 双人午市套餐',
+      rules: '周末通用；需提前预约...',
+      itemName: '项目名称',
+      itemQuantity: '数量',
+      itemPrice: '价格',
+      itemSort: '排序',
+    },
+    typeOptions: {
+      packageDeal: '团购套餐',
+      voucher: '代金券',
+    },
+    itemSectionHeading: '套餐明细',
+    addItem: '添加明细',
+    deleteItem: '删除',
+    submitting: '提交中...',
+    submitCreate: '创建并提交审核',
+    submitUpdate: '保存并重新提交',
+    tableHeaders: {
+      deal: '套餐',
+      shop: '门店',
+      price: '价格',
+      audit: '审核',
+      availability: '上下架',
+      actions: '操作',
+    },
+    stockSummary: (stock, soldCount) => `库存 ${stock} · 已售 ${soldCount}`,
+    auditStatusText: (status, fallback) => {
+      if (status === 1) return '已通过'
+      if (status === 2) return '已驳回'
+      if (status === 0) return '待审核'
+      return fallback || `状态 ${status}`
+    },
+    rejectReasonLabel: '驳回原因：',
+    liveStatusText: (status, fallback) => {
+      if (status === 1) return '已上架'
+      if (status === 0) return '已下架'
+      return fallback || `状态 ${status}`
+    },
+    goLive: '上架',
+    takeDown: '下架',
+    edit: '编辑',
+    readOnly: '只读',
+    empty: '还没有团购，先建一个吧。',
+  },
+  shopDrafts: {
+    eyebrow: 'Shop drafts',
+    heading: '门店与草稿审核',
+    description: '默认看待审/被驳回草稿；先建草稿，再改基础资料/相册/菜单，提交审核前线上门店数据不会变。',
+    loadError: '门店数据加载失败',
+    draftLoadError: '草稿加载失败',
+    newDraftNotice: '新门店草稿已创建',
+    newDraftError: '创建草稿失败',
+    updateDraftOpened: '已打开门店修改草稿',
+    currentDraftStatus: (statusText) => `当前草稿状态：${statusText}`,
+    updateDraftError: '创建修改草稿失败',
+    validations: {
+      categoryRequired: '请选择分类',
+      cityRequired: '请选择城市',
+      areaRequired: '请选择商圈',
+      nameRequired: '请填写门店名称',
+      coverUrlRequired: '请填写封面图 URL',
+      priceInvalid: '人均价格无效',
+      addressRequired: '请填写地址',
+      businessHoursRequired: '请填写营业时间',
+      summaryRequired: '请填写门店简介',
+      latitudeInvalid: '纬度无效',
+      longitudeInvalid: '经度无效',
+      photoUrlRequired: (index) => `第 ${index} 张图片地址不能为空`,
+      photoRequired: '至少上传 1 张门店图片',
+      coverPhotoMismatch: '封面图必须同时出现在相册中，且 photoType=1',
+      dishNameRequired: (index) => `第 ${index} 个菜品名称不能为空`,
+      dishPriceInvalid: (index) => `第 ${index} 个菜品价格无效`,
+      noActiveDraft: '没有可保存的草稿',
+    },
+    saveNotice: '草稿已保存（基础资料 / 相册 / 菜单）',
+    saveError: '草稿保存失败',
+    submitNotice: '门店变更已提交审核，审核通过前不会改动线上门店',
+    submitError: '提交审核失败',
+    areasLoadError: '商圈加载失败',
+    filterLabel: '草稿状态',
+    filterOptions: {
+      pendingOrRejected: '待审/被驳回',
+      all: '全部',
+      draft: '草稿',
+      pending: '待审',
+      approved: '已通过',
+      rejected: '已驳回',
+    },
+    create: '新建门店草稿',
+    missingPermission: (permission) => `当前账号缺少 \`${permission}\` 权限，只能查看线上门店。`,
+    loading: '加载中...',
+    liveTableHeaders: {
+      shop: '门店',
+      region: '区域',
+      city: '城市',
+      score: '评分',
+      status: '状态',
+      actions: '操作',
+    },
+    liveShopStatusText: (openNow, fallback) => {
+      if (openNow === true) return '营业中'
+      if (openNow === false) return '休息中'
+      return fallback || '-'
+    },
+    createUpdateDraft: '修改草稿',
+    readOnly: '只读',
+    noLiveShops: '当前还没有线上门店，可先新建门店草稿。',
+    draftListHeading: '草稿列表',
+    draftTableHeaders: {
+      draft: '草稿',
+      type: '类型',
+      targetShop: '目标门店',
+      status: '状态',
+      actions: '操作',
+    },
+    draftFallbackName: (draftId) => `草稿 #${draftId}`,
+    changeTypeText: (changeType) => changeType === 1 ? '新门店' : '修改门店',
+    draftStatusText: (status, fallback) => {
+      if (status === 1) return '待审核'
+      if (status === 2) return '已通过'
+      if (status === 3) return '已驳回'
+      if (status === 4) return '已失效'
+      if (status === 0) return '草稿'
+      return fallback || `状态 ${status}`
+    },
+    rejectReasonLabel: '驳回：',
+    open: '打开',
+    editorTitle: (draftId) => `编辑草稿 #${draftId}`,
+    editorSubtitle: (changeType, targetShopId, statusText) =>
+      `${changeType === 1 ? '新门店草稿' : `修改门店 #${targetShopId}`} · ${statusText}`,
+    editorRejectSummary: (reason) => `驳回原因：${reason}。修改后可重新保存并提交审核。`,
+    collapseEditor: '收起编辑器',
+    labels: {
+      category: '分类',
+      city: '城市',
+      area: '商圈',
+      openStatus: '营业状态',
+      name: '门店名称',
+      coverUrl: '封面图 URL',
+      phone: '电话',
+      pricePerCapita: '人均价格',
+      currency: '币种',
+      businessHours: '营业时间',
+      address: '地址',
+      latitude: '纬度',
+      longitude: '经度',
+      tags: '标签（逗号分隔）',
+      summary: '简介',
+    },
+    placeholders: {
+      selectCategory: '请选择分类',
+      selectCity: '请选择城市',
+      selectArea: '请选择商圈',
+      tags: 'Chinese,Spicy',
+      photoUrl: '图片 URL',
+      sort: '排序',
+      dishName: '菜品名',
+      dishPrice: '价格',
+      dishReason: '推荐理由',
+    },
+    openStatusOptions: {
+      open: '营业中',
+      closed: '休息中',
+    },
+    photoSectionHeading: '相册（1-20，封面必须 photoType=1）',
+    addPhoto: '添加图片',
+    photoTypeOptions: {
+      cover: '封面',
+      environment: '环境',
+      dish: '菜品',
+    },
+    dishSectionHeading: '菜单（最多 100）',
+    addDish: '添加菜品',
+    delete: '删除',
+    saving: '保存中...',
+    saveDraft: '保存草稿',
+    submitReview: '提交审核',
+  },
 }
 
 const enStrings: MerchantStrings = {
@@ -1175,6 +1618,238 @@ const enStrings: MerchantStrings = {
     },
     submitting: 'Submitting...',
     submit: 'Submit verified merchant application',
+  },
+  deals: {
+    eyebrow: 'Deal management',
+    heading: 'Create and edit deals',
+    description: 'Pending and rejected deals are shown by default. Creating or editing a deal sends it back to pending review in the offline state until approval.',
+    detailLoadError: 'Failed to load deal details.',
+    validations: {
+      shopRequired: 'Select a shop.',
+      titleRequired: 'Enter a deal title.',
+      coverImageRequired: 'Enter a cover image URL.',
+      pricePositive: 'Sale price must be greater than 0.',
+      originalPricePositive: 'Original price must be greater than 0.',
+      stockMin: 'Stock cannot be lower than -1.',
+      itemNameRequired: (index) => `Item ${index} must have a name.`,
+      itemQuantityInvalid: (index) => `Item ${index} has an invalid quantity.`,
+      itemPriceInvalid: (index) => `Item ${index} has an invalid price.`,
+    },
+    loadError: 'Failed to load deals.',
+    createNotice: 'Deal created and submitted for review.',
+    updateNotice: 'Deal updated and resubmitted for review.',
+    saveError: 'Failed to save the deal.',
+    enabledNotice: 'Deal is now live.',
+    disabledNotice: 'Deal has been taken down.',
+    toggleError: 'Failed to update the live status.',
+    filterLabel: 'Audit status',
+    filterOptions: {
+      pendingOrRejected: 'Pending or rejected',
+      all: 'All',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    create: 'New deal',
+    missingPermission: (permission) => `This account does not have the \`${permission}\` permission and can only view the list.`,
+    formTitles: {
+      create: 'New deal',
+      edit: (dealId) => `Edit deal #${dealId}`,
+    },
+    rejectReasonSummary: (reason) => `Latest rejection reason: ${reason}. Saving will resubmit the deal for review.`,
+    missingRejectReason: 'Not provided',
+    labels: {
+      shop: 'Shop',
+      type: 'Type',
+      title: 'Title',
+      coverImage: 'Cover image URL',
+      price: 'Sale price',
+      originalPrice: 'Original price',
+      currency: 'Currency',
+      stock: 'Stock (-1 for unlimited)',
+      validStart: 'Valid from',
+      validEnd: 'Valid until',
+      rules: 'Usage rules',
+    },
+    placeholders: {
+      selectShop: 'Select a shop',
+      title: 'For example: Lunch set for two',
+      rules: 'Valid on weekends; reservation required...',
+      itemName: 'Item name',
+      itemQuantity: 'Quantity',
+      itemPrice: 'Price',
+      itemSort: 'Sort order',
+    },
+    typeOptions: {
+      packageDeal: 'Set meal',
+      voucher: 'Voucher',
+    },
+    itemSectionHeading: 'Package items',
+    addItem: 'Add item',
+    deleteItem: 'Delete',
+    submitting: 'Submitting...',
+    submitCreate: 'Create and submit',
+    submitUpdate: 'Save and resubmit',
+    tableHeaders: {
+      deal: 'Deal',
+      shop: 'Shop',
+      price: 'Price',
+      audit: 'Audit',
+      availability: 'Live status',
+      actions: 'Actions',
+    },
+    stockSummary: (stock, soldCount) => `Stock ${stock} · Sold ${soldCount}`,
+    auditStatusText: (status, fallback) => {
+      if (status === 1) return 'Approved'
+      if (status === 2) return 'Rejected'
+      if (status === 0) return 'Pending review'
+      return fallback || `Status ${status}`
+    },
+    rejectReasonLabel: 'Rejection reason:',
+    liveStatusText: (status, fallback) => {
+      if (status === 1) return 'Live'
+      if (status === 0) return 'Offline'
+      return fallback || `Status ${status}`
+    },
+    goLive: 'Put live',
+    takeDown: 'Take down',
+    edit: 'Edit',
+    readOnly: 'Read-only',
+    empty: 'No deals yet. Create the first one.',
+  },
+  shopDrafts: {
+    eyebrow: 'Shop drafts',
+    heading: 'Shop drafts and audit flow',
+    description: 'Pending and rejected drafts are shown by default. Create a draft first, then update base information, gallery, and menu. Live shop data stays unchanged until approval.',
+    loadError: 'Failed to load shop data.',
+    draftLoadError: 'Failed to load the draft.',
+    newDraftNotice: 'New shop draft created.',
+    newDraftError: 'Failed to create a new draft.',
+    updateDraftOpened: 'Opened the shop update draft.',
+    currentDraftStatus: (statusText) => `Current draft status: ${statusText}`,
+    updateDraftError: 'Failed to create an update draft.',
+    validations: {
+      categoryRequired: 'Select a category.',
+      cityRequired: 'Select a city.',
+      areaRequired: 'Select an area.',
+      nameRequired: 'Enter the shop name.',
+      coverUrlRequired: 'Enter a cover image URL.',
+      priceInvalid: 'Price per capita is invalid.',
+      addressRequired: 'Enter the address.',
+      businessHoursRequired: 'Enter business hours.',
+      summaryRequired: 'Enter the shop summary.',
+      latitudeInvalid: 'Latitude is invalid.',
+      longitudeInvalid: 'Longitude is invalid.',
+      photoUrlRequired: (index) => `Photo ${index} must include an image URL.`,
+      photoRequired: 'Upload at least one shop photo.',
+      coverPhotoMismatch: 'The cover image must also appear in the gallery with photoType=1.',
+      dishNameRequired: (index) => `Dish ${index} must have a name.`,
+      dishPriceInvalid: (index) => `Dish ${index} has an invalid price.`,
+      noActiveDraft: 'There is no active draft to save.',
+    },
+    saveNotice: 'Draft saved (base information, gallery, and menu).',
+    saveError: 'Failed to save the draft.',
+    submitNotice: 'Shop changes submitted for review. The live shop stays unchanged until approval.',
+    submitError: 'Failed to submit the draft for review.',
+    areasLoadError: 'Failed to load areas.',
+    filterLabel: 'Draft status',
+    filterOptions: {
+      pendingOrRejected: 'Pending or rejected',
+      all: 'All',
+      draft: 'Draft',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    create: 'New shop draft',
+    missingPermission: (permission) => `This account does not have the \`${permission}\` permission and can only view live shops.`,
+    loading: 'Loading...',
+    liveTableHeaders: {
+      shop: 'Shop',
+      region: 'Region',
+      city: 'City',
+      score: 'Score',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    liveShopStatusText: (openNow, fallback) => {
+      if (openNow === true) return 'Open now'
+      if (openNow === false) return 'Closed'
+      return fallback || '-'
+    },
+    createUpdateDraft: 'Create update draft',
+    readOnly: 'Read-only',
+    noLiveShops: 'There are no live shops yet. Start by creating a new shop draft.',
+    draftListHeading: 'Draft list',
+    draftTableHeaders: {
+      draft: 'Draft',
+      type: 'Type',
+      targetShop: 'Target shop',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    draftFallbackName: (draftId) => `Draft #${draftId}`,
+    changeTypeText: (changeType) => changeType === 1 ? 'New shop' : 'Update shop',
+    draftStatusText: (status, fallback) => {
+      if (status === 1) return 'Pending review'
+      if (status === 2) return 'Approved'
+      if (status === 3) return 'Rejected'
+      if (status === 4) return 'Invalidated'
+      if (status === 0) return 'Draft'
+      return fallback || `Status ${status}`
+    },
+    rejectReasonLabel: 'Rejected:',
+    open: 'Open',
+    editorTitle: (draftId) => `Edit draft #${draftId}`,
+    editorSubtitle: (changeType, targetShopId, statusText) =>
+      `${changeType === 1 ? 'New shop draft' : `Update shop #${targetShopId}`} · ${statusText}`,
+    editorRejectSummary: (reason) => `Rejection reason: ${reason}. Update the draft and save or resubmit it.`,
+    collapseEditor: 'Collapse editor',
+    labels: {
+      category: 'Category',
+      city: 'City',
+      area: 'Area',
+      openStatus: 'Operating status',
+      name: 'Shop name',
+      coverUrl: 'Cover image URL',
+      phone: 'Phone',
+      pricePerCapita: 'Price per capita',
+      currency: 'Currency',
+      businessHours: 'Business hours',
+      address: 'Address',
+      latitude: 'Latitude',
+      longitude: 'Longitude',
+      tags: 'Tags (comma-separated)',
+      summary: 'Summary',
+    },
+    placeholders: {
+      selectCategory: 'Select a category',
+      selectCity: 'Select a city',
+      selectArea: 'Select an area',
+      tags: 'Chinese,Spicy',
+      photoUrl: 'Image URL',
+      sort: 'Sort order',
+      dishName: 'Dish name',
+      dishPrice: 'Price',
+      dishReason: 'Recommendation',
+    },
+    openStatusOptions: {
+      open: 'Open now',
+      closed: 'Closed',
+    },
+    photoSectionHeading: 'Gallery (1-20 images, and the cover must use photoType=1)',
+    addPhoto: 'Add image',
+    photoTypeOptions: {
+      cover: 'Cover',
+      environment: 'Environment',
+      dish: 'Dish',
+    },
+    dishSectionHeading: 'Menu (up to 100 items)',
+    addDish: 'Add dish',
+    delete: 'Delete',
+    saving: 'Saving...',
+    saveDraft: 'Save draft',
+    submitReview: 'Submit for review',
   },
 }
 
