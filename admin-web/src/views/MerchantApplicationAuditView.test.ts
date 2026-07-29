@@ -79,8 +79,9 @@ describe('MerchantApplicationAuditView', () => {
     const { app, host } = mountView()
     await flushView()
     expect(mocks.listMerchantApplications).toHaveBeenCalledWith({ status: 0, page: 1, pageSize: 20 })
+    expect(host.textContent).toContain('Merchant Applications')
     expect(host.textContent).toContain('North Star Foods')
-    click(host, '通过申请')
+    click(host, 'Approve application')
     await flushView()
     expect(mocks.auditMerchantApplication).toHaveBeenCalledWith(77, { status: 1, reason: '' })
     app.unmount()
@@ -89,18 +90,18 @@ describe('MerchantApplicationAuditView', () => {
   it('requires a rejection reason before sending the decision', async () => {
     const { app, host } = mountView()
     await flushView()
-    click(host, '驳回申请')
+    click(host, 'Reject application')
     await nextTick()
-    click(host, '确认驳回')
+    click(host, 'Confirm rejection')
     await nextTick()
-    expect(host.textContent).toContain('驳回原因不能为空')
+    expect(host.textContent).toContain('A rejection reason is required.')
     expect(mocks.auditMerchantApplication).not.toHaveBeenCalled()
 
     const reason = host.querySelector<HTMLTextAreaElement>('[name="rejectReason"]')
     if (!reason) throw new Error('missing rejectReason')
     reason.value = '执照图片无法识别'
     reason.dispatchEvent(new Event('input'))
-    click(host, '确认驳回')
+    click(host, 'Confirm rejection')
     await flushView()
     expect(mocks.auditMerchantApplication).toHaveBeenCalledWith(77, { status: 2, reason: '执照图片无法识别' })
     app.unmount()
@@ -120,10 +121,10 @@ describe('MerchantApplicationAuditView', () => {
 
     expect(host.textContent).toContain('North Star Foods')
     expect(host.textContent).toContain('Approved Foods')
-    expect(host.textContent).toContain('当前账号仅可查看，无商户准入审核权限。')
-    expect(host.textContent).toContain('已处理')
-    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('通过申请'))).toBe(false)
-    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('驳回申请'))).toBe(false)
+    expect(host.textContent).toContain('This account is read-only and cannot process merchant applications.')
+    expect(host.textContent).toContain('Processed')
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Approve application'))).toBe(false)
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Reject application'))).toBe(false)
     expect(host.querySelector('[name="rejectReason"]')).toBeNull()
     app.unmount()
   })
@@ -133,16 +134,16 @@ describe('MerchantApplicationAuditView', () => {
     await flushView()
 
     const passButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('通过申请'))
+      .find((button) => button.textContent?.includes('Approve application'))
     const openRejectButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('驳回申请'))
+      .find((button) => button.textContent?.includes('Reject application'))
     if (!passButton || !openRejectButton) throw new Error('missing merchant application audit buttons')
     openRejectButton.click()
     await nextTick()
 
     const reason = host.querySelector<HTMLTextAreaElement>('[name="rejectReason"]')
     const rejectButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
-      .find((button) => button.textContent?.includes('确认驳回'))
+      .find((button) => button.textContent?.includes('Confirm rejection'))
     if (!reason || !rejectButton) throw new Error('missing opened merchant application rejection controls')
     reason.value = '执照图片无法识别'
     reason.dispatchEvent(new Event('input'))
@@ -155,7 +156,7 @@ describe('MerchantApplicationAuditView', () => {
 
     expect(mocks.auditMerchantApplication).not.toHaveBeenCalled()
     expect(host.querySelector('[name="rejectReason"]')).toBeNull()
-    expect(host.textContent).toContain('当前账号仅可查看，无商户准入审核权限。')
+    expect(host.textContent).toContain('This account is read-only and cannot process merchant applications.')
     app.unmount()
   })
 })

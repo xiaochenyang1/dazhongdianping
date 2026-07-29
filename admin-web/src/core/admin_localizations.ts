@@ -862,6 +862,119 @@ export interface AdminStrings {
     handled: string
     emptyState: string
   }
+  merchantApplicationAudit: {
+    loadError: string
+    actionError: string
+    rejectReasonRequired: string
+    approvedMessage: (companyName: string) => string
+    rejectedMessage: (companyName: string) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    listEyebrow: string
+    listHeading: string
+    listSummary: (total: number) => string
+    filters: {
+      status: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    applyFilters: string
+    tableHeaders: {
+      merchant: string
+      legal: string
+      shopPhotos: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    licenseLink: string
+    shopPhotoAlt: (index: number) => string
+    statusText: (status: number, fallback?: string) => string
+    approve: string
+    reject: string
+    readOnly: string
+    handled: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    rejectEyebrow: string
+    rejectDescription: string
+    rejectReasonLabel: string
+    rejectReasonPlaceholder: string
+    confirmReject: string
+  }
+  reportManagement: {
+    loadError: string
+    actionError: string
+    upheldMessage: (reportId: number, contentHidden: boolean) => string
+    dismissedMessage: (reportId: number) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    filters: {
+      reportType: string
+      status: string
+      keyword: string
+    }
+    reportTypeOptions: {
+      all: string
+      review: string
+      post: string
+      message: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      upheld: string
+      dismissed: string
+    }
+    keywordPlaceholder: string
+    query: string
+    tableHeaders: {
+      type: string
+      summary: string
+      reporter: string
+      reason: string
+      status: string
+      time: string
+    }
+    loading: string
+    empty: string
+    reportTypeText: (reportType: string, fallback?: string) => string
+    targetTypeText: (reportType: string, targetType?: number | null, fallback?: string) => string
+    statusText: (status: number, fallback?: string) => string
+    targetStatusText: (
+      reportType: string,
+      targetAuditStatus?: number | null,
+      fallback?: string,
+    ) => string
+    detailEyebrow: string
+    detailHeading: (reportType: string, reportId: number) => string
+    detailLabels: {
+      target: string
+      author: string
+      targetStatus: string
+      reporter: string
+      reason: string
+      summary: string
+      time: string
+    }
+    summaryFallback: string
+    authorFallback: string
+    targetStatusFallback: string
+    remarkPlaceholder: string
+    dismissAction: string
+    upholdAction: string
+    readOnly: string
+    handled: string
+  }
   circles: {
     loadError: string
     saveError: string
@@ -1532,6 +1645,94 @@ function enAuditTaskStatusText(status: number, fallback?: string) {
   if (status === 1) return 'Approved'
   if (status === 2) return 'Rejected'
   return fallback || `Status ${status}`
+}
+
+function zhMerchantApplicationStatusText(status: number, fallback?: string) {
+  if (status === 0) return '待审核'
+  if (status === 1) return '已通过'
+  if (status === 2) return '已驳回'
+  return fallback || `状态 ${status}`
+}
+
+function enMerchantApplicationStatusText(status: number, fallback?: string) {
+  if (status === 0) return 'Pending review'
+  if (status === 1) return 'Approved'
+  if (status === 2) return 'Rejected'
+  return fallback || `Status ${status}`
+}
+
+function zhReportTypeText(reportType: string, fallback?: string) {
+  if (reportType === 'review') return '点评举报'
+  if (reportType === 'post') return '帖子举报'
+  if (reportType === 'message') return '私信举报'
+  return fallback || reportType
+}
+
+function enReportTypeText(reportType: string, fallback?: string) {
+  if (reportType === 'review') return 'Review report'
+  if (reportType === 'post') return 'Post report'
+  if (reportType === 'message') return 'Message report'
+  return fallback || reportType
+}
+
+function zhReportTargetTypeText(reportType: string, targetType?: number | null, fallback?: string) {
+  if (reportType === 'review') return '点评'
+  if (reportType === 'post') return '帖子'
+  if (reportType === 'message') {
+    if (targetType === 1) return '消息'
+    if (targetType === 2) return '会话'
+    return '私信'
+  }
+  return fallback || reportType
+}
+
+function enReportTargetTypeText(reportType: string, targetType?: number | null, fallback?: string) {
+  if (reportType === 'review') return 'Review'
+  if (reportType === 'post') return 'Post'
+  if (reportType === 'message') {
+    if (targetType === 1) return 'Message'
+    if (targetType === 2) return 'Conversation'
+    return 'Direct message'
+  }
+  return fallback || reportType
+}
+
+function zhReportStatusText(status: number, fallback?: string) {
+  if (status === 0) return '待处理'
+  if (status === 1) return '已成立'
+  if (status === 2) return '已驳回'
+  return fallback || `状态 ${status}`
+}
+
+function enReportStatusText(status: number, fallback?: string) {
+  if (status === 0) return 'Pending'
+  if (status === 1) return 'Upheld'
+  if (status === 2) return 'Dismissed'
+  return fallback || `Status ${status}`
+}
+
+function zhReportTargetStatusText(
+  reportType: string,
+  targetAuditStatus?: number | null,
+  fallback?: string,
+) {
+  if (reportType === 'message') return '私信'
+  if (targetAuditStatus == null) return fallback || ''
+  if (targetAuditStatus === 1) return '公开'
+  if (targetAuditStatus === 2) return '已隐藏/驳回'
+  return '待审'
+}
+
+function enReportTargetStatusText(
+  reportType: string,
+  targetAuditStatus?: number | null,
+  fallback?: string,
+) {
+  if (reportType === 'message') return 'Direct message'
+  if (targetAuditStatus == null) return fallback || ''
+  if (targetAuditStatus === 1) return 'Visible'
+  if (targetAuditStatus === 2) return 'Hidden / rejected'
+  return 'Pending review'
 }
 
 const zhCnStrings: AdminStrings = {
@@ -2411,6 +2612,117 @@ const zhCnStrings: AdminStrings = {
     readOnly: '当前账号只有查看权限，无法处理认证。',
     handled: '当前任务已经处理，只保留查看。',
     emptyState: '请先选择一条认证商户任务。',
+  },
+  merchantApplicationAudit: {
+    loadError: '商户资质申请加载失败',
+    actionError: '资质审核失败',
+    rejectReasonRequired: '驳回原因不能为空。',
+    approvedMessage: (companyName) => `商户 ${companyName} 已通过资质审核。`,
+    rejectedMessage: (companyName) => `商户 ${companyName} 已驳回。`,
+    eyebrow: '商户准入',
+    heading: '先看清资质，再放行经营权限。',
+    description: (region) => `当前区域 ${region}。审核动作会同步商户状态并记录审计日志。`,
+    refresh: '刷新申请',
+    listEyebrow: '申请列表',
+    listHeading: '材料、主体和区域放在一张桌上看。',
+    listSummary: (total) => `共 ${total} 条`,
+    filters: {
+      status: '状态',
+    },
+    statusOptions: {
+      all: '全部',
+      pending: '待审核',
+      approved: '已通过',
+      rejected: '已驳回',
+    },
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      merchant: '商户主体',
+      legal: '法人/执照',
+      shopPhotos: '门店照片',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '申请加载中...',
+    empty: '当前没有资质申请。',
+    licenseLink: '查看营业执照',
+    shopPhotoAlt: (index) => `门店资质照片 ${index + 1}`,
+    statusText: zhMerchantApplicationStatusText,
+    approve: '通过申请',
+    reject: '驳回申请',
+    readOnly: '当前账号仅可查看，无商户准入审核权限。',
+    handled: '已处理',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    rejectEyebrow: '驳回申请',
+    rejectDescription: '原因会原样返回商户端，写人话，别写“资料不符”四个字就跑路。',
+    rejectReasonLabel: '驳回原因',
+    rejectReasonPlaceholder: '例如：执照主体与申请主体不一致。',
+    confirmReject: '确认驳回',
+  },
+  reportManagement: {
+    loadError: '举报列表加载失败',
+    actionError: '处理失败',
+    upheldMessage: (reportId, contentHidden) =>
+      contentHidden ? `举报 #${reportId} 已成立，内容已隐藏。` : `举报 #${reportId} 已成立。`,
+    dismissedMessage: (reportId) => `举报 #${reportId} 已驳回。`,
+    eyebrow: '内容举报',
+    heading: '点评、帖子、私信举报统一收口，别再让举报沉在业务表里。',
+    description: (region) =>
+      `当前区域 ${region}。点评/帖子按区域过滤；私信举报为全局队列。成立可隐藏公开内容，驳回仅关闭举报。`,
+    filters: {
+      reportType: '类型',
+      status: '状态',
+      keyword: '关键词',
+    },
+    reportTypeOptions: {
+      all: '全部',
+      review: '点评',
+      post: '帖子',
+      message: '私信',
+    },
+    statusOptions: {
+      all: '全部',
+      pending: '待处理',
+      upheld: '已成立',
+      dismissed: '已驳回',
+    },
+    keywordPlaceholder: '举报人 / 原因 / 内容摘要',
+    query: '查询',
+    tableHeaders: {
+      type: '类型',
+      summary: '摘要',
+      reporter: '举报人',
+      reason: '原因',
+      status: '状态',
+      time: '时间',
+    },
+    loading: '加载中...',
+    empty: '当前筛选下没有举报。',
+    reportTypeText: zhReportTypeText,
+    targetTypeText: zhReportTargetTypeText,
+    statusText: zhReportStatusText,
+    targetStatusText: zhReportTargetStatusText,
+    detailEyebrow: '举报详情',
+    detailHeading: (reportType, reportId) => `${reportType} #${reportId}`,
+    detailLabels: {
+      target: '目标',
+      author: '作者',
+      targetStatus: '目标状态',
+      reporter: '举报人',
+      reason: '原因',
+      summary: '摘要',
+      time: '时间',
+    },
+    summaryFallback: '—',
+    authorFallback: '—',
+    targetStatusFallback: '—',
+    remarkPlaceholder: '处理备注（隐藏时建议填写）',
+    dismissAction: '驳回举报',
+    upholdAction: '成立并处理',
+    readOnly: '当前账号仅可查看，无处理权限。',
+    handled: '该举报已处理，无需再操作。',
   },
   circles: {
     loadError: '圈子加载失败',
@@ -3999,6 +4311,120 @@ const enStrings: AdminStrings = {
     readOnly: 'This account is read-only and cannot process merchant verification tasks.',
     handled: 'This task has already been processed. View only.',
     emptyState: 'Select a verified merchant task first.',
+  },
+  merchantApplicationAudit: {
+    loadError: 'Failed to load merchant applications.',
+    actionError: 'Failed to process the merchant application.',
+    rejectReasonRequired: 'A rejection reason is required.',
+    approvedMessage: (companyName) => `Merchant application for ${companyName} approved.`,
+    rejectedMessage: (companyName) => `Merchant application for ${companyName} rejected.`,
+    eyebrow: 'Merchant Applications',
+    heading: 'Review qualifications before opening merchant operating access.',
+    description: (region) =>
+      `Current region ${region}. Decisions update merchant status and write an audit log.`,
+    refresh: 'Refresh applications',
+    listEyebrow: 'Application queue',
+    listHeading: 'Keep the entity, license, and shop photos in one place for review.',
+    listSummary: (total) => `${total} applications`,
+    filters: {
+      status: 'Status',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      merchant: 'Merchant entity',
+      legal: 'Legal person / license',
+      shopPhotos: 'Shop photos',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading merchant applications...',
+    empty: 'No merchant applications.',
+    licenseLink: 'View business license',
+    shopPhotoAlt: (index) => `Shop qualification photo ${index + 1}`,
+    statusText: enMerchantApplicationStatusText,
+    approve: 'Approve application',
+    reject: 'Reject application',
+    readOnly: 'This account is read-only and cannot process merchant applications.',
+    handled: 'Processed',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    rejectEyebrow: 'Reject application',
+    rejectDescription:
+      'This reason is returned to the merchant verbatim. Be specific about what is missing or inconsistent.',
+    rejectReasonLabel: 'Rejection reason',
+    rejectReasonPlaceholder:
+      'For example: The business license entity does not match the application.',
+    confirmReject: 'Confirm rejection',
+  },
+  reportManagement: {
+    loadError: 'Failed to load reports.',
+    actionError: 'Failed to process the report.',
+    upheldMessage: (reportId, contentHidden) =>
+      contentHidden ? `Report #${reportId} upheld and content hidden.` : `Report #${reportId} upheld.`,
+    dismissedMessage: (reportId) => `Report #${reportId} dismissed.`,
+    eyebrow: 'Content Reports',
+    heading: 'Keep review, post, and message reports in one queue instead of burying them in product tables.',
+    description: (region) =>
+      `Current region ${region}. Review and post reports are region-scoped; message reports stay global. Upholding a report can hide public content, while dismissal only closes the case.`,
+    filters: {
+      reportType: 'Type',
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    reportTypeOptions: {
+      all: 'All types',
+      review: 'Review',
+      post: 'Post',
+      message: 'Message',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      pending: 'Pending',
+      upheld: 'Upheld',
+      dismissed: 'Dismissed',
+    },
+    keywordPlaceholder: 'Reporter / reason / content summary',
+    query: 'Search',
+    tableHeaders: {
+      type: 'Type',
+      summary: 'Summary',
+      reporter: 'Reporter',
+      reason: 'Reason',
+      status: 'Status',
+      time: 'Submitted at',
+    },
+    loading: 'Loading reports...',
+    empty: 'No reports match the current filters.',
+    reportTypeText: enReportTypeText,
+    targetTypeText: enReportTargetTypeText,
+    statusText: enReportStatusText,
+    targetStatusText: enReportTargetStatusText,
+    detailEyebrow: 'Report details',
+    detailHeading: (reportType, reportId) => `${reportType} #${reportId}`,
+    detailLabels: {
+      target: 'Target',
+      author: 'Author',
+      targetStatus: 'Target status',
+      reporter: 'Reporter',
+      reason: 'Reason',
+      summary: 'Summary',
+      time: 'Submitted at',
+    },
+    summaryFallback: '—',
+    authorFallback: '—',
+    targetStatusFallback: '—',
+    remarkPlaceholder: 'Resolution note (recommended when hiding content)',
+    dismissAction: 'Dismiss report',
+    upholdAction: 'Uphold and process',
+    readOnly: 'This account is read-only and cannot process reports.',
+    handled: 'This report has already been processed.',
   },
   circles: {
     loadError: 'Failed to load circles.',

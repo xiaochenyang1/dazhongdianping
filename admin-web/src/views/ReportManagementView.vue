@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { listAdminReports, resolveAdminReport } from '@/services/admin'
 import type { AdminReport, PageResult } from '@/types/admin'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const canWrite = computed(() => state.permissions.includes('audit:report:write'))
 
 const loading = ref(false)
@@ -35,6 +37,40 @@ const selected = computed(() => {
   )
 })
 
+function reportTypeText(report: AdminReport) {
+  return strings.value.reportManagement.reportTypeText(report.reportType, report.reportTypeText)
+}
+
+function reportStatusText(report: AdminReport) {
+  return strings.value.reportManagement.statusText(report.status, report.statusText)
+}
+
+function reportTargetTypeText(report: AdminReport) {
+  return strings.value.reportManagement.targetTypeText(
+    report.reportType,
+    report.targetType,
+    report.targetTypeText,
+  )
+}
+
+function reportTargetStatusText(report: AdminReport) {
+  return (
+    strings.value.reportManagement.targetStatusText(
+      report.reportType,
+      report.targetAuditStatus,
+      report.targetStatusText,
+    ) || strings.value.reportManagement.targetStatusFallback
+  )
+}
+
+function reportSummary(report: AdminReport) {
+  return report.targetSummary || strings.value.reportManagement.summaryFallback
+}
+
+function reportAuthor(report: AdminReport) {
+  return report.targetAuthorName || strings.value.reportManagement.authorFallback
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -56,7 +92,7 @@ async function load() {
       selectedType.value = first?.reportType ?? ''
     }
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '举报列表加载失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.reportManagement.loadError
   } finally {
     loading.value = false
   }
@@ -70,27 +106,31 @@ function select(item: AdminReport) {
   error.value = ''
 }
 
+function applyFilters() {
+  filters.page = 1
+  void load()
+}
+
 async function resolve(action: 'dismiss' | 'hide') {
-  if (!selected.value || !canWrite.value) return
-  if (action === 'hide' && selected.value.reportType === 'message') {
-    // still allowed; backend marks as established without public hide
-  }
+  const current = selected.value
+  if (!current || !canWrite.value || current.status !== 0) return
+
   acting.value = true
   error.value = ''
   success.value = ''
   try {
-    await resolveAdminReport(selected.value.reportType, selected.value.id, {
+    await resolveAdminReport(current.reportType, current.id, {
       action,
       remark: remark.value.trim() || undefined,
     })
     success.value =
       action === 'hide'
-        ? `举报 #${selected.value.id} 已成立${selected.value.reportType === 'message' ? '' : '，内容已隐藏'}`
-        : `举报 #${selected.value.id} 已驳回`
+        ? strings.value.reportManagement.upheldMessage(current.id, current.reportType !== 'message')
+        : strings.value.reportManagement.dismissedMessage(current.id)
     remark.value = ''
     await load()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '处理失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.reportManagement.actionError
   } finally {
     acting.value = false
   }
@@ -112,11 +152,9 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">内容举报</p>
-        <h1>点评、帖子、私信举报统一收口，别再让举报沉在业务表里。</h1>
-        <p>
-          当前区域 {{ state.region }}。点评/帖子按区域过滤；私信举报为全局队列。成立可隐藏公开内容，驳回仅关闭举报。
-        </p>
+        <p class="eyebrow">{{ strings.reportManagement.eyebrow }}</p>
+        <h1>{{ strings.reportManagement.heading }}</h1>
+        <p>{{ strings.reportManagement.description(state.region) }}</p>
       </div>
     </div>
 
@@ -126,54 +164,64 @@ watch(
     <section class="content-card">
       <div class="toolbar">
         <label>
-          <span class="muted">类型</span>
-          <select v-model="filters.reportType" data-testid="report-type-filter" @change="filters.page = 1; load()">
-            <option value="">全部</option>
-            <option value="review">点评</option>
-            <option value="post">帖子</option>
-            <option value="message">私信</option>
+          <span class="muted">{{ strings.reportManagement.filters.reportType }}</span>
+          <select
+            v-model="filters.reportType"
+            data-testid="report-type-filter"
+            @change="applyFilters"
+          >
+            <option value="">{{ strings.reportManagement.reportTypeOptions.all }}</option>
+            <option value="review">{{ strings.reportManagement.reportTypeOptions.review }}</option>
+            <option value="post">{{ strings.reportManagement.reportTypeOptions.post }}</option>
+            <option value="message">{{ strings.reportManagement.reportTypeOptions.message }}</option>
           </select>
         </label>
         <label>
-          <span class="muted">状态</span>
-          <select v-model="filters.status" data-testid="report-status-filter" @change="filters.page = 1; load()">
-            <option value="">全部</option>
-            <option value="0">待处理</option>
-            <option value="1">已成立</option>
-            <option value="2">已驳回</option>
+          <span class="muted">{{ strings.reportManagement.filters.status }}</span>
+          <select
+            v-model="filters.status"
+            data-testid="report-status-filter"
+            @change="applyFilters"
+          >
+            <option value="">{{ strings.reportManagement.statusOptions.all }}</option>
+            <option value="0">{{ strings.reportManagement.statusOptions.pending }}</option>
+            <option value="1">{{ strings.reportManagement.statusOptions.upheld }}</option>
+            <option value="2">{{ strings.reportManagement.statusOptions.dismissed }}</option>
           </select>
         </label>
         <label>
-          <span class="muted">关键词</span>
+          <span class="muted">{{ strings.reportManagement.filters.keyword }}</span>
           <input
             v-model="filters.keyword"
             data-testid="report-keyword-filter"
             type="search"
-            placeholder="举报人/原因/内容摘要"
-            @keyup.enter="filters.page = 1; load()"
+            :placeholder="strings.reportManagement.keywordPlaceholder"
+            @keyup.enter="applyFilters"
           />
         </label>
-        <button type="button" class="secondary-button" @click="filters.page = 1; load()">查询</button>
+        <button type="button" class="secondary-button" @click="applyFilters">
+          {{ strings.reportManagement.query }}
+        </button>
       </div>
 
       <div class="table-shell">
         <table class="data-table">
           <thead>
             <tr>
-              <th>类型</th>
-              <th>摘要</th>
-              <th>举报人</th>
-              <th>原因</th>
-              <th>状态</th>
-              <th>时间</th>
+              <th>{{ strings.reportManagement.tableHeaders.type }}</th>
+              <th>{{ strings.reportManagement.tableHeaders.summary }}</th>
+              <th>{{ strings.reportManagement.tableHeaders.reporter }}</th>
+              <th>{{ strings.reportManagement.tableHeaders.reason }}</th>
+              <th>{{ strings.reportManagement.tableHeaders.status }}</th>
+              <th>{{ strings.reportManagement.tableHeaders.time }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="6" class="table-empty">加载中...</td>
+              <td colspan="6" class="table-empty">{{ strings.reportManagement.loading }}</td>
             </tr>
             <tr v-else-if="!pageState?.list.length">
-              <td colspan="6" class="table-empty">当前筛选下没有举报。</td>
+              <td colspan="6" class="table-empty">{{ strings.reportManagement.empty }}</td>
             </tr>
             <tr
               v-for="item in pageState?.list || []"
@@ -182,14 +230,16 @@ watch(
               :data-testid="`report-row-${item.reportType}-${item.id}`"
               @click="select(item)"
             >
-              <td>{{ item.reportTypeText }}</td>
+              <td>{{ reportTypeText(item) }}</td>
               <td>
                 <strong>#{{ item.targetId }}</strong>
-                <div class="muted">{{ item.targetSummary || '—' }}</div>
+                <div class="muted">{{ reportSummary(item) }}</div>
               </td>
               <td>{{ item.reporterUserName || item.reporterUserId }}</td>
               <td>{{ item.reason }}</td>
-              <td><span class="status-pill">{{ item.statusText }}</span></td>
+              <td>
+                <span class="status-pill">{{ reportStatusText(item) }}</span>
+              </td>
               <td>{{ item.createdAt }}</td>
             </tr>
           </tbody>
@@ -200,28 +250,53 @@ watch(
     <section v-if="selected" class="content-card">
       <div class="section-headline">
         <div>
-          <p class="eyebrow">举报详情</p>
-          <h2>{{ selected.reportTypeText }} #{{ selected.id }}</h2>
+          <p class="eyebrow">{{ strings.reportManagement.detailEyebrow }}</p>
+          <h2>{{ strings.reportManagement.detailHeading(reportTypeText(selected), selected.id) }}</h2>
         </div>
-        <span class="status-pill">{{ selected.statusText }}</span>
+        <span class="status-pill">{{ reportStatusText(selected) }}</span>
       </div>
       <div class="detail-grid">
-        <p><strong>目标</strong>：#{{ selected.targetId }} {{ selected.targetTypeText }}</p>
-        <p><strong>作者</strong>：{{ selected.targetAuthorName || '—' }}</p>
-        <p><strong>目标状态</strong>：{{ selected.targetStatusText || '—' }}</p>
-        <p><strong>举报人</strong>：{{ selected.reporterUserName || selected.reporterUserId }}</p>
-        <p><strong>原因</strong>：{{ selected.reason }}</p>
-        <p><strong>摘要</strong>：{{ selected.targetSummary || '—' }}</p>
-        <p><strong>时间</strong>：{{ selected.createdAt }}</p>
+        <p>
+          <strong>{{ strings.reportManagement.detailLabels.target }}</strong>
+          : #{{ selected.targetId }} {{ reportTargetTypeText(selected) }}
+        </p>
+        <p>
+          <strong>{{ strings.reportManagement.detailLabels.author }}</strong>
+          : {{ reportAuthor(selected) }}
+        </p>
+        <p>
+          <strong>{{ strings.reportManagement.detailLabels.targetStatus }}</strong>
+          : {{ reportTargetStatusText(selected) }}
+        </p>
+        <p>
+          <strong>{{ strings.reportManagement.detailLabels.reporter }}</strong>
+          : {{ selected.reporterUserName || selected.reporterUserId }}
+        </p>
+        <p>
+          <strong>{{ strings.reportManagement.detailLabels.reason }}</strong>
+          : {{ selected.reason }}
+        </p>
+        <p>
+          <strong>{{ strings.reportManagement.detailLabels.summary }}</strong>
+          : {{ reportSummary(selected) }}
+        </p>
+        <p>
+          <strong>{{ strings.reportManagement.detailLabels.time }}</strong>
+          : {{ selected.createdAt }}
+        </p>
       </div>
 
-      <div v-if="canWrite && selected.status === 0" class="form-actions" style="margin-top: 16px; gap: 12px; display: flex; flex-wrap: wrap">
+      <div
+        v-if="canWrite && selected.status === 0"
+        class="form-actions"
+        style="margin-top: 16px; gap: 12px; display: flex; flex-wrap: wrap"
+      >
         <input
           v-model="remark"
           data-testid="report-resolve-remark"
           type="text"
           maxlength="255"
-          placeholder="处理备注（隐藏时建议填写）"
+          :placeholder="strings.reportManagement.remarkPlaceholder"
           style="min-width: 240px; flex: 1"
         />
         <button
@@ -231,7 +306,7 @@ watch(
           :disabled="acting"
           @click="resolve('dismiss')"
         >
-          驳回举报
+          {{ strings.reportManagement.dismissAction }}
         </button>
         <button
           type="button"
@@ -240,11 +315,11 @@ watch(
           :disabled="acting"
           @click="resolve('hide')"
         >
-          成立并处理
+          {{ strings.reportManagement.upholdAction }}
         </button>
       </div>
-      <p v-else-if="!canWrite" class="muted">当前账号仅可查看，无处理权限。</p>
-      <p v-else class="muted">该举报已处理，无需再操作。</p>
+      <p v-else-if="!canWrite" class="muted">{{ strings.reportManagement.readOnly }}</p>
+      <p v-else class="muted">{{ strings.reportManagement.handled }}</p>
     </section>
   </section>
 </template>

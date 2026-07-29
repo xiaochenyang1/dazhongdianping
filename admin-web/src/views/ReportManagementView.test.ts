@@ -14,7 +14,7 @@ vi.mock('@/services/admin', () => adminMocks)
 vi.mock('@/composables/useAdminSession', async () => {
   const { reactive } = await import('vue')
   sessionMock.state = reactive({
-    region: 'CN' as const,
+    region: 'EU' as const,
     permissions: ['audit:report:read', 'audit:report:write'],
   })
   return { useAdminSession: () => ({ state: sessionMock.state }) }
@@ -37,7 +37,7 @@ const reports = {
       reason: '广告',
       status: 0,
       statusText: '待处理',
-      region: 'CN',
+      region: 'EU',
       targetSummary: '快来加微信',
       targetAuthorName: '作者A',
       targetStatusText: '公开',
@@ -70,7 +70,7 @@ describe('ReportManagementView', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     Object.values(adminMocks).forEach((mock) => mock.mockReset())
-    sessionMock.state.region = 'CN'
+    sessionMock.state.region = 'EU'
     sessionMock.state.permissions = ['audit:report:read', 'audit:report:write']
     adminMocks.listAdminReports.mockResolvedValue(reports)
     adminMocks.resolveAdminReport.mockResolvedValue({ ...reports.list[0], status: 1, statusText: '已成立' })
@@ -86,7 +86,8 @@ describe('ReportManagementView', () => {
     expect(adminMocks.listAdminReports).toHaveBeenCalledWith(
       expect.objectContaining({ status: 0, page: 1 }),
     )
-    expect(host.textContent).toContain('点评举报')
+    expect(host.textContent).toContain('Content Reports')
+    expect(host.textContent).toContain('Review report')
     expect(host.textContent).toContain('广告')
     app.unmount()
   })
@@ -100,6 +101,20 @@ describe('ReportManagementView', () => {
       action: 'hide',
       remark: undefined,
     })
+    expect(host.textContent).toContain('Report #11 upheld and content hidden.')
+    app.unmount()
+  })
+
+  it('keeps report details visible while hiding actions from read-only users', async () => {
+    sessionMock.state.permissions = ['audit:report:read']
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('Review report')
+    expect(host.textContent).toContain('广告')
+    expect(host.textContent).toContain('This account is read-only and cannot process reports.')
+    expect(host.querySelector('[data-testid="report-hide"]')).toBeNull()
+    expect(host.querySelector('[data-testid="report-dismiss"]')).toBeNull()
     app.unmount()
   })
 })
