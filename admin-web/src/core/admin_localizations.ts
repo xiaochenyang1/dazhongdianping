@@ -367,6 +367,217 @@ export interface AdminStrings {
     page: (page: number) => string
     nextPage: string
   }
+  shopManagement: {
+    loadError: string
+    initError: string
+    detailLoadError: string
+    saveError: string
+    deleteError: string
+    createSuccess: string
+    updateSuccess: string
+    deleteSuccess: string
+    deleteConfirm: (shopName: string) => string
+    validationErrors: {
+      categoryCityAreaRequired: string
+      basicsRequired: string
+      coordinatesPairRequired: string
+      latitudeRange: string
+      longitudeRange: string
+    }
+    eyebrow: string
+    heading: (region: Region) => string
+    description: string
+    refresh: string
+    create: string
+    filters: {
+      eyebrow: string
+      heading: string
+      count: (start: number, end: number, total: number) => string
+      emptyCount: string
+      labels: {
+        keyword: string
+        city: string
+        area: string
+        category: string
+      }
+      placeholders: {
+        keyword: string
+      }
+      options: {
+        allCities: string
+        allAreas: string
+        allCategories: string
+      }
+      apply: string
+      reset: string
+    }
+    tableHeaders: {
+      shop: string
+      merchant: string
+      categoryRegion: string
+      cityArea: string
+      price: string
+      status: string
+      actions: string
+    }
+    listLoading: string
+    listEmpty: string
+    merchantFallback: string
+    statusText: (status: number, fallback?: string) => string
+    edit: string
+    view: string
+    delete: string
+    deleting: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    editor: {
+      eyebrow: string
+      heading: (shopId: number | null) => string
+      loading: string
+      regionNote: (region: Region) => string
+      readOnly: string
+      readOnlyMessage: string
+      labels: {
+        merchantId: string
+        category: string
+        city: string
+        area: string
+        name: string
+        phone: string
+        coverUrl: string
+        pricePerCapita: string
+        currency: string
+        businessHours: string
+        status: string
+        address: string
+        latitude: string
+        longitude: string
+        score: string
+        tasteScore: string
+        envScore: string
+        serviceScore: string
+        tags: string
+        summary: string
+        createdAt: string
+        updatedAt: string
+      }
+      placeholders: {
+        merchantId: string
+        category: string
+        city: string
+        area: string
+        name: string
+        phone: string
+        coverUrl: string
+        businessHours: string
+        address: string
+        latitude: string
+        longitude: string
+        tags: string
+        summary: string
+      }
+      statusOptions: {
+        open: string
+        closed: string
+        offline: string
+      }
+      toggles: {
+        hasDeal: string
+        openNow: string
+      }
+      previewFallbacks: {
+        alt: string
+        title: string
+        address: string
+        businessHours: string
+      }
+      reset: string
+      saving: string
+      saveUpdate: string
+      create: string
+      demoMerchantIds: string
+    }
+  }
+  userManagement: {
+    loadError: string
+    detailLoadError: string
+    banReasonRequired: string
+    banError: string
+    unbanError: string
+    bannedMessage: (userLabel: string) => string
+    unbannedMessage: (userLabel: string) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    metaLoading: string
+    metaSummary: (total: number) => string
+    metaDescription: string
+    filters: {
+      keyword: string
+      userId: string
+      status: string
+      region: string
+      keywordPlaceholder: string
+      userIdPlaceholder: string
+      statusOptions: {
+        all: string
+        active: string
+        banned: string
+        deleted: string
+      }
+      regionAll: string
+      apply: string
+    }
+    tableHeaders: {
+      user: string
+      account: string
+      regionLevel: string
+      growthPoints: string
+      status: string
+      lastLogin: string
+      actions: string
+    }
+    listLoading: string
+    empty: string
+    userFallback: (userId: number) => string
+    userIdLabel: (userId: number) => string
+    levelLabel: (level: number) => string
+    statusText: (status: number, fallback?: string) => string
+    neverLoggedIn: string
+    detailAction: string
+    banAction: string
+    unbanAction: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    detailLoading: string
+    detailEyebrow: string
+    detailSummary: (account: string, region: string) => string
+    signatureLabel: string
+    banReasonLabel: string
+    pendingAppeal: (count: number) => string
+    goAppealAudit: string
+    latestAppealLabel: string
+    appealStatusText: (statusText: string) => string
+    stats: {
+      reviewCount: string
+      postCount: string
+      orderCount: string
+      reservationCount: string
+      favoriteCount: string
+      activeSessions: string
+      growthValue: string
+      createdAt: string
+    }
+    close: string
+    banEyebrow: string
+    banDescription: string
+    banReasonField: string
+    banPlaceholder: string
+    confirmBan: string
+  }
   auditLogs: {
     eyebrow: string
     heading: string
@@ -1919,6 +2130,45 @@ function enImportBatchStatusText(status: number, fallback?: string) {
   return fallback || `Status ${status}`
 }
 
+function zhShopStatusText(status: number, fallback?: string) {
+  if (status === 0) return '下线'
+  if (status === 2) return '停业'
+  if (status === 1) return '营业'
+  return fallback || `状态 ${status}`
+}
+
+function enShopStatusText(status: number, fallback?: string) {
+  if (status === 0) return 'Offline'
+  if (status === 2) return 'Closed'
+  if (status === 1) return 'Open'
+  return fallback || `Status ${status}`
+}
+
+function zhUserStatusText(status: number, fallback?: string) {
+  if (status === 2) return '已封禁'
+  if (status === 3) return '已注销'
+  if (status === 1) return '正常'
+  return fallback || `状态 ${status}`
+}
+
+function enUserStatusText(status: number, fallback?: string) {
+  if (status === 2) return 'Banned'
+  if (status === 3) return 'Deleted'
+  if (status === 1) return 'Active'
+  return fallback || `Status ${status}`
+}
+
+function zhAppealStatusText(statusText: string) {
+  return statusText
+}
+
+function enAppealStatusText(statusText: string) {
+  if (statusText === '待审核') return 'Pending review'
+  if (statusText === '已通过') return 'Approved'
+  if (statusText === '已驳回') return 'Rejected'
+  return statusText
+}
+
 const zhCnStrings: AdminStrings = {
   tag: 'zh-CN',
   brand: '大众点评后台',
@@ -2284,6 +2534,218 @@ const zhCnStrings: AdminStrings = {
     previousPage: '上一页',
     page: (page) => `第 ${page} 页`,
     nextPage: '下一页',
+  },
+  shopManagement: {
+    loadError: '门店列表加载失败',
+    initError: '商户管理初始化失败',
+    detailLoadError: '门店详情加载失败',
+    saveError: '门店保存失败',
+    deleteError: '门店删除失败',
+    createSuccess: '门店创建成功。',
+    updateSuccess: '门店更新成功。',
+    deleteSuccess: '门店已删除。',
+    deleteConfirm: (shopName) => `确认删除门店「${shopName}」？`,
+    validationErrors: {
+      categoryCityAreaRequired: '分类、城市、商圈得补齐，不然门店往哪儿挂？',
+      basicsRequired: '名称、封面、地址、摘要这些基础字段别留空。',
+      coordinatesPairRequired: '经纬度得成对填写，单独来一个没法定位。',
+      latitudeRange: '纬度必须在 -90 到 90 之间。',
+      longitudeRange: '经度必须在 -180 到 180 之间。',
+    },
+    eyebrow: '商户管理',
+    heading: (region) => `区域 ${region} 的门店最小 CRUD 已经接上，先把数据盘清楚。`,
+    description: '这里追求的是可操作、可验收，不是摆一堆按钮假装平台很大。',
+    refresh: '刷新列表',
+    create: '新建门店',
+    filters: {
+      eyebrow: '列表筛选',
+      heading: '先把门店找得到、改得到，再谈后面的运营玩法。',
+      count: (start, end, total) => `${start}-${end} / ${total}`,
+      emptyCount: '0 / 0',
+      labels: {
+        keyword: '关键词',
+        city: '城市',
+        area: '商圈',
+        category: '分类',
+      },
+      placeholders: {
+        keyword: '店名 / 地址 / 商户名',
+      },
+      options: {
+        allCities: '全部城市',
+        allAreas: '全部商圈',
+        allCategories: '全部分类',
+      },
+      apply: '应用筛选',
+      reset: '重置',
+    },
+    tableHeaders: {
+      shop: '门店',
+      merchant: '商户',
+      categoryRegion: '分类 / 区域',
+      cityArea: '城市 / 商圈',
+      price: '人均',
+      status: '状态',
+      actions: '操作',
+    },
+    listLoading: '门店列表加载中...',
+    listEmpty: '当前筛选下没有门店，条件别拧巴得太狠。',
+    merchantFallback: '未绑定商户',
+    statusText: zhShopStatusText,
+    edit: '编辑',
+    view: '查看',
+    delete: '删除',
+    deleting: '删除中...',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    editor: {
+      eyebrow: '编辑器',
+      heading: (shopId) => shopId ? `编辑门店 #${shopId}` : '新建门店',
+      loading: '详情加载中...',
+      regionNote: (region) => `区域 ${region}`,
+      readOnly: '只读',
+      readOnlyMessage: '当前账号仅可查看门店资料，无维护权限。',
+      labels: {
+        merchantId: '商户 ID',
+        category: '分类',
+        city: '城市',
+        area: '商圈',
+        name: '门店名称',
+        phone: '联系电话',
+        coverUrl: '封面图',
+        pricePerCapita: '人均',
+        currency: '币种',
+        businessHours: '营业时间',
+        status: '状态',
+        address: '地址',
+        latitude: '纬度',
+        longitude: '经度',
+        score: '综合评分',
+        tasteScore: '口味',
+        envScore: '环境',
+        serviceScore: '服务',
+        tags: '标签',
+        summary: '摘要',
+        createdAt: '创建时间',
+        updatedAt: '更新时间',
+      },
+      placeholders: {
+        merchantId: '可为空或填现有商户 ID',
+        category: '请选择分类',
+        city: '请选择城市',
+        area: '请选择商圈',
+        name: '例如：徐汇测试店',
+        phone: '门店电话',
+        coverUrl: 'https://...',
+        businessHours: '10:00-21:00',
+        address: '请填写完整地址',
+        latitude: '例如 31.230416',
+        longitude: '例如 121.473701',
+        tags: '火锅, 聚餐, 夜宵',
+        summary: '写清楚门店亮点，不要满屏废话。',
+      },
+      statusOptions: {
+        open: '营业',
+        closed: '停业',
+        offline: '下线',
+      },
+      toggles: {
+        hasDeal: '当前有优惠 / 团购',
+        openNow: '当前展示为营业中',
+      },
+      previewFallbacks: {
+        alt: '门店封面预览',
+        title: '门店封面预览',
+        address: '地址还没填，别急着说自己上线了。',
+        businessHours: '营业时间待填',
+      },
+      reset: '重置表单',
+      saving: '保存中...',
+      saveUpdate: '保存修改',
+      create: '创建门店',
+      demoMerchantIds: '现成演示商户 ID：`CN` 可用 `1001 / 1002`，`EU` 可用 `2001 / 2002`。',
+    },
+  },
+  userManagement: {
+    loadError: '用户数据加载失败',
+    detailLoadError: '用户详情加载失败',
+    banReasonRequired: '封禁原因不能为空',
+    banError: '封禁操作失败',
+    unbanError: '解封操作失败',
+    bannedMessage: (userLabel) => `用户 ${userLabel} 已封禁，全部登录态已失效。`,
+    unbannedMessage: (userLabel) => `用户 ${userLabel} 已解封。`,
+    eyebrow: '用户治理',
+    heading: '用户管理',
+    description: (region) =>
+      `当前区域 ${region}。封禁会立即吊销该用户的全部登录态并拦截后续登录，动作会记录审计日志。`,
+    refresh: '刷新列表',
+    metaLoading: '加载中...',
+    metaSummary: (total) => `共 ${total} 个用户`,
+    metaDescription: '支持按昵称 / 邮箱 / 手机号关键词、用户 ID、账号状态和归属区域筛选。',
+    filters: {
+      keyword: '关键词',
+      userId: '用户 ID',
+      status: '账号状态',
+      region: '归属区域',
+      keywordPlaceholder: '昵称 / 邮箱 / 手机号',
+      userIdPlaceholder: '例如 9001',
+      statusOptions: {
+        all: '全部',
+        active: '正常',
+        banned: '已封禁',
+        deleted: '已注销',
+      },
+      regionAll: '全部',
+      apply: '应用筛选',
+    },
+    tableHeaders: {
+      user: '用户',
+      account: '账号',
+      regionLevel: '区域 / 等级',
+      growthPoints: '成长值 / 积分',
+      status: '状态',
+      lastLogin: '最近登录',
+      actions: '操作',
+    },
+    listLoading: '用户数据加载中...',
+    empty: '当前筛选下没有用户。',
+    userFallback: (userId) => `user:${userId}`,
+    userIdLabel: (userId) => `ID ${userId}`,
+    levelLabel: (level) => `Lv${level}`,
+    statusText: zhUserStatusText,
+    neverLoggedIn: '--',
+    detailAction: '详情',
+    banAction: '封禁',
+    unbanAction: '解封',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    detailLoading: '用户详情加载中...',
+    detailEyebrow: '用户详情',
+    detailSummary: (account, region) => `${account} · 区域 ${region}`,
+    signatureLabel: '签名',
+    banReasonLabel: '封禁原因',
+    pendingAppeal: (count) => `该用户有 ${count} 条待审封禁申诉。`,
+    goAppealAudit: '去处理',
+    latestAppealLabel: '最近一次封禁申诉',
+    appealStatusText: zhAppealStatusText,
+    stats: {
+      reviewCount: '点评数',
+      postCount: '帖子数',
+      orderCount: '订单数',
+      reservationCount: '预订数',
+      favoriteCount: '收藏数',
+      activeSessions: '活跃会话',
+      growthValue: '成长值',
+      createdAt: '注册时间',
+    },
+    close: '关闭',
+    banEyebrow: '封禁用户',
+    banDescription: '封禁后该用户全部登录态立即失效，密码和验证码登录都会被拦截。原因会记录进审计日志。',
+    banReasonField: '封禁原因',
+    banPlaceholder: '例如：发布垃圾广告',
+    confirmBan: '确认封禁',
   },
   auditLogs: {
     eyebrow: 'Audit Trail',
@@ -4147,6 +4609,221 @@ const enStrings: AdminStrings = {
     previousPage: 'Previous',
     page: (page) => `Page ${page}`,
     nextPage: 'Next',
+  },
+  shopManagement: {
+    loadError: 'Failed to load shops.',
+    initError: 'Failed to initialize shop management.',
+    detailLoadError: 'Failed to load shop details.',
+    saveError: 'Failed to save the shop.',
+    deleteError: 'Failed to delete the shop.',
+    createSuccess: 'Shop created.',
+    updateSuccess: 'Shop updated.',
+    deleteSuccess: 'Shop deleted.',
+    deleteConfirm: (shopName) => `Delete shop "${shopName}"?`,
+    validationErrors: {
+      categoryCityAreaRequired: 'Category, city, and area are required before a shop can be saved.',
+      basicsRequired: 'Name, cover, address, and summary are required.',
+      coordinatesPairRequired: 'Latitude and longitude must be provided together.',
+      latitudeRange: 'Latitude must be between -90 and 90.',
+      longitudeRange: 'Longitude must be between -180 and 180.',
+    },
+    eyebrow: 'Shop Management',
+    heading: (region) =>
+      `The minimum shop CRUD for region ${region} is wired up. Get the data inventory in order first.`,
+    description:
+      'This page is meant to be operable and testable, not padded with decorative buttons that pretend the platform is bigger than it is.',
+    refresh: 'Refresh list',
+    create: 'New shop',
+    filters: {
+      eyebrow: 'List filters',
+      heading: 'Make shops easy to find and edit before layering on operations.',
+      count: (start, end, total) => `${start}-${end} / ${total}`,
+      emptyCount: '0 / 0',
+      labels: {
+        keyword: 'Keyword',
+        city: 'City',
+        area: 'Area',
+        category: 'Category',
+      },
+      placeholders: {
+        keyword: 'Shop / address / merchant',
+      },
+      options: {
+        allCities: 'All cities',
+        allAreas: 'All areas',
+        allCategories: 'All categories',
+      },
+      apply: 'Apply filters',
+      reset: 'Reset',
+    },
+    tableHeaders: {
+      shop: 'Shop',
+      merchant: 'Merchant',
+      categoryRegion: 'Category / region',
+      cityArea: 'City / area',
+      price: 'Per-capita',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    listLoading: 'Loading shops...',
+    listEmpty: 'No shops match the current filters.',
+    merchantFallback: 'Unassigned merchant',
+    statusText: enShopStatusText,
+    edit: 'Edit',
+    view: 'View',
+    delete: 'Delete',
+    deleting: 'Deleting...',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    editor: {
+      eyebrow: 'Editor',
+      heading: (shopId) => shopId ? `Edit shop #${shopId}` : 'New shop',
+      loading: 'Loading details...',
+      regionNote: (region) => `Region ${region}`,
+      readOnly: 'Read-only',
+      readOnlyMessage: 'This account is read-only and cannot maintain shop data.',
+      labels: {
+        merchantId: 'Merchant ID',
+        category: 'Category',
+        city: 'City',
+        area: 'Area',
+        name: 'Shop name',
+        phone: 'Phone',
+        coverUrl: 'Cover image',
+        pricePerCapita: 'Per-capita',
+        currency: 'Currency',
+        businessHours: 'Business hours',
+        status: 'Status',
+        address: 'Address',
+        latitude: 'Latitude',
+        longitude: 'Longitude',
+        score: 'Overall score',
+        tasteScore: 'Taste',
+        envScore: 'Environment',
+        serviceScore: 'Service',
+        tags: 'Tags',
+        summary: 'Summary',
+        createdAt: 'Created at',
+        updatedAt: 'Updated at',
+      },
+      placeholders: {
+        merchantId: 'Optional. Use an existing merchant ID if needed',
+        category: 'Select a category',
+        city: 'Select a city',
+        area: 'Select an area',
+        name: 'For example: Le Marais test shop',
+        phone: 'Shop phone',
+        coverUrl: 'https://...',
+        businessHours: '10:00-21:00',
+        address: 'Enter the full address',
+        latitude: 'For example 48.856613',
+        longitude: 'For example 2.352222',
+        tags: 'Bistro, Dinner, Late night',
+        summary: 'Describe the shop highlights clearly.',
+      },
+      statusOptions: {
+        open: 'Open',
+        closed: 'Closed',
+        offline: 'Offline',
+      },
+      toggles: {
+        hasDeal: 'Has active deals',
+        openNow: 'Show as open now',
+      },
+      previewFallbacks: {
+        alt: 'Shop cover preview',
+        title: 'Shop cover preview',
+        address: 'Address is still empty.',
+        businessHours: 'Business hours pending',
+      },
+      reset: 'Reset form',
+      saving: 'Saving...',
+      saveUpdate: 'Save changes',
+      create: 'Create shop',
+      demoMerchantIds: 'Demo merchant IDs: `CN` can use `1001 / 1002`, `EU` can use `2001 / 2002`.',
+    },
+  },
+  userManagement: {
+    loadError: 'Failed to load users.',
+    detailLoadError: 'Failed to load user details.',
+    banReasonRequired: 'A ban reason is required.',
+    banError: 'Failed to ban the user.',
+    unbanError: 'Failed to unban the user.',
+    bannedMessage: (userLabel) => `User ${userLabel} has been banned. All sessions were revoked.`,
+    unbannedMessage: (userLabel) => `User ${userLabel} has been unbanned.`,
+    eyebrow: 'User Governance',
+    heading: 'User Management',
+    description: (region) =>
+      `Current region ${region}. Banning immediately revokes all active sessions and blocks future sign-ins. Every action is written to the audit log.`,
+    refresh: 'Refresh list',
+    metaLoading: 'Loading...',
+    metaSummary: (total) => `${total} users`,
+    metaDescription: 'Filter by nickname, email, phone, user ID, account status, and preferred region.',
+    filters: {
+      keyword: 'Keyword',
+      userId: 'User ID',
+      status: 'Account status',
+      region: 'Preferred region',
+      keywordPlaceholder: 'Nickname / email / phone',
+      userIdPlaceholder: 'For example 9001',
+      statusOptions: {
+        all: 'All',
+        active: 'Active',
+        banned: 'Banned',
+        deleted: 'Deleted',
+      },
+      regionAll: 'All',
+      apply: 'Apply filters',
+    },
+    tableHeaders: {
+      user: 'User',
+      account: 'Account',
+      regionLevel: 'Region / level',
+      growthPoints: 'Growth / points',
+      status: 'Status',
+      lastLogin: 'Last login',
+      actions: 'Actions',
+    },
+    listLoading: 'Loading users...',
+    empty: 'No users match the current filters.',
+    userFallback: (userId) => `user:${userId}`,
+    userIdLabel: (userId) => `ID ${userId}`,
+    levelLabel: (level) => `Lv${level}`,
+    statusText: enUserStatusText,
+    neverLoggedIn: 'Never signed in',
+    detailAction: 'Details',
+    banAction: 'Ban',
+    unbanAction: 'Unban',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    detailLoading: 'Loading user details...',
+    detailEyebrow: 'User Details',
+    detailSummary: (account, region) => `${account} · Region ${region}`,
+    signatureLabel: 'Signature',
+    banReasonLabel: 'Ban reason',
+    pendingAppeal: (count) => `${count} pending ban appeal tasks.`,
+    goAppealAudit: 'Handle appeals',
+    latestAppealLabel: 'Latest ban appeal',
+    appealStatusText: enAppealStatusText,
+    stats: {
+      reviewCount: 'Reviews',
+      postCount: 'Posts',
+      orderCount: 'Orders',
+      reservationCount: 'Reservations',
+      favoriteCount: 'Favorites',
+      activeSessions: 'Active sessions',
+      growthValue: 'Growth value',
+      createdAt: 'Created at',
+    },
+    close: 'Close',
+    banEyebrow: 'Ban User',
+    banDescription:
+      'Banning immediately invalidates all active sessions and blocks password and OTP sign-ins. The reason is written to the audit log.',
+    banReasonField: 'Ban reason',
+    banPlaceholder: 'For example: Posting spam ads',
+    confirmBan: 'Confirm ban',
   },
   auditLogs: {
     eyebrow: 'Audit Trail',

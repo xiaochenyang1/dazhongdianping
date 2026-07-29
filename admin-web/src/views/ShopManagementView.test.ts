@@ -170,11 +170,12 @@ describe('ShopManagementView', () => {
     const { host } = mountView()
     await flushView()
 
+    expect(host.textContent).toContain('Shop Management')
     expect(host.textContent).toContain('Maison Bistro')
     expect(host.querySelector('[data-testid="create-shop"]')).toBeNull()
     expect(host.querySelector('[data-testid="delete-shop-201"]')).toBeNull()
     expect(host.querySelector('[data-testid="save-shop"]')).toBeNull()
-    expect(host.querySelector<HTMLButtonElement>('[data-testid="open-shop-201"]')?.textContent).toContain('查看')
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="open-shop-201"]')?.textContent).toContain('View')
 
     host.querySelector<HTMLButtonElement>('[data-testid="open-shop-201"]')?.click()
     await flushView()
@@ -182,7 +183,7 @@ describe('ShopManagementView', () => {
     expect(adminMocks.getShop).toHaveBeenCalledWith(201)
     expect(host.querySelector<HTMLInputElement>('[name="shop-name"]')?.value).toBe('Maison Bistro')
     expect(host.querySelector<HTMLFieldSetElement>('[data-testid="shop-editor-fields"]')?.disabled).toBe(true)
-    expect(host.textContent).toContain('当前账号仅可查看门店资料，无维护权限。')
+    expect(host.textContent).toContain('This account is read-only and cannot maintain shop data.')
   })
 
   it('blocks stale create, save, and delete controls after write permission is revoked', async () => {

@@ -11,12 +11,19 @@ const routerMocks = vi.hoisted(() => ({
   push: vi.fn(),
 }))
 
-vi.mock('@/services/admin', () => mocks)
-vi.mock('@/composables/useAdminSession', () => ({
-  useAdminSession: () => ({
-    state: { permissions: ['system:user:read', 'system:user:write'], region: 'CN' },
-  }),
+const sessionMock = vi.hoisted(() => ({
+  state: undefined as unknown as { permissions: string[]; region: 'CN' | 'EU' },
 }))
+
+vi.mock('@/services/admin', () => mocks)
+vi.mock('@/composables/useAdminSession', async () => {
+  const { reactive } = await import('vue')
+  sessionMock.state = reactive({
+    permissions: ['system:user:read', 'system:user:write'],
+    region: 'EU' as const,
+  })
+  return { useAdminSession: () => ({ state: sessionMock.state }) }
+})
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: routerMocks.push,
@@ -95,6 +102,8 @@ describe('UserManagementView', () => {
   beforeEach(() => {
     Object.values(mocks).forEach((mock) => mock.mockReset())
     routerMocks.push.mockReset()
+    sessionMock.state.permissions = ['system:user:read', 'system:user:write']
+    sessionMock.state.region = 'EU'
     mocks.listAdminAppUsers.mockResolvedValue({ list: users, total: 2, page: 1, pageSize: 20, hasMore: false })
   })
 
@@ -110,15 +119,16 @@ describe('UserManagementView', () => {
       page: 1,
       pageSize: 20,
     })
+    expect(host.textContent).toContain('User Management')
     expect(host.textContent).toContain('审评员阿木')
-    expect(host.textContent).toContain('已封禁')
+    expect(host.textContent).toContain('Banned')
 
     input(host, 'app-user-keyword', '咖啡')
     input(host, 'app-user-id', '9002')
     select(host, 'app-user-status', '2')
     select(host, 'app-user-region', 'EU')
     await nextTick()
-    click(host, '应用筛选')
+    click(host, 'Apply filters')
     await flush()
 
     expect(mocks.listAdminAppUsers).toHaveBeenLastCalledWith({
@@ -150,12 +160,12 @@ describe('UserManagementView', () => {
     const { app, host } = mount()
     await flush()
 
-    click(host, '详情')
+    click(host, 'Details')
     await flush()
 
     expect(mocks.getAdminAppUser).toHaveBeenCalledWith(9001)
-    expect(host.textContent).toContain('点评数')
-    expect(host.textContent).toContain('活跃会话')
+    expect(host.textContent).toContain('Reviews')
+    expect(host.textContent).toContain('Active sessions')
     expect(host.textContent).toContain('本地演示用户')
     app.unmount()
   })
@@ -178,15 +188,16 @@ describe('UserManagementView', () => {
     const { app, host } = mount()
     await flush()
 
-    const detailButtons = [...host.querySelectorAll('button')].filter((item) => item.textContent?.includes('详情'))
+    const detailButtons = [...host.querySelectorAll('button')].filter((item) => item.textContent?.includes('Details'))
     detailButtons[detailButtons.length - 1]?.click()
     await flush()
 
     expect(mocks.getAdminAppUser).toHaveBeenCalledWith(9002)
-    expect(host.textContent).toContain('封禁原因：发布垃圾广告')
-    expect(host.textContent).toContain('1 条待审封禁申诉')
+    expect(host.textContent).toContain('Ban reason')
+    expect(host.textContent).toContain('发布垃圾广告')
+    expect(host.textContent).toContain('1 pending ban appeal tasks.')
 
-    click(host, '去处理')
+    click(host, 'Handle appeals')
     expect(routerMocks.push).toHaveBeenCalledWith('/audit/user-appeals')
     app.unmount()
   })
@@ -196,24 +207,24 @@ describe('UserManagementView', () => {
     const { app, host } = mount()
     await flush()
 
-    click(host, '封禁')
+    click(host, 'Ban')
     await nextTick()
-    click(host, '确认封禁')
+    click(host, 'Confirm ban')
     await flush()
     expect(mocks.updateAdminAppUserStatus).not.toHaveBeenCalled()
-    expect(host.textContent).toContain('封禁原因不能为空')
+    expect(host.textContent).toContain('A ban reason is required.')
 
     const reasonBox = host.querySelector<HTMLTextAreaElement>('[name="banReason"]')
     if (!reasonBox) throw new Error('missing textarea: banReason')
     reasonBox.value = '发布垃圾广告'
     reasonBox.dispatchEvent(new Event('input'))
     await nextTick()
-    click(host, '确认封禁')
+    click(host, 'Confirm ban')
     await flush()
 
     expect(mocks.updateAdminAppUserStatus).toHaveBeenCalledWith(9001, { action: 'ban', reason: '发布垃圾广告' })
     expect(mocks.listAdminAppUsers).toHaveBeenCalledTimes(2)
-    expect(host.textContent).toContain('已封禁，全部登录态已失效')
+    expect(host.textContent).toContain('has been banned. All sessions were revoked.')
     app.unmount()
   })
 
@@ -222,7 +233,7 @@ describe('UserManagementView', () => {
     const { app, host } = mount()
     await flush()
 
-    click(host, '解封')
+    click(host, 'Unban')
     await flush()
 
     expect(mocks.updateAdminAppUserStatus).toHaveBeenCalledWith(9002, { action: 'unban', reason: '' })

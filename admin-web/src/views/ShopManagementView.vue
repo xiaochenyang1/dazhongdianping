@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
-import {
-  createShop,
-  getShop,
-  listShops,
-  removeShop,
-  updateShop,
-} from '@/services/admin'
+import { adminStringsForRegion } from '@/core/admin_localizations'
+import { createShop, getShop, listShops, removeShop, updateShop } from '@/services/admin'
 import { fetchAreas, fetchCategories, fetchCities } from '@/services/meta'
 import type {
   AdminShopDetail,
@@ -60,6 +55,7 @@ interface CategoryOption {
 }
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 
 const categories = ref<CategoryNode[]>([])
 const cities = ref<City[]>([])
@@ -101,17 +97,16 @@ const categoryOptions = computed<CategoryOption[]>(() =>
 )
 
 const canWrite = computed(() => state.permissions.includes('data:shop:write'))
-const editorTitle = computed(() => (selectedShopId.value ? `编辑门店 #${selectedShopId.value}` : '新建门店'))
+const editorTitle = computed(() => strings.value.shopManagement.editor.heading(selectedShopId.value))
 const listCountText = computed(() => {
   if (!pageState.value || pageState.value.list.length === 0) {
-    return '0 / 0'
+    return strings.value.shopManagement.filters.emptyCount
   }
 
   const start = (pageState.value.page - 1) * pageState.value.pageSize + 1
   const end = start + pageState.value.list.length - 1
-  return `${start}-${end} / ${pageState.value.total}`
+  return strings.value.shopManagement.filters.count(start, end, pageState.value.total)
 })
-
 const coverPreviewUrl = computed(() => form.coverUrl.trim() || defaultCoverUrl(state.region))
 
 function defaultCurrency(region: Region) {
@@ -151,6 +146,18 @@ function createEmptyShopForm(region: Region): ShopFormState {
   }
 }
 
+function shopStatusText(shop: AdminShopSummary | AdminShopDetail) {
+  return strings.value.shopManagement.statusText(shop.status, shop.statusText)
+}
+
+function merchantLabel(shop: AdminShopSummary) {
+  return shop.merchantName || strings.value.shopManagement.merchantFallback
+}
+
+function actionLabel() {
+  return canWrite.value ? strings.value.shopManagement.edit : strings.value.shopManagement.view
+}
+
 async function loadMeta() {
   const [nextCategories, nextCities] = await Promise.all([fetchCategories(), fetchCities()])
   categories.value = nextCategories
@@ -162,7 +169,6 @@ async function loadFilterAreas() {
     filterAreas.value = []
     return
   }
-
   filterAreas.value = await fetchAreas(Number(filters.cityId))
 }
 
@@ -171,7 +177,6 @@ async function loadFormAreas() {
     formAreas.value = []
     return
   }
-
   formAreas.value = await fetchAreas(Number(form.cityId))
 }
 
@@ -246,7 +251,7 @@ async function loadShops() {
       pageSize: filters.pageSize,
     })
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '门店列表加载失败'
+    errorMessage.value = error instanceof Error ? error.message : strings.value.shopManagement.loadError
   } finally {
     listLoading.value = false
   }
@@ -262,7 +267,7 @@ async function bootstrapPage() {
     await prepareCreateForm()
     await loadShops()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '商户管理初始化失败'
+    errorMessage.value = error instanceof Error ? error.message : strings.value.shopManagement.initError
   }
 }
 
@@ -288,7 +293,8 @@ async function handleEdit(shopId: number) {
     const detail = await getShop(shopId)
     await applyDetail(detail)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '门店详情加载失败'
+    errorMessage.value =
+      error instanceof Error ? error.message : strings.value.shopManagement.detailLoadError
   } finally {
     detailLoading.value = false
   }
@@ -303,22 +309,22 @@ function parseTags(rawValue: string) {
 
 function buildPayload(): AdminShopSavePayload {
   if (!form.categoryId || !form.cityId || !form.areaId) {
-    throw new Error('分类、城市、商圈得补齐，不然门店往哪儿挂？')
+    throw new Error(strings.value.shopManagement.validationErrors.categoryCityAreaRequired)
   }
   if (!form.name.trim() || !form.coverUrl.trim() || !form.address.trim() || !form.summary.trim()) {
-    throw new Error('名称、封面、地址、摘要这些基础字段别留空。')
+    throw new Error(strings.value.shopManagement.validationErrors.basicsRequired)
   }
 
   const latitude = form.latitude.trim() === '' ? null : Number(form.latitude)
   const longitude = form.longitude.trim() === '' ? null : Number(form.longitude)
   if ((latitude == null) !== (longitude == null)) {
-    throw new Error('经纬度得成对填写，单独来一个没法定位。')
+    throw new Error(strings.value.shopManagement.validationErrors.coordinatesPairRequired)
   }
   if (latitude != null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) {
-    throw new Error('纬度必须在 -90 到 90 之间。')
+    throw new Error(strings.value.shopManagement.validationErrors.latitudeRange)
   }
   if (longitude != null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180)) {
-    throw new Error('经度必须在 -180 到 180 之间。')
+    throw new Error(strings.value.shopManagement.validationErrors.longitudeRange)
   }
 
   return {
@@ -354,20 +360,22 @@ async function saveShop() {
   saving.value = true
   errorMessage.value = ''
   successMessage.value = ''
-
   const isEditing = selectedShopId.value != null
 
   try {
     const payload = buildPayload()
-    const detail = isEditing && selectedShopId.value
-      ? await updateShop(selectedShopId.value, payload)
-      : await createShop(payload)
+    const detail =
+      isEditing && selectedShopId.value
+        ? await updateShop(selectedShopId.value, payload)
+        : await createShop(payload)
 
     await applyDetail(detail)
     await loadShops()
-    successMessage.value = isEditing ? '门店更新成功。' : '门店创建成功。'
+    successMessage.value = isEditing
+      ? strings.value.shopManagement.updateSuccess
+      : strings.value.shopManagement.createSuccess
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '门店保存失败'
+    errorMessage.value = error instanceof Error ? error.message : strings.value.shopManagement.saveError
   } finally {
     saving.value = false
   }
@@ -377,11 +385,10 @@ async function handleDelete(shopId: number) {
   if (!canWrite.value || removingShopId.value != null) return
 
   const target = pageState.value?.list.find((item) => item.id === shopId)
-  const confirmed = window.confirm(`确认删除门店「${target?.name ?? `#${shopId}`}」？`)
-
-  if (!confirmed || !canWrite.value) {
-    return
-  }
+  const confirmed = window.confirm(
+    strings.value.shopManagement.deleteConfirm(target?.name ?? `#${shopId}`),
+  )
+  if (!confirmed || !canWrite.value) return
 
   removingShopId.value = shopId
   errorMessage.value = ''
@@ -399,9 +406,10 @@ async function handleDelete(shopId: number) {
     }
 
     await loadShops()
-    successMessage.value = '门店已删除。'
+    successMessage.value = strings.value.shopManagement.deleteSuccess
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '门店删除失败'
+    errorMessage.value =
+      error instanceof Error ? error.message : strings.value.shopManagement.deleteError
   } finally {
     removingShopId.value = null
   }
@@ -423,19 +431,13 @@ function resetFilters() {
 }
 
 function goPrevPage() {
-  if (!pageState.value || pageState.value.page <= 1) {
-    return
-  }
-
+  if (!pageState.value || pageState.value.page <= 1) return
   filters.page -= 1
   void loadShops()
 }
 
 function goNextPage() {
-  if (!pageState.value?.hasMore) {
-    return
-  }
-
+  if (!pageState.value?.hasMore) return
   filters.page += 1
   void loadShops()
 }
@@ -458,14 +460,24 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">商户管理</p>
-        <h1>区域 {{ state.region }} 的门店最小 CRUD 已经接上，先把数据盘清楚。</h1>
-        <p>这里追求的是可操作、可验收，不是摆一堆按钮假装平台很大。</p>
+        <p class="eyebrow">{{ strings.shopManagement.eyebrow }}</p>
+        <h1>{{ strings.shopManagement.heading(state.region) }}</h1>
+        <p>{{ strings.shopManagement.description }}</p>
       </div>
 
       <div class="header-actions">
-        <button type="button" class="secondary-button" @click="loadShops">刷新列表</button>
-        <button v-if="canWrite" type="button" class="primary-button" data-testid="create-shop" @click="openCreateForm">新建门店</button>
+        <button type="button" class="secondary-button" @click="loadShops">
+          {{ strings.shopManagement.refresh }}
+        </button>
+        <button
+          v-if="canWrite"
+          type="button"
+          class="primary-button"
+          data-testid="create-shop"
+          @click="openCreateForm"
+        >
+          {{ strings.shopManagement.create }}
+        </button>
       </div>
     </div>
 
@@ -476,22 +488,26 @@ watch(
       <section class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">列表筛选</p>
-            <h2>先把门店找得到、改得到，再谈后面的运营玩法。</h2>
+            <p class="eyebrow">{{ strings.shopManagement.filters.eyebrow }}</p>
+            <h2>{{ strings.shopManagement.filters.heading }}</h2>
           </div>
-          <span class="inline-note">当前显示 {{ listCountText }}</span>
+          <span class="inline-note">{{ listCountText }}</span>
         </div>
 
         <div class="toolbar-grid toolbar-grid--filters">
           <label class="field">
-            <span>关键词</span>
-            <input v-model="filters.keyword" type="text" placeholder="店名 / 地址 / 商户名" />
+            <span>{{ strings.shopManagement.filters.labels.keyword }}</span>
+            <input
+              v-model="filters.keyword"
+              type="text"
+              :placeholder="strings.shopManagement.filters.placeholders.keyword"
+            />
           </label>
 
           <label class="field">
-            <span>城市</span>
+            <span>{{ strings.shopManagement.filters.labels.city }}</span>
             <select :value="filters.cityId" @change="onFilterCityChange(($event.target as HTMLSelectElement).value)">
-              <option value="">全部城市</option>
+              <option value="">{{ strings.shopManagement.filters.options.allCities }}</option>
               <option v-for="city in cities" :key="city.id" :value="city.id">
                 {{ city.name }}
               </option>
@@ -499,9 +515,9 @@ watch(
           </label>
 
           <label class="field">
-            <span>商圈</span>
+            <span>{{ strings.shopManagement.filters.labels.area }}</span>
             <select v-model="filters.areaId">
-              <option value="">全部商圈</option>
+              <option value="">{{ strings.shopManagement.filters.options.allAreas }}</option>
               <option v-for="area in filterAreas" :key="area.id" :value="area.id">
                 {{ area.name }}
               </option>
@@ -509,9 +525,9 @@ watch(
           </label>
 
           <label class="field">
-            <span>分类</span>
+            <span>{{ strings.shopManagement.filters.labels.category }}</span>
             <select v-model="filters.categoryId">
-              <option value="">全部分类</option>
+              <option value="">{{ strings.shopManagement.filters.options.allCategories }}</option>
               <option v-for="category in categoryOptions" :key="category.id" :value="category.id">
                 {{ category.label }}
               </option>
@@ -520,46 +536,66 @@ watch(
         </div>
 
         <div class="toolbar-actions">
-          <button type="button" class="primary-button" @click="applyFilters">应用筛选</button>
-          <button type="button" class="ghost-button" @click="resetFilters">重置</button>
+          <button type="button" class="primary-button" @click="applyFilters">
+            {{ strings.shopManagement.filters.apply }}
+          </button>
+          <button type="button" class="ghost-button" @click="resetFilters">
+            {{ strings.shopManagement.filters.reset }}
+          </button>
         </div>
 
         <div class="table-shell">
           <table class="data-table">
             <thead>
               <tr>
-                <th>门店</th>
-                <th>商户</th>
-                <th>分类 / 区域</th>
-                <th>城市 / 商圈</th>
-                <th>人均</th>
-                <th>状态</th>
-                <th>操作</th>
+                <th>{{ strings.shopManagement.tableHeaders.shop }}</th>
+                <th>{{ strings.shopManagement.tableHeaders.merchant }}</th>
+                <th>{{ strings.shopManagement.tableHeaders.categoryRegion }}</th>
+                <th>{{ strings.shopManagement.tableHeaders.cityArea }}</th>
+                <th>{{ strings.shopManagement.tableHeaders.price }}</th>
+                <th>{{ strings.shopManagement.tableHeaders.status }}</th>
+                <th>{{ strings.shopManagement.tableHeaders.actions }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="listLoading">
-                <td colspan="7" class="table-empty">门店列表加载中...</td>
+                <td colspan="7" class="table-empty">{{ strings.shopManagement.listLoading }}</td>
               </tr>
               <tr v-else-if="!pageState || pageState.list.length === 0">
-                <td colspan="7" class="table-empty">当前筛选下没有门店，条件别拧巴得太狠。</td>
+                <td colspan="7" class="table-empty">{{ strings.shopManagement.listEmpty }}</td>
               </tr>
               <tr v-for="shop in pageState?.list" :key="shop.id">
                 <td>
                   <strong>{{ shop.name }}</strong>
                   <p>#{{ shop.id }} · {{ shop.createdAt }}</p>
                 </td>
-                <td>{{ shop.merchantName || '未绑定商户' }}</td>
+                <td>{{ merchantLabel(shop) }}</td>
                 <td>{{ shop.categoryName }} · {{ shop.region }}</td>
                 <td>{{ shop.cityName }} · {{ shop.areaName }}</td>
                 <td>{{ shop.pricePerCapita }} {{ state.region === 'EU' ? 'EUR' : 'CNY' }}</td>
                 <td>
-                  <span class="status-pill" :class="shop.status === 1 ? 'status-pill--good' : shop.status === 2 ? 'status-pill--warn' : 'status-pill--muted'">
-                    {{ shop.statusText }}
+                  <span
+                    class="status-pill"
+                    :class="
+                      shop.status === 1
+                        ? 'status-pill--good'
+                        : shop.status === 2
+                          ? 'status-pill--warn'
+                          : 'status-pill--muted'
+                    "
+                  >
+                    {{ shopStatusText(shop) }}
                   </span>
                 </td>
                 <td class="table-actions">
-                  <button type="button" class="table-action" :data-testid="`open-shop-${shop.id}`" @click="handleEdit(shop.id)">{{ canWrite ? '编辑' : '查看' }}</button>
+                  <button
+                    type="button"
+                    class="table-action"
+                    :data-testid="`open-shop-${shop.id}`"
+                    @click="handleEdit(shop.id)"
+                  >
+                    {{ actionLabel() }}
+                  </button>
                   <button
                     v-if="canWrite"
                     type="button"
@@ -568,7 +604,11 @@ watch(
                     :disabled="removingShopId === shop.id"
                     @click="handleDelete(shop.id)"
                   >
-                    {{ removingShopId === shop.id ? '删除中...' : '删除' }}
+                    {{
+                      removingShopId === shop.id
+                        ? strings.shopManagement.deleting
+                        : strings.shopManagement.delete
+                    }}
                   </button>
                 </td>
               </tr>
@@ -577,12 +617,22 @@ watch(
         </div>
 
         <div class="pager">
-          <button type="button" class="ghost-button" :disabled="(pageState?.page ?? 1) <= 1" @click="goPrevPage">
-            上一页
+          <button
+            type="button"
+            class="ghost-button"
+            :disabled="(pageState?.page ?? 1) <= 1"
+            @click="goPrevPage"
+          >
+            {{ strings.shopManagement.previousPage }}
           </button>
-          <span>第 {{ pageState?.page ?? 1 }} 页</span>
-          <button type="button" class="ghost-button" :disabled="!pageState?.hasMore" @click="goNextPage">
-            下一页
+          <span>{{ strings.shopManagement.page(pageState?.page ?? 1) }}</span>
+          <button
+            type="button"
+            class="ghost-button"
+            :disabled="!pageState?.hasMore"
+            @click="goNextPage"
+          >
+            {{ strings.shopManagement.nextPage }}
           </button>
         </div>
       </section>
@@ -590,183 +640,242 @@ watch(
       <section class="content-card editor-card">
         <div class="editor-header">
           <div>
-            <p class="eyebrow">编辑器</p>
+            <p class="eyebrow">{{ strings.shopManagement.editor.eyebrow }}</p>
             <h2>{{ editorTitle }}</h2>
           </div>
-          <span class="inline-note">{{ detailLoading ? '详情加载中...' : canWrite ? `区域 ${state.region}` : '只读' }}</span>
+          <span class="inline-note">
+            {{
+              detailLoading
+                ? strings.shopManagement.editor.loading
+                : canWrite
+                  ? strings.shopManagement.editor.regionNote(state.region)
+                  : strings.shopManagement.editor.readOnly
+            }}
+          </span>
         </div>
 
         <form class="editor-form" data-testid="shop-editor" @submit.prevent="saveShop">
           <fieldset class="editor-fieldset" data-testid="shop-editor-fields" :disabled="!canWrite">
             <div class="form-grid form-grid--two">
-            <label class="field">
-              <span>商户 ID</span>
-              <input v-model="form.merchantId" type="number" min="0" placeholder="可为空或填现有商户 ID" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.merchantId }}</span>
+                <input
+                  v-model="form.merchantId"
+                  type="number"
+                  min="0"
+                  :placeholder="strings.shopManagement.editor.placeholders.merchantId"
+                />
+              </label>
 
-            <label class="field">
-              <span>分类</span>
-              <select v-model="form.categoryId">
-                <option value="">请选择分类</option>
-                <option v-for="category in categoryOptions" :key="category.id" :value="category.id">
-                  {{ category.label }}
-                </option>
-              </select>
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.category }}</span>
+                <select v-model="form.categoryId">
+                  <option value="">{{ strings.shopManagement.editor.placeholders.category }}</option>
+                  <option v-for="category in categoryOptions" :key="category.id" :value="category.id">
+                    {{ category.label }}
+                  </option>
+                </select>
+              </label>
 
-            <label class="field">
-              <span>城市</span>
-              <select :value="form.cityId" @change="onFormCityChange(($event.target as HTMLSelectElement).value)">
-                <option value="">请选择城市</option>
-                <option v-for="city in cities" :key="city.id" :value="city.id">
-                  {{ city.name }}
-                </option>
-              </select>
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.city }}</span>
+                <select :value="form.cityId" @change="onFormCityChange(($event.target as HTMLSelectElement).value)">
+                  <option value="">{{ strings.shopManagement.editor.placeholders.city }}</option>
+                  <option v-for="city in cities" :key="city.id" :value="city.id">
+                    {{ city.name }}
+                  </option>
+                </select>
+              </label>
 
-            <label class="field">
-              <span>商圈</span>
-              <select v-model="form.areaId">
-                <option value="">请选择商圈</option>
-                <option v-for="area in formAreas" :key="area.id" :value="area.id">
-                  {{ area.name }}
-                </option>
-              </select>
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.area }}</span>
+                <select v-model="form.areaId">
+                  <option value="">{{ strings.shopManagement.editor.placeholders.area }}</option>
+                  <option v-for="area in formAreas" :key="area.id" :value="area.id">
+                    {{ area.name }}
+                  </option>
+                </select>
+              </label>
 
-            <label class="field">
-              <span>门店名称</span>
-              <input v-model="form.name" name="shop-name" type="text" placeholder="例如：徐汇测试店" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.name }}</span>
+                <input
+                  v-model="form.name"
+                  name="shop-name"
+                  type="text"
+                  :placeholder="strings.shopManagement.editor.placeholders.name"
+                />
+              </label>
 
-            <label class="field">
-              <span>联系电话</span>
-              <input v-model="form.phone" type="text" placeholder="门店电话" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.phone }}</span>
+                <input
+                  v-model="form.phone"
+                  type="text"
+                  :placeholder="strings.shopManagement.editor.placeholders.phone"
+                />
+              </label>
 
-            <label class="field field--full">
-              <span>封面图</span>
-              <input v-model="form.coverUrl" type="url" placeholder="https://..." />
-            </label>
+              <label class="field field--full">
+                <span>{{ strings.shopManagement.editor.labels.coverUrl }}</span>
+                <input
+                  v-model="form.coverUrl"
+                  type="url"
+                  :placeholder="strings.shopManagement.editor.placeholders.coverUrl"
+                />
+              </label>
 
-            <label class="field">
-              <span>人均</span>
-              <input v-model="form.pricePerCapita" type="number" min="0" step="0.1" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.pricePerCapita }}</span>
+                <input v-model="form.pricePerCapita" type="number" min="0" step="0.1" />
+              </label>
 
-            <label class="field">
-              <span>币种</span>
-              <input v-model="form.currency" type="text" maxlength="3" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.currency }}</span>
+                <input v-model="form.currency" type="text" maxlength="3" />
+              </label>
 
-            <label class="field">
-              <span>营业时间</span>
-              <input v-model="form.businessHours" type="text" placeholder="10:00-21:00" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.businessHours }}</span>
+                <input
+                  v-model="form.businessHours"
+                  type="text"
+                  :placeholder="strings.shopManagement.editor.placeholders.businessHours"
+                />
+              </label>
 
-            <label class="field">
-              <span>状态</span>
-              <select v-model="form.status">
-                <option value="1">营业</option>
-                <option value="2">停业</option>
-                <option value="0">下线</option>
-              </select>
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.status }}</span>
+                <select v-model="form.status">
+                  <option value="1">{{ strings.shopManagement.editor.statusOptions.open }}</option>
+                  <option value="2">{{ strings.shopManagement.editor.statusOptions.closed }}</option>
+                  <option value="0">{{ strings.shopManagement.editor.statusOptions.offline }}</option>
+                </select>
+              </label>
 
-            <label class="field field--full">
-              <span>地址</span>
-              <input v-model="form.address" name="shop-address" type="text" placeholder="请填写完整地址" />
-            </label>
+              <label class="field field--full">
+                <span>{{ strings.shopManagement.editor.labels.address }}</span>
+                <input
+                  v-model="form.address"
+                  name="shop-address"
+                  type="text"
+                  :placeholder="strings.shopManagement.editor.placeholders.address"
+                />
+              </label>
 
-            <label class="field">
-              <span>纬度</span>
-              <input v-model="form.latitude" type="number" min="-90" max="90" step="0.000001" placeholder="例如 31.230416" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.latitude }}</span>
+                <input
+                  v-model="form.latitude"
+                  type="number"
+                  min="-90"
+                  max="90"
+                  step="0.000001"
+                  :placeholder="strings.shopManagement.editor.placeholders.latitude"
+                />
+              </label>
 
-            <label class="field">
-              <span>经度</span>
-              <input v-model="form.longitude" type="number" min="-180" max="180" step="0.000001" placeholder="例如 121.473701" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.longitude }}</span>
+                <input
+                  v-model="form.longitude"
+                  type="number"
+                  min="-180"
+                  max="180"
+                  step="0.000001"
+                  :placeholder="strings.shopManagement.editor.placeholders.longitude"
+                />
+              </label>
 
-            <label class="field">
-              <span>综合评分</span>
-              <input v-model="form.score" type="number" min="0" step="0.1" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.score }}</span>
+                <input v-model="form.score" type="number" min="0" step="0.1" />
+              </label>
 
-            <label class="field">
-              <span>口味</span>
-              <input v-model="form.tasteScore" type="number" min="0" step="0.1" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.tasteScore }}</span>
+                <input v-model="form.tasteScore" type="number" min="0" step="0.1" />
+              </label>
 
-            <label class="field">
-              <span>环境</span>
-              <input v-model="form.envScore" type="number" min="0" step="0.1" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.envScore }}</span>
+                <input v-model="form.envScore" type="number" min="0" step="0.1" />
+              </label>
 
-            <label class="field">
-              <span>服务</span>
-              <input v-model="form.serviceScore" type="number" min="0" step="0.1" />
-            </label>
+              <label class="field">
+                <span>{{ strings.shopManagement.editor.labels.serviceScore }}</span>
+                <input v-model="form.serviceScore" type="number" min="0" step="0.1" />
+              </label>
 
-            <label class="field field--full">
-              <span>标签</span>
-              <input v-model="form.tags" type="text" placeholder="火锅, 聚餐, 夜宵" />
-            </label>
+              <label class="field field--full">
+                <span>{{ strings.shopManagement.editor.labels.tags }}</span>
+                <input
+                  v-model="form.tags"
+                  type="text"
+                  :placeholder="strings.shopManagement.editor.placeholders.tags"
+                />
+              </label>
 
-            <label class="field field--full">
-              <span>摘要</span>
-              <textarea
-                v-model="form.summary"
-                name="shop-summary"
-                rows="4"
-                placeholder="写清楚门店亮点，不要满屏废话。"
-              />
-            </label>
+              <label class="field field--full">
+                <span>{{ strings.shopManagement.editor.labels.summary }}</span>
+                <textarea
+                  v-model="form.summary"
+                  name="shop-summary"
+                  rows="4"
+                  :placeholder="strings.shopManagement.editor.placeholders.summary"
+                />
+              </label>
             </div>
 
             <div class="toggle-grid">
               <label class="toggle-card">
                 <input v-model="form.hasDeal" type="checkbox" />
-                <span>当前有优惠 / 团购</span>
+                <span>{{ strings.shopManagement.editor.toggles.hasDeal }}</span>
               </label>
               <label class="toggle-card">
                 <input v-model="form.openNow" type="checkbox" />
-                <span>当前展示为营业中</span>
+                <span>{{ strings.shopManagement.editor.toggles.openNow }}</span>
               </label>
             </div>
           </fieldset>
 
           <div class="image-preview">
-            <img :src="coverPreviewUrl" :alt="form.name || '门店封面预览'" />
+            <img :src="coverPreviewUrl" :alt="form.name || strings.shopManagement.editor.previewFallbacks.alt" />
             <div class="image-preview__body">
-              <strong>{{ form.name || '门店封面预览' }}</strong>
-              <p>{{ form.address || '地址还没填，别急着说自己上线了。' }}</p>
-              <span>{{ form.businessHours || '营业时间待填' }}</span>
+              <strong>{{ form.name || strings.shopManagement.editor.previewFallbacks.title }}</strong>
+              <p>{{ form.address || strings.shopManagement.editor.previewFallbacks.address }}</p>
+              <span>{{ form.businessHours || strings.shopManagement.editor.previewFallbacks.businessHours }}</span>
             </div>
           </div>
 
           <div class="meta-grid">
             <div>
-              <span>创建时间</span>
+              <span>{{ strings.shopManagement.editor.labels.createdAt }}</span>
               <strong>{{ selectedDetail?.createdAt ?? '--' }}</strong>
             </div>
             <div>
-              <span>更新时间</span>
+              <span>{{ strings.shopManagement.editor.labels.updatedAt }}</span>
               <strong>{{ selectedDetail?.updatedAt ?? '--' }}</strong>
             </div>
           </div>
 
           <div v-if="canWrite" class="form-actions">
-            <button type="button" class="ghost-button" @click="openCreateForm">重置表单</button>
+            <button type="button" class="ghost-button" @click="openCreateForm">
+              {{ strings.shopManagement.editor.reset }}
+            </button>
             <button type="submit" class="primary-button" data-testid="save-shop" :disabled="saving">
-              {{ saving ? '保存中...' : selectedShopId ? '保存修改' : '创建门店' }}
+              {{
+                saving
+                  ? strings.shopManagement.editor.saving
+                  : selectedShopId
+                    ? strings.shopManagement.editor.saveUpdate
+                    : strings.shopManagement.editor.create
+              }}
             </button>
           </div>
-          <p v-else class="inline-note">当前账号仅可查看门店资料，无维护权限。</p>
+          <p v-else class="inline-note">{{ strings.shopManagement.editor.readOnlyMessage }}</p>
 
-          <p class="inline-note">
-            现成演示商户 ID：`CN` 可用 `1001 / 1002`，`EU` 可用 `2001 / 2002`。
-          </p>
+          <p class="inline-note">{{ strings.shopManagement.editor.demoMerchantIds }}</p>
         </form>
       </section>
     </div>
