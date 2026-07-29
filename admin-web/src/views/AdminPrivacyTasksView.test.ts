@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/services/admin', () => mocks)
 vi.mock('@/composables/useAdminSession', () => ({
   useAdminSession: () => ({
-    state: { permissions: ['system:privacy_task:read'] },
+    state: { permissions: ['system:privacy_task:read'], region: 'EU' as const },
   }),
 }))
 
@@ -90,15 +90,17 @@ describe('AdminPrivacyTasksView', () => {
       page: 1,
       pageSize: 20,
     })
-    expect(host.textContent).toContain('账号删除')
+    expect(host.textContent).toContain('Privacy Tasks')
+    expect(host.textContent).toContain('Account deletion')
     expect(host.textContent).toContain('审评员阿木')
+    expect(host.textContent).toContain('Cooling-off period')
 
     input(host, 'privacy-task-user-id', '9001')
     select(host, 'privacy-task-type', '2')
     select(host, 'privacy-task-status', '1')
     input(host, 'privacy-task-keyword', 'demo.cn')
     await nextTick()
-    click(host, '应用筛选')
+    click(host, 'Apply filters')
     await flush()
 
     expect(mocks.listAdminPrivacyTasks).toHaveBeenLastCalledWith({

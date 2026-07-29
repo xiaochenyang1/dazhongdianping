@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/services/admin', () => mocks)
 vi.mock('@/composables/useAdminSession', () => ({
   useAdminSession: () => ({
-    state: { permissions: ['system:audit_log:read'] },
+    state: { permissions: ['system:audit_log:read'], region: 'EU' as const },
   }),
 }))
 
@@ -72,6 +72,8 @@ describe('AdminAuditLogsView', () => {
       page: 1,
       pageSize: 20,
     })
+    expect(host.textContent).toContain('Audit Logs')
+    expect(host.textContent).toContain('Apply filters')
     expect(host.textContent).toContain('system.role_update')
     expect(host.textContent).toContain('更新 EU 只读员权限')
 
@@ -79,7 +81,7 @@ describe('AdminAuditLogsView', () => {
     input(host, 'audit-log-action', 'system.role_update')
     input(host, 'audit-log-keyword', '只读员')
     await nextTick()
-    click(host, '应用筛选')
+    click(host, 'Apply filters')
     await flush()
 
     expect(mocks.listAdminAuditLogs).toHaveBeenLastCalledWith({

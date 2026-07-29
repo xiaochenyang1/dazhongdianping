@@ -108,6 +108,109 @@ export interface AdminStrings {
     footerText: string
     footerChips: [string, string, string]
   }
+  auditLogs: {
+    eyebrow: string
+    heading: string
+    description: string
+    loadError: string
+    metaLoading: string
+    metaSummary: (total: number) => string
+    metaDescription: string
+    labels: {
+      adminId: string
+      action: string
+      target: string
+      keyword: string
+    }
+    placeholders: {
+      adminId: string
+      action: string
+      target: string
+      keyword: string
+    }
+    applyFilters: string
+    tableHeaders: {
+      time: string
+      operator: string
+      action: string
+      target: string
+      detail: string
+      ip: string
+    }
+    loadingRow: string
+    empty: string
+    systemFallback: string
+    detailFallback: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+  }
+  privacyTasks: {
+    eyebrow: string
+    heading: string
+    description: string
+    loadError: string
+    metaLoading: string
+    metaSummary: (total: number) => string
+    metaDescription: string
+    labels: {
+      userId: string
+      taskType: string
+      status: string
+      keyword: string
+    }
+    placeholders: {
+      userId: string
+      keyword: string
+    }
+    taskTypeOptions: {
+      all: string
+      export: string
+      delete: string
+    }
+    statusOptions: {
+      all: string
+      exportPending: string
+      exportProcessing: string
+      exportReady: string
+      exportExpired: string
+      exportFailed: string
+      exportCancelled: string
+      deletePendingConfirm: string
+      deleteCoolingOff: string
+      deleteProcessing: string
+      deleteCompleted: string
+      deleteCancelled: string
+      deleteRejected: string
+      mixed0: string
+      mixed1: string
+      mixed2: string
+      mixed3: string
+      mixed4: string
+      mixed5: string
+    }
+    applyFilters: string
+    tableHeaders: {
+      time: string
+      task: string
+      user: string
+      status: string
+      keyInfo: string
+      deadline: string
+    }
+    loadingRow: string
+    empty: string
+    taskTypeText: (taskType: number, fallback?: string) => string
+    taskStatusText: (taskType: number, status: number, fallback?: string) => string
+    allModules: string
+    noReason: string
+    deadlineFallback: string
+    exportFilePending: string
+    verificationMethod: (method: string) => string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+  }
 }
 
 export type AdminRouteTitleKey = keyof AdminStrings['routeTitles']
@@ -257,6 +360,131 @@ const zhCnStrings: AdminStrings = {
     footerText: '管理员与角色管理、权限和区域范围由服务端实时核验，后台能力以数据库授权为准。',
     footerChips: ['管理员管理', '角色与权限', '区域范围'],
   },
+  auditLogs: {
+    eyebrow: 'Audit Trail',
+    heading: '审计日志',
+    description: '管理员登录、角色变更、审核动作都会往这儿落。查问题别靠拍脑门，先翻日志。',
+    loadError: '审计日志加载失败',
+    metaLoading: '加载中...',
+    metaSummary: (total) => `共 ${total} 条日志`,
+    metaDescription: '支持按管理员、动作、目标和关键词交叉过滤。',
+    labels: {
+      adminId: '管理员 ID',
+      action: '动作',
+      target: '目标',
+      keyword: '关键词',
+    },
+    placeholders: {
+      adminId: '例如 1',
+      action: '例如 system.role_update',
+      target: '例如 role:7',
+      keyword: '搜索详情、IP、账号',
+    },
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      time: '时间',
+      operator: '操作人',
+      action: '动作',
+      target: '目标',
+      detail: '详情',
+      ip: 'IP',
+    },
+    loadingRow: '审计日志加载中...',
+    empty: '当前筛选下没有审计日志，条件别拧得太邪乎。',
+    systemFallback: '系统',
+    detailFallback: '无详情',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+  },
+  privacyTasks: {
+    eyebrow: 'Privacy Operations',
+    heading: '隐私任务',
+    description: '这里查的是用户数据导出和账号删除任务。合规链路别靠猜，先看任务状态和时间线。',
+    loadError: '隐私任务加载失败',
+    metaLoading: '加载中...',
+    metaSummary: (total) => `共 ${total} 条隐私任务`,
+    metaDescription: '支持按用户、任务类型、状态和关键词交叉筛选。',
+    labels: {
+      userId: '用户 ID',
+      taskType: '任务类型',
+      status: '状态',
+      keyword: '关键词',
+    },
+    placeholders: {
+      userId: '例如 9001',
+      keyword: '账号、模块、原因、失败信息',
+    },
+    taskTypeOptions: {
+      all: '全部类型',
+      export: '数据导出',
+      delete: '账号删除',
+    },
+    statusOptions: {
+      all: '全部状态',
+      exportPending: '待处理',
+      exportProcessing: '处理中',
+      exportReady: '可下载',
+      exportExpired: '已过期',
+      exportFailed: '失败',
+      exportCancelled: '已取消',
+      deletePendingConfirm: '待确认',
+      deleteCoolingOff: '冷静期中',
+      deleteProcessing: '处理中',
+      deleteCompleted: '已完成',
+      deleteCancelled: '已取消',
+      deleteRejected: '已驳回',
+      mixed0: '0: 待处理/待确认',
+      mixed1: '1: 处理中/冷静期中',
+      mixed2: '2: 可下载/处理中',
+      mixed3: '3: 已过期/已完成',
+      mixed4: '4: 失败/已取消',
+      mixed5: '5: 已取消/已驳回',
+    },
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      time: '时间',
+      task: '任务',
+      user: '用户',
+      status: '状态',
+      keyInfo: '关键信息',
+      deadline: '时效',
+    },
+    loadingRow: '隐私任务加载中...',
+    empty: '当前筛选下没有隐私任务，条件别拧巴过头。',
+    taskTypeText: (taskType, fallback) => {
+      if (taskType === 1) return '数据导出'
+      if (taskType === 2) return '账号删除'
+      return fallback || `任务类型 ${taskType}`
+    },
+    taskStatusText: (taskType, status, fallback) => {
+      if (taskType === 1) {
+        if (status === 0) return '待处理'
+        if (status === 1) return '处理中'
+        if (status === 2) return '可下载'
+        if (status === 3) return '已过期'
+        if (status === 4) return '失败'
+        if (status === 5) return '已取消'
+      }
+      if (taskType === 2) {
+        if (status === 0) return '待确认'
+        if (status === 1) return '冷静期中'
+        if (status === 2) return '处理中'
+        if (status === 3) return '已完成'
+        if (status === 4) return '已取消'
+        if (status === 5) return '已驳回'
+      }
+      return fallback || `状态 ${status}`
+    },
+    allModules: '全部模块',
+    noReason: '无说明',
+    deadlineFallback: '--',
+    exportFilePending: '尚未生成文件',
+    verificationMethod: (method) => `验证方式：${method}`,
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+  },
 }
 
 const enStrings: AdminStrings = {
@@ -364,6 +592,131 @@ const enStrings: AdminStrings = {
     loginButton: 'Enter console',
     footerText: 'Admin accounts, roles, permissions, and regional scope are verified by the server in real time. Console capabilities follow database authorization.',
     footerChips: ['Admin Accounts', 'Roles & Permissions', 'Regional Scope'],
+  },
+  auditLogs: {
+    eyebrow: 'Audit Trail',
+    heading: 'Audit Logs',
+    description: 'Admin sign-ins, role changes, and audit actions all land here. Start with the logs instead of guessing what happened.',
+    loadError: 'Failed to load audit logs.',
+    metaLoading: 'Loading...',
+    metaSummary: (total) => `${total} log entries`,
+    metaDescription: 'Filter across admin ID, action, target, and keyword.',
+    labels: {
+      adminId: 'Admin ID',
+      action: 'Action',
+      target: 'Target',
+      keyword: 'Keyword',
+    },
+    placeholders: {
+      adminId: 'For example: 1',
+      action: 'For example: system.role_update',
+      target: 'For example: role:7',
+      keyword: 'Search details, IP, or account',
+    },
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      time: 'Time',
+      operator: 'Operator',
+      action: 'Action',
+      target: 'Target',
+      detail: 'Detail',
+      ip: 'IP',
+    },
+    loadingRow: 'Loading audit logs...',
+    empty: 'No audit logs match the current filters.',
+    systemFallback: 'System',
+    detailFallback: 'No details',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+  },
+  privacyTasks: {
+    eyebrow: 'Privacy Operations',
+    heading: 'Privacy Tasks',
+    description: 'This view covers data export and account deletion requests. Start with task status and timing instead of guessing at compliance flow.',
+    loadError: 'Failed to load privacy tasks.',
+    metaLoading: 'Loading...',
+    metaSummary: (total) => `${total} privacy tasks`,
+    metaDescription: 'Filter across user, task type, status, and keyword.',
+    labels: {
+      userId: 'User ID',
+      taskType: 'Task type',
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    placeholders: {
+      userId: 'For example: 9001',
+      keyword: 'Account, modules, reason, or failure',
+    },
+    taskTypeOptions: {
+      all: 'All task types',
+      export: 'Data export',
+      delete: 'Account deletion',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      exportPending: 'Pending',
+      exportProcessing: 'In progress',
+      exportReady: 'Ready to download',
+      exportExpired: 'Expired',
+      exportFailed: 'Failed',
+      exportCancelled: 'Cancelled',
+      deletePendingConfirm: 'Pending confirmation',
+      deleteCoolingOff: 'Cooling-off period',
+      deleteProcessing: 'In progress',
+      deleteCompleted: 'Completed',
+      deleteCancelled: 'Cancelled',
+      deleteRejected: 'Rejected',
+      mixed0: '0: pending / confirmation',
+      mixed1: '1: in progress / cooling-off',
+      mixed2: '2: ready / in progress',
+      mixed3: '3: expired / completed',
+      mixed4: '4: failed / cancelled',
+      mixed5: '5: cancelled / rejected',
+    },
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      time: 'Time',
+      task: 'Task',
+      user: 'User',
+      status: 'Status',
+      keyInfo: 'Key details',
+      deadline: 'Deadline',
+    },
+    loadingRow: 'Loading privacy tasks...',
+    empty: 'No privacy tasks match the current filters.',
+    taskTypeText: (taskType, fallback) => {
+      if (taskType === 1) return 'Data export'
+      if (taskType === 2) return 'Account deletion'
+      return fallback || `Task type ${taskType}`
+    },
+    taskStatusText: (taskType, status, fallback) => {
+      if (taskType === 1) {
+        if (status === 0) return 'Pending'
+        if (status === 1) return 'In progress'
+        if (status === 2) return 'Ready to download'
+        if (status === 3) return 'Expired'
+        if (status === 4) return 'Failed'
+        if (status === 5) return 'Cancelled'
+      }
+      if (taskType === 2) {
+        if (status === 0) return 'Pending confirmation'
+        if (status === 1) return 'Cooling-off period'
+        if (status === 2) return 'In progress'
+        if (status === 3) return 'Completed'
+        if (status === 4) return 'Cancelled'
+        if (status === 5) return 'Rejected'
+      }
+      return fallback || `Status ${status}`
+    },
+    allModules: 'All modules',
+    noReason: 'No reason provided',
+    deadlineFallback: '--',
+    exportFilePending: 'File not generated yet',
+    verificationMethod: (method) => `Verification: ${method}`,
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
   },
 }
 
