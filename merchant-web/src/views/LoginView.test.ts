@@ -7,7 +7,7 @@ const routerMocks = vi.hoisted(() => ({ replace: vi.fn() }))
 
 vi.mock('@/services/merchant', () => serviceMocks)
 vi.mock('@/composables/useMerchantSession', () => ({
-  useMerchantSession: () => ({ setSession: sessionMocks.setSession }),
+  useMerchantSession: () => ({ state: { region: 'CN' }, setSession: sessionMocks.setSession }),
 }))
 vi.mock('vue-router', () => ({
   RouterLink: { props: ['to'], template: '<a><slot /></a>' },

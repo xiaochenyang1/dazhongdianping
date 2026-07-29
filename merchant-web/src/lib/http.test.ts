@@ -79,6 +79,7 @@ describe('merchant HTTP session handling', () => {
     const config = axiosMock.request.mock.calls[0][0] as AxiosRequestConfig
     expect(config.headers).toMatchObject({
       Authorization: 'Bearer merchant-token',
+      'Accept-Language': 'en',
       'X-Region': 'EU',
     })
     expect(session.state.token).toBeUndefined()

@@ -2,27 +2,83 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useMerchantSession } from '@/composables/useMerchantSession'
+import {
+  merchantStringsForRegion,
+  type MerchantRouteTitleKey,
+} from '@/core/merchant_localizations'
 import { fetchAccount } from '@/services/merchant'
 
-const route = useRoute(); const router = useRouter(); const { state, clearSession } = useMerchantSession()
-const title = computed(() => String(route.meta.title ?? '商户工作台'))
+const route = useRoute()
+const router = useRouter()
+const { state, clearSession } = useMerchantSession()
+const strings = computed(() => merchantStringsForRegion(state.region))
+const title = computed(() => {
+  const titleKey = typeof route.meta.titleKey === 'string'
+    ? route.meta.titleKey as MerchantRouteTitleKey
+    : 'workbench'
+  return strings.value.routeTitles[titleKey]
+})
 const permissions = ref<string[]>([])
-const baseLinks = [
-  { path: '/dashboard', label: '经营概览', permission: 'dashboard:view' },
-  { path: '/shops', label: '门店管理', permission: 'shop:view' },
-  { path: '/reservations', label: '预订处理', permission: 'reservation:view' },
-  { path: '/reservation-slots', label: '预订时段', permission: 'reservation:view' },
-  { path: '/deals', label: '团购管理', permission: 'deal:edit' },
-  { path: '/orders', label: '订单退款', permission: 'order:view' },
-  { path: '/coupons', label: '券码核销', permission: 'coupon:verify' },
-  { path: '/reviews', label: '点评经营', permission: 'shop:view' },
-  { path: '/verified', label: '认证商户', permission: 'merchant:verify' },
-  { path: '/staffs', label: '员工管理', permission: 'staff:manage' },
-]
-const links = computed(() => baseLinks.filter((link) => permissions.value.includes(link.permission)))
-function logout() { clearSession(); void router.replace('/login') }
-onMounted(async () => { try { permissions.value = (await fetchAccount()).permissions } catch { permissions.value = [] } })
+const baseLinks = computed(() => [
+  { path: '/dashboard', label: strings.value.routeTitles.dashboard, permission: 'dashboard:view' },
+  { path: '/shops', label: strings.value.routeTitles.shops, permission: 'shop:view' },
+  { path: '/reservations', label: strings.value.routeTitles.reservations, permission: 'reservation:view' },
+  { path: '/reservation-slots', label: strings.value.routeTitles.reservationSlots, permission: 'reservation:view' },
+  { path: '/deals', label: strings.value.routeTitles.deals, permission: 'deal:edit' },
+  { path: '/orders', label: strings.value.routeTitles.orders, permission: 'order:view' },
+  { path: '/coupons', label: strings.value.routeTitles.coupons, permission: 'coupon:verify' },
+  { path: '/reviews', label: strings.value.routeTitles.reviews, permission: 'shop:view' },
+  { path: '/verified', label: strings.value.routeTitles.verified, permission: 'merchant:verify' },
+  { path: '/staffs', label: strings.value.routeTitles.staffs, permission: 'staff:manage' },
+])
+const links = computed(() => baseLinks.value.filter((link) => permissions.value.includes(link.permission)))
+
+function logout() {
+  clearSession()
+  void router.replace('/login')
+}
+
+onMounted(async () => {
+  try {
+    permissions.value = (await fetchAccount()).permissions
+  } catch {
+    permissions.value = []
+  }
+})
 </script>
+
 <template>
-  <div class="shell"><aside class="sidebar"><p class="eyebrow">商户工作台</p><h1>大众点评</h1><nav><RouterLink v-for="link in links" :key="link.path" :to="link.path" :class="{active: route.path === link.path}">{{ link.label }}</RouterLink></nav></aside><section class="main"><header><div><p class="eyebrow">当前页面</p><h2>{{ title }}</h2></div><div class="actions"><span data-testid="merchant-fixed-region">{{ state.region }} · {{ state.region === 'EU' ? '欧洲区' : '国内区' }}</span><span>{{ state.account }}</span><button class="ghost" @click="logout">退出</button></div></header><main class="page"><RouterView :permissions="permissions" /></main></section></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <p class="eyebrow">{{ strings.shell.workbenchEyebrow }}</p>
+      <h1>{{ strings.brand }}</h1>
+      <nav>
+        <RouterLink
+          v-for="link in links"
+          :key="link.path"
+          :to="link.path"
+          :class="{ active: route.path === link.path }"
+        >
+          {{ link.label }}
+        </RouterLink>
+      </nav>
+    </aside>
+
+    <section class="main">
+      <header>
+        <div>
+          <p class="eyebrow">{{ strings.shell.currentPageEyebrow }}</p>
+          <h2>{{ title }}</h2>
+        </div>
+        <div class="actions">
+          <span data-testid="merchant-fixed-region">
+            {{ state.region }} · {{ strings.common.regionLabel(state.region) }}
+          </span>
+          <span>{{ state.account }}</span>
+          <button class="ghost" @click="logout">{{ strings.shell.logout }}</button>
+        </div>
+      </header>
+      <main class="page"><RouterView :permissions="permissions" /></main>
+    </section>
+  </div>
 </template>

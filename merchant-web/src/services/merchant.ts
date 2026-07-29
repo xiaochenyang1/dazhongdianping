@@ -1,5 +1,6 @@
 import { apiGet, apiPost, apiPut } from '@/lib/http'
 import type { MerchantRegion } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 
 export interface PageResult<T> { list: T[]; total: number; page: number; pageSize: number; hasMore: boolean }
 export interface MerchantLogin {
@@ -342,4 +343,6 @@ export function saveReply(id: number, content: string) { return apiPut<Record<st
 export function createAppealDraft(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reviews/${id}/appeal-drafts`) }
 export function saveAppeal(id: number, payload: { reason: string; evidenceUrls: string[] }) { return apiPut<Record<string, unknown>>(`/api/b/v1/review-appeals/${id}`, payload) }
 export function submitAppeal(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/review-appeals/${id}/submit`) }
-export function regionLabel(region: MerchantRegion) { return region === 'EU' ? '欧洲区' : '国内区' }
+export function regionLabel(region: MerchantRegion) {
+  return merchantStringsForRegion(region).common.regionLabel(region)
+}

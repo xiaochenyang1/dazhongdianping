@@ -12,7 +12,7 @@ vi.mock('vue-router', () => ({
     props: { permissions: { type: Array, default: () => [] } },
     template: '<div data-testid="router-view">{{ permissions.join(",") }}</div>',
   },
-  useRoute: () => ({ path: '/dashboard', meta: { title: '经营概览' } }),
+  useRoute: () => ({ path: '/dashboard', meta: { titleKey: 'dashboard' } }),
   useRouter: () => ({ replace: vi.fn() }),
 }))
 
@@ -33,12 +33,12 @@ describe('MerchantLayout', () => {
 
   it('only exposes staff management with staff:manage permission', async () => {
     const without = await render(['coupon:verify'])
-    expect(without.host.textContent).not.toContain('员工管理')
-    expect(without.host.textContent).toContain('券码核销')
+    expect(without.host.textContent).not.toContain('Staff Management')
+    expect(without.host.textContent).toContain('Coupon Verification')
     without.app.unmount()
 
     const owner = await render(['staff:manage'])
-    expect(owner.host.textContent).toContain('员工管理')
+    expect(owner.host.textContent).toContain('Staff Management')
     owner.app.unmount()
   })
 
@@ -49,7 +49,7 @@ describe('MerchantLayout', () => {
     expect(paths).toEqual(['/shops', '/reservations', '/reservation-slots', '/coupons', '/reviews'])
     expect(host.querySelector('[data-testid="router-view"]')?.textContent)
       .toBe('shop:view,reservation:view,review:reply,coupon:verify')
-    expect(host.querySelector('[data-testid="merchant-fixed-region"]')?.textContent).toBe('EU · 欧洲区')
+    expect(host.querySelector('[data-testid="merchant-fixed-region"]')?.textContent).toBe('EU · Europe')
     expect(host.querySelector('header select')).toBeNull()
     app.unmount()
   })

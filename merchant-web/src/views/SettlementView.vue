@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useMerchantSession } from '@/composables/useMerchantSession'
+import { merchantStringsForRegion } from '@/core/merchant_localizations'
 import { fetchSettlementStatus, submitSettlement, type SettlementStatus } from '@/services/merchant'
 
+const { state } = useMerchantSession()
+const strings = computed(() => merchantStringsForRegion(state.region))
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
@@ -24,7 +28,7 @@ async function load() {
     status.value = await fetchSettlementStatus()
     fillForm(status.value)
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '资质状态加载失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.settlement.loadError
   } finally {
     loading.value = false
   }
@@ -44,10 +48,10 @@ async function submit() {
       ...(status.value ?? { merchantId: 0 }),
       ...payload,
       ...result,
-      statusText: result.statusText || '待审核',
+      statusText: result.statusText || strings.value.settlement.fallbackPendingStatusText,
     }
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '资质提交失败'
+    error.value = cause instanceof Error ? cause.message : strings.value.settlement.submitError
   } finally {
     saving.value = false
   }
@@ -60,41 +64,58 @@ onMounted(load)
   <main class="settlement-page">
     <section class="settlement-header">
       <div>
-        <p class="eyebrow">Business verification</p>
-        <h1>经营资质档案</h1>
-        <p>审核通过前，公开业务数据不会被新账号修改。先把材料交齐，再进经营台狠狠干活。</p>
+        <p class="eyebrow">{{ strings.settlement.eyebrow }}</p>
+        <h1>{{ strings.settlement.heading }}</h1>
+        <p>{{ strings.settlement.description }}</p>
       </div>
       <span v-if="status" class="status-pill" :class="`status-${status.status}`">{{ status.statusText }}</span>
     </section>
 
-    <p v-if="loading" class="card feedback">资质状态加载中...</p>
+    <p v-if="loading" class="card feedback">{{ strings.settlement.loadingStatus }}</p>
     <p v-else-if="error && !status" class="card error" role="alert">{{ error }}</p>
 
     <template v-else-if="status">
       <article v-if="status.status === 0" class="card status-card">
-        <p class="eyebrow">审核中</p>
-        <h2>资料已经进入审核队列</h2>
-        <p>提交时间：{{ status.submittedAt || '刚刚提交' }}。审核完成后重新进入此页即可查看结果。</p>
+        <p class="eyebrow">{{ strings.settlement.pendingEyebrow }}</p>
+        <h2>{{ strings.settlement.pendingHeading }}</h2>
+        <p>{{ strings.settlement.pendingSubmittedAt(status.submittedAt) }}</p>
       </article>
 
       <article v-else-if="status.status === 1" class="card status-card status-card--success">
-        <p class="eyebrow">审核通过</p>
-        <h2>经营工作台已经开放</h2>
-        <p>现在可以维护门店、团购、预订、员工和点评经营。</p>
-        <RouterLink class="primary-link" to="/dashboard">进入经营工作台</RouterLink>
+        <p class="eyebrow">{{ strings.settlement.approvedEyebrow }}</p>
+        <h2>{{ strings.settlement.approvedHeading }}</h2>
+        <p>{{ strings.settlement.approvedDescription }}</p>
+        <RouterLink class="primary-link" to="/dashboard">{{ strings.settlement.openWorkbench }}</RouterLink>
       </article>
 
       <form v-if="editable" class="card settlement-form" @submit.prevent="submit">
         <div>
-          <p class="eyebrow">{{ status.status === 2 ? '重新提交' : '首次提交' }}</p>
-          <h2>{{ status.status === 2 ? '根据驳回意见更新材料' : '填写经营资质' }}</h2>
-          <p v-if="status.status === 2" class="rejection-note"><strong>驳回原因：</strong>{{ status.rejectReason }}</p>
+          <p class="eyebrow">
+            {{ status.status === 2 ? strings.settlement.resubmitEyebrow : strings.settlement.firstSubmitEyebrow }}
+          </p>
+          <h2>
+            {{ status.status === 2 ? strings.settlement.resubmitHeading : strings.settlement.firstSubmitHeading }}
+          </h2>
+          <p v-if="status.status === 2" class="rejection-note">
+            <strong>{{ strings.settlement.rejectReasonLabel }}</strong>{{ status.rejectReason }}
+          </p>
         </div>
-        <label>营业执照图片 URL<input v-model.trim="form.licenseUrl" name="licenseUrl" required type="url" /></label>
-        <label>法人或经营者姓名<input v-model.trim="form.legalPerson" name="legalPerson" required /></label>
-        <label>门店照片 URL（每行一张，最多 12 张）<textarea v-model="form.photoLines" name="shopPhotoUrls" required rows="6" /></label>
+        <label>
+          {{ strings.settlement.licenseUrlLabel }}
+          <input v-model.trim="form.licenseUrl" name="licenseUrl" required type="url" />
+        </label>
+        <label>
+          {{ strings.settlement.legalPersonLabel }}
+          <input v-model.trim="form.legalPerson" name="legalPerson" required />
+        </label>
+        <label>
+          {{ strings.settlement.shopPhotoUrlsLabel }}
+          <textarea v-model="form.photoLines" name="shopPhotoUrls" required rows="6" />
+        </label>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
-        <button class="primary-action" :disabled="saving">{{ saving ? '提交中...' : '提交审核' }}</button>
+        <button class="primary-action" :disabled="saving">
+          {{ saving ? strings.settlement.submitting : strings.settlement.submitReview }}
+        </button>
       </form>
     </template>
   </main>

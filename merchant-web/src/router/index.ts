@@ -1,27 +1,31 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useMerchantSession } from '@/composables/useMerchantSession'
+import {
+  merchantStringsForRegion,
+  type MerchantRouteTitleKey,
+} from '@/core/merchant_localizations'
 import { fetchSettlementStatus } from '@/services/merchant'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/login', component: () => import('@/views/LoginView.vue'), meta: { title: '商户登录' } },
-    { path: '/register', component: () => import('@/views/RegisterView.vue'), meta: { title: '商户入驻' } },
-    { path: '/settlement', component: () => import('@/views/SettlementView.vue'), meta: { requiresAuth: true, title: '经营资质' } },
+    { path: '/login', component: () => import('@/views/LoginView.vue'), meta: { titleKey: 'login' } },
+    { path: '/register', component: () => import('@/views/RegisterView.vue'), meta: { titleKey: 'register' } },
+    { path: '/settlement', component: () => import('@/views/SettlementView.vue'), meta: { requiresAuth: true, titleKey: 'settlement' } },
     {
       path: '/', component: () => import('@/layouts/MerchantLayout.vue'), meta: { requiresAuth: true },
       children: [
         { path: '', redirect: '/dashboard' },
-        { path: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { requiresAuth: true, title: '经营概览' } },
-        { path: 'shops', component: () => import('@/views/ShopsView.vue'), meta: { requiresAuth: true, title: '门店管理' } },
-        { path: 'reservations', component: () => import('@/views/ReservationsView.vue'), meta: { requiresAuth: true, title: '预订处理' } },
-        { path: 'reservation-slots', component: () => import('@/views/ReservationSlotsView.vue'), meta: { requiresAuth: true, title: '预订时段' } },
-        { path: 'deals', component: () => import('@/views/DealsView.vue'), meta: { requiresAuth: true, title: '团购管理' } },
-        { path: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { requiresAuth: true, title: '订单退款' } },
-        { path: 'coupons', component: () => import('@/views/CouponsView.vue'), meta: { requiresAuth: true, title: '券码核销' } },
-      { path: 'reviews', component: () => import('@/views/ReviewsView.vue'), meta: { requiresAuth: true, title: '点评经营' } },
-        { path: 'verified', component: () => import('@/views/VerifiedCertificationView.vue'), meta: { requiresAuth: true, title: '认证商户' } },
-      { path: 'staffs', component: () => import('@/views/StaffsView.vue'), meta: { requiresAuth: true, title: '员工管理' } },
+        { path: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { requiresAuth: true, titleKey: 'dashboard' } },
+        { path: 'shops', component: () => import('@/views/ShopsView.vue'), meta: { requiresAuth: true, titleKey: 'shops' } },
+        { path: 'reservations', component: () => import('@/views/ReservationsView.vue'), meta: { requiresAuth: true, titleKey: 'reservations' } },
+        { path: 'reservation-slots', component: () => import('@/views/ReservationSlotsView.vue'), meta: { requiresAuth: true, titleKey: 'reservationSlots' } },
+        { path: 'deals', component: () => import('@/views/DealsView.vue'), meta: { requiresAuth: true, titleKey: 'deals' } },
+        { path: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { requiresAuth: true, titleKey: 'orders' } },
+        { path: 'coupons', component: () => import('@/views/CouponsView.vue'), meta: { requiresAuth: true, titleKey: 'coupons' } },
+        { path: 'reviews', component: () => import('@/views/ReviewsView.vue'), meta: { requiresAuth: true, titleKey: 'reviews' } },
+        { path: 'verified', component: () => import('@/views/VerifiedCertificationView.vue'), meta: { requiresAuth: true, titleKey: 'verified' } },
+        { path: 'staffs', component: () => import('@/views/StaffsView.vue'), meta: { requiresAuth: true, titleKey: 'staffs' } },
       ],
     },
   ],
@@ -43,5 +47,15 @@ router.beforeEach(async (to) => {
   return true
 })
 
-router.afterEach((to) => { document.title = `${String(to.meta.title ?? '商户工作台')} | 大众点评` })
+function routeTitleKey(titleKey: unknown): MerchantRouteTitleKey {
+  return typeof titleKey === 'string' ? titleKey as MerchantRouteTitleKey : 'workbench'
+}
+
+router.afterEach((to) => {
+  const { state } = useMerchantSession()
+  const strings = merchantStringsForRegion(state.region)
+  const title = strings.routeTitles[routeTitleKey(to.meta.titleKey)]
+  document.title = `${title} | ${strings.brand}`
+})
+
 export default router
