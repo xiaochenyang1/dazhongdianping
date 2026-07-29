@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { getAdminDealDetail, listAuditTasks, passAuditTask, rejectAuditTask } from '@/services/admin'
 import type { AdminAuditTask, AdminDealDetail, PageResult } from '@/types/admin'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const loading = ref(false)
 const detailLoading = ref(false)
 const acting = ref(false)
@@ -24,14 +26,42 @@ const selectedTask = computed(
     pageState.value?.list[0] ??
     null,
 )
+const canHandleSelected = computed(() => canWrite.value && selectedTask.value?.status === 0)
+
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+function taskStatusText(task: AdminAuditTask) {
+  return strings.value.dealAudit.statusText(task.status, task.statusText)
+}
+
+function merchantLabel(task: AdminAuditTask) {
+  return task.submittedBy || strings.value.dealAudit.merchantFallback
+}
+
+function shopLabel(task: AdminAuditTask) {
+  return task.shopName || strings.value.dealAudit.shopFallback(task.shopId)
+}
+
+function titleLabel(task: AdminAuditTask) {
+  return task.summary || strings.value.dealAudit.titleFallback
+}
+
+function taskActionLabel(taskId: number) {
+  return selectedTaskId.value === taskId
+    ? strings.value.dealAudit.selected
+    : strings.value.dealAudit.view
+}
 
 async function loadDealDetail(dealId: number) {
   detailLoading.value = true
+  dealDetail.value = null
   try {
     dealDetail.value = await getAdminDealDetail(dealId)
-  } catch (error) {
+  } catch (cause) {
     dealDetail.value = null
-    errorMessage.value = error instanceof Error ? error.message : '团购详情加载失败'
+    errorMessage.value = messageOf(cause, strings.value.dealAudit.detailLoadError)
   } finally {
     detailLoading.value = false
   }
@@ -60,8 +90,8 @@ async function loadTasks() {
     } else {
       dealDetail.value = null
     }
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '团购审核任务加载失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.dealAudit.loadError)
   } finally {
     loading.value = false
   }
@@ -81,19 +111,19 @@ async function selectTask(taskId: number) {
 
 async function handlePass() {
   const task = selectedTask.value
-  if (!canWrite.value || task?.status !== 0) return
+  if (!canHandleSelected.value || !task) return
 
   acting.value = true
   errorMessage.value = ''
   successMessage.value = ''
   try {
     await passAuditTask(task.id, { remark: approveRemark.value.trim() || undefined })
-    successMessage.value = `团购审核任务 #${task.id} 已通过；商户仍需自行上架后才会公开销售。`
+    successMessage.value = strings.value.dealAudit.passed(task.id)
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '团购审核通过失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.dealAudit.passError)
   } finally {
     acting.value = false
   }
@@ -101,11 +131,11 @@ async function handlePass() {
 
 async function handleReject() {
   const task = selectedTask.value
-  if (!canWrite.value || task?.status !== 0) return
+  if (!canHandleSelected.value || !task) return
 
   const reason = rejectReason.value.trim()
   if (!reason) {
-    errorMessage.value = '驳回原因不能为空。'
+    errorMessage.value = strings.value.dealAudit.rejectReasonRequired
     return
   }
 
@@ -114,12 +144,12 @@ async function handleReject() {
   successMessage.value = ''
   try {
     await rejectAuditTask(task.id, { reason })
-    successMessage.value = `团购审核任务 #${task.id} 已驳回。`
+    successMessage.value = strings.value.dealAudit.rejected(task.id)
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '团购审核驳回失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.dealAudit.rejectError)
   } finally {
     acting.value = false
   }
@@ -135,6 +165,7 @@ watch(
   () => {
     filters.page = 1
     selectedTaskId.value = null
+    dealDetail.value = null
     void loadTasks()
   },
   { immediate: true },
@@ -145,13 +176,11 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">团购审核</p>
-        <h1>商户提交的团购，先审内容再放行。</h1>
-        <p>
-          当前区域 {{ state.region }}。这里只处理 `bizType=2` 的团购/代金券审核；通过后仍由商户主动上架，不会自动开售。
-        </p>
+        <p class="eyebrow">{{ strings.dealAudit.eyebrow }}</p>
+        <h1>{{ strings.dealAudit.heading }}</h1>
+        <p>{{ strings.dealAudit.description(state.region) }}</p>
       </div>
-      <button type="button" class="secondary-button" @click="loadTasks">刷新任务</button>
+      <button type="button" class="secondary-button" @click="loadTasks">{{ strings.dealAudit.refresh }}</button>
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
@@ -161,33 +190,33 @@ watch(
       <section class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">任务列表</p>
-            <h2>团购创建/编辑都会重新进入待审。</h2>
+            <p class="eyebrow">{{ strings.dealAudit.listEyebrow }}</p>
+            <h2>{{ strings.dealAudit.listHeading }}</h2>
           </div>
-          <span class="inline-note">共 {{ pageState?.total ?? 0 }} 条团购审核任务</span>
+          <span class="inline-note">{{ strings.dealAudit.listSummary(pageState?.total ?? 0) }}</span>
         </div>
 
         <div class="toolbar-grid toolbar-grid--filters">
           <label class="field">
-            <span>状态</span>
+            <span>{{ strings.dealAudit.filters.status }}</span>
             <select v-model="filters.status" name="deal-status-filter">
-              <option value="">全部状态</option>
-              <option value="0">待人审</option>
-              <option value="1">通过</option>
-              <option value="2">驳回</option>
+              <option value="">{{ strings.dealAudit.statusOptions.all }}</option>
+              <option value="0">{{ strings.dealAudit.statusOptions.pending }}</option>
+              <option value="1">{{ strings.dealAudit.statusOptions.approved }}</option>
+              <option value="2">{{ strings.dealAudit.statusOptions.rejected }}</option>
             </select>
           </label>
           <label class="field">
-            <span>关键词</span>
+            <span>{{ strings.dealAudit.filters.keyword }}</span>
             <input
               v-model="filters.keyword"
               name="deal-keyword-filter"
               data-testid="deal-keyword-filter"
-              placeholder="商户名 / 门店名 / 团购标题"
+              :placeholder="strings.dealAudit.keywordPlaceholder"
             />
           </label>
           <div class="toolbar-actions">
-            <button type="button" class="primary-button" @click="applyFilters">应用筛选</button>
+            <button type="button" class="primary-button" @click="applyFilters">{{ strings.dealAudit.applyFilters }}</button>
           </div>
         </div>
 
@@ -195,49 +224,43 @@ watch(
           <table class="data-table">
             <thead>
               <tr>
-                <th>任务</th>
-                <th>商户</th>
-                <th>门店</th>
-                <th>团购标题</th>
-                <th>状态</th>
-                <th>操作</th>
+                <th>{{ strings.dealAudit.tableHeaders.task }}</th>
+                <th>{{ strings.dealAudit.tableHeaders.merchant }}</th>
+                <th>{{ strings.dealAudit.tableHeaders.shop }}</th>
+                <th>{{ strings.dealAudit.tableHeaders.title }}</th>
+                <th>{{ strings.dealAudit.tableHeaders.status }}</th>
+                <th>{{ strings.dealAudit.tableHeaders.actions }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="6" class="table-empty">团购审核任务加载中...</td>
+                <td colspan="6" class="table-empty">{{ strings.dealAudit.loading }}</td>
               </tr>
               <tr v-else-if="!pageState?.list.length">
-                <td colspan="6" class="table-empty">当前没有团购审核任务。</td>
+                <td colspan="6" class="table-empty">{{ strings.dealAudit.empty }}</td>
               </tr>
               <tr v-for="task in pageState?.list" :key="task.id">
                 <td>
                   <strong>#{{ task.id }}</strong>
-                  <p>团购 #{{ task.bizId }}</p>
+                  <p>{{ strings.dealAudit.taskLabel(task.bizId) }}</p>
                 </td>
-                <td>{{ task.submittedBy || '未知商户' }}</td>
+                <td>{{ merchantLabel(task) }}</td>
                 <td>
-                  <strong>{{ task.shopName || `shop:${task.shopId || '-'}` }}</strong>
-                  <p v-if="task.shopId">门店 #{{ task.shopId }}</p>
+                  <strong>{{ shopLabel(task) }}</strong>
+                  <p v-if="task.shopId">{{ strings.dealAudit.shopIdLabel(task.shopId) }}</p>
                 </td>
-                <td>{{ task.summary || '暂无标题' }}</td>
+                <td>{{ titleLabel(task) }}</td>
                 <td>
                   <span
                     class="status-pill"
-                    :class="
-                      task.status === 0
-                        ? 'status-pill--warn'
-                        : task.status === 1
-                          ? 'status-pill--good'
-                          : 'status-pill--muted'
-                    "
+                    :class="task.status === 0 ? 'status-pill--warn' : task.status === 1 ? 'status-pill--good' : 'status-pill--muted'"
                   >
-                    {{ task.statusText }}
+                    {{ taskStatusText(task) }}
                   </span>
                 </td>
                 <td>
                   <button type="button" class="table-action" @click="selectTask(task.id)">
-                    {{ selectedTaskId === task.id ? '已选中' : '查看' }}
+                    {{ taskActionLabel(task.id) }}
                   </button>
                 </td>
               </tr>
@@ -250,24 +273,18 @@ watch(
             type="button"
             class="ghost-button"
             :disabled="filters.page <= 1"
-            @click="
-              filters.page--;
-              loadTasks()
-            "
+            @click="filters.page--; loadTasks()"
           >
-            上一页
+            {{ strings.dealAudit.previousPage }}
           </button>
-          <span>第 {{ filters.page }} 页</span>
+          <span>{{ strings.dealAudit.page(filters.page) }}</span>
           <button
             type="button"
             class="ghost-button"
             :disabled="!pageState?.hasMore"
-            @click="
-              filters.page++;
-              loadTasks()
-            "
+            @click="filters.page++; loadTasks()"
           >
-            下一页
+            {{ strings.dealAudit.nextPage }}
           </button>
         </div>
       </section>
@@ -276,75 +293,76 @@ watch(
         <template v-if="selectedTask">
           <div class="editor-header">
             <div>
-              <p class="eyebrow">任务处理</p>
-              <h2>任务 #{{ selectedTask.id }}</h2>
+              <p class="eyebrow">{{ strings.dealAudit.editorEyebrow }}</p>
+              <h2>{{ strings.dealAudit.editorHeading(selectedTask.id) }}</h2>
             </div>
-            <span class="inline-note">{{ selectedTask.statusText }}</span>
+            <span class="inline-note">{{ taskStatusText(selectedTask) }}</span>
           </div>
+
           <div class="meta-grid">
             <div>
-              <span>团购</span>
+              <span>{{ strings.dealAudit.metaLabels.deal }}</span>
               <strong>#{{ selectedTask.bizId }}</strong>
             </div>
             <div>
-              <span>商户</span>
-              <strong>{{ selectedTask.submittedBy || '未知商户' }}</strong>
+              <span>{{ strings.dealAudit.metaLabels.merchant }}</span>
+              <strong>{{ merchantLabel(selectedTask) }}</strong>
             </div>
             <div>
-              <span>门店</span>
-              <strong>{{ selectedTask.shopName || `shop:${selectedTask.shopId || '-'}` }}</strong>
+              <span>{{ strings.dealAudit.metaLabels.shop }}</span>
+              <strong>{{ shopLabel(selectedTask) }}</strong>
             </div>
             <div>
-              <span>区域</span>
+              <span>{{ strings.dealAudit.metaLabels.region }}</span>
               <strong>{{ selectedTask.region }}</strong>
             </div>
             <div>
-              <span>提交时间</span>
+              <span>{{ strings.dealAudit.metaLabels.submittedAt }}</span>
               <strong>{{ selectedTask.createdAt }}</strong>
             </div>
             <div>
-              <span>业务类型</span>
+              <span>{{ strings.dealAudit.metaLabels.bizType }}</span>
               <strong>{{ selectedTask.bizTypeText }}</strong>
             </div>
           </div>
           <div class="hint-card">
-            <strong>团购标题</strong>
-            <p>{{ selectedTask.summary || '暂无标题' }}</p>
+            <strong>{{ strings.dealAudit.tableHeaders.title }}</strong>
+            <p>{{ titleLabel(selectedTask) }}</p>
           </div>
 
-          <div v-if="detailLoading" class="inline-note">团购详情加载中...</div>
+          <div v-if="detailLoading" class="inline-note">{{ strings.dealAudit.detailLoading }}</div>
           <template v-else-if="dealDetail">
             <div class="meta-grid">
               <div>
-                <span>售价</span>
+                <span>{{ strings.dealAudit.detailLabels.price }}</span>
                 <strong>{{ dealDetail.price }} {{ dealDetail.currency }}</strong>
               </div>
               <div>
-                <span>原价</span>
+                <span>{{ strings.dealAudit.detailLabels.originalPrice }}</span>
                 <strong>{{ dealDetail.originalPrice }} {{ dealDetail.currency }}</strong>
               </div>
               <div>
-                <span>库存</span>
+                <span>{{ strings.dealAudit.detailLabels.stock }}</span>
                 <strong>{{ dealDetail.stock }}</strong>
               </div>
               <div>
-                <span>有效期</span>
-                <strong>{{ dealDetail.validStart || '不限' }} ~ {{ dealDetail.validEnd || '不限' }}</strong>
+                <span>{{ strings.dealAudit.detailLabels.validPeriod }}</span>
+                <strong>{{ dealDetail.validStart || strings.dealAudit.unlimited }} ~ {{ dealDetail.validEnd || strings.dealAudit.unlimited }}</strong>
               </div>
             </div>
             <div class="hint-card">
-              <strong>使用规则</strong>
-              <p>{{ dealDetail.rules || '暂无规则' }}</p>
+              <strong>{{ strings.dealAudit.detailLabels.rules }}</strong>
+              <p>{{ dealDetail.rules || strings.dealAudit.noRules }}</p>
             </div>
             <div class="hint-card">
-              <strong>套餐明细</strong>
+              <strong>{{ strings.dealAudit.detailLabels.items }}</strong>
               <div class="table-shell">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>项目</th>
-                      <th>数量</th>
-                      <th>价格</th>
+                      <th>{{ strings.dealAudit.itemHeaders.name }}</th>
+                      <th>{{ strings.dealAudit.itemHeaders.quantity }}</th>
+                      <th>{{ strings.dealAudit.itemHeaders.price }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -354,7 +372,7 @@ watch(
                       <td>{{ item.price }}</td>
                     </tr>
                     <tr v-if="!(dealDetail.items && dealDetail.items.length)">
-                      <td colspan="3" class="table-empty">暂无套餐明细</td>
+                      <td colspan="3" class="table-empty">{{ strings.dealAudit.itemEmpty }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -362,28 +380,28 @@ watch(
             </div>
             <div v-if="dealDetail.coverImage" class="application-photos">
               <a :href="dealDetail.coverImage" target="_blank" rel="noreferrer">
-                <img :src="dealDetail.coverImage" alt="团购封面" />
+                <img :src="dealDetail.coverImage" :alt="strings.dealAudit.detailLabels.coverAlt" />
               </a>
             </div>
           </template>
 
-          <template v-if="canWrite && selectedTask.status === 0">
+          <template v-if="canHandleSelected">
             <label class="field field--full">
-              <span>通过备注</span>
+              <span>{{ strings.dealAudit.approveRemarkLabel }}</span>
               <textarea
                 v-model="approveRemark"
                 name="approve-remark"
                 rows="4"
-                placeholder="可选，记录通过依据。"
+                :placeholder="strings.dealAudit.approveRemarkPlaceholder"
               />
             </label>
             <label class="field field--full">
-              <span>驳回原因</span>
+              <span>{{ strings.dealAudit.rejectReasonLabel }}</span>
               <textarea
                 v-model="rejectReason"
                 name="reject-reason"
                 rows="4"
-                placeholder="必填，商户端会看到这段原因。"
+                :placeholder="strings.dealAudit.rejectReasonPlaceholder"
               />
             </label>
             <div class="form-actions">
@@ -394,7 +412,7 @@ watch(
                 :disabled="acting"
                 @click="handlePass"
               >
-                通过团购
+                {{ strings.dealAudit.approve }}
               </button>
               <button
                 type="button"
@@ -403,14 +421,14 @@ watch(
                 :disabled="acting"
                 @click="handleReject"
               >
-                驳回团购
+                {{ strings.dealAudit.reject }}
               </button>
             </div>
           </template>
-          <p v-else-if="!canWrite" class="inline-note">当前账号仅可查看，无团购审核处理权限。</p>
-          <p v-else class="inline-note">当前任务已经处理，只保留查看。</p>
+          <p v-else-if="!canWrite" class="inline-note">{{ strings.dealAudit.readOnly }}</p>
+          <p v-else class="inline-note">{{ strings.dealAudit.handled }}</p>
         </template>
-        <div v-else class="empty-state">请先选择一条团购审核任务。</div>
+        <div v-else class="empty-state">{{ strings.dealAudit.emptyState }}</div>
       </section>
     </div>
   </section>

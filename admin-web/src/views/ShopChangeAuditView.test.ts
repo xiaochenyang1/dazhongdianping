@@ -98,6 +98,7 @@ describe('ShopChangeAuditView', () => {
     const { app, host } = mountView()
     await flushView()
 
+    expect(host.textContent).toContain('Shop Draft Audit')
     expect(adminMocks.listAuditTasks).toHaveBeenCalledWith({
       region: 'EU',
       bizType: 5,
@@ -117,7 +118,7 @@ describe('ShopChangeAuditView', () => {
     keyword.value = 'Maison'
     keyword.dispatchEvent(new Event('input'))
     const applyButton = [...host.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('应用筛选'),
+      button.textContent?.includes('Apply filters'),
     )
     if (!applyButton) throw new Error('找不到应用筛选按钮')
     applyButton.click()
@@ -132,7 +133,7 @@ describe('ShopChangeAuditView', () => {
     })
 
     const passButton = [...host.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('通过门店草稿'),
+      button.textContent?.includes('Approve shop draft'),
     )
     if (!passButton) throw new Error('找不到通过门店草稿按钮')
     passButton.click()
@@ -148,12 +149,12 @@ describe('ShopChangeAuditView', () => {
     await flushView()
 
     const rejectButton = [...host.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('驳回门店草稿'),
+      button.textContent?.includes('Reject shop draft'),
     )
     if (!rejectButton) throw new Error('找不到驳回门店草稿按钮')
     rejectButton.click()
     await flushView()
-    expect(host.textContent).toContain('驳回原因不能为空')
+    expect(host.textContent).toContain('A rejection reason is required.')
     expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
 
     const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
@@ -174,10 +175,10 @@ describe('ShopChangeAuditView', () => {
     await flushView()
 
     const passButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
-      button.textContent?.includes('通过门店草稿'),
+      button.textContent?.includes('Approve shop draft'),
     )
     const rejectButton = [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
-      button.textContent?.includes('驳回门店草稿'),
+      button.textContent?.includes('Reject shop draft'),
     )
     const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
     if (!passButton || !rejectButton || !reason) throw new Error('找不到门店草稿处理控件')
@@ -192,7 +193,7 @@ describe('ShopChangeAuditView', () => {
     expect(adminMocks.passAuditTask).not.toHaveBeenCalled()
     expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
     expect(host.textContent).toContain('Maison Sichuan Draft')
-    expect(host.textContent).toContain('当前账号只有查看权限')
+    expect(host.textContent).toContain('This account is read-only and cannot process shop drafts.')
     expect(host.querySelector('textarea[name="approve-remark"]')).toBeNull()
     expect(host.querySelector('textarea[name="reject-reason"]')).toBeNull()
     app.unmount()

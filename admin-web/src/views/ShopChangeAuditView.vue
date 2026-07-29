@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
+import { adminStringsForRegion } from '@/core/admin_localizations'
 import { getAdminShopChangeDetail, listAuditTasks, passAuditTask, rejectAuditTask } from '@/services/admin'
 import type { AdminAuditTask, AdminShopChangeDetail, PageResult } from '@/types/admin'
 
 const { state } = useAdminSession()
+const strings = computed(() => adminStringsForRegion(state.region))
 const loading = ref(false)
 const detailLoading = ref(false)
 const acting = ref(false)
@@ -26,13 +28,44 @@ const selectedTask = computed(
 const canWrite = computed(() => state.permissions.includes('audit:shop_change:write'))
 const canHandleSelected = computed(() => canWrite.value && selectedTask.value?.status === 0)
 
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+function taskStatusText(task: AdminAuditTask) {
+  return strings.value.shopChangeAudit.statusText(task.status, task.statusText)
+}
+
+function merchantLabel(task: AdminAuditTask) {
+  return task.submittedBy || strings.value.shopChangeAudit.merchantFallback
+}
+
+function candidateShopLabel(task: AdminAuditTask) {
+  return task.shopName || strings.value.shopChangeAudit.candidateShopFallback
+}
+
+function targetShopLabel(shopId: number | null) {
+  return strings.value.shopChangeAudit.targetShopLabel(shopId)
+}
+
+function summaryLabel(task: AdminAuditTask) {
+  return task.summary || strings.value.shopChangeAudit.summaryFallback
+}
+
+function actionLabel(taskId: number) {
+  return selectedTaskId.value === taskId
+    ? strings.value.shopChangeAudit.selected
+    : strings.value.shopChangeAudit.view
+}
+
 async function loadShopChangeDetail(changeId: number) {
   detailLoading.value = true
+  shopChangeDetail.value = null
   try {
     shopChangeDetail.value = await getAdminShopChangeDetail(changeId)
-  } catch (error) {
+  } catch (cause) {
     shopChangeDetail.value = null
-    errorMessage.value = error instanceof Error ? error.message : '门店草稿详情加载失败'
+    errorMessage.value = messageOf(cause, strings.value.shopChangeAudit.detailLoadError)
   } finally {
     detailLoading.value = false
   }
@@ -61,8 +94,8 @@ async function loadTasks() {
     } else {
       shopChangeDetail.value = null
     }
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '门店草稿审核任务加载失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.shopChangeAudit.loadError)
   } finally {
     loading.value = false
   }
@@ -82,19 +115,19 @@ async function selectTask(taskId: number) {
 
 async function handlePass() {
   const task = selectedTask.value
-  if (!canWrite.value || task?.status !== 0) return
+  if (!canHandleSelected.value || !task) return
 
   acting.value = true
   errorMessage.value = ''
   successMessage.value = ''
   try {
     await passAuditTask(task.id, { remark: approveRemark.value.trim() || undefined })
-    successMessage.value = `门店草稿审核任务 #${task.id} 已通过，变更将应用到线上门店。`
+    successMessage.value = strings.value.shopChangeAudit.passed(task.id)
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '门店草稿审核通过失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.shopChangeAudit.passError)
   } finally {
     acting.value = false
   }
@@ -102,11 +135,11 @@ async function handlePass() {
 
 async function handleReject() {
   const task = selectedTask.value
-  if (!canWrite.value || task?.status !== 0) return
+  if (!canHandleSelected.value || !task) return
 
   const reason = rejectReason.value.trim()
   if (!reason) {
-    errorMessage.value = '驳回原因不能为空。'
+    errorMessage.value = strings.value.shopChangeAudit.rejectReasonRequired
     return
   }
 
@@ -115,12 +148,12 @@ async function handleReject() {
   successMessage.value = ''
   try {
     await rejectAuditTask(task.id, { reason })
-    successMessage.value = `门店草稿审核任务 #${task.id} 已驳回。`
+    successMessage.value = strings.value.shopChangeAudit.rejected(task.id)
     approveRemark.value = ''
     rejectReason.value = ''
     await loadTasks()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '门店草稿审核驳回失败'
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.shopChangeAudit.rejectError)
   } finally {
     acting.value = false
   }
@@ -136,6 +169,7 @@ watch(
   () => {
     filters.page = 1
     selectedTaskId.value = null
+    shopChangeDetail.value = null
     void loadTasks()
   },
   { immediate: true },
@@ -146,13 +180,11 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">门店草稿审核</p>
-        <h1>商户改门店资料，先审再上线。</h1>
-        <p>
-          当前区域 {{ state.region }}。这里只处理 `bizType=5` 的门店完整草稿；通过后整体应用基础资料/相册/菜单，驳回后商户可改草稿重提。
-        </p>
+        <p class="eyebrow">{{ strings.shopChangeAudit.eyebrow }}</p>
+        <h1>{{ strings.shopChangeAudit.heading }}</h1>
+        <p>{{ strings.shopChangeAudit.description(state.region) }}</p>
       </div>
-      <button type="button" class="secondary-button" @click="loadTasks">刷新任务</button>
+      <button type="button" class="secondary-button" @click="loadTasks">{{ strings.shopChangeAudit.refresh }}</button>
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
@@ -162,33 +194,33 @@ watch(
       <section class="content-card">
         <div class="section-headline">
           <div>
-            <p class="eyebrow">任务列表</p>
-            <h2>新建门店和修改门店都走同一套草稿审核。</h2>
+            <p class="eyebrow">{{ strings.shopChangeAudit.listEyebrow }}</p>
+            <h2>{{ strings.shopChangeAudit.listHeading }}</h2>
           </div>
-          <span class="inline-note">共 {{ pageState?.total ?? 0 }} 条门店草稿任务</span>
+          <span class="inline-note">{{ strings.shopChangeAudit.listSummary(pageState?.total ?? 0) }}</span>
         </div>
 
         <div class="toolbar-grid toolbar-grid--filters">
           <label class="field">
-            <span>状态</span>
+            <span>{{ strings.shopChangeAudit.filters.status }}</span>
             <select v-model="filters.status" name="shop-change-status-filter">
-              <option value="">全部状态</option>
-              <option value="0">待人审</option>
-              <option value="1">通过</option>
-              <option value="2">驳回</option>
+              <option value="">{{ strings.shopChangeAudit.statusOptions.all }}</option>
+              <option value="0">{{ strings.shopChangeAudit.statusOptions.pending }}</option>
+              <option value="1">{{ strings.shopChangeAudit.statusOptions.approved }}</option>
+              <option value="2">{{ strings.shopChangeAudit.statusOptions.rejected }}</option>
             </select>
           </label>
           <label class="field">
-            <span>关键词</span>
+            <span>{{ strings.shopChangeAudit.filters.keyword }}</span>
             <input
               v-model="filters.keyword"
               name="shop-change-keyword-filter"
               data-testid="shop-change-keyword-filter"
-              placeholder="商户名 / 门店名 / 摘要"
+              :placeholder="strings.shopChangeAudit.keywordPlaceholder"
             />
           </label>
           <div class="toolbar-actions">
-            <button type="button" class="primary-button" @click="applyFilters">应用筛选</button>
+            <button type="button" class="primary-button" @click="applyFilters">{{ strings.shopChangeAudit.applyFilters }}</button>
           </div>
         </div>
 
@@ -196,50 +228,43 @@ watch(
           <table class="data-table">
             <thead>
               <tr>
-                <th>任务</th>
-                <th>商户</th>
-                <th>候选门店</th>
-                <th>摘要</th>
-                <th>状态</th>
-                <th>操作</th>
+                <th>{{ strings.shopChangeAudit.tableHeaders.task }}</th>
+                <th>{{ strings.shopChangeAudit.tableHeaders.merchant }}</th>
+                <th>{{ strings.shopChangeAudit.tableHeaders.candidateShop }}</th>
+                <th>{{ strings.shopChangeAudit.tableHeaders.summary }}</th>
+                <th>{{ strings.shopChangeAudit.tableHeaders.status }}</th>
+                <th>{{ strings.shopChangeAudit.tableHeaders.actions }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="6" class="table-empty">门店草稿审核任务加载中...</td>
+                <td colspan="6" class="table-empty">{{ strings.shopChangeAudit.loading }}</td>
               </tr>
               <tr v-else-if="!pageState?.list.length">
-                <td colspan="6" class="table-empty">当前没有门店草稿审核任务。</td>
+                <td colspan="6" class="table-empty">{{ strings.shopChangeAudit.empty }}</td>
               </tr>
               <tr v-for="task in pageState?.list" :key="task.id">
                 <td>
                   <strong>#{{ task.id }}</strong>
-                  <p>草稿 #{{ task.bizId }}</p>
+                  <p>{{ strings.shopChangeAudit.taskLabel(task.bizId) }}</p>
                 </td>
-                <td>{{ task.submittedBy || '未知商户' }}</td>
+                <td>{{ merchantLabel(task) }}</td>
                 <td>
-                  <strong>{{ task.shopName || '未命名门店' }}</strong>
-                  <p v-if="task.shopId">目标门店 #{{ task.shopId }}</p>
-                  <p v-else>新建门店</p>
+                  <strong>{{ candidateShopLabel(task) }}</strong>
+                  <p>{{ targetShopLabel(task.shopId) }}</p>
                 </td>
-                <td>{{ task.summary || '暂无摘要' }}</td>
+                <td>{{ summaryLabel(task) }}</td>
                 <td>
                   <span
                     class="status-pill"
-                    :class="
-                      task.status === 0
-                        ? 'status-pill--warn'
-                        : task.status === 1
-                          ? 'status-pill--good'
-                          : 'status-pill--muted'
-                    "
+                    :class="task.status === 0 ? 'status-pill--warn' : task.status === 1 ? 'status-pill--good' : 'status-pill--muted'"
                   >
-                    {{ task.statusText }}
+                    {{ taskStatusText(task) }}
                   </span>
                 </td>
                 <td>
                   <button type="button" class="table-action" @click="selectTask(task.id)">
-                    {{ selectedTaskId === task.id ? '已选中' : '查看' }}
+                    {{ actionLabel(task.id) }}
                   </button>
                 </td>
               </tr>
@@ -252,24 +277,18 @@ watch(
             type="button"
             class="ghost-button"
             :disabled="filters.page <= 1"
-            @click="
-              filters.page--;
-              loadTasks()
-            "
+            @click="filters.page--; loadTasks()"
           >
-            上一页
+            {{ strings.shopChangeAudit.previousPage }}
           </button>
-          <span>第 {{ filters.page }} 页</span>
+          <span>{{ strings.shopChangeAudit.page(filters.page) }}</span>
           <button
             type="button"
             class="ghost-button"
             :disabled="!pageState?.hasMore"
-            @click="
-              filters.page++;
-              loadTasks()
-            "
+            @click="filters.page++; loadTasks()"
           >
-            下一页
+            {{ strings.shopChangeAudit.nextPage }}
           </button>
         </div>
       </section>
@@ -278,72 +297,72 @@ watch(
         <template v-if="selectedTask">
           <div class="editor-header">
             <div>
-              <p class="eyebrow">任务处理</p>
-              <h2>任务 #{{ selectedTask.id }}</h2>
+              <p class="eyebrow">{{ strings.shopChangeAudit.editorEyebrow }}</p>
+              <h2>{{ strings.shopChangeAudit.editorHeading(selectedTask.id) }}</h2>
             </div>
-            <span class="inline-note">{{ selectedTask.statusText }}</span>
+            <span class="inline-note">{{ taskStatusText(selectedTask) }}</span>
           </div>
           <div class="meta-grid">
             <div>
-              <span>草稿</span>
+              <span>{{ strings.shopChangeAudit.metaLabels.draft }}</span>
               <strong>#{{ selectedTask.bizId }}</strong>
             </div>
             <div>
-              <span>商户</span>
-              <strong>{{ selectedTask.submittedBy || '未知商户' }}</strong>
+              <span>{{ strings.shopChangeAudit.metaLabels.merchant }}</span>
+              <strong>{{ merchantLabel(selectedTask) }}</strong>
             </div>
             <div>
-              <span>候选门店</span>
-              <strong>{{ selectedTask.shopName || '未命名门店' }}</strong>
+              <span>{{ strings.shopChangeAudit.metaLabels.candidateShop }}</span>
+              <strong>{{ candidateShopLabel(selectedTask) }}</strong>
             </div>
             <div>
-              <span>目标门店</span>
-              <strong>{{ selectedTask.shopId ? `#${selectedTask.shopId}` : '新建门店' }}</strong>
+              <span>{{ strings.shopChangeAudit.metaLabels.targetShop }}</span>
+              <strong>{{ targetShopLabel(selectedTask.shopId) }}</strong>
             </div>
             <div>
-              <span>区域</span>
+              <span>{{ strings.shopChangeAudit.metaLabels.region }}</span>
               <strong>{{ selectedTask.region }}</strong>
             </div>
             <div>
-              <span>提交时间</span>
+              <span>{{ strings.shopChangeAudit.metaLabels.submittedAt }}</span>
               <strong>{{ selectedTask.createdAt }}</strong>
             </div>
           </div>
           <div class="hint-card">
-            <strong>门店摘要</strong>
-            <p>{{ selectedTask.summary || '暂无摘要' }}</p>
+            <strong>{{ strings.shopChangeAudit.detailSummaryLabel }}</strong>
+            <p>{{ summaryLabel(selectedTask) }}</p>
           </div>
 
-          <div v-if="detailLoading" class="inline-note">门店草稿详情加载中...</div>
+          <div v-if="detailLoading" class="inline-note">{{ strings.shopChangeAudit.detailLoading }}</div>
           <template v-else-if="shopChangeDetail">
             <div class="meta-grid">
               <div>
-                <span>类型</span>
-                <strong>{{ shopChangeDetail.changeType === 1 ? '新门店' : '修改门店' }}</strong>
+                <span>{{ strings.shopChangeAudit.detailLabels.changeType }}</span>
+                <strong>{{ strings.shopChangeAudit.changeTypeText(shopChangeDetail.changeType) }}</strong>
               </div>
               <div>
-                <span>电话</span>
-                <strong>{{ shopChangeDetail.phone || '-' }}</strong>
+                <span>{{ strings.shopChangeAudit.detailLabels.phone }}</span>
+                <strong>{{ shopChangeDetail.phone || strings.shopChangeAudit.emptyValue }}</strong>
               </div>
               <div>
-                <span>人均</span>
+                <span>{{ strings.shopChangeAudit.detailLabels.pricePerCapita }}</span>
                 <strong>{{ shopChangeDetail.pricePerCapita }} {{ shopChangeDetail.currency }}</strong>
               </div>
               <div>
-                <span>营业时间</span>
-                <strong>{{ shopChangeDetail.businessHours || '-' }}</strong>
+                <span>{{ strings.shopChangeAudit.detailLabels.businessHours }}</span>
+                <strong>{{ shopChangeDetail.businessHours || strings.shopChangeAudit.emptyValue }}</strong>
               </div>
               <div>
-                <span>地址</span>
-                <strong>{{ shopChangeDetail.address || '-' }}</strong>
+                <span>{{ strings.shopChangeAudit.detailLabels.address }}</span>
+                <strong>{{ shopChangeDetail.address || strings.shopChangeAudit.emptyValue }}</strong>
               </div>
               <div>
-                <span>标签</span>
-                <strong>{{ (shopChangeDetail.tags || []).join(', ') || '-' }}</strong>
+                <span>{{ strings.shopChangeAudit.detailLabels.tags }}</span>
+                <strong>{{ (shopChangeDetail.tags || []).join(', ') || strings.shopChangeAudit.emptyValue }}</strong>
               </div>
             </div>
             <div class="hint-card">
-              <strong>相册</strong>
+              <strong>{{ strings.shopChangeAudit.detailLabels.gallery }}</strong>
               <div class="application-photos">
                 <a
                   v-for="(photo, index) in shopChangeDetail.photos || []"
@@ -352,30 +371,32 @@ watch(
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <img :src="photo.imageUrl" :alt="`门店图片 ${index + 1}`" />
+                  <img :src="photo.imageUrl" :alt="strings.shopChangeAudit.photoAlt(index)" />
                 </a>
-                <p v-if="!(shopChangeDetail.photos && shopChangeDetail.photos.length)" class="inline-note">暂无相册</p>
+                <p v-if="!(shopChangeDetail.photos && shopChangeDetail.photos.length)" class="inline-note">
+                  {{ strings.shopChangeAudit.emptyGallery }}
+                </p>
               </div>
             </div>
             <div class="hint-card">
-              <strong>菜单</strong>
+              <strong>{{ strings.shopChangeAudit.detailLabels.menu }}</strong>
               <div class="table-shell">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>菜品</th>
-                      <th>价格</th>
-                      <th>推荐理由</th>
+                      <th>{{ strings.shopChangeAudit.dishHeaders.name }}</th>
+                      <th>{{ strings.shopChangeAudit.dishHeaders.price }}</th>
+                      <th>{{ strings.shopChangeAudit.dishHeaders.recommendReason }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="(dish, index) in shopChangeDetail.dishes || []" :key="`${dish.name}-${index}`">
                       <td>{{ dish.name }}</td>
                       <td>{{ dish.price }}</td>
-                      <td>{{ dish.recommendReason || '-' }}</td>
+                      <td>{{ dish.recommendReason || strings.shopChangeAudit.dishRecommendFallback }}</td>
                     </tr>
                     <tr v-if="!(shopChangeDetail.dishes && shopChangeDetail.dishes.length)">
-                      <td colspan="3" class="table-empty">暂无菜单</td>
+                      <td colspan="3" class="table-empty">{{ strings.shopChangeAudit.dishEmpty }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -385,36 +406,36 @@ watch(
 
           <template v-if="canHandleSelected">
             <label class="field field--full">
-              <span>通过备注</span>
+              <span>{{ strings.shopChangeAudit.approveRemarkLabel }}</span>
               <textarea
                 v-model="approveRemark"
                 name="approve-remark"
                 rows="4"
-                placeholder="可选，记录通过依据。"
+                :placeholder="strings.shopChangeAudit.approveRemarkPlaceholder"
               />
             </label>
             <label class="field field--full">
-              <span>驳回原因</span>
+              <span>{{ strings.shopChangeAudit.rejectReasonLabel }}</span>
               <textarea
                 v-model="rejectReason"
                 name="reject-reason"
                 rows="4"
-                placeholder="必填，商户端会看到这段原因。"
+                :placeholder="strings.shopChangeAudit.rejectReasonPlaceholder"
               />
             </label>
             <div class="form-actions">
               <button type="button" class="primary-button" :disabled="acting" @click="handlePass">
-                通过门店草稿
+                {{ strings.shopChangeAudit.approve }}
               </button>
               <button type="button" class="secondary-button" :disabled="acting" @click="handleReject">
-                驳回门店草稿
+                {{ strings.shopChangeAudit.reject }}
               </button>
             </div>
           </template>
-          <p v-else-if="!canWrite" class="inline-note">当前账号只有查看权限，无法处理门店草稿。</p>
-          <p v-else class="inline-note">当前任务已经处理，只保留查看。</p>
+          <p v-else-if="!canWrite" class="inline-note">{{ strings.shopChangeAudit.readOnly }}</p>
+          <p v-else class="inline-note">{{ strings.shopChangeAudit.handled }}</p>
         </template>
-        <div v-else class="empty-state">请先选择一条门店草稿审核任务。</div>
+        <div v-else class="empty-state">{{ strings.shopChangeAudit.emptyState }}</div>
       </section>
     </div>
   </section>

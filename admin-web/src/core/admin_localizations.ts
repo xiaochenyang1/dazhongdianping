@@ -455,6 +455,183 @@ export interface AdminStrings {
     handled: string
     emptyState: string
   }
+  dealAudit: {
+    loadError: string
+    detailLoadError: string
+    passError: string
+    rejectError: string
+    rejectReasonRequired: string
+    passed: (taskId: number) => string
+    rejected: (taskId: number) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    listEyebrow: string
+    listHeading: string
+    listSummary: (total: number) => string
+    filters: {
+      status: string
+      keyword: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    keywordPlaceholder: string
+    applyFilters: string
+    tableHeaders: {
+      task: string
+      merchant: string
+      shop: string
+      title: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    taskLabel: (bizId: number) => string
+    merchantFallback: string
+    shopFallback: (shopId: number | null) => string
+    shopIdLabel: (shopId: number) => string
+    titleFallback: string
+    statusText: (status: number, fallback?: string) => string
+    selected: string
+    view: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    editorEyebrow: string
+    editorHeading: (taskId: number) => string
+    metaLabels: {
+      deal: string
+      merchant: string
+      shop: string
+      region: string
+      submittedAt: string
+      bizType: string
+    }
+    detailLoading: string
+    detailLabels: {
+      price: string
+      originalPrice: string
+      stock: string
+      validPeriod: string
+      rules: string
+      items: string
+      coverAlt: string
+    }
+    unlimited: string
+    noRules: string
+    itemHeaders: {
+      name: string
+      quantity: string
+      price: string
+    }
+    itemEmpty: string
+    approveRemarkLabel: string
+    approveRemarkPlaceholder: string
+    rejectReasonLabel: string
+    rejectReasonPlaceholder: string
+    approve: string
+    reject: string
+    readOnly: string
+    handled: string
+    emptyState: string
+  }
+  shopChangeAudit: {
+    loadError: string
+    detailLoadError: string
+    passError: string
+    rejectError: string
+    rejectReasonRequired: string
+    passed: (taskId: number) => string
+    rejected: (taskId: number) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    listEyebrow: string
+    listHeading: string
+    listSummary: (total: number) => string
+    filters: {
+      status: string
+      keyword: string
+    }
+    statusOptions: {
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+    }
+    keywordPlaceholder: string
+    applyFilters: string
+    tableHeaders: {
+      task: string
+      merchant: string
+      candidateShop: string
+      summary: string
+      status: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    taskLabel: (bizId: number) => string
+    merchantFallback: string
+    candidateShopFallback: string
+    targetShopLabel: (shopId: number | null) => string
+    summaryFallback: string
+    statusText: (status: number, fallback?: string) => string
+    selected: string
+    view: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    editorEyebrow: string
+    editorHeading: (taskId: number) => string
+    metaLabels: {
+      draft: string
+      merchant: string
+      candidateShop: string
+      targetShop: string
+      region: string
+      submittedAt: string
+    }
+    detailSummaryLabel: string
+    detailLoading: string
+    detailLabels: {
+      changeType: string
+      phone: string
+      pricePerCapita: string
+      businessHours: string
+      address: string
+      tags: string
+      gallery: string
+      menu: string
+    }
+    changeTypeText: (changeType: number) => string
+    emptyValue: string
+    photoAlt: (index: number) => string
+    emptyGallery: string
+    dishHeaders: {
+      name: string
+      price: string
+      recommendReason: string
+    }
+    dishRecommendFallback: string
+    dishEmpty: string
+    approveRemarkLabel: string
+    approveRemarkPlaceholder: string
+    rejectReasonLabel: string
+    rejectReasonPlaceholder: string
+    approve: string
+    reject: string
+    readOnly: string
+    handled: string
+    emptyState: string
+  }
   reviewAppealAudit: {
     loadError: string
     actionError: string
@@ -1826,6 +2003,183 @@ const zhCnStrings: AdminStrings = {
     readOnly: '当前账号只有查看权限，无法处理帖子审核。',
     handled: '当前任务已经处理，只保留查看。',
     emptyState: '请先选择一条帖子审核任务。',
+  },
+  dealAudit: {
+    loadError: '团购审核任务加载失败',
+    detailLoadError: '团购详情加载失败',
+    passError: '团购审核通过失败',
+    rejectError: '团购审核驳回失败',
+    rejectReasonRequired: '驳回原因不能为空。',
+    passed: (taskId) => `团购审核任务 #${taskId} 已通过；商户仍需自行上架后才会公开销售。`,
+    rejected: (taskId) => `团购审核任务 #${taskId} 已驳回。`,
+    eyebrow: '团购审核',
+    heading: '商户提交的团购，先审内容再放行。',
+    description: (region) => `当前区域 ${region}。这里只处理 bizType=2 的团购/代金券审核；通过后仍由商户主动上架，不会自动开售。`,
+    refresh: '刷新任务',
+    listEyebrow: '任务列表',
+    listHeading: '团购创建/编辑都会重新进入待审。',
+    listSummary: (total) => `共 ${total} 条团购审核任务`,
+    filters: {
+      status: '状态',
+      keyword: '关键词',
+    },
+    statusOptions: {
+      all: '全部状态',
+      pending: '待人审',
+      approved: '通过',
+      rejected: '驳回',
+    },
+    keywordPlaceholder: '商户名 / 门店名 / 团购标题',
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      task: '任务',
+      merchant: '商户',
+      shop: '门店',
+      title: '团购标题',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '团购审核任务加载中...',
+    empty: '当前没有团购审核任务。',
+    taskLabel: (bizId) => `团购 #${bizId}`,
+    merchantFallback: '未知商户',
+    shopFallback: (shopId) => `shop:${shopId || '-'}`,
+    shopIdLabel: (shopId) => `门店 #${shopId}`,
+    titleFallback: '暂无标题',
+    statusText: zhAuditTaskStatusText,
+    selected: '已选中',
+    view: '查看',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    editorEyebrow: '任务处理',
+    editorHeading: (taskId) => `任务 #${taskId}`,
+    metaLabels: {
+      deal: '团购',
+      merchant: '商户',
+      shop: '门店',
+      region: '区域',
+      submittedAt: '提交时间',
+      bizType: '业务类型',
+    },
+    detailLoading: '团购详情加载中...',
+    detailLabels: {
+      price: '售价',
+      originalPrice: '原价',
+      stock: '库存',
+      validPeriod: '有效期',
+      rules: '使用规则',
+      items: '套餐明细',
+      coverAlt: '团购封面',
+    },
+    unlimited: '不限',
+    noRules: '暂无规则',
+    itemHeaders: {
+      name: '项目',
+      quantity: '数量',
+      price: '价格',
+    },
+    itemEmpty: '暂无套餐明细',
+    approveRemarkLabel: '通过备注',
+    approveRemarkPlaceholder: '可选，记录通过依据。',
+    rejectReasonLabel: '驳回原因',
+    rejectReasonPlaceholder: '必填，商户端会看到这段原因。',
+    approve: '通过团购',
+    reject: '驳回团购',
+    readOnly: '当前账号仅可查看，无团购审核处理权限。',
+    handled: '当前任务已经处理，只保留查看。',
+    emptyState: '请先选择一条团购审核任务。',
+  },
+  shopChangeAudit: {
+    loadError: '门店草稿审核任务加载失败',
+    detailLoadError: '门店草稿详情加载失败',
+    passError: '门店草稿审核通过失败',
+    rejectError: '门店草稿审核驳回失败',
+    rejectReasonRequired: '驳回原因不能为空。',
+    passed: (taskId) => `门店草稿审核任务 #${taskId} 已通过，变更将应用到线上门店。`,
+    rejected: (taskId) => `门店草稿审核任务 #${taskId} 已驳回。`,
+    eyebrow: '门店草稿审核',
+    heading: '商户改门店资料，先审再上线。',
+    description: (region) => `当前区域 ${region}。这里只处理 bizType=5 的门店完整草稿；通过后整体应用基础资料、相册和菜单，驳回后商户可改草稿重提。`,
+    refresh: '刷新任务',
+    listEyebrow: '任务列表',
+    listHeading: '新建门店和修改门店都走同一套草稿审核。',
+    listSummary: (total) => `共 ${total} 条门店草稿任务`,
+    filters: {
+      status: '状态',
+      keyword: '关键词',
+    },
+    statusOptions: {
+      all: '全部状态',
+      pending: '待人审',
+      approved: '通过',
+      rejected: '驳回',
+    },
+    keywordPlaceholder: '商户名 / 门店名 / 摘要',
+    applyFilters: '应用筛选',
+    tableHeaders: {
+      task: '任务',
+      merchant: '商户',
+      candidateShop: '候选门店',
+      summary: '摘要',
+      status: '状态',
+      actions: '操作',
+    },
+    loading: '门店草稿审核任务加载中...',
+    empty: '当前没有门店草稿审核任务。',
+    taskLabel: (bizId) => `草稿 #${bizId}`,
+    merchantFallback: '未知商户',
+    candidateShopFallback: '未命名门店',
+    targetShopLabel: (shopId) => shopId ? `#${shopId}` : '新建门店',
+    summaryFallback: '暂无摘要',
+    statusText: zhAuditTaskStatusText,
+    selected: '已选中',
+    view: '查看',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    editorEyebrow: '任务处理',
+    editorHeading: (taskId) => `任务 #${taskId}`,
+    metaLabels: {
+      draft: '草稿',
+      merchant: '商户',
+      candidateShop: '候选门店',
+      targetShop: '目标门店',
+      region: '区域',
+      submittedAt: '提交时间',
+    },
+    detailSummaryLabel: '门店摘要',
+    detailLoading: '门店草稿详情加载中...',
+    detailLabels: {
+      changeType: '类型',
+      phone: '电话',
+      pricePerCapita: '人均',
+      businessHours: '营业时间',
+      address: '地址',
+      tags: '标签',
+      gallery: '相册',
+      menu: '菜单',
+    },
+    changeTypeText: (changeType) => changeType === 1 ? '新门店' : '修改门店',
+    emptyValue: '-',
+    photoAlt: (index) => `门店图片 ${index + 1}`,
+    emptyGallery: '暂无相册',
+    dishHeaders: {
+      name: '菜品',
+      price: '价格',
+      recommendReason: '推荐理由',
+    },
+    dishRecommendFallback: '-',
+    dishEmpty: '暂无菜单',
+    approveRemarkLabel: '通过备注',
+    approveRemarkPlaceholder: '可选，记录通过依据。',
+    rejectReasonLabel: '驳回原因',
+    rejectReasonPlaceholder: '必填，商户端会看到这段原因。',
+    approve: '通过门店草稿',
+    reject: '驳回门店草稿',
+    readOnly: '当前账号只有查看权限，无法处理门店草稿。',
+    handled: '当前任务已经处理，只保留查看。',
+    emptyState: '请先选择一条门店草稿审核任务。',
   },
   reviewAppealAudit: {
     loadError: '申诉任务加载失败',
@@ -3235,6 +3589,183 @@ const enStrings: AdminStrings = {
     readOnly: 'This account is read-only and cannot process post audits.',
     handled: 'This task has already been handled. View only.',
     emptyState: 'Select a post audit task first.',
+  },
+  dealAudit: {
+    loadError: 'Failed to load deal audit tasks.',
+    detailLoadError: 'Failed to load the deal details.',
+    passError: 'Failed to approve the deal.',
+    rejectError: 'Failed to reject the deal.',
+    rejectReasonRequired: 'A rejection reason is required.',
+    passed: (taskId) => `Deal audit task #${taskId} approved. The merchant still needs to publish it manually before it goes live.`,
+    rejected: (taskId) => `Deal audit task #${taskId} rejected.`,
+    eyebrow: 'Deal Audit',
+    heading: 'Review merchant-submitted deals before they are allowed through.',
+    description: (region) => `Current region ${region}. This queue only handles bizType=2 deal and voucher audits. Even after approval, merchants still publish them manually.`,
+    refresh: 'Refresh tasks',
+    listEyebrow: 'Task list',
+    listHeading: 'Creating or editing a deal pushes it back into review.',
+    listSummary: (total) => `${total} deal audit tasks`,
+    filters: {
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    keywordPlaceholder: 'Merchant / shop / deal title',
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      task: 'Task',
+      merchant: 'Merchant',
+      shop: 'Shop',
+      title: 'Deal title',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading deal audit tasks...',
+    empty: 'No deal audit tasks.',
+    taskLabel: (bizId) => `Deal #${bizId}`,
+    merchantFallback: 'Unknown merchant',
+    shopFallback: (shopId) => `shop:${shopId || '-'}`,
+    shopIdLabel: (shopId) => `Shop #${shopId}`,
+    titleFallback: 'No title',
+    statusText: enAuditTaskStatusText,
+    selected: 'Selected',
+    view: 'View',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    editorEyebrow: 'Task Handling',
+    editorHeading: (taskId) => `Task #${taskId}`,
+    metaLabels: {
+      deal: 'Deal',
+      merchant: 'Merchant',
+      shop: 'Shop',
+      region: 'Region',
+      submittedAt: 'Submitted at',
+      bizType: 'Business type',
+    },
+    detailLoading: 'Loading deal details...',
+    detailLabels: {
+      price: 'Price',
+      originalPrice: 'Original price',
+      stock: 'Stock',
+      validPeriod: 'Validity period',
+      rules: 'Usage rules',
+      items: 'Package items',
+      coverAlt: 'Deal cover',
+    },
+    unlimited: 'Unlimited',
+    noRules: 'No rules',
+    itemHeaders: {
+      name: 'Item',
+      quantity: 'Quantity',
+      price: 'Price',
+    },
+    itemEmpty: 'No package items.',
+    approveRemarkLabel: 'Approval note',
+    approveRemarkPlaceholder: 'Optional. Record the approval basis.',
+    rejectReasonLabel: 'Rejection reason',
+    rejectReasonPlaceholder: 'Required. The merchant sees this explanation.',
+    approve: 'Approve deal',
+    reject: 'Reject deal',
+    readOnly: 'This account is read-only and cannot process deal audits.',
+    handled: 'This task has already been handled. View only.',
+    emptyState: 'Select a deal audit task first.',
+  },
+  shopChangeAudit: {
+    loadError: 'Failed to load shop draft audit tasks.',
+    detailLoadError: 'Failed to load the shop draft details.',
+    passError: 'Failed to approve the shop draft.',
+    rejectError: 'Failed to reject the shop draft.',
+    rejectReasonRequired: 'A rejection reason is required.',
+    passed: (taskId) => `Shop draft audit task #${taskId} approved. The changes will be applied to the live shop.`,
+    rejected: (taskId) => `Shop draft audit task #${taskId} rejected.`,
+    eyebrow: 'Shop Draft Audit',
+    heading: 'Review merchant shop changes before they go live.',
+    description: (region) => `Current region ${region}. This queue only handles bizType=5 full shop drafts. Approval applies the base profile, gallery, and menu together; rejection sends the draft back for revision.`,
+    refresh: 'Refresh tasks',
+    listEyebrow: 'Task list',
+    listHeading: 'New shops and edited shops both pass through the same draft review flow.',
+    listSummary: (total) => `${total} shop draft tasks`,
+    filters: {
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    statusOptions: {
+      all: 'All statuses',
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+    },
+    keywordPlaceholder: 'Merchant / shop / summary',
+    applyFilters: 'Apply filters',
+    tableHeaders: {
+      task: 'Task',
+      merchant: 'Merchant',
+      candidateShop: 'Candidate shop',
+      summary: 'Summary',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    loading: 'Loading shop draft audit tasks...',
+    empty: 'No shop draft audit tasks.',
+    taskLabel: (bizId) => `Draft #${bizId}`,
+    merchantFallback: 'Unknown merchant',
+    candidateShopFallback: 'Untitled shop',
+    targetShopLabel: (shopId) => shopId ? `#${shopId}` : 'New shop',
+    summaryFallback: 'No summary',
+    statusText: enAuditTaskStatusText,
+    selected: 'Selected',
+    view: 'View',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    editorEyebrow: 'Task Handling',
+    editorHeading: (taskId) => `Task #${taskId}`,
+    metaLabels: {
+      draft: 'Draft',
+      merchant: 'Merchant',
+      candidateShop: 'Candidate shop',
+      targetShop: 'Target shop',
+      region: 'Region',
+      submittedAt: 'Submitted at',
+    },
+    detailSummaryLabel: 'Shop summary',
+    detailLoading: 'Loading shop draft details...',
+    detailLabels: {
+      changeType: 'Change type',
+      phone: 'Phone',
+      pricePerCapita: 'Per-capita price',
+      businessHours: 'Business hours',
+      address: 'Address',
+      tags: 'Tags',
+      gallery: 'Gallery',
+      menu: 'Menu',
+    },
+    changeTypeText: (changeType) => changeType === 1 ? 'New shop' : 'Existing shop update',
+    emptyValue: '-',
+    photoAlt: (index) => `Shop photo ${index + 1}`,
+    emptyGallery: 'No gallery yet.',
+    dishHeaders: {
+      name: 'Dish',
+      price: 'Price',
+      recommendReason: 'Recommendation',
+    },
+    dishRecommendFallback: '-',
+    dishEmpty: 'No menu yet.',
+    approveRemarkLabel: 'Approval note',
+    approveRemarkPlaceholder: 'Optional. Record the approval basis.',
+    rejectReasonLabel: 'Rejection reason',
+    rejectReasonPlaceholder: 'Required. The merchant sees this explanation.',
+    approve: 'Approve shop draft',
+    reject: 'Reject shop draft',
+    readOnly: 'This account is read-only and cannot process shop drafts.',
+    handled: 'This task has already been handled. View only.',
+    emptyState: 'Select a shop draft audit task first.',
   },
   reviewAppealAudit: {
     loadError: 'Failed to load appeal tasks.',

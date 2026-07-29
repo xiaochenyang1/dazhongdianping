@@ -95,6 +95,7 @@ describe('DealAuditView', () => {
     const { app, host } = mountView()
     await flushView()
 
+    expect(host.textContent).toContain('Deal Audit')
     expect(adminMocks.listAuditTasks).toHaveBeenCalledWith({
       region: 'EU',
       bizType: 2,
@@ -114,7 +115,7 @@ describe('DealAuditView', () => {
     keyword.value = '巴黎川味'
     keyword.dispatchEvent(new Event('input'))
     const applyButton = [...host.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('应用筛选'),
+      button.textContent?.includes('Apply filters'),
     )
     if (!applyButton) throw new Error('找不到应用筛选按钮')
     applyButton.click()
@@ -129,7 +130,7 @@ describe('DealAuditView', () => {
     })
 
     const passButton = [...host.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('通过团购'),
+      button.textContent?.includes('Approve deal'),
     )
     if (!passButton) throw new Error('找不到通过团购按钮')
     passButton.click()
@@ -145,12 +146,12 @@ describe('DealAuditView', () => {
     await flushView()
 
     const rejectButton = [...host.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('驳回团购'),
+      button.textContent?.includes('Reject deal'),
     )
     if (!rejectButton) throw new Error('找不到驳回团购按钮')
     rejectButton.click()
     await flushView()
-    expect(host.textContent).toContain('驳回原因不能为空')
+    expect(host.textContent).toContain('A rejection reason is required.')
     expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
 
     const reason = host.querySelector<HTMLTextAreaElement>('textarea[name="reject-reason"]')
@@ -176,7 +177,7 @@ describe('DealAuditView', () => {
     expect(host.textContent).toContain('双人午市套餐')
     expect(host.textContent).toContain('巴黎川味餐饮')
     expect(host.textContent).toContain('周末通用')
-    expect(host.textContent).toContain('当前账号仅可查看，无团购审核处理权限。')
+    expect(host.textContent).toContain('This account is read-only and cannot process deal audits.')
     expect(host.querySelector('textarea[name="approve-remark"]')).toBeNull()
     expect(host.querySelector('textarea[name="reject-reason"]')).toBeNull()
     expect(host.querySelector('[data-testid="deal-audit-pass"]')).toBeNull()
@@ -201,7 +202,7 @@ describe('DealAuditView', () => {
     expect(adminMocks.rejectAuditTask).not.toHaveBeenCalled()
     expect(host.querySelector('[data-testid="deal-audit-pass"]')).toBeNull()
     expect(host.querySelector('[data-testid="deal-audit-reject"]')).toBeNull()
-    expect(host.textContent).toContain('当前账号仅可查看，无团购审核处理权限。')
+    expect(host.textContent).toContain('This account is read-only and cannot process deal audits.')
     app.unmount()
   })
 })
