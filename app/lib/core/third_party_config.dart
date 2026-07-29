@@ -1,3 +1,5 @@
+import 'package:dazhongdianping_app/core/app_localizations.dart';
+
 enum ThirdPartyFeature { maps, payment, push }
 
 class ThirdPartyConfig {
@@ -20,11 +22,13 @@ class ThirdPartyConfig {
   bool get paypalEnabled => paypalClientId.trim().isNotEmpty;
   bool get pushEnabled => firebaseConfigured;
 
-  String unavailableReason(ThirdPartyFeature feature) => switch (feature) {
-    ThirdPartyFeature.maps =>
-      googleMapsEnabled ? '' : 'Google Maps 未配置，仍可按城市和列表浏览。',
+  String unavailableReason(
+    AppLocalizations strings,
+    ThirdPartyFeature feature,
+  ) => switch (feature) {
+    ThirdPartyFeature.maps => googleMapsEnabled ? '' : strings.mapsUnavailable,
     ThirdPartyFeature.payment =>
-      (stripeEnabled || paypalEnabled) ? '' : '真实支付未配置，客户端不会伪造支付成功。',
-    ThirdPartyFeature.push => pushEnabled ? '' : 'FCM/APNs 未配置，通知仍可通过站内消息补偿。',
+      (stripeEnabled || paypalEnabled) ? '' : strings.realPaymentUnavailable,
+    ThirdPartyFeature.push => pushEnabled ? '' : strings.pushUnavailable,
   };
 }

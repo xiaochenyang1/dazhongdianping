@@ -150,6 +150,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Future<void> _pay() async {
     if (_acting) return;
     final reason = widget.thirdPartyConfig.unavailableReason(
+      AppLocalizations.of(context),
       ThirdPartyFeature.payment,
     );
     if (reason.isNotEmpty) {
@@ -186,8 +187,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       _showMessage(successMessage);
       return true;
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         _showMessage(AppLocalizations.of(context).actionFailed(error));
+      }
       return false;
     } finally {
       if (mounted) setState(() => _acting = false);
@@ -222,6 +224,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Widget _buildOrder(BuildContext context, TradeOrder order) {
     final strings = AppLocalizations.of(context);
     final paymentReason = widget.thirdPartyConfig.unavailableReason(
+      strings,
       ThirdPartyFeature.payment,
     );
     return ListView(

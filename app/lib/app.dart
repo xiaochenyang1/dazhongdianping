@@ -89,6 +89,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
         final communityRepository = CommunityRepository(apiClient);
         final reviewRepository = ReviewRepository(apiClient);
         final canInteract = authController.currentUser != null;
+        final strings = AppLocalizations.forTag(settings.localeTag);
         return MaterialApp(
           title: 'Local Life EU',
           debugShowCheckedModeBanner: false,
@@ -156,7 +157,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                           conversation: ConversationSummary(
                             id: 0,
                             peerUserId: peerUserId,
-                            peerNickname: '私信用户',
+                            peerNickname: strings.directMessageUser,
                             peerAvatar: '',
                             lastMessagePreview: '',
                             lastMessageAt: '',
@@ -224,7 +225,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                                       conversation: ConversationSummary(
                                         id: 0,
                                         peerUserId: peerUserId,
-                                        peerNickname: '私信用户',
+                                        peerNickname: strings.directMessageUser,
                                         peerAvatar: '',
                                         lastMessagePreview: '',
                                         lastMessageAt: '',
@@ -266,7 +267,8 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                                               conversation: ConversationSummary(
                                                 id: 0,
                                                 peerUserId: peerUserId,
-                                                peerNickname: '私信用户',
+                                                peerNickname:
+                                                    strings.directMessageUser,
                                                 peerAvatar: '',
                                                 lastMessagePreview: '',
                                                 lastMessageAt: '',
@@ -298,7 +300,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                               id: conversationId,
                               peerUserId: peerUserId ?? 0,
                               peerNickname: peerName.isEmpty
-                                  ? '私信用户'
+                                  ? strings.directMessageUser
                                   : peerName,
                               peerAvatar: '',
                               lastMessagePreview: '',
@@ -373,10 +375,10 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                       );
                       if (result != null && result.isNotEmpty) {
                         final message = result == 'approved'
-                            ? '本地达人认证已通过'
+                            ? strings.expertCertificationApprovedNotice
                             : result == 'rejected'
-                            ? '本地达人认证未通过，可查看原因后重提'
-                            : '本地达人认证状态已更新';
+                            ? strings.expertCertificationRejectedNotice
+                            : strings.expertCertificationUpdatedNotice;
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           final messenger = ScaffoldMessenger.maybeOf(
                             screenContext,

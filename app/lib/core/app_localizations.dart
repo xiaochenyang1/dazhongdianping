@@ -26,6 +26,8 @@ class AppLocalizations {
     'map': '地图',
     'mapsConfigured': 'Google Maps 已配置',
     'mapsUnavailable': 'Google Maps 未配置，仍可按城市和列表浏览。',
+    'realPaymentUnavailable': '真实支付未配置，客户端不会伪造支付成功。',
+    'pushUnavailable': 'FCM/APNs 未配置，通知仍可通过站内消息补偿。',
     'notifications': '消息通知',
     'account': '个人中心',
     'cityRankings': '城市榜单',
@@ -155,6 +157,7 @@ class AppLocalizations {
     'circleMembersTitle': '{name}成员',
     'membersLoadFailed': '成员加载失败：{error}',
     'directMessages': '私信',
+    'directMessageUser': '私信用户',
     'refreshConversationsFailed': '刷新会话失败：{error}',
     'loadMoreConversationsFailed': '加载更多会话失败：{error}',
     'conversationsLoadFailed': '会话加载失败：{error}',
@@ -510,6 +513,9 @@ class AppLocalizations {
     'expertReasonTooLong': '申请理由不能超过 500 字',
     'localExpertBadge': '本地达人',
     'applicationReason': '申请理由',
+    'expertCertificationApprovedNotice': '本地达人认证已通过',
+    'expertCertificationRejectedNotice': '本地达人认证未通过，可查看原因后重提',
+    'expertCertificationUpdatedNotice': '本地达人认证状态已更新',
     'growthRecordsLoadFailed': '流水加载失败：{error}',
     'noGrowthRecords': '还没有成长值 / 积分流水',
     'refreshGrowthRecordsFailed': '刷新流水失败：{error}',
@@ -699,6 +705,8 @@ class AppLocalizations {
     'map': '地圖',
     'mapsConfigured': 'Google Maps 已設定',
     'mapsUnavailable': 'Google Maps 尚未設定，仍可依城市和列表瀏覽。',
+    'realPaymentUnavailable': '真實支付尚未設定，客戶端不會偽造支付成功。',
+    'pushUnavailable': 'FCM/APNs 尚未設定，通知仍可透過站內訊息補償。',
     'notifications': '訊息通知',
     'account': '個人中心',
     'cityRankings': '城市排行榜',
@@ -828,6 +836,7 @@ class AppLocalizations {
     'circleMembersTitle': '{name}成員',
     'membersLoadFailed': '成員載入失敗：{error}',
     'directMessages': '私信',
+    'directMessageUser': '私信使用者',
     'refreshConversationsFailed': '重新整理對話失敗：{error}',
     'loadMoreConversationsFailed': '載入更多對話失敗：{error}',
     'conversationsLoadFailed': '對話載入失敗：{error}',
@@ -1183,6 +1192,9 @@ class AppLocalizations {
     'expertReasonTooLong': '申請理由不能超過 500 字',
     'localExpertBadge': '在地達人',
     'applicationReason': '申請理由',
+    'expertCertificationApprovedNotice': '在地達人認證已通過',
+    'expertCertificationRejectedNotice': '在地達人認證未通過，可查看原因後重新提交',
+    'expertCertificationUpdatedNotice': '在地達人認證狀態已更新',
     'growthRecordsLoadFailed': '流水載入失敗：{error}',
     'noGrowthRecords': '還沒有成長值 / 積分流水',
     'refreshGrowthRecordsFailed': '重新整理流水失敗：{error}',
@@ -1373,6 +1385,10 @@ class AppLocalizations {
     'mapsConfigured': 'Google Maps is configured',
     'mapsUnavailable':
         'Google Maps is not configured. City and list browsing remain available.',
+    'realPaymentUnavailable':
+        'Real payment is not configured. The client will not fake a successful payment.',
+    'pushUnavailable':
+        'FCM/APNs is not configured. Notifications can still fall back to in-app messages.',
     'notifications': 'Notifications',
     'account': 'Profile',
     'cityRankings': 'City rankings',
@@ -1507,6 +1523,7 @@ class AppLocalizations {
     'circleMembersTitle': '{name} members',
     'membersLoadFailed': 'Could not load members: {error}',
     'directMessages': 'Messages',
+    'directMessageUser': 'Message user',
     'refreshConversationsFailed': 'Could not refresh conversations: {error}',
     'loadMoreConversationsFailed': 'Could not load more conversations: {error}',
     'conversationsLoadFailed': 'Could not load conversations: {error}',
@@ -1885,6 +1902,11 @@ class AppLocalizations {
     'expertReasonTooLong': 'Application reason cannot exceed 500 characters',
     'localExpertBadge': 'Local expert',
     'applicationReason': 'Application reason',
+    'expertCertificationApprovedNotice': 'Local expert certification approved',
+    'expertCertificationRejectedNotice':
+        'Local expert certification rejected. Review the reason and resubmit.',
+    'expertCertificationUpdatedNotice':
+        'Local expert certification status updated',
     'growthRecordsLoadFailed': 'Could not load growth history: {error}',
     'noGrowthRecords': 'No growth or points history yet',
     'refreshGrowthRecordsFailed': 'Could not refresh growth history: {error}',
@@ -2109,6 +2131,8 @@ class AppLocalizations {
   String get map => _text('map');
   String get mapsConfigured => _text('mapsConfigured');
   String get mapsUnavailable => _text('mapsUnavailable');
+  String get realPaymentUnavailable => _text('realPaymentUnavailable');
+  String get pushUnavailable => _text('pushUnavailable');
   String get notifications => _text('notifications');
   String get account => _text('account');
   String get cityRankings => _text('cityRankings');
@@ -2297,6 +2321,7 @@ class AppLocalizations {
   String membersLoadFailed(Object error) =>
       _withError('membersLoadFailed', error);
   String get directMessages => _text('directMessages');
+  String get directMessageUser => _text('directMessageUser');
   String refreshConversationsFailed(Object error) =>
       _withError('refreshConversationsFailed', error);
   String loadMoreConversationsFailed(Object error) =>
@@ -2788,6 +2813,12 @@ class AppLocalizations {
   String get expertReasonRequired => _text('expertReasonRequired');
   String get expertReasonTooLong => _text('expertReasonTooLong');
   String get localExpertBadge => _text('localExpertBadge');
+  String get expertCertificationApprovedNotice =>
+      _text('expertCertificationApprovedNotice');
+  String get expertCertificationRejectedNotice =>
+      _text('expertCertificationRejectedNotice');
+  String get expertCertificationUpdatedNotice =>
+      _text('expertCertificationUpdatedNotice');
   String get applicationReason => _text('applicationReason');
   String growthRecordsLoadFailed(Object error) =>
       _withError('growthRecordsLoadFailed', error);

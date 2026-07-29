@@ -132,6 +132,15 @@ void main() {
       ).averageSpendLabel(currency: 'EUR', amount: '19'),
       'Avg spend EUR 19',
     );
+    expect(
+      AppLocalizations.forTag('en').realPaymentUnavailable,
+      'Real payment is not configured. The client will not fake a successful payment.',
+    );
+    expect(AppLocalizations.forTag('zh-CN').directMessageUser, '私信用户');
+    expect(
+      AppLocalizations.forTag('en').expertCertificationUpdatedNotice,
+      'Local expert certification status updated',
+    );
     expect(AppLocalizations.forTag('zh-CN').deleteBrowseHistoryTooltip, '删除足迹');
   });
 
