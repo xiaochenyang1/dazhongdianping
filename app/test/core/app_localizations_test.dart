@@ -167,6 +167,14 @@ void main() {
       'You already have an appeal under review. Wait for the result before submitting another.',
     );
     expect(
+      AppLocalizations.forTag('en').authErrorInvalidCredentials,
+      'The account or password is incorrect. Check them and try again.',
+    );
+    expect(
+      AppLocalizations.forTag('en').authErrorCodeRateLimited,
+      'Verification codes are being sent too often. Wait a bit and try again.',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).notificationDirectMessagePreview(name: 'Alex', preview: 'See you soon'),

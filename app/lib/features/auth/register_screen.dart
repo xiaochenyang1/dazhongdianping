@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -43,7 +44,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => errorMessage = AppLocalizations.of(context).enterEmailOrPhoneFirst);
+      setState(
+        () =>
+            errorMessage = AppLocalizations.of(context).enterEmailOrPhoneFirst,
+      );
       return;
     }
     setState(() {
@@ -59,12 +63,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         setState(() {
           codeHint = result.mockCode.isEmpty
-              ? AppLocalizations.of(context).codeSentRetry(result.nextRetrySeconds)
+              ? AppLocalizations.of(
+                  context,
+                ).codeSentRetry(result.nextRetrySeconds)
               : AppLocalizations.of(context).localCodeHint(result.mockCode);
         });
       }
     } catch (error) {
-      if (mounted) setState(() => errorMessage = '$error');
+      if (mounted) {
+        setState(
+          () => errorMessage = localizeAuthError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => sendingCode = false);
     }
@@ -76,7 +89,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final code = codeController.text.trim();
     final password = passwordController.text;
     if (account.isEmpty || code.isEmpty || password.isEmpty) {
-      setState(() => errorMessage = AppLocalizations.of(context).fillAccountCodePassword);
+      setState(
+        () =>
+            errorMessage = AppLocalizations.of(context).fillAccountCodePassword,
+      );
       return;
     }
     setState(() {
@@ -95,7 +111,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final user = widget.controller.currentUser;
       if (mounted && user != null) widget.onAuthenticated(user);
     } catch (error) {
-      if (mounted) setState(() => errorMessage = '$error');
+      if (mounted) {
+        setState(
+          () => errorMessage = localizeAuthError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => submitting = false);
     }
@@ -144,7 +167,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               border: const OutlineInputBorder(),
               suffixIcon: TextButton(
                 onPressed: sendingCode ? null : sendCode,
-                child: Text(sendingCode ? strings.sendingCode : strings.sendCode),
+                child: Text(
+                  sendingCode ? strings.sendingCode : strings.sendCode,
+                ),
               ),
             ),
           ),
@@ -166,7 +191,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 20),
           FilledButton(
             onPressed: submitting ? null : submit,
-            child: Text(submitting ? strings.registering : strings.registerAndLogin),
+            child: Text(
+              submitting ? strings.registering : strings.registerAndLogin,
+            ),
           ),
         ],
       ),

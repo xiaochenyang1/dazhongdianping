@@ -14,6 +14,8 @@ class LoginFakeApi implements JsonApi {
   LoginFakeApi({this.banOnLogin = false});
 
   final bool banOnLogin;
+  Object? sendCodeError;
+  Object? loginError;
   int sendCodeRequests = 0;
   int loginRequests = 0;
   Completer<void>? sendCodeGate;
@@ -30,6 +32,7 @@ class LoginFakeApi implements JsonApi {
     if (path.endsWith('/send-code')) {
       sendCodeRequests++;
       await sendCodeGate?.future;
+      if (sendCodeError != null) throw sendCodeError!;
       return {
         'sent': true,
         'expireSeconds': 300,
@@ -39,9 +42,10 @@ class LoginFakeApi implements JsonApi {
     }
     loginRequests++;
     await loginGate?.future;
+    if (loginError != null) throw loginError!;
     if (banOnLogin && path.endsWith('/login/password')) {
       throw const ApiException(
-        '账号已被封禁',
+        '账号已被封禁，暂时无法登录',
         statusCode: 401,
         messageKey: 'auth.user_banned',
       );
@@ -58,7 +62,6 @@ class LoginFakeApi implements JsonApi {
     };
   }
 }
-
 
 Widget localizedApp({
   required Widget home,
@@ -183,6 +186,54 @@ void main() {
           ?.text,
       'banned@example.com',
     );
+  });
+
+  testWidgets('login screen localizes backend errors in English', (
+    tester,
+  ) async {
+    final api = LoginFakeApi()
+      ..sendCodeError = const ApiException('验证码发送太频繁，请稍后再试')
+      ..loginError = const ApiException('账号或密码错误');
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: LoginScreen(controller: controller, onAuthenticated: (_) {}),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('login-account')),
+      'demo@example.com',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'WrongPassword123',
+    );
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'The account or password is incorrect. Check them and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('账号或密码错误'), findsNothing);
+
+    await tester.tap(find.text('Code'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send code'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Verification codes are being sent too often. Wait a bit and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('验证码发送太频繁'), findsNothing);
   });
 
   testWidgets('login screen opens ban appeal entry directly', (tester) async {

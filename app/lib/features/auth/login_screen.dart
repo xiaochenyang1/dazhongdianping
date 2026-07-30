@@ -1,6 +1,7 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/auth/ban_appeal_screen.dart';
 import 'package:dazhongdianping_app/features/auth/register_screen.dart';
@@ -45,13 +46,18 @@ class _LoginScreenState extends State<LoginScreen> {
       accountController.text.trim().contains('@') ? 'email' : 'phone';
 
   bool _isBannedError(Object error) =>
-      error is ApiException && error.messageKey == 'auth.user_banned';
+      error is ApiException &&
+      (error.messageKey == 'auth.user_banned' ||
+          error.message.trim() == '账号已被封禁，暂时无法登录' ||
+          error.message.trim() == '账号已被封禁');
 
   Future<void> submit() async {
     if (widget.controller.busy) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => localError = AppLocalizations.of(context).enterEmailOrPhone);
+      setState(
+        () => localError = AppLocalizations.of(context).enterEmailOrPhone,
+      );
       return;
     }
     try {
@@ -80,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        localError = '$error';
+        localError = localizeAuthError(AppLocalizations.of(context), error);
         bannedAccount = _isBannedError(error) ? account : null;
       });
     }
@@ -90,7 +96,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => localError = AppLocalizations.of(context).enterEmailOrPhoneFirst);
+      setState(
+        () => localError = AppLocalizations.of(context).enterEmailOrPhoneFirst,
+      );
       return;
     }
     setState(() => sendingCode = true);
@@ -108,7 +116,14 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     } catch (error) {
-      if (mounted) setState(() => localError = '$error');
+      if (mounted) {
+        setState(
+          () => localError = localizeAuthError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => sendingCode = false);
     }
@@ -145,8 +160,14 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 24),
             SegmentedButton<LoginMode>(
               segments: [
-                ButtonSegment(value: LoginMode.password, label: Text(strings.passwordLogin)),
-                ButtonSegment(value: LoginMode.code, label: Text(strings.codeLogin)),
+                ButtonSegment(
+                  value: LoginMode.password,
+                  label: Text(strings.passwordLogin),
+                ),
+                ButtonSegment(
+                  value: LoginMode.code,
+                  label: Text(strings.codeLogin),
+                ),
               ],
               selected: {mode},
               onSelectionChanged: (values) =>
@@ -183,7 +204,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: const OutlineInputBorder(),
                   suffixIcon: TextButton(
                     onPressed: sendingCode ? null : sendCode,
-                    child: Text(sendingCode ? strings.sendingCode : strings.sendCode),
+                    child: Text(
+                      sendingCode ? strings.sendingCode : strings.sendCode,
+                    ),
                   ),
                 ),
               ),
@@ -227,12 +250,17 @@ class _LoginScreenState extends State<LoginScreen> {
             if (success)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: Text(strings.loginSuccess, style: const TextStyle(color: Colors.green)),
+                child: Text(
+                  strings.loginSuccess,
+                  style: const TextStyle(color: Colors.green),
+                ),
               ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: widget.controller.busy ? null : submit,
-              child: Text(widget.controller.busy ? strings.loggingIn : strings.login),
+              child: Text(
+                widget.controller.busy ? strings.loggingIn : strings.login,
+              ),
             ),
             const SizedBox(height: 12),
             TextButton(
@@ -257,7 +285,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     onReset: () {
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(AppLocalizations.of(context).passwordResetPleaseLogin)),
+                        SnackBar(
+                          content: Text(
+                            AppLocalizations.of(
+                              context,
+                            ).passwordResetPleaseLogin,
+                          ),
+                        ),
                       );
                     },
                   ),

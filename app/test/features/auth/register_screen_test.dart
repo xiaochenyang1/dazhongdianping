@@ -13,6 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 class RegisterScreenApi implements JsonApi {
   String? path;
   Object? body;
+  Object? sendCodeError;
+  Object? registerError;
   int sendCodeRequests = 0;
   int registerRequests = 0;
   Completer<void>? sendCodeGate;
@@ -31,6 +33,7 @@ class RegisterScreenApi implements JsonApi {
     if (path.endsWith('/send-code')) {
       sendCodeRequests++;
       await sendCodeGate?.future;
+      if (sendCodeError != null) throw sendCodeError!;
       return {
         'sent': true,
         'expireSeconds': 300,
@@ -40,6 +43,7 @@ class RegisterScreenApi implements JsonApi {
     }
     registerRequests++;
     await registerGate?.future;
+    if (registerError != null) throw registerError!;
     return {
       'accessToken': 'register-access',
       'refreshToken': 'register-refresh',
@@ -52,7 +56,6 @@ class RegisterScreenApi implements JsonApi {
     };
   }
 }
-
 
 Widget localizedApp({
   required Widget home,
@@ -140,6 +143,53 @@ void main() {
     expect(api.path, '/api/c/v1/auth/register');
     expect(authenticated?.nickname, 'New User');
     expect(controller.currentUser?.id, 12);
+  });
+
+  testWidgets('register screen localizes backend errors in English', (
+    tester,
+  ) async {
+    final api = RegisterScreenApi()
+      ..sendCodeError = const ApiException('验证码发送太频繁，请稍后再试')
+      ..registerError = const ApiException('账号已注册');
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: RegisterScreen(controller: controller, onAuthenticated: (_) {}),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('register-account')),
+      'new@example.com',
+    );
+    await tester.tap(find.text('Send code'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Verification codes are being sent too often. Wait a bit and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('验证码发送太频繁'), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('register-code')), '123456');
+    await tester.enterText(
+      find.byKey(const Key('register-password')),
+      'Demo123456',
+    );
+    await tester.tap(find.text('Register and sign in'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'This account is already registered. Sign in or reset the password instead.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('账号已注册'), findsNothing);
   });
 
   testWidgets('register screen guards duplicate verification codes', (

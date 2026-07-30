@@ -13,6 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 class ResetScreenApi implements JsonApi {
   String? path;
   Object? body;
+  Object? sendCodeError;
+  Object? resetError;
   int sendCodeRequests = 0;
   int resetRequests = 0;
   Completer<void>? sendCodeGate;
@@ -31,6 +33,7 @@ class ResetScreenApi implements JsonApi {
     if (path.endsWith('/send-code')) {
       sendCodeRequests++;
       await sendCodeGate?.future;
+      if (sendCodeError != null) throw sendCodeError!;
       return {
         'sent': true,
         'expireSeconds': 300,
@@ -40,10 +43,10 @@ class ResetScreenApi implements JsonApi {
     }
     resetRequests++;
     await resetGate?.future;
+    if (resetError != null) throw resetError!;
     return {};
   }
 }
-
 
 Widget localizedApp({
   required Widget home,
@@ -136,6 +139,52 @@ void main() {
       'newPassword': 'NewPass123',
     });
     expect(reset, isTrue);
+  });
+
+  testWidgets('reset password screen localizes backend errors in English', (
+    tester,
+  ) async {
+    final api = ResetScreenApi()
+      ..sendCodeError = const ApiException('邮箱格式不合法')
+      ..resetError = const ApiException('账号不存在');
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ResetPasswordScreen(controller: controller, onReset: () {}),
+      ),
+    );
+
+    await tester.enterText(find.byKey(const Key('reset-account')), 'bad@email');
+    await tester.tap(find.text('Send code'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('The email format looks invalid. Check it and try again.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('邮箱格式不合法'), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('reset-code')), '654321');
+    await tester.enterText(
+      find.byKey(const Key('reset-password')),
+      'NewPass123',
+    );
+    await tester.enterText(
+      find.byKey(const Key('reset-confirm-password')),
+      'NewPass123',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Reset password'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'We could not find this account. Check the email or phone number and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('账号不存在'), findsNothing);
   });
 
   testWidgets('reset password screen rejects mismatched new passwords', (

@@ -528,6 +528,16 @@ class AppLocalizations {
     'fillAccountCodePassword': '账号、验证码和密码都得填',
     'fillAccountCodeNewPassword': '账号、验证码和新密码都得填',
     'passwordsDoNotMatch': '两次输入的新密码对不上',
+    'authErrorInvalidCredentials': '账号或密码不正确，请重新输入后再试',
+    'authErrorAccountBanned': '这个账号当前已被封禁，暂时无法登录',
+    'authErrorAccountRegistered': '这个账号已经注册过了，直接登录或找回密码即可',
+    'authErrorAccountNotFound': '找不到这个账号，请检查邮箱或手机号是否填写正确',
+    'authErrorCodeInvalid': '验证码无效或已过期，请重新获取后再试',
+    'authErrorInvalidEmail': '邮箱格式不正确，请检查后重试',
+    'authErrorInvalidPhone': '手机号格式不正确，请检查后重试',
+    'authErrorCodeRateLimited': '验证码发送太频繁了，请稍等一会儿再试',
+    'authErrorCodeSendUnavailable': '验证码发送服务暂时不可用，请稍后再试',
+    'authErrorCodeVerifyUnavailable': '验证码校验服务暂时不可用，请稍后再试',
     'registerHero': '加入欧洲华人生活圈',
     'resetPasswordHero': '重新设置登录密码',
     'fillAccountAndCodeBeforeAppeal': '先填好账号和验证码，再提交申诉',
@@ -1322,6 +1332,16 @@ class AppLocalizations {
     'fillAccountCodePassword': '帳號、驗證碼和密碼都得填',
     'fillAccountCodeNewPassword': '帳號、驗證碼和新密碼都得填',
     'passwordsDoNotMatch': '兩次輸入的新密碼對不上',
+    'authErrorInvalidCredentials': '帳號或密碼不正確，請重新輸入後再試',
+    'authErrorAccountBanned': '這個帳號目前已被封禁，暫時無法登入',
+    'authErrorAccountRegistered': '這個帳號已經註冊過了，直接登入或找回密碼即可',
+    'authErrorAccountNotFound': '找不到這個帳號，請檢查信箱或手機號是否填寫正確',
+    'authErrorCodeInvalid': '驗證碼無效或已過期，請重新取得後再試',
+    'authErrorInvalidEmail': '信箱格式不正確，請檢查後重試',
+    'authErrorInvalidPhone': '手機號格式不正確，請檢查後重試',
+    'authErrorCodeRateLimited': '驗證碼發送太頻繁了，請稍等一會兒再試',
+    'authErrorCodeSendUnavailable': '驗證碼發送服務暫時不可用，請稍後再試',
+    'authErrorCodeVerifyUnavailable': '驗證碼校驗服務暫時不可用，請稍後再試',
     'registerHero': '加入歐洲華人生活圈',
     'resetPasswordHero': '重新設定登入密碼',
     'fillAccountAndCodeBeforeAppeal': '先填好帳號和驗證碼，再提交申訴',
@@ -2151,6 +2171,26 @@ class AppLocalizations {
     'fillAccountCodePassword': 'Account, code and password are required',
     'fillAccountCodeNewPassword': 'Account, code and new password are required',
     'passwordsDoNotMatch': 'New passwords do not match',
+    'authErrorInvalidCredentials':
+        'The account or password is incorrect. Check them and try again.',
+    'authErrorAccountBanned':
+        'This account is currently banned and cannot sign in.',
+    'authErrorAccountRegistered':
+        'This account is already registered. Sign in or reset the password instead.',
+    'authErrorAccountNotFound':
+        'We could not find this account. Check the email or phone number and try again.',
+    'authErrorCodeInvalid':
+        'The verification code is invalid or expired. Request a new one and try again.',
+    'authErrorInvalidEmail':
+        'The email format looks invalid. Check it and try again.',
+    'authErrorInvalidPhone':
+        'The phone number format looks invalid. Check it and try again.',
+    'authErrorCodeRateLimited':
+        'Verification codes are being sent too often. Wait a bit and try again.',
+    'authErrorCodeSendUnavailable':
+        'Code sending is not available right now. Try again later.',
+    'authErrorCodeVerifyUnavailable':
+        'Code verification is not available right now. Try again later.',
     'registerHero': 'Join Chinese local life in Europe',
     'resetPasswordHero': 'Set a new sign-in password',
     'fillAccountAndCodeBeforeAppeal': 'Fill account and code before submitting',
@@ -3457,6 +3497,19 @@ class AppLocalizations {
   String get fillAccountCodePassword => _text('fillAccountCodePassword');
   String get fillAccountCodeNewPassword => _text('fillAccountCodeNewPassword');
   String get passwordsDoNotMatch => _text('passwordsDoNotMatch');
+  String get authErrorInvalidCredentials =>
+      _text('authErrorInvalidCredentials');
+  String get authErrorAccountBanned => _text('authErrorAccountBanned');
+  String get authErrorAccountRegistered => _text('authErrorAccountRegistered');
+  String get authErrorAccountNotFound => _text('authErrorAccountNotFound');
+  String get authErrorCodeInvalid => _text('authErrorCodeInvalid');
+  String get authErrorInvalidEmail => _text('authErrorInvalidEmail');
+  String get authErrorInvalidPhone => _text('authErrorInvalidPhone');
+  String get authErrorCodeRateLimited => _text('authErrorCodeRateLimited');
+  String get authErrorCodeSendUnavailable =>
+      _text('authErrorCodeSendUnavailable');
+  String get authErrorCodeVerifyUnavailable =>
+      _text('authErrorCodeVerifyUnavailable');
   String get registerHero => _text('registerHero');
   String get resetPasswordHero => _text('resetPasswordHero');
   String get fillAccountAndCodeBeforeAppeal =>

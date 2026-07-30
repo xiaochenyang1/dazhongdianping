@@ -1,0 +1,47 @@
+import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
+
+String localizeAuthError(
+  AppLocalizations strings,
+  Object error, {
+  Map<String, String> overrides = const {},
+}) {
+  if (error is! ApiException) {
+    return '$error';
+  }
+
+  final message = error.message.trim();
+  final localized =
+      overrides[message] ??
+      _localizedAuthErrorByKey(strings, error.messageKey) ??
+      _localizedAuthErrorByMessage(strings, message);
+  if (localized == null) {
+    return '$error';
+  }
+  return error.traceId == null
+      ? localized
+      : '$localized [traceId: ${error.traceId}]';
+}
+
+String? _localizedAuthErrorByKey(AppLocalizations strings, String? messageKey) {
+  return switch (messageKey) {
+    'auth.user_banned' => strings.authErrorAccountBanned,
+    _ => null,
+  };
+}
+
+String? _localizedAuthErrorByMessage(AppLocalizations strings, String message) {
+  return switch (message) {
+    '账号或密码错误' => strings.authErrorInvalidCredentials,
+    '账号已被封禁，暂时无法登录' => strings.authErrorAccountBanned,
+    '账号已注册' => strings.authErrorAccountRegistered,
+    '账号不存在' => strings.authErrorAccountNotFound,
+    '验证码无效或已过期' => strings.authErrorCodeInvalid,
+    '邮箱格式不合法' => strings.authErrorInvalidEmail,
+    '手机号格式不合法' => strings.authErrorInvalidPhone,
+    '验证码发送太频繁，请稍后再试' => strings.authErrorCodeRateLimited,
+    '验证码发送通道尚未配置' => strings.authErrorCodeSendUnavailable,
+    '验证码校验通道尚未配置' => strings.authErrorCodeVerifyUnavailable,
+    _ => null,
+  };
+}

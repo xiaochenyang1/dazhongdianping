@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:flutter/material.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -42,7 +43,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => errorMessage = AppLocalizations.of(context).enterEmailOrPhoneFirst);
+      setState(
+        () =>
+            errorMessage = AppLocalizations.of(context).enterEmailOrPhoneFirst,
+      );
       return;
     }
     setState(() {
@@ -58,12 +62,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (mounted) {
         setState(() {
           codeHint = result.mockCode.isEmpty
-              ? AppLocalizations.of(context).codeSentRetry(result.nextRetrySeconds)
+              ? AppLocalizations.of(
+                  context,
+                ).codeSentRetry(result.nextRetrySeconds)
               : AppLocalizations.of(context).localCodeHint(result.mockCode);
         });
       }
     } catch (error) {
-      if (mounted) setState(() => errorMessage = '$error');
+      if (mounted) {
+        setState(
+          () => errorMessage = localizeAuthError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => sendingCode = false);
     }
@@ -75,11 +88,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final code = codeController.text.trim();
     final password = passwordController.text;
     if (account.isEmpty || code.isEmpty || password.isEmpty) {
-      setState(() => errorMessage = AppLocalizations.of(context).fillAccountCodeNewPassword);
+      setState(
+        () => errorMessage = AppLocalizations.of(
+          context,
+        ).fillAccountCodeNewPassword,
+      );
       return;
     }
     if (password != confirmPasswordController.text) {
-      setState(() => errorMessage = AppLocalizations.of(context).passwordsDoNotMatch);
+      setState(
+        () => errorMessage = AppLocalizations.of(context).passwordsDoNotMatch,
+      );
       return;
     }
     setState(() {
@@ -95,7 +114,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       );
       if (mounted) widget.onReset();
     } catch (error) {
-      if (mounted) setState(() => errorMessage = '$error');
+      if (mounted) {
+        setState(
+          () => errorMessage = localizeAuthError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => submitting = false);
     }
@@ -134,7 +160,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               border: const OutlineInputBorder(),
               suffixIcon: TextButton(
                 onPressed: sendingCode ? null : sendCode,
-                child: Text(sendingCode ? strings.sendingCode : strings.sendCode),
+                child: Text(
+                  sendingCode ? strings.sendingCode : strings.sendCode,
+                ),
               ),
             ),
           ),
