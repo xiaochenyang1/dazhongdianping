@@ -175,6 +175,14 @@ void main() {
       'Verification codes are being sent too often. Wait a bit and try again.',
     );
     expect(
+      AppLocalizations.forTag('en').authErrorEmailAlreadyBound,
+      'This email is already bound to another account.',
+    );
+    expect(
+      AppLocalizations.forTag('en').authErrorOldPasswordIncorrect,
+      'The current password is incorrect.',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).notificationDirectMessagePreview(name: 'Alex', preview: 'See you soon'),

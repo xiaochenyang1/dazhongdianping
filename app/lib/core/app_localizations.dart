@@ -538,6 +538,10 @@ class AppLocalizations {
     'authErrorCodeRateLimited': '验证码发送太频繁了，请稍等一会儿再试',
     'authErrorCodeSendUnavailable': '验证码发送服务暂时不可用，请稍后再试',
     'authErrorCodeVerifyUnavailable': '验证码校验服务暂时不可用，请稍后再试',
+    'authErrorEmailAlreadyBound': '这个邮箱已经被其他账号绑定了，请换一个再试',
+    'authErrorPhoneAlreadyBound': '这个手机号已经被其他账号绑定了，请换一个再试',
+    'authErrorOldPasswordIncorrect': '当前密码不正确，请重新输入后再试',
+    'authErrorSamePasswordAsOld': '新密码不能和当前密码相同，请换一个再试',
     'registerHero': '加入欧洲华人生活圈',
     'resetPasswordHero': '重新设置登录密码',
     'fillAccountAndCodeBeforeAppeal': '先填好账号和验证码，再提交申诉',
@@ -1342,6 +1346,10 @@ class AppLocalizations {
     'authErrorCodeRateLimited': '驗證碼發送太頻繁了，請稍等一會兒再試',
     'authErrorCodeSendUnavailable': '驗證碼發送服務暫時不可用，請稍後再試',
     'authErrorCodeVerifyUnavailable': '驗證碼校驗服務暫時不可用，請稍後再試',
+    'authErrorEmailAlreadyBound': '這個信箱已經被其他帳號綁定了，請換一個再試',
+    'authErrorPhoneAlreadyBound': '這個手機號已經被其他帳號綁定了，請換一個再試',
+    'authErrorOldPasswordIncorrect': '目前密碼不正確，請重新輸入後再試',
+    'authErrorSamePasswordAsOld': '新密碼不能和目前密碼相同，請換一個再試',
     'registerHero': '加入歐洲華人生活圈',
     'resetPasswordHero': '重新設定登入密碼',
     'fillAccountAndCodeBeforeAppeal': '先填好帳號和驗證碼，再提交申訴',
@@ -2191,6 +2199,13 @@ class AppLocalizations {
         'Code sending is not available right now. Try again later.',
     'authErrorCodeVerifyUnavailable':
         'Code verification is not available right now. Try again later.',
+    'authErrorEmailAlreadyBound':
+        'This email is already bound to another account.',
+    'authErrorPhoneAlreadyBound':
+        'This phone number is already bound to another account.',
+    'authErrorOldPasswordIncorrect': 'The current password is incorrect.',
+    'authErrorSamePasswordAsOld':
+        'The new password must be different from the current password.',
     'registerHero': 'Join Chinese local life in Europe',
     'resetPasswordHero': 'Set a new sign-in password',
     'fillAccountAndCodeBeforeAppeal': 'Fill account and code before submitting',
@@ -3510,6 +3525,11 @@ class AppLocalizations {
       _text('authErrorCodeSendUnavailable');
   String get authErrorCodeVerifyUnavailable =>
       _text('authErrorCodeVerifyUnavailable');
+  String get authErrorEmailAlreadyBound => _text('authErrorEmailAlreadyBound');
+  String get authErrorPhoneAlreadyBound => _text('authErrorPhoneAlreadyBound');
+  String get authErrorOldPasswordIncorrect =>
+      _text('authErrorOldPasswordIncorrect');
+  String get authErrorSamePasswordAsOld => _text('authErrorSamePasswordAsOld');
   String get registerHero => _text('registerHero');
   String get resetPasswordHero => _text('resetPasswordHero');
   String get fillAccountAndCodeBeforeAppeal =>

@@ -42,6 +42,10 @@ String? _localizedAuthErrorByMessage(AppLocalizations strings, String message) {
     '验证码发送太频繁，请稍后再试' => strings.authErrorCodeRateLimited,
     '验证码发送通道尚未配置' => strings.authErrorCodeSendUnavailable,
     '验证码校验通道尚未配置' => strings.authErrorCodeVerifyUnavailable,
+    '该邮箱已被其他账号绑定' => strings.authErrorEmailAlreadyBound,
+    '该手机号已被其他账号绑定' => strings.authErrorPhoneAlreadyBound,
+    '旧密码不正确' => strings.authErrorOldPasswordIncorrect,
+    '新密码不能和旧密码一样' => strings.authErrorSamePasswordAsOld,
     _ => null,
   };
 }

@@ -12,6 +12,9 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
   AccountSettingsApi({this.failFirst = false});
 
   final bool failFirst;
+  Object? sendBindCodeError;
+  Object? bindError;
+  Object? updatePasswordError;
   int profileRequests = 0;
   Completer<void>? retryGate;
   String? path;
@@ -57,12 +60,16 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
     paths.add(path);
     this.body = body;
     if (path == '/api/c/v1/auth/send-code') {
+      if (sendBindCodeError != null) throw sendBindCodeError!;
       return {
         'sent': true,
         'expireSeconds': 300,
         'nextRetrySeconds': 60,
         'mockCode': '112233',
       };
+    }
+    if (path == '/api/c/v1/user/bind' && bindError != null) {
+      throw bindError!;
     }
     return profile(phone: '+447700900111');
   }
@@ -72,10 +79,12 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
     this.path = path;
     paths.add(path);
     this.body = body;
+    if (path == '/api/c/v1/user/password' && updatePasswordError != null) {
+      throw updatePasswordError!;
+    }
     return profile(nickname: 'Updated User');
   }
 }
-
 
 Widget localizedApp({
   required Widget home,
@@ -100,7 +109,9 @@ void main() {
   ) async {
     final api = AccountSettingsApi(failFirst: true);
     await tester.pumpWidget(
-      localizedApp(home: AccountSettingsScreen(repository: UserRepository(api))),
+      localizedApp(
+        home: AccountSettingsScreen(repository: UserRepository(api)),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -118,7 +129,9 @@ void main() {
     final gate = Completer<void>();
     final api = AccountSettingsApi(failFirst: true)..retryGate = gate;
     await tester.pumpWidget(
-      localizedApp(home: AccountSettingsScreen(repository: UserRepository(api))),
+      localizedApp(
+        home: AccountSettingsScreen(repository: UserRepository(api)),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -227,7 +240,9 @@ void main() {
   ) async {
     final api = AccountSettingsApi();
     await tester.pumpWidget(
-      localizedApp(home: AccountSettingsScreen(repository: UserRepository(api))),
+      localizedApp(
+        home: AccountSettingsScreen(repository: UserRepository(api)),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -271,5 +286,95 @@ void main() {
           ?.text,
       isEmpty,
     );
+  });
+
+  testWidgets('account settings localizes auth backend errors in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = AccountSettingsApi()
+      ..sendBindCodeError = const ApiException('验证码发送太频繁，请稍后再试')
+      ..bindError = const ApiException('该邮箱已被其他账号绑定')
+      ..updatePasswordError = const ApiException('旧密码不正确');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: AccountSettingsScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final messenger = tester.state<ScaffoldMessengerState>(
+      find.byType(ScaffoldMessenger),
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-confirm-bind')),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings-bind-account')),
+      'other@example.com',
+    );
+    await tester.tap(find.byKey(const Key('settings-send-bind-code')));
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not send code: Verification codes are being sent too often. Wait a bit and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('验证码发送太频繁'), findsNothing);
+    messenger.removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('settings-bind-code')),
+      '112233',
+    );
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-confirm-bind')));
+    await tester.pump();
+    expect(api.path, '/api/c/v1/user/bind');
+    expect(
+      find.text(
+        'Could not bind account: This email is already bound to another account.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('其他账号绑定'), findsNothing);
+    messenger.removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-update-password')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings-old-password')),
+      'wrong-old-password',
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings-new-password')),
+      'new-password',
+    );
+    await tester.enterText(
+      find.byKey(const Key('settings-confirm-password')),
+      'new-password',
+    );
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-update-password')));
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not update password: The current password is incorrect.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('旧密码不正确'), findsNothing);
   });
 }

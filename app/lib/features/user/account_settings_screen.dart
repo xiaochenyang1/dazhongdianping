@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -89,7 +90,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       widget.onProfileChanged?.call(profile);
       _showMessage(AppLocalizations.of(context).profileSaved);
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).saveProfileFailed(error));
+      if (mounted)
+        _showMessage(AppLocalizations.of(context).saveProfileFailed(error));
     } finally {
       if (mounted) setState(() => savingProfile = false);
     }
@@ -98,7 +100,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   Future<void> _sendBindCode() async {
     final account = bindAccountController.text.trim();
     if (account.isEmpty) {
-      _showMessage(AppLocalizations.of(context).fillTargetFirst(bindType == 'email' ? AppLocalizations.of(context).email : AppLocalizations.of(context).phone));
+      _showMessage(
+        AppLocalizations.of(context).fillTargetFirst(
+          bindType == 'email'
+              ? AppLocalizations.of(context).email
+              : AppLocalizations.of(context).phone,
+        ),
+      );
       return;
     }
     if (sendingBindCode) return;
@@ -110,9 +118,19 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       );
       if (!mounted) return;
       final mockCode = result.mockCode;
-      _showMessage(mockCode.isEmpty ? AppLocalizations.of(context).codeSent : AppLocalizations.of(context).codeSentWithLocal(mockCode));
+      _showMessage(
+        mockCode.isEmpty
+            ? AppLocalizations.of(context).codeSent
+            : AppLocalizations.of(context).codeSentWithLocal(mockCode),
+      );
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).sendCodeFailed(error));
+      if (mounted) {
+        _showMessage(
+          AppLocalizations.of(context).sendCodeFailed(
+            localizeAuthError(AppLocalizations.of(context), error),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => sendingBindCode = false);
     }
@@ -141,7 +159,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       widget.onProfileChanged?.call(profile);
       _showMessage(AppLocalizations.of(context).accountBound);
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).bindFailed(error));
+      if (mounted) {
+        _showMessage(
+          AppLocalizations.of(
+            context,
+          ).bindFailed(localizeAuthError(AppLocalizations.of(context), error)),
+        );
+      }
     } finally {
       if (mounted) setState(() => bindingAccount = false);
     }
@@ -175,7 +199,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       confirmPasswordController.clear();
       _showMessage(AppLocalizations.of(context).passwordUpdated);
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).updatePasswordFailed(error));
+      if (mounted) {
+        _showMessage(
+          AppLocalizations.of(context).updatePasswordFailed(
+            localizeAuthError(AppLocalizations.of(context), error),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => updatingPassword = false);
     }
@@ -216,7 +246,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     key: const Key('account-settings-retry'),
                     onPressed: reloadingProfile ? null : _reloadProfile,
                     icon: const Icon(Icons.refresh),
-                    label: Text(reloadingProfile ? strings.processing : strings.retry),
+                    label: Text(
+                      reloadingProfile ? strings.processing : strings.retry,
+                    ),
                   ),
                 ],
               ),
@@ -228,7 +260,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             children: [
               Text(
                 strings.accountSettingsHero,
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               Text(strings.accountSettingsSubtitleLong),
@@ -264,9 +299,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                       border: const OutlineInputBorder(),
                     ),
                     items: [
-                      DropdownMenuItem(value: 0, child: Text(strings.genderUnknown)),
-                      DropdownMenuItem(value: 1, child: Text(strings.genderMale)),
-                      DropdownMenuItem(value: 2, child: Text(strings.genderFemale)),
+                      DropdownMenuItem(
+                        value: 0,
+                        child: Text(strings.genderUnknown),
+                      ),
+                      DropdownMenuItem(
+                        value: 1,
+                        child: Text(strings.genderMale),
+                      ),
+                      DropdownMenuItem(
+                        value: 2,
+                        child: Text(strings.genderFemale),
+                      ),
                     ],
                     onChanged: (value) => setState(() => gender = value ?? 0),
                   ),
@@ -285,7 +329,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   FilledButton(
                     key: const Key('settings-save-profile'),
                     onPressed: savingProfile ? null : _saveProfile,
-                    child: Text(savingProfile ? strings.saving : strings.saveProfile),
+                    child: Text(
+                      savingProfile ? strings.saving : strings.saveProfile,
+                    ),
                   ),
                 ],
               ),
@@ -294,8 +340,16 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 title: strings.accountBinding,
                 icon: Icons.link_outlined,
                 children: [
-                  Text(strings.emailLabel(profile.email.isEmpty ? strings.unbound : profile.email)),
-                  Text(strings.phoneLabel(profile.phone.isEmpty ? strings.unbound : profile.phone)),
+                  Text(
+                    strings.emailLabel(
+                      profile.email.isEmpty ? strings.unbound : profile.email,
+                    ),
+                  ),
+                  Text(
+                    strings.phoneLabel(
+                      profile.phone.isEmpty ? strings.unbound : profile.phone,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   SegmentedButton<String>(
                     segments: [
@@ -312,7 +366,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     key: const Key('settings-bind-account'),
                     controller: bindAccountController,
                     decoration: InputDecoration(
-                      labelText: bindType == 'email' ? strings.email : strings.phone,
+                      labelText: bindType == 'email'
+                          ? strings.email
+                          : strings.phone,
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -326,7 +382,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                       suffixIcon: TextButton(
                         key: const Key('settings-send-bind-code'),
                         onPressed: sendingBindCode ? null : _sendBindCode,
-                        child: Text(sendingBindCode ? strings.sendingCode : strings.sendCode),
+                        child: Text(
+                          sendingBindCode
+                              ? strings.sendingCode
+                              : strings.sendCode,
+                        ),
                       ),
                     ),
                   ),
@@ -334,7 +394,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   FilledButton(
                     key: const Key('settings-confirm-bind'),
                     onPressed: bindingAccount ? null : _bindAccount,
-                    child: Text(bindingAccount ? strings.binding : strings.confirmBind),
+                    child: Text(
+                      bindingAccount ? strings.binding : strings.confirmBind,
+                    ),
                   ),
                 ],
               ),
@@ -384,7 +446,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     onPressed: updatingPassword
                         ? null
                         : () => _updatePassword(profile),
-                    child: Text(updatingPassword ? strings.updating : strings.updatePassword),
+                    child: Text(
+                      updatingPassword
+                          ? strings.updating
+                          : strings.updatePassword,
+                    ),
                   ),
                 ],
               ),
