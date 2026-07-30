@@ -320,7 +320,11 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                       ),
                       subtitle: _auditRemark.isEmpty
                           ? null
-                          : Text(_auditRemark),
+                          : Text(
+                              AppLocalizations.of(
+                                context,
+                              ).auditRemarkLabel(_auditRemark),
+                            ),
                     ),
                   ),
                   SizedBox(height: 10),

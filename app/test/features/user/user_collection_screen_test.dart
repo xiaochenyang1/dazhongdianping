@@ -468,7 +468,7 @@ void main() {
     await tester.tap(find.text('伦敦周末市场指南'));
     await tester.pumpAndSettle();
     expect(find.text('编辑帖子'), findsOneWidget);
-    expect(find.text('请补充具体地址'), findsOneWidget);
+    expect(find.textContaining('审核备注：请补充具体地址'), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -516,5 +516,25 @@ void main() {
 
     expect(find.text('My reviews'), findsOneWidget);
     expect(find.textContaining('Pending review'), findsOneWidget);
+  });
+
+  testWidgets('user collection localizes post audit remark in English', (
+    tester,
+  ) async {
+    final api = CollectionApi();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: UserCollectionScreen(
+          repository: UserRepository(api),
+          collection: UserCollection.posts,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('My posts'), findsOneWidget);
+    expect(find.textContaining('Rejected'), findsOneWidget);
+    expect(find.textContaining('Audit note: 请补充具体地址'), findsOneWidget);
   });
 }

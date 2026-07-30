@@ -180,7 +180,7 @@ class UserCollectionScreen extends StatelessWidget {
         '${item['content'] ?? ''}',
         [
           auditStatus,
-          if (auditRemark.isNotEmpty) auditRemark,
+          if (auditRemark.isNotEmpty) strings.auditRemarkLabel(auditRemark),
         ].where((part) => part.isNotEmpty).join(' · '),
       ].where((part) => part.isNotEmpty).join('\n'),
       UserCollection.orders =>

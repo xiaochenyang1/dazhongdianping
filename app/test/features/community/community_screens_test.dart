@@ -47,6 +47,9 @@ class CommunityScreenApi
   Completer<void>? ownedPostGate;
   final List<int> requestedCommentPages = <int>[];
   final commentPageGates = <int, Completer<void>>{};
+  int auditStatus = 1;
+  String auditStatusText = '审核通过';
+  String auditRemark = '';
 
   Map<String, dynamic> get post => {
     'id': 7,
@@ -59,9 +62,9 @@ class CommunityScreenApi
     'commentCount': 1,
     'repostCount': repostCount,
     'repostedByCurrentUser': reposted,
-    'auditStatus': 1,
-    'auditStatusText': '审核通过',
-    'auditRemark': '',
+    'auditStatus': auditStatus,
+    'auditStatusText': auditStatusText,
+    'auditRemark': auditRemark,
     'status': 1,
     'images': const ['https://files.example/market.jpg'],
     'topics': ['伦敦生活'],
@@ -1290,6 +1293,27 @@ void main() {
     expect(find.text('Edit post'), findsOneWidget);
     expect(find.text('Approved'), findsOneWidget);
     expect(find.text('审核通过'), findsNothing);
+  });
+
+  testWidgets('post editor localizes audit remark in English', (tester) async {
+    final api = CommunityScreenApi()..auditRemark = '请补充具体地址';
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: PostEditorScreen(repository: CommunityRepository(api), postId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Approved'), findsOneWidget);
+    expect(find.text('Audit note: 请补充具体地址'), findsOneWidget);
   });
 
   testWidgets('post editor blocks an incomplete form and retries loading', (
