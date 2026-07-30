@@ -246,6 +246,9 @@ class AppLocalizations {
     'orderCanceled': '订单已取消',
     'refundReason': '退款原因',
     'refundSubmitted': '退款申请已提交',
+    'refundStatusPending': '待审核',
+    'refundStatusApproved': '退款成功',
+    'refundStatusRejected': '已驳回',
     'defaultRefundReason': '行程有变',
     'paymentRequestCreated': '已创建 {channel} 支付请求，请在支付渠道完成付款',
     'paymentStartFailed': '支付发起失败：{error}',
@@ -941,6 +944,9 @@ class AppLocalizations {
     'orderCanceled': '訂單已取消',
     'refundReason': '退款原因',
     'refundSubmitted': '退款申請已提交',
+    'refundStatusPending': '待審核',
+    'refundStatusApproved': '退款成功',
+    'refundStatusRejected': '已駁回',
     'defaultRefundReason': '行程有變',
     'paymentRequestCreated': '已建立 {channel} 支付請求，請在支付渠道完成付款',
     'paymentStartFailed': '支付發起失敗：{error}',
@@ -1646,6 +1652,9 @@ class AppLocalizations {
     'orderCanceled': 'Order canceled',
     'refundReason': 'Refund reason',
     'refundSubmitted': 'Refund request submitted',
+    'refundStatusPending': 'Pending review',
+    'refundStatusApproved': 'Refunded',
+    'refundStatusRejected': 'Rejected',
     'defaultRefundReason': 'Plans changed',
     'paymentRequestCreated':
         'Created a {channel} payment request. Finish payment in the channel.',
@@ -2520,6 +2529,9 @@ class AppLocalizations {
   String get orderCanceled => _text('orderCanceled');
   String get refundReason => _text('refundReason');
   String get refundSubmitted => _text('refundSubmitted');
+  String get refundStatusPending => _text('refundStatusPending');
+  String get refundStatusApproved => _text('refundStatusApproved');
+  String get refundStatusRejected => _text('refundStatusRejected');
   String get defaultRefundReason => _text('defaultRefundReason');
   String paymentRequestCreated(String channel) =>
       _text('paymentRequestCreated').replaceFirst('{channel}', channel);
@@ -3125,6 +3137,29 @@ class AppLocalizations {
       '已使用' || 'Used' => couponUsed,
       '已过期' || '已過期' || 'Expired' => couponExpired,
       '已退款' || 'Refunded' => couponRefunded,
+      final value when value != null && value.isNotEmpty => value,
+      _ => unknownStatus,
+    };
+  }
+
+  String refundStatusLabel({int? status, String? fallback}) {
+    if (status != null) {
+      return switch (status) {
+        0 => refundStatusPending,
+        1 => refundStatusApproved,
+        2 => refundStatusRejected,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+      };
+    }
+    return switch (fallback) {
+      '待审核' ||
+      '待審核' ||
+      '申请中' ||
+      '申請中' ||
+      'Pending review' ||
+      'Refund requested' => refundStatusPending,
+      '退款成功' || 'Refunded' || 'Refund successful' => refundStatusApproved,
+      '已驳回' || '已駁回' || 'Rejected' => refundStatusRejected,
       final value when value != null && value.isNotEmpty => value,
       _ => unknownStatus,
     };

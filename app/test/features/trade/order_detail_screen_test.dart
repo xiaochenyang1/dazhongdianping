@@ -136,6 +136,35 @@ Widget localizedApp({
 }
 
 void main() {
+  testWidgets('order detail localizes trade status labels in English', (
+    tester,
+  ) async {
+    final api = OrderDetailApi(paid: true);
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Paid'), findsAtLeastNWidgets(1));
+
+    await tester.tap(find.byKey(const Key('order-refund-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('order-refund-reason')),
+      'Need to change the plan',
+    );
+    await tester.tap(
+      find.text(AppLocalizations.forTag('en').submitApplication),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Refund: Pending review'), findsOneWidget);
+    expect(find.textContaining('待审核'), findsNothing);
+  });
+
   testWidgets('coupon detail retries an initial load failure', (tester) async {
     final api = OrderDetailApi(failFirstCoupon: true);
     await tester.pumpWidget(
@@ -275,6 +304,37 @@ void main() {
     await tester.tap(find.byKey(const Key('copy-coupon-code')));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('券码已复制'), findsOneWidget);
+  });
+
+  testWidgets('coupon detail localizes status labels in English', (
+    tester,
+  ) async {
+    final api = OrderDetailApi();
+    const coupon = Coupon(
+      id: 21,
+      orderId: 10,
+      code: 'CP-DEMO-2026',
+      status: 1,
+      statusText: '待使用',
+      dealTitle: '双人晚餐套餐',
+      shopName: '柏林茶馆',
+      expireAt: '2026-12-31',
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CouponDetailScreen(
+          repository: TradeRepository(api),
+          code: coupon.code,
+          initialCoupon: coupon,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Coupon details'), findsOneWidget);
+    expect(find.textContaining('Available'), findsOneWidget);
+    expect(find.textContaining('待使用'), findsNothing);
   });
 
   testWidgets('coupon detail guards duplicate clipboard writes', (

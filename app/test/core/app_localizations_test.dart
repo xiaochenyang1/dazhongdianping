@@ -156,6 +156,10 @@ void main() {
       'Available',
     );
     expect(
+      AppLocalizations.forTag('en').refundStatusLabel(fallback: '待审核'),
+      'Pending review',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).growthRecordActionLabel('review_create', fallback: '发布点评'),

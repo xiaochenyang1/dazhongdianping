@@ -292,15 +292,18 @@ class CouponDetail extends Coupon {
 class RefundInfo {
   const RefundInfo({
     required this.reason,
+    required this.status,
     required this.statusText,
     required this.auditReason,
   });
   final String reason;
+  final int? status;
   final String statusText;
   final String auditReason;
 
   factory RefundInfo.fromJson(Map<String, dynamic> json) => RefundInfo(
     reason: json['reason'] as String? ?? '',
+    status: (json['status'] as num?)?.toInt(),
     statusText: json['statusText'] as String? ?? '',
     auditReason: json['auditReason'] as String? ?? '',
   );

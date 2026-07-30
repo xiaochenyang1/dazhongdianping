@@ -227,6 +227,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       strings,
       ThirdPartyFeature.payment,
     );
+    final payStatusText = strings.payStatusLabel(
+      status: order.payStatus,
+      fallback: order.payStatusText,
+    );
+    final refundStatusText = order.refund == null
+        ? null
+        : strings.refundStatusLabel(
+            status: order.refund!.status,
+            fallback: order.refund!.statusText,
+          );
     return ListView(
       padding: const EdgeInsets.all(18),
       children: [
@@ -238,7 +248,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  order.payStatusText,
+                  payStatusText,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
@@ -320,7 +330,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 14),
           Card(
             child: ListTile(
-              title: Text(strings.refundLabel(order.refund!.statusText)),
+              title: Text(strings.refundLabel(refundStatusText!)),
               subtitle: Text(order.refund!.reason),
             ),
           ),
@@ -336,7 +346,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             (coupon) => Card(
               child: ListTile(
                 title: Text(coupon.code),
-                subtitle: Text('${coupon.statusText} · ${coupon.expireAt}'),
+                subtitle: Text(
+                  '${strings.couponStatusLabel(status: coupon.status, fallback: coupon.statusText)} · ${coupon.expireAt}',
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -451,6 +463,10 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
               ? detail!.verifyHint
               : strings.defaultVerifyHint;
           final qrImageUrl = detail?.qrImageUrl ?? '';
+          final couponStatusText = strings.couponStatusLabel(
+            status: coupon.status,
+            fallback: coupon.statusText,
+          );
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -462,9 +478,9 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                     children: [
                       Text(
                         usable == null
-                            ? coupon.statusText
+                            ? couponStatusText
                             : strings.statusWithRedeemability(
-                                coupon.statusText,
+                                couponStatusText,
                                 usable,
                               ),
                       ),
