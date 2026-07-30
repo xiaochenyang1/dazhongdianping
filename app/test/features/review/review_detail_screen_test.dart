@@ -18,6 +18,13 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   bool failNextDetail = false;
   bool failNextComments = false;
   bool failNextReport = false;
+  Object? detailError;
+  Object? commentError;
+  Object? loadMoreCommentError;
+  Object? likeError;
+  Object? commentSubmitError;
+  Object? reportError;
+  Object? deleteError;
   int reportRequests = 0;
   int detailRequests = 0;
   Completer<void>? commentRetryGate;
@@ -87,12 +94,18 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
       return detail(owned: true);
     }
     if (path == '/api/c/v1/reviews/12/comments') {
+      final page = query?['page'] as int? ?? 1;
+      if (page == 1 && commentError != null) {
+        throw commentError!;
+      }
+      if (page > 1 && loadMoreCommentError != null) {
+        throw loadMoreCommentError!;
+      }
       if (failNextComments) {
         failNextComments = false;
         throw StateError('comment network unavailable');
       }
       await commentRetryGate?.future;
-      final page = query?['page'] as int? ?? 1;
       requestedCommentPages.add(page);
       final pageComments = !paginateComments
           ? comments
@@ -121,6 +134,9 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
     }
     if (path == '/api/c/v1/reviews/12') {
       detailRequests++;
+      if (detailError != null) {
+        throw detailError!;
+      }
       if (failNextDetail) {
         failNextDetail = false;
         throw StateError('network unavailable');
@@ -133,6 +149,9 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
 
   @override
   Future<Map<String, dynamic>> deleteJson(String path) async {
+    if (deleteError != null) {
+      throw deleteError!;
+    }
     deletedPaths.add(path);
     return const {};
   }
@@ -141,11 +160,17 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     posts.add(path);
     if (path == '/api/c/v1/reviews/12/like') {
+      if (likeError != null) {
+        throw likeError!;
+      }
       liked = !liked;
       likeCount += liked ? 1 : -1;
       return {'reviewId': 12, 'liked': liked, 'likeCount': likeCount};
     }
     if (path == '/api/c/v1/reviews/12/comments') {
+      if (commentSubmitError != null) {
+        throw commentSubmitError!;
+      }
       final content = (body as Map)['content'] as String;
       comments.add({
         'id': 100 + comments.length,
@@ -163,6 +188,9 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
     }
     if (path == '/api/c/v1/reviews/12/report') {
       reportRequests++;
+      if (reportError != null) {
+        throw reportError!;
+      }
       if (failNextReport) {
         failNextReport = false;
         throw StateError('report unavailable');
@@ -277,6 +305,30 @@ void main() {
     expect(api.detailRequests, 2);
     expect(find.text('柏林茶馆'), findsOneWidget);
     expect(api.requestedCommentPages, [1]);
+  });
+
+  testWidgets('public review detail localizes load errors in English', (
+    tester,
+  ) async {
+    final api = DetailFakeApi()..detailError = const ApiException('点评不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load review details: This review could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('点评不存在'), findsNothing);
   });
 
   testWidgets('public review guards duplicate detail retries', (tester) async {
@@ -431,6 +483,88 @@ void main() {
     await tester.pump();
     expect(api.posts, contains('/api/c/v1/reviews/12/report'));
     expect(find.text('举报已提交'), findsOneWidget);
+  });
+
+  testWidgets('public review detail localizes comment errors in English', (
+    tester,
+  ) async {
+    final api = DetailFakeApi()
+      ..commentSubmitError = const ApiException('回复目标不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('review-comment-reply-81')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.byKey(const Key('review-comment-reply-81')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('review-comment-reply-81')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('review-comment-input')),
+      'Reply that should fail',
+    );
+    await tester.tap(find.byKey(const Key('review-comment-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not comment: The comment you are replying to could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('回复目标不存在'), findsNothing);
+  });
+
+  testWidgets('public review detail localizes report errors in English', (
+    tester,
+  ) async {
+    final api = DetailFakeApi()
+      ..reportError = const ApiException('你已经举报过这条点评了');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('review-report-button')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.tap(find.byKey(const Key('review-report-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('review-report-reason')),
+      'Duplicate report',
+    );
+    await tester.tap(find.text('Submit report'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not report: You already reported this review. Do not submit it again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('你已经举报过这条点评了'), findsNothing);
   });
 
   testWidgets('guest public review detail is read-only', (tester) async {

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/review/review_error_localizer.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -115,7 +116,14 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
         _auditRemark = detail.auditRemark;
       });
     } catch (error) {
-      if (mounted) setState(() => _loadError = '$error');
+      if (mounted) {
+        setState(
+          () => _loadError = localizeReviewError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -197,7 +205,13 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
       );
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(result);
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).saveFailed(error));
+      if (mounted) {
+        _showMessage(
+          AppLocalizations.of(context).saveFailed(
+            localizeReviewError(AppLocalizations.of(context), error),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

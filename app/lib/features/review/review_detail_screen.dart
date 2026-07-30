@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
+import 'package:dazhongdianping_app/features/review/review_error_localizer.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -142,7 +143,13 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).likeFailed(error))),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).likeFailed(
+              localizeReviewError(AppLocalizations.of(context), error),
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _likeSaving = false);
@@ -175,7 +182,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).commentFailed(error)),
+          content: Text(
+            AppLocalizations.of(context).commentFailed(
+              localizeReviewError(AppLocalizations.of(context), error),
+            ),
+          ),
         ),
       );
     } finally {
@@ -213,7 +224,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreCommentsFailed(error),
+              AppLocalizations.of(context).loadMoreCommentsFailed(
+                localizeReviewError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -273,7 +286,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).reportFailed(error)),
+          content: Text(
+            AppLocalizations.of(context).reportFailed(
+              localizeReviewError(AppLocalizations.of(context), error),
+            ),
+          ),
         ),
       );
     } finally {
@@ -338,7 +355,11 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).deleteFailed(error)),
+          content: Text(
+            AppLocalizations.of(context).deleteFailed(
+              localizeReviewError(AppLocalizations.of(context), error),
+            ),
+          ),
         ),
       );
     } finally {
@@ -444,9 +465,12 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  AppLocalizations.of(
-                    context,
-                  ).reviewDetailLoadFailed(snapshot.error!),
+                  AppLocalizations.of(context).reviewDetailLoadFailed(
+                    localizeReviewError(
+                      AppLocalizations.of(context),
+                      snapshot.error!,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
@@ -704,9 +728,12 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          AppLocalizations.of(
-                            context,
-                          ).commentsLoadFailed(commentSnapshot.error!),
+                          AppLocalizations.of(context).commentsLoadFailed(
+                            localizeReviewError(
+                              AppLocalizations.of(context),
+                              commentSnapshot.error!,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 8),
                         FilledButton.tonalIcon(

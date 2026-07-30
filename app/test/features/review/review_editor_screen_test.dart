@@ -17,6 +17,7 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
   String? uploadedFileName;
   bool failNextSave = false;
   bool failNextUpload = false;
+  Object? saveError;
   int uploadRequests = 0;
   bool failNextLoad = false;
   int loadRequests = 0;
@@ -64,6 +65,9 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     method = 'POST';
     this.path = path;
     this.body = body;
+    if (saveError != null) {
+      throw saveError!;
+    }
     if (failNextSave) {
       failNextSave = false;
       throw StateError('save unavailable');
@@ -77,6 +81,9 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     method = 'PUT';
     this.path = path;
     this.body = body;
+    if (saveError != null) {
+      throw saveError!;
+    }
     final payload = body! as Map<String, Object?>;
     return detail(content: payload['content'] as String);
   }
@@ -397,6 +404,38 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('review editor localizes save errors in English', (tester) async {
+    final api = EditorFakeApi()..saveError = const ApiException('点评所属门店不可修改');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReviewEditorScreen(
+          repository: ReviewRepository(api),
+          shopId: 7,
+          shopName: '柏林茶馆',
+          currency: 'EUR',
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await scrollTo(tester, find.byKey(const Key('review-content')));
+    await tester.enterText(
+      find.byKey(const Key('review-content')),
+      'Localized save failure',
+    );
+    await scrollTo(tester, find.byKey(const Key('review-submit')));
+    await tester.tap(find.byKey(const Key('review-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not save: The place for this review cannot be changed.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('点评所属门店不可修改'), findsNothing);
   });
 
   testWidgets('review editor rejects empty content and invalid cost', (

@@ -381,6 +381,30 @@ void main() {
     );
     expect(AppLocalizations.forTag('en').writeReview, 'Write a review');
     expect(AppLocalizations.forTag('en').reviewDetail, 'Review details');
+    expect(
+      AppLocalizations.forTag('en').reviewErrorNotFound,
+      'This review could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reviewErrorReportDuplicate,
+      'You already reported this review. Do not submit it again.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reviewErrorReplyTargetMissing,
+      'The comment you are replying to could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reviewErrorUserUnavailable,
+      'Your account is currently unavailable.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reviewErrorShopUnavailable,
+      'This place is unavailable for reviews.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reviewErrorShopImmutable,
+      'The place for this review cannot be changed.',
+    );
     expect(AppLocalizations.forTag('zh-CN').address, '地址');
     expect(AppLocalizations.forTag('zh-TW').openingHours, '營業時間');
     expect(AppLocalizations.forTag('en').contactPhone, 'Contact phone');
