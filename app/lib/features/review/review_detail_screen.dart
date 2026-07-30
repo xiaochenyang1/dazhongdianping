@@ -470,6 +470,12 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
           status: review.auditStatus,
           fallback: review.auditStatusText,
         );
+        final showAuditStatus =
+            review.auditStatusText.isNotEmpty ||
+            switch (review.auditStatus) {
+              0 || 1 || 2 => true,
+              _ => false,
+            };
         return ListView(
           padding: const EdgeInsets.all(18),
           children: [
@@ -505,8 +511,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                     ),
                   ),
                 Text('★ ${review.scoreOverall.toStringAsFixed(1)}'),
-                if (review.auditStatusText.isNotEmpty)
-                  Chip(label: Text(auditStatusText)),
+                if (showAuditStatus) Chip(label: Text(auditStatusText)),
               ],
             ),
             if (widget.owned && review.auditRemark.isNotEmpty) ...[

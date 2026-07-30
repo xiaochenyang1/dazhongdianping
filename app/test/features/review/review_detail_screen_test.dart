@@ -12,6 +12,7 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   final List<String> posts = <String>[];
   final List<String> deletedPaths = <String>[];
   bool liked = false;
+  bool blankAuditStatusText = false;
   int likeCount = 3;
   bool paginateComments = false;
   bool failNextDetail = false;
@@ -54,7 +55,11 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
     'commentCount': comments.length,
     'likedByCurrentUser': liked,
     'auditStatus': owned ? 0 : 1,
-    'auditStatusText': owned ? '待审核' : '审核通过',
+    'auditStatusText': blankAuditStatusText
+        ? ''
+        : owned
+        ? '待审核'
+        : '审核通过',
     'auditRemark': owned ? '请补充菜品细节' : '',
     'status': 1,
     'statusText': '正常',
@@ -323,6 +328,24 @@ void main() {
     expect(find.text('Approved'), findsOneWidget);
     expect(find.text('Local expert'), findsOneWidget);
     expect(find.text('审核通过'), findsNothing);
+  });
+
+  testWidgets('public review detail keeps audit chip when text is blank', (
+    tester,
+  ) async {
+    final api = DetailFakeApi()..blankAuditStatusText = true;
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Approved'), findsOneWidget);
   });
 
   testWidgets('public review detail loads later comment pages', (tester) async {
