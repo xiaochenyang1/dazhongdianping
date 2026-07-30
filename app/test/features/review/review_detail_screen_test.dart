@@ -321,6 +321,7 @@ void main() {
     );
     expect(find.textContaining('3 likes · 1 comments'), findsOneWidget);
     expect(find.text('Approved'), findsOneWidget);
+    expect(find.text('Local expert'), findsOneWidget);
     expect(find.text('审核通过'), findsNothing);
   });
 

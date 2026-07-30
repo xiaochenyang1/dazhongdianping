@@ -1,5 +1,17 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
 
+({String? code, String? label}) _badgeFromJson(Object? raw) {
+  if (raw is! Map<String, dynamic>) {
+    return (code: null, label: null);
+  }
+  final code = raw['code'];
+  final label = raw['label'];
+  return (
+    code: code is String && code.trim().isNotEmpty ? code.trim() : null,
+    label: label is String && label.trim().isNotEmpty ? label.trim() : null,
+  );
+}
+
 class RankSummary {
   const RankSummary({
     required this.id,
@@ -48,6 +60,7 @@ class RankShop {
     required this.pricePerCapita,
     required this.cityName,
     required this.areaName,
+    this.merchantCertificationCode,
     this.merchantCertificationLabel,
   });
 
@@ -58,15 +71,11 @@ class RankShop {
   final num pricePerCapita;
   final String cityName;
   final String areaName;
+  final String? merchantCertificationCode;
   final String? merchantCertificationLabel;
 
   factory RankShop.fromJson(Map<String, dynamic> json) {
-    final certification = json['merchantCertification'];
-    String? label;
-    if (certification is Map<String, dynamic>) {
-      final value = certification['label'];
-      if (value is String && value.trim().isNotEmpty) label = value.trim();
-    }
+    final certification = _badgeFromJson(json['merchantCertification']);
     return RankShop(
       id: (json['id'] as num?)?.toInt() ?? 0,
       name: json['name'] as String? ?? '',
@@ -75,7 +84,8 @@ class RankShop {
       pricePerCapita: json['pricePerCapita'] as num? ?? 0,
       cityName: json['cityName'] as String? ?? '',
       areaName: json['areaName'] as String? ?? '',
-      merchantCertificationLabel: label,
+      merchantCertificationCode: certification.code,
+      merchantCertificationLabel: certification.label,
     );
   }
 }

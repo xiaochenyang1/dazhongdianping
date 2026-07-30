@@ -77,9 +77,13 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
     } catch (error) {
       if (mounted) {
         setState(() => _visibleProfile = previous);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).followStatusUpdateFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).followStatusUpdateFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -121,13 +125,21 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppLocalizations.of(context).publicProfileLoadFailed(snapshot.error!)),
+                Text(
+                  AppLocalizations.of(
+                    context,
+                  ).publicProfileLoadFailed(snapshot.error!),
+                ),
                 SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('public-profile-retry'),
                   onPressed: _reloadingProfile ? null : _reloadProfile,
                   icon: const Icon(Icons.refresh),
-                  label: Text(_reloadingProfile ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
+                  label: Text(
+                    _reloadingProfile
+                        ? AppLocalizations.of(context).processing
+                        : AppLocalizations.of(context).retry,
+                  ),
                 ),
               ],
             ),
@@ -152,24 +164,39 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
             ),
-            if (profile.expertCertificationLabel != null) ...[
+            if (AppLocalizations.of(context)
+                .certificationBadgeLabel(
+                  code: profile.expertCertificationCode,
+                  fallback: profile.expertCertificationLabel,
+                )
+                .isNotEmpty) ...[
               const SizedBox(height: 8),
               Center(
                 child: Chip(
                   avatar: const Icon(Icons.verified, size: 16),
-                  label: Text(profile.expertCertificationLabel!),
+                  label: Text(
+                    AppLocalizations.of(context).certificationBadgeLabel(
+                      code: profile.expertCertificationCode,
+                      fallback: profile.expertCertificationLabel,
+                    ),
+                  ),
                 ),
               ),
             ],
             Text(
-              profile.signature.isEmpty ? AppLocalizations.of(context).noSignature : profile.signature,
+              profile.signature.isEmpty
+                  ? AppLocalizations.of(context).noSignature
+                  : profile.signature,
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
-                  child: _Metric(label: AppLocalizations.of(context).reviewsMetric, value: '${profile.reviewCount}'),
+                  child: _Metric(
+                    label: AppLocalizations.of(context).reviewsMetric,
+                    value: '${profile.reviewCount}',
+                  ),
                 ),
                 Expanded(
                   child: InkWell(
@@ -204,7 +231,11 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                   Expanded(
                     child: FilledButton(
                       onPressed: _saving ? null : () => _toggle(profile),
-                      child: Text(profile.followedByCurrentUser ? AppLocalizations.of(context).followed : AppLocalizations.of(context).followingUsers),
+                      child: Text(
+                        profile.followedByCurrentUser
+                            ? AppLocalizations.of(context).followed
+                            : AppLocalizations.of(context).followingUsers,
+                      ),
                     ),
                   ),
                   if (widget.onMessage != null) ...[
@@ -213,7 +244,9 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => widget.onMessage!(profile.id),
                         icon: const Icon(Icons.chat_bubble_outline_rounded),
-                        label: Text(AppLocalizations.of(context).sendDirectMessage),
+                        label: Text(
+                          AppLocalizations.of(context).sendDirectMessage,
+                        ),
                       ),
                     ),
                   ],
@@ -334,9 +367,13 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreUsersFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreUsersFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => loadingMore = false);
@@ -345,7 +382,13 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.followers ? AppLocalizations.of(context).followers : AppLocalizations.of(context).followingUsers)),
+    appBar: AppBar(
+      title: Text(
+        widget.followers
+            ? AppLocalizations.of(context).followers
+            : AppLocalizations.of(context).followingUsers,
+      ),
+    ),
     body: FutureBuilder<SocialUserPage>(
       future: page,
       builder: (context, snapshot) {
@@ -355,13 +398,21 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(AppLocalizations.of(context).relationListLoadFailed(snapshot.error!)),
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        ).relationListLoadFailed(snapshot.error!),
+                      ),
                       SizedBox(height: 12),
                       FilledButton.tonalIcon(
                         key: const Key('relationships-retry'),
                         onPressed: reloading ? null : reload,
                         icon: const Icon(Icons.refresh),
-                        label: Text(reloading ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
+                        label: Text(
+                          reloading
+                              ? AppLocalizations.of(context).processing
+                              : AppLocalizations.of(context).retry,
+                        ),
                       ),
                     ],
                   ),
@@ -371,7 +422,13 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
         final current = snapshot.data!;
         final items = current.items;
         if (items.isEmpty) {
-          return Center(child: Text(widget.followers ? AppLocalizations.of(context).noFollowers : AppLocalizations.of(context).noFollowing));
+          return Center(
+            child: Text(
+              widget.followers
+                  ? AppLocalizations.of(context).noFollowers
+                  : AppLocalizations.of(context).noFollowing,
+            ),
+          );
         }
         return ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -389,7 +446,11 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.expand_more),
-                  label: Text(loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
+                  label: Text(
+                    loadingMore
+                        ? AppLocalizations.of(context).loading
+                        : AppLocalizations.of(context).loadMore,
+                  ),
                 ),
               );
             }
@@ -399,7 +460,10 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
                 title: Text(user.nickname),
                 subtitle: Text(
                   user.signature.isEmpty
-                      ? AppLocalizations.of(context).levelFollowersMeta(level: user.level, count: user.followerCount)
+                      ? AppLocalizations.of(context).levelFollowersMeta(
+                          level: user.level,
+                          count: user.followerCount,
+                        )
                       : user.signature,
                 ),
                 trailing: const Icon(Icons.chevron_right),

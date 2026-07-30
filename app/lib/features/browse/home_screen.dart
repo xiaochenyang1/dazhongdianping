@@ -185,8 +185,14 @@ class _HomeScreenState extends State<HomeScreen> {
             initialValue: widget.localeTag,
             onSelected: widget.onLocaleChanged,
             itemBuilder: (_) => [
-              PopupMenuItem(value: 'zh-CN', child: Text(strings.simplifiedChinese)),
-              PopupMenuItem(value: 'zh-TW', child: Text(strings.traditionalChinese)),
+              PopupMenuItem(
+                value: 'zh-CN',
+                child: Text(strings.simplifiedChinese),
+              ),
+              PopupMenuItem(
+                value: 'zh-TW',
+                child: Text(strings.traditionalChinese),
+              ),
               PopupMenuItem(value: 'en', child: Text(strings.englishLanguage)),
             ],
             icon: const Icon(Icons.language),
@@ -366,9 +372,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               subtitle: Text(
-                                shop.merchantCertificationLabel == null
+                                strings
+                                        .certificationBadgeLabel(
+                                          code: shop.merchantCertificationCode,
+                                          fallback:
+                                              shop.merchantCertificationLabel,
+                                        )
+                                        .isEmpty
                                     ? '${shop.category} · ★ ${shop.score.toStringAsFixed(1)}'
-                                    : '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${shop.merchantCertificationLabel}',
+                                    : '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${strings.certificationBadgeLabel(code: shop.merchantCertificationCode, fallback: shop.merchantCertificationLabel)}',
                               ),
                               trailing: Text(
                                 formatMoney(

@@ -286,6 +286,7 @@ void main() {
       expect(api.path, '/api/c/v1/reviews/12');
       expect(detail.userName, '阿遥');
       expect(detail.likeCount, 3);
+      expect(detail.authorCertificationCode, 'local_expert');
       expect(detail.authorCertificationLabel, '本地达人');
       expect(detail.merchantReply, '柏林茶馆：谢谢支持');
       expect(detail.canInteract, isTrue);

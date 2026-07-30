@@ -86,6 +86,10 @@ void main() {
     expect(api.path, '/api/c/v1/ranks/30001');
     expect(detail.type, 1);
     expect(detail.items.single.shop.name, '渝里火锅徐汇店');
+    expect(
+      detail.items.single.shop.merchantCertificationCode,
+      'verified_merchant',
+    );
     expect(detail.items.single.shop.merchantCertificationLabel, '认证商户');
   });
 }

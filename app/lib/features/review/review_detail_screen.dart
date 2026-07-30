@@ -489,10 +489,20 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                       : review.userName,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
-                if (review.authorCertificationLabel != null)
+                if (AppLocalizations.of(context)
+                    .certificationBadgeLabel(
+                      code: review.authorCertificationCode,
+                      fallback: review.authorCertificationLabel,
+                    )
+                    .isNotEmpty)
                   Chip(
                     avatar: const Icon(Icons.verified, size: 16),
-                    label: Text(review.authorCertificationLabel!),
+                    label: Text(
+                      AppLocalizations.of(context).certificationBadgeLabel(
+                        code: review.authorCertificationCode,
+                        fallback: review.authorCertificationLabel,
+                      ),
+                    ),
                   ),
                 Text('★ ${review.scoreOverall.toStringAsFixed(1)}'),
                 if (review.auditStatusText.isNotEmpty)

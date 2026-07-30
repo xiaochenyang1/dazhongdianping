@@ -1,5 +1,17 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
 
+({String? code, String? label}) _badgeFromJson(Object? raw) {
+  if (raw is! Map<String, dynamic>) {
+    return (code: null, label: null);
+  }
+  final code = raw['code'];
+  final label = raw['label'];
+  return (
+    code: code is String && code.trim().isNotEmpty ? code.trim() : null,
+    label: label is String && label.trim().isNotEmpty ? label.trim() : null,
+  );
+}
+
 class ShopSummary {
   const ShopSummary({
     required this.id,
@@ -8,6 +20,7 @@ class ShopSummary {
     required this.score,
     required this.currency,
     required this.pricePerCapita,
+    this.merchantCertificationCode,
     this.merchantCertificationLabel,
   });
   final int id;
@@ -16,17 +29,11 @@ class ShopSummary {
   final double score;
   final String currency;
   final num pricePerCapita;
+  final String? merchantCertificationCode;
   final String? merchantCertificationLabel;
 
   factory ShopSummary.fromJson(Map<String, dynamic> json) {
-    final certification = json['merchantCertification'];
-    String? label;
-    if (certification is Map<String, dynamic>) {
-      final value = certification['label'];
-      if (value is String && value.trim().isNotEmpty) {
-        label = value.trim();
-      }
-    }
+    final certification = _badgeFromJson(json['merchantCertification']);
     return ShopSummary(
       id: json['id'] as int,
       name: json['name'] as String? ?? '',
@@ -34,7 +41,8 @@ class ShopSummary {
       score: (json['score'] as num? ?? 0).toDouble(),
       currency: json['currency'] as String? ?? 'EUR',
       pricePerCapita: json['pricePerCapita'] as num? ?? 0,
-      merchantCertificationLabel: label,
+      merchantCertificationCode: certification.code,
+      merchantCertificationLabel: certification.label,
     );
   }
 }
@@ -77,6 +85,7 @@ class ShopReviewPreview {
     required this.likedCount,
     required this.commentCount,
     required this.createdAt,
+    this.authorCertificationCode,
     this.authorCertificationLabel,
     this.merchantReply,
   });
@@ -88,18 +97,12 @@ class ShopReviewPreview {
   final int likedCount;
   final int commentCount;
   final String createdAt;
+  final String? authorCertificationCode;
   final String? authorCertificationLabel;
   final String? merchantReply;
 
   factory ShopReviewPreview.fromJson(Map<String, dynamic> json) {
-    final author = json['authorCertification'];
-    String? authorLabel;
-    if (author is Map<String, dynamic>) {
-      final value = author['label'];
-      if (value is String && value.trim().isNotEmpty) {
-        authorLabel = value.trim();
-      }
-    }
+    final author = _badgeFromJson(json['authorCertification']);
     final reply = json['merchantReply'];
     String? merchantReply;
     if (reply is Map<String, dynamic>) {
@@ -119,7 +122,8 @@ class ShopReviewPreview {
       likedCount: (json['likedCount'] as num?)?.toInt() ?? 0,
       commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
       createdAt: json['createdAt'] as String? ?? '',
-      authorCertificationLabel: authorLabel,
+      authorCertificationCode: author.code,
+      authorCertificationLabel: author.label,
       merchantReply: merchantReply,
     );
   }
@@ -225,6 +229,7 @@ class ShopBrowseHistoryItem {
     required this.areaName,
     required this.viewCount,
     required this.lastViewedAt,
+    this.merchantCertificationCode,
     this.merchantCertificationLabel,
   });
 
@@ -239,17 +244,11 @@ class ShopBrowseHistoryItem {
   final String areaName;
   final int viewCount;
   final String lastViewedAt;
+  final String? merchantCertificationCode;
   final String? merchantCertificationLabel;
 
   factory ShopBrowseHistoryItem.fromJson(Map<String, dynamic> json) {
-    final certification = json['merchantCertification'];
-    String? label;
-    if (certification is Map<String, dynamic>) {
-      final value = certification['label'];
-      if (value is String && value.trim().isNotEmpty) {
-        label = value.trim();
-      }
-    }
+    final certification = _badgeFromJson(json['merchantCertification']);
     return ShopBrowseHistoryItem(
       id: (json['id'] as num?)?.toInt() ?? 0,
       shopId: (json['shopId'] as num?)?.toInt() ?? 0,
@@ -262,7 +261,8 @@ class ShopBrowseHistoryItem {
       areaName: json['areaName'] as String? ?? '',
       viewCount: (json['viewCount'] as num?)?.toInt() ?? 1,
       lastViewedAt: json['lastViewedAt'] as String? ?? '',
-      merchantCertificationLabel: label,
+      merchantCertificationCode: certification.code,
+      merchantCertificationLabel: certification.label,
     );
   }
 }
@@ -296,6 +296,7 @@ class ShopDetail {
     required this.businessHours,
     required this.summary,
     required this.tags,
+    this.merchantCertificationCode,
     this.merchantCertificationLabel,
   });
 
@@ -310,17 +311,11 @@ class ShopDetail {
   final String businessHours;
   final String summary;
   final List<String> tags;
+  final String? merchantCertificationCode;
   final String? merchantCertificationLabel;
 
   factory ShopDetail.fromJson(Map<String, dynamic> json) {
-    final certification = json['merchantCertification'];
-    String? label;
-    if (certification is Map<String, dynamic>) {
-      final value = certification['label'];
-      if (value is String && value.trim().isNotEmpty) {
-        label = value.trim();
-      }
-    }
+    final certification = _badgeFromJson(json['merchantCertification']);
     return ShopDetail(
       id: json['id'] as int,
       name: json['name'] as String? ?? '',
@@ -335,7 +330,8 @@ class ShopDetail {
       tags: (json['tags'] as List<dynamic>? ?? const [])
           .map((item) => '$item')
           .toList(),
-      merchantCertificationLabel: label,
+      merchantCertificationCode: certification.code,
+      merchantCertificationLabel: certification.label,
     );
   }
 }

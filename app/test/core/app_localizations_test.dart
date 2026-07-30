@@ -76,6 +76,16 @@ void main() {
       'ranking',
     );
     expect(
+      AppLocalizations.forTag(
+        'en',
+      ).certificationBadgeLabel(code: 'verified_merchant'),
+      'Verified merchant',
+    );
+    expect(
+      AppLocalizations.forTag('en').certificationBadgeLabel(fallback: '本地达人'),
+      'Local expert',
+    );
+    expect(
       AppLocalizations.forTag('en').openTargetFailed('deal', 'offline'),
       'Could not open deal: offline',
     );

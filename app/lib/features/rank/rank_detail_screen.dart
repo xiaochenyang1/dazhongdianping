@@ -135,8 +135,16 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
                         [
                           if (location.isNotEmpty) location,
                           '★ ${shop.score.toStringAsFixed(1)}',
-                          if (shop.merchantCertificationLabel != null)
-                            shop.merchantCertificationLabel!,
+                          if (strings
+                              .certificationBadgeLabel(
+                                code: shop.merchantCertificationCode,
+                                fallback: shop.merchantCertificationLabel,
+                              )
+                              .isNotEmpty)
+                            strings.certificationBadgeLabel(
+                              code: shop.merchantCertificationCode,
+                              fallback: shop.merchantCertificationLabel,
+                            ),
                           if (item.reason.isNotEmpty) item.reason,
                         ].join(' · '),
                         maxLines: 3,

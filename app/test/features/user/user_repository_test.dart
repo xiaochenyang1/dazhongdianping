@@ -339,6 +339,7 @@ void main() {
       final followers = await repository.loadRelationships(9, followers: true);
       expect(profile.followerCount, 12);
       expect(profile.followingCount, 7);
+      expect(profile.expertCertificationCode, 'local_expert');
       expect(profile.expertCertificationLabel, '本地达人');
       expect(followers.items.single.nickname, '巴黎小李');
       final later = await repository.loadRelationships(

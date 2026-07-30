@@ -279,9 +279,14 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                     return Card(
                       child: ListTile(
                         title: Text(
-                          item.authorCertificationLabel == null
+                          strings
+                                  .certificationBadgeLabel(
+                                    code: item.authorCertificationCode,
+                                    fallback: item.authorCertificationLabel,
+                                  )
+                                  .isEmpty
                               ? '$userName · ★ ${item.score.toStringAsFixed(1)}'
-                              : '$userName · ${item.authorCertificationLabel} · ★ ${item.score.toStringAsFixed(1)}',
+                              : '$userName · ${strings.certificationBadgeLabel(code: item.authorCertificationCode, fallback: item.authorCertificationLabel)} · ★ ${item.score.toStringAsFixed(1)}',
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

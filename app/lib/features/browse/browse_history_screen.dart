@@ -277,8 +277,16 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
                   if (location.isNotEmpty) location,
                   strings.browseViewCount(item.viewCount),
                   if (item.lastViewedAt.isNotEmpty) item.lastViewedAt,
-                  if (item.merchantCertificationLabel != null)
-                    item.merchantCertificationLabel!,
+                  if (strings
+                      .certificationBadgeLabel(
+                        code: item.merchantCertificationCode,
+                        fallback: item.merchantCertificationLabel,
+                      )
+                      .isNotEmpty)
+                    strings.certificationBadgeLabel(
+                      code: item.merchantCertificationCode,
+                      fallback: item.merchantCertificationLabel,
+                    ),
                 ].join(' · ');
                 return Card(
                   child: ListTile(

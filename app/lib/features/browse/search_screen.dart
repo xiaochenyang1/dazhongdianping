@@ -531,9 +531,15 @@ class _SearchScreenState extends State<SearchScreen> {
                             return ListTile(
                               title: Text(shop.name),
                               subtitle: Text(
-                                shop.merchantCertificationLabel == null
+                                strings
+                                        .certificationBadgeLabel(
+                                          code: shop.merchantCertificationCode,
+                                          fallback:
+                                              shop.merchantCertificationLabel,
+                                        )
+                                        .isEmpty
                                     ? '${shop.category} · ★ ${shop.score.toStringAsFixed(1)}'
-                                    : '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${shop.merchantCertificationLabel}',
+                                    : '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${strings.certificationBadgeLabel(code: shop.merchantCertificationCode, fallback: shop.merchantCertificationLabel)}',
                               ),
                               trailing: Text(
                                 formatMoney(

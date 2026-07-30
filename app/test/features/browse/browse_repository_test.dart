@@ -28,6 +28,7 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
         'businessHours': '10:00-22:00',
         'summary': 'Hand-pulled noodles',
         'tags': ['Noodles'],
+        'merchantCertification': {'code': 'verified_merchant', 'label': '认证商户'},
       };
     }
     if (path == '/api/c/v1/search/hot') {
@@ -57,6 +58,10 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
             'score': 4.6,
             'currency': 'CNY',
             'pricePerCapita': 88,
+            'merchantCertification': {
+              'code': 'verified_merchant',
+              'label': '认证商户',
+            },
           },
         ],
       };
@@ -121,6 +126,10 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
             'areaName': 'Soho',
             'viewCount': 2,
             'lastViewedAt': '2026-07-25 18:00',
+            'merchantCertification': {
+              'code': 'verified_merchant',
+              'label': '认证商户',
+            },
           },
         ],
         'total': 1,
@@ -154,6 +163,10 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
           'score': 4.7,
           'currency': 'EUR',
           'pricePerCapita': 22,
+          'merchantCertification': {
+            'code': 'verified_merchant',
+            'label': '认证商户',
+          },
         },
       ],
     };
@@ -181,6 +194,7 @@ void main() {
     expect(api.path, '/api/c/v1/search/shops');
     expect(api.query?['keyword'], 'noodles');
     expect(results.single.name, 'Paris Noodles');
+    expect(results.single.merchantCertificationCode, 'verified_merchant');
 
     final page = await repository.searchShopPage(
       'noodles',
@@ -194,6 +208,7 @@ void main() {
     final detail = await repository.loadShopDetail(99);
     expect(api.path, '/api/c/v1/shops/99');
     expect(detail.address, 'Rue de Lyon');
+    expect(detail.merchantCertificationCode, 'verified_merchant');
   });
 
   test(
@@ -246,6 +261,7 @@ void main() {
     expect(api.path, '/api/c/v1/user/browse-history');
     expect(history.single.shopName, 'London Hotpot');
     expect(history.single.viewCount, 2);
+    expect(history.single.merchantCertificationCode, 'verified_merchant');
 
     final page = await repository.loadBrowseHistoryPage(page: 2, pageSize: 12);
     expect(api.query, {'page': 2, 'pageSize': 12});
@@ -294,6 +310,7 @@ void main() {
     expect(api.query?['limit'], 4);
     expect(similar.single.name, '徐汇小馆');
     expect(similar.single.category, '上海 · 徐汇');
+    expect(similar.single.merchantCertificationCode, 'verified_merchant');
   });
 
   test('loads public shop reviews preview list', () async {
@@ -310,6 +327,7 @@ void main() {
     expect(api.query?['pageSize'], 5);
     expect(api.query?['sort'], 'latest');
     expect(reviews.single.userName, '阿遥');
+    expect(reviews.single.authorCertificationCode, 'local_expert');
     expect(reviews.single.authorCertificationLabel, '本地达人');
     expect(reviews.single.merchantReply, '渝里火锅：谢谢光临，欢迎再来。');
   });

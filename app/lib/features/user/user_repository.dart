@@ -2,6 +2,18 @@ import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 
+({String? code, String? label}) _badgeFromJson(Object? raw) {
+  if (raw is! Map<String, dynamic>) {
+    return (code: null, label: null);
+  }
+  final code = raw['code'];
+  final label = raw['label'];
+  return (
+    code: code is String && code.trim().isNotEmpty ? code.trim() : null,
+    label: label is String && label.trim().isNotEmpty ? label.trim() : null,
+  );
+}
+
 enum UserCollection { reviews, posts, favorites, orders, coupons, reservations }
 
 extension UserCollectionInfo on UserCollection {
@@ -212,6 +224,7 @@ class PublicUserProfile {
     required this.followerCount,
     required this.followingCount,
     required this.followedByCurrentUser,
+    this.expertCertificationCode,
     this.expertCertificationLabel,
   });
   final int id;
@@ -223,16 +236,10 @@ class PublicUserProfile {
   final int followerCount;
   final int followingCount;
   final bool followedByCurrentUser;
+  final String? expertCertificationCode;
   final String? expertCertificationLabel;
   factory PublicUserProfile.fromJson(Map<String, dynamic> json) {
-    final certification = json['expertCertification'];
-    String? expertLabel;
-    if (certification is Map<String, dynamic>) {
-      final value = certification['label'];
-      if (value is String && value.trim().isNotEmpty) {
-        expertLabel = value.trim();
-      }
-    }
+    final certification = _badgeFromJson(json['expertCertification']);
     return PublicUserProfile(
       id: json['id'] as int,
       nickname: json['nickname'] as String? ?? '',
@@ -243,7 +250,8 @@ class PublicUserProfile {
       followerCount: json['followerCount'] as int? ?? 0,
       followingCount: json['followingCount'] as int? ?? 0,
       followedByCurrentUser: json['followedByCurrentUser'] as bool? ?? false,
-      expertCertificationLabel: expertLabel,
+      expertCertificationCode: certification.code,
+      expertCertificationLabel: certification.label,
     );
   }
   PublicUserProfile withFollow({
@@ -259,6 +267,7 @@ class PublicUserProfile {
     followerCount: followers,
     followingCount: followingCount,
     followedByCurrentUser: following,
+    expertCertificationCode: expertCertificationCode,
     expertCertificationLabel: expertCertificationLabel,
   );
 }

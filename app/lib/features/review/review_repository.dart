@@ -2,6 +2,18 @@ import 'dart:typed_data';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
 
+({String? code, String? label}) _badgeFromJson(Object? raw) {
+  if (raw is! Map<String, dynamic>) {
+    return (code: null, label: null);
+  }
+  final code = raw['code'];
+  final label = raw['label'];
+  return (
+    code: code is String && code.trim().isNotEmpty ? code.trim() : null,
+    label: label is String && label.trim().isNotEmpty ? label.trim() : null,
+  );
+}
+
 class ReviewEditorData {
   const ReviewEditorData({
     required this.id,
@@ -92,6 +104,7 @@ class ReviewDetail {
     required this.images,
     required this.createdAt,
     required this.updatedAt,
+    this.authorCertificationCode,
     this.authorCertificationLabel,
     this.merchantReply,
   });
@@ -120,6 +133,7 @@ class ReviewDetail {
   final List<String> images;
   final String createdAt;
   final String updatedAt;
+  final String? authorCertificationCode;
   final String? authorCertificationLabel;
   final String? merchantReply;
 
@@ -154,20 +168,14 @@ class ReviewDetail {
     images: images,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    authorCertificationCode: authorCertificationCode,
     authorCertificationLabel: authorCertificationLabel,
     merchantReply: merchantReply,
   );
 
   factory ReviewDetail.fromJson(Map<String, dynamic> json) {
     final imageItems = json['images'] as List<dynamic>? ?? const [];
-    final author = json['authorCertification'];
-    String? authorLabel;
-    if (author is Map<String, dynamic>) {
-      final value = author['label'];
-      if (value is String && value.trim().isNotEmpty) {
-        authorLabel = value.trim();
-      }
-    }
+    final author = _badgeFromJson(json['authorCertification']);
     final reply = json['merchantReply'];
     String? merchantReply;
     if (reply is Map<String, dynamic>) {
@@ -211,7 +219,8 @@ class ReviewDetail {
           .toList(),
       createdAt: json['createdAt'] as String? ?? '',
       updatedAt: json['updatedAt'] as String? ?? '',
-      authorCertificationLabel: authorLabel,
+      authorCertificationCode: author.code,
+      authorCertificationLabel: author.label,
       merchantReply: merchantReply,
     );
   }

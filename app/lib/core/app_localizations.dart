@@ -545,6 +545,7 @@ class AppLocalizations {
     'expertReasonRequired': '请先填写申请理由',
     'expertReasonTooLong': '申请理由不能超过 500 字',
     'localExpertBadge': '本地达人',
+    'verifiedMerchantBadge': '认证商户',
     'applicationReason': '申请理由',
     'expertCertificationApprovedNotice': '本地达人认证已通过',
     'expertCertificationRejectedNotice': '本地达人认证未通过，可查看原因后重提',
@@ -1259,6 +1260,7 @@ class AppLocalizations {
     'expertReasonRequired': '請先填寫申請理由',
     'expertReasonTooLong': '申請理由不能超過 500 字',
     'localExpertBadge': '在地達人',
+    'verifiedMerchantBadge': '認證商戶',
     'applicationReason': '申請理由',
     'expertCertificationApprovedNotice': '在地達人認證已通過',
     'expertCertificationRejectedNotice': '在地達人認證未通過，可查看原因後重新提交',
@@ -2005,6 +2007,7 @@ class AppLocalizations {
     'expertReasonRequired': 'Please enter an application reason',
     'expertReasonTooLong': 'Application reason cannot exceed 500 characters',
     'localExpertBadge': 'Local expert',
+    'verifiedMerchantBadge': 'Verified merchant',
     'applicationReason': 'Application reason',
     'expertCertificationApprovedNotice': 'Local expert certification approved',
     'expertCertificationRejectedNotice':
@@ -3086,6 +3089,7 @@ class AppLocalizations {
   String get expertReasonRequired => _text('expertReasonRequired');
   String get expertReasonTooLong => _text('expertReasonTooLong');
   String get localExpertBadge => _text('localExpertBadge');
+  String get verifiedMerchantBadge => _text('verifiedMerchantBadge');
   String get expertCertificationApprovedNotice =>
       _text('expertCertificationApprovedNotice');
   String get expertCertificationRejectedNotice =>
@@ -3146,6 +3150,23 @@ class AppLocalizations {
       2 => expertStatusApproved,
       3 => expertStatusRejected,
       _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+    };
+  }
+
+  String certificationBadgeLabel({String? code, String? fallback}) {
+    final normalizedCode = code?.trim();
+    if (normalizedCode != null && normalizedCode.isNotEmpty) {
+      return switch (normalizedCode) {
+        'local_expert' => localExpertBadge,
+        'verified_merchant' => verifiedMerchantBadge,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : '',
+      };
+    }
+    return switch (fallback) {
+      '本地达人' || '在地達人' || 'Local expert' => localExpertBadge,
+      '认证商户' || '認證商戶' || 'Verified merchant' => verifiedMerchantBadge,
+      final value when value != null && value.isNotEmpty => value,
+      _ => '',
     };
   }
 

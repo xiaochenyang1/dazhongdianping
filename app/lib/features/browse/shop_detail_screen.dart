@@ -239,11 +239,21 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (shop.merchantCertificationLabel != null) ...[
+              if (strings
+                  .certificationBadgeLabel(
+                    code: shop.merchantCertificationCode,
+                    fallback: shop.merchantCertificationLabel,
+                  )
+                  .isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Chip(
                   avatar: const Icon(Icons.verified, size: 16),
-                  label: Text(shop.merchantCertificationLabel!),
+                  label: Text(
+                    strings.certificationBadgeLabel(
+                      code: shop.merchantCertificationCode,
+                      fallback: shop.merchantCertificationLabel,
+                    ),
+                  ),
                 ),
               ],
               const SizedBox(height: 8),
@@ -447,9 +457,14 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                         return Card(
                           child: ListTile(
                             title: Text(
-                              item.authorCertificationLabel == null
+                              strings
+                                      .certificationBadgeLabel(
+                                        code: item.authorCertificationCode,
+                                        fallback: item.authorCertificationLabel,
+                                      )
+                                      .isEmpty
                                   ? '$userName · ★ ${item.score.toStringAsFixed(1)}'
-                                  : '$userName · ${item.authorCertificationLabel} · ★ ${item.score.toStringAsFixed(1)}',
+                                  : '$userName · ${strings.certificationBadgeLabel(code: item.authorCertificationCode, fallback: item.authorCertificationLabel)} · ★ ${item.score.toStringAsFixed(1)}',
                             ),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,9 +568,16 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                               child: ListTile(
                                 title: Text(item.name),
                                 subtitle: Text(
-                                  item.merchantCertificationLabel == null
+                                  strings
+                                          .certificationBadgeLabel(
+                                            code:
+                                                item.merchantCertificationCode,
+                                            fallback:
+                                                item.merchantCertificationLabel,
+                                          )
+                                          .isEmpty
                                       ? '${item.category} · ★ ${item.score.toStringAsFixed(1)}'
-                                      : '${item.category} · ★ ${item.score.toStringAsFixed(1)} · ${item.merchantCertificationLabel}',
+                                      : '${item.category} · ★ ${item.score.toStringAsFixed(1)} · ${strings.certificationBadgeLabel(code: item.merchantCertificationCode, fallback: item.merchantCertificationLabel)}',
                                 ),
                                 trailing: Text(
                                   '${item.currency} ${item.pricePerCapita}',

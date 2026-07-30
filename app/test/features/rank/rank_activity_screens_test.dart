@@ -82,7 +82,26 @@ class RankScreenApi implements JsonApi {
         'categoryName': '火锅',
         'period': '2026-07',
         'updatedAt': '2026-07-20 10:00:00',
-        'items': const [],
+        'items': [
+          {
+            'position': 1,
+            'rankScore': 94.7,
+            'reason': '综合评分稳定',
+            'shop': {
+              'id': 10001,
+              'name': '渝里火锅徐汇店',
+              'score': 4.7,
+              'currency': 'CNY',
+              'pricePerCapita': 138,
+              'cityName': '上海',
+              'areaName': '徐汇',
+              'merchantCertification': {
+                'code': 'verified_merchant',
+                'label': '认证商户',
+              },
+            },
+          },
+        ],
       };
     }
     return const {};
@@ -320,6 +339,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('Must-eat ranking'), findsOneWidget);
+    expect(find.textContaining('Verified merchant'), findsOneWidget);
 
     await tester.pumpWidget(
       localizedApp(
