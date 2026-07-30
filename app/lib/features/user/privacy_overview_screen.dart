@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/user/privacy_export_saver.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
@@ -362,7 +363,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).submitDeleteFailed(error),
+              AppLocalizations.of(context).submitDeleteFailed(
+                _localizedDeleteError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -404,7 +407,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).sendDeleteCodeFailed(error),
+              AppLocalizations.of(context).sendDeleteCodeFailed(
+                _localizedDeleteError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -784,6 +789,18 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       3 => strings.deviceLoggedOut,
       _ => strings.unknownStatus,
     };
+  }
+
+  String _localizedDeleteError(AppLocalizations strings, Object error) {
+    return localizeAuthError(
+      strings,
+      error,
+      overrides: {
+        '删除校验账号必须是当前已绑定账号': strings.privacyDeleteErrorBoundAccountOnly,
+        '当前账号还没有可校验的登录密码': strings.privacyDeleteErrorNoPassword,
+        '删除校验密码不正确': strings.privacyDeleteErrorWrongPassword,
+      },
+    );
   }
 
   Widget _buildExportTask(PrivacyExportTask task) {

@@ -183,6 +183,14 @@ void main() {
       'The current password is incorrect.',
     );
     expect(
+      AppLocalizations.forTag('en').privacyDeleteErrorNoPassword,
+      'This account does not have a login password available for verification. Use code verification instead.',
+    );
+    expect(
+      AppLocalizations.forTag('en').privacyDeleteErrorWrongPassword,
+      'The current login password is incorrect.',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).notificationDirectMessagePreview(name: 'Alex', preview: 'See you soon'),

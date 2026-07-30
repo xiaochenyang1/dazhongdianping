@@ -596,6 +596,9 @@ class AppLocalizations {
     'submitDeleteFailed': '提交删除申请失败：{error}',
     'fillBoundAccountFirst': '先填写当前已绑定账号',
     'sendDeleteCodeFailed': '发送注销验证码失败：{error}',
+    'privacyDeleteErrorBoundAccountOnly': '只能使用当前已绑定的邮箱或手机号来校验注销申请',
+    'privacyDeleteErrorNoPassword': '这个账号当前没有可校验的登录密码，请改用验证码方式验证',
+    'privacyDeleteErrorWrongPassword': '当前登录密码不正确，请重新输入后再试',
     'createdAtLabel': '创建于 {time}',
     'expiresAtLabel': '到期 {time}',
     'reasonLabel': '原因：{value}',
@@ -1404,6 +1407,9 @@ class AppLocalizations {
     'submitDeleteFailed': '提交刪除申請失敗：{error}',
     'fillBoundAccountFirst': '先填寫目前已綁定帳號',
     'sendDeleteCodeFailed': '發送註銷驗證碼失敗：{error}',
+    'privacyDeleteErrorBoundAccountOnly': '只能使用目前已綁定的信箱或手機號來校驗註銷申請',
+    'privacyDeleteErrorNoPassword': '這個帳號目前沒有可校驗的登入密碼，請改用驗證碼方式驗證',
+    'privacyDeleteErrorWrongPassword': '目前登入密碼不正確，請重新輸入後再試',
     'createdAtLabel': '建立於 {time}',
     'expiresAtLabel': '到期 {time}',
     'reasonLabel': '原因：{value}',
@@ -2277,6 +2283,12 @@ class AppLocalizations {
     'submitDeleteFailed': 'Could not submit delete request: {error}',
     'fillBoundAccountFirst': 'Enter your currently bound account first',
     'sendDeleteCodeFailed': 'Could not send deletion code: {error}',
+    'privacyDeleteErrorBoundAccountOnly':
+        'Use a currently bound email or phone number to verify account deletion.',
+    'privacyDeleteErrorNoPassword':
+        'This account does not have a login password available for verification. Use code verification instead.',
+    'privacyDeleteErrorWrongPassword':
+        'The current login password is incorrect.',
     'createdAtLabel': 'Created {time}',
     'expiresAtLabel': 'Expires {time}',
     'reasonLabel': 'Reason: {value}',
@@ -3604,6 +3616,12 @@ class AppLocalizations {
   String get fillBoundAccountFirst => _text('fillBoundAccountFirst');
   String sendDeleteCodeFailed(Object error) =>
       _withError('sendDeleteCodeFailed', error);
+  String get privacyDeleteErrorBoundAccountOnly =>
+      _text('privacyDeleteErrorBoundAccountOnly');
+  String get privacyDeleteErrorNoPassword =>
+      _text('privacyDeleteErrorNoPassword');
+  String get privacyDeleteErrorWrongPassword =>
+      _text('privacyDeleteErrorWrongPassword');
   String createdAtLabel(String time) =>
       _text('createdAtLabel').replaceFirst('{time}', time);
   String expiresAtLabel(String time) =>

@@ -43,6 +43,8 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   int submitDeleteRequests = 0;
   Completer<void>? sendDeleteCodeGate;
   int sendDeleteCodeRequests = 0;
+  Object? submitDeleteError;
+  Object? sendDeleteCodeError;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -147,12 +149,14 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
     if (path == '/api/c/v1/privacy/delete-tasks') {
       submitDeleteRequests++;
       await submitDeleteGate?.future;
+      if (submitDeleteError != null) throw submitDeleteError!;
       deleteStatus = 1;
       return _deleteTask(1);
     }
     if (path == '/api/c/v1/auth/send-code') {
       sendDeleteCodeRequests++;
       await sendDeleteCodeGate?.future;
+      if (sendDeleteCodeError != null) throw sendDeleteCodeError!;
       return {
         'sent': true,
         'expireSeconds': 300,
@@ -818,6 +822,87 @@ void main() {
     expect(api.sendDeleteCodeRequests, 1);
     api.sendDeleteCodeGate!.complete();
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('privacy center localizes deletion auth errors in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = PrivacyScreenApi(deleteStatus: null)
+      ..sendDeleteCodeError = const ApiException('验证码发送太频繁，请稍后再试')
+      ..submitDeleteError = const ApiException('验证码无效或已过期');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final messenger = tester.state<ScaffoldMessengerState>(
+      find.byType(ScaffoldMessenger),
+    );
+
+    final sendDeleteCode = find.byKey(const Key('privacy-send-delete-code'));
+    await scrollTo(tester, sendDeleteCode);
+    await tester.tap(sendDeleteCode);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not send deletion code: Verification codes are being sent too often. Wait a bit and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('验证码发送太频繁'), findsNothing);
+    messenger.removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('privacy-delete-code')),
+      '123456',
+    );
+    await tester.enterText(
+      find.byKey(const Key('privacy-delete-reason')),
+      'I no longer need this account.',
+    );
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    final submitDelete = find.byKey(const Key('privacy-delete-submit'));
+    await scrollTo(tester, submitDelete);
+    await tester.tap(submitDelete);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not submit delete request: The verification code is invalid or expired. Request a new one and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('验证码无效或已过期'), findsNothing);
+    messenger.removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    api.submitDeleteError = const ApiException('删除校验密码不正确');
+    await scrollTo(tester, find.text('Verify with password'));
+    await tester.tap(find.text('Verify with password'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('privacy-delete-password')),
+      'wrong-password',
+    );
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    await tester.tap(submitDelete);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not submit delete request: The current login password is incorrect.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('删除校验密码不正确'), findsNothing);
   });
 
   testWidgets('privacy center fits a mobile viewport', (tester) async {
