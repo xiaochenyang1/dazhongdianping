@@ -104,6 +104,10 @@ void main() {
       'Review liked',
     );
     expect(
+      AppLocalizations.forTag('en').notificationTitleMention,
+      'You were mentioned',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).notificationLikedYourReview(name: 'Alex', preview: 'So useful'),
@@ -120,6 +124,21 @@ void main() {
         'en',
       ).notificationRepostedYourPost(name: 'Jordan', title: 'Late-night eats'),
       'Jordan reposted your post "Late-night eats"',
+    );
+    expect(
+      AppLocalizations.forTag('en').notificationMentionedYouInPost(
+        name: 'Taylor',
+        title: 'Kyoto breakfast',
+      ),
+      'Taylor mentioned you in the post "Kyoto breakfast"',
+    );
+    expect(
+      AppLocalizations.forTag('en').notificationTopicUpdateContent(
+        name: 'Jordan',
+        topic: 'Late night eats',
+        title: 'Seoul route',
+      ),
+      'Jordan posted "Seoul route" in #Late night eats',
     );
     expect(
       AppLocalizations.forTag(

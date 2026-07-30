@@ -35,7 +35,7 @@ Future<void> expectEnglishNotification(
     localizedApp(
       locale: const Locale('en'),
       home: NotificationScreen(
-        key: ValueKey(expectedTitle),
+        key: ValueKey('$expectedTitle::$expectedContent'),
         repository: NotificationRepository(api),
       ),
     ),
@@ -50,7 +50,10 @@ class NotificationScreenApi implements JsonApi {
   NotificationScreenApi({
     this.social = false,
     this.directMessage = false,
+    this.socialMentionPost = false,
+    this.socialMentionComment = false,
     this.postAudit = false,
+    this.topicUpdate = false,
     this.orderPaid = false,
     this.orderRefundApproved = false,
     this.orderRefundRejected = false,
@@ -78,7 +81,10 @@ class NotificationScreenApi implements JsonApi {
   });
   final bool social;
   final bool directMessage;
+  final bool socialMentionPost;
+  final bool socialMentionComment;
   final bool postAudit;
+  final bool topicUpdate;
   final bool orderPaid;
   final bool orderRefundApproved;
   final bool orderRefundRejected;
@@ -143,6 +149,34 @@ class NotificationScreenApi implements JsonApi {
         'createdAt': '2026-07-15 10:00:00',
       };
     }
+    if (socialMentionPost) {
+      return {
+        'id': 1,
+        'type': 'social.mention',
+        'actorUserId': 9,
+        'actorName': '东京阿满',
+        'title': '有人@了你',
+        'content': '东京阿满 在帖子《京都早餐地图》中提到了你',
+        'linkUrl': '/community/posts/88',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (socialMentionComment) {
+      return {
+        'id': 1,
+        'type': 'social.mention',
+        'actorUserId': 9,
+        'actorName': '悉尼阿柚',
+        'title': '有人@了你',
+        'content': '悉尼阿柚 在帖子《曼谷夜市合集》的评论中提到了你',
+        'linkUrl': '/community/posts/88',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
     if (postAudit) {
       return {
         'id': 1,
@@ -152,6 +186,20 @@ class NotificationScreenApi implements JsonApi {
         'title': '帖子已通过审核',
         'content': '《伦敦周末早午餐避坑指南》 已公开：内容真实，可公开',
         'linkUrl': '/community/posts/88?audit=approved',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (topicUpdate) {
+      return {
+        'id': 1,
+        'type': 'topic.update',
+        'actorUserId': 9,
+        'actorName': '马德里小许',
+        'title': '关注的话题有新内容',
+        'content': '马德里小许 在 #城市夜宵 发布了《首尔夜猫子路线》',
+        'linkUrl': '/community/posts/88',
         'aggregateCount': 1,
         'read': read,
         'createdAt': '2026-07-15 10:00:00',
@@ -530,9 +578,27 @@ void main() {
     );
     await expectEnglishNotification(
       tester,
+      api: NotificationScreenApi(socialMentionPost: true),
+      expectedTitle: 'You were mentioned',
+      expectedContent: '东京阿满 mentioned you in the post "京都早餐地图"',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(socialMentionComment: true),
+      expectedTitle: 'You were mentioned',
+      expectedContent: '悉尼阿柚 mentioned you in a comment on "曼谷夜市合集"',
+    );
+    await expectEnglishNotification(
+      tester,
       api: NotificationScreenApi(postAudit: true),
       expectedTitle: 'Post approved',
       expectedContent: '"伦敦周末早午餐避坑指南" is now public: 内容真实，可公开',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(topicUpdate: true),
+      expectedTitle: 'New topic update',
+      expectedContent: '马德里小许 posted "首尔夜猫子路线" in #城市夜宵',
     );
     await expectEnglishNotification(
       tester,

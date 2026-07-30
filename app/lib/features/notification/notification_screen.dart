@@ -328,12 +328,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return strings.notificationTitleSocialFollow;
       case 'message.direct':
         return strings.notificationTitleDirectMessage;
+      case 'social.mention':
+        return strings.notificationTitleMention;
       case 'post.audit.result':
         return switch (_notificationQueryValue(notification.linkUrl, 'audit')) {
           'approved' => strings.notificationTitlePostApproved,
           'rejected' => strings.notificationTitlePostRejected,
           _ => notification.title,
         };
+      case 'topic.update':
+        return strings.notificationTitleTopicUpdate;
       case 'order.paid':
         return strings.notificationTitleOrderPaid;
       case 'order.refund.result':
@@ -417,8 +421,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return _localizedSocialFollowContent(strings, notification);
       case 'message.direct':
         return _localizedDirectMessageContent(strings, notification);
+      case 'social.mention':
+        return _localizedMentionContent(strings, notification);
       case 'post.audit.result':
         return _localizedPostAuditContent(strings, notification);
+      case 'topic.update':
+        return _localizedTopicUpdateContent(strings, notification);
       case 'order.paid':
         return _localizedOrderPaidContent(strings, notification);
       case 'order.refund.result':
@@ -506,6 +514,71 @@ class _NotificationScreenState extends State<NotificationScreen> {
       ),
       _ => notification.content,
     };
+  }
+
+  String _localizedMentionContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final mentionedInComment = _extractMentionInPostCommentContent(
+      notification.content,
+    );
+    final actorInComment = _preferredNotificationActorName(
+      notification,
+      mentionedInComment?.name,
+    );
+    final commentTitle = mentionedInComment?.title;
+    if (actorInComment != null &&
+        actorInComment.isNotEmpty &&
+        commentTitle != null &&
+        commentTitle.isNotEmpty) {
+      return strings.notificationMentionedYouInPostComment(
+        name: actorInComment,
+        title: commentTitle,
+      );
+    }
+    final mentionedInPost = _extractMentionInPostContent(notification.content);
+    final actorInPost = _preferredNotificationActorName(
+      notification,
+      mentionedInPost?.name,
+    );
+    final postTitle = mentionedInPost?.title;
+    if (actorInPost == null ||
+        actorInPost.isEmpty ||
+        postTitle == null ||
+        postTitle.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationMentionedYouInPost(
+      name: actorInPost,
+      title: postTitle,
+    );
+  }
+
+  String _localizedTopicUpdateContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractTopicUpdateContent(notification.content);
+    final actorName = _preferredNotificationActorName(
+      notification,
+      parsed?.name,
+    );
+    final topic = parsed?.topic;
+    final title = parsed?.title;
+    if (actorName == null ||
+        actorName.isEmpty ||
+        topic == null ||
+        topic.isEmpty ||
+        title == null ||
+        title.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationTopicUpdateContent(
+      name: actorName,
+      topic: topic,
+      title: title,
+    );
   }
 
   String _localizedOrderPaidContent(
@@ -982,6 +1055,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return (actor: actor, remark: match?.group(2)?.trim());
   }
 
+  ({String name, String title})? _extractMentionInPostContent(String content) =>
+      _extractMentionNotificationTitle(content, r'在(?:帖子|貼文)', r'中提到了你');
+
+  ({String name, String title})? _extractMentionInPostCommentContent(
+    String content,
+  ) => _extractMentionNotificationTitle(
+    content,
+    r'在(?:帖子|貼文)',
+    r'的(?:评论|留言)中提到了你',
+  );
+
   ({String name, String preview})? _extractReviewLikeContent(String content) =>
       _extractNamedNotificationPreview(content, r'(?:赞了你的点评|讚了你的評論)');
 
@@ -1033,6 +1117,48 @@ class _NotificationScreenState extends State<NotificationScreen> {
       return null;
     }
     return (name: name, title: title);
+  }
+
+  ({String name, String title})? _extractMentionNotificationTitle(
+    String content,
+    String prefixPattern,
+    String suffixPattern,
+  ) {
+    final match = RegExp(
+      '^(.+?)\\s+$prefixPattern(?:《(.+?)》|「(.+?)」|"(.+?)")$suffixPattern\$',
+    ).firstMatch(content.trim());
+    final name = match?.group(1)?.trim();
+    final title =
+        match?.group(2)?.trim() ??
+        match?.group(3)?.trim() ??
+        match?.group(4)?.trim();
+    if (name == null || name.isEmpty || title == null || title.isEmpty) {
+      return null;
+    }
+    return (name: name, title: title);
+  }
+
+  ({String name, String topic, String title})? _extractTopicUpdateContent(
+    String content,
+  ) {
+    final match = RegExp(
+      '^(.+?)\\s+在\\s*#(.+?)\\s+(?:发布了|發布了)(?:《(.+?)》|「(.+?)」|"(.+?)")\$',
+    ).firstMatch(content.trim());
+    final name = match?.group(1)?.trim();
+    final topic = match?.group(2)?.trim();
+    final title =
+        match?.group(3)?.trim() ??
+        match?.group(4)?.trim() ??
+        match?.group(5)?.trim();
+    if (name == null ||
+        name.isEmpty ||
+        topic == null ||
+        topic.isEmpty ||
+        title == null ||
+        title.isEmpty) {
+      return null;
+    }
+    return (name: name, topic: topic, title: title);
   }
 
   String? _extractOrderNumber(String segment) {

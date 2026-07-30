@@ -115,8 +115,10 @@ class AppLocalizations {
     'unreadBadge': '未读',
     'notificationTitleSocialFollow': '新增关注',
     'notificationTitleDirectMessage': '收到私信',
+    'notificationTitleMention': '有人@了你',
     'notificationTitlePostApproved': '帖子已通过审核',
     'notificationTitlePostRejected': '帖子未通过审核',
+    'notificationTitleTopicUpdate': '关注的话题有新内容',
     'notificationTitleOrderPaid': '支付成功',
     'notificationTitleReservationConfirmed': '预订已自动确认',
     'notificationTitleReservationSubmitted': '预订已提交',
@@ -169,6 +171,9 @@ class AppLocalizations {
     'notificationLikedYourPost': '{name} 赞了你的帖子《{title}》',
     'notificationCommentedOnYourPost': '{name} 评论了你的帖子：{preview}',
     'notificationRepostedYourPost': '{name} 转发了你的帖子《{title}》',
+    'notificationMentionedYouInPost': '{name} 在帖子《{title}》中提到了你',
+    'notificationMentionedYouInPostComment': '{name} 在帖子《{title}》的评论中提到了你',
+    'notificationTopicUpdateContent': '{name} 在 #{topic} 发布了《{title}》',
     'loggingOut': '退出中...',
     'logout': '退出',
     'profileLoadFailed': '用户资料加载失败：{error}',
@@ -886,8 +891,10 @@ class AppLocalizations {
     'unreadBadge': '未讀',
     'notificationTitleSocialFollow': '新增關注',
     'notificationTitleDirectMessage': '收到私信',
+    'notificationTitleMention': '有人提到了你',
     'notificationTitlePostApproved': '貼文已通過審核',
     'notificationTitlePostRejected': '貼文未通過審核',
+    'notificationTitleTopicUpdate': '關注的話題有新內容',
     'notificationTitleOrderPaid': '支付成功',
     'notificationTitleReservationConfirmed': '預訂已自動確認',
     'notificationTitleReservationSubmitted': '預訂已提交',
@@ -940,6 +947,9 @@ class AppLocalizations {
     'notificationLikedYourPost': '{name} 讚了你的貼文《{title}》',
     'notificationCommentedOnYourPost': '{name} 評論了你的貼文：{preview}',
     'notificationRepostedYourPost': '{name} 轉發了你的貼文《{title}》',
+    'notificationMentionedYouInPost': '{name} 在貼文《{title}》中提到了你',
+    'notificationMentionedYouInPostComment': '{name} 在貼文《{title}》的留言中提到了你',
+    'notificationTopicUpdateContent': '{name} 在 #{topic} 發布了《{title}》',
     'loggingOut': '登出中...',
     'logout': '登出',
     'profileLoadFailed': '使用者資料載入失敗：{error}',
@@ -1661,8 +1671,10 @@ class AppLocalizations {
     'unreadBadge': 'Unread',
     'notificationTitleSocialFollow': 'New follower',
     'notificationTitleDirectMessage': 'New direct message',
+    'notificationTitleMention': 'You were mentioned',
     'notificationTitlePostApproved': 'Post approved',
     'notificationTitlePostRejected': 'Post rejected',
+    'notificationTitleTopicUpdate': 'New topic update',
     'notificationTitleOrderPaid': 'Payment successful',
     'notificationTitleReservationConfirmed': 'Reservation auto-confirmed',
     'notificationTitleReservationSubmitted': 'Reservation submitted',
@@ -1726,6 +1738,11 @@ class AppLocalizations {
     'notificationCommentedOnYourPost':
         '{name} commented on your post: {preview}',
     'notificationRepostedYourPost': '{name} reposted your post "{title}"',
+    'notificationMentionedYouInPost':
+        '{name} mentioned you in the post "{title}"',
+    'notificationMentionedYouInPostComment':
+        '{name} mentioned you in a comment on "{title}"',
+    'notificationTopicUpdateContent': '{name} posted "{title}" in #{topic}',
     'loggingOut': 'Signing out...',
     'logout': 'Sign out',
     'profileLoadFailed': 'Could not load profile: {error}',
@@ -2657,10 +2674,13 @@ class AppLocalizations {
       _text('notificationTitleSocialFollow');
   String get notificationTitleDirectMessage =>
       _text('notificationTitleDirectMessage');
+  String get notificationTitleMention => _text('notificationTitleMention');
   String get notificationTitlePostApproved =>
       _text('notificationTitlePostApproved');
   String get notificationTitlePostRejected =>
       _text('notificationTitlePostRejected');
+  String get notificationTitleTopicUpdate =>
+      _text('notificationTitleTopicUpdate');
   String get notificationTitleOrderPaid => _text('notificationTitleOrderPaid');
   String get notificationTitleReservationConfirmed =>
       _text('notificationTitleReservationConfirmed');
@@ -2721,6 +2741,26 @@ class AppLocalizations {
   }) => _text(
     'notificationRepostedYourPost',
   ).replaceFirst('{name}', name).replaceFirst('{title}', title);
+  String notificationMentionedYouInPost({
+    required String name,
+    required String title,
+  }) => _text(
+    'notificationMentionedYouInPost',
+  ).replaceFirst('{name}', name).replaceFirst('{title}', title);
+  String notificationMentionedYouInPostComment({
+    required String name,
+    required String title,
+  }) => _text(
+    'notificationMentionedYouInPostComment',
+  ).replaceFirst('{name}', name).replaceFirst('{title}', title);
+  String notificationTopicUpdateContent({
+    required String name,
+    required String topic,
+    required String title,
+  }) => _text('notificationTopicUpdateContent')
+      .replaceFirst('{name}', name)
+      .replaceFirst('{topic}', topic)
+      .replaceFirst('{title}', title);
   String notificationDirectMessagePreview({
     required String name,
     required String preview,
