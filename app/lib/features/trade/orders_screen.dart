@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/trade/trade_error_localizer.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
@@ -231,6 +232,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       status: order.payStatus,
                       fallback: order.payStatusText,
                     );
+                    final amountText = formatMoney(
+                      order.amount,
+                      order.currency,
+                      locale: strings.tag,
+                    );
                     return Card(
                       key: Key('order-card-${order.id}'),
                       child: ListTile(
@@ -240,7 +246,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               : order.dealTitle,
                         ),
                         subtitle: Text(
-                          '${order.orderNo}\n${order.shopName} · $payStatusText · ${order.currency} ${order.amount}',
+                          '${order.orderNo}\n${order.shopName} · $payStatusText · $amountText',
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),

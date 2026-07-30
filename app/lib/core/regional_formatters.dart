@@ -2,7 +2,7 @@ import 'package:intl/intl.dart';
 
 String formatMoney(num amount, String currency, {String locale = 'en_GB'}) {
   return NumberFormat.simpleCurrency(
-    locale: locale,
+    locale: locale.replaceAll('-', '_'),
     name: currency,
   ).format(amount);
 }

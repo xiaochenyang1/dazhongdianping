@@ -116,7 +116,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Orders'), findsOneWidget);
     expect(find.text('Unpaid'), findsOneWidget);
-    expect(find.textContaining('柏林茶馆 · Unpaid · EUR 29.9'), findsOneWidget);
+    expect(find.textContaining('柏林茶馆 · Unpaid · €29.90'), findsOneWidget);
+    expect(find.textContaining('EUR 29.9'), findsNothing);
     expect(find.textContaining('待支付'), findsNothing);
   });
 
