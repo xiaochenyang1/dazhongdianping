@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
@@ -49,6 +50,9 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
   final List<int> removedShopIds = <int>[];
   final List<int> requestedPages = <int>[];
   bool failNextLoad = false;
+  Object? loadError;
+  Object? clearError;
+  Object? removeError;
   Completer<void>? clearGate;
   final Map<int, Completer<void>> removeGates = {};
   final Map<int, Completer<void>> pageGates = {};
@@ -69,6 +73,9 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
   }) async {
     requestedPages.add(page);
     await pageGates[page]?.future;
+    if (loadError != null) {
+      throw loadError!;
+    }
     if (failNextLoad) {
       failNextLoad = false;
       throw Exception('browse history network unavailable');
@@ -90,6 +97,9 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
   Future<void> clearBrowseHistory() async {
     clearCalls += 1;
     await clearGate?.future;
+    if (clearError != null) {
+      throw clearError!;
+    }
     history = const [];
   }
 
@@ -97,6 +107,9 @@ class BrowseHistoryFakeRepository extends BrowseRepository {
   Future<void> removeBrowseHistoryItem(int shopId) async {
     removedShopIds.add(shopId);
     await removeGates[shopId]?.future;
+    if (removeError != null) {
+      throw removeError!;
+    }
     history = history.where((item) => item.shopId != shopId).toList();
   }
 }
@@ -210,6 +223,28 @@ void main() {
     expect(find.textContaining('足迹加载失败'), findsNothing);
   });
 
+  testWidgets('browse history localizes load failures in English', (
+    tester,
+  ) async {
+    final repository = BrowseHistoryFakeRepository()
+      ..loadError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: BrowseHistoryScreen(repository: repository),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load history: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
   testWidgets('browse history guards duplicate item removal', (tester) async {
     final repository = BrowseHistoryFakeRepository()
       ..removeGates[10001] = Completer<void>();
@@ -235,6 +270,29 @@ void main() {
 
     expect(find.text('London Hotpot'), findsNothing);
     expect(find.text('Paris Cafe'), findsOneWidget);
+  });
+
+  testWidgets('browse history localizes delete failures in English', (
+    tester,
+  ) async {
+    final repository = BrowseHistoryFakeRepository()
+      ..removeError = const ApiException('shopId 无效');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: BrowseHistoryScreen(repository: repository),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Delete history item').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not delete history item: The place id is invalid.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('shopId 无效'), findsNothing);
   });
 
   testWidgets('browse history blocks item removal while clearing', (

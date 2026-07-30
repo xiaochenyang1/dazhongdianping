@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/browse/browse_error_localizer.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
@@ -57,10 +58,13 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       }
     } catch (error) {
       if (mounted && revision == _historyRevision) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).refreshBrowseHistoryFailed(error),
+              strings.refreshBrowseHistoryFailed(
+                localizeBrowseError(strings, error),
+              ),
             ),
           ),
         );
@@ -105,10 +109,13 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       });
     } catch (error) {
       if (mounted && revision == _historyRevision) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreBrowseHistoryFailed(error),
+              strings.loadMoreBrowseHistoryFailed(
+                localizeBrowseError(strings, error),
+              ),
             ),
           ),
         );
@@ -143,10 +150,13 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       });
     } catch (error) {
       if (!mounted) return;
+      final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context).clearBrowseHistoryFailed(error),
+            strings.clearBrowseHistoryFailed(
+              localizeBrowseError(strings, error),
+            ),
           ),
         ),
       );
@@ -182,10 +192,13 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
       });
     } catch (error) {
       if (!mounted) return;
+      final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context).deleteBrowseHistoryFailed(error),
+            strings.deleteBrowseHistoryFailed(
+              localizeBrowseError(strings, error),
+            ),
           ),
         ),
       );
@@ -219,11 +232,12 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            final error = localizeBrowseError(strings, snapshot.error!);
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.browseHistoryLoadFailed(snapshot.error!)),
+                  Text(strings.browseHistoryLoadFailed(error)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('browse-history-retry'),

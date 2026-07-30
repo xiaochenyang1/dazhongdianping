@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -14,6 +16,10 @@ class DetailFakeRepository extends BrowseRepository {
     this.failFirstDetail = false,
     this.failFirstSimilar = false,
     this.failFirstReviews = false,
+    this.detailError,
+    this.favoriteError,
+    this.similarError,
+    this.reviewsError,
     this.similar = const [
       ShopSummary(
         id: 8,
@@ -43,6 +49,10 @@ class DetailFakeRepository extends BrowseRepository {
   final bool failFirstDetail;
   final bool failFirstSimilar;
   final bool failFirstReviews;
+  Object? detailError;
+  Object? favoriteError;
+  Object? similarError;
+  Object? reviewsError;
   int detailRequests = 0;
   Completer<void>? detailRetryGate;
   Completer<void>? reviewRetryGate;
@@ -59,6 +69,9 @@ class DetailFakeRepository extends BrowseRepository {
   @override
   Future<ShopDetail> loadShopDetail(int shopId) async {
     detailRequests++;
+    if (detailError != null) {
+      throw detailError!;
+    }
     if (failFirstDetail && detailRequests == 1) {
       throw StateError('network unavailable');
     }
@@ -84,12 +97,18 @@ class DetailFakeRepository extends BrowseRepository {
   @override
   Future<void> favoriteShop(int shopId) async {
     favoriteCalls.add('favorite:$shopId');
+    if (favoriteError != null) {
+      throw favoriteError!;
+    }
     favorited = true;
   }
 
   @override
   Future<void> unfavoriteShop(int shopId) async {
     favoriteCalls.add('unfavorite:$shopId');
+    if (favoriteError != null) {
+      throw favoriteError!;
+    }
     favorited = false;
   }
 
@@ -99,6 +118,9 @@ class DetailFakeRepository extends BrowseRepository {
     int limit = 6,
   }) async {
     similarRequests.add(shopId);
+    if (similarError != null) {
+      throw similarError!;
+    }
     if (failFirstSimilar && similarRequests.length == 1) {
       throw StateError('similar network unavailable');
     }
@@ -116,6 +138,9 @@ class DetailFakeRepository extends BrowseRepository {
     bool? hasImages,
   }) async {
     reviewRequests.add(shopId);
+    if (reviewsError != null) {
+      throw reviewsError!;
+    }
     if (failFirstReviews && reviewRequests.length == 1) {
       throw StateError('review network unavailable');
     }
@@ -198,6 +223,23 @@ class DetailReviewApi implements JsonApi {
     paths.add(path);
     return const {};
   }
+}
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
 }
 
 void main() {
@@ -336,6 +378,77 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.detailRequests, 2);
     expect(find.text('Berlin Tea'), findsOneWidget);
+  });
+
+  testWidgets('shop detail localizes load failures in English', (tester) async {
+    final repository = DetailFakeRepository(
+      detailError: const ApiException('商户不存在'),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ShopDetailScreen(repository: repository, shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load place details: This place could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('商户不存在'), findsNothing);
+  });
+
+  testWidgets('shop detail localizes favorite failures in English', (
+    tester,
+  ) async {
+    final repository = DetailFakeRepository(
+      favoriteError: const ApiException('用户登录状态不存在'),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ShopDetailScreen(repository: repository, shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save place'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not update favorite: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
+  testWidgets('shop detail localizes preview failures in English', (
+    tester,
+  ) async {
+    final repository = DetailFakeRepository(
+      reviewsError: const ApiException('商户不存在'),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ShopDetailScreen(repository: repository, shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('shop-review-previews-retry')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(
+      find.text('Could not load place reviews: This place could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('商户不存在'), findsNothing);
   });
 
   testWidgets('shop detail shows address and opening hours', (tester) async {

@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
+import 'package:dazhongdianping_app/features/activity/activity_error_localizer.dart';
 import 'package:dazhongdianping_app/features/activity/activity_detail_screen.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
@@ -55,10 +56,13 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
       }
     } catch (error) {
       if (mounted) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).refreshActivitiesFailed(error),
+              strings.refreshActivitiesFailed(
+                localizeActivityError(strings, error),
+              ),
             ),
           ),
         );
@@ -105,11 +109,12 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            final error = localizeActivityError(strings, snapshot.error!);
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.activitiesLoadFailed(snapshot.error!)),
+                  Text(strings.activitiesLoadFailed(error)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('activity-list-retry'),

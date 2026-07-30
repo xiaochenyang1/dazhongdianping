@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/browse/browse_error_localizer.dart';
 import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
@@ -115,7 +116,8 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
       });
     } catch (error) {
       if (!mounted || requestId != _requestId) return;
-      setState(() => _loadMoreError = '$error');
+      final strings = AppLocalizations.of(context);
+      setState(() => _loadMoreError = localizeBrowseError(strings, error));
     } finally {
       if (mounted && requestId == _requestId) {
         setState(() => _loadingMore = false);
@@ -223,11 +225,12 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError && _items.isEmpty) {
+                  final error = localizeBrowseError(strings, snapshot.error!);
                   return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(strings.shopReviewsLoadFailed(snapshot.error!)),
+                        Text(strings.shopReviewsLoadFailed(error)),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('shop-reviews-retry'),

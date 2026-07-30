@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/search_screen.dart';
@@ -16,6 +17,12 @@ class SearchFakeRepository extends BrowseRepository {
     this.paginatedHistory = false,
     this.failFirstPanel = false,
     this.failFirstSearch = false,
+    this.panelError,
+    this.searchError,
+    this.loadMoreSearchError,
+    this.clearError,
+    this.removeHistoryError,
+    this.loadMoreHistoryError,
   });
 
   final List<SearchHotWord> hotWords;
@@ -25,6 +32,12 @@ class SearchFakeRepository extends BrowseRepository {
   final bool paginatedHistory;
   final bool failFirstPanel;
   final bool failFirstSearch;
+  Object? panelError;
+  Object? searchError;
+  Object? loadMoreSearchError;
+  Object? clearError;
+  Object? removeHistoryError;
+  Object? loadMoreHistoryError;
   int panelRequests = 0;
   int searchRequests = 0;
   final List<int> requestedPages = <int>[];
@@ -64,6 +77,12 @@ class SearchFakeRepository extends BrowseRepository {
     int pageSize = 20,
   }) async {
     searchRequests++;
+    if (page == 1 && searchError != null) {
+      throw searchError!;
+    }
+    if (page > 1 && loadMoreSearchError != null) {
+      throw loadMoreSearchError!;
+    }
     if (failFirstSearch && searchRequests == 1) {
       throw StateError('search network unavailable');
     }
@@ -89,6 +108,9 @@ class SearchFakeRepository extends BrowseRepository {
   @override
   Future<List<SearchHotWord>> loadHotWords({int limit = 8}) async {
     panelRequests++;
+    if (panelError != null) {
+      throw panelError!;
+    }
     if (failFirstPanel && panelRequests == 1) {
       throw StateError('panel network unavailable');
     }
@@ -109,6 +131,9 @@ class SearchFakeRepository extends BrowseRepository {
   }) async {
     requestedHistoryPages.add(page);
     await historyPageGates[page]?.future;
+    if (page > 1 && loadMoreHistoryError != null) {
+      throw loadMoreHistoryError!;
+    }
     final items = paginatedHistory
         ? [
             SearchHistoryItem(
@@ -131,6 +156,9 @@ class SearchFakeRepository extends BrowseRepository {
   Future<void> clearSearchHistory() async {
     clearCalls += 1;
     await clearHistoryGate?.future;
+    if (clearError != null) {
+      throw clearError!;
+    }
     history = const [];
   }
 
@@ -138,6 +166,9 @@ class SearchFakeRepository extends BrowseRepository {
   Future<void> removeSearchHistoryItem(int historyId) async {
     removedHistoryIds.add(historyId);
     await removeHistoryGates[historyId]?.future;
+    if (removeHistoryError != null) {
+      throw removeHistoryError!;
+    }
     history = history.where((item) => item.id != historyId).toList();
   }
 
@@ -217,6 +248,26 @@ void main() {
     expect(find.text('Brunch · 12'), findsOneWidget);
   });
 
+  testWidgets('search discovery localizes browse errors in English', (
+    tester,
+  ) async {
+    final repository = SearchFakeRepository(
+      panelError: const ApiException('用户登录状态不存在'),
+    );
+    await tester.pumpWidget(
+      localizedSearch(repository: repository, locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load search discovery: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
   testWidgets('search results retry the current keyword', (tester) async {
     final repository = SearchFakeRepository(failFirstSearch: true);
     await tester.pumpWidget(
@@ -272,6 +323,32 @@ void main() {
     expect(repository.requestedPages, [1, 2]);
     expect(find.text('Paris Tea'), findsOneWidget);
     expect(find.byKey(const Key('search-results-load-more')), findsNothing);
+  });
+
+  testWidgets('search load more localizes browse errors in English', (
+    tester,
+  ) async {
+    final repository = SearchFakeRepository(
+      paginated: true,
+      loadMoreSearchError: const ApiException('商户不存在'),
+    );
+    await tester.pumpWidget(
+      localizedSearch(
+        repository: repository,
+        locale: const Locale('en'),
+        initialKeyword: 'tea',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('search-results-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load more places: This place could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('商户不存在'), findsNothing);
   });
 
   testWidgets('search screen submits keyword and renders result', (
@@ -451,6 +528,37 @@ void main() {
     repository.removeHistoryGates[11]!.complete();
     await tester.pumpAndSettle();
     expect(find.text('noodles'), findsNothing);
+  });
+
+  testWidgets('search history removal localizes browse errors in English', (
+    tester,
+  ) async {
+    final repository = SearchFakeRepository(
+      history: const [
+        SearchHistoryItem(
+          id: 11,
+          keyword: 'noodles',
+          region: 'EU',
+          updatedAt: '2026-07-25 10:00:00',
+        ),
+      ],
+      removeHistoryError: const ApiException('搜索历史不存在'),
+    );
+    await tester.pumpWidget(
+      localizedSearch(repository: repository, locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.close).first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not remove search history: This search history item could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('搜索历史不存在'), findsNothing);
   });
 
   testWidgets('clear invalidates an in-flight search history page', (

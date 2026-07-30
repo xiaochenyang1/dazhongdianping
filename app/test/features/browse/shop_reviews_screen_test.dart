@@ -10,9 +10,15 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class ReviewsFakeRepository extends BrowseRepository {
-  ReviewsFakeRepository({this.failFirst = false});
+  ReviewsFakeRepository({
+    this.failFirst = false,
+    this.initialError,
+    this.loadMoreError,
+  });
 
   final bool failFirst;
+  Object? initialError;
+  Object? loadMoreError;
   int pageRequests = 0;
   Completer<void>? retryGate;
   final List<Map<String, Object?>> requests = <Map<String, Object?>>[];
@@ -30,6 +36,12 @@ class ReviewsFakeRepository extends BrowseRepository {
     bool? hasImages,
   }) async {
     pageRequests++;
+    if (page == 1 && initialError != null) {
+      throw initialError!;
+    }
+    if (page > 1 && loadMoreError != null) {
+      throw loadMoreError!;
+    }
     if (failFirst && pageRequests == 1) {
       throw StateError('network unavailable');
     }
@@ -205,6 +217,31 @@ void main() {
     expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
   });
 
+  testWidgets('shop reviews screen localizes load failures in English', (
+    tester,
+  ) async {
+    final repository = ReviewsFakeRepository(
+      initialError: const ApiException('商户不存在'),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ShopReviewsScreen(
+          repository: repository,
+          shopId: 7,
+          shopName: 'Berlin Tea House',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load place reviews: This place could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('商户不存在'), findsNothing);
+  });
+
   testWidgets('shop reviews screen filters sorts and opens review detail', (
     tester,
   ) async {
@@ -300,6 +337,37 @@ void main() {
 
     expect(find.text('当前筛选结果'), findsOneWidget);
     expect(find.text('过期筛选结果'), findsNothing);
+  });
+
+  testWidgets('shop reviews screen localizes load more failures in English', (
+    tester,
+  ) async {
+    final repository = ReviewsFakeRepository(
+      loadMoreError: const ApiException('sort 仅支持 latest、popular 或 score'),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ShopReviewsScreen(
+          repository: repository,
+          shopId: 7,
+          shopName: 'Berlin Tea House',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('shop-reviews-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load more: This review sort option is unsupported.'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('sort 仅支持 latest、popular 或 score'),
+      findsNothing,
+    );
   });
 
   testWidgets('shop reviews screen localizes English chrome', (tester) async {

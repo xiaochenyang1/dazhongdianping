@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
+import 'package:dazhongdianping_app/features/activity/activity_error_localizer.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
@@ -184,7 +185,12 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
           targetType: item.targetType,
           fallback: item.targetTypeText,
         );
-        _showOpenError(strings.openTargetFailed(targetName, error));
+        _showOpenError(
+          strings.openTargetFailed(
+            targetName,
+            localizeActivityTargetError(strings, item, error),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _openingItemIds.remove(item.id));
@@ -209,11 +215,12 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            final error = localizeActivityError(strings, snapshot.error!);
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.activityDetailLoadFailed(snapshot.error!)),
+                  Text(strings.activityDetailLoadFailed(error)),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('activity-detail-retry'),

@@ -2,6 +2,7 @@ import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/rank/rank_error_localizer.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
@@ -73,11 +74,12 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            final error = localizeRankError(strings, snapshot.error!);
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.rankDetailLoadFailed(snapshot.error!)),
+                  Text(strings.rankDetailLoadFailed(error)),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('rank-detail-retry'),

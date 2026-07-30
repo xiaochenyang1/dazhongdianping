@@ -33,6 +33,8 @@ class RankScreenApi implements JsonApi {
   int loadCount = 0;
   bool failNextLoad = false;
   bool failNextDetail = false;
+  Object? loadError;
+  Object? detailError;
   int detailLoadCount = 0;
   Completer<void>? loadGate;
   Completer<void>? detailGate;
@@ -45,6 +47,9 @@ class RankScreenApi implements JsonApi {
     if (path == '/api/c/v1/ranks') {
       loadCount += 1;
       await loadGate?.future;
+      if (loadError != null) {
+        throw loadError!;
+      }
       if (failNextLoad) {
         failNextLoad = false;
         throw const ApiException('rank network unavailable');
@@ -68,6 +73,9 @@ class RankScreenApi implements JsonApi {
     }
     if (path == '/api/c/v1/ranks/30001') {
       detailLoadCount += 1;
+      if (detailError != null) {
+        throw detailError!;
+      }
       if (failNextDetail) {
         failNextDetail = false;
         throw const ApiException('rank detail network unavailable');
@@ -117,6 +125,14 @@ class ActivityScreenApi implements JsonApi {
   bool failNextLoad = false;
   int detailLoadCount = 0;
   bool failNextDetail = false;
+  Object? loadError;
+  Object? detailError;
+  Object? targetError;
+  int targetType = 4;
+  String targetTypeText = '榜单';
+  int targetId = 30001;
+  String targetName = '上海必吃榜';
+  String targetTitle = '榜单入口';
   Completer<void>? loadGate;
   Completer<void>? detailGate;
 
@@ -128,6 +144,9 @@ class ActivityScreenApi implements JsonApi {
     if (path == '/api/c/v1/activities') {
       loadCount += 1;
       await loadGate?.future;
+      if (loadError != null) {
+        throw loadError!;
+      }
       if (failNextLoad) {
         failNextLoad = false;
         throw const ApiException('activity network unavailable');
@@ -152,6 +171,9 @@ class ActivityScreenApi implements JsonApi {
     }
     if (path == '/api/c/v1/activities/9001') {
       detailLoadCount += 1;
+      if (detailError != null) {
+        throw detailError!;
+      }
       if (failNextDetail) {
         failNextDetail = false;
         throw const ApiException('activity detail network unavailable');
@@ -171,16 +193,55 @@ class ActivityScreenApi implements JsonApi {
         'items': [
           {
             'id': 1,
-            'targetType': 4,
-            'targetTypeText': '榜单',
-            'targetId': 30001,
-            'targetName': '上海必吃榜',
-            'title': '榜单入口',
+            'targetType': targetType,
+            'targetTypeText': targetTypeText,
+            'targetId': targetId,
+            'targetName': targetName,
+            'title': targetTitle,
             'subtitle': '',
             'linkUrl': '',
           },
         ],
       };
+    }
+    if (path == '/api/c/v1/ranks/30001') {
+      if (targetError != null) {
+        throw targetError!;
+      }
+      return {
+        'id': 30001,
+        'name': 'Activity Rank',
+        'type': 1,
+        'typeText': '必吃榜',
+        'cityName': '上海',
+        'categoryName': '火锅',
+        'period': '2026-07',
+        'updatedAt': '2026-07-20 10:00:00',
+        'items': const [],
+      };
+    }
+    if (path == '/api/c/v1/topics/51') {
+      if (targetError != null) {
+        throw targetError!;
+      }
+      return {
+        'id': 51,
+        'region': 'EU',
+        'name': '伦敦咖啡',
+        'postCount': 0,
+        'followerCount': 8,
+        'recommended': true,
+        'pinnedSort': 0,
+        'followedByCurrentUser': false,
+        'hotScore': 20,
+        'postCount7d': 0,
+        'likeCount7d': 0,
+        'commentCount7d': 0,
+        'calculatedAt': '2026-07-27 12:00:00',
+      };
+    }
+    if (path == '/api/c/v1/topics/51/posts') {
+      return {'list': const [], 'total': 0, 'page': 1, 'pageSize': 30};
     }
     return const {};
   }
@@ -281,6 +342,27 @@ void main() {
     expect(find.text('上海必吃榜'), findsOneWidget);
   });
 
+  testWidgets('rank detail localizes business errors in English', (
+    tester,
+  ) async {
+    final api = RankScreenApi()..detailError = const ApiException('榜单不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: RankDetailScreen(repository: RankRepository(api), rankId: 30001),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load ranking details: This ranking could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('榜单不存在'), findsNothing);
+  });
+
   testWidgets('rank list opens detail', (tester) async {
     await tester.pumpWidget(
       localizedApp(
@@ -354,6 +436,62 @@ void main() {
     expect(find.textContaining('Themed campaign'), findsOneWidget);
     expect(find.textContaining('Activity page'), findsOneWidget);
     expect(find.textContaining('ranking'), findsOneWidget);
+  });
+
+  testWidgets('activity detail localizes business errors in English', (
+    tester,
+  ) async {
+    final api = ActivityScreenApi()
+      ..detailError = const ApiException('活动不存在或未上线');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ActivityDetailScreen(
+          repository: ActivityRepository(api),
+          activityId: 9001,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load activity details: This activity could not be found or is no longer online.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('活动不存在或未上线'), findsNothing);
+  });
+
+  testWidgets('activity detail localizes nested target errors in English', (
+    tester,
+  ) async {
+    final api = ActivityScreenApi()
+      ..targetType = 5
+      ..targetTypeText = '话题'
+      ..targetId = 51
+      ..targetName = '伦敦咖啡'
+      ..targetTitle = '话题入口'
+      ..targetError = const ApiException('话题不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ActivityDetailScreen(
+          repository: ActivityRepository(api),
+          activityId: 9001,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('activity-item-1')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not open topic: This topic could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('话题不存在'), findsNothing);
   });
 
   testWidgets('rank list guards duplicate detail navigation', (tester) async {

@@ -51,6 +51,11 @@ class AppLocalizations {
     'loadMore': '加载更多',
     'loadMoreShopsFailed': '加载更多门店失败：{error}',
     'discoveryFailed': '搜索发现加载失败：{error}',
+    'browseErrorShopNotFound': '这家门店不存在',
+    'browseErrorSearchHistoryNotFound': '这条搜索历史不存在',
+    'browseErrorInvalidShopId': '门店参数无效',
+    'browseErrorUnsupportedReviewSort': '当前点评排序方式不受支持',
+    'browseErrorUnsupportedFavoriteTarget': '当前收藏目标类型不受支持',
     'enterKeyword': '输入关键词开始搜索',
     'recentSearches': '最近搜过',
     'clearing': '清空中...',
@@ -63,6 +68,8 @@ class AppLocalizations {
     'rankDetailTitle': '榜单详情',
     'refreshRanksFailed': '刷新榜单失败：{error}',
     'ranksLoadFailed': '榜单加载失败：{error}',
+    'rankErrorNotFound': '这个榜单不存在',
+    'rankErrorInvalidType': '当前榜单类型不受支持',
     'noPublicRanks': '当前区域暂无公开榜单',
     'rankTypeMustEat': '必吃榜',
     'rankTypeTopRated': '好评榜',
@@ -87,6 +94,7 @@ class AppLocalizations {
     'activityTypeContentTopic': '内容话题',
     'resourceCount': '{count} 个资源',
     'activityDetailLoadFailed': '活动详情加载失败：{error}',
+    'activityErrorNotFoundOrOffline': '当前活动不存在或未上线',
     'activityNoItems': '该活动暂无资源项',
     'cannotOpenExternalLink': '无法打开外部链接',
     'openTargetFailed': '{target}打开失败：{error}',
@@ -927,6 +935,11 @@ class AppLocalizations {
     'loadMore': '載入更多',
     'loadMoreShopsFailed': '載入更多店家失敗：{error}',
     'discoveryFailed': '搜尋探索載入失敗：{error}',
+    'browseErrorShopNotFound': '這家店家不存在',
+    'browseErrorSearchHistoryNotFound': '這筆搜尋記錄不存在',
+    'browseErrorInvalidShopId': '店家參數無效',
+    'browseErrorUnsupportedReviewSort': '目前評論排序方式不受支援',
+    'browseErrorUnsupportedFavoriteTarget': '目前收藏目標類型不受支援',
     'enterKeyword': '輸入關鍵字開始搜尋',
     'recentSearches': '最近搜尋',
     'clearing': '清除中...',
@@ -939,6 +952,8 @@ class AppLocalizations {
     'rankDetailTitle': '排行榜詳情',
     'refreshRanksFailed': '重新整理排行榜失敗：{error}',
     'ranksLoadFailed': '排行榜載入失敗：{error}',
+    'rankErrorNotFound': '這個排行榜不存在',
+    'rankErrorInvalidType': '目前排行榜類型不受支援',
     'noPublicRanks': '目前區域暫無公開排行榜',
     'rankTypeMustEat': '必吃榜',
     'rankTypeTopRated': '好評榜',
@@ -963,6 +978,7 @@ class AppLocalizations {
     'activityTypeContentTopic': '內容話題',
     'resourceCount': '{count} 個資源',
     'activityDetailLoadFailed': '活動詳情載入失敗：{error}',
+    'activityErrorNotFoundOrOffline': '目前活動不存在或未上線',
     'activityNoItems': '此活動暫無資源項',
     'cannotOpenExternalLink': '無法開啟外部連結',
     'openTargetFailed': '{target}開啟失敗：{error}',
@@ -1807,6 +1823,14 @@ class AppLocalizations {
     'loadMore': 'Load more',
     'loadMoreShopsFailed': 'Could not load more places: {error}',
     'discoveryFailed': 'Could not load search discovery: {error}',
+    'browseErrorShopNotFound': 'This place could not be found.',
+    'browseErrorSearchHistoryNotFound':
+        'This search history item could not be found.',
+    'browseErrorInvalidShopId': 'The place id is invalid.',
+    'browseErrorUnsupportedReviewSort':
+        'This review sort option is unsupported.',
+    'browseErrorUnsupportedFavoriteTarget':
+        'This favorite target type is unsupported.',
     'enterKeyword': 'Enter a keyword to search',
     'recentSearches': 'Recent searches',
     'clearing': 'Clearing...',
@@ -1819,6 +1843,8 @@ class AppLocalizations {
     'rankDetailTitle': 'Ranking details',
     'refreshRanksFailed': 'Could not refresh rankings: {error}',
     'ranksLoadFailed': 'Could not load rankings: {error}',
+    'rankErrorNotFound': 'This ranking could not be found.',
+    'rankErrorInvalidType': 'This ranking type is unsupported.',
     'noPublicRanks': 'No public rankings in this region yet',
     'rankTypeMustEat': 'Must-eat ranking',
     'rankTypeTopRated': 'Top-rated ranking',
@@ -1843,6 +1869,8 @@ class AppLocalizations {
     'activityTypeContentTopic': 'Content topic',
     'resourceCount': '{count} resources',
     'activityDetailLoadFailed': 'Could not load activity details: {error}',
+    'activityErrorNotFoundOrOffline':
+        'This activity could not be found or is no longer online.',
     'activityNoItems': 'This activity has no resources yet',
     'cannotOpenExternalLink': 'Could not open the external link',
     'openTargetFailed': 'Could not open {target}: {error}',
@@ -2859,6 +2887,14 @@ class AppLocalizations {
   String loadMoreShopsFailed(Object error) =>
       _withError('loadMoreShopsFailed', error);
   String discoveryFailed(Object error) => _withError('discoveryFailed', error);
+  String get browseErrorShopNotFound => _text('browseErrorShopNotFound');
+  String get browseErrorSearchHistoryNotFound =>
+      _text('browseErrorSearchHistoryNotFound');
+  String get browseErrorInvalidShopId => _text('browseErrorInvalidShopId');
+  String get browseErrorUnsupportedReviewSort =>
+      _text('browseErrorUnsupportedReviewSort');
+  String get browseErrorUnsupportedFavoriteTarget =>
+      _text('browseErrorUnsupportedFavoriteTarget');
   String get enterKeyword => _text('enterKeyword');
   String get recentSearches => _text('recentSearches');
   String get clearing => _text('clearing');
@@ -2875,6 +2911,8 @@ class AppLocalizations {
   String refreshRanksFailed(Object error) =>
       _withError('refreshRanksFailed', error);
   String ranksLoadFailed(Object error) => _withError('ranksLoadFailed', error);
+  String get rankErrorNotFound => _text('rankErrorNotFound');
+  String get rankErrorInvalidType => _text('rankErrorInvalidType');
   String get noPublicRanks => _text('noPublicRanks');
   String get rankTypeMustEat => _text('rankTypeMustEat');
   String get rankTypeTopRated => _text('rankTypeTopRated');
@@ -2904,6 +2942,8 @@ class AppLocalizations {
   String resourceCount(int count) => _withCount('resourceCount', count);
   String activityDetailLoadFailed(Object error) =>
       _withError('activityDetailLoadFailed', error);
+  String get activityErrorNotFoundOrOffline =>
+      _text('activityErrorNotFoundOrOffline');
   String get activityNoItems => _text('activityNoItems');
   String get cannotOpenExternalLink => _text('cannotOpenExternalLink');
   String openTargetFailed(String target, Object error) => _text(

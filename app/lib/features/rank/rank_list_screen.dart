@@ -1,6 +1,7 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/rank/rank_error_localizer.dart';
 import 'package:dazhongdianping_app/features/rank/rank_detail_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
@@ -55,10 +56,11 @@ class _RankListScreenState extends State<RankListScreen> {
       }
     } catch (error) {
       if (mounted) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).refreshRanksFailed(error),
+              strings.refreshRanksFailed(localizeRankError(strings, error)),
             ),
           ),
         );
@@ -105,11 +107,12 @@ class _RankListScreenState extends State<RankListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            final error = localizeRankError(strings, snapshot.error!);
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.ranksLoadFailed(snapshot.error!)),
+                  Text(strings.ranksLoadFailed(error)),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('rank-list-retry'),

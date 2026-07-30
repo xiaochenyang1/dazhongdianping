@@ -424,6 +424,26 @@ void main() {
       AppLocalizations.forTag('en').tradeErrorPaymentChannelUnavailable,
       'Payment services are not configured yet.',
     );
+    expect(
+      AppLocalizations.forTag('en').browseErrorShopNotFound,
+      'This place could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').browseErrorSearchHistoryNotFound,
+      'This search history item could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').browseErrorInvalidShopId,
+      'The place id is invalid.',
+    );
+    expect(
+      AppLocalizations.forTag('en').browseErrorUnsupportedReviewSort,
+      'This review sort option is unsupported.',
+    );
+    expect(
+      AppLocalizations.forTag('en').browseErrorUnsupportedFavoriteTarget,
+      'This favorite target type is unsupported.',
+    );
     expect(AppLocalizations.forTag('en').onlineReservation, 'Book online');
     expect(AppLocalizations.forTag('en').myReservations, 'Reservations');
     expect(AppLocalizations.forTag('zh-CN').cancelReservation, '取消预订');
@@ -470,6 +490,14 @@ void main() {
       'Confirmed',
     );
     expect(
+      AppLocalizations.forTag('en').rankErrorNotFound,
+      'This ranking could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').rankErrorInvalidType,
+      'This ranking type is unsupported.',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).reservationConfirmModeLabel(fallback: '自动确认'),
@@ -480,6 +508,10 @@ void main() {
         'en',
       ).reservationTimelineActionLabel(actionType: 5),
       'Rescheduled by user',
+    );
+    expect(
+      AppLocalizations.forTag('en').activityErrorNotFoundOrOffline,
+      'This activity could not be found or is no longer online.',
     );
     expect(AppLocalizations.forTag('en').writeReview, 'Write a review');
     expect(AppLocalizations.forTag('en').reviewDetail, 'Review details');

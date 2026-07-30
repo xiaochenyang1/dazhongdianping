@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
+import 'package:dazhongdianping_app/features/browse/browse_error_localizer.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
@@ -136,9 +137,10 @@ class _SearchScreenState extends State<SearchScreen> {
           historyRevision != _historyRevision) {
         return;
       }
+      final strings = AppLocalizations.of(context);
       setState(() {
         _panelLoading = false;
-        _panelError = '$error';
+        _panelError = localizeBrowseError(strings, error);
       });
     }
   }
@@ -237,10 +239,11 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _searchRequestId) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreShopsFailed(error),
+              strings.loadMoreShopsFailed(localizeBrowseError(strings, error)),
             ),
           ),
         );
@@ -268,9 +271,12 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (error) {
       if (!mounted) return;
+      final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).clearHistoryFailed(error)),
+          content: Text(
+            strings.clearHistoryFailed(localizeBrowseError(strings, error)),
+          ),
         ),
       );
     } finally {
@@ -302,10 +308,11 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (error) {
       if (!mounted) return;
+      final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context).removeHistoryFailed(error),
+            strings.removeHistoryFailed(localizeBrowseError(strings, error)),
           ),
         ),
       );
@@ -350,10 +357,13 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     } catch (error) {
       if (mounted && revision == _historyRevision) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreHistoryFailed(error),
+              strings.loadMoreHistoryFailed(
+                localizeBrowseError(strings, error),
+              ),
             ),
           ),
         );
@@ -473,11 +483,15 @@ class _SearchScreenState extends State<SearchScreen> {
                           );
                         }
                         if (snapshot.hasError) {
+                          final error = localizeBrowseError(
+                            strings,
+                            snapshot.error!,
+                          );
                           return Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(strings.searchFailed(snapshot.error!)),
+                                Text(strings.searchFailed(error)),
                                 const SizedBox(height: 12),
                                 FilledButton.tonalIcon(
                                   key: const Key('search-results-retry'),

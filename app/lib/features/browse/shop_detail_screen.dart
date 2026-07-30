@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/browse/browse_error_localizer.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_screen.dart';
@@ -153,10 +154,11 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
       setState(() => _favorited = !_favorited);
     } catch (error) {
       if (!mounted) return;
+      final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context).favoriteActionFailed(error),
+            strings.favoriteActionFailed(localizeBrowseError(strings, error)),
           ),
         ),
       );
@@ -211,11 +213,12 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            final error = localizeBrowseError(strings, snapshot.error!);
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.shopDetailLoadFailed(snapshot.error!)),
+                  Text(strings.shopDetailLoadFailed(error)),
                   SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('shop-detail-retry'),
@@ -421,13 +424,17 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       );
                     }
                     if (reviewSnapshot.hasError) {
+                      final error = localizeBrowseError(
+                        AppLocalizations.of(context),
+                        reviewSnapshot.error!,
+                      );
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             AppLocalizations.of(
                               context,
-                            ).shopReviewsLoadFailed(reviewSnapshot.error!),
+                            ).shopReviewsLoadFailed(error),
                           ),
                           const SizedBox(height: 8),
                           FilledButton.tonalIcon(
@@ -531,13 +538,17 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       );
                     }
                     if (similarSnapshot.hasError) {
+                      final error = localizeBrowseError(
+                        AppLocalizations.of(context),
+                        similarSnapshot.error!,
+                      );
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             AppLocalizations.of(
                               context,
-                            ).similarShopsLoadFailed(similarSnapshot.error!),
+                            ).similarShopsLoadFailed(error),
                           ),
                           SizedBox(height: 8),
                           FilledButton.tonalIcon(
