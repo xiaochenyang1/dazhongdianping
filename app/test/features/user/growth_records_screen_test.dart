@@ -13,6 +13,9 @@ class GrowthRecordsApi implements JsonApi {
 
   final bool paginated;
   bool failNextRecordsLoad = false;
+  Object? recordsError;
+  Object? nextRecordsError;
+  Object? loadMoreRecordsError;
   final List<int> requestedPages = [];
   final requestGates = <int, Completer<void>>{};
 
@@ -41,6 +44,17 @@ class GrowthRecordsApi implements JsonApi {
       final page = query?['page'] as int? ?? 1;
       requestedPages.add(page);
       await requestGates[requestedPages.length]?.future;
+      if (page == 1 && recordsError != null) {
+        throw recordsError!;
+      }
+      if (nextRecordsError != null) {
+        final error = nextRecordsError!;
+        nextRecordsError = null;
+        throw error;
+      }
+      if (page > 1 && loadMoreRecordsError != null) {
+        throw loadMoreRecordsError!;
+      }
       if (failNextRecordsLoad) {
         failNextRecordsLoad = false;
         throw const ApiException('growth records network unavailable');
@@ -241,5 +255,75 @@ void main() {
     expect(find.text('发布点评'), findsOneWidget);
     expect(find.text('完善资料'), findsNothing);
     expect(find.text('加载更多'), findsOneWidget);
+  });
+
+  testWidgets('growth records localize load errors in English', (tester) async {
+    final api = GrowthRecordsApi()
+      ..recordsError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: GrowthRecordsScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load growth history: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
+  testWidgets('growth records localize refresh errors in English', (
+    tester,
+  ) async {
+    final api = GrowthRecordsApi();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: GrowthRecordsScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    api.nextRecordsError = const ApiException('用户登录状态不存在');
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not refresh growth history: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
+  testWidgets('growth records localize load more errors in English', (
+    tester,
+  ) async {
+    final api = GrowthRecordsApi(paginated: true)
+      ..loadMoreRecordsError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: GrowthRecordsScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Load more'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load more: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
   });
 }

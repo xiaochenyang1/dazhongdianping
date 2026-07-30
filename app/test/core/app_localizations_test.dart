@@ -207,6 +207,10 @@ void main() {
       'Your sign-in session is no longer available. Please sign in again.',
     );
     expect(
+      AppLocalizations.forTag('en').growthRecordsErrorSessionMissing,
+      'Your sign-in session is no longer available. Please sign in again.',
+    );
+    expect(
       AppLocalizations.forTag('en').privacyDeleteErrorNoPassword,
       'This account does not have a login password available for verification. Use code verification instead.',
     );

@@ -1,6 +1,15 @@
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:flutter/material.dart';
+
+String _localizedGrowthRecordsError(AppLocalizations strings, Object error) {
+  return localizeAuthError(
+    strings,
+    error,
+    overrides: {'用户登录状态不存在': strings.growthRecordsErrorSessionMissing},
+  );
+}
 
 class GrowthRecordsScreen extends StatefulWidget {
   const GrowthRecordsScreen({super.key, required this.repository});
@@ -79,9 +88,13 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
     } catch (error) {
       if (mounted && revision == _pageRevision) {
         setState(
-          () => _error = AppLocalizations.of(
-            context,
-          ).refreshGrowthRecordsFailed(error),
+          () =>
+              _error = AppLocalizations.of(context).refreshGrowthRecordsFailed(
+                _localizedGrowthRecordsError(
+                  AppLocalizations.of(context),
+                  error,
+                ),
+              ),
         );
       }
     } finally {
@@ -101,7 +114,9 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
       if (!mounted || revision != _pageRevision) return;
       setState(() {
         _loadingMore = false;
-        _error = AppLocalizations.of(context).loadMoreFailed(error);
+        _error = AppLocalizations.of(context).loadMoreFailed(
+          _localizedGrowthRecordsError(AppLocalizations.of(context), error),
+        );
       });
     }
   }
@@ -131,7 +146,11 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.growthRecordsLoadFailed(snapshot.error!)),
+                  Text(
+                    strings.growthRecordsLoadFailed(
+                      _localizedGrowthRecordsError(strings, snapshot.error!),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('growth-records-retry'),

@@ -659,6 +659,7 @@ class AppLocalizations {
     'expertCertificationApprovedNotice': '本地达人认证已通过',
     'expertCertificationRejectedNotice': '本地达人认证未通过，可查看原因后重提',
     'expertCertificationUpdatedNotice': '本地达人认证状态已更新',
+    'growthRecordsErrorSessionMissing': '当前登录状态已失效，请重新登录后再试',
     'growthRecordsLoadFailed': '流水加载失败：{error}',
     'noGrowthRecords': '还没有成长值 / 积分流水',
     'refreshGrowthRecordsFailed': '刷新流水失败：{error}',
@@ -1487,6 +1488,7 @@ class AppLocalizations {
     'expertCertificationApprovedNotice': '在地達人認證已通過',
     'expertCertificationRejectedNotice': '在地達人認證未通過，可查看原因後重新提交',
     'expertCertificationUpdatedNotice': '在地達人認證狀態已更新',
+    'growthRecordsErrorSessionMissing': '目前登入狀態已失效，請重新登入後再試',
     'growthRecordsLoadFailed': '流水載入失敗：{error}',
     'noGrowthRecords': '還沒有成長值 / 積分流水',
     'refreshGrowthRecordsFailed': '重新整理流水失敗：{error}',
@@ -2401,6 +2403,8 @@ class AppLocalizations {
         'Local expert certification rejected. Review the reason and resubmit.',
     'expertCertificationUpdatedNotice':
         'Local expert certification status updated',
+    'growthRecordsErrorSessionMissing':
+        'Your sign-in session is no longer available. Please sign in again.',
     'growthRecordsLoadFailed': 'Could not load growth history: {error}',
     'noGrowthRecords': 'No growth or points history yet',
     'refreshGrowthRecordsFailed': 'Could not refresh growth history: {error}',
@@ -3773,6 +3777,8 @@ class AppLocalizations {
   String get expertCertificationUpdatedNotice =>
       _text('expertCertificationUpdatedNotice');
   String get applicationReason => _text('applicationReason');
+  String get growthRecordsErrorSessionMissing =>
+      _text('growthRecordsErrorSessionMissing');
   String growthRecordsLoadFailed(Object error) =>
       _withError('growthRecordsLoadFailed', error);
   String get noGrowthRecords => _text('noGrowthRecords');
