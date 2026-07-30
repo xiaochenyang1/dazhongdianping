@@ -13,6 +13,7 @@ class OrdersApi implements JsonApi {
 
   final bool paginated;
   final bool failFirst;
+  Object? listError;
   int orderListRequests = 0;
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
@@ -30,6 +31,11 @@ class OrdersApi implements JsonApi {
     lastQuery = query;
     if (path == '/api/c/v1/orders') {
       orderListRequests++;
+      if (listError != null) {
+        final error = listError!;
+        listError = null;
+        throw error;
+      }
       if (failFirst && orderListRequests == 1) {
         throw StateError('network unavailable');
       }
@@ -127,6 +133,25 @@ void main() {
 
     expect(api.orderListRequests, 2);
     expect(find.byKey(const Key('order-card-10')), findsOneWidget);
+  });
+
+  testWidgets('orders screen localizes load errors in English', (tester) async {
+    final api = OrdersApi()..listError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: OrdersScreen(repository: TradeRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load orders: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
   });
 
   testWidgets('orders screen guards duplicate retries', (tester) async {

@@ -30,6 +30,10 @@ class OrderDetailApi implements JsonApi {
   int paymentRequests = 0;
   int orderRequests = 0;
   Completer<void>? orderGate;
+  Object? couponError;
+  Object? paymentError;
+  Object? refundError;
+  Object? orderError;
 
   Map<String, dynamic> order({int status = 1, bool refunded = false}) => {
     'id': 10,
@@ -61,6 +65,11 @@ class OrderDetailApi implements JsonApi {
     this.path = path;
     if (path.startsWith('/api/c/v1/coupons/')) {
       couponRequests++;
+      if (couponError != null) {
+        final error = couponError!;
+        couponError = null;
+        throw error;
+      }
       if (failFirstCoupon && couponRequests == 1) {
         throw StateError('network unavailable');
       }
@@ -86,6 +95,11 @@ class OrderDetailApi implements JsonApi {
     }
     orderRequests += 1;
     await orderGate?.future;
+    if (orderError != null) {
+      final error = orderError!;
+      orderError = null;
+      throw error;
+    }
     if (failFirstOrder && orderRequests == 1) {
       throw StateError('order unavailable');
     }
@@ -99,6 +113,11 @@ class OrderDetailApi implements JsonApi {
     if (path.endsWith('/pay')) {
       paymentRequests += 1;
       await paymentGate?.future;
+      if (paymentError != null) {
+        final error = paymentError!;
+        paymentError = null;
+        throw error;
+      }
       return {
         'channel': 'stripe',
         'orderNo': 'OD-10',
@@ -108,6 +127,11 @@ class OrderDetailApi implements JsonApi {
     }
     if (path.endsWith('/refund')) {
       refundRequests += 1;
+      if (refundError != null) {
+        final error = refundError!;
+        refundError = null;
+        throw error;
+      }
       if (failNextRefund) {
         failNextRefund = false;
         throw StateError('refund unavailable');
@@ -186,6 +210,28 @@ void main() {
     expect(find.textContaining('由商户核销'), findsOneWidget);
   });
 
+  testWidgets('coupon detail localizes load errors in English', (tester) async {
+    final api = OrderDetailApi()..couponError = const ApiException('券码不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CouponDetailScreen(
+          repository: TradeRepository(api),
+          code: 'CP-DEMO-2026',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load coupon details: This coupon could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('券码不存在'), findsNothing);
+  });
+
   testWidgets('coupon detail guards duplicate retries', (tester) async {
     final gate = Completer<void>();
     final api = OrderDetailApi(failFirstCoupon: true)..couponGate = gate;
@@ -237,6 +283,36 @@ void main() {
 
     expect(api.path, '/api/c/v1/orders/10/cancel');
     expect(find.text('订单已取消'), findsOneWidget);
+  });
+
+  testWidgets('order detail localizes payment errors in English', (
+    tester,
+  ) async {
+    final api = OrderDetailApi()..paymentError = const ApiException('支付渠道尚未配置');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: OrderDetailScreen(
+          repository: TradeRepository(api),
+          orderId: 10,
+          thirdPartyConfig: const ThirdPartyConfig(
+            stripePublishableKey: 'pk_test_widget',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('order-pay-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not start payment: Payment services are not configured yet.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('支付渠道尚未配置'), findsNothing);
   });
 
   testWidgets('order detail guards duplicate load retries', (tester) async {
@@ -416,6 +492,37 @@ void main() {
     expect(api.refundRequests, 2);
     expect(api.body, {'reason': '需要保留的退款原因'});
     expect(find.text('退款：待审核'), findsOneWidget);
+  });
+
+  testWidgets('order detail localizes refund errors in English', (
+    tester,
+  ) async {
+    final api = OrderDetailApi(paid: true)
+      ..refundError = const ApiException('订单已有退款申请');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('order-refund-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('order-refund-reason')),
+      'Duplicate refund request',
+    );
+    await tester.tap(find.text('Submit'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not complete the action: A refund request already exists for this order.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('订单已有退款申请'), findsNothing);
   });
 
   testWidgets('order detail blocks duplicate payment requests', (tester) async {

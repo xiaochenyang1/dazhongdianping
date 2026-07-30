@@ -1,6 +1,7 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
+import 'package:dazhongdianping_app/features/trade/trade_error_localizer.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -55,7 +56,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       final order = await widget.repository.loadOrder(widget.orderId);
       if (mounted) setState(() => _order = order);
     } catch (error) {
-      if (mounted) setState(() => _error = '$error');
+      if (mounted) {
+        setState(
+          () =>
+              _error = localizeTradeError(AppLocalizations.of(context), error),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -167,7 +173,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       }
     } catch (error) {
       if (mounted) {
-        _showMessage(AppLocalizations.of(context).paymentStartFailed(error));
+        final strings = AppLocalizations.of(context);
+        _showMessage(
+          strings.paymentStartFailed(localizeTradeError(strings, error)),
+        );
       }
     } finally {
       if (mounted) setState(() => _acting = false);
@@ -188,7 +197,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       return true;
     } catch (error) {
       if (mounted) {
-        _showMessage(AppLocalizations.of(context).actionFailed(error));
+        final strings = AppLocalizations.of(context);
+        _showMessage(strings.actionFailed(localizeTradeError(strings, error)));
       }
       return false;
     } finally {
@@ -442,7 +452,11 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.couponDetailLoadFailed(snapshot.error!)),
+                  Text(
+                    strings.couponDetailLoadFailed(
+                      localizeTradeError(strings, snapshot.error!),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('coupon-detail-retry'),
@@ -601,7 +615,9 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        strings.detailRefreshFailed(snapshot.error!),
+                        strings.detailRefreshFailed(
+                          localizeTradeError(strings, snapshot.error!),
+                        ),
                         style: const TextStyle(color: Color(0xFFB45309)),
                       ),
                       const SizedBox(height: 8),

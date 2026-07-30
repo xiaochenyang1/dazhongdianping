@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
+import 'package:dazhongdianping_app/features/trade/trade_error_localizer.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -97,10 +98,11 @@ class _CouponsScreenState extends State<CouponsScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _requestId) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreCouponsFailed(error),
+              strings.loadMoreCouponsFailed(localizeTradeError(strings, error)),
             ),
           ),
         );
@@ -189,7 +191,11 @@ class _CouponsScreenState extends State<CouponsScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(strings.couponsLoadFailed(snapshot.error!)),
+                        Text(
+                          strings.couponsLoadFailed(
+                            localizeTradeError(strings, snapshot.error!),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('coupons-retry'),

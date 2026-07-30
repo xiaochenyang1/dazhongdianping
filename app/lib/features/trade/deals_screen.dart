@@ -2,6 +2,7 @@ import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
+import 'package:dazhongdianping_app/features/trade/trade_error_localizer.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -59,9 +60,14 @@ class _DealsScreenState extends State<DealsScreen> {
         );
       } catch (error) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).createOrderFailed(error))));
+          final strings = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                strings.createOrderFailed(localizeTradeError(strings, error)),
+              ),
+            ),
+          );
         }
         return;
       }
@@ -79,8 +85,16 @@ class _DealsScreenState extends State<DealsScreen> {
         );
       } catch (error) {
         if (mounted) {
+          final strings = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context).orderCreatedOpenDetailFailed(order.orderNo, error))),
+            SnackBar(
+              content: Text(
+                strings.orderCreatedOpenDetailFailed(
+                  order.orderNo,
+                  localizeTradeError(strings, error),
+                ),
+              ),
+            ),
           );
         }
       }
@@ -105,7 +119,11 @@ class _DealsScreenState extends State<DealsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.dealsLoadFailed(snapshot.error!)),
+                  Text(
+                    strings.dealsLoadFailed(
+                      localizeTradeError(strings, snapshot.error!),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('deals-retry'),

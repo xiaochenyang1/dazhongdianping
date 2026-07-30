@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/trade/trade_error_localizer.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
@@ -95,10 +96,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _requestId) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreOrdersFailed(error),
+              strings.loadMoreOrdersFailed(localizeTradeError(strings, error)),
             ),
           ),
         );
@@ -175,7 +177,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(strings.ordersLoadFailed(snapshot.error!)),
+                        Text(
+                          strings.ordersLoadFailed(
+                            localizeTradeError(strings, snapshot.error!),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('orders-retry'),

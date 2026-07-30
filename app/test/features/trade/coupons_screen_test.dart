@@ -13,6 +13,7 @@ class CouponsApi implements JsonApi {
 
   final bool paginated;
   final bool failFirst;
+  Object? listError;
   int couponListRequests = 0;
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
@@ -30,6 +31,11 @@ class CouponsApi implements JsonApi {
     lastQuery = query;
     if (path == '/api/c/v1/coupons') {
       couponListRequests++;
+      if (listError != null) {
+        final error = listError!;
+        listError = null;
+        throw error;
+      }
       if (failFirst && couponListRequests == 1) {
         throw StateError('network unavailable');
       }
@@ -126,6 +132,27 @@ void main() {
 
     expect(api.couponListRequests, 2);
     expect(find.byKey(const Key('coupon-card-CP-DEMO')), findsOneWidget);
+  });
+
+  testWidgets('coupons screen localizes load errors in English', (
+    tester,
+  ) async {
+    final api = CouponsApi()..listError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CouponsScreen(repository: TradeRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load coupons: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
   });
 
   testWidgets('coupons screen guards duplicate retries', (tester) async {

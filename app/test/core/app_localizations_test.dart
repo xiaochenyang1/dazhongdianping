@@ -376,6 +376,54 @@ void main() {
     expect(AppLocalizations.forTag('en').groupDeals, 'Group deals');
     expect(AppLocalizations.forTag('zh-CN').payPending, '待支付');
     expect(AppLocalizations.forTag('en').buy, 'Buy');
+    expect(
+      AppLocalizations.forTag('en').tradeErrorDealNotFound,
+      'This deal could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorDealExpired,
+      'This deal has expired.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorDealOutOfStock,
+      'This deal is sold out.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorOrderNotFound,
+      'This order could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorOrderPaymentUnavailable,
+      'This order cannot be paid right now.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorOrderCancelUnavailable,
+      'This order cannot be canceled right now.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorOrderRefundUnavailable,
+      'This order cannot be refunded right now.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorRefundUsedCoupons,
+      'This order includes redeemed coupons, so a full refund is unavailable.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorRefundExists,
+      'A refund request already exists for this order.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorCouponCodeRequired,
+      'Enter a coupon code.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorCouponNotFound,
+      'This coupon could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').tradeErrorPaymentChannelUnavailable,
+      'Payment services are not configured yet.',
+    );
     expect(AppLocalizations.forTag('en').onlineReservation, 'Book online');
     expect(AppLocalizations.forTag('en').myReservations, 'Reservations');
     expect(AppLocalizations.forTag('zh-CN').cancelReservation, '取消预订');

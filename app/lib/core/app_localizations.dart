@@ -316,6 +316,18 @@ class AppLocalizations {
     'soldCount': '已售 {count}',
     'stockCount': '库存 {count}',
     'buy': '购买',
+    'tradeErrorDealNotFound': '这项团购不存在',
+    'tradeErrorDealExpired': '这项团购已过期',
+    'tradeErrorDealOutOfStock': '这项团购库存不足',
+    'tradeErrorOrderNotFound': '这笔订单不存在',
+    'tradeErrorOrderPaymentUnavailable': '这笔订单当前无法支付',
+    'tradeErrorOrderCancelUnavailable': '这笔订单当前无法取消',
+    'tradeErrorOrderRefundUnavailable': '这笔订单当前无法退款',
+    'tradeErrorRefundUsedCoupons': '订单里有已核销的券，暂不支持整单退款',
+    'tradeErrorRefundExists': '这笔订单已有退款申请',
+    'tradeErrorCouponCodeRequired': '请输入券码',
+    'tradeErrorCouponNotFound': '这张券不存在',
+    'tradeErrorPaymentChannelUnavailable': '支付服务暂未配置',
     'createOrderFailed': '下单失败：{error}',
     'orderCreatedOpenDetailFailed': '订单 {orderNo} 已创建，但打开详情失败：{error}',
     'dealDetail': '团购详情',
@@ -1171,6 +1183,18 @@ class AppLocalizations {
     'soldCount': '已售 {count}',
     'stockCount': '庫存 {count}',
     'buy': '購買',
+    'tradeErrorDealNotFound': '這項團購不存在',
+    'tradeErrorDealExpired': '這項團購已過期',
+    'tradeErrorDealOutOfStock': '這項團購庫存不足',
+    'tradeErrorOrderNotFound': '這筆訂單不存在',
+    'tradeErrorOrderPaymentUnavailable': '這筆訂單目前無法付款',
+    'tradeErrorOrderCancelUnavailable': '這筆訂單目前無法取消',
+    'tradeErrorOrderRefundUnavailable': '這筆訂單目前無法退款',
+    'tradeErrorRefundUsedCoupons': '訂單內有已核銷的券，暫不支援整單退款',
+    'tradeErrorRefundExists': '這筆訂單已有退款申請',
+    'tradeErrorCouponCodeRequired': '請輸入券碼',
+    'tradeErrorCouponNotFound': '這張券不存在',
+    'tradeErrorPaymentChannelUnavailable': '支付服務尚未配置',
     'createOrderFailed': '下單失敗：{error}',
     'orderCreatedOpenDetailFailed': '訂單 {orderNo} 已建立，但開啟詳情失敗：{error}',
     'dealDetail': '團購詳情',
@@ -2060,6 +2084,22 @@ class AppLocalizations {
     'soldCount': 'Sold {count}',
     'stockCount': 'Stock {count}',
     'buy': 'Buy',
+    'tradeErrorDealNotFound': 'This deal could not be found.',
+    'tradeErrorDealExpired': 'This deal has expired.',
+    'tradeErrorDealOutOfStock': 'This deal is sold out.',
+    'tradeErrorOrderNotFound': 'This order could not be found.',
+    'tradeErrorOrderPaymentUnavailable': 'This order cannot be paid right now.',
+    'tradeErrorOrderCancelUnavailable':
+        'This order cannot be canceled right now.',
+    'tradeErrorOrderRefundUnavailable':
+        'This order cannot be refunded right now.',
+    'tradeErrorRefundUsedCoupons':
+        'This order includes redeemed coupons, so a full refund is unavailable.',
+    'tradeErrorRefundExists': 'A refund request already exists for this order.',
+    'tradeErrorCouponCodeRequired': 'Enter a coupon code.',
+    'tradeErrorCouponNotFound': 'This coupon could not be found.',
+    'tradeErrorPaymentChannelUnavailable':
+        'Payment services are not configured yet.',
     'createOrderFailed': 'Could not create order: {error}',
     'orderCreatedOpenDetailFailed':
         'Order {orderNo} was created, but opening details failed: {error}',
@@ -3386,6 +3426,24 @@ class AppLocalizations {
   String soldCount(int count) => _withCount('soldCount', count);
   String stockCount(int count) => _withCount('stockCount', count);
   String get buy => _text('buy');
+  String get tradeErrorDealNotFound => _text('tradeErrorDealNotFound');
+  String get tradeErrorDealExpired => _text('tradeErrorDealExpired');
+  String get tradeErrorDealOutOfStock => _text('tradeErrorDealOutOfStock');
+  String get tradeErrorOrderNotFound => _text('tradeErrorOrderNotFound');
+  String get tradeErrorOrderPaymentUnavailable =>
+      _text('tradeErrorOrderPaymentUnavailable');
+  String get tradeErrorOrderCancelUnavailable =>
+      _text('tradeErrorOrderCancelUnavailable');
+  String get tradeErrorOrderRefundUnavailable =>
+      _text('tradeErrorOrderRefundUnavailable');
+  String get tradeErrorRefundUsedCoupons =>
+      _text('tradeErrorRefundUsedCoupons');
+  String get tradeErrorRefundExists => _text('tradeErrorRefundExists');
+  String get tradeErrorCouponCodeRequired =>
+      _text('tradeErrorCouponCodeRequired');
+  String get tradeErrorCouponNotFound => _text('tradeErrorCouponNotFound');
+  String get tradeErrorPaymentChannelUnavailable =>
+      _text('tradeErrorPaymentChannelUnavailable');
   String createOrderFailed(Object error) =>
       _withError('createOrderFailed', error);
   String orderCreatedOpenDetailFailed(String orderNo, Object error) => _text(

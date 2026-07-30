@@ -14,6 +14,7 @@ class DealsScreenApi implements JsonApi {
 
   final bool failFirst;
   final bool failPayment;
+  Object? createOrderError;
   int dealRequests = 0;
   int createOrderRequests = 0;
   int orderDetailRequests = 0;
@@ -83,6 +84,11 @@ class DealsScreenApi implements JsonApi {
       throw StateError('unexpected POST $path');
     }
     createOrderRequests++;
+    if (createOrderError != null) {
+      final error = createOrderError!;
+      createOrderError = null;
+      throw error;
+    }
     return {
       'id': 10,
       'orderNo': 'O10',
@@ -99,7 +105,6 @@ class DealsScreenApi implements JsonApi {
     };
   }
 }
-
 
 Widget localizedApp({
   required Widget home,
@@ -119,7 +124,6 @@ Widget localizedApp({
 }
 
 void main() {
-
   testWidgets('deals screen switches English chrome', (tester) async {
     await tester.pumpWidget(
       localizedApp(
@@ -135,7 +139,6 @@ void main() {
     expect(find.text('Group deals'), findsOneWidget);
     expect(find.text('Group deals'), findsWidgets);
   });
-
 
   testWidgets('deals screen retries an initial load failure', (tester) async {
     final api = DealsScreenApi(failFirst: true);
@@ -156,6 +159,33 @@ void main() {
 
     expect(api.dealRequests, 2);
     expect(find.text('Dinner Set'), findsOneWidget);
+  });
+
+  testWidgets('deals screen localizes create-order errors in English', (
+    tester,
+  ) async {
+    final api = DealsScreenApi()
+      ..createOrderError = const ApiException('团购已过期');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: DealsScreen(
+          repository: TradeRepository(api),
+          shopId: 2,
+          thirdPartyConfig: const ThirdPartyConfig(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('deal-action-5')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not create order: This deal has expired.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('团购已过期'), findsNothing);
   });
 
   testWidgets('deals screen guards duplicate retries', (tester) async {
