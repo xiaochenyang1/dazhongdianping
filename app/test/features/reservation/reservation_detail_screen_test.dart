@@ -12,6 +12,10 @@ class ReservationDetailApi implements JsonApi {
   String? path;
   Object? body;
   bool failNextReschedule = false;
+  Object? detailError;
+  Object? slotError;
+  Object? cancelError;
+  Object? rescheduleError;
   int rescheduleRequests = 0;
   Completer<void>? slotGate;
   int slotRequests = 0;
@@ -62,6 +66,9 @@ class ReservationDetailApi implements JsonApi {
     if (path.contains('reservation-slots')) {
       slotRequests += 1;
       await slotGate?.future;
+      if (slotError != null) {
+        throw slotError!;
+      }
       return {
         'list': [
           {
@@ -79,6 +86,9 @@ class ReservationDetailApi implements JsonApi {
     }
     detailRequests += 1;
     await detailGate?.future;
+    if (detailError != null) {
+      throw detailError!;
+    }
     if (failFirstDetail && detailRequests == 1) {
       throw StateError('reservation unavailable');
     }
@@ -89,7 +99,13 @@ class ReservationDetailApi implements JsonApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     this.path = path;
     this.body = body;
+    if (path.endsWith('/cancel') && cancelError != null) {
+      throw cancelError!;
+    }
     if (path.endsWith('/reschedule')) rescheduleRequests++;
+    if (path.endsWith('/reschedule') && rescheduleError != null) {
+      throw rescheduleError!;
+    }
     if (path.endsWith('/reschedule') && failNextReschedule) {
       failNextReschedule = false;
       throw StateError('reschedule unavailable');
@@ -165,6 +181,66 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.detailRequests, 2);
     expect(find.text('柏林茶馆'), findsOneWidget);
+  });
+
+  testWidgets('reservation detail localizes slot lookup failures in English', (
+    tester,
+  ) async {
+    final api = ReservationDetailApi()
+      ..slotError = const ApiException('预订时段不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationDetailScreen(
+          repository: ReservationRepository(api),
+          reservationId: 11,
+          initialRescheduleDate: DateTime(2026, 7, 21),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Find new slots'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load time slots: This reservation slot could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('预订时段不存在'), findsNothing);
+  });
+
+  testWidgets('reservation detail localizes cancel failures in English', (
+    tester,
+  ) async {
+    final api = ReservationDetailApi()
+      ..cancelError = const ApiException('已超过允许取消时间');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationDetailScreen(
+          repository: ReservationRepository(api),
+          reservationId: 11,
+          initialRescheduleDate: DateTime(2026, 7, 21),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Cancel reservation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm cancel'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not complete the action: The cancellation window has passed.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('已超过允许取消时间'), findsNothing);
   });
 
   testWidgets('reservation detail cancels after confirmation', (tester) async {
@@ -320,6 +396,40 @@ void main() {
 
     expect(api.rescheduleRequests, 2);
     expect(find.textContaining('19:00'), findsNothing);
+  });
+
+  testWidgets('reservation detail localizes reschedule failures in English', (
+    tester,
+  ) async {
+    final api = ReservationDetailApi()
+      ..rescheduleError = const ApiException('新时段余量不足');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationDetailScreen(
+          repository: ReservationRepository(api),
+          reservationId: 11,
+          initialRescheduleDate: DateTime(2026, 7, 21),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Find new slots'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('19:00'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Confirm reschedule'));
+    await tester.tap(find.text('Confirm reschedule'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not complete the action: The new time slot no longer has enough availability.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('新时段余量不足'), findsNothing);
   });
 
   testWidgets('reservation detail blocks duplicate slot requests', (

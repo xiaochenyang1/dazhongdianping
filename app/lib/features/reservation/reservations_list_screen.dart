@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/reservation/reservation_error_localizer.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:flutter/material.dart';
@@ -97,10 +98,13 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _requestId) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreReservationsFailed(error),
+              strings.loadMoreReservationsFailed(
+                localizeReservationError(strings, error),
+              ),
             ),
           ),
         );
@@ -173,11 +177,15 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
+                  final error = localizeReservationError(
+                    strings,
+                    snapshot.error!,
+                  );
                   return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(strings.reservationsLoadFailed(snapshot.error!)),
+                        Text(strings.reservationsLoadFailed(error)),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           key: const Key('reservations-retry'),

@@ -13,6 +13,8 @@ class ReservationsApi implements JsonApi {
 
   final bool paginated;
   final bool failFirst;
+  Object? listError;
+  Object? loadMoreError;
   int reservationListRequests = 0;
   Map<String, Object?>? lastQuery;
   final List<String> paths = <String>[];
@@ -35,6 +37,12 @@ class ReservationsApi implements JsonApi {
       }
       if (reservationListRequests > 1) await retryGate?.future;
       final page = query?['page'] as int? ?? 1;
+      if (page == 1 && listError != null) {
+        throw listError!;
+      }
+      if (page > 1 && loadMoreError != null) {
+        throw loadMoreError!;
+      }
       requestedPages.add(page);
       return {
         'list': [
@@ -143,6 +151,52 @@ void main() {
 
     expect(api.reservationListRequests, 2);
     expect(find.byKey(const Key('reservation-card-11')), findsOneWidget);
+  });
+
+  testWidgets('reservations list localizes load failures in English', (
+    tester,
+  ) async {
+    final api = ReservationsApi()..listError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationsListScreen(repository: ReservationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load reservations: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
+  testWidgets('reservations list localizes load more failures in English', (
+    tester,
+  ) async {
+    final api = ReservationsApi(paginated: true)
+      ..loadMoreError = const ApiException('预订不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationsListScreen(repository: ReservationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('reservations-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load more reservations: This reservation could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('预订不存在'), findsNothing);
   });
 
   testWidgets('reservations list guards duplicate retries', (tester) async {

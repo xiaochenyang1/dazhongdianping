@@ -12,8 +12,10 @@ class ReservationScreenApi implements JsonApi {
   ReservationScreenApi({this.failFirst = false});
 
   final bool failFirst;
+  Object? slotError;
   int slotRequests = 0;
   Completer<void>? retryGate;
+  Object? createError;
   Completer<void>? createGate;
   int createRequests = 0;
 
@@ -23,6 +25,9 @@ class ReservationScreenApi implements JsonApi {
     Map<String, Object?>? query,
   }) async {
     slotRequests++;
+    if (slotError != null) {
+      throw slotError!;
+    }
     if (failFirst && slotRequests == 1) {
       throw StateError('network unavailable');
     }
@@ -45,6 +50,9 @@ class ReservationScreenApi implements JsonApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     createRequests++;
     await createGate?.future;
+    if (createError != null) {
+      throw createError!;
+    }
     return {'id': 11, 'reservationNo': 'R11', 'status': 0, 'statusText': '待确认'};
   }
 }
@@ -103,6 +111,60 @@ void main() {
 
     expect(find.textContaining('Pending'), findsOneWidget);
     expect(find.textContaining('待确认'), findsNothing);
+  });
+
+  testWidgets('reservation screen localizes slot failures in English', (
+    tester,
+  ) async {
+    final api = ReservationScreenApi()
+      ..slotError = const ApiException('slotId 与 reserveTime 至少传一个');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationScreen(
+          repository: ReservationRepository(api),
+          shopId: 2,
+          initialDate: DateTime(2026, 7, 16),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load time slots: Select a reservation slot first.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('slotId 与 reserveTime 至少传一个'), findsNothing);
+  });
+
+  testWidgets('reservation screen localizes create failures in English', (
+    tester,
+  ) async {
+    final api = ReservationScreenApi()
+      ..createError = const ApiException('当前时段余量不足');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationScreen(
+          repository: ReservationRepository(api),
+          shopId: 2,
+          initialDate: DateTime(2026, 7, 16),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('18:00'));
+    await tester.tap(find.byKey(const Key('reservation-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not create reservation: This time slot no longer has enough availability.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('当前时段余量不足'), findsNothing);
   });
 
   testWidgets('reservation screen retries an initial slot failure', (

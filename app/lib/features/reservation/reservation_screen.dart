@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/reservation/reservation_error_localizer.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -96,10 +97,13 @@ class _ReservationScreenState extends State<ReservationScreen> {
       }
     } catch (error) {
       if (mounted) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).reservationFailed(error),
+              strings.reservationFailed(
+                localizeReservationError(strings, error),
+              ),
             ),
           ),
         );
@@ -157,10 +161,14 @@ class _ReservationScreenState extends State<ReservationScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
+                final error = localizeReservationError(
+                  strings,
+                  snapshot.error!,
+                );
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(strings.slotsLoadFailed(snapshot.error!)),
+                    Text(strings.slotsLoadFailed(error)),
                     const SizedBox(height: 8),
                     FilledButton.tonalIcon(
                       key: const Key('reservation-slots-retry'),

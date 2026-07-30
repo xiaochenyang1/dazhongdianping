@@ -406,6 +406,15 @@ class AppLocalizations {
     'selectSlotFirst': '请选择时段',
     'reservationCreated': '预订 {no} 已创建：{status}',
     'reservationFailed': '预订失败：{error}',
+    'reservationErrorInvalidPeopleCount': '预订人数至少为 1 人',
+    'reservationErrorSlotOrTimeRequired': '请先选择预订时段',
+    'reservationErrorSlotCapacityUnavailable': '当前时段剩余名额不足',
+    'reservationErrorCancelDeadlinePassed': '已经超过可取消时间',
+    'reservationErrorCancelUnavailable': '当前预订暂时无法取消',
+    'reservationErrorRescheduleSlotCapacityUnavailable': '新时段剩余名额不足',
+    'reservationErrorRescheduleUnavailable': '当前预订暂时无法改期',
+    'reservationErrorSlotNotFound': '预订时段不存在',
+    'reservationErrorNotFound': '这笔预订不存在',
     'dateLabel': '日期 {date}',
     'peopleCount': '{count} 人',
     'slotsLoadFailed': '时段加载失败：{error}',
@@ -1273,6 +1282,15 @@ class AppLocalizations {
     'selectSlotFirst': '請選擇時段',
     'reservationCreated': '預訂 {no} 已建立：{status}',
     'reservationFailed': '預訂失敗：{error}',
+    'reservationErrorInvalidPeopleCount': '預訂人數至少為 1 人',
+    'reservationErrorSlotOrTimeRequired': '請先選擇預訂時段',
+    'reservationErrorSlotCapacityUnavailable': '目前時段剩餘名額不足',
+    'reservationErrorCancelDeadlinePassed': '已超過可取消時間',
+    'reservationErrorCancelUnavailable': '目前預訂暫時無法取消',
+    'reservationErrorRescheduleSlotCapacityUnavailable': '新時段剩餘名額不足',
+    'reservationErrorRescheduleUnavailable': '目前預訂暫時無法改期',
+    'reservationErrorSlotNotFound': '預訂時段不存在',
+    'reservationErrorNotFound': '這筆預訂不存在',
     'dateLabel': '日期 {date}',
     'peopleCount': '{count} 人',
     'slotsLoadFailed': '時段載入失敗：{error}',
@@ -2181,6 +2199,20 @@ class AppLocalizations {
     'selectSlotFirst': 'Please select a time slot',
     'reservationCreated': 'Reservation {no} created: {status}',
     'reservationFailed': 'Could not create reservation: {error}',
+    'reservationErrorInvalidPeopleCount': 'Guest count must be at least 1.',
+    'reservationErrorSlotOrTimeRequired': 'Select a reservation slot first.',
+    'reservationErrorSlotCapacityUnavailable':
+        'This time slot no longer has enough availability.',
+    'reservationErrorCancelDeadlinePassed':
+        'The cancellation window has passed.',
+    'reservationErrorCancelUnavailable':
+        'This reservation cannot be canceled right now.',
+    'reservationErrorRescheduleSlotCapacityUnavailable':
+        'The new time slot no longer has enough availability.',
+    'reservationErrorRescheduleUnavailable':
+        'This reservation cannot be rescheduled right now.',
+    'reservationErrorSlotNotFound': 'This reservation slot could not be found.',
+    'reservationErrorNotFound': 'This reservation could not be found.',
     'dateLabel': 'Date {date}',
     'peopleCount': '{count} guests',
     'slotsLoadFailed': 'Could not load time slots: {error}',
@@ -3571,6 +3603,23 @@ class AppLocalizations {
       ).replaceFirst('{no}', no).replaceFirst('{status}', status);
   String reservationFailed(Object error) =>
       _withError('reservationFailed', error);
+  String get reservationErrorInvalidPeopleCount =>
+      _text('reservationErrorInvalidPeopleCount');
+  String get reservationErrorSlotOrTimeRequired =>
+      _text('reservationErrorSlotOrTimeRequired');
+  String get reservationErrorSlotCapacityUnavailable =>
+      _text('reservationErrorSlotCapacityUnavailable');
+  String get reservationErrorCancelDeadlinePassed =>
+      _text('reservationErrorCancelDeadlinePassed');
+  String get reservationErrorCancelUnavailable =>
+      _text('reservationErrorCancelUnavailable');
+  String get reservationErrorRescheduleSlotCapacityUnavailable =>
+      _text('reservationErrorRescheduleSlotCapacityUnavailable');
+  String get reservationErrorRescheduleUnavailable =>
+      _text('reservationErrorRescheduleUnavailable');
+  String get reservationErrorSlotNotFound =>
+      _text('reservationErrorSlotNotFound');
+  String get reservationErrorNotFound => _text('reservationErrorNotFound');
   String dateLabel(String date) =>
       _text('dateLabel').replaceFirst('{date}', date);
   String peopleCount(int count) => _withCount('peopleCount', count);

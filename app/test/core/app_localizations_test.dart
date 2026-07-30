@@ -428,6 +428,44 @@ void main() {
     expect(AppLocalizations.forTag('en').myReservations, 'Reservations');
     expect(AppLocalizations.forTag('zh-CN').cancelReservation, '取消预订');
     expect(
+      AppLocalizations.forTag('en').reservationErrorInvalidPeopleCount,
+      'Guest count must be at least 1.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reservationErrorSlotOrTimeRequired,
+      'Select a reservation slot first.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reservationErrorSlotCapacityUnavailable,
+      'This time slot no longer has enough availability.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reservationErrorCancelDeadlinePassed,
+      'The cancellation window has passed.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reservationErrorCancelUnavailable,
+      'This reservation cannot be canceled right now.',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).reservationErrorRescheduleSlotCapacityUnavailable,
+      'The new time slot no longer has enough availability.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reservationErrorRescheduleUnavailable,
+      'This reservation cannot be rescheduled right now.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reservationErrorSlotNotFound,
+      'This reservation slot could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').reservationErrorNotFound,
+      'This reservation could not be found.',
+    );
+    expect(
       AppLocalizations.forTag('en').reservationStatusLabel(fallback: '已确认'),
       'Confirmed',
     );

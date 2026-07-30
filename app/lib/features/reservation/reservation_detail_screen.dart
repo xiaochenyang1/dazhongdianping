@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/reservation/reservation_error_localizer.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -53,7 +54,10 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
       );
       if (mounted) setState(() => _reservation = reservation);
     } catch (error) {
-      if (mounted) setState(() => _error = '$error');
+      if (mounted) {
+        final strings = AppLocalizations.of(context);
+        setState(() => _error = localizeReservationError(strings, error));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -135,8 +139,12 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
         });
       }
     } catch (error) {
-      if (mounted)
-        _showMessage(AppLocalizations.of(context).slotsLoadFailed(error));
+      if (mounted) {
+        final strings = AppLocalizations.of(context);
+        _showMessage(
+          strings.slotsLoadFailed(localizeReservationError(strings, error)),
+        );
+      }
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -175,8 +183,12 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
       _showMessage(message);
       return true;
     } catch (error) {
-      if (mounted)
-        _showMessage(AppLocalizations.of(context).actionFailed(error));
+      if (mounted) {
+        final strings = AppLocalizations.of(context);
+        _showMessage(
+          strings.actionFailed(localizeReservationError(strings, error)),
+        );
+      }
       return false;
     } finally {
       if (mounted) setState(() => _acting = false);
