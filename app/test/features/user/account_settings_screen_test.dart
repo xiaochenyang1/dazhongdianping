@@ -12,6 +12,7 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
   AccountSettingsApi({this.failFirst = false});
 
   final bool failFirst;
+  Object? profileError;
   Object? saveProfileError;
   Object? sendBindCodeError;
   Object? bindError;
@@ -48,6 +49,9 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
     this.path = path;
     paths.add(path);
     profileRequests++;
+    if (profileError != null) {
+      throw profileError!;
+    }
     if (failFirst && profileRequests == 1) {
       throw StateError('network unavailable');
     }
@@ -393,5 +397,27 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('旧密码不正确'), findsNothing);
+  });
+
+  testWidgets('account settings localizes profile load errors in English', (
+    tester,
+  ) async {
+    final api = AccountSettingsApi()
+      ..profileError = const ApiException('用户不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: AccountSettingsScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load account profile: Your account could not be found. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户不存在'), findsNothing);
   });
 }

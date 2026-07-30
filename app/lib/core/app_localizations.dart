@@ -542,6 +542,8 @@ class AppLocalizations {
     'authErrorPhoneAlreadyBound': '这个手机号已经被其他账号绑定了，请换一个再试',
     'authErrorOldPasswordIncorrect': '当前密码不正确，请重新输入后再试',
     'authErrorSamePasswordAsOld': '新密码不能和当前密码相同，请换一个再试',
+    'authErrorCurrentUserNotFound': '当前账号不存在，请重新登录后再试',
+    'authErrorSessionMissing': '当前登录状态已失效，请重新登录后再试',
     'authErrorProfileNicknameTooLong': '昵称最多只能填写 64 个字符',
     'authErrorProfileAvatarTooLong': '头像地址最多只能填写 255 个字符',
     'authErrorProfileSignatureTooLong': '签名最多只能填写 255 个字符',
@@ -1371,6 +1373,8 @@ class AppLocalizations {
     'authErrorPhoneAlreadyBound': '這個手機號已經被其他帳號綁定了，請換一個再試',
     'authErrorOldPasswordIncorrect': '目前密碼不正確，請重新輸入後再試',
     'authErrorSamePasswordAsOld': '新密碼不能和目前密碼相同，請換一個再試',
+    'authErrorCurrentUserNotFound': '目前帳號不存在，請重新登入後再試',
+    'authErrorSessionMissing': '目前登入狀態已失效，請重新登入後再試',
     'authErrorProfileNicknameTooLong': '暱稱最多只能填寫 64 個字元',
     'authErrorProfileAvatarTooLong': '頭像網址最多只能填寫 255 個字元',
     'authErrorProfileSignatureTooLong': '簽名最多只能填寫 255 個字元',
@@ -2248,6 +2252,10 @@ class AppLocalizations {
     'authErrorOldPasswordIncorrect': 'The current password is incorrect.',
     'authErrorSamePasswordAsOld':
         'The new password must be different from the current password.',
+    'authErrorCurrentUserNotFound':
+        'Your account could not be found. Please sign in again.',
+    'authErrorSessionMissing':
+        'Your sign-in session is no longer available. Please sign in again.',
     'authErrorProfileNicknameTooLong':
         'Nickname must be 64 characters or fewer.',
     'authErrorProfileAvatarTooLong':
@@ -3611,6 +3619,9 @@ class AppLocalizations {
   String get authErrorOldPasswordIncorrect =>
       _text('authErrorOldPasswordIncorrect');
   String get authErrorSamePasswordAsOld => _text('authErrorSamePasswordAsOld');
+  String get authErrorCurrentUserNotFound =>
+      _text('authErrorCurrentUserNotFound');
+  String get authErrorSessionMissing => _text('authErrorSessionMissing');
   String get authErrorProfileNicknameTooLong =>
       _text('authErrorProfileNicknameTooLong');
   String get authErrorProfileAvatarTooLong =>

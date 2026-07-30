@@ -17,6 +17,7 @@ class CenterFakeApi implements JsonApi, JsonMutationApi {
   CenterFakeApi({this.failFirst = false});
 
   final bool failFirst;
+  Object? profileError;
   int profileRequests = 0;
   Completer<void>? retryGate;
 
@@ -26,6 +27,9 @@ class CenterFakeApi implements JsonApi, JsonMutationApi {
     Map<String, Object?>? query,
   }) async {
     profileRequests++;
+    if (profileError != null) {
+      throw profileError!;
+    }
     if (failFirst && profileRequests == 1) {
       throw StateError('network unavailable');
     }
@@ -81,7 +85,6 @@ class GatedAuthController extends AuthController {
   }
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),
@@ -100,7 +103,6 @@ Widget localizedApp({
 }
 
 void main() {
-  
   testWidgets('user center switches English chrome', (tester) async {
     final api = CenterFakeApi();
     final auth = AuthController(
@@ -129,7 +131,7 @@ void main() {
     expect(find.text('Privacy center'), findsOneWidget);
   });
 
-testWidgets('user center retries an initial profile failure', (tester) async {
+  testWidgets('user center retries an initial profile failure', (tester) async {
     final api = CenterFakeApi(failFirst: true);
     final auth = AuthController(
       repository: AuthRepository(api),
@@ -290,5 +292,33 @@ testWidgets('user center retries an initial profile failure', (tester) async {
     await tester.pumpAndSettle();
     expect(auth.logoutCalls, 1);
     expect(loggedOut, 1);
+  });
+
+  testWidgets('user center localizes profile load errors in English', (
+    tester,
+  ) async {
+    final api = CenterFakeApi()..profileError = const ApiException('用户登录状态不存在');
+    final auth = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: UserCenterScreen(
+          repository: UserRepository(api),
+          authController: auth,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load profile: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
   });
 }

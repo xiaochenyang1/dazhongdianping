@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
@@ -121,13 +122,19 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.profileLoadFailed(snapshot.error!)),
+                  Text(
+                    strings.profileLoadFailed(
+                      localizeAuthError(strings, snapshot.error!),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('user-center-retry'),
                     onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloading ? strings.processing : strings.retry),
+                    label: Text(
+                      _reloading ? strings.processing : strings.retry,
+                    ),
                   ),
                 ],
               ),

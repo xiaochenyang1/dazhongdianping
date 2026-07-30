@@ -245,7 +245,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.accountProfileLoadFailed(snapshot.error!)),
+                  Text(
+                    strings.accountProfileLoadFailed(
+                      localizeAuthError(strings, snapshot.error!),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
                     key: const Key('account-settings-retry'),

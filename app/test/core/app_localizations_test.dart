@@ -183,6 +183,14 @@ void main() {
       'The current password is incorrect.',
     );
     expect(
+      AppLocalizations.forTag('en').authErrorCurrentUserNotFound,
+      'Your account could not be found. Please sign in again.',
+    );
+    expect(
+      AppLocalizations.forTag('en').authErrorSessionMissing,
+      'Your sign-in session is no longer available. Please sign in again.',
+    );
+    expect(
       AppLocalizations.forTag('en').authErrorProfileNicknameTooLong,
       'Nickname must be 64 characters or fewer.',
     );
