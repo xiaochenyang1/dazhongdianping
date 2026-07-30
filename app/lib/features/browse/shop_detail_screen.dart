@@ -10,6 +10,7 @@ import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/deals_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -261,7 +262,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               ],
               const SizedBox(height: 8),
               Text(
-                '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${shop.currency} ${shop.pricePerCapita}',
+                '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${formatMoney(shop.pricePerCapita, shop.currency, locale: strings.tag)}',
               ),
               const SizedBox(height: 24),
               _InfoTile(
@@ -591,7 +592,11 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                                       : '${item.category} · ★ ${item.score.toStringAsFixed(1)} · ${strings.certificationBadgeLabel(code: item.merchantCertificationCode, fallback: item.merchantCertificationLabel)}',
                                 ),
                                 trailing: Text(
-                                  '${item.currency} ${item.pricePerCapita}',
+                                  formatMoney(
+                                    item.pricePerCapita,
+                                    item.currency,
+                                    locale: strings.tag,
+                                  ),
                                 ),
                                 onTap: () => Navigator.of(context).push(
                                   MaterialPageRoute(

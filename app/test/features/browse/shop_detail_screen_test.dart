@@ -20,6 +20,8 @@ class DetailFakeRepository extends BrowseRepository {
     this.favoriteError,
     this.similarError,
     this.reviewsError,
+    this.detailCurrency = 'EUR',
+    this.detailPricePerCapita = 12,
     this.similar = const [
       ShopSummary(
         id: 8,
@@ -49,6 +51,8 @@ class DetailFakeRepository extends BrowseRepository {
   final bool failFirstDetail;
   final bool failFirstSimilar;
   final bool failFirstReviews;
+  final String detailCurrency;
+  final num detailPricePerCapita;
   Object? detailError;
   Object? favoriteError;
   Object? similarError;
@@ -76,13 +80,13 @@ class DetailFakeRepository extends BrowseRepository {
       throw StateError('network unavailable');
     }
     if (detailRequests > 1) await detailRetryGate?.future;
-    return const ShopDetail(
+    return ShopDetail(
       id: 7,
       name: 'Berlin Tea',
       category: 'Tea',
       score: 4.5,
-      currency: 'EUR',
-      pricePerCapita: 12,
+      currency: detailCurrency,
+      pricePerCapita: detailPricePerCapita,
       address: 'Alexanderplatz',
       phone: '+493000000',
       businessHours: '09:00-21:00',
@@ -243,6 +247,38 @@ Widget localizedApp({
 }
 
 void main() {
+  testWidgets('shop detail formats all prices using the current locale', (
+    tester,
+  ) async {
+    final repository = DetailFakeRepository(
+      detailCurrency: 'JPY',
+      detailPricePerCapita: 29.9,
+      similar: const [
+        ShopSummary(
+          id: 8,
+          name: 'Tokyo Tea',
+          category: 'Tea',
+          score: 4.4,
+          currency: 'JPY',
+          pricePerCapita: 45.5,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      localizedApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('¥30'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Tokyo Tea'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('¥46'), findsOneWidget);
+    expect(find.textContaining('JPY '), findsNothing);
+  });
+
   testWidgets('shop detail retries failed review previews locally', (
     tester,
   ) async {
