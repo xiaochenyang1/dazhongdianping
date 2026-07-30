@@ -34,6 +34,8 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
+  static const _notificationSeparator = ' · ';
+
   late Future<NotificationPage> _notifications;
   bool _markingAll = false;
   bool _loadingMore = false;
@@ -184,7 +186,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).allNotificationsMarkedRead),
+          content: Text(
+            AppLocalizations.of(context).allNotificationsMarkedRead,
+          ),
         ),
       );
     } catch (error) {
@@ -313,6 +317,387 @@ class _NotificationScreenState extends State<NotificationScreen> {
         setState(() => _handlingNotificationIds.remove(notification.id));
       }
     }
+  }
+
+  String _localizedNotificationTitle(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    switch (notification.type) {
+      case 'social.follow':
+        return strings.notificationTitleSocialFollow;
+      case 'message.direct':
+        return strings.notificationTitleDirectMessage;
+      case 'post.audit.result':
+        return switch (_notificationQueryValue(notification.linkUrl, 'audit')) {
+          'approved' => strings.notificationTitlePostApproved,
+          'rejected' => strings.notificationTitlePostRejected,
+          _ => notification.title,
+        };
+      case 'order.paid':
+        return strings.notificationTitleOrderPaid;
+      case 'reservation.created':
+        return switch (_notificationQueryValue(
+          notification.linkUrl,
+          'status',
+        )) {
+          'confirmed' => strings.notificationTitleReservationConfirmed,
+          'pending' => strings.notificationTitleReservationSubmitted,
+          _ => notification.title,
+        };
+      case 'coupon.reminder':
+        return strings.notificationTitleCouponReminder;
+      case 'coupon.verified':
+        return strings.notificationTitleCouponVerified;
+      case 'review.reply':
+        return _canLocalizeMerchantReplyTitle(notification.title)
+            ? strings.notificationTitleMerchantReply
+            : notification.title;
+      case 'expert.certification.result':
+        return switch (_notificationQueryValue(
+          notification.linkUrl,
+          'expert',
+        )) {
+          'approved' => strings.expertCertificationApprovedNotice,
+          'rejected' => strings.expertCertificationRejectedNotice,
+          _ => notification.title,
+        };
+      default:
+        return notification.title;
+    }
+  }
+
+  String _localizedNotificationContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    switch (notification.type) {
+      case 'social.follow':
+        return _localizedSocialFollowContent(strings, notification);
+      case 'message.direct':
+        return _localizedDirectMessageContent(strings, notification);
+      case 'post.audit.result':
+        return _localizedPostAuditContent(strings, notification);
+      case 'order.paid':
+        return _localizedOrderPaidContent(strings, notification);
+      case 'reservation.created':
+        return _localizedReservationContent(strings, notification);
+      case 'coupon.reminder':
+        return _localizedCouponReminderContent(strings, notification);
+      case 'coupon.verified':
+        return _localizedCouponVerifiedContent(strings, notification);
+      case 'expert.certification.result':
+        return _localizedExpertCertificationContent(strings, notification);
+      default:
+        return notification.content;
+    }
+  }
+
+  String _localizedSocialFollowContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final actorName = notification.actorName.trim();
+    if (actorName.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationFollowedYou(actorName);
+  }
+
+  String _localizedDirectMessageContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final namedPreview = _extractNamedPreview(notification.content);
+    final actorName = notification.actorName.trim().isNotEmpty
+        ? notification.actorName.trim()
+        : namedPreview?.name;
+    final preview = namedPreview?.preview;
+    if (actorName == null ||
+        actorName.isEmpty ||
+        preview == null ||
+        preview.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationDirectMessagePreview(
+      name: actorName,
+      preview: preview,
+    );
+  }
+
+  String _localizedPostAuditContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractPostAuditContent(notification.content);
+    if (parsed == null) {
+      return notification.content;
+    }
+    return switch (_notificationQueryValue(notification.linkUrl, 'audit')) {
+      'approved' => strings.notificationPostApprovedContent(
+        parsed.title,
+        remark: parsed.remark,
+      ),
+      'rejected' => strings.notificationPostRejectedContent(
+        parsed.title,
+        remark: parsed.remark,
+      ),
+      _ => notification.content,
+    };
+  }
+
+  String _localizedOrderPaidContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final segments = _notificationSegments(notification.content);
+    if (segments.isEmpty) {
+      return notification.content;
+    }
+    final localized = <String>[];
+    for (final segment in segments) {
+      final orderNo = _extractOrderNumber(segment);
+      if (orderNo != null && orderNo.isNotEmpty) {
+        localized.add(strings.notificationOrderNumber(orderNo));
+        continue;
+      }
+      if (segment == '券码已发放，可在我的券查看') {
+        localized.add(strings.notificationCouponsReady);
+        continue;
+      }
+      localized.add(segment);
+    }
+    return localized.join(_notificationSeparator);
+  }
+
+  String _localizedReservationContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final segments = _notificationSegments(notification.content);
+    if (segments.isEmpty) {
+      return notification.content;
+    }
+    final reservationStatus = _notificationQueryValue(
+      notification.linkUrl,
+      'status',
+    );
+    final localized = <String>[];
+    for (var index = 0; index < segments.length; index += 1) {
+      final segment = segments[index];
+      final peopleCount = _extractPeopleCount(segment);
+      if (peopleCount != null) {
+        localized.add(strings.peopleCount(peopleCount));
+        continue;
+      }
+      final isLastSegment = index == segments.length - 1;
+      if (isLastSegment && reservationStatus == 'confirmed') {
+        localized.add(strings.notificationReservationAutoConfirmedAction);
+        continue;
+      }
+      if (isLastSegment && reservationStatus == 'pending') {
+        localized.add(strings.notificationReservationSubmittedAction);
+        continue;
+      }
+      localized.add(segment);
+    }
+    return localized.join(_notificationSeparator);
+  }
+
+  String _localizedCouponReminderContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final expiring = _extractCouponExpiringInDays(notification.content);
+    if (expiring != null) {
+      return strings.notificationCouponExpiringInDays(
+        code: expiring.code,
+        days: expiring.days,
+      );
+    }
+    final segments = _notificationSegments(notification.content);
+    if (segments.isEmpty) {
+      return notification.content;
+    }
+    final localized = <String>[];
+    for (final segment in segments) {
+      final expiryDate = _extractExpiryDate(segment);
+      if (expiryDate != null && expiryDate.isNotEmpty) {
+        localized.add(strings.validUntilDate(expiryDate));
+        continue;
+      }
+      final couponCode = _extractCouponCode(segment);
+      if (couponCode != null && couponCode.isNotEmpty) {
+        localized.add(strings.notificationCouponCodeLabel(couponCode));
+        continue;
+      }
+      localized.add(segment);
+    }
+    return localized.join(_notificationSeparator);
+  }
+
+  String _localizedCouponVerifiedContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final redeemedAt = _extractCouponRedeemedAt(notification.content);
+    if (redeemedAt != null) {
+      return strings.notificationCouponRedeemedAt(
+        code: redeemedAt.code,
+        shop: redeemedAt.shop,
+      );
+    }
+    final segments = _notificationSegments(notification.content);
+    if (segments.isEmpty) {
+      return notification.content;
+    }
+    final localized = <String>[];
+    for (final segment in segments) {
+      final redeemedCode = _extractRedeemedCouponCode(segment);
+      if (redeemedCode != null && redeemedCode.isNotEmpty) {
+        localized.add(strings.notificationCouponCodeLabel(redeemedCode));
+        localized.add(strings.notificationCouponRedeemed);
+        continue;
+      }
+      localized.add(segment);
+    }
+    return localized.join(_notificationSeparator);
+  }
+
+  String _localizedExpertCertificationContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final remark = _extractNotificationRemark(notification.content);
+    return switch (_notificationQueryValue(notification.linkUrl, 'expert')) {
+      'approved' => _appendLocalizedNotificationRemark(
+        strings,
+        strings.notificationExpertApprovedContent,
+        remark,
+      ),
+      'rejected' => _appendLocalizedNotificationRemark(
+        strings,
+        strings.notificationExpertRejectedContent,
+        remark,
+      ),
+      _ => notification.content,
+    };
+  }
+
+  String _appendLocalizedNotificationRemark(
+    AppLocalizations strings,
+    String base,
+    String? remark,
+  ) {
+    if (remark == null || remark.trim().isEmpty) {
+      return base;
+    }
+    final separator = strings.tag.startsWith('en') ? ': ' : '：';
+    return '$base$separator${remark.trim()}';
+  }
+
+  String? _notificationQueryValue(String linkUrl, String key) {
+    final uri = Uri.tryParse(linkUrl);
+    final value = uri?.queryParameters[key]?.trim();
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
+
+  List<String> _notificationSegments(String content) => content
+      .split(_notificationSeparator)
+      .map((segment) => segment.trim())
+      .where((segment) => segment.isNotEmpty)
+      .toList();
+
+  bool _canLocalizeMerchantReplyTitle(String title) {
+    final normalized = title.trim();
+    return normalized.isEmpty ||
+        normalized == '商家回复' ||
+        normalized == '商家回复了你的点评' ||
+        normalized == '商家回覆' ||
+        normalized == '商家回覆了你的點評' ||
+        normalized == 'Merchant reply';
+  }
+
+  ({String name, String preview})? _extractNamedPreview(String content) {
+    final match = RegExp(r'^(.+?)[：:]\s*(.+)$').firstMatch(content.trim());
+    final name = match?.group(1)?.trim();
+    final preview = match?.group(2)?.trim();
+    if (name == null || name.isEmpty || preview == null || preview.isEmpty) {
+      return null;
+    }
+    return (name: name, preview: preview);
+  }
+
+  ({String title, String? remark})? _extractPostAuditContent(String content) {
+    final match = RegExp(
+      r'^《(.+?)》\s*(?:已公开|已公開|未通过审核|未通過審核)(?:：(.+))?$',
+    ).firstMatch(content.trim());
+    final title = match?.group(1)?.trim();
+    if (title == null || title.isEmpty) {
+      return null;
+    }
+    return (title: title, remark: match?.group(2)?.trim());
+  }
+
+  String? _extractOrderNumber(String segment) {
+    final match = RegExp(r'^订单\s+(.+)$').firstMatch(segment);
+    return match?.group(1)?.trim();
+  }
+
+  int? _extractPeopleCount(String segment) {
+    final match = RegExp(r'^(\d+)\s*(?:人|位)$').firstMatch(segment);
+    return match == null ? null : int.tryParse(match.group(1)!);
+  }
+
+  ({String code, int days})? _extractCouponExpiringInDays(String content) {
+    final match = RegExp(
+      r'^(.+?)\s+将在\s+(\d+)\s+天后过期$',
+    ).firstMatch(content.trim());
+    final code = match?.group(1)?.trim();
+    final days = match == null ? null : int.tryParse(match.group(2)!);
+    if (code == null || code.isEmpty || days == null) {
+      return null;
+    }
+    return (code: code, days: days);
+  }
+
+  String? _extractExpiryDate(String segment) {
+    final match = RegExp(r'^有效期至\s+(.+)$').firstMatch(segment);
+    return match?.group(1)?.trim();
+  }
+
+  String? _extractCouponCode(String segment) {
+    final match = RegExp(r'^券码\s+(.+)$').firstMatch(segment);
+    return match?.group(1)?.trim();
+  }
+
+  ({String code, String shop})? _extractCouponRedeemedAt(String content) {
+    final match = RegExp(
+      r'^(.+?)\s+已在\s*(.+?)\s*核销$',
+    ).firstMatch(content.trim());
+    final code = match?.group(1)?.trim();
+    final shop = match?.group(2)?.trim();
+    if (code == null || code.isEmpty || shop == null || shop.isEmpty) {
+      return null;
+    }
+    return (code: code, shop: shop);
+  }
+
+  String? _extractRedeemedCouponCode(String segment) {
+    final match = RegExp(r'^券码\s+(.+?)\s+已核销成功$').firstMatch(segment.trim());
+    return match?.group(1)?.trim();
+  }
+
+  String? _extractNotificationRemark(String content) {
+    final index = content.indexOf('：');
+    if (index < 0) {
+      return null;
+    }
+    final remark = content.substring(index + 1).trim();
+    return remark.isEmpty ? null : remark;
   }
 
   @override
@@ -454,6 +839,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         );
                       }
                       final notification = visible[index];
+                      final localizedTitle = _localizedNotificationTitle(
+                        strings,
+                        notification,
+                      );
+                      final localizedContent = _localizedNotificationContent(
+                        strings,
+                        notification,
+                      );
                       return Card(
                         child: ListTile(
                           key: Key('notification-${notification.id}'),
@@ -467,7 +860,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  notification.title,
+                                  localizedTitle,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -509,7 +902,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(notification.content),
+                                Text(localizedContent),
                                 const SizedBox(height: 8),
                                 Text(
                                   notification.createdAt,

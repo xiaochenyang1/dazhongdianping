@@ -95,6 +95,38 @@ void main() {
     );
     expect(AppLocalizations.forTag('en').filterUnreadOnly, 'Unread only');
     expect(AppLocalizations.forTag('zh-CN').markAllReadWithCount(3), '全部已读（3）');
+    expect(
+      AppLocalizations.forTag('en').notificationFollowedYou('Alice'),
+      'Alice followed you',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).notificationDirectMessagePreview(name: 'Alex', preview: 'See you soon'),
+      'Alex: See you soon',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).notificationPostApprovedContent('Weekend brunch', remark: 'Looks good'),
+      '"Weekend brunch" is now public: Looks good',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).notificationCouponExpiringInDays(code: 'CP-DEMO', days: 1),
+      'CP-DEMO expires in 1 day',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).notificationCouponRedeemedAt(code: 'CP-DEMO', shop: 'Tea House'),
+      'CP-DEMO was redeemed at Tea House',
+    );
+    expect(
+      AppLocalizations.forTag('en').notificationExpertApprovedContent,
+      'Your local expert certification was approved',
+    );
     expect(AppLocalizations.forTag('en').accountSettings, 'Account settings');
     expect(AppLocalizations.forTag('en').privacyCenter, 'Privacy center');
     expect(AppLocalizations.forTag('zh-CN').growthValueLabel(350), '350 成长值');

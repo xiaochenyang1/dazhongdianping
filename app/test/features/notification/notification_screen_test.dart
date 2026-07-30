@@ -25,6 +25,27 @@ Widget localizedApp({
   );
 }
 
+Future<void> expectEnglishNotification(
+  WidgetTester tester, {
+  required NotificationScreenApi api,
+  required String expectedTitle,
+  required String expectedContent,
+}) async {
+  await tester.pumpWidget(
+    localizedApp(
+      locale: const Locale('en'),
+      home: NotificationScreen(
+        key: ValueKey(expectedTitle),
+        repository: NotificationRepository(api),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+
+  expect(find.text(expectedTitle), findsOneWidget);
+  expect(find.text(expectedContent), findsOneWidget);
+}
+
 class NotificationScreenApi implements JsonApi {
   NotificationScreenApi({
     this.social = false,
@@ -266,7 +287,6 @@ class NotificationScreenApi implements JsonApi {
 }
 
 void main() {
-  
   testWidgets('notification screen switches English chrome', (tester) async {
     final api = NotificationScreenApi(mixedRead: true);
     await tester.pumpWidget(
@@ -281,9 +301,73 @@ void main() {
     expect(find.text('Unread only'), findsOneWidget);
     expect(find.text('Unread'), findsOneWidget);
     expect(find.text('Mark all read (1)'), findsOneWidget);
+    expect(find.text('Merchant reply'), findsOneWidget);
+    expect(find.text('已读通知'), findsOneWidget);
   });
 
-testWidgets('notification screen filters unread messages locally', (
+  testWidgets(
+    'notification screen localizes supported notifications in English',
+    (tester) async {
+      await expectEnglishNotification(
+        tester,
+        api: NotificationScreenApi(social: true),
+        expectedTitle: 'New follower',
+        expectedContent: '伦敦小王 followed you',
+      );
+      await expectEnglishNotification(
+        tester,
+        api: NotificationScreenApi(directMessage: true),
+        expectedTitle: 'New direct message',
+        expectedContent: '巴黎小陈: 第二条私信提醒',
+      );
+      await expectEnglishNotification(
+        tester,
+        api: NotificationScreenApi(postAudit: true),
+        expectedTitle: 'Post approved',
+        expectedContent: '"伦敦周末早午餐避坑指南" is now public: 内容真实，可公开',
+      );
+      await expectEnglishNotification(
+        tester,
+        api: NotificationScreenApi(orderPaid: true),
+        expectedTitle: 'Payment successful',
+        expectedContent:
+            '双人套餐 · Order OD456 · 88.00 CNY · Coupons are ready in My coupons',
+      );
+      await expectEnglishNotification(
+        tester,
+        api: NotificationScreenApi(reservationCreated: true),
+        expectedTitle: 'Reservation auto-confirmed',
+        expectedContent:
+            '巴黎川菜馆 · 2026-07-26 18:00 · 2 guests · Your reservation was automatically confirmed',
+      );
+      await expectEnglishNotification(
+        tester,
+        api: NotificationScreenApi(couponReminder: true),
+        expectedTitle: 'Coupon reminder',
+        expectedContent: 'CP-DEMO expires in 1 day',
+      );
+      await expectEnglishNotification(
+        tester,
+        api: NotificationScreenApi(couponVerified: true),
+        expectedTitle: 'Coupon redeemed',
+        expectedContent: 'CP-DEMO was redeemed at 柏林茶馆',
+      );
+      await expectEnglishNotification(
+        tester,
+        api: NotificationScreenApi(expertResult: true),
+        expectedTitle: 'Local expert certification approved',
+        expectedContent: 'Your local expert certification was approved',
+      );
+      await expectEnglishNotification(
+        tester,
+        api: NotificationScreenApi(),
+        expectedTitle: 'Merchant reply',
+        expectedContent: '谢谢支持',
+      );
+    },
+  );
+
+  testWidgets('notification screen filters unread messages locally', (
     tester,
   ) async {
     final api = NotificationScreenApi(mixedRead: true);

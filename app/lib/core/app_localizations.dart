@@ -113,6 +113,30 @@ class AppLocalizations {
     'noNotifications': '暂无消息',
     'continueFindUnread': '继续查找未读消息',
     'unreadBadge': '未读',
+    'notificationTitleSocialFollow': '新增关注',
+    'notificationTitleDirectMessage': '收到私信',
+    'notificationTitlePostApproved': '帖子已通过审核',
+    'notificationTitlePostRejected': '帖子未通过审核',
+    'notificationTitleOrderPaid': '支付成功',
+    'notificationTitleReservationConfirmed': '预订已自动确认',
+    'notificationTitleReservationSubmitted': '预订已提交',
+    'notificationTitleCouponReminder': '券码即将到期',
+    'notificationTitleCouponVerified': '券码已核销',
+    'notificationTitleMerchantReply': '商家回复',
+    'notificationFollowedYou': '{name} 关注了你',
+    'notificationDirectMessagePreview': '{name}：{preview}',
+    'notificationPostApprovedContent': '《{title}》 已公开',
+    'notificationPostRejectedContent': '《{title}》 未通过审核',
+    'notificationOrderNumber': '订单 {orderNo}',
+    'notificationCouponsReady': '券码已发放，可在我的券查看',
+    'notificationReservationAutoConfirmedAction': '系统已自动确认你的预订',
+    'notificationReservationSubmittedAction': '已提交，等待商户确认',
+    'notificationCouponCodeLabel': '券码 {code}',
+    'notificationCouponExpiringInDays': '{code} 将在 {days} 天后过期',
+    'notificationCouponRedeemedAt': '{code} 已在 {shop} 核销',
+    'notificationCouponRedeemed': '已核销成功',
+    'notificationExpertApprovedContent': '你的本地达人认证已审核通过',
+    'notificationExpertRejectedContent': '你的本地达人认证未通过，请查看原因后重提',
     'loggingOut': '退出中...',
     'logout': '退出',
     'profileLoadFailed': '用户资料加载失败：{error}',
@@ -828,6 +852,30 @@ class AppLocalizations {
     'noNotifications': '暫無訊息',
     'continueFindUnread': '繼續尋找未讀訊息',
     'unreadBadge': '未讀',
+    'notificationTitleSocialFollow': '新增關注',
+    'notificationTitleDirectMessage': '收到私信',
+    'notificationTitlePostApproved': '貼文已通過審核',
+    'notificationTitlePostRejected': '貼文未通過審核',
+    'notificationTitleOrderPaid': '支付成功',
+    'notificationTitleReservationConfirmed': '預訂已自動確認',
+    'notificationTitleReservationSubmitted': '預訂已提交',
+    'notificationTitleCouponReminder': '券碼即將到期',
+    'notificationTitleCouponVerified': '券碼已核銷',
+    'notificationTitleMerchantReply': '商家回覆',
+    'notificationFollowedYou': '{name} 關注了你',
+    'notificationDirectMessagePreview': '{name}：{preview}',
+    'notificationPostApprovedContent': '《{title}》 已公開',
+    'notificationPostRejectedContent': '《{title}》 未通過審核',
+    'notificationOrderNumber': '訂單 {orderNo}',
+    'notificationCouponsReady': '券碼已發放，可在我的券查看',
+    'notificationReservationAutoConfirmedAction': '系統已自動確認你的預訂',
+    'notificationReservationSubmittedAction': '已提交，等待商戶確認',
+    'notificationCouponCodeLabel': '券碼 {code}',
+    'notificationCouponExpiringInDays': '{code} 將在 {days} 天後過期',
+    'notificationCouponRedeemedAt': '{code} 已在 {shop} 核銷',
+    'notificationCouponRedeemed': '已核銷成功',
+    'notificationExpertApprovedContent': '你的在地達人認證已審核通過',
+    'notificationExpertRejectedContent': '你的在地達人認證未通過，請查看原因後重提',
     'loggingOut': '登出中...',
     'logout': '登出',
     'profileLoadFailed': '使用者資料載入失敗：{error}',
@@ -1547,6 +1595,34 @@ class AppLocalizations {
     'noNotifications': 'No notifications yet',
     'continueFindUnread': 'Keep looking for unread',
     'unreadBadge': 'Unread',
+    'notificationTitleSocialFollow': 'New follower',
+    'notificationTitleDirectMessage': 'New direct message',
+    'notificationTitlePostApproved': 'Post approved',
+    'notificationTitlePostRejected': 'Post rejected',
+    'notificationTitleOrderPaid': 'Payment successful',
+    'notificationTitleReservationConfirmed': 'Reservation auto-confirmed',
+    'notificationTitleReservationSubmitted': 'Reservation submitted',
+    'notificationTitleCouponReminder': 'Coupon reminder',
+    'notificationTitleCouponVerified': 'Coupon redeemed',
+    'notificationTitleMerchantReply': 'Merchant reply',
+    'notificationFollowedYou': '{name} followed you',
+    'notificationDirectMessagePreview': '{name}: {preview}',
+    'notificationPostApprovedContent': '"{title}" is now public',
+    'notificationPostRejectedContent': '"{title}" was rejected',
+    'notificationOrderNumber': 'Order {orderNo}',
+    'notificationCouponsReady': 'Coupons are ready in My coupons',
+    'notificationReservationAutoConfirmedAction':
+        'Your reservation was automatically confirmed',
+    'notificationReservationSubmittedAction':
+        'Submitted and waiting for merchant confirmation',
+    'notificationCouponCodeLabel': 'Coupon {code}',
+    'notificationCouponExpiringInDays': '{code} expires in {days} days',
+    'notificationCouponRedeemedAt': '{code} was redeemed at {shop}',
+    'notificationCouponRedeemed': 'Redeemed',
+    'notificationExpertApprovedContent':
+        'Your local expert certification was approved',
+    'notificationExpertRejectedContent':
+        'Your local expert certification was rejected. Review the reason and resubmit.',
     'loggingOut': 'Signing out...',
     'logout': 'Sign out',
     'profileLoadFailed': 'Could not load profile: {error}',
@@ -2229,6 +2305,12 @@ class AppLocalizations {
   String _withName(String key, String name) =>
       _text(key).replaceFirst('{name}', name);
 
+  String _appendNotificationRemark(String base, String? remark) {
+    if (remark == null || remark.trim().isEmpty) return base;
+    final separator = tag.startsWith('en') ? ': ' : '：';
+    return '$base$separator${remark.trim()}';
+  }
+
   String _normalizeErrorText(Object error) {
     final text = switch (error) {
       StateError() => '${error.message}',
@@ -2468,6 +2550,80 @@ class AppLocalizations {
   String get noNotifications => _text('noNotifications');
   String get continueFindUnread => _text('continueFindUnread');
   String get unreadBadge => _text('unreadBadge');
+  String get notificationTitleSocialFollow =>
+      _text('notificationTitleSocialFollow');
+  String get notificationTitleDirectMessage =>
+      _text('notificationTitleDirectMessage');
+  String get notificationTitlePostApproved =>
+      _text('notificationTitlePostApproved');
+  String get notificationTitlePostRejected =>
+      _text('notificationTitlePostRejected');
+  String get notificationTitleOrderPaid => _text('notificationTitleOrderPaid');
+  String get notificationTitleReservationConfirmed =>
+      _text('notificationTitleReservationConfirmed');
+  String get notificationTitleReservationSubmitted =>
+      _text('notificationTitleReservationSubmitted');
+  String get notificationTitleCouponReminder =>
+      _text('notificationTitleCouponReminder');
+  String get notificationTitleCouponVerified =>
+      _text('notificationTitleCouponVerified');
+  String get notificationTitleMerchantReply =>
+      _text('notificationTitleMerchantReply');
+  String notificationFollowedYou(String name) =>
+      _text('notificationFollowedYou').replaceFirst('{name}', name);
+  String notificationDirectMessagePreview({
+    required String name,
+    required String preview,
+  }) => _text(
+    'notificationDirectMessagePreview',
+  ).replaceFirst('{name}', name).replaceFirst('{preview}', preview);
+  String notificationPostApprovedContent(String title, {String? remark}) {
+    final base = _text(
+      'notificationPostApprovedContent',
+    ).replaceFirst('{title}', title);
+    return _appendNotificationRemark(base, remark);
+  }
+
+  String notificationPostRejectedContent(String title, {String? remark}) {
+    final base = _text(
+      'notificationPostRejectedContent',
+    ).replaceFirst('{title}', title);
+    return _appendNotificationRemark(base, remark);
+  }
+
+  String notificationOrderNumber(String orderNo) =>
+      _text('notificationOrderNumber').replaceFirst('{orderNo}', orderNo);
+  String get notificationCouponsReady => _text('notificationCouponsReady');
+  String get notificationReservationAutoConfirmedAction =>
+      _text('notificationReservationAutoConfirmedAction');
+  String get notificationReservationSubmittedAction =>
+      _text('notificationReservationSubmittedAction');
+  String notificationCouponCodeLabel(String code) =>
+      _text('notificationCouponCodeLabel').replaceFirst('{code}', code);
+  String notificationCouponExpiringInDays({
+    required String code,
+    required int days,
+  }) {
+    if (tag.startsWith('en')) {
+      final unit = days == 1 ? 'day' : 'days';
+      return '$code expires in $days $unit';
+    }
+    return _text(
+      'notificationCouponExpiringInDays',
+    ).replaceFirst('{code}', code).replaceFirst('{days}', '$days');
+  }
+
+  String notificationCouponRedeemedAt({
+    required String code,
+    required String shop,
+  }) => _text(
+    'notificationCouponRedeemedAt',
+  ).replaceFirst('{code}', code).replaceFirst('{shop}', shop);
+  String get notificationCouponRedeemed => _text('notificationCouponRedeemed');
+  String get notificationExpertApprovedContent =>
+      _text('notificationExpertApprovedContent');
+  String get notificationExpertRejectedContent =>
+      _text('notificationExpertRejectedContent');
   String get loggingOut => _text('loggingOut');
   String get logout => _text('logout');
   String profileLoadFailed(Object error) =>
