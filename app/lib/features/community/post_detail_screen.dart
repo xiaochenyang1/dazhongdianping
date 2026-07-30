@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
+import 'package:dazhongdianping_app/features/community/community_error_localizer.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -114,7 +115,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         () => _post = Future.value(post.copyWith(likeCount: result.likeCount)),
       );
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).likeFailed(error));
+      if (mounted) {
+        final strings = AppLocalizations.of(context);
+        _showMessage(
+          strings.likeFailed(localizeCommunityError(strings, error)),
+        );
+      }
     } finally {
       if (mounted) setState(() => _likeSaving = false);
     }
@@ -144,7 +150,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       });
     } catch (error) {
       if (mounted) {
-        _showMessage(AppLocalizations.of(context).commentFailed(error));
+        final strings = AppLocalizations.of(context);
+        _showMessage(
+          strings.commentFailed(localizeCommunityError(strings, error)),
+        );
       }
     } finally {
       if (mounted) setState(() => _commentSaving = false);
@@ -184,10 +193,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _commentRequestId) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreCommentsFailed(error),
+              strings.loadMoreCommentsFailed(
+                localizeCommunityError(strings, error),
+              ),
             ),
           ),
         );
@@ -219,10 +231,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (mounted) setState(() => _favorited = !_favorited);
     } catch (error) {
       if (mounted) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).favoriteActionFailed(error),
+              strings.favoriteActionFailed(
+                localizeCommunityError(strings, error),
+              ),
             ),
           ),
         );
@@ -260,9 +275,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       }
     } catch (error) {
       if (mounted) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).repostFailed(error)),
+            content: Text(
+              strings.repostFailed(localizeCommunityError(strings, error)),
+            ),
           ),
         );
       }
@@ -318,10 +336,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       }
     } catch (error) {
       if (mounted) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).reportSubmitFailed(error),
+              strings.reportSubmitFailed(
+                localizeCommunityError(strings, error),
+              ),
             ),
           ),
         );
@@ -400,7 +421,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  AppLocalizations.of(context).postLoadFailed(snapshot.error!),
+                  AppLocalizations.of(context).postLoadFailed(
+                    localizeCommunityError(
+                      AppLocalizations.of(context),
+                      snapshot.error!,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
@@ -592,9 +618,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     child: Column(
                       children: [
                         Text(
-                          AppLocalizations.of(
-                            context,
-                          ).commentsLoadFailed(snapshot.error!),
+                          AppLocalizations.of(context).commentsLoadFailed(
+                            localizeCommunityError(
+                              AppLocalizations.of(context),
+                              snapshot.error!,
+                            ),
+                          ),
                         ),
                         SizedBox(height: 8),
                         FilledButton.tonalIcon(

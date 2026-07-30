@@ -19,6 +19,14 @@ class CommunityScreenApi
   String? postPath;
   String? deletePath;
   Object? body;
+  Object? feedError;
+  Object? followingFeedError;
+  Object? postError;
+  Object? ownedPostError;
+  Object? saveError;
+  Object? commentLoadError;
+  Object? commentSubmitError;
+  Object? reportError;
   bool reposted = false;
   int repostCount = 2;
   bool paginateFeed = false;
@@ -81,6 +89,11 @@ class CommunityScreenApi
       final page = query?['page'] as int? ?? 1;
       requestedCommentPages.add(page);
       await commentPageGates[page]?.future;
+      if (commentLoadError != null) {
+        final error = commentLoadError!;
+        commentLoadError = null;
+        throw error;
+      }
       if (failNextCommentLoad) {
         failNextCommentLoad = false;
         throw StateError('comments unavailable');
@@ -125,6 +138,16 @@ class CommunityScreenApi
       };
     }
     if (path == '/api/c/v1/posts' || path == '/api/c/v1/posts/following') {
+      if (path == '/api/c/v1/posts' && feedError != null) {
+        final error = feedError!;
+        feedError = null;
+        throw error;
+      }
+      if (path == '/api/c/v1/posts/following' && followingFeedError != null) {
+        final error = followingFeedError!;
+        followingFeedError = null;
+        throw error;
+      }
       if (path == '/api/c/v1/posts' && failNextFeed) {
         failNextFeed = false;
         throw StateError('feed network unavailable');
@@ -148,6 +171,11 @@ class CommunityScreenApi
     }
     if (path == '/api/c/v1/posts/7') {
       postRequests++;
+      if (postError != null) {
+        final error = postError!;
+        postError = null;
+        throw error;
+      }
       if (failNextPost) {
         failNextPost = false;
         throw StateError('network unavailable');
@@ -157,6 +185,11 @@ class CommunityScreenApi
     if (path == '/api/c/v1/user/posts/7') {
       ownedPostRequests++;
       await ownedPostGate?.future;
+      if (ownedPostError != null) {
+        final error = ownedPostError!;
+        ownedPostError = null;
+        throw error;
+      }
       if (failNextOwnedPost) {
         failNextOwnedPost = false;
         throw StateError('owned post unavailable');
@@ -171,6 +204,11 @@ class CommunityScreenApi
     postPath = path;
     this.body = body;
     if (path.endsWith('/report')) reportRequests++;
+    if (path == '/api/c/v1/posts' && saveError != null) {
+      final error = saveError!;
+      saveError = null;
+      throw error;
+    }
     if (path == '/api/c/v1/posts' && failNextSave) {
       failNextSave = false;
       throw StateError('save unavailable');
@@ -192,6 +230,11 @@ class CommunityScreenApi
       return {'postId': 7, 'reposted': true, 'repostCount': repostCount};
     }
     if (path.endsWith('/comments')) {
+      if (commentSubmitError != null) {
+        final error = commentSubmitError!;
+        commentSubmitError = null;
+        throw error;
+      }
       if (failNextComment) {
         failNextComment = false;
         throw StateError('comment unavailable');
@@ -215,6 +258,11 @@ class CommunityScreenApi
         'mine': true,
         'createdAt': '2026-07-16 12:00:00',
       };
+    }
+    if (path.endsWith('/report') && reportError != null) {
+      final error = reportError!;
+      reportError = null;
+      throw error;
     }
     if (path.endsWith('/report') && failNextReport) {
       failNextReport = false;
@@ -322,6 +370,23 @@ class CommunityTopicApi extends CommunityScreenApi {
   }
 }
 
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 void main() {
   testWidgets('community feed switches English chrome', (tester) async {
     final api = CommunityScreenApi();
@@ -418,6 +483,27 @@ void main() {
     expect(api.postRequests, 2);
     expect(api.requestedCommentPages, [1, 1]);
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
+  });
+
+  testWidgets('post detail localizes load errors in English', (tester) async {
+    final api = CommunityScreenApi()..postError = const ApiException('帖子不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load post: This post could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('帖子不存在'), findsNothing);
   });
 
   testWidgets('post detail switches English chrome', (tester) async {
@@ -643,6 +729,34 @@ void main() {
     expect(find.text('伦敦咖啡'), findsOneWidget);
   });
 
+  testWidgets('community feed localizes following errors in English', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi()
+      ..followingFeedError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CommunityFeedScreen(
+          repository: CommunityRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Following'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load community: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
   testWidgets(
     'community feed does not reload after disposal while editor is open',
     (tester) async {
@@ -832,6 +946,43 @@ void main() {
     expect(api.body, {'content': '楼中回复', 'replyTo': 11});
   });
 
+  testWidgets('post detail localizes comment errors in English', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi()
+      ..commentSubmitError = const ApiException('回复目标不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('comment-reply-11')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('comment-reply-11')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Reply should fail');
+    await tester.tap(find.byKey(const Key('post-comment-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not comment: The comment you are replying to could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('回复目标不存在'), findsNothing);
+  });
+
   testWidgets('post detail recovers failed like and comment actions', (
     tester,
   ) async {
@@ -993,6 +1144,44 @@ void main() {
           .text,
       isEmpty,
     );
+  });
+
+  testWidgets('post detail localizes report errors in English', (tester) async {
+    final api = CommunityScreenApi()
+      ..reportError = const ApiException('你已经举报过这条帖子了');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('post-report-button')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.tap(find.byKey(const Key('post-report-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('post-report-reason')),
+      'Duplicate report',
+    );
+    await tester.tap(find.text('Submit report'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not submit report: You already reported this post. Do not submit it again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('你已经举报过这条帖子了'), findsNothing);
   });
 
   testWidgets('post detail guards duplicate report dialogs', (tester) async {
@@ -1255,6 +1444,39 @@ void main() {
     expect(find.byKey(const Key('post-submit')), findsOneWidget);
   });
 
+  testWidgets('post editor localizes save errors in English', (tester) async {
+    final api = CommunityScreenApi()
+      ..saveError = const ApiException('请先加入圈子再发帖');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PostEditorScreen(
+          repository: CommunityRepository(api),
+          circleId: 3,
+          circleName: 'London Foodies',
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('post-title')),
+      'Localized save failure',
+    );
+    await tester.enterText(
+      find.byKey(const Key('post-content')),
+      'This submission should surface a localized error.',
+    );
+    await tester.ensureVisible(find.byKey(const Key('post-submit')));
+    await tester.tap(find.byKey(const Key('post-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not save post: Join the circle before posting.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('请先加入圈子再发帖'), findsNothing);
+  });
+
   testWidgets('post editor loads an owned post for editing', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -1337,6 +1559,26 @@ void main() {
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
     expect(find.textContaining('周六上午'), findsOneWidget);
     expect(find.byKey(const Key('post-submit')), findsOneWidget);
+  });
+
+  testWidgets('post editor localizes load errors in English', (tester) async {
+    final api = CommunityScreenApi()
+      ..ownedPostError = const ApiException('帖子不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PostEditorScreen(repository: CommunityRepository(api), postId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load post editor data: This post could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('帖子不存在'), findsNothing);
   });
 
   testWidgets('post editor guards duplicate load retries', (tester) async {

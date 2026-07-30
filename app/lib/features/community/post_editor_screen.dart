@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/community/community_error_localizer.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -93,7 +94,14 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         _auditRemark = post.auditRemark;
       });
     } catch (error) {
-      if (mounted) setState(() => _loadError = '$error');
+      if (mounted) {
+        setState(
+          () => _loadError = localizeCommunityError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -175,8 +183,12 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
       );
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(result);
     } catch (error) {
-      if (mounted)
-        _showMessage(AppLocalizations.of(context).postSaveFailed(error));
+      if (mounted) {
+        final strings = AppLocalizations.of(context);
+        _showMessage(
+          strings.postSaveFailed(localizeCommunityError(strings, error)),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -226,9 +238,12 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
+      final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).deleteFailed(error)),
+          content: Text(
+            strings.deleteFailed(localizeCommunityError(strings, error)),
+          ),
         ),
       );
     } finally {

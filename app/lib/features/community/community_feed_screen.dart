@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
 import 'package:dazhongdianping_app/features/circle/circle_square_screen.dart';
+import 'package:dazhongdianping_app/features/community/community_error_localizer.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:dazhongdianping_app/features/community/post_editor_screen.dart';
@@ -38,19 +41,26 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   final Set<int> _openingPostIds = <int>{};
   int _selectedTab = 0;
   final List<int> _requestIds = [0, 0];
+
   @override
   void initState() {
     super.initState();
-    _posts = widget.repository.loadFeedPage();
+    _posts = _loadTabPage();
+  }
+
+  Future<CommunityPostPage> _loadTabPage({bool following = false}) {
+    final future = following
+        ? widget.repository.loadFollowingFeedPage()
+        : widget.repository.loadFeedPage();
+    future.ignore();
+    return future;
   }
 
   Future<void> _reload() async {
     final tab = _selectedTab;
     if (_reloading[tab]) return;
     _requestIds[tab]++;
-    final future = tab == 0
-        ? widget.repository.loadFeedPage()
-        : widget.repository.loadFollowingFeedPage();
+    final future = _loadTabPage(following: tab == 1);
     setState(() {
       _loadingMore[tab] = false;
       _reloading[tab] = true;
@@ -73,7 +83,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
     setState(() {
       _selectedTab = index;
       if (index == 1 && widget.canInteract && _followingPosts == null) {
-        _followingPosts = widget.repository.loadFollowingFeedPage();
+        _followingPosts = _loadTabPage(following: true);
       }
     });
   }
@@ -114,10 +124,13 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _requestIds[tab]) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMorePostsFailed(error),
+              strings.loadMorePostsFailed(
+                localizeCommunityError(strings, error),
+              ),
             ),
           ),
         );
@@ -246,7 +259,14 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(strings.communityLoadFailed(snapshot.error!)),
+                            Text(
+                              strings.communityLoadFailed(
+                                localizeCommunityError(
+                                  strings,
+                                  snapshot.error!,
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 12),
                             FilledButton.tonalIcon(
                               key: const Key('community-feed-retry'),
@@ -272,7 +292,9 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                         children: [
                           SizedBox(
                             height: MediaQuery.sizeOf(context).height * 0.4,
-                            child: Center(child: Text(strings.noCommunityPosts)),
+                            child: Center(
+                              child: Text(strings.noCommunityPosts),
+                            ),
                           ),
                         ],
                       );

@@ -238,6 +238,10 @@ class AppLocalizations {
     'publicPosts': '公开帖子',
     'postsLoadFailed': '帖子加载失败：{error}',
     'noPublicPostsHere': '这里还没有公开帖子。',
+    'communityErrorPostNotFound': '这条帖子不存在',
+    'communityErrorReportDuplicate': '你已经举报过这条帖子了，请不要重复提交',
+    'communityErrorReplyTargetMissing': '你要回复的评论不存在',
+    'communityErrorJoinCircleToPost': '请先加入圈子再发帖',
     'loadMoreCirclesFailed': '加载更多圈子失败：{error}',
     'circlesLoadFailed': '圈子加载失败：{error}',
     'circleErrorJoinedOnlyLoginRequired': '登录后才能查看已加入的圈子',
@@ -1089,6 +1093,10 @@ class AppLocalizations {
     'publicPosts': '公開貼文',
     'postsLoadFailed': '貼文載入失敗：{error}',
     'noPublicPostsHere': '這裡還沒有公開貼文。',
+    'communityErrorPostNotFound': '這則貼文不存在',
+    'communityErrorReportDuplicate': '你已經檢舉過這則貼文了，請不要重複提交',
+    'communityErrorReplyTargetMissing': '你要回覆的評論不存在',
+    'communityErrorJoinCircleToPost': '請先加入圈子再發文',
     'loadMoreCirclesFailed': '載入更多圈子失敗：{error}',
     'circlesLoadFailed': '圈子載入失敗：{error}',
     'circleErrorJoinedOnlyLoginRequired': '登入後才能查看已加入的圈子',
@@ -1966,6 +1974,12 @@ class AppLocalizations {
     'publicPosts': 'Public posts',
     'postsLoadFailed': 'Could not load posts: {error}',
     'noPublicPostsHere': 'No public posts here yet.',
+    'communityErrorPostNotFound': 'This post could not be found.',
+    'communityErrorReportDuplicate':
+        'You already reported this post. Do not submit it again.',
+    'communityErrorReplyTargetMissing':
+        'The comment you are replying to could not be found.',
+    'communityErrorJoinCircleToPost': 'Join the circle before posting.',
     'loadMoreCirclesFailed': 'Could not load more circles: {error}',
     'circlesLoadFailed': 'Could not load circles: {error}',
     'circleErrorJoinedOnlyLoginRequired':
@@ -3258,6 +3272,13 @@ class AppLocalizations {
   String get publicPosts => _text('publicPosts');
   String postsLoadFailed(Object error) => _withError('postsLoadFailed', error);
   String get noPublicPostsHere => _text('noPublicPostsHere');
+  String get communityErrorPostNotFound => _text('communityErrorPostNotFound');
+  String get communityErrorReportDuplicate =>
+      _text('communityErrorReportDuplicate');
+  String get communityErrorReplyTargetMissing =>
+      _text('communityErrorReplyTargetMissing');
+  String get communityErrorJoinCircleToPost =>
+      _text('communityErrorJoinCircleToPost');
   String loadMoreCirclesFailed(Object error) =>
       _withError('loadMoreCirclesFailed', error);
   String circlesLoadFailed(Object error) =>

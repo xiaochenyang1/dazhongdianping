@@ -349,6 +349,22 @@ void main() {
       AppLocalizations.forTag('zh-CN').circleMeta(members: 3, posts: 5),
       '3 位成员 · 5 篇帖子',
     );
+    expect(
+      AppLocalizations.forTag('en').communityErrorPostNotFound,
+      'This post could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').communityErrorReportDuplicate,
+      'You already reported this post. Do not submit it again.',
+    );
+    expect(
+      AppLocalizations.forTag('en').communityErrorReplyTargetMissing,
+      'The comment you are replying to could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').communityErrorJoinCircleToPost,
+      'Join the circle before posting.',
+    );
     expect(AppLocalizations.forTag('en').directMessages, 'Messages');
     expect(AppLocalizations.forTag('en').blockedUsers, 'Blocked users');
     expect(AppLocalizations.forTag('zh-CN').unblockUser, '解除拉黑');
