@@ -2825,7 +2825,7 @@ class AppLocalizations {
 
   String _normalizeErrorText(Object error) {
     final text = switch (error) {
-      StateError() => '${error.message}',
+      StateError() => error.message,
       FormatException() => error.message,
       ArgumentError() => error.message?.toString() ?? error.toString(),
       AssertionError() => error.message?.toString() ?? error.toString(),
@@ -4416,6 +4416,39 @@ class AppLocalizations {
       '到店提醒' || 'Arrival reminder' => reservationActionArrivalReminder,
       final value when value != null && value.isNotEmpty => value,
       _ => unknownStatus,
+    };
+  }
+
+  String reservationTimelineRemarkLabel({
+    int? actionType,
+    required String fallback,
+  }) {
+    if (fallback.isEmpty) return '';
+    return switch (fallback) {
+      '系统发送到店前 30 分钟提醒' => notificationTitleReservationReminderThirtyMinutes,
+      '系统发送到店前 2 小时提醒' => notificationTitleReservationReminderTwoHours,
+      '创建预订' ||
+      '建立預訂' ||
+      'Created reservation' ||
+      'Reservation created' ||
+      '商户确认' ||
+      '商家確認' ||
+      'Merchant confirmed' ||
+      'Confirmed by merchant' ||
+      '用户取消' ||
+      '使用者取消' ||
+      'Canceled by user' ||
+      'Cancelled by user' ||
+      '确认到店' ||
+      '確認到店' ||
+      'Checked in' ||
+      '标记爽约' ||
+      '標記爽約' ||
+      'Marked no-show' => reservationTimelineActionLabel(
+        actionType: actionType,
+        fallback: fallback,
+      ),
+      _ => fallback,
     };
   }
 

@@ -152,7 +152,7 @@ void main() {
     expect(find.text('Created reservation'), findsOneWidget);
     expect(find.text('已确认'), findsNothing);
     expect(find.textContaining('自动确认'), findsNothing);
-    expect(find.text('创建预订'), findsNothing);
+    expect(find.textContaining('创建预订'), findsNothing);
   });
 
   testWidgets('reservation detail guards duplicate load retries', (

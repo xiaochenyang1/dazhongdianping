@@ -357,7 +357,9 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                     fallback: item.actionText,
                   ),
                 ),
-                subtitle: Text('${item.remark}\n${item.createdAt}'),
+                subtitle: Text(
+                  '${strings.reservationTimelineRemarkLabel(actionType: item.actionType, fallback: item.remark)}\n${item.createdAt}',
+                ),
               ),
             ),
           ),
