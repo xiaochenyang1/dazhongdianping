@@ -96,6 +96,14 @@ void main() {
     expect(AppLocalizations.forTag('en').filterUnreadOnly, 'Unread only');
     expect(AppLocalizations.forTag('zh-CN').markAllReadWithCount(3), '全部已读（3）');
     expect(
+      AppLocalizations.forTag('en').notificationErrorUnavailable,
+      'The notification service is temporarily unavailable.',
+    );
+    expect(
+      AppLocalizations.forTag('en').notificationErrorRefreshUnavailable,
+      'Notifications could not be refreshed right now.',
+    );
+    expect(
       AppLocalizations.forTag('en').notificationFollowedYou('Alice'),
       'Alice followed you',
     );

@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/notification/notification_error_localizer.dart';
 import 'package:dazhongdianping_app/features/notification/notification_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -69,7 +70,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).refreshNotificationsFailed(error),
+              AppLocalizations.of(context).refreshNotificationsFailed(
+                localizeNotificationError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -108,7 +111,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (mounted && revision == _pageRevision) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).loadMoreFailed(error)),
+            content: Text(
+              AppLocalizations.of(context).loadMoreFailed(
+                localizeNotificationError(AppLocalizations.of(context), error),
+              ),
+            ),
           ),
         );
       }
@@ -142,7 +149,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).markReadFailed(error)),
+            content: Text(
+              AppLocalizations.of(context).markReadFailed(
+                localizeNotificationError(AppLocalizations.of(context), error),
+              ),
+            ),
           ),
         );
       }
@@ -196,7 +207,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).markAllReadFailed(error),
+              AppLocalizations.of(context).markAllReadFailed(
+                localizeNotificationError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -1396,7 +1409,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(strings.notificationsLoadFailed(snapshot.error!)),
+                        Text(
+                          strings.notificationsLoadFailed(
+                            localizeNotificationError(strings, snapshot.error!),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         FilledButton.icon(
                           key: const Key('notifications-retry'),

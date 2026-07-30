@@ -107,6 +107,8 @@ class AppLocalizations {
     'filterAll': '全部',
     'filterUnreadOnly': '只看未读',
     'notificationsLoadFailed': '消息加载失败：{error}',
+    'notificationErrorUnavailable': '通知服务暂时不可用',
+    'notificationErrorRefreshUnavailable': '通知暂时无法刷新',
     'reload': '重新加载',
     'refresh': '刷新',
     'noUnreadNotifications': '暂无未读消息',
@@ -948,6 +950,8 @@ class AppLocalizations {
     'filterAll': '全部',
     'filterUnreadOnly': '只看未讀',
     'notificationsLoadFailed': '訊息載入失敗：{error}',
+    'notificationErrorUnavailable': '通知服務暫時不可用',
+    'notificationErrorRefreshUnavailable': '通知暫時無法重新整理',
     'reload': '重新載入',
     'refresh': '重新整理',
     'noUnreadNotifications': '暫無未讀訊息',
@@ -1793,6 +1797,10 @@ class AppLocalizations {
     'filterAll': 'All',
     'filterUnreadOnly': 'Unread only',
     'notificationsLoadFailed': 'Could not load notifications: {error}',
+    'notificationErrorUnavailable':
+        'The notification service is temporarily unavailable.',
+    'notificationErrorRefreshUnavailable':
+        'Notifications could not be refreshed right now.',
     'reload': 'Reload',
     'refresh': 'Refresh',
     'noUnreadNotifications': 'No unread notifications',
@@ -2907,6 +2915,10 @@ class AppLocalizations {
   String get filterUnreadOnly => _text('filterUnreadOnly');
   String notificationsLoadFailed(Object error) =>
       _withError('notificationsLoadFailed', error);
+  String get notificationErrorUnavailable =>
+      _text('notificationErrorUnavailable');
+  String get notificationErrorRefreshUnavailable =>
+      _text('notificationErrorRefreshUnavailable');
   String get reload => _text('reload');
   String get refresh => _text('refresh');
   String get noUnreadNotifications => _text('noUnreadNotifications');

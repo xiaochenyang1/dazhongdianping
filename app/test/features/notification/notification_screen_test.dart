@@ -125,12 +125,17 @@ class NotificationScreenApi implements JsonApi {
   int loadCount = 0;
   final requestedPages = <int>[];
   bool failNextLoad = false;
+  Object? loadError;
+  Object? refreshError;
+  Object? loadMoreError;
   Completer<void>? ackGate;
   final ackGates = <int, Completer<void>>{};
   final loadGates = <int, Completer<void>>{};
   int ackCalls = 0;
+  Object? ackError;
   Completer<void>? loadMoreGate;
   int markAllCalls = 0;
+  Object? markAllError;
 
   Map<String, dynamic> _item({required bool read}) {
     if (social) {
@@ -576,6 +581,15 @@ class NotificationScreenApi implements JsonApi {
     final page = query?['page'] as int? ?? 1;
     requestedPages.add(page);
     await loadGates[loadCount]?.future;
+    if (page == 1 && loadCount == 1 && loadError != null) {
+      throw loadError!;
+    }
+    if (page == 1 && loadCount > 1 && refreshError != null) {
+      throw refreshError!;
+    }
+    if (page > 1 && loadMoreError != null) {
+      throw loadMoreError!;
+    }
     if (failNextLoad) {
       failNextLoad = false;
       throw const ApiException('刷新网络暂时不可用');
@@ -628,9 +642,15 @@ class NotificationScreenApi implements JsonApi {
     postedPath = path;
     if (path == '/api/c/v1/notifications/read-all') {
       markAllCalls += 1;
+      if (markAllError != null) {
+        throw markAllError!;
+      }
       return {'updated': 1, 'count': 0};
     }
     ackCalls += 1;
+    if (ackError != null) {
+      throw ackError!;
+    }
     final id = int.parse(path.split('/').reversed.elementAt(1));
     await ackGate?.future;
     await ackGates[id]?.future;
@@ -890,12 +910,35 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('网络暂时不可用'), findsOneWidget);
+    expect(find.textContaining('通知服务暂时不可用'), findsOneWidget);
+    expect(find.textContaining('网络暂时不可用'), findsNothing);
     await tester.tap(find.byKey(const Key('notifications-retry')));
     await tester.pumpAndSettle();
 
     expect(api.loadCount, 2);
     expect(find.text('商家回复'), findsOneWidget);
+  });
+
+  testWidgets('notification screen localizes load errors in English', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi()
+      ..loadError = const ApiException('网络暂时不可用');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load notifications: The notification service is temporarily unavailable.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('网络暂时不可用'), findsNothing);
   });
 
   testWidgets('notification screen guards duplicate retries', (tester) async {
@@ -968,6 +1011,35 @@ void main() {
     expect(find.textContaining('消息加载失败'), findsNothing);
   });
 
+  testWidgets('notification screen localizes refresh errors in English', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi()
+      ..refreshError = const ApiException('刷新网络暂时不可用');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.fling(
+      find.byKey(const Key('notification-list')),
+      const Offset(0, 300),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not refresh notifications: Notifications could not be refreshed right now.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('刷新网络暂时不可用'), findsNothing);
+  });
+
   testWidgets('empty notification state can refresh', (tester) async {
     final api = NotificationScreenApi(empty: true);
     await tester.pumpWidget(
@@ -1007,6 +1079,31 @@ void main() {
     expect(api.requestedPages, [1, 2]);
     expect(find.text('更早未读通知'), findsOneWidget);
     expect(find.byKey(const Key('notifications-load-more')), findsNothing);
+  });
+
+  testWidgets('notification screen localizes load more errors in English', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi(paginated: true)
+      ..loadMoreError = const ApiException('网络暂时不可用');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notifications-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load more: The notification service is temporarily unavailable.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('网络暂时不可用'), findsNothing);
   });
 
   testWidgets('notification screen renders an unread message', (tester) async {
@@ -1056,6 +1153,31 @@ void main() {
 
     expect(api.postedPath, '/api/c/v1/notifications/1/ack');
     expect(find.text('未读'), findsNothing);
+  });
+
+  testWidgets('notification screen localizes mark read errors in English', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi()
+      ..ackError = const ApiException('网络暂时不可用');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Merchant reply'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not mark as read: The notification service is temporarily unavailable.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('网络暂时不可用'), findsNothing);
   });
 
   testWidgets(
@@ -1340,6 +1462,31 @@ void main() {
     expect(api.postedPath, '/api/c/v1/notifications/read-all');
     expect(find.text('未读'), findsNothing);
     expect(find.text('全部通知已标记为已读'), findsOneWidget);
+  });
+
+  testWidgets('notification screen localizes mark all read errors in English', (
+    tester,
+  ) async {
+    final api = NotificationScreenApi()
+      ..markAllError = const ApiException('网络暂时不可用');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: NotificationScreen(repository: NotificationRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notifications-mark-all')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not mark all as read: The notification service is temporarily unavailable.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('网络暂时不可用'), findsNothing);
   });
 
   testWidgets('notification serializes pagination and mark-all actions', (
