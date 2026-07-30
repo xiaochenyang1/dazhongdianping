@@ -82,7 +82,6 @@ class OrdersApi implements JsonApi {
       const {};
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),
@@ -101,7 +100,6 @@ Widget localizedApp({
 }
 
 void main() {
-
   testWidgets('orders screen switches English chrome', (tester) async {
     await tester.pumpWidget(
       localizedApp(
@@ -112,8 +110,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Orders'), findsOneWidget);
     expect(find.text('Unpaid'), findsOneWidget);
+    expect(find.textContaining('柏林茶馆 · Unpaid · EUR 29.9'), findsOneWidget);
+    expect(find.textContaining('待支付'), findsNothing);
   });
-
 
   testWidgets('orders screen retries an initial load failure', (tester) async {
     final api = OrdersApi(failFirst: true);

@@ -95,9 +95,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _requestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreOrdersFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreOrdersFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && requestId == _requestId) {
@@ -177,7 +181,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           key: const Key('orders-retry'),
                           onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_retrying ? strings.processing : strings.retry),
+                          label: Text(
+                            _retrying ? strings.processing : strings.retry,
+                          ),
                         ),
                       ],
                     ),
@@ -208,11 +214,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   ),
                                 )
                               : const Icon(Icons.expand_more),
-                          label: Text(_loadingMore ? strings.loading : strings.loadMore),
+                          label: Text(
+                            _loadingMore ? strings.loading : strings.loadMore,
+                          ),
                         ),
                       );
                     }
                     final order = items[index];
+                    final payStatusText = strings.payStatusLabel(
+                      status: order.payStatus,
+                      fallback: order.payStatusText,
+                    );
                     return Card(
                       key: Key('order-card-${order.id}'),
                       child: ListTile(
@@ -222,7 +234,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               : order.dealTitle,
                         ),
                         subtitle: Text(
-                          '${order.orderNo}\n${order.shopName} · ${order.payStatusText} · ${order.currency} ${order.amount}',
+                          '${order.orderNo}\n${order.shopName} · $payStatusText · ${order.currency} ${order.amount}',
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),
