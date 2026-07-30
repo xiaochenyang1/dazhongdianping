@@ -325,6 +325,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('3 likes · 1 comments'), findsOneWidget);
+    expect(find.textContaining('Merchant reply: 谢谢支持'), findsOneWidget);
     expect(find.text('Approved'), findsOneWidget);
     expect(find.text('Local expert'), findsOneWidget);
     expect(find.text('审核通过'), findsNothing);
@@ -397,7 +398,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('说得对'), findsOneWidget);
-    expect(find.textContaining('商家回复：柏林茶馆：谢谢支持'), findsOneWidget);
+    expect(find.textContaining('商家回复：谢谢支持'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('review-like-button')));
     await tester.pumpAndSettle();

@@ -34,7 +34,7 @@ class DetailFakeRepository extends BrowseRepository {
         commentCount: 1,
         createdAt: '2026-07-01 18:30',
         authorCertificationLabel: '本地达人',
-        merchantReply: '柏林茶馆：谢谢支持。',
+        merchantReply: '谢谢支持。',
       ),
     ],
   });

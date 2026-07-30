@@ -329,7 +329,7 @@ void main() {
     expect(reviews.single.userName, '阿遥');
     expect(reviews.single.authorCertificationCode, 'local_expert');
     expect(reviews.single.authorCertificationLabel, '本地达人');
-    expect(reviews.single.merchantReply, '渝里火锅：谢谢光临，欢迎再来。');
+    expect(reviews.single.merchantReply, '谢谢光临，欢迎再来。');
   });
 
   test('loads shop review page with sort and filters', () async {

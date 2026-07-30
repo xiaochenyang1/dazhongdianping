@@ -179,12 +179,9 @@ class ReviewDetail {
     final reply = json['merchantReply'];
     String? merchantReply;
     if (reply is Map<String, dynamic>) {
-      final merchantName = reply['merchantName'] as String? ?? '';
       final content = reply['content'] as String? ?? '';
       if (content.trim().isNotEmpty) {
-        merchantReply = merchantName.isEmpty
-            ? content.trim()
-            : '$merchantName：${content.trim()}';
+        merchantReply = content.trim();
       }
     }
     return ReviewDetail(
