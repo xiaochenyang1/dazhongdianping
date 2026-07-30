@@ -336,6 +336,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
         };
       case 'order.paid':
         return strings.notificationTitleOrderPaid;
+      case 'order.refund.result':
+        return switch (_notificationQueryValue(
+          notification.linkUrl,
+          'refund',
+        )) {
+          'approved' => strings.notificationTitleRefundApproved,
+          'rejected' => strings.notificationTitleRefundRejected,
+          _ => notification.title,
+        };
       case 'reservation.created':
         return switch (_notificationQueryValue(
           notification.linkUrl,
@@ -343,6 +352,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
         )) {
           'confirmed' => strings.notificationTitleReservationConfirmed,
           'pending' => strings.notificationTitleReservationSubmitted,
+          _ => notification.title,
+        };
+      case 'reservation.status':
+        return switch (_notificationQueryValue(
+          notification.linkUrl,
+          'status',
+        )) {
+          'confirmed' => strings.notificationTitleReservationMerchantConfirmed,
+          'arrived' => strings.notificationTitleReservationArrived,
+          'rejected' => strings.notificationTitleReservationRejected,
+          'no_show' => strings.notificationTitleReservationNoShow,
           _ => notification.title,
         };
       case 'coupon.reminder':
@@ -362,6 +382,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
           'rejected' => strings.expertCertificationRejectedNotice,
           _ => notification.title,
         };
+      case 'review.audit.result':
+        return switch (_notificationQueryValue(notification.linkUrl, 'audit')) {
+          'approved' => strings.notificationTitleReviewApproved,
+          'rejected' => strings.notificationTitleReviewRejected,
+          _ => notification.title,
+        };
+      case 'review.hidden':
+        return strings.notificationTitleReviewHidden;
       default:
         return notification.title;
     }
@@ -380,14 +408,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return _localizedPostAuditContent(strings, notification);
       case 'order.paid':
         return _localizedOrderPaidContent(strings, notification);
+      case 'order.refund.result':
+        return _localizedRefundResultContent(strings, notification);
       case 'reservation.created':
         return _localizedReservationContent(strings, notification);
+      case 'reservation.status':
+        return _localizedReservationStatusContent(strings, notification);
       case 'coupon.reminder':
         return _localizedCouponReminderContent(strings, notification);
       case 'coupon.verified':
         return _localizedCouponVerifiedContent(strings, notification);
       case 'expert.certification.result':
         return _localizedExpertCertificationContent(strings, notification);
+      case 'review.audit.result':
+        return _localizedReviewAuditContent(strings, notification);
+      case 'review.hidden':
+        return _localizedReviewHiddenContent(strings, notification);
       default:
         return notification.content;
     }
@@ -470,6 +506,49 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return localized.join(_notificationSeparator);
   }
 
+  String _localizedRefundResultContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final segments = _notificationSegments(notification.content);
+    if (segments.isEmpty) {
+      return notification.content;
+    }
+    final refundStatus = _notificationQueryValue(
+      notification.linkUrl,
+      'refund',
+    );
+    final localized = <String>[];
+    for (var index = 0; index < segments.length; index += 1) {
+      final segment = segments[index];
+      final orderNo = _extractOrderNumber(segment);
+      if (orderNo != null && orderNo.isNotEmpty) {
+        localized.add(strings.notificationOrderNumber(orderNo));
+        continue;
+      }
+      final isLastSegment = index == segments.length - 1;
+      if (isLastSegment) {
+        final action = _extractRefundAction(segment);
+        if (action != null) {
+          final actor = _localizedNotificationActor(strings, action.actor);
+          final base = switch (refundStatus) {
+            'approved' => strings.notificationRefundApprovedAction(actor),
+            'rejected' => strings.notificationRefundRejectedAction(actor),
+            _ => null,
+          };
+          if (base != null) {
+            localized.add(
+              _appendLocalizedNotificationRemark(strings, base, action.remark),
+            );
+            continue;
+          }
+        }
+      }
+      localized.add(segment);
+    }
+    return localized.join(_notificationSeparator);
+  }
+
   String _localizedReservationContent(
     AppLocalizations strings,
     AppNotification notification,
@@ -498,6 +577,48 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (isLastSegment && reservationStatus == 'pending') {
         localized.add(strings.notificationReservationSubmittedAction);
         continue;
+      }
+      localized.add(segment);
+    }
+    return localized.join(_notificationSeparator);
+  }
+
+  String _localizedReservationStatusContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final segments = _notificationSegments(notification.content);
+    if (segments.isEmpty) {
+      return notification.content;
+    }
+    final reservationStatus = _notificationQueryValue(
+      notification.linkUrl,
+      'status',
+    );
+    final localized = <String>[];
+    for (var index = 0; index < segments.length; index += 1) {
+      final segment = segments[index];
+      final peopleCount = _extractPeopleCount(segment);
+      if (peopleCount != null) {
+        localized.add(strings.peopleCount(peopleCount));
+        continue;
+      }
+      final isLastSegment = index == segments.length - 1;
+      if (isLastSegment) {
+        final remark = _extractNotificationRemark(segment);
+        final action = switch (reservationStatus) {
+          'confirmed' => strings.notificationReservationMerchantConfirmedAction,
+          'arrived' => strings.notificationReservationArrivedAction,
+          'rejected' => strings.notificationReservationMerchantRejectedAction,
+          'no_show' => strings.notificationReservationMarkedNoShowAction,
+          _ => null,
+        };
+        if (action != null) {
+          localized.add(
+            _appendLocalizedNotificationRemark(strings, action, remark),
+          );
+          continue;
+        }
       }
       localized.add(segment);
     }
@@ -584,6 +705,41 @@ class _NotificationScreenState extends State<NotificationScreen> {
     };
   }
 
+  String _localizedReviewAuditContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractReviewNotificationContent(notification.content);
+    if (parsed == null) {
+      return notification.content;
+    }
+    return switch (_notificationQueryValue(notification.linkUrl, 'audit')) {
+      'approved' => strings.notificationReviewApprovedContent(
+        parsed.shop,
+        remark: parsed.remark,
+      ),
+      'rejected' => strings.notificationReviewRejectedContent(
+        parsed.shop,
+        remark: parsed.remark,
+      ),
+      _ => notification.content,
+    };
+  }
+
+  String _localizedReviewHiddenContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractReviewNotificationContent(notification.content);
+    if (parsed == null) {
+      return notification.content;
+    }
+    return strings.notificationReviewHiddenContent(
+      parsed.shop,
+      remark: parsed.remark,
+    );
+  }
+
   String _appendLocalizedNotificationRemark(
     AppLocalizations strings,
     String base,
@@ -594,6 +750,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
     final separator = strings.tag.startsWith('en') ? ': ' : '：';
     return '$base$separator${remark.trim()}';
+  }
+
+  String _localizedNotificationActor(AppLocalizations strings, String actor) {
+    final normalized = actor.trim();
+    return switch (normalized) {
+      '平台' || '平臺' || 'Platform' => strings.notificationActorPlatform,
+      '商户' || '商戶' || '商家' || 'Merchant' => strings.notificationActorMerchant,
+      _ => normalized,
+    };
   }
 
   String? _notificationQueryValue(String linkUrl, String key) {
@@ -640,6 +805,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
       return null;
     }
     return (title: title, remark: match?.group(2)?.trim());
+  }
+
+  ({String actor, String? remark})? _extractRefundAction(String segment) {
+    final match = RegExp(
+      r'^(平台|平臺|商户|商戶|商家)(?:已同意退款|已驳回退款|已駁回退款)(?:：(.+))?$',
+    ).firstMatch(segment.trim());
+    final actor = match?.group(1)?.trim();
+    if (actor == null || actor.isEmpty) {
+      return null;
+    }
+    return (actor: actor, remark: match?.group(2)?.trim());
   }
 
   String? _extractOrderNumber(String segment) {
@@ -689,6 +865,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
   String? _extractRedeemedCouponCode(String segment) {
     final match = RegExp(r'^券码\s+(.+?)\s+已核销成功$').firstMatch(segment.trim());
     return match?.group(1)?.trim();
+  }
+
+  ({String shop, String? remark})? _extractReviewNotificationContent(
+    String content,
+  ) {
+    final segments = _notificationSegments(content);
+    if (segments.length < 2) {
+      return null;
+    }
+    final shop = segments.first.trim();
+    if (shop.isEmpty) {
+      return null;
+    }
+    return (shop: shop, remark: _extractNotificationRemark(segments.last));
   }
 
   String? _extractNotificationRemark(String content) {

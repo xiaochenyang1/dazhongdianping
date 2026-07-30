@@ -137,6 +137,26 @@ class AppLocalizations {
     'notificationCouponRedeemed': '已核销成功',
     'notificationExpertApprovedContent': '你的本地达人认证已审核通过',
     'notificationExpertRejectedContent': '你的本地达人认证未通过，请查看原因后重提',
+    'notificationTitleRefundApproved': '退款已通过',
+    'notificationTitleRefundRejected': '退款已驳回',
+    'notificationTitleReservationMerchantConfirmed': '预订已确认',
+    'notificationTitleReservationArrived': '已确认到店',
+    'notificationTitleReservationRejected': '预订被拒绝',
+    'notificationTitleReservationNoShow': '预订已标记爽约',
+    'notificationTitleReviewApproved': '点评已通过审核',
+    'notificationTitleReviewRejected': '点评未通过审核',
+    'notificationTitleReviewHidden': '点评已被隐藏',
+    'notificationActorPlatform': '平台',
+    'notificationActorMerchant': '商户',
+    'notificationRefundApprovedAction': '{actor}已同意退款',
+    'notificationRefundRejectedAction': '{actor}已驳回退款',
+    'notificationReservationMerchantConfirmedAction': '商户已确认你的预订',
+    'notificationReservationArrivedAction': '商户已确认你到店',
+    'notificationReservationMerchantRejectedAction': '商户已拒绝你的预订',
+    'notificationReservationMarkedNoShowAction': '商户已将本次预订标记为爽约',
+    'notificationReviewApprovedContent': '{shop} · 你的点评已公开展示',
+    'notificationReviewRejectedContent': '{shop} · 你的点评未通过审核',
+    'notificationReviewHiddenContent': '{shop} · 商户申诉成立，你的点评已从公开展示中隐藏',
     'loggingOut': '退出中...',
     'logout': '退出',
     'profileLoadFailed': '用户资料加载失败：{error}',
@@ -876,6 +896,26 @@ class AppLocalizations {
     'notificationCouponRedeemed': '已核銷成功',
     'notificationExpertApprovedContent': '你的在地達人認證已審核通過',
     'notificationExpertRejectedContent': '你的在地達人認證未通過，請查看原因後重提',
+    'notificationTitleRefundApproved': '退款已通過',
+    'notificationTitleRefundRejected': '退款已駁回',
+    'notificationTitleReservationMerchantConfirmed': '預訂已確認',
+    'notificationTitleReservationArrived': '已確認到店',
+    'notificationTitleReservationRejected': '預訂被拒絕',
+    'notificationTitleReservationNoShow': '預訂已標記爽約',
+    'notificationTitleReviewApproved': '評論已通過審核',
+    'notificationTitleReviewRejected': '評論未通過審核',
+    'notificationTitleReviewHidden': '評論已被隱藏',
+    'notificationActorPlatform': '平台',
+    'notificationActorMerchant': '商家',
+    'notificationRefundApprovedAction': '{actor}已同意退款',
+    'notificationRefundRejectedAction': '{actor}已駁回退款',
+    'notificationReservationMerchantConfirmedAction': '商家已確認你的預訂',
+    'notificationReservationArrivedAction': '商家已確認你到店',
+    'notificationReservationMerchantRejectedAction': '商家已拒絕你的預訂',
+    'notificationReservationMarkedNoShowAction': '商家已將本次預訂標記為爽約',
+    'notificationReviewApprovedContent': '{shop} · 你的評論已公開展示',
+    'notificationReviewRejectedContent': '{shop} · 你的評論未通過審核',
+    'notificationReviewHiddenContent': '{shop} · 商家申訴成立，你的評論已從公開展示中隱藏',
     'loggingOut': '登出中...',
     'logout': '登出',
     'profileLoadFailed': '使用者資料載入失敗：{error}',
@@ -1623,6 +1663,31 @@ class AppLocalizations {
         'Your local expert certification was approved',
     'notificationExpertRejectedContent':
         'Your local expert certification was rejected. Review the reason and resubmit.',
+    'notificationTitleRefundApproved': 'Refund approved',
+    'notificationTitleRefundRejected': 'Refund rejected',
+    'notificationTitleReservationMerchantConfirmed': 'Reservation confirmed',
+    'notificationTitleReservationArrived': 'Arrival confirmed',
+    'notificationTitleReservationRejected': 'Reservation rejected',
+    'notificationTitleReservationNoShow': 'Reservation marked no-show',
+    'notificationTitleReviewApproved': 'Review approved',
+    'notificationTitleReviewRejected': 'Review rejected',
+    'notificationTitleReviewHidden': 'Review hidden',
+    'notificationActorPlatform': 'Platform',
+    'notificationActorMerchant': 'Merchant',
+    'notificationRefundApprovedAction': '{actor} approved your refund',
+    'notificationRefundRejectedAction': '{actor} rejected your refund',
+    'notificationReservationMerchantConfirmedAction':
+        'The merchant confirmed your reservation',
+    'notificationReservationArrivedAction':
+        'The merchant confirmed your arrival',
+    'notificationReservationMerchantRejectedAction':
+        'The merchant rejected your reservation',
+    'notificationReservationMarkedNoShowAction':
+        'The merchant marked this reservation as no-show',
+    'notificationReviewApprovedContent': '{shop} · Your review is now public',
+    'notificationReviewRejectedContent': '{shop} · Your review was rejected',
+    'notificationReviewHiddenContent':
+        '{shop} · The merchant appeal was approved and your review was hidden from public view',
     'loggingOut': 'Signing out...',
     'logout': 'Sign out',
     'profileLoadFailed': 'Could not load profile: {error}',
@@ -2624,6 +2689,59 @@ class AppLocalizations {
       _text('notificationExpertApprovedContent');
   String get notificationExpertRejectedContent =>
       _text('notificationExpertRejectedContent');
+  String get notificationTitleRefundApproved =>
+      _text('notificationTitleRefundApproved');
+  String get notificationTitleRefundRejected =>
+      _text('notificationTitleRefundRejected');
+  String get notificationTitleReservationMerchantConfirmed =>
+      _text('notificationTitleReservationMerchantConfirmed');
+  String get notificationTitleReservationArrived =>
+      _text('notificationTitleReservationArrived');
+  String get notificationTitleReservationRejected =>
+      _text('notificationTitleReservationRejected');
+  String get notificationTitleReservationNoShow =>
+      _text('notificationTitleReservationNoShow');
+  String get notificationTitleReviewApproved =>
+      _text('notificationTitleReviewApproved');
+  String get notificationTitleReviewRejected =>
+      _text('notificationTitleReviewRejected');
+  String get notificationTitleReviewHidden =>
+      _text('notificationTitleReviewHidden');
+  String get notificationActorPlatform => _text('notificationActorPlatform');
+  String get notificationActorMerchant => _text('notificationActorMerchant');
+  String notificationRefundApprovedAction(String actor) =>
+      _text('notificationRefundApprovedAction').replaceFirst('{actor}', actor);
+  String notificationRefundRejectedAction(String actor) =>
+      _text('notificationRefundRejectedAction').replaceFirst('{actor}', actor);
+  String get notificationReservationMerchantConfirmedAction =>
+      _text('notificationReservationMerchantConfirmedAction');
+  String get notificationReservationArrivedAction =>
+      _text('notificationReservationArrivedAction');
+  String get notificationReservationMerchantRejectedAction =>
+      _text('notificationReservationMerchantRejectedAction');
+  String get notificationReservationMarkedNoShowAction =>
+      _text('notificationReservationMarkedNoShowAction');
+  String notificationReviewApprovedContent(String shop, {String? remark}) {
+    final base = _text(
+      'notificationReviewApprovedContent',
+    ).replaceFirst('{shop}', shop);
+    return _appendNotificationRemark(base, remark);
+  }
+
+  String notificationReviewRejectedContent(String shop, {String? remark}) {
+    final base = _text(
+      'notificationReviewRejectedContent',
+    ).replaceFirst('{shop}', shop);
+    return _appendNotificationRemark(base, remark);
+  }
+
+  String notificationReviewHiddenContent(String shop, {String? remark}) {
+    final base = _text(
+      'notificationReviewHiddenContent',
+    ).replaceFirst('{shop}', shop);
+    return _appendNotificationRemark(base, remark);
+  }
+
   String get loggingOut => _text('loggingOut');
   String get logout => _text('logout');
   String profileLoadFailed(Object error) =>

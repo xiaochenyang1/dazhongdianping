@@ -52,10 +52,16 @@ class NotificationScreenApi implements JsonApi {
     this.directMessage = false,
     this.postAudit = false,
     this.orderPaid = false,
+    this.orderRefundApproved = false,
+    this.orderRefundRejected = false,
     this.reservationCreated = false,
+    this.reservationStatusRejected = false,
+    this.reservationStatusNoShow = false,
     this.couponReminder = false,
     this.couponVerified = false,
     this.expertResult = false,
+    this.reviewAuditApproved = false,
+    this.reviewHidden = false,
     this.failFirstLoad = false,
     this.mixedRead = false,
     this.twoUnread = false,
@@ -67,10 +73,16 @@ class NotificationScreenApi implements JsonApi {
   final bool directMessage;
   final bool postAudit;
   final bool orderPaid;
+  final bool orderRefundApproved;
+  final bool orderRefundRejected;
   final bool reservationCreated;
+  final bool reservationStatusRejected;
+  final bool reservationStatusNoShow;
   final bool couponReminder;
   final bool couponVerified;
   final bool expertResult;
+  final bool reviewAuditApproved;
+  final bool reviewHidden;
   final bool failFirstLoad;
   final bool mixedRead;
   final bool twoUnread;
@@ -145,6 +157,34 @@ class NotificationScreenApi implements JsonApi {
         'createdAt': '2026-07-15 10:00:00',
       };
     }
+    if (orderRefundApproved) {
+      return {
+        'id': 1,
+        'type': 'order.refund.result',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '退款已通过',
+        'content': '双人套餐 · 订单 OD456 · 平台已同意退款：已按原路退回',
+        'linkUrl': '/user/orders/99?refund=approved',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (orderRefundRejected) {
+      return {
+        'id': 1,
+        'type': 'order.refund.result',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '退款已驳回',
+        'content': '双人套餐 · 订单 OD456 · 商户已驳回退款：券码已核销',
+        'linkUrl': '/user/orders/99?refund=rejected',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
     if (reservationCreated) {
       return {
         'id': 1,
@@ -154,6 +194,34 @@ class NotificationScreenApi implements JsonApi {
         'title': '预订已自动确认',
         'content': '巴黎川菜馆 · 2026-07-26 18:00 · 2 人 · 系统已自动确认你的预订',
         'linkUrl': '/user/reservations/44?status=confirmed',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (reservationStatusRejected) {
+      return {
+        'id': 1,
+        'type': 'reservation.status',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '预订被拒绝',
+        'content': '巴黎川菜馆 · 2026-07-26 18:00 · 2 人 · 商户已拒绝你的预订：满桌',
+        'linkUrl': '/user/reservations/44?status=rejected',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (reservationStatusNoShow) {
+      return {
+        'id': 1,
+        'type': 'reservation.status',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '预订已标记爽约',
+        'content': '巴黎川菜馆 · 2026-07-26 18:00 · 2 人 · 商户已将本次预订标记为爽约',
+        'linkUrl': '/user/reservations/44?status=no_show',
         'aggregateCount': 1,
         'read': read,
         'createdAt': '2026-07-15 10:00:00',
@@ -196,6 +264,34 @@ class NotificationScreenApi implements JsonApi {
         'title': '本地达人认证已通过',
         'content': '你的本地达人认证已审核通过',
         'linkUrl': '/user/profile?expert=approved',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (reviewAuditApproved) {
+      return {
+        'id': 1,
+        'type': 'review.audit.result',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '点评已通过审核',
+        'content': '柏林茶馆 · 你的点评已公开展示',
+        'linkUrl': '/user/reviews/12?audit=approved',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (reviewHidden) {
+      return {
+        'id': 1,
+        'type': 'review.hidden',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '点评已被隐藏',
+        'content': '柏林茶馆 · 商户申诉成立，你的点评已从公开展示中隐藏：商家已提供处理凭证',
+        'linkUrl': '/user/reviews/12?hidden=appeal',
         'aggregateCount': 1,
         'read': read,
         'createdAt': '2026-07-15 10:00:00',
@@ -305,67 +401,107 @@ void main() {
     expect(find.text('已读通知'), findsOneWidget);
   });
 
-  testWidgets(
-    'notification screen localizes supported notifications in English',
-    (tester) async {
-      await expectEnglishNotification(
-        tester,
-        api: NotificationScreenApi(social: true),
-        expectedTitle: 'New follower',
-        expectedContent: '伦敦小王 followed you',
-      );
-      await expectEnglishNotification(
-        tester,
-        api: NotificationScreenApi(directMessage: true),
-        expectedTitle: 'New direct message',
-        expectedContent: '巴黎小陈: 第二条私信提醒',
-      );
-      await expectEnglishNotification(
-        tester,
-        api: NotificationScreenApi(postAudit: true),
-        expectedTitle: 'Post approved',
-        expectedContent: '"伦敦周末早午餐避坑指南" is now public: 内容真实，可公开',
-      );
-      await expectEnglishNotification(
-        tester,
-        api: NotificationScreenApi(orderPaid: true),
-        expectedTitle: 'Payment successful',
-        expectedContent:
-            '双人套餐 · Order OD456 · 88.00 CNY · Coupons are ready in My coupons',
-      );
-      await expectEnglishNotification(
-        tester,
-        api: NotificationScreenApi(reservationCreated: true),
-        expectedTitle: 'Reservation auto-confirmed',
-        expectedContent:
-            '巴黎川菜馆 · 2026-07-26 18:00 · 2 guests · Your reservation was automatically confirmed',
-      );
-      await expectEnglishNotification(
-        tester,
-        api: NotificationScreenApi(couponReminder: true),
-        expectedTitle: 'Coupon reminder',
-        expectedContent: 'CP-DEMO expires in 1 day',
-      );
-      await expectEnglishNotification(
-        tester,
-        api: NotificationScreenApi(couponVerified: true),
-        expectedTitle: 'Coupon redeemed',
-        expectedContent: 'CP-DEMO was redeemed at 柏林茶馆',
-      );
-      await expectEnglishNotification(
-        tester,
-        api: NotificationScreenApi(expertResult: true),
-        expectedTitle: 'Local expert certification approved',
-        expectedContent: 'Your local expert certification was approved',
-      );
-      await expectEnglishNotification(
-        tester,
-        api: NotificationScreenApi(),
-        expectedTitle: 'Merchant reply',
-        expectedContent: '谢谢支持',
-      );
-    },
-  );
+  testWidgets('notification screen localizes supported notifications in English', (
+    tester,
+  ) async {
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(social: true),
+      expectedTitle: 'New follower',
+      expectedContent: '伦敦小王 followed you',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(directMessage: true),
+      expectedTitle: 'New direct message',
+      expectedContent: '巴黎小陈: 第二条私信提醒',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(postAudit: true),
+      expectedTitle: 'Post approved',
+      expectedContent: '"伦敦周末早午餐避坑指南" is now public: 内容真实，可公开',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(orderPaid: true),
+      expectedTitle: 'Payment successful',
+      expectedContent:
+          '双人套餐 · Order OD456 · 88.00 CNY · Coupons are ready in My coupons',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(orderRefundApproved: true),
+      expectedTitle: 'Refund approved',
+      expectedContent:
+          '双人套餐 · Order OD456 · Platform approved your refund: 已按原路退回',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(orderRefundRejected: true),
+      expectedTitle: 'Refund rejected',
+      expectedContent:
+          '双人套餐 · Order OD456 · Merchant rejected your refund: 券码已核销',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(reservationCreated: true),
+      expectedTitle: 'Reservation auto-confirmed',
+      expectedContent:
+          '巴黎川菜馆 · 2026-07-26 18:00 · 2 guests · Your reservation was automatically confirmed',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(reservationStatusRejected: true),
+      expectedTitle: 'Reservation rejected',
+      expectedContent:
+          '巴黎川菜馆 · 2026-07-26 18:00 · 2 guests · The merchant rejected your reservation: 满桌',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(reservationStatusNoShow: true),
+      expectedTitle: 'Reservation marked no-show',
+      expectedContent:
+          '巴黎川菜馆 · 2026-07-26 18:00 · 2 guests · The merchant marked this reservation as no-show',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(couponReminder: true),
+      expectedTitle: 'Coupon reminder',
+      expectedContent: 'CP-DEMO expires in 1 day',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(couponVerified: true),
+      expectedTitle: 'Coupon redeemed',
+      expectedContent: 'CP-DEMO was redeemed at 柏林茶馆',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(expertResult: true),
+      expectedTitle: 'Local expert certification approved',
+      expectedContent: 'Your local expert certification was approved',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(reviewAuditApproved: true),
+      expectedTitle: 'Review approved',
+      expectedContent: '柏林茶馆 · Your review is now public',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(reviewHidden: true),
+      expectedTitle: 'Review hidden',
+      expectedContent:
+          '柏林茶馆 · The merchant appeal was approved and your review was hidden from public view: 商家已提供处理凭证',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(),
+      expectedTitle: 'Merchant reply',
+      expectedContent: '谢谢支持',
+    );
+  });
 
   testWidgets('notification screen filters unread messages locally', (
     tester,
