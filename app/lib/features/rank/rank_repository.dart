@@ -4,6 +4,7 @@ class RankSummary {
   const RankSummary({
     required this.id,
     required this.name,
+    required this.type,
     required this.typeText,
     required this.cityName,
     required this.categoryName,
@@ -15,6 +16,7 @@ class RankSummary {
 
   final int id;
   final String name;
+  final int? type;
   final String typeText;
   final String cityName;
   final String categoryName;
@@ -26,6 +28,7 @@ class RankSummary {
   factory RankSummary.fromJson(Map<String, dynamic> json) => RankSummary(
     id: (json['id'] as num?)?.toInt() ?? 0,
     name: json['name'] as String? ?? '',
+    type: (json['type'] as num?)?.toInt(),
     typeText: json['typeText'] as String? ?? '',
     cityName: json['cityName'] as String? ?? '',
     categoryName: json['categoryName'] as String? ?? '',
@@ -115,6 +118,7 @@ class RankDetail {
   const RankDetail({
     required this.id,
     required this.name,
+    required this.type,
     required this.typeText,
     required this.cityName,
     required this.categoryName,
@@ -125,6 +129,7 @@ class RankDetail {
 
   final int id;
   final String name;
+  final int? type;
   final String typeText;
   final String cityName;
   final String categoryName;
@@ -140,6 +145,7 @@ class RankDetail {
     return RankDetail(
       id: (json['id'] as num?)?.toInt() ?? 0,
       name: json['name'] as String? ?? '',
+      type: (json['type'] as num?)?.toInt(),
       typeText: json['typeText'] as String? ?? '',
       cityName: json['cityName'] as String? ?? '',
       categoryName: json['categoryName'] as String? ?? '',

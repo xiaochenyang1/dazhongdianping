@@ -52,12 +52,28 @@ void main() {
       'Top place: Hotpot House',
     );
     expect(
+      AppLocalizations.forTag('en').rankTypeLabel(fallback: '必吃榜'),
+      'Must-eat ranking',
+    );
+    expect(
       AppLocalizations.forTag('en').ranksLoadFailed('offline'),
       'Could not load rankings: offline',
     );
     expect(
       AppLocalizations.forTag('en').activitiesLoadFailed('timeout'),
       'Could not load activities: timeout',
+    );
+    expect(
+      AppLocalizations.forTag('en').activityChannelLabel(channel: 4),
+      'Activity page',
+    );
+    expect(
+      AppLocalizations.forTag('en').activityTypeLabel(fallback: '专题活动'),
+      'Themed campaign',
+    );
+    expect(
+      AppLocalizations.forTag('en').activityTargetTypeLabel(targetType: 4),
+      'ranking',
     );
     expect(
       AppLocalizations.forTag('en').openTargetFailed('deal', 'offline'),

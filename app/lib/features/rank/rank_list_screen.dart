@@ -114,7 +114,9 @@ class _RankListScreenState extends State<RankListScreen> {
                   FilledButton(
                     key: const Key('rank-list-retry'),
                     onPressed: _reloading ? null : _reload,
-                    child: Text(_reloading ? strings.processing : strings.retry),
+                    child: Text(
+                      _reloading ? strings.processing : strings.retry,
+                    ),
                   ),
                 ],
               ),
@@ -132,8 +134,12 @@ class _RankListScreenState extends State<RankListScreen> {
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final item = items[index];
+                final typeText = strings.rankTypeLabel(
+                  type: item.type,
+                  fallback: item.typeText,
+                );
                 final meta = [
-                  item.typeText,
+                  typeText,
                   if (item.cityName.isNotEmpty) item.cityName,
                   if (item.categoryName.isNotEmpty) item.categoryName,
                   if (item.period.isNotEmpty) item.period,

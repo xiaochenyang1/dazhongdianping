@@ -5,7 +5,9 @@ class ActivitySummary {
     required this.id,
     required this.name,
     required this.cityName,
+    required this.channel,
     required this.channelText,
+    required this.type,
     required this.typeText,
     required this.cover,
     required this.startAt,
@@ -16,7 +18,9 @@ class ActivitySummary {
   final int id;
   final String name;
   final String cityName;
+  final int? channel;
   final String channelText;
+  final int? type;
   final String typeText;
   final String cover;
   final String startAt;
@@ -28,7 +32,9 @@ class ActivitySummary {
         id: (json['id'] as num?)?.toInt() ?? 0,
         name: json['name'] as String? ?? '',
         cityName: json['cityName'] as String? ?? '',
+        channel: (json['channel'] as num?)?.toInt(),
         channelText: json['channelText'] as String? ?? '',
+        type: (json['type'] as num?)?.toInt(),
         typeText: json['typeText'] as String? ?? '',
         cover: json['cover'] as String? ?? '',
         startAt: json['startAt'] as String? ?? '',
@@ -75,7 +81,9 @@ class ActivityDetail {
     required this.id,
     required this.name,
     required this.cityName,
+    required this.channel,
     required this.channelText,
+    required this.type,
     required this.typeText,
     required this.cover,
     required this.startAt,
@@ -86,7 +94,9 @@ class ActivityDetail {
   final int id;
   final String name;
   final String cityName;
+  final int? channel;
   final String channelText;
+  final int? type;
   final String typeText;
   final String cover;
   final String startAt;
@@ -102,7 +112,9 @@ class ActivityDetail {
       id: (json['id'] as num?)?.toInt() ?? 0,
       name: json['name'] as String? ?? '',
       cityName: json['cityName'] as String? ?? '',
+      channel: (json['channel'] as num?)?.toInt(),
       channelText: json['channelText'] as String? ?? '',
+      type: (json['type'] as num?)?.toInt(),
       typeText: json['typeText'] as String? ?? '',
       cover: json['cover'] as String? ?? '',
       startAt: json['startAt'] as String? ?? '',

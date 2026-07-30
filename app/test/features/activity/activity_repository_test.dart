@@ -20,8 +20,10 @@ class ActivityFakeApi implements JsonApi {
             'id': 9001,
             'name': '暑期火锅节',
             'cityName': '上海',
-            'channelText': 'C端',
-            'typeText': '专题',
+            'channel': 4,
+            'channelText': '活动页',
+            'type': 1,
+            'typeText': '专题活动',
             'cover': '',
             'startAt': '2026-07-01',
             'endAt': '2026-08-31',
@@ -35,8 +37,10 @@ class ActivityFakeApi implements JsonApi {
         'id': 9001,
         'name': '暑期火锅节',
         'cityName': '上海',
-        'channelText': 'C端',
-        'typeText': '专题',
+        'channel': 4,
+        'channelText': '活动页',
+        'type': 1,
+        'typeText': '专题活动',
         'cover': '',
         'startAt': '2026-07-01',
         'endAt': '2026-08-31',
@@ -71,9 +75,13 @@ void main() {
     expect(api.path, '/api/c/v1/activities');
     expect(api.query?['limit'], 12);
     expect(activities.single.name, '暑期火锅节');
+    expect(activities.single.channel, 4);
+    expect(activities.single.type, 1);
 
     final detail = await repository.loadActivityDetail(9001);
     expect(api.path, '/api/c/v1/activities/9001');
+    expect(detail.channel, 4);
+    expect(detail.type, 1);
     expect(detail.items.single.targetName, '渝里火锅徐汇店');
     expect(detail.items.single.targetType, 1);
   });

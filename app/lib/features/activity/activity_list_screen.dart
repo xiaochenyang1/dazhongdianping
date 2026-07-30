@@ -114,7 +114,9 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                   FilledButton(
                     key: const Key('activity-list-retry'),
                     onPressed: _reloading ? null : _reload,
-                    child: Text(_reloading ? strings.processing : strings.retry),
+                    child: Text(
+                      _reloading ? strings.processing : strings.retry,
+                    ),
                   ),
                 ],
               ),
@@ -132,9 +134,17 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final item = items[index];
+                final typeText = strings.activityTypeLabel(
+                  type: item.type,
+                  fallback: item.typeText,
+                );
+                final channelText = strings.activityChannelLabel(
+                  channel: item.channel,
+                  fallback: item.channelText,
+                );
                 final meta = [
-                  item.typeText,
-                  item.channelText,
+                  typeText,
+                  channelText,
                   if (item.cityName.isNotEmpty) item.cityName,
                   strings.resourceCount(item.itemCount),
                 ].where((part) => part.isNotEmpty).join(' · ');

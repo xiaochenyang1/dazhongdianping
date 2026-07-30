@@ -180,12 +180,10 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       }
     } catch (error) {
       if (mounted) {
-        final targetName = switch (item.targetType) {
-          2 => strings.targetDeal,
-          5 => strings.targetTopic,
-          6 => strings.targetExternalLink,
-          _ => strings.targetResource,
-        };
+        final targetName = strings.activityTargetTypeLabel(
+          targetType: item.targetType,
+          fallback: item.targetTypeText,
+        );
         _showOpenError(strings.openTargetFailed(targetName, error));
       }
     } finally {
@@ -221,13 +219,23 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                     key: const Key('activity-detail-retry'),
                     onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloading ? strings.processing : strings.retry),
+                    label: Text(
+                      _reloading ? strings.processing : strings.retry,
+                    ),
                   ),
                 ],
               ),
             );
           }
           final detail = snapshot.data!;
+          final typeText = strings.activityTypeLabel(
+            type: detail.type,
+            fallback: detail.typeText,
+          );
+          final channelText = strings.activityChannelLabel(
+            channel: detail.channel,
+            fallback: detail.channelText,
+          );
           final period = [
             if (detail.startAt.isNotEmpty) detail.startAt,
             if (detail.endAt.isNotEmpty) detail.endAt,
@@ -245,8 +253,8 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
               const SizedBox(height: 8),
               Text(
                 [
-                  detail.typeText,
-                  detail.channelText,
+                  typeText,
+                  channelText,
                   if (detail.cityName.isNotEmpty) detail.cityName,
                   if (period.isNotEmpty) period,
                 ].where((part) => part.isNotEmpty).join(' · '),
@@ -267,7 +275,10 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                       ),
                       subtitle: Text(
                         [
-                          item.targetTypeText,
+                          strings.activityTargetTypeLabel(
+                            targetType: item.targetType,
+                            fallback: item.targetTypeText,
+                          ),
                           if (item.subtitle.isNotEmpty) item.subtitle,
                           if (item.targetName.isNotEmpty &&
                               item.title.isNotEmpty)

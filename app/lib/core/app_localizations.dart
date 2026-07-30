@@ -64,6 +64,9 @@ class AppLocalizations {
     'refreshRanksFailed': '刷新榜单失败：{error}',
     'ranksLoadFailed': '榜单加载失败：{error}',
     'noPublicRanks': '当前区域暂无公开榜单',
+    'rankTypeMustEat': '必吃榜',
+    'rankTypeTopRated': '好评榜',
+    'rankTypeTrending': '热门榜',
     'shopCount': '{count} 家门店',
     'topShop': '榜首 {name}',
     'rankDetailLoadFailed': '榜单详情加载失败：{error}',
@@ -72,12 +75,25 @@ class AppLocalizations {
     'refreshActivitiesFailed': '刷新活动失败：{error}',
     'activitiesLoadFailed': '活动加载失败：{error}',
     'noOnlineActivities': '当前区域暂无上线活动',
+    'activityChannelHome': '首页',
+    'activityChannelSearch': '搜索',
+    'activityChannelChannel': '频道',
+    'activityChannelPage': '活动页',
+    'activityChannelCommunity': '社区',
+    'activityTypeThemed': '专题活动',
+    'activityTypeHoliday': '节日活动',
+    'activityTypeNewCustomer': '新客活动',
+    'activityTypeMerchantSupport': '商户扶持',
+    'activityTypeContentTopic': '内容话题',
     'resourceCount': '{count} 个资源',
     'activityDetailLoadFailed': '活动详情加载失败：{error}',
     'activityNoItems': '该活动暂无资源项',
     'cannotOpenExternalLink': '无法打开外部链接',
     'openTargetFailed': '{target}打开失败：{error}',
+    'targetShop': '店铺',
     'targetDeal': '团购',
+    'targetPost': '帖子',
+    'targetRank': '榜单',
     'targetTopic': '话题',
     'targetExternalLink': '外部链接',
     'targetResource': '资源',
@@ -762,6 +778,9 @@ class AppLocalizations {
     'refreshRanksFailed': '重新整理排行榜失敗：{error}',
     'ranksLoadFailed': '排行榜載入失敗：{error}',
     'noPublicRanks': '目前區域暫無公開排行榜',
+    'rankTypeMustEat': '必吃榜',
+    'rankTypeTopRated': '好評榜',
+    'rankTypeTrending': '熱門榜',
     'shopCount': '{count} 家店家',
     'topShop': '榜首 {name}',
     'rankDetailLoadFailed': '排行榜詳情載入失敗：{error}',
@@ -770,12 +789,25 @@ class AppLocalizations {
     'refreshActivitiesFailed': '重新整理活動失敗：{error}',
     'activitiesLoadFailed': '活動載入失敗：{error}',
     'noOnlineActivities': '目前區域暫無上線活動',
+    'activityChannelHome': '首頁',
+    'activityChannelSearch': '搜尋',
+    'activityChannelChannel': '頻道',
+    'activityChannelPage': '活動頁',
+    'activityChannelCommunity': '社群',
+    'activityTypeThemed': '專題活動',
+    'activityTypeHoliday': '節日活動',
+    'activityTypeNewCustomer': '新客活動',
+    'activityTypeMerchantSupport': '商戶扶持',
+    'activityTypeContentTopic': '內容話題',
     'resourceCount': '{count} 個資源',
     'activityDetailLoadFailed': '活動詳情載入失敗：{error}',
     'activityNoItems': '此活動暫無資源項',
     'cannotOpenExternalLink': '無法開啟外部連結',
     'openTargetFailed': '{target}開啟失敗：{error}',
+    'targetShop': '店家',
     'targetDeal': '團購',
+    'targetPost': '貼文',
+    'targetRank': '排行榜',
     'targetTopic': '話題',
     'targetExternalLink': '外部連結',
     'targetResource': '資源',
@@ -1464,6 +1496,9 @@ class AppLocalizations {
     'refreshRanksFailed': 'Could not refresh rankings: {error}',
     'ranksLoadFailed': 'Could not load rankings: {error}',
     'noPublicRanks': 'No public rankings in this region yet',
+    'rankTypeMustEat': 'Must-eat ranking',
+    'rankTypeTopRated': 'Top-rated ranking',
+    'rankTypeTrending': 'Trending ranking',
     'shopCount': '{count} places',
     'topShop': 'Top place: {name}',
     'rankDetailLoadFailed': 'Could not load ranking details: {error}',
@@ -1472,12 +1507,25 @@ class AppLocalizations {
     'refreshActivitiesFailed': 'Could not refresh activities: {error}',
     'activitiesLoadFailed': 'Could not load activities: {error}',
     'noOnlineActivities': 'No live activities in this region yet',
+    'activityChannelHome': 'Home',
+    'activityChannelSearch': 'Search',
+    'activityChannelChannel': 'Channel',
+    'activityChannelPage': 'Activity page',
+    'activityChannelCommunity': 'Community',
+    'activityTypeThemed': 'Themed campaign',
+    'activityTypeHoliday': 'Holiday campaign',
+    'activityTypeNewCustomer': 'New customer campaign',
+    'activityTypeMerchantSupport': 'Merchant support',
+    'activityTypeContentTopic': 'Content topic',
     'resourceCount': '{count} resources',
     'activityDetailLoadFailed': 'Could not load activity details: {error}',
     'activityNoItems': 'This activity has no resources yet',
     'cannotOpenExternalLink': 'Could not open the external link',
     'openTargetFailed': 'Could not open {target}: {error}',
+    'targetShop': 'place',
     'targetDeal': 'deal',
+    'targetPost': 'post',
+    'targetRank': 'ranking',
     'targetTopic': 'topic',
     'targetExternalLink': 'external link',
     'targetResource': 'resource',
@@ -2259,6 +2307,9 @@ class AppLocalizations {
       _withError('refreshRanksFailed', error);
   String ranksLoadFailed(Object error) => _withError('ranksLoadFailed', error);
   String get noPublicRanks => _text('noPublicRanks');
+  String get rankTypeMustEat => _text('rankTypeMustEat');
+  String get rankTypeTopRated => _text('rankTypeTopRated');
+  String get rankTypeTrending => _text('rankTypeTrending');
   String shopCount(int count) => _withCount('shopCount', count);
   String topShop(String name) => _withName('topShop', name);
   String rankDetailLoadFailed(Object error) =>
@@ -2270,6 +2321,17 @@ class AppLocalizations {
   String activitiesLoadFailed(Object error) =>
       _withError('activitiesLoadFailed', error);
   String get noOnlineActivities => _text('noOnlineActivities');
+  String get activityChannelHome => _text('activityChannelHome');
+  String get activityChannelSearch => _text('activityChannelSearch');
+  String get activityChannelChannel => _text('activityChannelChannel');
+  String get activityChannelPage => _text('activityChannelPage');
+  String get activityChannelCommunity => _text('activityChannelCommunity');
+  String get activityTypeThemed => _text('activityTypeThemed');
+  String get activityTypeHoliday => _text('activityTypeHoliday');
+  String get activityTypeNewCustomer => _text('activityTypeNewCustomer');
+  String get activityTypeMerchantSupport =>
+      _text('activityTypeMerchantSupport');
+  String get activityTypeContentTopic => _text('activityTypeContentTopic');
   String resourceCount(int count) => _withCount('resourceCount', count);
   String activityDetailLoadFailed(Object error) =>
       _withError('activityDetailLoadFailed', error);
@@ -2278,10 +2340,111 @@ class AppLocalizations {
   String openTargetFailed(String target, Object error) => _text(
     'openTargetFailed',
   ).replaceFirst('{target}', target).replaceFirst('{error}', '$error');
+  String get targetShop => _text('targetShop');
   String get targetDeal => _text('targetDeal');
+  String get targetPost => _text('targetPost');
+  String get targetRank => _text('targetRank');
   String get targetTopic => _text('targetTopic');
   String get targetExternalLink => _text('targetExternalLink');
   String get targetResource => _text('targetResource');
+  String rankTypeLabel({int? type, String? fallback}) {
+    if (type != null) {
+      return switch (type) {
+        1 => rankTypeMustEat,
+        2 => rankTypeTopRated,
+        3 => rankTypeTrending,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : targetRank,
+      };
+    }
+    return switch (fallback) {
+      '必吃榜' || 'Must-eat ranking' => rankTypeMustEat,
+      '好评榜' || '好評榜' || 'Top-rated ranking' => rankTypeTopRated,
+      '热门榜' || '熱門榜' || 'Trending ranking' => rankTypeTrending,
+      final value when value != null && value.isNotEmpty => value,
+      _ => targetRank,
+    };
+  }
+
+  String activityChannelLabel({int? channel, String? fallback}) {
+    if (channel != null) {
+      return switch (channel) {
+        1 => activityChannelHome,
+        2 => activityChannelSearch,
+        3 => activityChannelChannel,
+        4 => activityChannelPage,
+        5 => activityChannelCommunity,
+        _ =>
+          fallback != null && fallback.isNotEmpty ? fallback : targetResource,
+      };
+    }
+    return switch (fallback) {
+      '首页' || '首頁' || 'Home' => activityChannelHome,
+      '搜索' || '搜尋' || 'Search' => activityChannelSearch,
+      '频道' || '頻道' || 'Channel' => activityChannelChannel,
+      '活动页' || '活動頁' || 'Activity page' => activityChannelPage,
+      '社区' || '社區' || '社群' || 'Community' => activityChannelCommunity,
+      final value when value != null && value.isNotEmpty => value,
+      _ => targetResource,
+    };
+  }
+
+  String activityTypeLabel({int? type, String? fallback}) {
+    if (type != null) {
+      return switch (type) {
+        1 => activityTypeThemed,
+        2 => activityTypeHoliday,
+        3 => activityTypeNewCustomer,
+        4 => activityTypeMerchantSupport,
+        5 => activityTypeContentTopic,
+        _ =>
+          fallback != null && fallback.isNotEmpty ? fallback : targetResource,
+      };
+    }
+    return switch (fallback) {
+      '专题活动' ||
+      '專題活動' ||
+      '专题' ||
+      '專題' ||
+      'Themed campaign' => activityTypeThemed,
+      '节日活动' || '節日活動' || 'Holiday campaign' => activityTypeHoliday,
+      '新客活动' || '新客活動' || 'New customer campaign' => activityTypeNewCustomer,
+      '商户扶持' || '商戶扶持' || 'Merchant support' => activityTypeMerchantSupport,
+      '内容话题' || '內容話題' || 'Content topic' => activityTypeContentTopic,
+      final value when value != null && value.isNotEmpty => value,
+      _ => targetResource,
+    };
+  }
+
+  String activityTargetTypeLabel({int? targetType, String? fallback}) {
+    if (targetType != null) {
+      return switch (targetType) {
+        1 => targetShop,
+        2 => targetDeal,
+        3 => targetPost,
+        4 => targetRank,
+        5 => targetTopic,
+        6 => targetExternalLink,
+        _ =>
+          fallback != null && fallback.isNotEmpty ? fallback : targetResource,
+      };
+    }
+    return switch (fallback) {
+      '店铺' || '店家' || 'Shop' || 'Place' || 'place' => targetShop,
+      '团购' || '團購' || 'Deal' || 'deal' => targetDeal,
+      '帖子' || '貼文' || 'Post' || 'post' => targetPost,
+      '榜单' || '排行榜' || 'Ranking' || 'ranking' => targetRank,
+      '话题' || '話題' || 'Topic' || 'topic' => targetTopic,
+      '外链' ||
+      '外鏈' ||
+      '外部链接' ||
+      '外部連結' ||
+      'External link' ||
+      'external link' => targetExternalLink,
+      final value when value != null && value.isNotEmpty => value,
+      _ => targetResource,
+    };
+  }
+
   String refreshNotificationsFailed(Object error) =>
       _withError('refreshNotificationsFailed', error);
   String loadMoreFailed(Object error) => _withError('loadMoreFailed', error);

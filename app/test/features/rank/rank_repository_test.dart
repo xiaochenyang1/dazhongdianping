@@ -79,10 +79,12 @@ void main() {
     final ranks = await repository.loadRanks();
     expect(api.path, '/api/c/v1/ranks');
     expect(ranks.single.name, '上海必吃榜');
+    expect(ranks.single.type, 1);
     expect(ranks.single.topShopName, '渝里火锅徐汇店');
 
     final detail = await repository.loadRankDetail(30001);
     expect(api.path, '/api/c/v1/ranks/30001');
+    expect(detail.type, 1);
     expect(detail.items.single.shop.name, '渝里火锅徐汇店');
     expect(detail.items.single.shop.merchantCertificationLabel, '认证商户');
   });

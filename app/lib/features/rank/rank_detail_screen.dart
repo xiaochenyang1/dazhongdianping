@@ -83,13 +83,19 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
                     key: const Key('rank-detail-retry'),
                     onPressed: _reloading ? null : _reload,
                     icon: const Icon(Icons.refresh),
-                    label: Text(_reloading ? strings.processing : strings.retry),
+                    label: Text(
+                      _reloading ? strings.processing : strings.retry,
+                    ),
                   ),
                 ],
               ),
             );
           }
           final detail = snapshot.data!;
+          final typeText = strings.rankTypeLabel(
+            type: detail.type,
+            fallback: detail.typeText,
+          );
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -103,7 +109,7 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
               const SizedBox(height: 8),
               Text(
                 [
-                  detail.typeText,
+                  typeText,
                   if (detail.cityName.isNotEmpty) detail.cityName,
                   if (detail.categoryName.isNotEmpty) detail.categoryName,
                   if (detail.period.isNotEmpty) detail.period,

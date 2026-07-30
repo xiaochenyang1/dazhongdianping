@@ -54,6 +54,7 @@ class RankScreenApi implements JsonApi {
           {
             'id': 30001,
             'name': '上海必吃榜',
+            'type': 1,
             'typeText': '必吃榜',
             'cityName': '上海',
             'categoryName': '火锅',
@@ -75,6 +76,7 @@ class RankScreenApi implements JsonApi {
       return {
         'id': 30001,
         'name': '上海必吃榜',
+        'type': 1,
         'typeText': '必吃榜',
         'cityName': '上海',
         'categoryName': '火锅',
@@ -117,8 +119,10 @@ class ActivityScreenApi implements JsonApi {
             'id': 9001,
             'name': '暑期火锅节',
             'cityName': '上海',
-            'channelText': 'C端',
-            'typeText': '专题',
+            'channel': 4,
+            'channelText': '活动页',
+            'type': 1,
+            'typeText': '专题活动',
             'cover': '',
             'startAt': '2026-07-01',
             'endAt': '2026-08-31',
@@ -138,12 +142,25 @@ class ActivityScreenApi implements JsonApi {
         'id': 9001,
         'name': '暑期火锅节',
         'cityName': '上海',
-        'channelText': 'C端',
-        'typeText': '专题',
+        'channel': 4,
+        'channelText': '活动页',
+        'type': 1,
+        'typeText': '专题活动',
         'cover': '',
         'startAt': '2026-07-01',
         'endAt': '2026-08-31',
-        'items': const [],
+        'items': [
+          {
+            'id': 1,
+            'targetType': 4,
+            'targetTypeText': '榜单',
+            'targetId': 30001,
+            'targetName': '上海必吃榜',
+            'title': '榜单入口',
+            'subtitle': '',
+            'linkUrl': '',
+          },
+        ],
       };
     }
     return const {};
@@ -259,7 +276,9 @@ void main() {
     expect(find.text('榜单详情'), findsOneWidget);
   });
 
-  testWidgets('rank and activity screens switch English chrome', (tester) async {
+  testWidgets('rank and activity screens switch English chrome', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       localizedApp(
         locale: const Locale('en'),
@@ -270,6 +289,7 @@ void main() {
     expect(find.text('City rankings'), findsOneWidget);
     expect(find.textContaining('10 places'), findsOneWidget);
     expect(find.textContaining('Top place:'), findsOneWidget);
+    expect(find.textContaining('Must-eat ranking'), findsOneWidget);
 
     await tester.pumpWidget(
       localizedApp(
@@ -282,6 +302,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Activities'), findsOneWidget);
     expect(find.textContaining('3 resources'), findsOneWidget);
+    expect(find.textContaining('Themed campaign'), findsOneWidget);
+    expect(find.textContaining('Activity page'), findsOneWidget);
+  });
+
+  testWidgets('rank and activity detail screens localize English metadata', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: RankDetailScreen(
+          repository: RankRepository(RankScreenApi()),
+          rankId: 30001,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Must-eat ranking'), findsOneWidget);
+
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ActivityDetailScreen(
+          repository: ActivityRepository(ActivityScreenApi()),
+          activityId: 9001,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Themed campaign'), findsOneWidget);
+    expect(find.textContaining('Activity page'), findsOneWidget);
+    expect(find.textContaining('ranking'), findsOneWidget);
   });
 
   testWidgets('rank list guards duplicate detail navigation', (tester) async {
