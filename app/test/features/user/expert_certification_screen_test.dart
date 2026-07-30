@@ -13,6 +13,7 @@ class ExpertCertApi implements JsonApi {
   Object? body;
   int status = 0;
   String reason = '';
+  Object? loadError;
   Object? applyError;
   int failLoads = 0;
   int loadRequests = 0;
@@ -25,6 +26,9 @@ class ExpertCertApi implements JsonApi {
   }) async {
     this.path = path;
     loadRequests++;
+    if (loadError != null) {
+      throw loadError!;
+    }
     if (failLoads > 0) {
       failLoads--;
       throw StateError('certification unavailable');
@@ -209,5 +213,26 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('待审核达人认证申请'), findsNothing);
+  });
+
+  testWidgets('expert certification localizes load errors in English', (
+    tester,
+  ) async {
+    final api = ExpertCertApi()..loadError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ExpertCertificationScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load certification status: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
   });
 }

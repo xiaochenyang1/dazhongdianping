@@ -1,6 +1,7 @@
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:flutter/material.dart';
 
 class ExpertCertificationScreen extends StatefulWidget {
@@ -107,20 +108,14 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
   }
 
   String _localizedExpertError(AppLocalizations strings, Object error) {
-    if (error is! ApiException) {
-      return '$error';
-    }
-    final localized = switch (error.message.trim()) {
-      '当前已有待审核达人认证申请' => strings.expertErrorPendingExists,
-      '当前已是认证达人，无需重复申请' => strings.expertErrorAlreadyApproved,
-      _ => null,
-    };
-    if (localized == null) {
-      return '$error';
-    }
-    return error.traceId == null
-        ? localized
-        : '$localized [traceId: ${error.traceId}]';
+    return localizeAuthError(
+      strings,
+      error,
+      overrides: {
+        '当前已有待审核达人认证申请': strings.expertErrorPendingExists,
+        '当前已是认证达人，无需重复申请': strings.expertErrorAlreadyApproved,
+      },
+    );
   }
 
   @override
@@ -139,7 +134,11 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.expertStatusLoadFailed(snapshot.error!)),
+                  Text(
+                    strings.expertStatusLoadFailed(
+                      _localizedExpertError(strings, snapshot.error!),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('expert-cert-retry'),
