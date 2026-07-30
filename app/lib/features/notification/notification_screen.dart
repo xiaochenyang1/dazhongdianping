@@ -369,6 +369,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return strings.notificationTitleCouponReminder;
       case 'coupon.verified':
         return strings.notificationTitleCouponVerified;
+      case 'review.like':
+        return strings.notificationTitleReviewLike;
+      case 'review.comment':
+        return strings.notificationTitleReviewComment;
+      case 'review.comment.reply':
+      case 'post.comment.reply':
+        return strings.notificationTitleCommentReply;
+      case 'post.like':
+        return strings.notificationTitlePostLike;
+      case 'post.comment':
+        return strings.notificationTitlePostComment;
+      case 'post.repost':
+        return strings.notificationTitlePostRepost;
       case 'review.reply':
         return _canLocalizeMerchantReplyTitle(notification.title)
             ? strings.notificationTitleMerchantReply
@@ -418,6 +431,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return _localizedCouponReminderContent(strings, notification);
       case 'coupon.verified':
         return _localizedCouponVerifiedContent(strings, notification);
+      case 'review.like':
+        return _localizedReviewLikeContent(strings, notification);
+      case 'review.comment':
+        return _localizedReviewCommentContent(strings, notification);
+      case 'review.comment.reply':
+      case 'post.comment.reply':
+        return _localizedCommentReplyContent(strings, notification);
+      case 'post.like':
+        return _localizedPostLikeContent(strings, notification);
+      case 'post.comment':
+        return _localizedPostCommentContent(strings, notification);
+      case 'post.repost':
+        return _localizedPostRepostContent(strings, notification);
       case 'expert.certification.result':
         return _localizedExpertCertificationContent(strings, notification);
       case 'review.audit.result':
@@ -685,6 +711,129 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return localized.join(_notificationSeparator);
   }
 
+  String _localizedReviewLikeContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractReviewLikeContent(notification.content);
+    final actorName = _preferredNotificationActorName(
+      notification,
+      parsed?.name,
+    );
+    final preview = parsed?.preview;
+    if (actorName == null ||
+        actorName.isEmpty ||
+        preview == null ||
+        preview.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationLikedYourReview(
+      name: actorName,
+      preview: preview,
+    );
+  }
+
+  String _localizedReviewCommentContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractReviewCommentContent(notification.content);
+    final actorName = _preferredNotificationActorName(
+      notification,
+      parsed?.name,
+    );
+    final preview = parsed?.preview;
+    if (actorName == null ||
+        actorName.isEmpty ||
+        preview == null ||
+        preview.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationCommentedOnYourReview(
+      name: actorName,
+      preview: preview,
+    );
+  }
+
+  String _localizedCommentReplyContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractCommentReplyContent(notification.content);
+    final actorName = _preferredNotificationActorName(
+      notification,
+      parsed?.name,
+    );
+    final preview = parsed?.preview;
+    if (actorName == null ||
+        actorName.isEmpty ||
+        preview == null ||
+        preview.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationRepliedToYou(name: actorName, preview: preview);
+  }
+
+  String _localizedPostLikeContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractPostLikeContent(notification.content);
+    final actorName = _preferredNotificationActorName(
+      notification,
+      parsed?.name,
+    );
+    final title = parsed?.title;
+    if (actorName == null ||
+        actorName.isEmpty ||
+        title == null ||
+        title.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationLikedYourPost(name: actorName, title: title);
+  }
+
+  String _localizedPostCommentContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractPostCommentContent(notification.content);
+    final actorName = _preferredNotificationActorName(
+      notification,
+      parsed?.name,
+    );
+    final preview = parsed?.preview;
+    if (actorName == null ||
+        actorName.isEmpty ||
+        preview == null ||
+        preview.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationCommentedOnYourPost(
+      name: actorName,
+      preview: preview,
+    );
+  }
+
+  String _localizedPostRepostContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final parsed = _extractPostRepostContent(notification.content);
+    final actorName = _preferredNotificationActorName(
+      notification,
+      parsed?.name,
+    );
+    final title = parsed?.title;
+    if (actorName == null ||
+        actorName.isEmpty ||
+        title == null ||
+        title.isEmpty) {
+      return notification.content;
+    }
+    return strings.notificationRepostedYourPost(name: actorName, title: title);
+  }
+
   String _localizedExpertCertificationContent(
     AppLocalizations strings,
     AppNotification notification,
@@ -761,6 +910,21 @@ class _NotificationScreenState extends State<NotificationScreen> {
     };
   }
 
+  String? _preferredNotificationActorName(
+    AppNotification notification,
+    String? parsedName,
+  ) {
+    final actorName = notification.actorName.trim();
+    if (actorName.isNotEmpty) {
+      return actorName;
+    }
+    final fallback = parsedName?.trim();
+    if (fallback == null || fallback.isEmpty) {
+      return null;
+    }
+    return fallback;
+  }
+
   String? _notificationQueryValue(String linkUrl, String key) {
     final uri = Uri.tryParse(linkUrl);
     final value = uri?.queryParameters[key]?.trim();
@@ -816,6 +980,59 @@ class _NotificationScreenState extends State<NotificationScreen> {
       return null;
     }
     return (actor: actor, remark: match?.group(2)?.trim());
+  }
+
+  ({String name, String preview})? _extractReviewLikeContent(String content) =>
+      _extractNamedNotificationPreview(content, r'(?:赞了你的点评|讚了你的評論)');
+
+  ({String name, String preview})? _extractReviewCommentContent(
+    String content,
+  ) => _extractNamedNotificationPreview(content, r'(?:评论了你的点评|評論了你的評論)');
+
+  ({String name, String preview})? _extractCommentReplyContent(
+    String content,
+  ) => _extractNamedNotificationPreview(content, r'(?:回复了你|回覆了你)');
+
+  ({String name, String title})? _extractPostLikeContent(String content) =>
+      _extractNamedNotificationTitle(content, r'(?:赞了你的帖子|讚了你的貼文)');
+
+  ({String name, String preview})? _extractPostCommentContent(String content) =>
+      _extractNamedNotificationPreview(content, r'(?:评论了你的帖子|評論了你的貼文)');
+
+  ({String name, String title})? _extractPostRepostContent(String content) =>
+      _extractNamedNotificationTitle(content, r'(?:转发了你的帖子|轉發了你的貼文)');
+
+  ({String name, String preview})? _extractNamedNotificationPreview(
+    String content,
+    String actionPattern,
+  ) {
+    final match = RegExp(
+      '^(.+?)\\s+$actionPattern[：:]\\s*(.+)\$',
+    ).firstMatch(content.trim());
+    final name = match?.group(1)?.trim();
+    final preview = match?.group(2)?.trim();
+    if (name == null || name.isEmpty || preview == null || preview.isEmpty) {
+      return null;
+    }
+    return (name: name, preview: preview);
+  }
+
+  ({String name, String title})? _extractNamedNotificationTitle(
+    String content,
+    String actionPattern,
+  ) {
+    final match = RegExp(
+      '^(.+?)\\s+$actionPattern(?:《(.+?)》|「(.+?)」|"(.+?)")\$',
+    ).firstMatch(content.trim());
+    final name = match?.group(1)?.trim();
+    final title =
+        match?.group(2)?.trim() ??
+        match?.group(3)?.trim() ??
+        match?.group(4)?.trim();
+    if (name == null || name.isEmpty || title == null || title.isEmpty) {
+      return null;
+    }
+    return (name: name, title: title);
   }
 
   String? _extractOrderNumber(String segment) {

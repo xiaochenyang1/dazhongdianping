@@ -157,6 +157,18 @@ class AppLocalizations {
     'notificationReviewApprovedContent': '{shop} · 你的点评已公开展示',
     'notificationReviewRejectedContent': '{shop} · 你的点评未通过审核',
     'notificationReviewHiddenContent': '{shop} · 商户申诉成立，你的点评已从公开展示中隐藏',
+    'notificationTitleReviewLike': '点评获赞',
+    'notificationTitleReviewComment': '点评新评论',
+    'notificationTitleCommentReply': '评论被回复',
+    'notificationTitlePostLike': '帖子获赞',
+    'notificationTitlePostComment': '帖子新评论',
+    'notificationTitlePostRepost': '帖子被转发',
+    'notificationLikedYourReview': '{name} 赞了你的点评：{preview}',
+    'notificationCommentedOnYourReview': '{name} 评论了你的点评：{preview}',
+    'notificationRepliedToYou': '{name} 回复了你：{preview}',
+    'notificationLikedYourPost': '{name} 赞了你的帖子《{title}》',
+    'notificationCommentedOnYourPost': '{name} 评论了你的帖子：{preview}',
+    'notificationRepostedYourPost': '{name} 转发了你的帖子《{title}》',
     'loggingOut': '退出中...',
     'logout': '退出',
     'profileLoadFailed': '用户资料加载失败：{error}',
@@ -916,6 +928,18 @@ class AppLocalizations {
     'notificationReviewApprovedContent': '{shop} · 你的評論已公開展示',
     'notificationReviewRejectedContent': '{shop} · 你的評論未通過審核',
     'notificationReviewHiddenContent': '{shop} · 商家申訴成立，你的評論已從公開展示中隱藏',
+    'notificationTitleReviewLike': '評論獲讚',
+    'notificationTitleReviewComment': '評論新留言',
+    'notificationTitleCommentReply': '評論被回覆',
+    'notificationTitlePostLike': '貼文獲讚',
+    'notificationTitlePostComment': '貼文新留言',
+    'notificationTitlePostRepost': '貼文被轉發',
+    'notificationLikedYourReview': '{name} 讚了你的評論：{preview}',
+    'notificationCommentedOnYourReview': '{name} 評論了你的評論：{preview}',
+    'notificationRepliedToYou': '{name} 回覆了你：{preview}',
+    'notificationLikedYourPost': '{name} 讚了你的貼文《{title}》',
+    'notificationCommentedOnYourPost': '{name} 評論了你的貼文：{preview}',
+    'notificationRepostedYourPost': '{name} 轉發了你的貼文《{title}》',
     'loggingOut': '登出中...',
     'logout': '登出',
     'profileLoadFailed': '使用者資料載入失敗：{error}',
@@ -1688,6 +1712,20 @@ class AppLocalizations {
     'notificationReviewRejectedContent': '{shop} · Your review was rejected',
     'notificationReviewHiddenContent':
         '{shop} · The merchant appeal was approved and your review was hidden from public view',
+    'notificationTitleReviewLike': 'Review liked',
+    'notificationTitleReviewComment': 'New review comment',
+    'notificationTitleCommentReply': 'Comment reply',
+    'notificationTitlePostLike': 'Post liked',
+    'notificationTitlePostComment': 'New post comment',
+    'notificationTitlePostRepost': 'Post reposted',
+    'notificationLikedYourReview': '{name} liked your review: {preview}',
+    'notificationCommentedOnYourReview':
+        '{name} commented on your review: {preview}',
+    'notificationRepliedToYou': '{name} replied to you: {preview}',
+    'notificationLikedYourPost': '{name} liked your post "{title}"',
+    'notificationCommentedOnYourPost':
+        '{name} commented on your post: {preview}',
+    'notificationRepostedYourPost': '{name} reposted your post "{title}"',
     'loggingOut': 'Signing out...',
     'logout': 'Sign out',
     'profileLoadFailed': 'Could not load profile: {error}',
@@ -2634,8 +2672,55 @@ class AppLocalizations {
       _text('notificationTitleCouponVerified');
   String get notificationTitleMerchantReply =>
       _text('notificationTitleMerchantReply');
+  String get notificationTitleReviewLike =>
+      _text('notificationTitleReviewLike');
+  String get notificationTitleReviewComment =>
+      _text('notificationTitleReviewComment');
+  String get notificationTitleCommentReply =>
+      _text('notificationTitleCommentReply');
+  String get notificationTitlePostLike => _text('notificationTitlePostLike');
+  String get notificationTitlePostComment =>
+      _text('notificationTitlePostComment');
+  String get notificationTitlePostRepost =>
+      _text('notificationTitlePostRepost');
   String notificationFollowedYou(String name) =>
       _text('notificationFollowedYou').replaceFirst('{name}', name);
+  String notificationLikedYourReview({
+    required String name,
+    required String preview,
+  }) => _text(
+    'notificationLikedYourReview',
+  ).replaceFirst('{name}', name).replaceFirst('{preview}', preview);
+  String notificationCommentedOnYourReview({
+    required String name,
+    required String preview,
+  }) => _text(
+    'notificationCommentedOnYourReview',
+  ).replaceFirst('{name}', name).replaceFirst('{preview}', preview);
+  String notificationRepliedToYou({
+    required String name,
+    required String preview,
+  }) => _text(
+    'notificationRepliedToYou',
+  ).replaceFirst('{name}', name).replaceFirst('{preview}', preview);
+  String notificationLikedYourPost({
+    required String name,
+    required String title,
+  }) => _text(
+    'notificationLikedYourPost',
+  ).replaceFirst('{name}', name).replaceFirst('{title}', title);
+  String notificationCommentedOnYourPost({
+    required String name,
+    required String preview,
+  }) => _text(
+    'notificationCommentedOnYourPost',
+  ).replaceFirst('{name}', name).replaceFirst('{preview}', preview);
+  String notificationRepostedYourPost({
+    required String name,
+    required String title,
+  }) => _text(
+    'notificationRepostedYourPost',
+  ).replaceFirst('{name}', name).replaceFirst('{title}', title);
   String notificationDirectMessagePreview({
     required String name,
     required String preview,

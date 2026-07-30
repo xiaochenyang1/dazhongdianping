@@ -100,6 +100,28 @@ void main() {
       'Alice followed you',
     );
     expect(
+      AppLocalizations.forTag('en').notificationTitleReviewLike,
+      'Review liked',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).notificationLikedYourReview(name: 'Alex', preview: 'So useful'),
+      'Alex liked your review: So useful',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).notificationRepliedToYou(name: 'Taylor', preview: 'Same here'),
+      'Taylor replied to you: Same here',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).notificationRepostedYourPost(name: 'Jordan', title: 'Late-night eats'),
+      'Jordan reposted your post "Late-night eats"',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).notificationDirectMessagePreview(name: 'Alex', preview: 'See you soon'),

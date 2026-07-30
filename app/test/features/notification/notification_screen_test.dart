@@ -59,6 +59,13 @@ class NotificationScreenApi implements JsonApi {
     this.reservationStatusNoShow = false,
     this.couponReminder = false,
     this.couponVerified = false,
+    this.reviewLike = false,
+    this.reviewComment = false,
+    this.reviewCommentReply = false,
+    this.postLike = false,
+    this.postComment = false,
+    this.postCommentReply = false,
+    this.postRepost = false,
     this.expertResult = false,
     this.reviewAuditApproved = false,
     this.reviewHidden = false,
@@ -80,6 +87,13 @@ class NotificationScreenApi implements JsonApi {
   final bool reservationStatusNoShow;
   final bool couponReminder;
   final bool couponVerified;
+  final bool reviewLike;
+  final bool reviewComment;
+  final bool reviewCommentReply;
+  final bool postLike;
+  final bool postComment;
+  final bool postCommentReply;
+  final bool postRepost;
   final bool expertResult;
   final bool reviewAuditApproved;
   final bool reviewHidden;
@@ -250,6 +264,104 @@ class NotificationScreenApi implements JsonApi {
         'title': '券码已核销',
         'content': 'CP-DEMO 已在柏林茶馆核销',
         'linkUrl': '/user/coupons/CP-DEMO',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (reviewLike) {
+      return {
+        'id': 1,
+        'type': 'review.like',
+        'actorUserId': 9,
+        'actorName': '慕尼黑小李',
+        'title': '点评获赞',
+        'content': '慕尼黑小李 赞了你的点评：这家店也太稳了',
+        'linkUrl': '/reviews/12',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (reviewComment) {
+      return {
+        'id': 1,
+        'type': 'review.comment',
+        'actorUserId': 9,
+        'actorName': '罗马小周',
+        'title': '点评新评论',
+        'content': '罗马小周 评论了你的点评：排队十分钟就能进',
+        'linkUrl': '/reviews/12',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (reviewCommentReply) {
+      return {
+        'id': 1,
+        'type': 'review.comment.reply',
+        'actorUserId': 9,
+        'actorName': '里昂阿澄',
+        'title': '评论被回复',
+        'content': '里昂阿澄 回复了你：我也喜欢这个套餐',
+        'linkUrl': '/reviews/12',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (postLike) {
+      return {
+        'id': 1,
+        'type': 'post.like',
+        'actorUserId': 9,
+        'actorName': '哥本哈根阿宁',
+        'title': '帖子获赞',
+        'content': '哥本哈根阿宁 赞了你的帖子《巴黎咖啡地图》',
+        'linkUrl': '/community/posts/88',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (postComment) {
+      return {
+        'id': 1,
+        'type': 'post.comment',
+        'actorUserId': 9,
+        'actorName': '苏黎世阿飞',
+        'title': '帖子新评论',
+        'content': '苏黎世阿飞 评论了你的帖子：收藏了这条路线',
+        'linkUrl': '/community/posts/88',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (postCommentReply) {
+      return {
+        'id': 1,
+        'type': 'post.comment.reply',
+        'actorUserId': 9,
+        'actorName': '米兰小顾',
+        'title': '评论被回复',
+        'content': '米兰小顾 回复了你：下次一起去',
+        'linkUrl': '/community/posts/88',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (postRepost) {
+      return {
+        'id': 1,
+        'type': 'post.repost',
+        'actorUserId': 9,
+        'actorName': '阿姆斯特丹小夏',
+        'title': '帖子被转发',
+        'content': '阿姆斯特丹小夏 转发了你的帖子《伦敦夜宵清单》',
+        'linkUrl': '/community/posts/88',
         'aggregateCount': 1,
         'read': read,
         'createdAt': '2026-07-15 10:00:00',
@@ -475,6 +587,48 @@ void main() {
       api: NotificationScreenApi(couponVerified: true),
       expectedTitle: 'Coupon redeemed',
       expectedContent: 'CP-DEMO was redeemed at 柏林茶馆',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(reviewLike: true),
+      expectedTitle: 'Review liked',
+      expectedContent: '慕尼黑小李 liked your review: 这家店也太稳了',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(reviewComment: true),
+      expectedTitle: 'New review comment',
+      expectedContent: '罗马小周 commented on your review: 排队十分钟就能进',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(reviewCommentReply: true),
+      expectedTitle: 'Comment reply',
+      expectedContent: '里昂阿澄 replied to you: 我也喜欢这个套餐',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(postLike: true),
+      expectedTitle: 'Post liked',
+      expectedContent: '哥本哈根阿宁 liked your post "巴黎咖啡地图"',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(postComment: true),
+      expectedTitle: 'New post comment',
+      expectedContent: '苏黎世阿飞 commented on your post: 收藏了这条路线',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(postCommentReply: true),
+      expectedTitle: 'Comment reply',
+      expectedContent: '米兰小顾 replied to you: 下次一起去',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(postRepost: true),
+      expectedTitle: 'Post reposted',
+      expectedContent: '阿姆斯特丹小夏 reposted your post "伦敦夜宵清单"',
     );
     await expectEnglishNotification(
       tester,
