@@ -62,7 +62,8 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   bool _deleting = false;
   bool _deleteDialogOpen = false;
   String? _loadError;
-  String _auditStatus = '';
+  int? _auditStatus;
+  String _auditStatusText = '';
   String _auditRemark = '';
 
   @override
@@ -87,7 +88,8 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         _images
           ..clear()
           ..addAll(post.images);
-        _auditStatus = post.auditStatusText;
+        _auditStatus = post.auditStatus;
+        _auditStatusText = post.auditStatusText;
         _auditRemark = post.auditRemark;
       });
     } catch (error) {
@@ -120,7 +122,8 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         image = await (widget.imagePicker ?? const SystemCommunityImagePicker())
             .pickImage();
       } catch (error) {
-        if (mounted) _showMessage(AppLocalizations.of(context).imagePickFailed(error));
+        if (mounted)
+          _showMessage(AppLocalizations.of(context).imagePickFailed(error));
         return;
       }
       if (image == null) return;
@@ -128,7 +131,8 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         final url = await widget.repository.uploadImage(image);
         if (mounted) setState(() => _images.add(url));
       } catch (error) {
-        if (mounted) _showMessage(AppLocalizations.of(context).imageUploadFailed(error));
+        if (mounted)
+          _showMessage(AppLocalizations.of(context).imageUploadFailed(error));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -164,12 +168,15 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
           ? await widget.repository.createPost(input)
           : await widget.repository.updatePost(widget.postId!, input);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).postSubmittedForAudit)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).postSubmittedForAudit),
+        ),
+      );
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(result);
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).postSaveFailed(error));
+      if (mounted)
+        _showMessage(AppLocalizations.of(context).postSaveFailed(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -213,15 +220,17 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
     try {
       await widget.repository.deletePost(postId);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).postDeleted)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).postDeleted)),
+      );
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).deleteFailed(error))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).deleteFailed(error)),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _deleting = false);
     }
@@ -230,7 +239,11 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.postId == null ? AppLocalizations.of(context).publishPost : AppLocalizations.of(context).editPost),
+      title: Text(
+        widget.postId == null
+            ? AppLocalizations.of(context).publishPost
+            : AppLocalizations.of(context).editPost,
+      ),
       actions: [
         if (widget.postId != null)
           TextButton(
@@ -243,7 +256,11 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                     _loadError != null
                 ? null
                 : _delete,
-            child: Text(_deleting ? AppLocalizations.of(context).deleting : AppLocalizations.of(context).delete),
+            child: Text(
+              _deleting
+                  ? AppLocalizations.of(context).deleting
+                  : AppLocalizations.of(context).delete,
+            ),
           ),
       ],
     ),
@@ -254,7 +271,11 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppLocalizations.of(context).postEditorLoadFailed(_loadError!)),
+                Text(
+                  AppLocalizations.of(
+                    context,
+                  ).postEditorLoadFailed(_loadError!),
+                ),
                 SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('post-editor-retry'),
@@ -275,17 +296,28 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                     color: const Color(0xFFFFE5D8),
                     child: ListTile(
                       leading: const Icon(Icons.groups_2_outlined),
-                      title: Text(AppLocalizations.of(context).publishToCircle(widget.circleName!)),
-                      subtitle: Text(AppLocalizations.of(context).circlePostNeedsAudit),
+                      title: Text(
+                        AppLocalizations.of(
+                          context,
+                        ).publishToCircle(widget.circleName!),
+                      ),
+                      subtitle: Text(
+                        AppLocalizations.of(context).circlePostNeedsAudit,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
                 ],
-                if (_auditStatus.isNotEmpty) ...[
+                if (_auditStatus != null || _auditStatusText.isNotEmpty) ...[
                   Card(
                     color: const Color(0xFFFFF4D6),
                     child: ListTile(
-                      title: Text(_auditStatus),
+                      title: Text(
+                        AppLocalizations.of(context).auditStatusLabel(
+                          status: _auditStatus,
+                          fallback: _auditStatusText,
+                        ),
+                      ),
                       subtitle: _auditRemark.isEmpty
                           ? null
                           : Text(_auditRemark),
@@ -297,9 +329,12 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                   key: const Key('post-title'),
                   controller: _title,
                   maxLength: 80,
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context).titleLabel),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? AppLocalizations.of(context).pleaseEnterTitle : null,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).titleLabel,
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? AppLocalizations.of(context).pleaseEnterTitle
+                      : null,
                 ),
                 TextFormField(
                   key: const Key('post-content'),
@@ -307,17 +342,26 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                   minLines: 5,
                   maxLines: 10,
                   maxLength: 5000,
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context).bodyLabel),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? AppLocalizations.of(context).pleaseEnterBody : null,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).bodyLabel,
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? AppLocalizations.of(context).pleaseEnterBody
+                      : null,
                 ),
                 TextField(
                   key: const Key('post-topics'),
                   controller: _topics,
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context).topicsCommaSeparated),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(
+                      context,
+                    ).topicsCommaSeparated,
+                  ),
                 ),
                 SizedBox(height: 12),
-                Text(AppLocalizations.of(context).uploadedCount(_images.length)),
+                Text(
+                  AppLocalizations.of(context).uploadedCount(_images.length),
+                ),
                 OutlinedButton.icon(
                   key: const Key('post-add-image'),
                   onPressed: _busy || _deleteDialogOpen || _images.length >= 9

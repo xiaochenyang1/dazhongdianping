@@ -320,6 +320,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('3 likes · 1 comments'), findsOneWidget);
+    expect(find.text('Approved'), findsOneWidget);
+    expect(find.text('审核通过'), findsNothing);
   });
 
   testWidgets('public review detail loads later comment pages', (tester) async {

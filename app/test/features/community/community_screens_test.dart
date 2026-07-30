@@ -1268,6 +1268,30 @@ void main() {
     expect(find.textContaining('周六上午'), findsOneWidget);
   });
 
+  testWidgets('post editor localizes audit status in English', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: PostEditorScreen(
+          repository: CommunityRepository(CommunityScreenApi()),
+          postId: 7,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit post'), findsOneWidget);
+    expect(find.text('Approved'), findsOneWidget);
+    expect(find.text('审核通过'), findsNothing);
+  });
+
   testWidgets('post editor blocks an incomplete form and retries loading', (
     tester,
   ) async {

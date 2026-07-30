@@ -71,7 +71,6 @@ class BanAppealFakeApi implements JsonApi {
   }
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),
@@ -90,6 +89,36 @@ Widget localizedApp({
 }
 
 void main() {
+  testWidgets('ban appeal screen localizes status labels in English', (
+    tester,
+  ) async {
+    final api = BanAppealFakeApi();
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: BanAppealScreen(
+          controller: controller,
+          initialAccount: 'banned@example.com',
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byKey(const Key('appeal-code')), '112233');
+    await tester.enterText(
+      find.byKey(const Key('appeal-reason')),
+      'This ban was a mistake and should be reviewed again.',
+    );
+    await tester.tap(find.byKey(const Key('appeal-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Pending review'), findsOneWidget);
+    expect(find.textContaining('待审核'), findsNothing);
+  });
+
   testWidgets('ban appeal screen sends appeal verification code', (
     tester,
   ) async {

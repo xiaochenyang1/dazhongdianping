@@ -16,6 +16,7 @@ class ReviewEditorData {
     required this.currency,
     required this.tags,
     required this.images,
+    required this.auditStatus,
     required this.auditStatusText,
     required this.auditRemark,
   });
@@ -32,6 +33,7 @@ class ReviewEditorData {
   final String currency;
   final List<String> tags;
   final List<String> images;
+  final int? auditStatus;
   final String auditStatusText;
   final String auditRemark;
 
@@ -57,6 +59,7 @@ class ReviewEditorData {
           )
           .where((url) => url.isNotEmpty)
           .toList(),
+      auditStatus: (json['auditStatus'] as num?)?.toInt(),
       auditStatusText: json['auditStatusText'] as String? ?? '',
       auditRemark: json['auditRemark'] as String? ?? '',
     );

@@ -49,7 +49,10 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
     if (sendingCode) return;
     final account = accountController.text.trim();
     if (account.isEmpty) {
-      setState(() => errorMessage = AppLocalizations.of(context).enterEmailOrPhoneFirst);
+      setState(
+        () =>
+            errorMessage = AppLocalizations.of(context).enterEmailOrPhoneFirst,
+      );
       return;
     }
     setState(() {
@@ -66,7 +69,9 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
       if (!mounted) return;
       setState(() {
         codeHint = result.mockCode.isEmpty
-            ? AppLocalizations.of(context).codeSentRetry(result.nextRetrySeconds)
+            ? AppLocalizations.of(
+                context,
+              ).codeSentRetry(result.nextRetrySeconds)
             : AppLocalizations.of(context).localCodeHint(result.mockCode);
       });
     } catch (error) {
@@ -82,11 +87,17 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
     final code = codeController.text.trim();
     final reason = reasonController.text.trim();
     if (account.isEmpty || code.isEmpty) {
-      setState(() => errorMessage = AppLocalizations.of(context).fillAccountAndCodeBeforeAppeal);
+      setState(
+        () => errorMessage = AppLocalizations.of(
+          context,
+        ).fillAccountAndCodeBeforeAppeal,
+      );
       return;
     }
     if (reason.length < 10) {
-      setState(() => errorMessage = AppLocalizations.of(context).appealReasonTooShort);
+      setState(
+        () => errorMessage = AppLocalizations.of(context).appealReasonTooShort,
+      );
       return;
     }
     setState(() {
@@ -105,7 +116,9 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
         appealStatus = status;
         codeController.clear();
         reasonController.clear();
-        successMessage = AppLocalizations.of(context).appealSubmitted(status.id);
+        successMessage = AppLocalizations.of(
+          context,
+        ).appealSubmitted(status.id);
       });
     } catch (error) {
       if (mounted) setState(() => errorMessage = '$error');
@@ -117,7 +130,11 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
     final account = accountController.text.trim();
     final code = codeController.text.trim();
     if (account.isEmpty || code.isEmpty) {
-      setState(() => errorMessage = AppLocalizations.of(context).queryNeedsAccountAndCode);
+      setState(
+        () => errorMessage = AppLocalizations.of(
+          context,
+        ).queryNeedsAccountAndCode,
+      );
       return;
     }
     setState(() {
@@ -135,7 +152,9 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
       setState(() {
         appealStatus = status;
         codeController.clear();
-        successMessage = AppLocalizations.of(context).appealProgressRefreshed(status.id);
+        successMessage = AppLocalizations.of(
+          context,
+        ).appealProgressRefreshed(status.id);
       });
     } catch (error) {
       if (mounted) setState(() => errorMessage = '$error');
@@ -148,6 +167,12 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final status = appealStatus;
+    final statusLabel = status == null
+        ? null
+        : strings.auditStatusLabel(
+            status: status.status,
+            fallback: status.statusText,
+          );
     return Scaffold(
       appBar: AppBar(title: Text(strings.banAppealTitle)),
       body: AnimatedBuilder(
@@ -180,7 +205,9 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
                 border: const OutlineInputBorder(),
                 suffixIcon: TextButton(
                   onPressed: sendingCode ? null : sendCode,
-                  child: Text(sendingCode ? strings.sendingCode : strings.sendCode),
+                  child: Text(
+                    sendingCode ? strings.sendingCode : strings.sendCode,
+                  ),
                 ),
               ),
             ),
@@ -227,7 +254,10 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        strings.appealStatusTitle(id: status.id, status: status.statusText),
+                        strings.appealStatusTitle(
+                          id: status.id,
+                          status: statusLabel!,
+                        ),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       if (status.banReason.isNotEmpty) ...[
@@ -266,7 +296,11 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
             FilledButton(
               key: const Key('appeal-submit'),
               onPressed: widget.controller.busy ? null : submitAppeal,
-              child: Text(widget.controller.busy ? strings.submittingAppeal : strings.submitAppeal),
+              child: Text(
+                widget.controller.busy
+                    ? strings.submittingAppeal
+                    : strings.submitAppeal,
+              ),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
@@ -274,7 +308,9 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
               onPressed: querying || widget.controller.busy
                   ? null
                   : queryProgress,
-              child: Text(querying ? strings.querying : strings.queryAppealProgress),
+              child: Text(
+                querying ? strings.querying : strings.queryAppealProgress,
+              ),
             ),
             if (status?.isApproved == true) ...[
               const SizedBox(height: 12),

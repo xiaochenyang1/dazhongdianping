@@ -74,6 +74,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
   String? _loadError;
   String _shopName = '';
   String _currency = '';
+  int? _auditStatus;
   String _auditStatusText = '';
   String _auditRemark = '';
 
@@ -109,6 +110,7 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
         _images
           ..clear()
           ..addAll(detail.images.map((url) => _ReviewImageItem(url: url)));
+        _auditStatus = detail.auditStatus;
         _auditStatusText = detail.auditStatusText;
         _auditRemark = detail.auditRemark;
       });
@@ -140,7 +142,8 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
         image = await (widget.imagePicker ?? const SystemReviewImagePicker())
             .pickImage();
       } catch (error) {
-        if (mounted) _showMessage(AppLocalizations.of(context).imagePickFailed(error));
+        if (mounted)
+          _showMessage(AppLocalizations.of(context).imagePickFailed(error));
         return;
       }
       if (image == null || !mounted) return;
@@ -152,7 +155,8 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
           () => _images.add(_ReviewImageItem(url: url, bytes: imageBytes)),
         );
       } catch (error) {
-        if (mounted) _showMessage(AppLocalizations.of(context).imageUploadFailed(error));
+        if (mounted)
+          _showMessage(AppLocalizations.of(context).imageUploadFailed(error));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -186,7 +190,11 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
           ? await widget.repository.updateReview(widget.reviewId!, input)
           : await widget.repository.createReview(input);
       if (!mounted) return;
-      _showMessage(_isEditing ? AppLocalizations.of(context).reviewUpdatedResubmitted : AppLocalizations.of(context).reviewSubmittedPending);
+      _showMessage(
+        _isEditing
+            ? AppLocalizations.of(context).reviewUpdatedResubmitted
+            : AppLocalizations.of(context).reviewSubmittedPending,
+      );
       if (Navigator.of(context).canPop()) Navigator.of(context).pop(result);
     } catch (error) {
       if (mounted) _showMessage(AppLocalizations.of(context).saveFailed(error));
@@ -208,7 +216,13 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? AppLocalizations.of(context).editReview : AppLocalizations.of(context).writeReview)),
+      appBar: AppBar(
+        title: Text(
+          _isEditing
+              ? AppLocalizations.of(context).editReview
+              : AppLocalizations.of(context).writeReview,
+        ),
+      ),
       body: _buildBody(context),
     );
   }
@@ -231,9 +245,15 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
         children: [
           _ShopHeader(shopName: _shopName),
-          if (_auditStatusText.isNotEmpty) ...[
+          if (_auditStatus != null || _auditStatusText.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _AuditNotice(status: _auditStatusText, remark: _auditRemark),
+            _AuditNotice(
+              status: AppLocalizations.of(context).auditStatusLabel(
+                status: _auditStatus,
+                fallback: _auditStatusText,
+              ),
+              remark: _auditRemark,
+            ),
           ],
           const SizedBox(height: 16),
           _SectionCard(
@@ -280,15 +300,18 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
                 filled: true,
                 border: OutlineInputBorder(borderSide: BorderSide.none),
               ),
-              validator: (value) =>
-                  value == null || value.trim().isEmpty ? AppLocalizations.of(context).pleaseWriteRealExperience : null,
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? AppLocalizations.of(context).pleaseWriteRealExperience
+                  : null,
             ),
           ),
           const SizedBox(height: 14),
           _SectionCard(
             title: AppLocalizations.of(context).onSitePhotos,
             subtitle: AppLocalizations.of(context).photosUploadHint,
-            trailing: Text(AppLocalizations.of(context).uploadedCount(_images.length)),
+            trailing: Text(
+              AppLocalizations.of(context).uploadedCount(_images.length),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -317,7 +340,11 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.add_photo_alternate_outlined),
-                  label: Text(_uploading ? AppLocalizations.of(context).uploading : AppLocalizations.of(context).addImages),
+                  label: Text(
+                    _uploading
+                        ? AppLocalizations.of(context).uploading
+                        : AppLocalizations.of(context).addImages,
+                  ),
                 ),
               ],
             ),
@@ -340,7 +367,9 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
                   ),
                   validator: (value) {
                     final amount = double.tryParse(value?.trim() ?? '');
-                    return amount == null || amount < 0 ? AppLocalizations.of(context).enterNonNegativeAmount : null;
+                    return amount == null || amount < 0
+                        ? AppLocalizations.of(context).enterNonNegativeAmount
+                        : null;
                   },
                 ),
                 const SizedBox(height: 14),
@@ -367,7 +396,11 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
                 : const Icon(Icons.rate_review_outlined),
             label: Padding(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              child: Text(_isEditing ? AppLocalizations.of(context).saveAndResubmit : AppLocalizations.of(context).publishReview),
+              child: Text(
+                _isEditing
+                    ? AppLocalizations.of(context).saveAndResubmit
+                    : AppLocalizations.of(context).publishReview,
+              ),
             ),
           ),
         ],
@@ -409,7 +442,10 @@ class _ShopHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(AppLocalizations.of(context).reviewingShop, style: const TextStyle(fontSize: 12)),
+                Text(
+                  AppLocalizations.of(context).reviewingShop,
+                  style: const TextStyle(fontSize: 12),
+                ),
                 Text(
                   shopName,
                   style: const TextStyle(

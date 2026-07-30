@@ -466,6 +466,10 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
         final review = _visibleReview ?? snapshot.data!;
         final showInteraction = _interactionAllowed(review);
         final showComments = _shouldShowComments(review);
+        final auditStatusText = AppLocalizations.of(context).auditStatusLabel(
+          status: review.auditStatus,
+          fallback: review.auditStatusText,
+        );
         return ListView(
           padding: const EdgeInsets.all(18),
           children: [
@@ -492,7 +496,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                   ),
                 Text('★ ${review.scoreOverall.toStringAsFixed(1)}'),
                 if (review.auditStatusText.isNotEmpty)
-                  Chip(label: Text(review.auditStatusText)),
+                  Chip(label: Text(auditStatusText)),
               ],
             ),
             if (widget.owned && review.auditRemark.isNotEmpty) ...[

@@ -33,6 +33,7 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     'scoreService': 4,
     'cost': 18,
     'currency': 'EUR',
+    'auditStatus': 0,
     'auditStatusText': '待审核',
     'auditRemark': '',
     'tags': ['中文服务'],
@@ -161,7 +162,6 @@ Future<void> scrollTo(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),
@@ -180,6 +180,29 @@ Widget localizedApp({
 }
 
 void main() {
+  testWidgets('review editor localizes audit status in English', (
+    tester,
+  ) async {
+    final api = EditorFakeApi();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReviewEditorScreen(
+          repository: ReviewRepository(api),
+          shopId: 7,
+          shopName: '柏林茶馆',
+          currency: 'EUR',
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit review'), findsOneWidget);
+    expect(find.text('Pending review'), findsOneWidget);
+    expect(find.text('待审核'), findsNothing);
+  });
+
   testWidgets('review editor creates a review from validated form data', (
     tester,
   ) async {
