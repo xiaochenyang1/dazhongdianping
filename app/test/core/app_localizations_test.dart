@@ -336,6 +336,14 @@ void main() {
       'The follow request could not be completed.',
     );
     expect(AppLocalizations.forTag('en').localCircles, 'Local circles');
+    expect(
+      AppLocalizations.forTag('en').circleErrorJoinedOnlyLoginRequired,
+      'Sign in to see the circles you joined.',
+    );
+    expect(
+      AppLocalizations.forTag('en').circleErrorNotFound,
+      'This circle could not be found.',
+    );
     expect(AppLocalizations.forTag('en').joinCircle, 'Join circle');
     expect(
       AppLocalizations.forTag('zh-CN').circleMeta(members: 3, posts: 5),

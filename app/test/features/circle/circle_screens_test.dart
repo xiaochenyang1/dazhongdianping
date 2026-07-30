@@ -8,14 +8,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
+
 class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool circleJoined = false;
   bool paginateCircles = false;
   bool failNextCircles = false;
+  Object? circleLoadError;
+  Object? loadMoreCircleError;
   final List<int> requestedCirclePages = <int>[];
   Completer<void>? circleRetryGate;
   bool paginatePosts = false;
   bool failNextPosts = false;
+  Object? postLoadError;
+  Object? loadMorePostError;
   final List<int> requestedPostPages = <int>[];
   Completer<void>? postRetryGate;
   int postCalls = 0;
@@ -23,11 +44,14 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int postDetailCalls = 0;
   bool paginateMembers = false;
   bool failNextMembers = false;
+  Object? memberLoadError;
+  Object? loadMoreMemberError;
   final List<int> requestedMemberPages = <int>[];
   Completer<void>? memberRetryGate;
   int memberCalls = 0;
   Completer<void>? membershipGate;
   int membershipCalls = 0;
+  Object? membershipError;
   Map<String, dynamic> circle({bool? joined, int count = 12}) => {
     'id': 3,
     'region': 'EU',
@@ -73,12 +97,18 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     }
     if (path.endsWith('/members')) {
       memberCalls++;
+      final page = query?['page'] as int? ?? 1;
+      if (page == 1 && memberLoadError != null) {
+        throw memberLoadError!;
+      }
+      if (page > 1 && loadMoreMemberError != null) {
+        throw loadMoreMemberError!;
+      }
       if (failNextMembers) {
         failNextMembers = false;
         throw StateError('member network unavailable');
       }
       await memberRetryGate?.future;
-      final page = query?['page'] as int? ?? 1;
       requestedMemberPages.add(page);
       return {
         'list': [
@@ -98,12 +128,18 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     }
     if (path.endsWith('/posts')) {
       postCalls++;
+      final page = query?['page'] as int? ?? 1;
+      if (page == 1 && postLoadError != null) {
+        throw postLoadError!;
+      }
+      if (page > 1 && loadMorePostError != null) {
+        throw loadMorePostError!;
+      }
       if (failNextPosts) {
         failNextPosts = false;
         throw StateError('post network unavailable');
       }
       await postRetryGate?.future;
-      final page = query?['page'] as int? ?? 1;
       requestedPostPages.add(page);
       return {
         'list': [
@@ -118,12 +154,18 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     if (path.endsWith('/3')) return circle();
+    final page = query?['page'] as int? ?? 1;
+    if (page == 1 && circleLoadError != null) {
+      throw circleLoadError!;
+    }
+    if (page > 1 && loadMoreCircleError != null) {
+      throw loadMoreCircleError!;
+    }
     if (failNextCircles) {
       failNextCircles = false;
       throw StateError('circle network unavailable');
     }
     await circleRetryGate?.future;
-    final page = query?['page'] as int? ?? 1;
     requestedCirclePages.add(page);
     return {
       'list': [
@@ -146,6 +188,9 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
     membershipCalls++;
     await membershipGate?.future;
+    if (membershipError != null) {
+      throw membershipError!;
+    }
     circleJoined = true;
     return {'circleId': 3, 'joined': true, 'memberCount': 13};
   }
@@ -158,7 +203,6 @@ class CircleScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
 }
 
 void main() {
-
   testWidgets('circle square switches English chrome', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -180,6 +224,31 @@ void main() {
     expect(find.text('Local circles'), findsOneWidget);
   });
 
+  testWidgets('circle square localizes joined-only load errors in English', (
+    tester,
+  ) async {
+    final api = CircleScreenApi()
+      ..circleLoadError = const ApiException('查看我的圈子需要登录');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CircleSquareScreen(
+          repository: CircleRepository(api),
+          canInteract: true,
+          showJoinedOnly: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load circles: Sign in to see the circles you joined.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('查看我的圈子需要登录'), findsNothing);
+  });
 
   testWidgets('circle square retries an initial load failure', (tester) async {
     final api = CircleScreenApi()..failNextCircles = true;
@@ -247,6 +316,29 @@ void main() {
     expect(find.text('周末市集指南'), findsOneWidget);
   });
 
+  testWidgets('circle detail localizes post load errors in English', (
+    tester,
+  ) async {
+    final api = CircleScreenApi()..postLoadError = const ApiException('圈子不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CircleDetailScreen(
+          repository: CircleRepository(api),
+          initial: AppCircle.fromJson(api.circle()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load posts: This circle could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('圈子不存在'), findsNothing);
+  });
+
   testWidgets('circle detail guards duplicate post retries', (tester) async {
     final gate = Completer<void>();
     final api = CircleScreenApi()
@@ -292,6 +384,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.requestedMemberPages, [1]);
     expect(find.text('伦敦小王'), findsOneWidget);
+  });
+
+  testWidgets('circle members localize load errors in English', (tester) async {
+    final api = CircleScreenApi()
+      ..memberLoadError = const ApiException('圈子不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CircleMembersScreen(
+          repository: CircleRepository(api),
+          circle: AppCircle.fromJson(api.circle()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load members: This circle could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('圈子不存在'), findsNothing);
   });
 
   testWidgets('circle members guard duplicate retries', (tester) async {
@@ -492,6 +605,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.membershipCalls, 1);
     expect(find.text('已加入'), findsOneWidget);
+  });
+
+  testWidgets('circle detail localizes membership errors in English', (
+    tester,
+  ) async {
+    final api = CircleScreenApi()
+      ..membershipError = const ApiException('圈子不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CircleDetailScreen(
+          repository: CircleRepository(api),
+          initial: AppCircle.fromJson(api.circle()),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('circle-membership-toggle')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Join circle'), findsOneWidget);
+    expect(
+      find.text(
+        'Could not update circle status: This circle could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('圈子不存在'), findsNothing);
   });
 
   testWidgets('circle detail guards duplicate member navigation', (

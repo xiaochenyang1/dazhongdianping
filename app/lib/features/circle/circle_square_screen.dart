@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/circle/circle_error_localizer.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
@@ -84,9 +85,15 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
       });
     } catch (error) {
       if (mounted && currentRequestId == requestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreCirclesFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreCirclesFailed(
+                localizeCircleError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && currentRequestId == requestId) {
@@ -131,13 +138,24 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppLocalizations.of(context).circlesLoadFailed(snapshot.error!)),
+                Text(
+                  AppLocalizations.of(context).circlesLoadFailed(
+                    localizeCircleError(
+                      AppLocalizations.of(context),
+                      snapshot.error!,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('circle-square-retry'),
                   onPressed: reloading ? null : reload,
                   icon: const Icon(Icons.refresh),
-                  label: Text(reloading ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
+                  label: Text(
+                    reloading
+                        ? AppLocalizations.of(context).processing
+                        : AppLocalizations.of(context).retry,
+                  ),
                 ),
               ],
             ),
@@ -163,7 +181,11 @@ class _CircleSquareScreenState extends State<CircleSquareScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.expand_more),
-                  label: Text(loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
+                  label: Text(
+                    loadingMore
+                        ? AppLocalizations.of(context).loading
+                        : AppLocalizations.of(context).loadMore,
+                  ),
                 ),
               );
             }
@@ -249,7 +271,10 @@ class _CircleCard extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                AppLocalizations.of(context).circleMeta(members: circle.memberCount, posts: circle.postCount),
+                AppLocalizations.of(context).circleMeta(
+                  members: circle.memberCount,
+                  posts: circle.postCount,
+                ),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -342,9 +367,15 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
       });
     } catch (error) {
       if (mounted && requestId == postsRequestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMorePostsFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMorePostsFailed(
+                localizeCircleError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && requestId == postsRequestId) {
@@ -380,9 +411,15 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
     } catch (error) {
       if (mounted) {
         setState(() => circle = before);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).circleStatusUpdateFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).circleStatusUpdateFailed(
+                localizeCircleError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => saving = false);
@@ -454,7 +491,10 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
               Text(circle.description),
               const SizedBox(height: 18),
               Text(
-                AppLocalizations.of(context).circleMeta(members: circle.memberCount, posts: circle.postCount),
+                AppLocalizations.of(context).circleMeta(
+                  members: circle.memberCount,
+                  posts: circle.postCount,
+                ),
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 16),
@@ -464,7 +504,11 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                     child: FilledButton(
                       key: const Key('circle-membership-toggle'),
                       onPressed: saving ? null : toggle,
-                      child: Text(circle.joined ? AppLocalizations.of(context).joined : AppLocalizations.of(context).joinCircle),
+                      child: Text(
+                        circle.joined
+                            ? AppLocalizations.of(context).joined
+                            : AppLocalizations.of(context).joinCircle,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -507,13 +551,24 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(AppLocalizations.of(context).postsLoadFailed(snapshot.error!)),
+                        Text(
+                          AppLocalizations.of(context).postsLoadFailed(
+                            localizeCircleError(
+                              AppLocalizations.of(context),
+                              snapshot.error!,
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         FilledButton.tonalIcon(
                           key: const Key('circle-posts-retry'),
                           onPressed: reloadingPosts ? null : reloadPosts,
                           icon: const Icon(Icons.refresh),
-                          label: Text(reloadingPosts ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
+                          label: Text(
+                            reloadingPosts
+                                ? AppLocalizations.of(context).processing
+                                : AppLocalizations.of(context).retry,
+                          ),
                         ),
                       ],
                     )
@@ -564,7 +619,11 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.expand_more),
-                    label: Text(loadingMorePosts ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
+                    label: Text(
+                      loadingMorePosts
+                          ? AppLocalizations.of(context).loading
+                          : AppLocalizations.of(context).loadMore,
+                    ),
                   ),
               ],
             );
@@ -645,9 +704,15 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
       });
     } catch (error) {
       if (mounted && currentRequestId == requestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreMembersFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreMembersFailed(
+                localizeCircleError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && currentRequestId == requestId) {
@@ -658,7 +723,11 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(AppLocalizations.of(context).circleMembersTitle(widget.circle.name))),
+    appBar: AppBar(
+      title: Text(
+        AppLocalizations.of(context).circleMembersTitle(widget.circle.name),
+      ),
+    ),
     body: FutureBuilder<CircleMemberPage>(
       future: page,
       builder: (_, snapshot) {
@@ -668,13 +737,24 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(AppLocalizations.of(context).membersLoadFailed(snapshot.error!)),
+                      Text(
+                        AppLocalizations.of(context).membersLoadFailed(
+                          localizeCircleError(
+                            AppLocalizations.of(context),
+                            snapshot.error!,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       FilledButton.tonalIcon(
                         key: const Key('circle-members-retry'),
                         onPressed: reloading ? null : reload,
                         icon: const Icon(Icons.refresh),
-                        label: Text(reloading ? AppLocalizations.of(context).processing : AppLocalizations.of(context).retry),
+                        label: Text(
+                          reloading
+                              ? AppLocalizations.of(context).processing
+                              : AppLocalizations.of(context).retry,
+                        ),
                       ),
                     ],
                   ),
@@ -698,7 +778,11 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.expand_more),
-                  label: Text(loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
+                  label: Text(
+                    loadingMore
+                        ? AppLocalizations.of(context).loading
+                        : AppLocalizations.of(context).loadMore,
+                  ),
                 ),
               );
             }

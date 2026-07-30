@@ -240,6 +240,8 @@ class AppLocalizations {
     'noPublicPostsHere': '这里还没有公开帖子。',
     'loadMoreCirclesFailed': '加载更多圈子失败：{error}',
     'circlesLoadFailed': '圈子加载失败：{error}',
+    'circleErrorJoinedOnlyLoginRequired': '登录后才能查看已加入的圈子',
+    'circleErrorNotFound': '这个圈子不存在',
     'circleMeta': '{members} 位成员 · {posts} 篇帖子',
     'circleStatusUpdateFailed': '圈子状态更新失败：{error}',
     'joined': '已加入',
@@ -1083,6 +1085,8 @@ class AppLocalizations {
     'noPublicPostsHere': '這裡還沒有公開貼文。',
     'loadMoreCirclesFailed': '載入更多圈子失敗：{error}',
     'circlesLoadFailed': '圈子載入失敗：{error}',
+    'circleErrorJoinedOnlyLoginRequired': '登入後才能查看已加入的圈子',
+    'circleErrorNotFound': '這個圈子不存在',
     'circleMeta': '{members} 位成員 · {posts} 篇貼文',
     'circleStatusUpdateFailed': '圈子狀態更新失敗：{error}',
     'joined': '已加入',
@@ -1952,6 +1956,9 @@ class AppLocalizations {
     'noPublicPostsHere': 'No public posts here yet.',
     'loadMoreCirclesFailed': 'Could not load more circles: {error}',
     'circlesLoadFailed': 'Could not load circles: {error}',
+    'circleErrorJoinedOnlyLoginRequired':
+        'Sign in to see the circles you joined.',
+    'circleErrorNotFound': 'This circle could not be found.',
     'circleMeta': '{members} members · {posts} posts',
     'circleStatusUpdateFailed': 'Could not update circle status: {error}',
     'joined': 'Joined',
@@ -3235,6 +3242,9 @@ class AppLocalizations {
       _withError('loadMoreCirclesFailed', error);
   String circlesLoadFailed(Object error) =>
       _withError('circlesLoadFailed', error);
+  String get circleErrorJoinedOnlyLoginRequired =>
+      _text('circleErrorJoinedOnlyLoginRequired');
+  String get circleErrorNotFound => _text('circleErrorNotFound');
   String circleMeta({required int members, required int posts}) => _text(
     'circleMeta',
   ).replaceFirst('{members}', '$members').replaceFirst('{posts}', '$posts');
