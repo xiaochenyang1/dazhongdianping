@@ -37,12 +37,15 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   int createExportRequests = 0;
   final Map<int, Completer<void>> downloadExportGates = {};
   final Map<int, int> downloadExportRequests = {};
+  final Map<int, Object> downloadExportErrors = {};
   Completer<void>? cancelDeleteGate;
   int cancelDeleteRequests = 0;
   Completer<void>? submitDeleteGate;
   int submitDeleteRequests = 0;
   Completer<void>? sendDeleteCodeGate;
   int sendDeleteCodeRequests = 0;
+  Object? createExportError;
+  Object? cancelDeleteError;
   Object? submitDeleteError;
   Object? sendDeleteCodeError;
 
@@ -137,12 +140,14 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
     if (path == '/api/c/v1/privacy/export-tasks') {
       createExportRequests++;
       await createExportGate?.future;
+      if (createExportError != null) throw createExportError!;
       exportCreated = true;
       return _exportTask(10);
     }
     if (path == '/api/c/v1/privacy/delete-tasks/9/cancel') {
       cancelDeleteRequests++;
       await cancelDeleteGate?.future;
+      if (cancelDeleteError != null) throw cancelDeleteError!;
       deleteStatus = 4;
       return _deleteTask(4);
     }
@@ -220,6 +225,8 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
       ifAbsent: () => 1,
     );
     await downloadExportGates[taskId]?.future;
+    final error = downloadExportErrors[taskId];
+    if (error != null) throw error;
     return Uint8List.fromList([1, 2, 3]);
   }
 
@@ -903,6 +910,114 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('删除校验密码不正确'), findsNothing);
+  });
+
+  testWidgets('privacy center localizes workflow errors in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = PrivacyScreenApi()
+      ..createExportError = const ApiException('今天的隐私导出次数已经用完了')
+      ..downloadExportErrors[8] = const ApiException('导出文件当前不可下载')
+      ..cancelDeleteError = const ApiException('当前删除任务不允许撤销');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final messenger = tester.state<ScaffoldMessengerState>(
+      find.byType(ScaffoldMessenger),
+    );
+
+    final createExport = find.byKey(const Key('privacy-create-export'));
+    await scrollTo(tester, createExport);
+    await tester.tap(createExport);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not create export task: Today\'s privacy export quota is already used up. Try again tomorrow.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('隐私导出次数已经用完'), findsNothing);
+    messenger.removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    final downloadExport = find.byKey(const Key('privacy-download-export-8'));
+    await scrollTo(tester, downloadExport);
+    await tester.tap(downloadExport);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not download export: This export file is not available for download yet. Try again later.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('当前不可下载'), findsNothing);
+    messenger.removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    final cancelDelete = find.byKey(const Key('privacy-cancel-delete-9'));
+    await scrollTo(tester, cancelDelete);
+    await tester.tap(cancelDelete);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not cancel delete request: This delete request can no longer be canceled. Refresh the status and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('不允许撤销'), findsNothing);
+  });
+
+  testWidgets('privacy center localizes pending delete request in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = PrivacyScreenApi(deleteStatus: null)
+      ..submitDeleteError = const ApiException('当前已有删除任务处理中');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await scrollTo(tester, find.text('Verify with password'));
+    await tester.tap(find.text('Verify with password'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('privacy-delete-password')),
+      'password',
+    );
+    await tester.enterText(
+      find.byKey(const Key('privacy-delete-reason')),
+      'I no longer need this account.',
+    );
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    final submitDelete = find.byKey(const Key('privacy-delete-submit'));
+    await scrollTo(tester, submitDelete);
+    await tester.tap(submitDelete);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not submit delete request: You already have a delete request in progress. Finish the current one first.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('删除任务处理中'), findsNothing);
   });
 
   testWidgets('privacy center fits a mobile viewport', (tester) async {

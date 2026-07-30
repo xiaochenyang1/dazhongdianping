@@ -589,6 +589,13 @@ class AppLocalizations {
     'createExportFailed': '创建导出任务失败：{error}',
     'deleteRequestCanceled': '删除申请已撤销，账号会继续保留',
     'cancelDeleteFailed': '撤销删除申请失败：{error}',
+    'privacyErrorExportLimitReached': '今天的隐私导出次数已经用完了，明天再试',
+    'privacyErrorExportUnavailable': '这个导出文件当前还不能下载，请稍后再试',
+    'privacyErrorExportMissing': '导出文件已经不存在了，请重新创建导出任务',
+    'privacyErrorDeleteTaskPending': '你已经有一条删除申请在处理中，先处理当前这条',
+    'privacyErrorDeleteTaskCannotCancel': '当前这条删除申请已经不能撤销了，请刷新状态后再看',
+    'privacyErrorDeleteTaskCancelFailed': '撤销删除申请失败了，请稍后再试',
+    'privacyErrorDeleteTaskMissing': '这条删除申请已经不存在了，请刷新页面',
     'fillAccountAndDeleteReason': '校验账号和删除原因都得填',
     'codeNotFilled': '验证码还没填',
     'passwordNotFilled': '登录密码还没填',
@@ -1402,6 +1409,13 @@ class AppLocalizations {
     'createExportFailed': '建立匯出任務失敗：{error}',
     'deleteRequestCanceled': '刪除申請已撤銷，帳號會繼續保留',
     'cancelDeleteFailed': '撤銷刪除申請失敗：{error}',
+    'privacyErrorExportLimitReached': '今天的隱私匯出次數已經用完了，明天再試',
+    'privacyErrorExportUnavailable': '這個匯出檔案目前還不能下載，請稍後再試',
+    'privacyErrorExportMissing': '匯出檔案已經不存在了，請重新建立匯出任務',
+    'privacyErrorDeleteTaskPending': '你已經有一筆刪除申請正在處理中，先處理目前這筆',
+    'privacyErrorDeleteTaskCannotCancel': '目前這筆刪除申請已經不能撤銷了，請重新整理狀態後再看',
+    'privacyErrorDeleteTaskCancelFailed': '撤銷刪除申請失敗了，請稍後再試',
+    'privacyErrorDeleteTaskMissing': '這筆刪除申請已經不存在了，請重新整理頁面',
     'fillAccountAndDeleteReason': '校驗帳號和刪除原因都得填',
     'codeNotFilled': '驗證碼還沒填',
     'passwordNotFilled': '登入密碼還沒填',
@@ -2278,6 +2292,20 @@ class AppLocalizations {
     'createExportFailed': 'Could not create export task: {error}',
     'deleteRequestCanceled': 'Delete request canceled. Account stays active',
     'cancelDeleteFailed': 'Could not cancel delete request: {error}',
+    'privacyErrorExportLimitReached':
+        'Today\'s privacy export quota is already used up. Try again tomorrow.',
+    'privacyErrorExportUnavailable':
+        'This export file is not available for download yet. Try again later.',
+    'privacyErrorExportMissing':
+        'This export file no longer exists. Create a new export task.',
+    'privacyErrorDeleteTaskPending':
+        'You already have a delete request in progress. Finish the current one first.',
+    'privacyErrorDeleteTaskCannotCancel':
+        'This delete request can no longer be canceled. Refresh the status and try again.',
+    'privacyErrorDeleteTaskCancelFailed':
+        'The delete request could not be canceled. Try again later.',
+    'privacyErrorDeleteTaskMissing':
+        'This delete request no longer exists. Refresh the page.',
     'fillAccountAndDeleteReason':
         'Bound account and delete reason are required',
     'codeNotFilled': 'Verification code is missing',
@@ -3615,6 +3643,19 @@ class AppLocalizations {
   String get deleteRequestCanceled => _text('deleteRequestCanceled');
   String cancelDeleteFailed(Object error) =>
       _withError('cancelDeleteFailed', error);
+  String get privacyErrorExportLimitReached =>
+      _text('privacyErrorExportLimitReached');
+  String get privacyErrorExportUnavailable =>
+      _text('privacyErrorExportUnavailable');
+  String get privacyErrorExportMissing => _text('privacyErrorExportMissing');
+  String get privacyErrorDeleteTaskPending =>
+      _text('privacyErrorDeleteTaskPending');
+  String get privacyErrorDeleteTaskCannotCancel =>
+      _text('privacyErrorDeleteTaskCannotCancel');
+  String get privacyErrorDeleteTaskCancelFailed =>
+      _text('privacyErrorDeleteTaskCancelFailed');
+  String get privacyErrorDeleteTaskMissing =>
+      _text('privacyErrorDeleteTaskMissing');
   String get fillAccountAndDeleteReason => _text('fillAccountAndDeleteReason');
   String get codeNotFilled => _text('codeNotFilled');
   String get passwordNotFilled => _text('passwordNotFilled');

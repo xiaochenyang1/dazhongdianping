@@ -224,7 +224,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).exportDownloadFailed(error),
+              AppLocalizations.of(context).exportDownloadFailed(
+                _localizedPrivacyError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -271,7 +273,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).createExportFailed(error),
+              AppLocalizations.of(context).createExportFailed(
+                _localizedPrivacyError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -300,7 +304,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).cancelDeleteFailed(error),
+              AppLocalizations.of(context).cancelDeleteFailed(
+                _localizedPrivacyError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -791,8 +797,30 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
     };
   }
 
-  String _localizedDeleteError(AppLocalizations strings, Object error) {
+  String _localizedPrivacyError(
+    AppLocalizations strings,
+    Object error, {
+    Map<String, String> overrides = const {},
+  }) {
     return localizeAuthError(
+      strings,
+      error,
+      overrides: {
+        '今天的隐私导出次数已经用完了': strings.privacyErrorExportLimitReached,
+        '导出文件当前不可下载': strings.privacyErrorExportUnavailable,
+        '导出文件不存在': strings.privacyErrorExportMissing,
+        '隐私导出任务不存在': strings.privacyErrorExportMissing,
+        '当前已有删除任务处理中': strings.privacyErrorDeleteTaskPending,
+        '当前删除任务不允许撤销': strings.privacyErrorDeleteTaskCannotCancel,
+        '删除任务撤销失败': strings.privacyErrorDeleteTaskCancelFailed,
+        '删除任务不存在': strings.privacyErrorDeleteTaskMissing,
+        ...overrides,
+      },
+    );
+  }
+
+  String _localizedDeleteError(AppLocalizations strings, Object error) {
+    return _localizedPrivacyError(
       strings,
       error,
       overrides: {

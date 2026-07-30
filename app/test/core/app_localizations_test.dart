@@ -191,6 +191,14 @@ void main() {
       'The current login password is incorrect.',
     );
     expect(
+      AppLocalizations.forTag('en').privacyErrorExportLimitReached,
+      'Today\'s privacy export quota is already used up. Try again tomorrow.',
+    );
+    expect(
+      AppLocalizations.forTag('en').privacyErrorDeleteTaskPending,
+      'You already have a delete request in progress. Finish the current one first.',
+    );
+    expect(
       AppLocalizations.forTag('en').expertErrorPendingExists,
       'You already have a local expert application under review. Wait for the current result first.',
     );
