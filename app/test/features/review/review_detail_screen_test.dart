@@ -9,6 +9,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class DetailFakeApi implements JsonApi, JsonDeleteApi {
+  DetailFakeApi({this.currency = 'EUR'});
+
+  final String currency;
   final List<String> posts = <String>[];
   final List<String> deletedPaths = <String>[];
   bool liked = false;
@@ -57,7 +60,7 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
     'scoreEnv': 4,
     'scoreService': 4.5,
     'cost': 18.5,
-    'currency': 'EUR',
+    'currency': currency,
     'likeCount': likeCount,
     'commentCount': comments.length,
     'likedByCurrentUser': liked,
@@ -373,7 +376,7 @@ void main() {
 
     expect(find.text('Review details'), findsOneWidget);
     expect(
-      find.text('Taste 5.0 · Environment 4.0 · Service 4.5 · Avg spend EUR 19'),
+      find.text('Taste 5.0 · Environment 4.0 · Service 4.5 · Avg spend €18.50'),
       findsOneWidget,
     );
     expect(find.textContaining('3 likes · 1 comments'), findsOneWidget);
@@ -381,6 +384,24 @@ void main() {
     expect(find.text('Approved'), findsOneWidget);
     expect(find.text('Local expert'), findsOneWidget);
     expect(find.text('审核通过'), findsNothing);
+  });
+
+  testWidgets('public review detail respects currency minor units', (
+    tester,
+  ) async {
+    final api = DetailFakeApi(currency: 'JPY');
+    await tester.pumpWidget(
+      localizedApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('人均 ¥19'), findsOneWidget);
+    expect(find.textContaining('JPY 19'), findsNothing);
   });
 
   testWidgets('public review detail keeps audit chip when text is blank', (
@@ -506,7 +527,9 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.byKey(const Key('review-comment-reply-81')));
+    await tester.ensureVisible(
+      find.byKey(const Key('review-comment-reply-81')),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('review-comment-reply-81')));

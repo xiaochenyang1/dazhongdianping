@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_error_localizer.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -586,7 +587,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
             const SizedBox(height: 12),
             Text(
               '${AppLocalizations.of(context).scoreTaste} ${review.scoreTaste.toStringAsFixed(1)} · ${AppLocalizations.of(context).scoreEnv} ${review.scoreEnv.toStringAsFixed(1)} · ${AppLocalizations.of(context).scoreService} ${review.scoreService.toStringAsFixed(1)}'
-              '${review.cost > 0 ? ' · ${AppLocalizations.of(context).averageSpendLabel(currency: review.currency, amount: review.cost.toStringAsFixed(0))}' : ''}',
+              '${review.cost > 0 ? ' · ${AppLocalizations.of(context).averageSpendLabel(amount: formatMoney(review.cost, review.currency, locale: AppLocalizations.of(context).tag))}' : ''}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             if (review.merchantReply != null) ...[

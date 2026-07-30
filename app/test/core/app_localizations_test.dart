@@ -589,10 +589,8 @@ void main() {
     expect(AppLocalizations.forTag('en').anonymousUser, 'Anonymous user');
     expect(AppLocalizations.forTag('en').browseViewCount(2), 'Viewed 2 times');
     expect(
-      AppLocalizations.forTag(
-        'en',
-      ).averageSpendLabel(currency: 'EUR', amount: '19'),
-      'Avg spend EUR 19',
+      AppLocalizations.forTag('en').averageSpendLabel(amount: '€19.00'),
+      'Avg spend €19.00',
     );
     expect(
       AppLocalizations.forTag('en').realPaymentUnavailable,
