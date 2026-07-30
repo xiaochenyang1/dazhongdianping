@@ -18,4 +18,24 @@ void main() {
       contains('BST'),
     );
   });
+
+  test('formats API timestamps for supported display locales', () {
+    expect(
+      formatDisplayDateTime('2026-07-19 18:05:42', locale: 'zh-CN'),
+      '2026/7/19 18:05',
+    );
+    expect(
+      formatDisplayDateTime('2026-07-19T18:05:42', locale: 'en'),
+      '19/07/2026 18:05',
+    );
+    expect(formatDisplayDate('2026-07-19', locale: 'en'), '19/07/2026');
+  });
+
+  test('preserves unparseable API timestamps', () {
+    expect(
+      formatDisplayDateTime('rolling weekly', locale: 'en'),
+      'rolling weekly',
+    );
+    expect(formatDisplayDate('not-a-date', locale: 'zh-CN'), 'not-a-date');
+  });
 }

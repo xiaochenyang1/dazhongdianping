@@ -494,7 +494,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                                 ],
                                 const SizedBox(height: 8),
                                 Text(
-                                  '${AppLocalizations.of(context).likeCommentStats(likes: item.likedCount, comments: item.commentCount)}${item.createdAt.isEmpty ? '' : ' · ${item.createdAt}'}',
+                                  '${AppLocalizations.of(context).likeCommentStats(likes: item.likedCount, comments: item.commentCount)}${item.createdAt.isEmpty ? '' : ' · ${formatDisplayDateTime(item.createdAt, locale: AppLocalizations.of(context).tag)}'}',
                                   style: const TextStyle(fontSize: 12),
                                 ),
                               ],

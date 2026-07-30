@@ -115,7 +115,11 @@ class _RankDetailScreenState extends State<RankDetailScreen> {
                   if (detail.cityName.isNotEmpty) detail.cityName,
                   if (detail.categoryName.isNotEmpty) detail.categoryName,
                   if (detail.period.isNotEmpty) detail.period,
-                  if (detail.updatedAt.isNotEmpty) detail.updatedAt,
+                  if (detail.updatedAt.isNotEmpty)
+                    formatDisplayDateTime(
+                      detail.updatedAt,
+                      locale: strings.tag,
+                    ),
                 ].where((part) => part.isNotEmpty).join(' · '),
               ),
               const SizedBox(height: 16),

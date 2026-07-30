@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_error_localizer.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_detail_screen.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
@@ -242,7 +243,10 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                         subtitle: Text(
                           strings.reservationListMeta(
                             no: item.reservationNo,
-                            time: item.reserveTime,
+                            time: formatDisplayDateTime(
+                              item.reserveTime,
+                              locale: strings.tag,
+                            ),
                             people: item.peopleCount,
                             status: strings.reservationStatusLabel(
                               status: item.status,

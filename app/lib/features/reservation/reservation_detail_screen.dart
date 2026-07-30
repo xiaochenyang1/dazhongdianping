@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_error_localizer.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:flutter/material.dart';
@@ -254,7 +255,10 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                 ),
                 Text(
                   strings.reservationTimePeople(
-                    time: reservation.reserveTime,
+                    time: formatDisplayDateTime(
+                      reservation.reserveTime,
+                      locale: strings.tag,
+                    ),
                     people: reservation.peopleCount,
                   ),
                 ),
@@ -358,7 +362,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                   ),
                 ),
                 subtitle: Text(
-                  '${strings.reservationTimelineRemarkLabel(actionType: item.actionType, fallback: item.remark)}\n${item.createdAt}',
+                  '${strings.reservationTimelineRemarkLabel(actionType: item.actionType, fallback: item.remark)}\n${formatDisplayDateTime(item.createdAt, locale: strings.tag)}',
                 ),
               ),
             ),

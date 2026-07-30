@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/activity/activity_error_localizer.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
@@ -244,8 +245,10 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
             fallback: detail.channelText,
           );
           final period = [
-            if (detail.startAt.isNotEmpty) detail.startAt,
-            if (detail.endAt.isNotEmpty) detail.endAt,
+            if (detail.startAt.isNotEmpty)
+              formatDisplayDateTime(detail.startAt, locale: strings.tag),
+            if (detail.endAt.isNotEmpty)
+              formatDisplayDateTime(detail.endAt, locale: strings.tag),
           ].join(' ~ ');
           return ListView(
             padding: const EdgeInsets.all(16),

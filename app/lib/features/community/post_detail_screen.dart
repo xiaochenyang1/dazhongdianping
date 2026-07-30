@@ -1,6 +1,7 @@
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/community_error_localizer.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
 
 class PostDetailScreen extends StatefulWidget {
@@ -381,7 +382,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 8,
                     children: [
-                      Text(comment.createdAt),
+                      Text(
+                        formatDisplayDateTime(
+                          comment.createdAt,
+                          locale: AppLocalizations.of(context).tag,
+                        ),
+                      ),
                       if (widget.canInteract)
                         TextButton(
                           key: Key('comment-reply-${comment.id}'),
@@ -467,7 +473,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
                 ),
-                Text(' · ${post.createdAt}'),
+                Text(
+                  ' · ${formatDisplayDateTime(post.createdAt, locale: AppLocalizations.of(context).tag)}',
+                ),
               ],
             ),
             const SizedBox(height: 14),

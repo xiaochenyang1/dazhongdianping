@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/activity/activity_error_localizer.dart';
 import 'package:dazhongdianping_app/features/activity/activity_detail_screen.dart';
@@ -154,8 +155,10 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                   strings.resourceCount(item.itemCount),
                 ].where((part) => part.isNotEmpty).join(' · ');
                 final period = [
-                  if (item.startAt.isNotEmpty) item.startAt,
-                  if (item.endAt.isNotEmpty) item.endAt,
+                  if (item.startAt.isNotEmpty)
+                    formatDisplayDateTime(item.startAt, locale: strings.tag),
+                  if (item.endAt.isNotEmpty)
+                    formatDisplayDateTime(item.endAt, locale: strings.tag),
                 ].join(' ~ ');
                 return Card(
                   key: Key('activity-card-${item.id}'),

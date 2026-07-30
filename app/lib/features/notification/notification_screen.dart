@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/notification/notification_error_localizer.dart';
 import 'package:dazhongdianping_app/features/notification/notification_repository.dart';
 import 'package:flutter/material.dart';
@@ -1558,7 +1559,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 Text(localizedContent),
                                 const SizedBox(height: 8),
                                 Text(
-                                  notification.createdAt,
+                                  formatDisplayDateTime(
+                                    notification.createdAt,
+                                    locale: AppLocalizations.of(context).tag,
+                                  ),
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],

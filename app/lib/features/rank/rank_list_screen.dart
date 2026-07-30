@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_error_localizer.dart';
@@ -157,7 +158,11 @@ class _RankListScreenState extends State<RankListScreen> {
                         meta,
                         if (item.topShopName.isNotEmpty)
                           strings.topShop(item.topShopName),
-                        if (item.updatedAt.isNotEmpty) item.updatedAt,
+                        if (item.updatedAt.isNotEmpty)
+                          formatDisplayDateTime(
+                            item.updatedAt,
+                            locale: strings.tag,
+                          ),
                       ].where((part) => part.isNotEmpty).join('\n'),
                     ),
                     isThreeLine: true,

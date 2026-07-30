@@ -397,7 +397,12 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 8,
                     children: [
-                      Text(comment.createdAt),
+                      Text(
+                        formatDisplayDateTime(
+                          comment.createdAt,
+                          locale: AppLocalizations.of(context).tag,
+                        ),
+                      ),
                       if (widget.canInteract && !widget.owned)
                         TextButton(
                           key: Key('review-comment-reply-${comment.id}'),
@@ -605,7 +610,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
             ],
             const SizedBox(height: 12),
             Text(
-              '${AppLocalizations.of(context).likeCommentStats(likes: review.likeCount, comments: review.commentCount)}${review.createdAt.isEmpty ? '' : ' · ${review.createdAt}'}',
+              '${AppLocalizations.of(context).likeCommentStats(likes: review.likeCount, comments: review.commentCount)}${review.createdAt.isEmpty ? '' : ' · ${formatDisplayDateTime(review.createdAt, locale: AppLocalizations.of(context).tag)}'}',
             ),
             if (showInteraction) ...[
               const SizedBox(height: 16),

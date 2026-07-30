@@ -3,6 +3,7 @@ import 'package:dazhongdianping_app/features/browse/browse_error_localizer.dart'
 import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
 
 class ShopReviewsScreen extends StatefulWidget {
@@ -310,7 +311,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                             const SizedBox(height: 8),
                             Text(
                               '${strings.likeCommentStats(likes: item.likedCount, comments: item.commentCount)}'
-                              '${item.createdAt.isEmpty ? '' : ' · ${item.createdAt}'}',
+                              '${item.createdAt.isEmpty ? '' : ' · ${formatDisplayDateTime(item.createdAt, locale: strings.tag)}'}',
                               style: const TextStyle(fontSize: 12),
                             ),
                           ],
