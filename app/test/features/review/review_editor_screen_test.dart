@@ -21,6 +21,9 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
   bool failNextLoad = false;
   int loadRequests = 0;
   Completer<void>? loadGate;
+  int auditStatus = 0;
+  String auditStatusText = '待审核';
+  String auditRemark = '';
 
   Map<String, dynamic> detail({String? content}) => {
     'id': 12,
@@ -33,9 +36,9 @@ class EditorFakeApi implements JsonApi, JsonMutationApi, FileUploadApi {
     'scoreService': 4,
     'cost': 18,
     'currency': 'EUR',
-    'auditStatus': 0,
-    'auditStatusText': '待审核',
-    'auditRemark': '',
+    'auditStatus': auditStatus,
+    'auditStatusText': auditStatusText,
+    'auditRemark': auditRemark,
     'tags': ['中文服务'],
     'images': const [],
   };
@@ -201,6 +204,28 @@ void main() {
     expect(find.text('Edit review'), findsOneWidget);
     expect(find.text('Pending review'), findsOneWidget);
     expect(find.text('待审核'), findsNothing);
+  });
+
+  testWidgets('review editor localizes audit remark in English', (
+    tester,
+  ) async {
+    final api = EditorFakeApi()..auditRemark = '请补充菜品细节';
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReviewEditorScreen(
+          repository: ReviewRepository(api),
+          shopId: 7,
+          shopName: '柏林茶馆',
+          currency: 'EUR',
+          reviewId: 12,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pending review'), findsOneWidget);
+    expect(find.text('Audit note: 请补充菜品细节'), findsOneWidget);
   });
 
   testWidgets('review editor creates a review from validated form data', (

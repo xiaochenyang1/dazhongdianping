@@ -481,7 +481,21 @@ class _AuditNotice extends StatelessWidget {
         children: [
           const Icon(Icons.fact_check_outlined, size: 20),
           const SizedBox(width: 10),
-          Expanded(child: Text(remark.isEmpty ? status : '$status：$remark')),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(status),
+                if (remark.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    AppLocalizations.of(context).auditRemarkLabel(remark),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
