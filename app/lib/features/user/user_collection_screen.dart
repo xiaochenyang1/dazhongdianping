@@ -107,10 +107,12 @@ class UserCollectionScreen extends StatelessWidget {
       }
       final targetType = item['targetType'];
       final targetId = item['targetId'];
-      if (targetType == 1)
+      if (targetType == 1) {
         return AppLocalizations.of(context).shopHash(targetId);
-      if (targetType == 2)
+      }
+      if (targetType == 2) {
         return AppLocalizations.of(context).postHash(targetId);
+      }
     }
     return '${item['title'] ?? item['name'] ?? item['orderNo'] ?? item['reservationNo'] ?? item['code'] ?? item['shopName'] ?? item['content'] ?? AppLocalizations.of(context).recordHash(item['id'] ?? index + 1)}';
   }
@@ -353,8 +355,9 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
           );
         }
         final page = snapshot.data!;
-        if (page.items.isEmpty)
+        if (page.items.isEmpty) {
           return Center(child: Text(strings.noCollectionData));
+        }
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: page.items.length + (page.hasMore ? 1 : 0),

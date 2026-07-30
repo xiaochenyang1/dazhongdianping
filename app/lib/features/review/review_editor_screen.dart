@@ -150,8 +150,9 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
         image = await (widget.imagePicker ?? const SystemReviewImagePicker())
             .pickImage();
       } catch (error) {
-        if (mounted)
+        if (mounted) {
           _showMessage(AppLocalizations.of(context).imagePickFailed(error));
+        }
         return;
       }
       if (image == null || !mounted) return;
@@ -163,8 +164,9 @@ class _ReviewEditorScreenState extends State<ReviewEditorScreen> {
           () => _images.add(_ReviewImageItem(url: url, bytes: imageBytes)),
         );
       } catch (error) {
-        if (mounted)
+        if (mounted) {
           _showMessage(AppLocalizations.of(context).imageUploadFailed(error));
+        }
       }
     } finally {
       if (mounted) setState(() => _uploading = false);

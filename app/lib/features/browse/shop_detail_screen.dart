@@ -419,7 +419,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     if (reviewSnapshot.connectionState !=
                         ConnectionState.done) {
                       return const Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(vertical: 12),
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
@@ -533,7 +533,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     if (similarSnapshot.connectionState !=
                         ConnectionState.done) {
                       return const Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(vertical: 12),
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }

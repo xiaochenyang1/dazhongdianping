@@ -130,8 +130,9 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         image = await (widget.imagePicker ?? const SystemCommunityImagePicker())
             .pickImage();
       } catch (error) {
-        if (mounted)
+        if (mounted) {
           _showMessage(AppLocalizations.of(context).imagePickFailed(error));
+        }
         return;
       }
       if (image == null) return;
@@ -139,8 +140,9 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         final url = await widget.repository.uploadImage(image);
         if (mounted) setState(() => _images.add(url));
       } catch (error) {
-        if (mounted)
+        if (mounted) {
           _showMessage(AppLocalizations.of(context).imageUploadFailed(error));
+        }
       }
     } finally {
       if (mounted) setState(() => _busy = false);
