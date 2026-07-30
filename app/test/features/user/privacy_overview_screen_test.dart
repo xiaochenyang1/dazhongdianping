@@ -45,7 +45,11 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   Completer<void>? sendDeleteCodeGate;
   int sendDeleteCodeRequests = 0;
   Object? createExportError;
+  Object? overviewError;
+  Object? loadMoreExportError;
+  Object? acceptPolicyError;
   Object? cancelDeleteError;
+  Object? logoutDeviceError;
   Object? submitDeleteError;
   Object? sendDeleteCodeError;
 
@@ -56,6 +60,9 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
   }) async {
     if (path == '/api/c/v1/privacy/overview') {
       overviewRequests++;
+      if (overviewError != null) {
+        throw overviewError!;
+      }
       if (failFirstOverview && overviewRequests == 1) {
         throw StateError('network unavailable');
       }
@@ -112,6 +119,9 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
       final page = query?['page'] as int? ?? 1;
       requestedExportPages.add(page);
       await exportPageGates[page]?.future;
+      if (page > 1 && loadMoreExportError != null) {
+        throw loadMoreExportError!;
+      }
       return {
         'list': [_exportTask(page == 1 ? (exportCreated ? 10 : 8) : 7)],
         'total': paginateExports ? 2 : 1,
@@ -170,6 +180,7 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
       };
     }
     if (path == '/api/c/v1/privacy/policies/accept') {
+      if (acceptPolicyError != null) throw acceptPolicyError!;
       final policyType = (body! as Map<String, dynamic>)['policyType'] as int;
       policyAcceptRequests.update(
         policyType,
@@ -201,6 +212,7 @@ class PrivacyScreenApi implements JsonApi, BinaryApi, JsonDeleteApi {
       ifAbsent: () => 1,
     );
     await deviceLogoutGates[deviceId]?.future;
+    if (logoutDeviceError != null) throw logoutDeviceError!;
     if (deviceId == 7) deviceLoggedOut = true;
     return {
       'id': deviceId,
@@ -1018,6 +1030,99 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('删除任务处理中'), findsNothing);
+  });
+
+  testWidgets('privacy center localizes overview load errors in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(
+            PrivacyScreenApi()..overviewError = const ApiException('用户登录状态不存在'),
+          ),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load privacy data: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
+  testWidgets('privacy center localizes action auth errors in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = PrivacyScreenApi()
+      ..paginateExports = true
+      ..loadMoreExportError = const ApiException('用户登录状态不存在')
+      ..acceptPolicyError = const ApiException('用户登录状态不存在')
+      ..logoutDeviceError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PrivacyOverviewScreen(
+          repository: PrivacyRepository(api),
+          accounts: const ['user@example.com'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final messenger = tester.state<ScaffoldMessengerState>(
+      find.byType(ScaffoldMessenger),
+    );
+
+    final loadMoreExports = find.byKey(const Key('privacy-exports-load-more'));
+    await scrollTo(tester, loadMoreExports);
+    await tester.tap(loadMoreExports);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not load more export tasks: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+    messenger.removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    final acceptPolicy = find.byKey(const Key('privacy-accept-policy-1'));
+    await scrollTo(tester, acceptPolicy);
+    await tester.tap(acceptPolicy);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not record agreement: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+    messenger.removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    final logoutDevice = find.byKey(const Key('privacy-logout-device-7'));
+    await scrollTo(tester, logoutDevice);
+    await tester.tap(logoutDevice);
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not deactivate device: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
   });
 
   testWidgets('privacy center fits a mobile viewport', (tester) async {

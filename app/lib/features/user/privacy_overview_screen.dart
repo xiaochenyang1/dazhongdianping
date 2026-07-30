@@ -136,7 +136,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreExportTasksFailed(error),
+              AppLocalizations.of(context).loadMoreExportTasksFailed(
+                _localizedPrivacyError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -167,7 +169,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).agreementRecordFailed(error),
+              AppLocalizations.of(context).agreementRecordFailed(
+                _localizedPrivacyError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -194,7 +198,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).deviceDeactivateFailed(error),
+              AppLocalizations.of(context).deviceDeactivateFailed(
+                _localizedPrivacyError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -443,9 +449,12 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    AppLocalizations.of(
-                      context,
-                    ).privacyLoadFailed(snapshot.error!),
+                    AppLocalizations.of(context).privacyLoadFailed(
+                      _localizedPrivacyError(
+                        AppLocalizations.of(context),
+                        snapshot.error!,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
