@@ -750,6 +750,9 @@ class AppLocalizations {
     'publicProfileLoadFailed': '用户主页加载失败：{error}',
     'sendDirectMessage': '发私信',
     'loginToFollowUser': '登录后可以关注这位用户。',
+    'publicProfileErrorUserNotFound': '这位用户不存在',
+    'publicProfileErrorSessionMissing': '当前登录状态已失效，请重新登录后再试',
+    'publicProfileErrorCannotFollowSelf': '你不能关注自己',
     'loadMoreUsersFailed': '加载更多用户失败：{error}',
     'relationListLoadFailed': '关系列表加载失败：{error}',
     'followers': '粉丝',
@@ -1574,6 +1577,9 @@ class AppLocalizations {
     'publicProfileLoadFailed': '使用者主頁載入失敗：{error}',
     'sendDirectMessage': '發私信',
     'loginToFollowUser': '登入後可以追蹤這位使用者。',
+    'publicProfileErrorUserNotFound': '這位使用者不存在',
+    'publicProfileErrorSessionMissing': '目前登入狀態已失效，請重新登入後再試',
+    'publicProfileErrorCannotFollowSelf': '你不能追蹤自己',
     'loadMoreUsersFailed': '載入更多使用者失敗：{error}',
     'relationListLoadFailed': '關係列表載入失敗：{error}',
     'followers': '粉絲',
@@ -2486,6 +2492,10 @@ class AppLocalizations {
     'publicProfileLoadFailed': 'Could not load profile: {error}',
     'sendDirectMessage': 'Message',
     'loginToFollowUser': 'Sign in to follow this user.',
+    'publicProfileErrorUserNotFound': 'This user could not be found.',
+    'publicProfileErrorSessionMissing':
+        'Your sign-in session is no longer available. Please sign in again.',
+    'publicProfileErrorCannotFollowSelf': 'You cannot follow yourself.',
     'loadMoreUsersFailed': 'Could not load more users: {error}',
     'relationListLoadFailed': 'Could not load relation list: {error}',
     'followers': 'Followers',
@@ -4185,6 +4195,12 @@ class AppLocalizations {
       _withError('publicProfileLoadFailed', error);
   String get sendDirectMessage => _text('sendDirectMessage');
   String get loginToFollowUser => _text('loginToFollowUser');
+  String get publicProfileErrorUserNotFound =>
+      _text('publicProfileErrorUserNotFound');
+  String get publicProfileErrorSessionMissing =>
+      _text('publicProfileErrorSessionMissing');
+  String get publicProfileErrorCannotFollowSelf =>
+      _text('publicProfileErrorCannotFollowSelf');
   String loadMoreUsersFailed(Object error) =>
       _withError('loadMoreUsersFailed', error);
   String relationListLoadFailed(Object error) =>

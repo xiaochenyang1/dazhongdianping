@@ -191,6 +191,18 @@ void main() {
       'The profile could not be updated. Try again later.',
     );
     expect(
+      AppLocalizations.forTag('en').publicProfileErrorUserNotFound,
+      'This user could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').publicProfileErrorSessionMissing,
+      'Your sign-in session is no longer available. Please sign in again.',
+    );
+    expect(
+      AppLocalizations.forTag('en').publicProfileErrorCannotFollowSelf,
+      'You cannot follow yourself.',
+    );
+    expect(
       AppLocalizations.forTag('en').privacyDeleteErrorNoPassword,
       'This account does not have a login password available for verification. Use code verification instead.',
     );

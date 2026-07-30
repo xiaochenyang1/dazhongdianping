@@ -1,6 +1,19 @@
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:flutter/material.dart';
+
+String _localizedPublicProfileError(AppLocalizations strings, Object error) {
+  return localizeAuthError(
+    strings,
+    error,
+    overrides: {
+      '用户不存在': strings.publicProfileErrorUserNotFound,
+      '用户登录状态不存在': strings.publicProfileErrorSessionMissing,
+      '不能关注自己': strings.publicProfileErrorCannotFollowSelf,
+    },
+  );
+}
 
 class PublicUserProfileScreen extends StatefulWidget {
   const PublicUserProfileScreen({
@@ -80,7 +93,12 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).followStatusUpdateFailed(error),
+              AppLocalizations.of(context).followStatusUpdateFailed(
+                _localizedPublicProfileError(
+                  AppLocalizations.of(context),
+                  error,
+                ),
+              ),
             ),
           ),
         );
@@ -126,9 +144,12 @@ class _PublicUserProfileScreenState extends State<PublicUserProfileScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  AppLocalizations.of(
-                    context,
-                  ).publicProfileLoadFailed(snapshot.error!),
+                  AppLocalizations.of(context).publicProfileLoadFailed(
+                    _localizedPublicProfileError(
+                      AppLocalizations.of(context),
+                      snapshot.error!,
+                    ),
+                  ),
                 ),
                 SizedBox(height: 12),
                 FilledButton.tonalIcon(
@@ -370,7 +391,12 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreUsersFailed(error),
+              AppLocalizations.of(context).loadMoreUsersFailed(
+                _localizedPublicProfileError(
+                  AppLocalizations.of(context),
+                  error,
+                ),
+              ),
             ),
           ),
         );
@@ -399,9 +425,12 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        AppLocalizations.of(
-                          context,
-                        ).relationListLoadFailed(snapshot.error!),
+                        AppLocalizations.of(context).relationListLoadFailed(
+                          _localizedPublicProfileError(
+                            AppLocalizations.of(context),
+                            snapshot.error!,
+                          ),
+                        ),
                       ),
                       SizedBox(height: 12),
                       FilledButton.tonalIcon(

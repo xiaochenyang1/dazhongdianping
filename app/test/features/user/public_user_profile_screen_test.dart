@@ -1,15 +1,21 @@
 import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
+import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/user/public_user_profile_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   bool paginateFollowers = false;
   bool failNextProfile = false;
   bool failNextFollowers = false;
+  Object? profileError;
+  Object? relationshipError;
+  Object? loadMoreFollowersError;
+  Object? followError;
   int profileRequests = 0;
   Completer<void>? profileRetryGate;
   final List<int> requestedFollowerPages = <int>[];
@@ -22,12 +28,18 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   }) async {
     if (path.endsWith('/followers')) {
       relationshipRequests++;
+      final page = query?['page'] as int? ?? 1;
+      if (page == 1 && relationshipError != null) {
+        throw relationshipError!;
+      }
+      if (page > 1 && loadMoreFollowersError != null) {
+        throw loadMoreFollowersError!;
+      }
       if (failNextFollowers) {
         failNextFollowers = false;
         throw StateError('relationship network unavailable');
       }
       await relationshipRetryGate?.future;
-      final page = query?['page'] as int? ?? 1;
       requestedFollowerPages.add(page);
       return {
         'list': [
@@ -50,6 +62,9 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       return {'list': const [], 'total': 0};
     }
     if (path == '/api/c/v1/user/21') {
+      if (profileError != null) {
+        throw profileError!;
+      }
       return {
         'id': 21,
         'nickname': '巴黎小陈',
@@ -63,6 +78,9 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       };
     }
     profileRequests++;
+    if (profileError != null) {
+      throw profileError!;
+    }
     if (failNextProfile) {
       failNextProfile = false;
       throw StateError('profile network unavailable');
@@ -86,15 +104,35 @@ class SocialProfileApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
       {};
   @override
-  Future<Map<String, dynamic>> putJson(String path, {Object? body}) async => {
-    'following': true,
-    'followerCount': 13,
-  };
+  Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
+    if (followError != null) {
+      throw followError!;
+    }
+    return {'following': true, 'followerCount': 13};
+  }
+
   @override
   Future<Map<String, dynamic>> deleteJson(String path) async => {
     'following': false,
     'followerCount': 12,
   };
+}
+
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
 }
 
 void main() {
@@ -245,6 +283,120 @@ void main() {
       expect(find.text('已关注'), findsOneWidget);
     },
   );
+
+  testWidgets('public profile localizes load errors in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PublicUserProfileScreen(
+          repository: UserRepository(
+            SocialProfileApi()..profileError = const ApiException('用户不存在'),
+          ),
+          userId: 9,
+          canFollow: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load profile: This user could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户不存在'), findsNothing);
+  });
+
+  testWidgets('public profile localizes follow errors in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: PublicUserProfileScreen(
+          repository: UserRepository(
+            SocialProfileApi()..followError = const ApiException('用户登录状态不存在'),
+          ),
+          userId: 9,
+          canFollow: true,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final followButton = find.text('Following', skipOffstage: false);
+    await tester.ensureVisible(followButton);
+    await tester.tap(followButton);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not update follow status: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
+  testWidgets('relationship list localizes load errors in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: UserRelationshipsScreen(
+          repository: UserRepository(
+            SocialProfileApi()..relationshipError = const ApiException('用户不存在'),
+          ),
+          userId: 9,
+          followers: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load relation list: This user could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户不存在'), findsNothing);
+  });
+
+  testWidgets('relationship list localizes load more errors in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: UserRelationshipsScreen(
+          repository: UserRepository(
+            SocialProfileApi()
+              ..paginateFollowers = true
+              ..loadMoreFollowersError = const ApiException('用户不存在'),
+          ),
+          userId: 9,
+          followers: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final loadMoreButton = find.byKey(
+      const Key('relationships-load-more'),
+      skipOffstage: false,
+    );
+    await tester.ensureVisible(loadMoreButton);
+    await tester.tap(loadMoreButton);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load more users: This user could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户不存在'), findsNothing);
+  });
 
   testWidgets('public profile guards duplicate relationship navigation', (
     tester,
