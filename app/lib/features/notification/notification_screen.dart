@@ -358,6 +358,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
           'pending' => strings.notificationTitleReservationSubmitted,
           _ => notification.title,
         };
+      case 'reservation.reminder':
+        return switch (_notificationQueryValue(
+          notification.linkUrl,
+          'remind',
+        )) {
+          '30' => strings.notificationTitleReservationReminderThirtyMinutes,
+          '120' => strings.notificationTitleReservationReminderTwoHours,
+          _ => notification.title,
+        };
       case 'reservation.status':
         return switch (_notificationQueryValue(
           notification.linkUrl,
@@ -371,6 +380,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
         };
       case 'coupon.reminder':
         return strings.notificationTitleCouponReminder;
+      case 'coupon.expired':
+        return strings.notificationTitleCouponExpired;
       case 'coupon.verified':
         return strings.notificationTitleCouponVerified;
       case 'review.like':
@@ -407,6 +418,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
         };
       case 'review.hidden':
         return strings.notificationTitleReviewHidden;
+      case 'account.ban_appeal':
+        return _localizedBanAppealTitle(strings, notification);
       default:
         return notification.title;
     }
@@ -433,10 +446,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return _localizedRefundResultContent(strings, notification);
       case 'reservation.created':
         return _localizedReservationContent(strings, notification);
+      case 'reservation.reminder':
+        return _localizedReservationReminderContent(strings, notification);
       case 'reservation.status':
         return _localizedReservationStatusContent(strings, notification);
       case 'coupon.reminder':
         return _localizedCouponReminderContent(strings, notification);
+      case 'coupon.expired':
+        return _localizedCouponExpiredContent(strings, notification);
       case 'coupon.verified':
         return _localizedCouponVerifiedContent(strings, notification);
       case 'review.like':
@@ -458,6 +475,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return _localizedReviewAuditContent(strings, notification);
       case 'review.hidden':
         return _localizedReviewHiddenContent(strings, notification);
+      case 'account.ban_appeal':
+        return _localizedBanAppealContent(strings, notification);
       default:
         return notification.content;
     }
@@ -724,6 +743,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return localized.join(_notificationSeparator);
   }
 
+  String _localizedReservationReminderContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final segments = _notificationSegments(notification.content);
+    if (segments.isEmpty) {
+      return notification.content;
+    }
+    final localized = <String>[];
+    for (final segment in segments) {
+      final peopleCount = _extractPeopleCount(segment);
+      if (peopleCount != null) {
+        localized.add(strings.peopleCount(peopleCount));
+        continue;
+      }
+      localized.add(segment);
+    }
+    return localized.join(_notificationSeparator);
+  }
+
   String _localizedCouponReminderContent(
     AppLocalizations strings,
     AppNotification notification,
@@ -735,6 +774,31 @@ class _NotificationScreenState extends State<NotificationScreen> {
         days: expiring.days,
       );
     }
+    final segments = _notificationSegments(notification.content);
+    if (segments.isEmpty) {
+      return notification.content;
+    }
+    final localized = <String>[];
+    for (final segment in segments) {
+      final expiryDate = _extractExpiryDate(segment);
+      if (expiryDate != null && expiryDate.isNotEmpty) {
+        localized.add(strings.validUntilDate(expiryDate));
+        continue;
+      }
+      final couponCode = _extractCouponCode(segment);
+      if (couponCode != null && couponCode.isNotEmpty) {
+        localized.add(strings.notificationCouponCodeLabel(couponCode));
+        continue;
+      }
+      localized.add(segment);
+    }
+    return localized.join(_notificationSeparator);
+  }
+
+  String _localizedCouponExpiredContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
     final segments = _notificationSegments(notification.content);
     if (segments.isEmpty) {
       return notification.content;
@@ -962,6 +1026,34 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
+  String _localizedBanAppealTitle(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final normalized = notification.title.trim();
+    return switch (normalized) {
+      '封禁申诉已通过' || '封禁申訴已通過' => strings.notificationTitleBanAppealApproved,
+      '封禁申诉已驳回' || '封禁申訴已駁回' => strings.notificationTitleBanAppealRejected,
+      '账号已解封' || '帳號已解封' => strings.notificationTitleAccountUnbanned,
+      _ => notification.title,
+    };
+  }
+
+  String _localizedBanAppealContent(
+    AppLocalizations strings,
+    AppNotification notification,
+  ) {
+    final normalized = notification.title.trim();
+    return switch (normalized) {
+      '封禁申诉已通过' || '封禁申訴已通過' => strings.notificationBanAppealApprovedContent,
+      '封禁申诉已驳回' || '封禁申訴已駁回' => strings.notificationBanAppealRejectedContent(
+        reason: _extractBanAppealRejectedReason(notification.content),
+      ),
+      '账号已解封' || '帳號已解封' => strings.notificationAccountUnbannedContent,
+      _ => notification.content,
+    };
+  }
+
   String _appendLocalizedNotificationRemark(
     AppLocalizations strings,
     String base,
@@ -1159,6 +1251,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
       return null;
     }
     return (name: name, topic: topic, title: title);
+  }
+
+  String? _extractBanAppealRejectedReason(String content) {
+    final match = RegExp(
+      r'^(?:你的封禁申诉未通过|你的封禁申訴未通過)[：:]\s*(.+)$',
+    ).firstMatch(content.trim());
+    final reason = match?.group(1)?.trim();
+    if (reason == null || reason.isEmpty) {
+      return null;
+    }
+    return reason;
   }
 
   String? _extractOrderNumber(String segment) {

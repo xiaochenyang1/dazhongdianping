@@ -141,6 +141,20 @@ void main() {
       'Jordan posted "Seoul route" in #Late night eats',
     );
     expect(
+      AppLocalizations.forTag('en').notificationTitleCouponExpired,
+      'Coupon expired',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).notificationBanAppealRejectedContent(reason: 'Policy violation'),
+      'Your ban appeal was rejected: Policy violation',
+    );
+    expect(
+      AppLocalizations.forTag('en').notificationTitleAccountUnbanned,
+      'Account unbanned',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).notificationDirectMessagePreview(name: 'Alex', preview: 'See you soon'),

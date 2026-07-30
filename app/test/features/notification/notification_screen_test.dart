@@ -58,9 +58,12 @@ class NotificationScreenApi implements JsonApi {
     this.orderRefundApproved = false,
     this.orderRefundRejected = false,
     this.reservationCreated = false,
+    this.reservationReminderSoon = false,
+    this.reservationReminderLater = false,
     this.reservationStatusRejected = false,
     this.reservationStatusNoShow = false,
     this.couponReminder = false,
+    this.couponExpired = false,
     this.couponVerified = false,
     this.reviewLike = false,
     this.reviewComment = false,
@@ -72,6 +75,9 @@ class NotificationScreenApi implements JsonApi {
     this.expertResult = false,
     this.reviewAuditApproved = false,
     this.reviewHidden = false,
+    this.banAppealApproved = false,
+    this.banAppealRejected = false,
+    this.accountUnbanned = false,
     this.failFirstLoad = false,
     this.mixedRead = false,
     this.twoUnread = false,
@@ -89,9 +95,12 @@ class NotificationScreenApi implements JsonApi {
   final bool orderRefundApproved;
   final bool orderRefundRejected;
   final bool reservationCreated;
+  final bool reservationReminderSoon;
+  final bool reservationReminderLater;
   final bool reservationStatusRejected;
   final bool reservationStatusNoShow;
   final bool couponReminder;
+  final bool couponExpired;
   final bool couponVerified;
   final bool reviewLike;
   final bool reviewComment;
@@ -103,6 +112,9 @@ class NotificationScreenApi implements JsonApi {
   final bool expertResult;
   final bool reviewAuditApproved;
   final bool reviewHidden;
+  final bool banAppealApproved;
+  final bool banAppealRejected;
+  final bool accountUnbanned;
   final bool failFirstLoad;
   final bool mixedRead;
   final bool twoUnread;
@@ -261,6 +273,34 @@ class NotificationScreenApi implements JsonApi {
         'createdAt': '2026-07-15 10:00:00',
       };
     }
+    if (reservationReminderSoon) {
+      return {
+        'id': 1,
+        'type': 'reservation.reminder',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '预订即将开始（30 分钟）',
+        'content': '巴黎川菜馆 · 2026-07-26 18:00 · 2 人',
+        'linkUrl': '/user/reservations/44?remind=30',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (reservationReminderLater) {
+      return {
+        'id': 1,
+        'type': 'reservation.reminder',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '预订提醒（2 小时）',
+        'content': '巴黎川菜馆 · 2026-07-26 18:00 · 4 人',
+        'linkUrl': '/user/reservations/44?remind=120',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
     if (reservationStatusRejected) {
       return {
         'id': 1,
@@ -298,6 +338,20 @@ class NotificationScreenApi implements JsonApi {
         'title': '券码即将到期',
         'content': 'CP-DEMO 将在 1 天后过期',
         'linkUrl': '/user/coupons?status=1&code=CP-DEMO&remind=1',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (couponExpired) {
+      return {
+        'id': 1,
+        'type': 'coupon.expired',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '券码已过期',
+        'content': '双人套餐 · 巴黎川菜馆 · 有效期至 2026-07-20 · 券码 CP-OVERDUE',
+        'linkUrl': '/user/coupons?status=3&code=CP-OVERDUE',
         'aggregateCount': 1,
         'read': read,
         'createdAt': '2026-07-15 10:00:00',
@@ -452,6 +506,48 @@ class NotificationScreenApi implements JsonApi {
         'title': '点评已被隐藏',
         'content': '柏林茶馆 · 商户申诉成立，你的点评已从公开展示中隐藏：商家已提供处理凭证',
         'linkUrl': '/user/reviews/12?hidden=appeal',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (banAppealApproved) {
+      return {
+        'id': 1,
+        'type': 'account.ban_appeal',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '封禁申诉已通过',
+        'content': '你的封禁申诉已通过，账号已解封，现在可以正常登录使用了。',
+        'linkUrl': '',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (banAppealRejected) {
+      return {
+        'id': 1,
+        'type': 'account.ban_appeal',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '封禁申诉已驳回',
+        'content': '你的封禁申诉未通过：存在刷单行为',
+        'linkUrl': '',
+        'aggregateCount': 1,
+        'read': read,
+        'createdAt': '2026-07-15 10:00:00',
+      };
+    }
+    if (accountUnbanned) {
+      return {
+        'id': 1,
+        'type': 'account.ban_appeal',
+        'actorUserId': null,
+        'actorName': '',
+        'title': '账号已解封',
+        'content': '管理员已解除你的账号封禁，关联的申诉已自动通过，现在可以正常登录使用了。',
+        'linkUrl': '',
         'aggregateCount': 1,
         'read': read,
         'createdAt': '2026-07-15 10:00:00',
@@ -630,6 +726,18 @@ void main() {
     );
     await expectEnglishNotification(
       tester,
+      api: NotificationScreenApi(reservationReminderSoon: true),
+      expectedTitle: 'Reservation starts in 30 min',
+      expectedContent: '巴黎川菜馆 · 2026-07-26 18:00 · 2 guests',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(reservationReminderLater: true),
+      expectedTitle: 'Reservation reminder (2 hours)',
+      expectedContent: '巴黎川菜馆 · 2026-07-26 18:00 · 4 guests',
+    );
+    await expectEnglishNotification(
+      tester,
       api: NotificationScreenApi(reservationStatusRejected: true),
       expectedTitle: 'Reservation rejected',
       expectedContent:
@@ -647,6 +755,13 @@ void main() {
       api: NotificationScreenApi(couponReminder: true),
       expectedTitle: 'Coupon reminder',
       expectedContent: 'CP-DEMO expires in 1 day',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(couponExpired: true),
+      expectedTitle: 'Coupon expired',
+      expectedContent:
+          '双人套餐 · 巴黎川菜馆 · Valid until 2026-07-20 · Coupon CP-OVERDUE',
     );
     await expectEnglishNotification(
       tester,
@@ -714,6 +829,26 @@ void main() {
       expectedTitle: 'Review hidden',
       expectedContent:
           '柏林茶馆 · The merchant appeal was approved and your review was hidden from public view: 商家已提供处理凭证',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(banAppealApproved: true),
+      expectedTitle: 'Ban appeal approved',
+      expectedContent:
+          'Your ban appeal was approved. Your account has been unbanned and you can sign in again.',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(banAppealRejected: true),
+      expectedTitle: 'Ban appeal rejected',
+      expectedContent: 'Your ban appeal was rejected: 存在刷单行为',
+    );
+    await expectEnglishNotification(
+      tester,
+      api: NotificationScreenApi(accountUnbanned: true),
+      expectedTitle: 'Account unbanned',
+      expectedContent:
+          'An admin removed your account ban. The related appeal was auto-approved and you can sign in again.',
     );
     await expectEnglishNotification(
       tester,

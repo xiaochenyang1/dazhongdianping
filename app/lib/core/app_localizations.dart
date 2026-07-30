@@ -122,7 +122,10 @@ class AppLocalizations {
     'notificationTitleOrderPaid': '支付成功',
     'notificationTitleReservationConfirmed': '预订已自动确认',
     'notificationTitleReservationSubmitted': '预订已提交',
+    'notificationTitleReservationReminderThirtyMinutes': '预订即将开始（30 分钟）',
+    'notificationTitleReservationReminderTwoHours': '预订提醒（2 小时）',
     'notificationTitleCouponReminder': '券码即将到期',
+    'notificationTitleCouponExpired': '券码已过期',
     'notificationTitleCouponVerified': '券码已核销',
     'notificationTitleMerchantReply': '商家回复',
     'notificationFollowedYou': '{name} 关注了你',
@@ -148,6 +151,9 @@ class AppLocalizations {
     'notificationTitleReviewApproved': '点评已通过审核',
     'notificationTitleReviewRejected': '点评未通过审核',
     'notificationTitleReviewHidden': '点评已被隐藏',
+    'notificationTitleBanAppealApproved': '封禁申诉已通过',
+    'notificationTitleBanAppealRejected': '封禁申诉已驳回',
+    'notificationTitleAccountUnbanned': '账号已解封',
     'notificationActorPlatform': '平台',
     'notificationActorMerchant': '商户',
     'notificationRefundApprovedAction': '{actor}已同意退款',
@@ -174,6 +180,10 @@ class AppLocalizations {
     'notificationMentionedYouInPost': '{name} 在帖子《{title}》中提到了你',
     'notificationMentionedYouInPostComment': '{name} 在帖子《{title}》的评论中提到了你',
     'notificationTopicUpdateContent': '{name} 在 #{topic} 发布了《{title}》',
+    'notificationBanAppealApprovedContent': '你的封禁申诉已通过，账号已解封，现在可以正常登录使用了。',
+    'notificationBanAppealRejectedContent': '你的封禁申诉未通过',
+    'notificationAccountUnbannedContent':
+        '管理员已解除你的账号封禁，关联的申诉已自动通过，现在可以正常登录使用了。',
     'loggingOut': '退出中...',
     'logout': '退出',
     'profileLoadFailed': '用户资料加载失败：{error}',
@@ -898,7 +908,10 @@ class AppLocalizations {
     'notificationTitleOrderPaid': '支付成功',
     'notificationTitleReservationConfirmed': '預訂已自動確認',
     'notificationTitleReservationSubmitted': '預訂已提交',
+    'notificationTitleReservationReminderThirtyMinutes': '預訂即將開始（30 分鐘）',
+    'notificationTitleReservationReminderTwoHours': '預訂提醒（2 小時）',
     'notificationTitleCouponReminder': '券碼即將到期',
+    'notificationTitleCouponExpired': '券碼已過期',
     'notificationTitleCouponVerified': '券碼已核銷',
     'notificationTitleMerchantReply': '商家回覆',
     'notificationFollowedYou': '{name} 關注了你',
@@ -924,6 +937,9 @@ class AppLocalizations {
     'notificationTitleReviewApproved': '評論已通過審核',
     'notificationTitleReviewRejected': '評論未通過審核',
     'notificationTitleReviewHidden': '評論已被隱藏',
+    'notificationTitleBanAppealApproved': '封禁申訴已通過',
+    'notificationTitleBanAppealRejected': '封禁申訴已駁回',
+    'notificationTitleAccountUnbanned': '帳號已解封',
     'notificationActorPlatform': '平台',
     'notificationActorMerchant': '商家',
     'notificationRefundApprovedAction': '{actor}已同意退款',
@@ -950,6 +966,10 @@ class AppLocalizations {
     'notificationMentionedYouInPost': '{name} 在貼文《{title}》中提到了你',
     'notificationMentionedYouInPostComment': '{name} 在貼文《{title}》的留言中提到了你',
     'notificationTopicUpdateContent': '{name} 在 #{topic} 發布了《{title}》',
+    'notificationBanAppealApprovedContent': '你的封禁申訴已通過，帳號已解封，現在可以正常登入使用了。',
+    'notificationBanAppealRejectedContent': '你的封禁申訴未通過',
+    'notificationAccountUnbannedContent':
+        '管理員已解除你的帳號封禁，關聯的申訴已自動通過，現在可以正常登入使用了。',
     'loggingOut': '登出中...',
     'logout': '登出',
     'profileLoadFailed': '使用者資料載入失敗：{error}',
@@ -1678,7 +1698,12 @@ class AppLocalizations {
     'notificationTitleOrderPaid': 'Payment successful',
     'notificationTitleReservationConfirmed': 'Reservation auto-confirmed',
     'notificationTitleReservationSubmitted': 'Reservation submitted',
+    'notificationTitleReservationReminderThirtyMinutes':
+        'Reservation starts in 30 min',
+    'notificationTitleReservationReminderTwoHours':
+        'Reservation reminder (2 hours)',
     'notificationTitleCouponReminder': 'Coupon reminder',
+    'notificationTitleCouponExpired': 'Coupon expired',
     'notificationTitleCouponVerified': 'Coupon redeemed',
     'notificationTitleMerchantReply': 'Merchant reply',
     'notificationFollowedYou': '{name} followed you',
@@ -1708,6 +1733,9 @@ class AppLocalizations {
     'notificationTitleReviewApproved': 'Review approved',
     'notificationTitleReviewRejected': 'Review rejected',
     'notificationTitleReviewHidden': 'Review hidden',
+    'notificationTitleBanAppealApproved': 'Ban appeal approved',
+    'notificationTitleBanAppealRejected': 'Ban appeal rejected',
+    'notificationTitleAccountUnbanned': 'Account unbanned',
     'notificationActorPlatform': 'Platform',
     'notificationActorMerchant': 'Merchant',
     'notificationRefundApprovedAction': '{actor} approved your refund',
@@ -1743,6 +1771,11 @@ class AppLocalizations {
     'notificationMentionedYouInPostComment':
         '{name} mentioned you in a comment on "{title}"',
     'notificationTopicUpdateContent': '{name} posted "{title}" in #{topic}',
+    'notificationBanAppealApprovedContent':
+        'Your ban appeal was approved. Your account has been unbanned and you can sign in again.',
+    'notificationBanAppealRejectedContent': 'Your ban appeal was rejected',
+    'notificationAccountUnbannedContent':
+        'An admin removed your account ban. The related appeal was auto-approved and you can sign in again.',
     'loggingOut': 'Signing out...',
     'logout': 'Sign out',
     'profileLoadFailed': 'Could not load profile: {error}',
@@ -2686,8 +2719,14 @@ class AppLocalizations {
       _text('notificationTitleReservationConfirmed');
   String get notificationTitleReservationSubmitted =>
       _text('notificationTitleReservationSubmitted');
+  String get notificationTitleReservationReminderThirtyMinutes =>
+      _text('notificationTitleReservationReminderThirtyMinutes');
+  String get notificationTitleReservationReminderTwoHours =>
+      _text('notificationTitleReservationReminderTwoHours');
   String get notificationTitleCouponReminder =>
       _text('notificationTitleCouponReminder');
+  String get notificationTitleCouponExpired =>
+      _text('notificationTitleCouponExpired');
   String get notificationTitleCouponVerified =>
       _text('notificationTitleCouponVerified');
   String get notificationTitleMerchantReply =>
@@ -2761,6 +2800,15 @@ class AppLocalizations {
       .replaceFirst('{name}', name)
       .replaceFirst('{topic}', topic)
       .replaceFirst('{title}', title);
+  String get notificationBanAppealApprovedContent =>
+      _text('notificationBanAppealApprovedContent');
+  String notificationBanAppealRejectedContent({String? reason}) {
+    final base = _text('notificationBanAppealRejectedContent');
+    return _appendNotificationRemark(base, reason);
+  }
+
+  String get notificationAccountUnbannedContent =>
+      _text('notificationAccountUnbannedContent');
   String notificationDirectMessagePreview({
     required String name,
     required String preview,
@@ -2832,6 +2880,12 @@ class AppLocalizations {
       _text('notificationTitleReviewRejected');
   String get notificationTitleReviewHidden =>
       _text('notificationTitleReviewHidden');
+  String get notificationTitleBanAppealApproved =>
+      _text('notificationTitleBanAppealApproved');
+  String get notificationTitleBanAppealRejected =>
+      _text('notificationTitleBanAppealRejected');
+  String get notificationTitleAccountUnbanned =>
+      _text('notificationTitleAccountUnbanned');
   String get notificationActorPlatform => _text('notificationActorPlatform');
   String get notificationActorMerchant => _text('notificationActorMerchant');
   String notificationRefundApprovedAction(String actor) =>
