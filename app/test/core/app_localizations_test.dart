@@ -203,6 +203,10 @@ void main() {
       'You cannot follow yourself.',
     );
     expect(
+      AppLocalizations.forTag('en').userCollectionErrorSessionMissing,
+      'Your sign-in session is no longer available. Please sign in again.',
+    );
+    expect(
       AppLocalizations.forTag('en').privacyDeleteErrorNoPassword,
       'This account does not have a login password available for verification. Use code verification instead.',
     );

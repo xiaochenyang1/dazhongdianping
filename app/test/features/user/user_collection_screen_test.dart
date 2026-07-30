@@ -14,6 +14,8 @@ class CollectionApi implements JsonApi {
 
   final bool paginatedReviews;
   final bool failFirstReviews;
+  Object? reviewError;
+  Object? loadMoreReviewError;
   int reviewRequests = 0;
   Completer<void>? reviewRetryGate;
   final List<int> requestedReviewPages = <int>[];
@@ -25,11 +27,17 @@ class CollectionApi implements JsonApi {
   }) async {
     if (path == '/api/c/v1/user/reviews') {
       reviewRequests++;
+      final page = query?['page'] as int? ?? 1;
+      if (page == 1 && reviewError != null) {
+        throw reviewError!;
+      }
+      if (page > 1 && loadMoreReviewError != null) {
+        throw loadMoreReviewError!;
+      }
       if (failFirstReviews && reviewRequests == 1) {
         throw StateError('network unavailable');
       }
       if (reviewRequests > 1) await reviewRetryGate?.future;
-      final page = query?['page'] as int? ?? 1;
       requestedReviewPages.add(page);
       return {
         'list': [
@@ -536,5 +544,57 @@ void main() {
     expect(find.text('My posts'), findsOneWidget);
     expect(find.textContaining('Rejected'), findsOneWidget);
     expect(find.textContaining('Audit note: 请补充具体地址'), findsOneWidget);
+  });
+
+  testWidgets('user collection localizes load errors in English', (
+    tester,
+  ) async {
+    final api = CollectionApi()..reviewError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: UserCollectionScreen(
+          repository: UserRepository(api),
+          collection: UserCollection.reviews,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
+  testWidgets('user collection localizes load more errors in English', (
+    tester,
+  ) async {
+    final api = CollectionApi(paginatedReviews: true)
+      ..loadMoreReviewError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: UserCollectionScreen(
+          repository: UserRepository(api),
+          collection: UserCollection.reviews,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('user-collection-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load more: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
   });
 }

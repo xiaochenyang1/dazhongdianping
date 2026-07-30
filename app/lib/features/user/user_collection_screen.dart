@@ -13,8 +13,17 @@ import 'package:dazhongdianping_app/features/trade/coupons_screen.dart';
 import 'package:dazhongdianping_app/features/trade/orders_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
+
+String _localizedCollectionError(AppLocalizations strings, Object error) {
+  return localizeAuthError(
+    strings,
+    error,
+    overrides: {'用户登录状态不存在': strings.userCollectionErrorSessionMissing},
+  );
+}
 
 class UserCollectionScreen extends StatelessWidget {
   const UserCollectionScreen({
@@ -298,7 +307,11 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
       if (mounted && requestId == _requestId) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).loadMoreFailed(error)),
+            content: Text(
+              AppLocalizations.of(context).loadMoreFailed(
+                _localizedCollectionError(AppLocalizations.of(context), error),
+              ),
+            ),
           ),
         );
       }
@@ -323,7 +336,11 @@ class _PaginatedCollectionBodyState extends State<_PaginatedCollectionBody> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(strings.collectionLoadFailed(snapshot.error!)),
+                Text(
+                  strings.collectionLoadFailed(
+                    _localizedCollectionError(strings, snapshot.error!),
+                  ),
+                ),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('user-collection-retry'),

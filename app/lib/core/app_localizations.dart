@@ -758,6 +758,7 @@ class AppLocalizations {
     'followers': '粉丝',
     'followingUsers': '关注',
     'noRelationUsers': '暂无用户',
+    'userCollectionErrorSessionMissing': '当前登录状态已失效，请重新登录后再试',
     'collectionLoadFailed': '加载失败：{error}',
     'noCollectionData': '暂无数据',
     'favoritedAt': '收藏于 {time}',
@@ -1585,6 +1586,7 @@ class AppLocalizations {
     'followers': '粉絲',
     'followingUsers': '追蹤',
     'noRelationUsers': '暫無使用者',
+    'userCollectionErrorSessionMissing': '目前登入狀態已失效，請重新登入後再試',
     'collectionLoadFailed': '載入失敗：{error}',
     'noCollectionData': '暫無資料',
     'favoritedAt': '收藏於 {time}',
@@ -2501,6 +2503,8 @@ class AppLocalizations {
     'followers': 'Followers',
     'followingUsers': 'Following',
     'noRelationUsers': 'No users yet',
+    'userCollectionErrorSessionMissing':
+        'Your sign-in session is no longer available. Please sign in again.',
     'collectionLoadFailed': 'Could not load: {error}',
     'noCollectionData': 'No data yet',
     'favoritedAt': 'Saved {time}',
@@ -4208,6 +4212,8 @@ class AppLocalizations {
   String get followers => _text('followers');
   String get followingUsers => _text('followingUsers');
   String get noRelationUsers => _text('noRelationUsers');
+  String get userCollectionErrorSessionMissing =>
+      _text('userCollectionErrorSessionMissing');
   String collectionLoadFailed(Object error) =>
       _withError('collectionLoadFailed', error);
   String get noCollectionData => _text('noCollectionData');
