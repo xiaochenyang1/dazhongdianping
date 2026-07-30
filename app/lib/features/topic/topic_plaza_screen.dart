@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/topic/topic_detail_screen.dart';
+import 'package:dazhongdianping_app/features/topic/topic_error_localizer.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -113,7 +114,9 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMoreTopicsFailed(error),
+              AppLocalizations.of(context).loadMoreTopicsFailed(
+                localizeTopicError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -178,7 +181,11 @@ class _TopicPlazaScreenState extends State<TopicPlazaScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(strings.topicsLoadFailed(snapshot.error!)),
+                          Text(
+                            strings.topicsLoadFailed(
+                              localizeTopicError(strings, snapshot.error!),
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           FilledButton.tonalIcon(
                             key: const Key('topic-plaza-retry'),
@@ -259,7 +266,10 @@ class _LoginGuide extends StatelessWidget {
             const SizedBox(height: 14),
             Text(strings.followingTopicsLoginRequired),
             const SizedBox(height: 14),
-            FilledButton(onPressed: onLoginRequired, child: Text(strings.goLogin)),
+            FilledButton(
+              onPressed: onLoginRequired,
+              child: Text(strings.goLogin),
+            ),
           ],
         ),
       ),
@@ -332,7 +342,10 @@ class _TopicCard extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 strings.hotScore(topic.hotScore),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 5),
               Text(

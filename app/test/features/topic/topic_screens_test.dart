@@ -16,16 +16,21 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   Completer<void>? followGate;
   bool paginateTopics = false;
   bool failNextRecommended = false;
+  Object? topicPageError;
+  Object? loadMoreTopicPageError;
   final List<int> requestedTopicPages = <int>[];
   final List<String> requestedTopicPageKeys = <String>[];
   final topicPageGates = <String, Completer<void>>{};
   bool paginatePosts = false;
   bool failNextPosts = false;
+  Object? topicPostsError;
+  Object? loadMoreTopicPostsError;
   final List<int> requestedPostPages = <int>[];
   Completer<void>? postRetryGate;
   int postCalls = 0;
   Completer<void>? postDetailGate;
   int postDetailCalls = 0;
+  Object? followError;
 
   Map<String, dynamic> topic({bool followed = false, int count = 88}) => {
     'id': 31,
@@ -82,12 +87,18 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     }
     if (path.endsWith('/posts')) {
       postCalls++;
+      final page = query?['page'] as int? ?? 1;
+      if (page == 1 && topicPostsError != null) {
+        throw topicPostsError!;
+      }
+      if (page > 1 && loadMoreTopicPostsError != null) {
+        throw loadMoreTopicPostsError!;
+      }
       if (failNextPosts) {
         failNextPosts = false;
         throw StateError('post network unavailable');
       }
       await postRetryGate?.future;
-      final page = query?['page'] as int? ?? 1;
       requestedPostPages.add(page);
       return {
         'list': [
@@ -107,6 +118,12 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       throw StateError('topic network unavailable');
     }
     final page = query?['page'] as int? ?? 1;
+    if (page == 1 && topicPageError != null) {
+      throw topicPageError!;
+    }
+    if (page > 1 && loadMoreTopicPageError != null) {
+      throw loadMoreTopicPageError!;
+    }
     requestedTopicPages.add(page);
     final pageKey = '$path:$page';
     requestedTopicPageKeys.add(pageKey);
@@ -132,6 +149,9 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
     followCalls++;
     await followGate?.future;
+    if (followError != null) {
+      throw followError!;
+    }
     if (failFollow) throw const ApiException('关注失败');
     return {'topicId': 31, 'followed': true, 'followerCount': 89};
   }
@@ -144,8 +164,24 @@ class TopicScreenApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   };
 }
 
-void main() {
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
 
+void main() {
   testWidgets('topic plaza switches English chrome', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -170,6 +206,28 @@ void main() {
     expect(find.text('Following'), findsOneWidget);
   });
 
+  testWidgets('topic plaza localizes load errors in English', (tester) async {
+    final api = TopicScreenApi()
+      ..topicPageError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: TopicPlazaScreen(
+          repository: TopicRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load topics: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
 
   testWidgets('topic detail retries an initial post failure', (tester) async {
     final api = TopicScreenApi()..failNextPosts = true;
@@ -191,6 +249,29 @@ void main() {
     expect(api.requestedPostPages, [1]);
     expect(find.text('周末咖啡地图'), findsOneWidget);
     expect(find.text('88 人关注'), findsOneWidget);
+  });
+
+  testWidgets('topic detail localizes post load errors in English', (
+    tester,
+  ) async {
+    final api = TopicScreenApi()..topicPostsError = const ApiException('话题不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: TopicDetailScreen(
+          repository: TopicRepository(api),
+          initial: TopicSummary.fromJson(api.topic()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load posts: This topic could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('话题不存在'), findsNothing);
   });
 
   testWidgets('topic detail guards duplicate post retries', (tester) async {
@@ -291,6 +372,34 @@ void main() {
     expect(find.byKey(const Key('topic-posts-load-more')), findsNothing);
   });
 
+  testWidgets('topic detail localizes load more post errors in English', (
+    tester,
+  ) async {
+    final api = TopicScreenApi()
+      ..paginatePosts = true
+      ..loadMoreTopicPostsError = const ApiException('话题不可用');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: TopicDetailScreen(
+          repository: TopicRepository(api),
+          initial: TopicSummary.fromJson(api.topic()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('topic-posts-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not load more posts: This topic is unavailable.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('话题不可用'), findsNothing);
+  });
+
   testWidgets('topic plaza loads later recommended topics', (tester) async {
     final api = TopicScreenApi()..paginateTopics = true;
     await tester.pumpWidget(
@@ -310,6 +419,35 @@ void main() {
     expect(api.requestedTopicPages, [1, 2]);
     expect(find.text('巴黎甜点'), findsOneWidget);
     expect(find.byKey(const Key('topic-plaza-load-more')), findsNothing);
+  });
+
+  testWidgets('topic plaza localizes load more errors in English', (
+    tester,
+  ) async {
+    final api = TopicScreenApi()
+      ..paginateTopics = true
+      ..loadMoreTopicPageError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: TopicPlazaScreen(
+          repository: TopicRepository(api),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('topic-plaza-load-more')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load more topics: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
   });
 
   testWidgets('topic plaza exposes three tabs and hot score composition', (
@@ -534,5 +672,35 @@ void main() {
     expect(find.text('关注话题'), findsOneWidget);
     expect(find.text('88 人关注'), findsOneWidget);
     expect(find.textContaining('关注状态更新失败'), findsOneWidget);
+  });
+
+  testWidgets('topic detail localizes follow errors in English', (
+    tester,
+  ) async {
+    final api = TopicScreenApi()..followError = const ApiException('关注失败');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: TopicDetailScreen(
+          repository: TopicRepository(api),
+          initial: TopicSummary.fromJson(api.topic()),
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Follow topic'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Follow topic'), findsOneWidget);
+    expect(find.text('88 followers'), findsOneWidget);
+    expect(
+      find.text(
+        'Could not update follow status: The follow request could not be completed.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('关注失败'), findsNothing);
   });
 }

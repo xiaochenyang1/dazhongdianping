@@ -1,6 +1,7 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
+import 'package:dazhongdianping_app/features/topic/topic_error_localizer.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -87,7 +88,9 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).loadMorePostsFailed(error),
+              AppLocalizations.of(context).loadMorePostsFailed(
+                localizeTopicError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -149,7 +152,9 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).followStatusUpdateFailed(error),
+              AppLocalizations.of(context).followStatusUpdateFailed(
+                localizeTopicError(AppLocalizations.of(context), error),
+              ),
             ),
           ),
         );
@@ -239,7 +244,11 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(strings.postsLoadFailed(snapshot.error!)),
+                    Text(
+                      strings.postsLoadFailed(
+                        localizeTopicError(strings, snapshot.error!),
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     FilledButton.tonalIcon(
                       key: const Key('topic-posts-retry'),

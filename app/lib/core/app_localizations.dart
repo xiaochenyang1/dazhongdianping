@@ -227,6 +227,9 @@ class AppLocalizations {
     'topicSevenDayStats': '7 天：{posts} 帖 · {likes} 赞 · {comments} 评论',
     'topicFollowMeta': '{followers} 人关注 · {posts} 篇公开帖子',
     'topicFollowerCount': '{count} 人关注',
+    'topicErrorNotFound': '这个话题不存在',
+    'topicErrorUnavailable': '这个话题暂时不可用',
+    'topicErrorFollowFailed': '关注请求未能完成',
     'followStatusUpdateFailed': '关注状态更新失败：{error}',
     'followed': '已关注',
     'followTopic': '关注话题',
@@ -1065,6 +1068,9 @@ class AppLocalizations {
     'topicSevenDayStats': '7 天：{posts} 帖 · {likes} 讚 · {comments} 評論',
     'topicFollowMeta': '{followers} 人追蹤 · {posts} 篇公開貼文',
     'topicFollowerCount': '{count} 人追蹤',
+    'topicErrorNotFound': '這個話題不存在',
+    'topicErrorUnavailable': '這個話題暫時不可用',
+    'topicErrorFollowFailed': '追蹤請求未能完成',
     'followStatusUpdateFailed': '追蹤狀態更新失敗：{error}',
     'followed': '已追蹤',
     'followTopic': '追蹤話題',
@@ -1927,6 +1933,9 @@ class AppLocalizations {
         '7 days: {posts} posts · {likes} likes · {comments} comments',
     'topicFollowMeta': '{followers} followers · {posts} public posts',
     'topicFollowerCount': '{count} followers',
+    'topicErrorNotFound': 'This topic could not be found.',
+    'topicErrorUnavailable': 'This topic is unavailable.',
+    'topicErrorFollowFailed': 'The follow request could not be completed.',
     'followStatusUpdateFailed': 'Could not update follow status: {error}',
     'followed': 'Following',
     'followTopic': 'Follow topic',
@@ -3200,6 +3209,9 @@ class AppLocalizations {
   ).replaceFirst('{followers}', '$followers').replaceFirst('{posts}', '$posts');
   String topicFollowerCount(int count) =>
       _text('topicFollowerCount').replaceFirst('{count}', '$count');
+  String get topicErrorNotFound => _text('topicErrorNotFound');
+  String get topicErrorUnavailable => _text('topicErrorUnavailable');
+  String get topicErrorFollowFailed => _text('topicErrorFollowFailed');
   String followStatusUpdateFailed(Object error) =>
       _withError('followStatusUpdateFailed', error);
   String get followed => _text('followed');
