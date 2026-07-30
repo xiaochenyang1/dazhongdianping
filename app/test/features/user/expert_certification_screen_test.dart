@@ -13,6 +13,7 @@ class ExpertCertApi implements JsonApi {
   Object? body;
   int status = 0;
   String reason = '';
+  Object? applyError;
   int failLoads = 0;
   int loadRequests = 0;
   Completer<void>? loadGate;
@@ -52,6 +53,7 @@ class ExpertCertApi implements JsonApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     this.path = path;
     this.body = body;
+    if (applyError != null) throw applyError!;
     status = 1;
     reason = (body as Map)['reason'] as String? ?? '';
     return {
@@ -178,5 +180,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('expert certification localizes backend errors in English', (
+    tester,
+  ) async {
+    final api = ExpertCertApi()
+      ..applyError = const ApiException('当前已有待审核达人认证申请');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ExpertCertificationScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('expert-cert-reason')),
+      'I regularly publish local reviews and practical neighborhood guides.',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Submit'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'You already have a local expert application under review. Wait for the current result first.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('待审核达人认证申请'), findsNothing);
   });
 }

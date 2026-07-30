@@ -191,6 +191,14 @@ void main() {
       'The current login password is incorrect.',
     );
     expect(
+      AppLocalizations.forTag('en').expertErrorPendingExists,
+      'You already have a local expert application under review. Wait for the current result first.',
+    );
+    expect(
+      AppLocalizations.forTag('en').expertErrorAlreadyApproved,
+      'You are already a certified local expert. No need to apply again.',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).notificationDirectMessagePreview(name: 'Alex', preview: 'See you soon'),

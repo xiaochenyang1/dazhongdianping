@@ -640,6 +640,8 @@ class AppLocalizations {
     'expertStatusRejected': '已驳回',
     'expertReasonRequired': '请先填写申请理由',
     'expertReasonTooLong': '申请理由不能超过 500 字',
+    'expertErrorPendingExists': '你已经有一条达人认证申请在审核中，先等当前结果出来',
+    'expertErrorAlreadyApproved': '你当前已经是认证达人了，不需要重复申请',
     'localExpertBadge': '本地达人',
     'verifiedMerchantBadge': '认证商户',
     'applicationReason': '申请理由',
@@ -1451,6 +1453,8 @@ class AppLocalizations {
     'expertStatusRejected': '已駁回',
     'expertReasonRequired': '請先填寫申請理由',
     'expertReasonTooLong': '申請理由不能超過 500 字',
+    'expertErrorPendingExists': '你已經有一筆達人認證申請在審核中，先等目前結果出來',
+    'expertErrorAlreadyApproved': '你目前已經是認證達人了，不需要重複申請',
     'localExpertBadge': '在地達人',
     'verifiedMerchantBadge': '認證商戶',
     'applicationReason': '申請理由',
@@ -2334,6 +2338,10 @@ class AppLocalizations {
     'expertStatusRejected': 'Rejected',
     'expertReasonRequired': 'Please enter an application reason',
     'expertReasonTooLong': 'Application reason cannot exceed 500 characters',
+    'expertErrorPendingExists':
+        'You already have a local expert application under review. Wait for the current result first.',
+    'expertErrorAlreadyApproved':
+        'You are already a certified local expert. No need to apply again.',
     'localExpertBadge': 'Local expert',
     'verifiedMerchantBadge': 'Verified merchant',
     'applicationReason': 'Application reason',
@@ -3676,6 +3684,8 @@ class AppLocalizations {
   String get expertStatusRejected => _text('expertStatusRejected');
   String get expertReasonRequired => _text('expertReasonRequired');
   String get expertReasonTooLong => _text('expertReasonTooLong');
+  String get expertErrorPendingExists => _text('expertErrorPendingExists');
+  String get expertErrorAlreadyApproved => _text('expertErrorAlreadyApproved');
   String get localExpertBadge => _text('localExpertBadge');
   String get verifiedMerchantBadge => _text('verifiedMerchantBadge');
   String get expertCertificationApprovedNotice =>

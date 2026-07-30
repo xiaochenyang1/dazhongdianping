@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -85,7 +86,7 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _error = '$error';
+        _error = _localizedExpertError(AppLocalizations.of(context), error);
       });
     }
   }
@@ -103,6 +104,23 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
       3 => const Color(0xFFB91C1C),
       _ => const Color(0xFF4B5563),
     };
+  }
+
+  String _localizedExpertError(AppLocalizations strings, Object error) {
+    if (error is! ApiException) {
+      return '$error';
+    }
+    final localized = switch (error.message.trim()) {
+      '当前已有待审核达人认证申请' => strings.expertErrorPendingExists,
+      '当前已是认证达人，无需重复申请' => strings.expertErrorAlreadyApproved,
+      _ => null,
+    };
+    if (localized == null) {
+      return '$error';
+    }
+    return error.traceId == null
+        ? localized
+        : '$localized [traceId: ${error.traceId}]';
   }
 
   @override
