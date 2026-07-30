@@ -118,7 +118,11 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    formatMoney(detail.price, detail.currency),
+                    formatMoney(
+                      detail.price,
+                      detail.currency,
+                      locale: strings.tag,
+                    ),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontSize: 24,
@@ -128,7 +132,11 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
                   const SizedBox(width: 10),
                   if (detail.originalPrice > detail.price)
                     Text(
-                      formatMoney(detail.originalPrice, detail.currency),
+                      formatMoney(
+                        detail.originalPrice,
+                        detail.currency,
+                        locale: strings.tag,
+                      ),
                       style: const TextStyle(
                         color: Colors.black54,
                         decoration: TextDecoration.lineThrough,
@@ -176,7 +184,13 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: Text(item.name),
                     subtitle: Text(strings.quantityLabel(item.quantity)),
-                    trailing: Text(formatMoney(item.price, detail.currency)),
+                    trailing: Text(
+                      formatMoney(
+                        item.price,
+                        detail.currency,
+                        locale: strings.tag,
+                      ),
+                    ),
                   ),
                 ),
             ],

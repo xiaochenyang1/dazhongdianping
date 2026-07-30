@@ -291,11 +291,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
                 _DetailRow(
                   label: strings.unitPrice,
-                  value: formatMoney(order.unitPrice, order.currency),
+                  value: formatMoney(
+                    order.unitPrice,
+                    order.currency,
+                    locale: strings.tag,
+                  ),
                 ),
                 _DetailRow(
                   label: strings.paidAmount,
-                  value: formatMoney(order.amount, order.currency),
+                  value: formatMoney(
+                    order.amount,
+                    order.currency,
+                    locale: strings.tag,
+                  ),
                   emphasize: true,
                 ),
               ],

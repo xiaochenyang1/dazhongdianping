@@ -8,6 +8,10 @@ void main() {
     expect(formatMoney(29.9, 'EUR', locale: 'en-GB'), '€29.90');
   });
 
+  test('uses currency-specific minor units with a hyphenated locale', () {
+    expect(formatMoney(29.9, 'JPY', locale: 'zh-CN'), '¥30');
+  });
+
   test('formats local business time with timezone label', () {
     expect(
       formatLocalDateTime(DateTime.utc(2026, 7, 15, 8), timezoneLabel: 'BST'),

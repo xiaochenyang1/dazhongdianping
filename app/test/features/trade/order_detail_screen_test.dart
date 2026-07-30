@@ -15,11 +15,13 @@ class OrderDetailApi implements JsonApi {
     this.failFirstCoupon = false,
     this.failFirstOrder = false,
     this.paid = false,
+    this.currency = 'EUR',
   });
 
   final bool failFirstCoupon;
   final bool failFirstOrder;
   final bool paid;
+  final String currency;
   int couponRequests = 0;
   Completer<void>? couponGate;
   String? path;
@@ -43,7 +45,7 @@ class OrderDetailApi implements JsonApi {
     'quantity': 1,
     'unitPrice': 29.9,
     'amount': 29.9,
-    'currency': 'EUR',
+    'currency': currency,
     'payStatus': paid ? 1 : 0,
     'payStatusText': paid ? '已支付' : '待支付',
     'status': status,
@@ -160,6 +162,21 @@ Widget localizedApp({
 }
 
 void main() {
+  testWidgets('order detail formats money using the current locale', (
+    tester,
+  ) async {
+    final api = OrderDetailApi(currency: 'JPY');
+    await tester.pumpWidget(
+      localizedApp(
+        home: OrderDetailScreen(repository: TradeRepository(api), orderId: 10),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('¥30'), findsNWidgets(2));
+    expect(find.textContaining('JP¥'), findsNothing);
+  });
+
   testWidgets('order detail localizes trade status labels in English', (
     tester,
   ) async {

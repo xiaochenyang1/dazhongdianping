@@ -162,7 +162,11 @@ class _DealsScreenState extends State<DealsScreen> {
                             const SizedBox(height: 6),
                             Text(
                               strings.priceSoldMeta(
-                                price: formatMoney(deal.price, deal.currency),
+                                price: formatMoney(
+                                  deal.price,
+                                  deal.currency,
+                                  locale: strings.tag,
+                                ),
                                 count: deal.soldCount,
                               ),
                             ),
