@@ -90,8 +90,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       widget.onProfileChanged?.call(profile);
       _showMessage(AppLocalizations.of(context).profileSaved);
     } catch (error) {
-      if (mounted)
-        _showMessage(AppLocalizations.of(context).saveProfileFailed(error));
+      if (mounted) {
+        _showMessage(
+          AppLocalizations.of(context).saveProfileFailed(
+            localizeAuthError(AppLocalizations.of(context), error),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => savingProfile = false);
     }

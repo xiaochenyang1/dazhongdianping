@@ -12,6 +12,7 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
   AccountSettingsApi({this.failFirst = false});
 
   final bool failFirst;
+  Object? saveProfileError;
   Object? sendBindCodeError;
   Object? bindError;
   Object? updatePasswordError;
@@ -79,6 +80,9 @@ class AccountSettingsApi implements JsonApi, JsonMutationApi {
     this.path = path;
     paths.add(path);
     this.body = body;
+    if (path == '/api/c/v1/user/profile' && saveProfileError != null) {
+      throw saveProfileError!;
+    }
     if (path == '/api/c/v1/user/password' && updatePasswordError != null) {
       throw updatePasswordError!;
     }
@@ -294,6 +298,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final api = AccountSettingsApi()
+      ..saveProfileError = const ApiException('nickname 不能超过 64 字')
       ..sendBindCodeError = const ApiException('验证码发送太频繁，请稍后再试')
       ..bindError = const ApiException('该邮箱已被其他账号绑定')
       ..updatePasswordError = const ApiException('旧密码不正确');
@@ -307,6 +312,18 @@ void main() {
     final messenger = tester.state<ScaffoldMessengerState>(
       find.byType(ScaffoldMessenger),
     );
+
+    await tester.tap(find.byKey(const Key('settings-save-profile')));
+    await tester.pump();
+    expect(
+      find.text(
+        'Could not save profile: Nickname must be 64 characters or fewer.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('nickname 不能超过 64 字'), findsNothing);
+    messenger.removeCurrentSnackBar();
+    await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('settings-confirm-bind')),

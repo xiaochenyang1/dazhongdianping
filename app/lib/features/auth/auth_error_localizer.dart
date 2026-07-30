@@ -46,6 +46,10 @@ String? _localizedAuthErrorByMessage(AppLocalizations strings, String message) {
     '该手机号已被其他账号绑定' => strings.authErrorPhoneAlreadyBound,
     '旧密码不正确' => strings.authErrorOldPasswordIncorrect,
     '新密码不能和旧密码一样' => strings.authErrorSamePasswordAsOld,
+    'nickname 不能超过 64 字' => strings.authErrorProfileNicknameTooLong,
+    'avatar 不能超过 255 字' => strings.authErrorProfileAvatarTooLong,
+    'signature 不能超过 255 字' => strings.authErrorProfileSignatureTooLong,
+    '用户资料更新失败' => strings.authErrorProfileUpdateFailed,
     _ => null,
   };
 }

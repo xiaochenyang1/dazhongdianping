@@ -183,6 +183,14 @@ void main() {
       'The current password is incorrect.',
     );
     expect(
+      AppLocalizations.forTag('en').authErrorProfileNicknameTooLong,
+      'Nickname must be 64 characters or fewer.',
+    );
+    expect(
+      AppLocalizations.forTag('en').authErrorProfileUpdateFailed,
+      'The profile could not be updated. Try again later.',
+    );
+    expect(
       AppLocalizations.forTag('en').privacyDeleteErrorNoPassword,
       'This account does not have a login password available for verification. Use code verification instead.',
     );

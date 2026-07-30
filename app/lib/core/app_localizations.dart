@@ -542,6 +542,10 @@ class AppLocalizations {
     'authErrorPhoneAlreadyBound': '这个手机号已经被其他账号绑定了，请换一个再试',
     'authErrorOldPasswordIncorrect': '当前密码不正确，请重新输入后再试',
     'authErrorSamePasswordAsOld': '新密码不能和当前密码相同，请换一个再试',
+    'authErrorProfileNicknameTooLong': '昵称最多只能填写 64 个字符',
+    'authErrorProfileAvatarTooLong': '头像地址最多只能填写 255 个字符',
+    'authErrorProfileSignatureTooLong': '签名最多只能填写 255 个字符',
+    'authErrorProfileUpdateFailed': '资料更新失败了，请稍后再试',
     'registerHero': '加入欧洲华人生活圈',
     'resetPasswordHero': '重新设置登录密码',
     'fillAccountAndCodeBeforeAppeal': '先填好账号和验证码，再提交申诉',
@@ -1362,6 +1366,10 @@ class AppLocalizations {
     'authErrorPhoneAlreadyBound': '這個手機號已經被其他帳號綁定了，請換一個再試',
     'authErrorOldPasswordIncorrect': '目前密碼不正確，請重新輸入後再試',
     'authErrorSamePasswordAsOld': '新密碼不能和目前密碼相同，請換一個再試',
+    'authErrorProfileNicknameTooLong': '暱稱最多只能填寫 64 個字元',
+    'authErrorProfileAvatarTooLong': '頭像網址最多只能填寫 255 個字元',
+    'authErrorProfileSignatureTooLong': '簽名最多只能填寫 255 個字元',
+    'authErrorProfileUpdateFailed': '資料更新失敗了，請稍後再試',
     'registerHero': '加入歐洲華人生活圈',
     'resetPasswordHero': '重新設定登入密碼',
     'fillAccountAndCodeBeforeAppeal': '先填好帳號和驗證碼，再提交申訴',
@@ -2230,6 +2238,13 @@ class AppLocalizations {
     'authErrorOldPasswordIncorrect': 'The current password is incorrect.',
     'authErrorSamePasswordAsOld':
         'The new password must be different from the current password.',
+    'authErrorProfileNicknameTooLong':
+        'Nickname must be 64 characters or fewer.',
+    'authErrorProfileAvatarTooLong':
+        'Avatar URL must be 255 characters or fewer.',
+    'authErrorProfileSignatureTooLong': 'Bio must be 255 characters or fewer.',
+    'authErrorProfileUpdateFailed':
+        'The profile could not be updated. Try again later.',
     'registerHero': 'Join Chinese local life in Europe',
     'resetPasswordHero': 'Set a new sign-in password',
     'fillAccountAndCodeBeforeAppeal': 'Fill account and code before submitting',
@@ -3578,6 +3593,14 @@ class AppLocalizations {
   String get authErrorOldPasswordIncorrect =>
       _text('authErrorOldPasswordIncorrect');
   String get authErrorSamePasswordAsOld => _text('authErrorSamePasswordAsOld');
+  String get authErrorProfileNicknameTooLong =>
+      _text('authErrorProfileNicknameTooLong');
+  String get authErrorProfileAvatarTooLong =>
+      _text('authErrorProfileAvatarTooLong');
+  String get authErrorProfileSignatureTooLong =>
+      _text('authErrorProfileSignatureTooLong');
+  String get authErrorProfileUpdateFailed =>
+      _text('authErrorProfileUpdateFailed');
   String get registerHero => _text('registerHero');
   String get resetPasswordHero => _text('resetPasswordHero');
   String get fillAccountAndCodeBeforeAppeal =>
