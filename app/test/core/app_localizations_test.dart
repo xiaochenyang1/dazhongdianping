@@ -191,6 +191,34 @@ void main() {
       'Your sign-in session is no longer available. Please sign in again.',
     );
     expect(
+      AppLocalizations.forTag('en').messageErrorUserNotFound,
+      'This user could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').messageErrorConversationMissing,
+      'This conversation could not be found.',
+    );
+    expect(
+      AppLocalizations.forTag('en').messageErrorCannotMessageSelf,
+      'You cannot send direct messages to yourself.',
+    );
+    expect(
+      AppLocalizations.forTag('en').messageErrorBlockedRelationship,
+      'You cannot send a direct message while a block relationship exists.',
+    );
+    expect(
+      AppLocalizations.forTag('en').messageErrorCannotBlockSelf,
+      'You cannot block yourself.',
+    );
+    expect(
+      AppLocalizations.forTag('en').messageErrorReportTargetUnavailable,
+      'This report target is unavailable or you do not have access.',
+    );
+    expect(
+      AppLocalizations.forTag('en').messageErrorReportDuplicate,
+      'You already reported this target. Do not submit it again.',
+    );
+    expect(
       AppLocalizations.forTag('en').authErrorProfileNicknameTooLong,
       'Nickname must be 64 characters or fewer.',
     );

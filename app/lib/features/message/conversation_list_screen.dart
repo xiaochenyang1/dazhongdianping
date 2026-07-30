@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/message/message_error_localizer.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -33,9 +34,15 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
       }
     } catch (error) {
       if (mounted && revision == _pageRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).refreshConversationsFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).refreshConversationsFailed(
+                localizeMessageError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -74,9 +81,15 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
       }
     } catch (error) {
       if (mounted && revision == _pageRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreConversationsFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreConversationsFailed(
+                localizeMessageError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && revision == _pageRevision) {
@@ -117,7 +130,15 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppLocalizations.of(context).conversationsLoadFailed(snapshot.error!), textAlign: TextAlign.center),
+                Text(
+                  AppLocalizations.of(context).conversationsLoadFailed(
+                    localizeMessageError(
+                      AppLocalizations.of(context),
+                      snapshot.error!,
+                    ),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   key: const Key('conversation-list-retry'),
@@ -134,7 +155,9 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
         }
         final page = snapshot.data!;
         if (page.items.isEmpty) {
-          return Center(child: Text(AppLocalizations.of(context).noDirectMessages));
+          return Center(
+            child: Text(AppLocalizations.of(context).noDirectMessages),
+          );
         }
         return RefreshIndicator(
           onRefresh: _reload,
@@ -153,7 +176,11 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.expand_more),
-                    label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
+                    label: Text(
+                      _loadingMore
+                          ? AppLocalizations.of(context).loading
+                          : AppLocalizations.of(context).loadMore,
+                    ),
                   ),
                 );
               }
@@ -274,9 +301,15 @@ class _ChatScreenState extends State<ChatScreen> {
       await widget.repository.markRead(widget.conversation.id);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).messageMarkReadFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).messageMarkReadFailed(
+                localizeMessageError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -304,9 +337,15 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadEarlierMessagesFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadEarlierMessagesFailed(
+                localizeMessageError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _loadingMore = false);
@@ -330,9 +369,15 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).sendFailed(e))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).sendFailed(
+                localizeMessageError(AppLocalizations.of(context), e),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -362,17 +407,23 @@ class _ChatScreenState extends State<ChatScreen> {
               value == 'report'
                   ? AppLocalizations.of(context).reportSubmitted
                   : (_blocked
-                      ? AppLocalizations.of(context).blockedBothWays
-                      : AppLocalizations.of(context).unblocked),
+                        ? AppLocalizations.of(context).blockedBothWays
+                        : AppLocalizations.of(context).unblocked),
             ),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).actionFailed(e))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).actionFailed(
+                localizeMessageError(AppLocalizations.of(context), e),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _actionSaving = false);
@@ -394,10 +445,17 @@ class _ChatScreenState extends State<ChatScreen> {
           enabled: !_actionSaving,
           onSelected: _action,
           itemBuilder: (_) => [
-            PopupMenuItem(value: 'report', child: Text(AppLocalizations.of(context).reportConversation)),
+            PopupMenuItem(
+              value: 'report',
+              child: Text(AppLocalizations.of(context).reportConversation),
+            ),
             PopupMenuItem(
               value: 'block',
-              child: Text(_blocked ? AppLocalizations.of(context).unblockUser : AppLocalizations.of(context).blockUser),
+              child: Text(
+                _blocked
+                    ? AppLocalizations.of(context).unblockUser
+                    : AppLocalizations.of(context).blockUser,
+              ),
             ),
           ],
         ),
@@ -413,7 +471,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(AppLocalizations.of(context).chatHistoryLoadFailed(_loadError!), textAlign: TextAlign.center),
+                      Text(
+                        AppLocalizations.of(context).chatHistoryLoadFailed(
+                          localizeMessageError(
+                            AppLocalizations.of(context),
+                            _loadError!,
+                          ),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: 12),
                       FilledButton.icon(
                         key: const Key('chat-history-retry'),
@@ -441,7 +507,13 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                 )
                               : const Icon(Icons.history),
-                          label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadEarlierMessages),
+                          label: Text(
+                            _loadingMore
+                                ? AppLocalizations.of(context).loading
+                                : AppLocalizations.of(
+                                    context,
+                                  ).loadEarlierMessages,
+                          ),
                         ),
                       );
                     }
@@ -503,7 +575,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     minLines: 1,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: _blocked ? AppLocalizations.of(context).blockedComposerHint : AppLocalizations.of(context).messageHint,
+                      hintText: _blocked
+                          ? AppLocalizations.of(context).blockedComposerHint
+                          : AppLocalizations.of(context).messageHint,
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(

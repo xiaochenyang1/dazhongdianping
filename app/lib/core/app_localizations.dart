@@ -248,6 +248,13 @@ class AppLocalizations {
     'membersLoadFailed': '成员加载失败：{error}',
     'directMessages': '私信',
     'directMessageUser': '私信用户',
+    'messageErrorUserNotFound': '这位用户不存在',
+    'messageErrorConversationMissing': '这个会话不存在',
+    'messageErrorCannotMessageSelf': '你不能给自己发送私信',
+    'messageErrorBlockedRelationship': '你们之间存在拉黑关系，暂时无法发送私信',
+    'messageErrorCannotBlockSelf': '你不能拉黑自己',
+    'messageErrorReportTargetUnavailable': '这个举报目标不存在，或你暂时无权访问',
+    'messageErrorReportDuplicate': '你已经举报过这个目标了，请不要重复提交',
     'refreshConversationsFailed': '刷新会话失败：{error}',
     'loadMoreConversationsFailed': '加载更多会话失败：{error}',
     'conversationsLoadFailed': '会话加载失败：{error}',
@@ -1079,6 +1086,13 @@ class AppLocalizations {
     'membersLoadFailed': '成員載入失敗：{error}',
     'directMessages': '私信',
     'directMessageUser': '私信使用者',
+    'messageErrorUserNotFound': '這位使用者不存在',
+    'messageErrorConversationMissing': '這個對話不存在',
+    'messageErrorCannotMessageSelf': '你不能給自己發私信',
+    'messageErrorBlockedRelationship': '你們之間存在封鎖關係，暫時無法發送私信',
+    'messageErrorCannotBlockSelf': '你不能封鎖自己',
+    'messageErrorReportTargetUnavailable': '這個檢舉目標不存在，或你目前無權存取',
+    'messageErrorReportDuplicate': '你已經檢舉過這個目標了，請不要重複提交',
     'refreshConversationsFailed': '重新整理對話失敗：{error}',
     'loadMoreConversationsFailed': '載入更多對話失敗：{error}',
     'conversationsLoadFailed': '對話載入失敗：{error}',
@@ -1935,6 +1949,17 @@ class AppLocalizations {
     'membersLoadFailed': 'Could not load members: {error}',
     'directMessages': 'Messages',
     'directMessageUser': 'Message user',
+    'messageErrorUserNotFound': 'This user could not be found.',
+    'messageErrorConversationMissing': 'This conversation could not be found.',
+    'messageErrorCannotMessageSelf':
+        'You cannot send direct messages to yourself.',
+    'messageErrorBlockedRelationship':
+        'You cannot send a direct message while a block relationship exists.',
+    'messageErrorCannotBlockSelf': 'You cannot block yourself.',
+    'messageErrorReportTargetUnavailable':
+        'This report target is unavailable or you do not have access.',
+    'messageErrorReportDuplicate':
+        'You already reported this target. Do not submit it again.',
     'refreshConversationsFailed': 'Could not refresh conversations: {error}',
     'loadMoreConversationsFailed': 'Could not load more conversations: {error}',
     'conversationsLoadFailed': 'Could not load conversations: {error}',
@@ -3205,6 +3230,19 @@ class AppLocalizations {
       _withError('membersLoadFailed', error);
   String get directMessages => _text('directMessages');
   String get directMessageUser => _text('directMessageUser');
+  String get messageErrorUserNotFound => _text('messageErrorUserNotFound');
+  String get messageErrorConversationMissing =>
+      _text('messageErrorConversationMissing');
+  String get messageErrorCannotMessageSelf =>
+      _text('messageErrorCannotMessageSelf');
+  String get messageErrorBlockedRelationship =>
+      _text('messageErrorBlockedRelationship');
+  String get messageErrorCannotBlockSelf =>
+      _text('messageErrorCannotBlockSelf');
+  String get messageErrorReportTargetUnavailable =>
+      _text('messageErrorReportTargetUnavailable');
+  String get messageErrorReportDuplicate =>
+      _text('messageErrorReportDuplicate');
   String refreshConversationsFailed(Object error) =>
       _withError('refreshConversationsFailed', error);
   String loadMoreConversationsFailed(Object error) =>

@@ -13,6 +13,9 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
   final List<int> unblockedUsers = [];
   bool failNextLoad = false;
   bool overlapPages = false;
+  Object? loadError;
+  Object? loadMoreError;
+  Object? unblockError;
   final Map<int, Completer<void>> unblockGates = {};
   final Map<int, Completer<void>> loadGates = {};
 
@@ -24,6 +27,12 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
     final page = query?['page'] as int? ?? 1;
     pages.add(page);
     await loadGates[pages.length]?.future;
+    if (page == 1 && loadError != null) {
+      throw loadError!;
+    }
+    if (page > 1 && loadMoreError != null) {
+      throw loadMoreError!;
+    }
     if (failNextLoad) {
       failNextLoad = false;
       throw Exception('blocked users network unavailable');
@@ -58,13 +67,32 @@ class BlockedUsersFakeApi implements JsonApi, JsonDeleteApi {
   Future<Map<String, dynamic>> deleteJson(String path) async {
     final userId = int.parse(path.split('/').last);
     unblockedUsers.add(userId);
+    if (unblockError != null) {
+      throw unblockError!;
+    }
     await unblockGates[userId]?.future;
     return {'userId': userId, 'blocked': false};
   }
 }
 
-void main() {
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
 
+void main() {
   testWidgets('blocked users switch English chrome', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -76,13 +104,14 @@ void main() {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        home: BlockedUsersScreen(repository: MessageRepository(BlockedUsersFakeApi())),
+        home: BlockedUsersScreen(
+          repository: MessageRepository(BlockedUsersFakeApi()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
     expect(find.text('Blocked users'), findsOneWidget);
   });
-
 
   testWidgets('blocked users load later pages and unblock a user', (
     tester,
@@ -209,5 +238,73 @@ void main() {
     expect(find.text('伦敦小王'), findsOneWidget);
     expect(find.text('巴黎小李'), findsNothing);
     expect(find.text('加载更多'), findsOneWidget);
+  });
+
+  testWidgets('blocked users localize load errors in English', (tester) async {
+    final api = BlockedUsersFakeApi()
+      ..loadError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: BlockedUsersScreen(repository: MessageRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load blocked users: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
+  testWidgets('blocked users localize load more errors in English', (
+    tester,
+  ) async {
+    final api = BlockedUsersFakeApi()
+      ..loadMoreError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: BlockedUsersScreen(repository: MessageRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Load more'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load more blocked users: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
+
+  testWidgets('blocked users localize unblock errors in English', (
+    tester,
+  ) async {
+    final api = BlockedUsersFakeApi()
+      ..unblockError = const ApiException('用户不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: BlockedUsersScreen(repository: MessageRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Unblock').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not unblock: This user could not be found.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户不存在'), findsNothing);
   });
 }

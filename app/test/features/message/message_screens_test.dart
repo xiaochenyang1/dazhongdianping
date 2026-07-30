@@ -12,14 +12,23 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   int conversationCalls = 0;
   final List<int> conversationPages = [];
   final List<int> messagePages = [];
+  Object? conversationError;
+  Object? loadMoreConversationError;
+  Object? messageError;
+  Object? loadMoreMessageError;
   bool failNextMessageLoad = false;
   int readCalls = 0;
+  Object? readError;
   bool failNextRead = false;
   bool failNextConversationLoad = false;
   Completer<void>? blockGate;
   int blockCalls = 0;
+  Object? blockError;
   bool failNextSend = false;
   int sendCalls = 0;
+  Object? sendError;
+  int reportCalls = 0;
+  Object? reportError;
   bool overlapMessagePages = false;
   bool overlapConversationPages = false;
   final conversationGates = <int, Completer<void>>{};
@@ -36,6 +45,12 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       final page = query?['page'] as int? ?? 1;
       conversationPages.add(page);
       await conversationGates[conversationCalls]?.future;
+      if (page == 1 && conversationError != null) {
+        throw conversationError!;
+      }
+      if (page > 1 && loadMoreConversationError != null) {
+        throw loadMoreConversationError!;
+      }
       if (failNextConversationLoad) {
         failNextConversationLoad = false;
         throw Exception('conversation network unavailable');
@@ -70,6 +85,12 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     final page = query?['page'] as int? ?? 1;
     messagePages.add(page);
     await messageLoadGate?.future;
+    if (page == 1 && messageError != null) {
+      throw messageError!;
+    }
+    if (page > 1 && loadMoreMessageError != null) {
+      throw loadMoreMessageError!;
+    }
     if (failNextMessageLoad) {
       failNextMessageLoad = false;
       throw Exception('network unavailable');
@@ -106,13 +127,26 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     if (path.endsWith('/read')) {
       readCalls += 1;
+      if (readError != null) {
+        throw readError!;
+      }
       if (failNextRead) {
         failNextRead = false;
         throw Exception('read unavailable');
       }
       return {'conversationId': 3, 'markedReadCount': 2};
     }
+    if (path.endsWith('/report')) {
+      reportCalls += 1;
+      if (reportError != null) {
+        throw reportError!;
+      }
+      return const {};
+    }
     sendCalls += 1;
+    if (sendError != null) {
+      throw sendError!;
+    }
     if (failNextSend) {
       failNextSend = false;
       throw Exception('send unavailable');
@@ -132,6 +166,9 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   @override
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
     blockCalls += 1;
+    if (blockError != null) {
+      throw blockError!;
+    }
     await blockGate?.future;
     return {'userId': 9, 'blocked': true};
   }
@@ -143,8 +180,34 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
   };
 }
 
-void main() {
+Widget localizedApp({
+  required Widget home,
+  Locale locale = const Locale('zh', 'CN'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
+}
 
+const testConversation = ConversationSummary(
+  id: 3,
+  peerUserId: 9,
+  peerNickname: '伦敦小王',
+  peerAvatar: '',
+  lastMessagePreview: '周末探店？',
+  lastMessageAt: '10:00',
+  unreadCount: 2,
+);
+
+void main() {
   testWidgets('message screens switch English chrome', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -166,6 +229,30 @@ void main() {
     expect(find.text('Messages'), findsOneWidget);
   });
 
+  testWidgets('conversation list localizes load errors in English', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi()
+      ..conversationError = const ApiException('用户登录状态不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ConversationListScreen(
+          repository: MessageRepository(api),
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load conversations: Your sign-in session is no longer available. Please sign in again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('用户登录状态不存在'), findsNothing);
+  });
 
   testWidgets('conversation list opens chat and sends text', (tester) async {
     await tester.pumpWidget(
@@ -362,6 +449,31 @@ void main() {
     expect(api.conversationPages, [1, 1]);
   });
 
+  testWidgets('chat localizes initial history load errors in English', (
+    tester,
+  ) async {
+    final api = ScreenMessageApi()..messageError = const ApiException('会话不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: testConversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not load chat history: This conversation could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('会话不存在'), findsNothing);
+  });
+
   testWidgets('chat loads earlier messages before the current history', (
     tester,
   ) async {
@@ -533,6 +645,29 @@ void main() {
     expect(api.readCalls, 1);
   });
 
+  testWidgets('chat localizes mark read errors in English', (tester) async {
+    final api = ScreenMessageApi()..readError = const ApiException('会话不存在');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: testConversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not sync read status: This conversation could not be found.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('会话不存在'), findsNothing);
+  });
+
   testWidgets('chat blocks duplicate conversation actions while pending', (
     tester,
   ) async {
@@ -631,5 +766,90 @@ void main() {
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       isEmpty,
     );
+  });
+
+  testWidgets('chat localizes send errors in English', (tester) async {
+    final api = ScreenMessageApi()
+      ..sendError = const ApiException('双方存在拉黑关系，无法发送私信');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: testConversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Blocked message');
+    await tester.tap(find.byKey(const Key('chat-send-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Could not send: You cannot send a direct message while a block relationship exists.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('双方存在拉黑关系，无法发送私信'), findsNothing);
+  });
+
+  testWidgets('chat localizes report errors in English', (tester) async {
+    final api = ScreenMessageApi()..reportError = const ApiException('请勿重复举报');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: testConversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Report conversation'));
+    await tester.pumpAndSettle();
+
+    expect(api.reportCalls, 1);
+    expect(api.sendCalls, 0);
+    expect(
+      find.text(
+        'Could not complete the action: You already reported this target. Do not submit it again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('请勿重复举报'), findsNothing);
+  });
+
+  testWidgets('chat localizes block errors in English', (tester) async {
+    final api = ScreenMessageApi()..blockError = const ApiException('不能拉黑自己');
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ChatScreen(
+          repository: MessageRepository(api),
+          conversation: testConversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Block user'));
+    await tester.pumpAndSettle();
+
+    expect(api.blockCalls, 1);
+    expect(
+      find.text('Could not complete the action: You cannot block yourself.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('不能拉黑自己'), findsNothing);
   });
 }

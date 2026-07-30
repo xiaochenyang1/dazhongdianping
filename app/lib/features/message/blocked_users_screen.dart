@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/features/message/message_error_localizer.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -29,9 +30,15 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       }
     } catch (error) {
       if (mounted && revision == _pageRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).refreshBlockedUsersFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).refreshBlockedUsersFailed(
+                localizeMessageError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -71,9 +78,15 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       }
     } catch (error) {
       if (mounted && revision == _pageRevision) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreBlockedUsersFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreBlockedUsersFailed(
+                localizeMessageError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && revision == _pageRevision) {
@@ -104,15 +117,25 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
             ),
           );
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).unblockedUser(user.nickname))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).unblockedUser(user.nickname),
+            ),
+          ),
+        );
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).unblockFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).unblockFailed(
+                localizeMessageError(AppLocalizations.of(context), error),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _unblocking.remove(user.id));
@@ -130,7 +153,15 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppLocalizations.of(context).blockedUsersLoadFailed(snapshot.error!), textAlign: TextAlign.center),
+                Text(
+                  AppLocalizations.of(context).blockedUsersLoadFailed(
+                    localizeMessageError(
+                      AppLocalizations.of(context),
+                      snapshot.error!,
+                    ),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   key: const Key('blocked-users-retry'),
@@ -159,7 +190,9 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
               if (page.items.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 120),
-                  child: Center(child: Text(AppLocalizations.of(context).blockedUsersEmpty)),
+                  child: Center(
+                    child: Text(AppLocalizations.of(context).blockedUsersEmpty),
+                  ),
                 );
               }
               if (index == page.items.length) {
@@ -174,7 +207,11 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.expand_more),
-                      label: Text(_loadingMore ? AppLocalizations.of(context).loading : AppLocalizations.of(context).loadMore),
+                      label: Text(
+                        _loadingMore
+                            ? AppLocalizations.of(context).loading
+                            : AppLocalizations.of(context).loadMore,
+                      ),
                     ),
                   ),
                 );
@@ -195,7 +232,9 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                 ),
                 subtitle: user.blockedAt.isEmpty
                     ? null
-                    : Text(AppLocalizations.of(context).blockedAt(user.blockedAt)),
+                    : Text(
+                        AppLocalizations.of(context).blockedAt(user.blockedAt),
+                      ),
                 trailing: TextButton(
                   key: Key('blocked-user-unblock-${user.id}'),
                   onPressed: _unblocking.contains(user.id)
