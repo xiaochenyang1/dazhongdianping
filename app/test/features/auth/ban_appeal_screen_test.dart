@@ -15,6 +15,9 @@ class BanAppealFakeApi implements JsonApi {
   Object? body;
   int status = 0;
   String statusText = '待审核';
+  Object? sendCodeError;
+  Object? submitError;
+  Object? queryError;
   int sendCodeRequests = 0;
   int submitRequests = 0;
   int queryRequests = 0;
@@ -35,6 +38,7 @@ class BanAppealFakeApi implements JsonApi {
     if (path.endsWith('/send-code')) {
       sendCodeRequests++;
       await sendCodeGate?.future;
+      if (sendCodeError != null) throw sendCodeError!;
       return {
         'sent': true,
         'expireSeconds': 300,
@@ -45,6 +49,7 @@ class BanAppealFakeApi implements JsonApi {
     if (path.endsWith('/auth/ban-appeals/query')) {
       queryRequests++;
       await queryGate?.future;
+      if (queryError != null) throw queryError!;
       return {
         'id': 91,
         'status': 1,
@@ -58,6 +63,7 @@ class BanAppealFakeApi implements JsonApi {
     }
     submitRequests++;
     await submitGate?.future;
+    if (submitError != null) throw submitError!;
     return {
       'id': 91,
       'status': status,
@@ -117,6 +123,72 @@ void main() {
 
     expect(find.textContaining('Pending review'), findsOneWidget);
     expect(find.textContaining('待审核'), findsNothing);
+  });
+
+  testWidgets('ban appeal screen localizes backend errors in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = BanAppealFakeApi()
+      ..sendCodeError = const ApiException('手机号格式不合法')
+      ..submitError = const ApiException('已有申诉正在处理中，请耐心等待审核结果')
+      ..queryError = const ApiException('该账号暂无申诉记录');
+    final controller = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: BanAppealScreen(controller: controller, initialAccount: '123'),
+      ),
+    );
+
+    await tester.tap(find.text('Send code'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'The phone number format looks invalid. Check it and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('手机号格式不合法'), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('appeal-code')), '112233');
+    await tester.enterText(
+      find.byKey(const Key('appeal-reason')),
+      'This account was banned by mistake and needs a manual review.',
+    );
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('appeal-submit')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('appeal-submit')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'You already have an appeal under review. Wait for the result before submitting another.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('已有申诉正在处理中'), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('appeal-query')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('appeal-query')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('No appeal record was found for this account yet.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('暂无申诉记录'), findsNothing);
   });
 
   testWidgets('ban appeal screen sends appeal verification code', (

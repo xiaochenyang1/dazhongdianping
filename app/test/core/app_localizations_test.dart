@@ -155,6 +155,18 @@ void main() {
       'Account unbanned',
     );
     expect(
+      AppLocalizations.forTag('en').banAppealStatusLabel(status: 0),
+      'Pending review',
+    );
+    expect(
+      AppLocalizations.forTag('en').banAppealStatusLabel(fallback: '已驳回'),
+      'Rejected',
+    );
+    expect(
+      AppLocalizations.forTag('en').banAppealErrorPendingExists,
+      'You already have an appeal under review. Wait for the result before submitting another.',
+    );
+    expect(
       AppLocalizations.forTag(
         'en',
       ).notificationDirectMessagePreview(name: 'Alex', preview: 'See you soon'),

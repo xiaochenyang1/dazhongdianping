@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
@@ -75,7 +76,14 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
             : AppLocalizations.of(context).localCodeHint(result.mockCode);
       });
     } catch (error) {
-      if (mounted) setState(() => errorMessage = '$error');
+      if (mounted) {
+        setState(
+          () => errorMessage = _localizedBanAppealError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => sendingCode = false);
     }
@@ -121,7 +129,14 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
         ).appealSubmitted(status.id);
       });
     } catch (error) {
-      if (mounted) setState(() => errorMessage = '$error');
+      if (mounted) {
+        setState(
+          () => errorMessage = _localizedBanAppealError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     }
   }
 
@@ -157,10 +172,40 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
         ).appealProgressRefreshed(status.id);
       });
     } catch (error) {
-      if (mounted) setState(() => errorMessage = '$error');
+      if (mounted) {
+        setState(
+          () => errorMessage = _localizedBanAppealError(
+            AppLocalizations.of(context),
+            error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => querying = false);
     }
+  }
+
+  String _localizedBanAppealError(AppLocalizations strings, Object error) {
+    if (error is! ApiException) {
+      return '$error';
+    }
+    final localized = switch (error.message.trim()) {
+      '账号不存在' => strings.banAppealErrorAccountNotFound,
+      '账号未被封禁，无需申诉' => strings.banAppealErrorAccountNotBanned,
+      '已有申诉正在处理中，请耐心等待审核结果' => strings.banAppealErrorPendingExists,
+      '该账号暂无申诉记录' => strings.banAppealErrorNoRecord,
+      '申诉状态已变化，请刷新后重试' => strings.banAppealErrorStatusChanged,
+      '验证码无效或已过期' => strings.banAppealErrorCodeInvalid,
+      '邮箱格式不合法' => strings.banAppealErrorInvalidEmail,
+      '手机号格式不合法' => strings.banAppealErrorInvalidPhone,
+      _ => null,
+    };
+    if (localized == null) {
+      return '$error';
+    }
+    return error.traceId == null
+        ? localized
+        : '$localized [traceId: ${error.traceId}]';
   }
 
   @override
@@ -169,7 +214,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
     final status = appealStatus;
     final statusLabel = status == null
         ? null
-        : strings.auditStatusLabel(
+        : strings.banAppealStatusLabel(
             status: status.status,
             fallback: status.statusText,
           );

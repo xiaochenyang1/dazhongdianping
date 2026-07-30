@@ -537,6 +537,14 @@ class AppLocalizations {
     'appealProgressRefreshed': '已刷新申诉 #{id} 的最新进度',
     'appealStatusTitle': '申诉 #{id} · {status}',
     'appealApprovedHint': '申诉已通过，账号已解封。请返回登录页继续使用。',
+    'banAppealErrorAccountNotFound': '找不到这个账号，请检查邮箱或手机号是否填写正确',
+    'banAppealErrorAccountNotBanned': '这个账号当前没有被封禁，不需要提交申诉',
+    'banAppealErrorPendingExists': '你已经有一条申诉在处理中，请耐心等待审核结果',
+    'banAppealErrorNoRecord': '这个账号暂时没有申诉记录',
+    'banAppealErrorStatusChanged': '申诉状态刚刚发生变化，请刷新后重试',
+    'banAppealErrorCodeInvalid': '验证码无效或已过期，请重新获取后再试',
+    'banAppealErrorInvalidEmail': '邮箱格式不正确，请检查后重试',
+    'banAppealErrorInvalidPhone': '手机号格式不正确，请检查后重试',
     'privacySubtitle': '导出能带走，删除有冷静期，规则和任务状态都摊开讲清楚。',
     'privacyLoadFailed': '隐私数据加载失败：{error}',
     'exportModuleAccount': '账号数据',
@@ -1323,6 +1331,14 @@ class AppLocalizations {
     'appealProgressRefreshed': '已刷新申訴 #{id} 的最新進度',
     'appealStatusTitle': '申訴 #{id} · {status}',
     'appealApprovedHint': '申訴已通過，帳號已解封。請返回登入頁繼續使用。',
+    'banAppealErrorAccountNotFound': '找不到這個帳號，請檢查信箱或手機號是否填寫正確',
+    'banAppealErrorAccountNotBanned': '這個帳號目前沒有被封禁，不需要提交申訴',
+    'banAppealErrorPendingExists': '你已經有一筆申訴正在處理中，請耐心等待審核結果',
+    'banAppealErrorNoRecord': '這個帳號暫時沒有申訴記錄',
+    'banAppealErrorStatusChanged': '申訴狀態剛剛發生變化，請重新整理後重試',
+    'banAppealErrorCodeInvalid': '驗證碼無效或已過期，請重新取得後再試',
+    'banAppealErrorInvalidEmail': '信箱格式不正確，請檢查後重試',
+    'banAppealErrorInvalidPhone': '手機號格式不正確，請檢查後重試',
     'privacySubtitle': '匯出能帶走，刪除有冷靜期，規則和任務狀態都攤開講清楚。',
     'privacyLoadFailed': '隱私資料載入失敗：{error}',
     'exportModuleAccount': '帳號資料',
@@ -2147,6 +2163,22 @@ class AppLocalizations {
     'appealStatusTitle': 'Appeal #{id} · {status}',
     'appealApprovedHint':
         'Appeal approved and account unbanned. Return to sign in.',
+    'banAppealErrorAccountNotFound':
+        'We could not find this account. Check the email or phone number and try again.',
+    'banAppealErrorAccountNotBanned':
+        'This account is not currently banned, so no appeal is needed.',
+    'banAppealErrorPendingExists':
+        'You already have an appeal under review. Wait for the result before submitting another.',
+    'banAppealErrorNoRecord':
+        'No appeal record was found for this account yet.',
+    'banAppealErrorStatusChanged':
+        'The appeal status changed just now. Refresh and try again.',
+    'banAppealErrorCodeInvalid':
+        'The verification code is invalid or expired. Request a new one and try again.',
+    'banAppealErrorInvalidEmail':
+        'The email format looks invalid. Check it and try again.',
+    'banAppealErrorInvalidPhone':
+        'The phone number format looks invalid. Check it and try again.',
     'privacySubtitle':
         'Exports leave with you. Deletion has a cooling-off period. Rules and task status stay explicit.',
     'privacyLoadFailed': 'Could not load privacy data: {error}',
@@ -3439,6 +3471,18 @@ class AppLocalizations {
     'appealStatusTitle',
   ).replaceFirst('{id}', '$id').replaceFirst('{status}', status);
   String get appealApprovedHint => _text('appealApprovedHint');
+  String get banAppealErrorAccountNotFound =>
+      _text('banAppealErrorAccountNotFound');
+  String get banAppealErrorAccountNotBanned =>
+      _text('banAppealErrorAccountNotBanned');
+  String get banAppealErrorPendingExists =>
+      _text('banAppealErrorPendingExists');
+  String get banAppealErrorNoRecord => _text('banAppealErrorNoRecord');
+  String get banAppealErrorStatusChanged =>
+      _text('banAppealErrorStatusChanged');
+  String get banAppealErrorCodeInvalid => _text('banAppealErrorCodeInvalid');
+  String get banAppealErrorInvalidEmail => _text('banAppealErrorInvalidEmail');
+  String get banAppealErrorInvalidPhone => _text('banAppealErrorInvalidPhone');
 
   String get privacySubtitle => _text('privacySubtitle');
   String privacyLoadFailed(Object error) =>
@@ -3734,6 +3778,24 @@ class AppLocalizations {
       '待审核' || '待審核' || 'Pending review' => expertStatusPendingReview,
       '审核通过' || '審核通過' || '已通过' || '已通過' || 'Approved' => expertStatusApproved,
       '审核驳回' || '審核駁回' || '已驳回' || '已駁回' || 'Rejected' => expertStatusRejected,
+      final value when value != null && value.isNotEmpty => value,
+      _ => unknownStatus,
+    };
+  }
+
+  String banAppealStatusLabel({int? status, String? fallback}) {
+    if (status != null) {
+      return switch (status) {
+        0 => expertStatusPendingReview,
+        1 => expertStatusApproved,
+        2 => expertStatusRejected,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+      };
+    }
+    return switch (fallback) {
+      '待审核' || '待審核' || 'Pending review' => expertStatusPendingReview,
+      '已通过' || '已通過' || 'Approved' => expertStatusApproved,
+      '已驳回' || '已駁回' || 'Rejected' => expertStatusRejected,
       final value when value != null && value.isNotEmpty => value,
       _ => unknownStatus,
     };
