@@ -506,9 +506,7 @@ void main() {
 
     expect(find.text('Coupon details'), findsOneWidget);
     expect(
-      find.textContaining(
-        'Could not refresh details: Bad state: network unavailable',
-      ),
+      find.textContaining('Could not refresh details: network unavailable'),
       findsOneWidget,
     );
     expect(find.text('Reload full details'), findsOneWidget);

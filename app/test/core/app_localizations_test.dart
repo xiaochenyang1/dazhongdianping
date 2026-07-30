@@ -12,6 +12,18 @@ void main() {
       AppLocalizations.forTag('en').searchFailed('offline'),
       'Search failed: offline',
     );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).detailRefreshFailed(StateError('network unavailable')),
+      'Could not refresh details: network unavailable',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'zh-CN',
+      ).actionFailed(Exception('send unavailable')),
+      '操作失败：send unavailable',
+    );
     expect(AppLocalizations.forTag('zh-CN').cityRankings, '城市榜单');
     expect(AppLocalizations.forTag('zh-TW').cityRankings, '城市排行榜');
     expect(AppLocalizations.forTag('en').cityRankings, 'City rankings');

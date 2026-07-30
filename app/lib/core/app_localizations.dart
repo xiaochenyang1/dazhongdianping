@@ -2130,11 +2130,36 @@ class AppLocalizations {
 
   String _text(String key) => _values[key]!;
   String _withError(String key, Object error) =>
-      _text(key).replaceFirst('{error}', '$error');
+      _text(key).replaceFirst('{error}', _normalizeErrorText(error));
   String _withCount(String key, int count) =>
       _text(key).replaceFirst('{count}', '$count');
   String _withName(String key, String name) =>
       _text(key).replaceFirst('{name}', name);
+
+  String _normalizeErrorText(Object error) {
+    final text = switch (error) {
+      StateError() => '${error.message}',
+      FormatException() => error.message,
+      ArgumentError() => error.message?.toString() ?? error.toString(),
+      AssertionError() => error.message?.toString() ?? error.toString(),
+      _ => error.toString(),
+    };
+    return _stripErrorPrefix(text);
+  }
+
+  String _stripErrorPrefix(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      return trimmed;
+    }
+    return trimmed
+        .replaceFirst(RegExp(r'^Bad state:\s*'), '')
+        .replaceFirst(RegExp(r'^Invalid argument\(s\):\s*'), '')
+        .replaceFirst(
+          RegExp(r'^(?:[A-Za-z]+)?(?:Exception|Error)(?: \([^)]+\))?:\s*'),
+          '',
+        );
+  }
 
   String get homeTitle => _text('homeTitle');
   String get searchHint => _text('searchHint');
