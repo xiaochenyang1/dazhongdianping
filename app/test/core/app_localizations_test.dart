@@ -106,6 +106,22 @@ void main() {
     expect(AppLocalizations.forTag('en').onlineReservation, 'Book online');
     expect(AppLocalizations.forTag('en').myReservations, 'Reservations');
     expect(AppLocalizations.forTag('zh-CN').cancelReservation, '取消预订');
+    expect(
+      AppLocalizations.forTag('en').reservationStatusLabel(fallback: '已确认'),
+      'Confirmed',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).reservationConfirmModeLabel(fallback: '自动确认'),
+      'Auto confirm',
+    );
+    expect(
+      AppLocalizations.forTag(
+        'en',
+      ).reservationTimelineActionLabel(actionType: 5),
+      'Rescheduled by user',
+    );
     expect(AppLocalizations.forTag('en').writeReview, 'Write a review');
     expect(AppLocalizations.forTag('en').reviewDetail, 'Review details');
     expect(AppLocalizations.forTag('zh-CN').address, '地址');

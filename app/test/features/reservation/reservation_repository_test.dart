@@ -79,6 +79,8 @@ class ReservationFakeApi implements JsonApi {
           'endTime': '20:00',
           'remainingCount': 4,
           'available': true,
+          'confirmMode': 1,
+          'confirmModeText': '自动确认',
         },
       ],
     };
@@ -126,6 +128,7 @@ void main() {
     );
     expect(api.path, '/api/c/v1/shops/2/reservation-slots');
     expect(slots.single.startTime, '18:00');
+    expect(slots.single.confirmMode, 1);
 
     final reservation = await repository.create(
       shopId: 2,
@@ -138,6 +141,7 @@ void main() {
     expect(api.path, '/api/c/v1/reservations');
     expect((api.body as Map)['slotId'], 3);
     expect(reservation.reservationNo, 'R11');
+    expect(reservation.status, 1);
   });
 
   test(
@@ -149,10 +153,14 @@ void main() {
       final detail = await repository.loadReservation(11);
       expect(api.path, '/api/c/v1/reservations/11');
       expect(detail.shopName, 'EU Shop');
+      expect(detail.status, 1);
+      expect(detail.confirmMode, 1);
+      expect(detail.timeline.single.actionType, 1);
       expect(detail.timeline.single.actionText, '创建预订');
 
       final cancelled = await repository.cancelReservation(11);
       expect(api.path, '/api/c/v1/reservations/11/cancel');
+      expect(cancelled.status, 3);
       expect(cancelled.statusText, '用户取消');
 
       final rescheduled = await repository.rescheduleReservation(
@@ -167,6 +175,7 @@ void main() {
         'reserveTime': '2026-07-20 19:00:00',
         'reason': '用户在线改期',
       });
+      expect(rescheduled.status, 1);
       expect(rescheduled.rescheduleCount, 1);
     },
   );

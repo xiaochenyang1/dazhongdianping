@@ -92,7 +92,6 @@ class ReservationsApi implements JsonApi {
       const {};
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),
@@ -111,19 +110,21 @@ Widget localizedApp({
 }
 
 void main() {
-
   testWidgets('reservations list switches English chrome', (tester) async {
     await tester.pumpWidget(
       localizedApp(
         locale: const Locale('en'),
-        home: ReservationsListScreen(repository: ReservationRepository(ReservationsApi())),
+        home: ReservationsListScreen(
+          repository: ReservationRepository(ReservationsApi()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
     expect(find.text('Reservations'), findsOneWidget);
     expect(find.text('Pending'), findsOneWidget);
+    expect(find.textContaining('guests · Confirmed'), findsOneWidget);
+    expect(find.textContaining('已确认'), findsNothing);
   });
-
 
   testWidgets('reservations list retries an initial load failure', (
     tester,

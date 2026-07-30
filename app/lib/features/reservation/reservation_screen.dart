@@ -63,9 +63,9 @@ class _ReservationScreenState extends State<ReservationScreen> {
   Future<void> createReservation() async {
     if (creating) return;
     if (selected == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).selectSlotFirst)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).selectSlotFirst)),
+      );
       return;
     }
     setState(() => creating = true);
@@ -79,12 +79,16 @@ class _ReservationScreenState extends State<ReservationScreen> {
         remark: remarkController.text.trim(),
       );
       if (mounted) {
+        final strings = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).reservationCreated(
+              strings.reservationCreated(
                 no: result.reservationNo,
-                status: result.statusText,
+                status: strings.reservationStatusLabel(
+                  status: result.status,
+                  fallback: result.statusText,
+                ),
               ),
             ),
           ),
@@ -92,9 +96,13 @@ class _ReservationScreenState extends State<ReservationScreen> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).reservationFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).reservationFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => creating = false);
@@ -158,7 +166,9 @@ class _ReservationScreenState extends State<ReservationScreen> {
                       key: const Key('reservation-slots-retry'),
                       onPressed: retryingSlots ? null : retrySlots,
                       icon: const Icon(Icons.refresh),
-                      label: Text(retryingSlots ? strings.processing : strings.retry),
+                      label: Text(
+                        retryingSlots ? strings.processing : strings.retry,
+                      ),
                     ),
                   ],
                 );
@@ -215,7 +225,9 @@ class _ReservationScreenState extends State<ReservationScreen> {
           FilledButton(
             key: const Key('reservation-submit'),
             onPressed: creating ? null : createReservation,
-            child: Text(creating ? strings.submitting : strings.submitReservation),
+            child: Text(
+              creating ? strings.submitting : strings.submitReservation,
+            ),
           ),
         ],
       ),

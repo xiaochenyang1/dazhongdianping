@@ -69,19 +69,19 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
         builder: (context) {
           final strings = AppLocalizations.of(context);
           return AlertDialog(
-          title: Text(strings.cancelReservation),
-          content: Text(strings.cancelReservationConfirm),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(strings.keepReservation),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(strings.confirmCancel),
-            ),
-          ],
-        );
+            title: Text(strings.cancelReservation),
+            content: Text(strings.cancelReservationConfirm),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(strings.keepReservation),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(strings.confirmCancel),
+              ),
+            ],
+          );
         },
       );
     } finally {
@@ -135,7 +135,8 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
         });
       }
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).slotsLoadFailed(error));
+      if (mounted)
+        _showMessage(AppLocalizations.of(context).slotsLoadFailed(error));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -174,7 +175,8 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
       _showMessage(message);
       return true;
     } catch (error) {
-      if (mounted) _showMessage(AppLocalizations.of(context).actionFailed(error));
+      if (mounted)
+        _showMessage(AppLocalizations.of(context).actionFailed(error));
       return false;
     } finally {
       if (mounted) setState(() => _acting = false);
@@ -208,6 +210,14 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
 
   Widget _buildDetail(BuildContext context, ReservationDetail reservation) {
     final strings = AppLocalizations.of(context);
+    final statusText = strings.reservationStatusLabel(
+      status: reservation.status,
+      fallback: reservation.statusText,
+    );
+    final confirmModeText = strings.reservationConfirmModeLabel(
+      mode: reservation.confirmMode,
+      fallback: reservation.confirmModeText,
+    );
     return ListView(
       padding: const EdgeInsets.all(18),
       children: [
@@ -219,7 +229,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  reservation.statusText,
+                  statusText,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
@@ -248,7 +258,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
               '${reservation.contactName} · ${reservation.contactPhone}',
             ),
             subtitle: Text(
-              '${reservation.confirmModeText}${reservation.remark.isEmpty ? '' : ' · ${reservation.remark}'}',
+              '$confirmModeText${reservation.remark.isEmpty ? '' : ' · ${reservation.remark}'}',
             ),
           ),
         ),
@@ -293,7 +303,10 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                     label: Text(
                       strings.rescheduleSlotMeta(
                         start: slot.startTime,
-                        mode: slot.confirmModeText,
+                        mode: strings.reservationConfirmModeLabel(
+                          mode: slot.confirmMode,
+                          fallback: slot.confirmModeText,
+                        ),
                         count: slot.remainingCount,
                       ),
                     ),
@@ -326,7 +339,12 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
             (item) => Card(
               child: ListTile(
                 leading: const Icon(Icons.history),
-                title: Text(item.actionText),
+                title: Text(
+                  strings.reservationTimelineActionLabel(
+                    actionType: item.actionType,
+                    fallback: item.actionText,
+                  ),
+                ),
                 subtitle: Text('${item.remark}\n${item.createdAt}'),
               ),
             ),

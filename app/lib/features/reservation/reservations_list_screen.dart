@@ -97,9 +97,13 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
       });
     } catch (error) {
       if (mounted && requestId == _requestId) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).loadMoreReservationsFailed(error))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).loadMoreReservationsFailed(error),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted && requestId == _requestId) {
@@ -179,7 +183,9 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                           key: const Key('reservations-retry'),
                           onPressed: _retrying ? null : _retry,
                           icon: const Icon(Icons.refresh),
-                          label: Text(_retrying ? strings.processing : strings.retry),
+                          label: Text(
+                            _retrying ? strings.processing : strings.retry,
+                          ),
                         ),
                       ],
                     ),
@@ -210,7 +216,9 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                                   ),
                                 )
                               : const Icon(Icons.expand_more),
-                          label: Text(_loadingMore ? strings.loading : strings.loadMore),
+                          label: Text(
+                            _loadingMore ? strings.loading : strings.loadMore,
+                          ),
                         ),
                       );
                     }
@@ -228,7 +236,10 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                             no: item.reservationNo,
                             time: item.reserveTime,
                             people: item.peopleCount,
-                            status: item.statusText,
+                            status: strings.reservationStatusLabel(
+                              status: item.status,
+                              fallback: item.statusText,
+                            ),
                           ),
                         ),
                         isThreeLine: true,

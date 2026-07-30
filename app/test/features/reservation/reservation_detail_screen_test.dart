@@ -70,6 +70,7 @@ class ReservationDetailApi implements JsonApi {
             'endTime': '21:00:00',
             'remainingCount': 3,
             'available': true,
+            'confirmMode': 1,
             'confirmModeText': '自动确认',
             'closedReason': '',
           },
@@ -97,7 +98,6 @@ class ReservationDetailApi implements JsonApi {
   }
 }
 
-
 Widget localizedApp({
   required Widget home,
   Locale locale = const Locale('zh', 'CN'),
@@ -116,6 +116,29 @@ Widget localizedApp({
 }
 
 void main() {
+  testWidgets('reservation detail localizes reservation labels in English', (
+    tester,
+  ) async {
+    final api = ReservationDetailApi();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationDetailScreen(
+          repository: ReservationRepository(api),
+          reservationId: 11,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Confirmed'), findsOneWidget);
+    expect(find.textContaining('Auto confirm'), findsOneWidget);
+    expect(find.text('Created reservation'), findsOneWidget);
+    expect(find.text('已确认'), findsNothing);
+    expect(find.textContaining('自动确认'), findsNothing);
+    expect(find.text('创建预订'), findsNothing);
+  });
+
   testWidgets('reservation detail guards duplicate load retries', (
     tester,
   ) async {

@@ -7,6 +7,7 @@ class ReservationSlot {
     required this.endTime,
     required this.remainingCount,
     required this.available,
+    required this.confirmMode,
     required this.confirmModeText,
     required this.closedReason,
   });
@@ -15,6 +16,7 @@ class ReservationSlot {
   final String endTime;
   final int remainingCount;
   final bool available;
+  final int? confirmMode;
   final String confirmModeText;
   final String closedReason;
 
@@ -25,6 +27,7 @@ class ReservationSlot {
         endTime: json['endTime'] as String? ?? '',
         remainingCount: json['remainingCount'] as int? ?? 0,
         available: json['available'] as bool? ?? false,
+        confirmMode: (json['confirmMode'] as num?)?.toInt(),
         confirmModeText: json['confirmModeText'] as String? ?? '',
         closedReason: json['closedReason'] as String? ?? '',
       );
@@ -32,16 +35,19 @@ class ReservationSlot {
 
 class ReservationTimelineItem {
   const ReservationTimelineItem({
+    required this.actionType,
     required this.actionText,
     required this.remark,
     required this.createdAt,
   });
+  final int? actionType;
   final String actionText;
   final String remark;
   final String createdAt;
 
   factory ReservationTimelineItem.fromJson(Map<String, dynamic> json) =>
       ReservationTimelineItem(
+        actionType: (json['actionType'] as num?)?.toInt(),
         actionText: json['actionText'] as String? ?? '',
         remark: json['remark'] as String? ?? '',
         createdAt: json['createdAt'] as String? ?? '',
@@ -60,7 +66,9 @@ class ReservationDetail {
     required this.contactName,
     required this.contactPhone,
     required this.remark,
+    required this.status,
     required this.statusText,
+    required this.confirmMode,
     required this.confirmModeText,
     required this.rescheduleCount,
     required this.canCancel,
@@ -77,7 +85,9 @@ class ReservationDetail {
   final String contactName;
   final String contactPhone;
   final String remark;
+  final int? status;
   final String statusText;
+  final int? confirmMode;
   final String confirmModeText;
   final int rescheduleCount;
   final bool canCancel;
@@ -97,7 +107,9 @@ class ReservationDetail {
       contactName: json['contactName'] as String? ?? '',
       contactPhone: json['contactPhone'] as String? ?? '',
       remark: json['remark'] as String? ?? '',
+      status: (json['status'] as num?)?.toInt(),
       statusText: json['statusText'] as String? ?? '',
+      confirmMode: (json['confirmMode'] as num?)?.toInt(),
       confirmModeText: json['confirmModeText'] as String? ?? '',
       rescheduleCount: json['rescheduleCount'] as int? ?? 0,
       canCancel: json['canCancel'] as bool? ?? false,
@@ -114,16 +126,19 @@ class ReservationResult {
   const ReservationResult({
     required this.id,
     required this.reservationNo,
+    required this.status,
     required this.statusText,
   });
   final int id;
   final String reservationNo;
+  final int? status;
   final String statusText;
 
   factory ReservationResult.fromJson(Map<String, dynamic> json) =>
       ReservationResult(
         id: json['id'] as int,
         reservationNo: json['reservationNo'] as String? ?? '',
+        status: (json['status'] as num?)?.toInt(),
         statusText: json['statusText'] as String? ?? '',
       );
 }

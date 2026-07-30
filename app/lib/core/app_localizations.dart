@@ -267,6 +267,17 @@ class AppLocalizations {
     'reservationUserCanceled': '用户取消',
     'reservationMerchantRejected': '商户拒绝',
     'reservationNoShow': '爽约',
+    'reservationConfirmModeAuto': '自动确认',
+    'reservationConfirmModeManual': '人工确认',
+    'reservationActionCreated': '创建预订',
+    'reservationActionMerchantConfirmed': '商户确认',
+    'reservationActionMerchantRejected': '商户拒绝',
+    'reservationActionUserCanceled': '用户取消',
+    'reservationActionUserRescheduled': '用户改期',
+    'reservationActionMerchantRescheduled': '商户改期',
+    'reservationActionCheckedIn': '确认到店',
+    'reservationActionMarkedNoShow': '标记爽约',
+    'reservationActionArrivalReminder': '到店提醒',
     'loadMoreReservationsFailed': '加载更多预订失败：{error}',
     'reservationsLoadFailed': '预订加载失败：{error}',
     'noReservationsForFilter': '当前筛选下暂无预订',
@@ -951,6 +962,17 @@ class AppLocalizations {
     'reservationUserCanceled': '使用者取消',
     'reservationMerchantRejected': '商家拒絕',
     'reservationNoShow': '爽約',
+    'reservationConfirmModeAuto': '自動確認',
+    'reservationConfirmModeManual': '人工確認',
+    'reservationActionCreated': '建立預訂',
+    'reservationActionMerchantConfirmed': '商家確認',
+    'reservationActionMerchantRejected': '商家拒絕',
+    'reservationActionUserCanceled': '使用者取消',
+    'reservationActionUserRescheduled': '使用者改期',
+    'reservationActionMerchantRescheduled': '商家改期',
+    'reservationActionCheckedIn': '確認到店',
+    'reservationActionMarkedNoShow': '標記爽約',
+    'reservationActionArrivalReminder': '到店提醒',
     'loadMoreReservationsFailed': '載入更多預訂失敗：{error}',
     'reservationsLoadFailed': '預訂載入失敗：{error}',
     'noReservationsForFilter': '目前篩選下暫無預訂',
@@ -1647,6 +1669,17 @@ class AppLocalizations {
     'reservationUserCanceled': 'Canceled by user',
     'reservationMerchantRejected': 'Rejected by merchant',
     'reservationNoShow': 'No-show',
+    'reservationConfirmModeAuto': 'Auto confirm',
+    'reservationConfirmModeManual': 'Manual confirm',
+    'reservationActionCreated': 'Created reservation',
+    'reservationActionMerchantConfirmed': 'Merchant confirmed',
+    'reservationActionMerchantRejected': 'Merchant rejected',
+    'reservationActionUserCanceled': 'Canceled by user',
+    'reservationActionUserRescheduled': 'Rescheduled by user',
+    'reservationActionMerchantRescheduled': 'Rescheduled by merchant',
+    'reservationActionCheckedIn': 'Checked in',
+    'reservationActionMarkedNoShow': 'Marked no-show',
+    'reservationActionArrivalReminder': 'Arrival reminder',
     'loadMoreReservationsFailed': 'Could not load more reservations: {error}',
     'reservationsLoadFailed': 'Could not load reservations: {error}',
     'noReservationsForFilter': 'No reservations for this filter',
@@ -2518,6 +2551,25 @@ class AppLocalizations {
   String get reservationMerchantRejected =>
       _text('reservationMerchantRejected');
   String get reservationNoShow => _text('reservationNoShow');
+  String get reservationConfirmModeAuto => _text('reservationConfirmModeAuto');
+  String get reservationConfirmModeManual =>
+      _text('reservationConfirmModeManual');
+  String get reservationActionCreated => _text('reservationActionCreated');
+  String get reservationActionMerchantConfirmed =>
+      _text('reservationActionMerchantConfirmed');
+  String get reservationActionMerchantRejected =>
+      _text('reservationActionMerchantRejected');
+  String get reservationActionUserCanceled =>
+      _text('reservationActionUserCanceled');
+  String get reservationActionUserRescheduled =>
+      _text('reservationActionUserRescheduled');
+  String get reservationActionMerchantRescheduled =>
+      _text('reservationActionMerchantRescheduled');
+  String get reservationActionCheckedIn => _text('reservationActionCheckedIn');
+  String get reservationActionMarkedNoShow =>
+      _text('reservationActionMarkedNoShow');
+  String get reservationActionArrivalReminder =>
+      _text('reservationActionArrivalReminder');
   String loadMoreReservationsFailed(Object error) =>
       _withError('loadMoreReservationsFailed', error);
   String reservationsLoadFailed(Object error) =>
@@ -3097,6 +3149,74 @@ class AppLocalizations {
       '用户取消' || '使用者取消' || 'Canceled by user' => reservationUserCanceled,
       '商户拒绝' || '商家拒絕' || 'Rejected by merchant' => reservationMerchantRejected,
       '爽约' || 'No-show' => reservationNoShow,
+      final value when value != null && value.isNotEmpty => value,
+      _ => unknownStatus,
+    };
+  }
+
+  String reservationConfirmModeLabel({int? mode, String? fallback}) {
+    if (mode != null) {
+      return switch (mode) {
+        1 => reservationConfirmModeAuto,
+        2 => reservationConfirmModeManual,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+      };
+    }
+    return switch (fallback) {
+      '自动确认' ||
+      '自動確認' ||
+      'Auto confirm' ||
+      'Automatic confirmation' => reservationConfirmModeAuto,
+      '人工确认' ||
+      '人工確認' ||
+      'Manual confirm' ||
+      'Manual confirmation' => reservationConfirmModeManual,
+      final value when value != null && value.isNotEmpty => value,
+      _ => unknownStatus,
+    };
+  }
+
+  String reservationTimelineActionLabel({int? actionType, String? fallback}) {
+    if (actionType != null) {
+      return switch (actionType) {
+        1 => reservationActionCreated,
+        2 => reservationActionMerchantConfirmed,
+        3 => reservationActionMerchantRejected,
+        4 => reservationActionUserCanceled,
+        5 => reservationActionUserRescheduled,
+        6 => reservationActionMerchantRescheduled,
+        7 => reservationActionCheckedIn,
+        8 => reservationActionMarkedNoShow,
+        9 => reservationActionArrivalReminder,
+        _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
+      };
+    }
+    return switch (fallback) {
+      '创建预订' ||
+      '建立預訂' ||
+      'Created reservation' ||
+      'Reservation created' => reservationActionCreated,
+      '商户确认' ||
+      '商家確認' ||
+      'Merchant confirmed' ||
+      'Confirmed by merchant' => reservationActionMerchantConfirmed,
+      '商户拒绝' ||
+      '商家拒絕' ||
+      'Merchant rejected' ||
+      'Rejected by merchant' => reservationActionMerchantRejected,
+      '用户取消' ||
+      '使用者取消' ||
+      'Canceled by user' ||
+      'Cancelled by user' => reservationActionUserCanceled,
+      '用户改期' ||
+      '使用者改期' ||
+      'Rescheduled by user' => reservationActionUserRescheduled,
+      '商户改期' ||
+      '商家改期' ||
+      'Rescheduled by merchant' => reservationActionMerchantRescheduled,
+      '确认到店' || '確認到店' || 'Checked in' => reservationActionCheckedIn,
+      '标记爽约' || '標記爽約' || 'Marked no-show' => reservationActionMarkedNoShow,
+      '到店提醒' || 'Arrival reminder' => reservationActionArrivalReminder,
       final value when value != null && value.isNotEmpty => value,
       _ => unknownStatus,
     };

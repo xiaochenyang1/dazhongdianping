@@ -45,10 +45,9 @@ class ReservationScreenApi implements JsonApi {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     createRequests++;
     await createGate?.future;
-    return {'id': 11, 'reservationNo': 'R11', 'statusText': '待确认'};
+    return {'id': 11, 'reservationNo': 'R11', 'status': 0, 'statusText': '待确认'};
   }
 }
-
 
 Widget localizedApp({
   required Widget home,
@@ -68,7 +67,6 @@ Widget localizedApp({
 }
 
 void main() {
-
   testWidgets('reservation screen switches English chrome', (tester) async {
     await tester.pumpWidget(
       localizedApp(
@@ -84,6 +82,28 @@ void main() {
     expect(find.text('Submit reservation'), findsOneWidget);
   });
 
+  testWidgets('reservation screen localizes created status in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ReservationScreen(
+          repository: ReservationRepository(ReservationScreenApi()),
+          shopId: 2,
+          initialDate: DateTime(2026, 7, 16),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('18:00'));
+    await tester.tap(find.byKey(const Key('reservation-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Pending'), findsOneWidget);
+    expect(find.textContaining('待确认'), findsNothing);
+  });
 
   testWidgets('reservation screen retries an initial slot failure', (
     tester,
