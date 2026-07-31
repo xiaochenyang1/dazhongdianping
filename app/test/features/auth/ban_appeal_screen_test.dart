@@ -122,6 +122,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Pending review'), findsOneWidget);
+    expect(find.text('Submitted: 26/07/2026 10:00'), findsOneWidget);
     expect(find.textContaining('待审核'), findsNothing);
   });
 

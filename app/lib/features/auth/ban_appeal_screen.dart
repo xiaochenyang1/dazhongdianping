@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
@@ -313,11 +314,25 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
                       ],
                       if (status.submittedAt.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Text(strings.submittedAtLabel(status.submittedAt)),
+                        Text(
+                          strings.submittedAtLabel(
+                            formatDisplayDateTime(
+                              status.submittedAt,
+                              locale: strings.tag,
+                            ),
+                          ),
+                        ),
                       ],
                       if (status.auditedAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(strings.processedAtLabel(status.auditedAt)),
+                        Text(
+                          strings.processedAtLabel(
+                            formatDisplayDateTime(
+                              status.auditedAt,
+                              locale: strings.tag,
+                            ),
+                          ),
+                        ),
                       ],
                       if (status.isApproved) ...[
                         const SizedBox(height: 12),

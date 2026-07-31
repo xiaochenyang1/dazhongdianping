@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:flutter/material.dart';
 
@@ -183,21 +184,47 @@ class _ExpertCertificationScreenState extends State<ExpertCertificationScreen> {
                       ),
                       if (status.submittedAt.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Text(strings.submittedAtLabel(status.submittedAt)),
+                        Text(
+                          strings.submittedAtLabel(
+                            formatDisplayDateTime(
+                              status.submittedAt,
+                              locale: strings.tag,
+                            ),
+                          ),
+                        ),
                       ],
                       if (status.reviewedAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(strings.reviewedAtLabel(status.reviewedAt)),
+                        Text(
+                          strings.reviewedAtLabel(
+                            formatDisplayDateTime(
+                              status.reviewedAt,
+                              locale: strings.tag,
+                            ),
+                          ),
+                        ),
                       ],
                       if (status.effectiveStartAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
-                          strings.effectiveStartLabel(status.effectiveStartAt),
+                          strings.effectiveStartLabel(
+                            formatDisplayDateTime(
+                              status.effectiveStartAt,
+                              locale: strings.tag,
+                            ),
+                          ),
                         ),
                       ],
                       if (status.effectiveEndAt.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(strings.effectiveEndLabel(status.effectiveEndAt)),
+                        Text(
+                          strings.effectiveEndLabel(
+                            formatDisplayDateTime(
+                              status.effectiveEndAt,
+                              locale: strings.tag,
+                            ),
+                          ),
+                        ),
                       ],
                       if (status.rejectReason.isNotEmpty) ...[
                         const SizedBox(height: 12),

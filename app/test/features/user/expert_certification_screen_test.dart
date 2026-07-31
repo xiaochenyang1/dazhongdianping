@@ -235,4 +235,21 @@ void main() {
     );
     expect(find.textContaining('用户登录状态不存在'), findsNothing);
   });
+
+  testWidgets('expert certification localizes status timestamps in English', (
+    tester,
+  ) async {
+    final api = ExpertCertApi()..status = 2;
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ExpertCertificationScreen(repository: UserRepository(api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Submitted: 25/07/2026 19:00'), findsOneWidget);
+    expect(find.text('Reviewed: 26/07/2026 10:00'), findsOneWidget);
+    expect(find.text('Effective from: 26/07/2026 10:00'), findsOneWidget);
+  });
 }
