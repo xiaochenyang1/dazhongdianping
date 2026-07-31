@@ -56,6 +56,7 @@ vi.mock('vue-router', () => ({
 }))
 
 import AuthDialog from './AuthDialog.vue'
+import { useAppContext } from '@/composables/useAppContext'
 
 async function flushView() {
   await Promise.resolve()
@@ -139,12 +140,51 @@ describe('AuthDialog 封禁申诉链路', () => {
     sessionMocks.state.authDialogOpen = true
     sessionMocks.state.authMode = 'password'
     sessionMocks.state.redirectTo = null
+    useAppContext().setRegion('CN')
   })
 
   afterEach(() => {
     app?.unmount()
     app = null
     document.body.innerHTML = ''
+  })
+
+  it('localizes every auth entry mode and backend errors for EU', async () => {
+    useAppContext().setRegion('EU')
+    authMocks.loginWithPassword.mockRejectedValue(
+      new ApiError('账号或密码错误', {
+        status: 401,
+        messageKey: 'common.unauthorized',
+      }),
+    )
+
+    app = mountDialog()
+    await flushView()
+
+    expect(document.body.textContent).toContain('Sign-in concierge')
+    expect(document.body.textContent).toContain('Password sign-in')
+    expect(document.body.textContent).toContain('Create account')
+    expect(document.body.textContent).toContain('Reset password')
+
+    fillInput('user@example.com / +447000000000', 'user@example.com')
+    fillInput('Enter your password', 'WrongPassword')
+    submitActiveForm()
+    await flushView()
+
+    expect(document.querySelector('.feedback.is-error')?.textContent)
+      .toContain('The account or password is incorrect.')
+
+    findButton('Verification code').click()
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    await flushView()
+
+    expect(document.body.textContent).toContain('Account type')
+    expect(document.body.textContent).toContain('Send code')
+    expect(
+      Array.from(document.querySelectorAll('input')).some(
+        (input) => input.placeholder === 'Account receiving the code',
+      ),
+    ).toBe(true)
   })
 
   it('密码登录被封禁时展示申诉入口，点击后带账号进入申诉表单', async () => {

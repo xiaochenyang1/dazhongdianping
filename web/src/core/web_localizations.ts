@@ -369,3 +369,14 @@ export function applyWebDocumentMeta(region: Region, name: unknown) {
   }
   descriptionTag.setAttribute('content', meta.description)
 }
+
+export function formatWebDateTime(raw: string, locale: WebLocaleTag) {
+  const match = raw.trim().match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/,
+  )
+  if (!match) return raw
+  const [, year, month, day, hour = '00', minute = '00'] = match
+  return locale === 'en'
+    ? `${day}/${month}/${year} ${hour}:${minute}`
+    : `${year}/${Number(month)}/${Number(day)} ${hour}:${minute}`
+}

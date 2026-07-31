@@ -16,6 +16,11 @@ import {
   submitBanAppeal,
 } from '@/services/auth'
 import type { AuthMode, AuthSessionResponse, UserBanAppealStatus } from '@/types/auth'
+import {
+  authStringsForRegion,
+  localizeWebAuthError,
+} from '@/core/web_auth_localizations'
+import { formatWebDateTime } from '@/core/web_localizations'
 
 const router = useRouter()
 const { state: appState } = useAppContext()
@@ -65,158 +70,42 @@ const appealForm = reactive({
 const appealStatus = ref<UserBanAppealStatus | null>(null)
 const appealQuerying = ref(false)
 const bannedAccount = ref('')
-
-const accountTypeOptions = [
-  { value: 'email', label: '邮箱' },
-  { value: 'phone', label: '手机号' },
-] satisfies Array<{
-  value: 'email' | 'phone'
-  label: string
-}>
-
-const modeOptions = [
-  {
-    mode: 'password',
-    label: '密码登录',
-    eyebrow: '熟悉账号',
-    detail: '已有密码的账号直接从这里进入，最快把收藏、点评和互动任务续上。',
-    footer: '输入密码后立刻恢复当前动作，适合回流用户。',
-  },
-  {
-    mode: 'code',
-    label: '验证码登录',
-    eyebrow: '快速校验',
-    detail: '适合临时登录和跨设备兜底，本地环境会直接回显 mock 验证码。',
-    footer: '轻量验证一把过，先把登录闭环和回跳链路跑顺。',
-  },
-  {
-    mode: 'register',
-    label: '注册账号',
-    eyebrow: '首次到店',
-    detail: '第一次使用就顺手建账号，后续写点评、互动和资料维护都能接着走。',
-    footer: '注册完成即进入登录态，新用户不用再多走一轮。',
-  },
-  {
-    mode: 'reset',
-    label: '重置密码',
-    eyebrow: '礼宾兜底',
-    detail: '忘记密码时先重置再回到密码登录，避免链路卡在门口来回兜圈子。',
-    footer: '重置完成会切回密码登录，直接用新密码继续。',
-  },
-] satisfies Array<{
-  mode: AuthMode
-  label: string
-  eyebrow: string
-  detail: string
-  footer: string
-}>
+const auth = computed(() => authStringsForRegion(appState.region))
+const accountTypeOptions = computed(() => auth.value.accountTypes)
+const modeOptions = computed(() => auth.value.modes)
 
 const panelTitle = computed(() => {
-  return (
-    {
-      password: '先把登录链路跑顺',
-      code: '验证码登录',
-      register: '注册新账号',
-      reset: '找回密码',
-      appeal: '封禁申诉',
-    } satisfies Record<AuthMode, string>
-  )[state.authMode]
+  return auth.value.panelTitles[state.authMode]
 })
 
-const panelSummary = computed(() => {
-  if (state.redirectTo) {
-    return '拦截后的动作已经替你保留，完成登录后会自动回到刚才的页面和操作，不会让你白点一遍。'
-  }
-
-  return '登录、注册、验证码和找回密码统一走同一套礼宾式入口，不再拿生硬的 tab 切来切去糊弄事。'
-})
-
-const appealModeMeta = {
-  mode: 'appeal',
-  label: '封禁申诉',
-  eyebrow: '账号救济',
-  detail: '账号被封禁后从这里提交申诉，运营复核通过会自动解封并恢复登录。',
-  footer: '提交后随时可以用新的验证码查询审核进度。',
-} satisfies {
-  mode: AuthMode
-  label: string
-  eyebrow: string
-  detail: string
-  footer: string
-}
+const panelSummary = computed(() => auth.value.panelSummary(Boolean(state.redirectTo)))
 
 const activeModeMeta = computed(() => {
   if (state.authMode === 'appeal') {
-    return appealModeMeta
+    return auth.value.appealMode
   }
-  return modeOptions.find((item) => item.mode === state.authMode) ?? modeOptions[0]
+  return modeOptions.value.find((item) => item.mode === state.authMode) ?? modeOptions.value[0]
 })
 
 const activeModeIndex = computed(() => {
-  const index = modeOptions.findIndex((item) => item.mode === state.authMode)
+  const index = modeOptions.value.findIndex((item) => item.mode === state.authMode)
   return index >= 0 ? index + 1 : 1
 })
 
-const stageHeadline = computed(() => {
-  return state.redirectTo ? '登录后直接续上当前任务' : '现在把账号闭环稳稳接上'
-})
-
-const stageSummary = computed(() => {
-  if (state.redirectTo) {
-    return `目标路径 ${state.redirectTo} 已记录在当前会话里，登录完成后会自动跳回。`
-  }
-
-  return '验证码会发送到你填写的邮箱或手机号，完成验证后即可继续。'
-})
-
-const resumeFacts = computed(() => [
-  {
-    label: state.redirectTo ? '恢复目标' : '运行环境',
-    value: state.redirectTo ?? '账号安全验证',
-  },
-  {
-    label: '当前区域',
-    value: appState.region,
-  },
-  {
-    label: '设备识别',
-    value: browserDeviceId.slice(0, 8).toUpperCase(),
-  },
-])
-
-const servicePromises = computed(() => [
-  {
-    title: '动作恢复',
-    detail: state.redirectTo
-      ? '登录成功后自动回到刚才的收藏、点评或互动动作。'
-      : '登录链路和页面浏览处在同一套弹层闭环里。',
-  },
-  {
-    title: '验证码验证',
-    detail: '验证码仅用于本次账号验证，请勿转发给他人。',
-  },
-  {
-    title: '区域一致',
-    detail: `当前沿用 ${appState.region} 区域视角，后续资料页和我的点评不会串区。`,
-  },
-])
-
-const stageFacts = computed(() => [
-  {
-    label: '当前方式',
-    value: activeModeMeta.value.label,
-  },
-  {
-    label: state.redirectTo ? '恢复路径' : '当前提示',
-    value: state.redirectTo ?? '验证码可直接联调',
-  },
-  {
-    label: '会话区域',
-    value: appState.region,
-  },
-])
-
-const secondaryModeLinks = computed(() => modeOptions.filter((item) => item.mode !== state.authMode))
+const stageHeadline = computed(() => auth.value.stageHeadline(Boolean(state.redirectTo)))
+const stageSummary = computed(() => auth.value.stageSummary(state.redirectTo ?? null))
+const resumeFacts = computed(() => auth.value.resumeFacts(
+  state.redirectTo ?? null,
+  appState.region,
+  browserDeviceId.slice(0, 8).toUpperCase(),
+))
+const servicePromises = computed(() => auth.value.servicePromises(Boolean(state.redirectTo), appState.region))
+const stageFacts = computed(() => auth.value.stageFacts(
+  activeModeMeta.value.label,
+  state.redirectTo ?? null,
+  appState.region,
+))
+const secondaryModeLinks = computed(() => modeOptions.value.filter((item) => item.mode !== state.authMode))
 
 watch(
   () => state.authDialogOpen,
@@ -302,7 +191,7 @@ function resolveCodePayload(targetMode: 'code' | 'register' | 'reset' | 'appeal'
 async function handleSendCode(targetMode: 'code' | 'register' | 'reset' | 'appeal') {
   const payload = resolveCodePayload(targetMode)
   if (!payload.account) {
-    errorMessage.value = '先把账号填上，再点发验证码。'
+    errorMessage.value = auth.value.text.codeAccountRequired
     return
   }
 
@@ -312,10 +201,10 @@ async function handleSendCode(targetMode: 'code' | 'register' | 'reset' | 'appea
 
   try {
     const response = await sendAuthCode(payload)
-    successMessage.value = `验证码已发送，${response.nextRetrySeconds} 秒后可重发。`
-    mockCodeHint.value = response.mockCode ? `本地 mock 验证码：${response.mockCode}` : ''
+    successMessage.value = auth.value.codeSent(response.nextRetrySeconds)
+    mockCodeHint.value = response.mockCode ? auth.value.mockCode(response.mockCode) : ''
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '验证码发送失败'
+    errorMessage.value = localizeWebAuthError(auth.value, error, auth.value.text.sendCodeFailed)
   } finally {
     sendingCode.value = false
   }
@@ -358,7 +247,7 @@ async function submitPasswordLogin() {
     if (error instanceof ApiError && error.messageKey === 'auth.user_banned') {
       handleBannedLogin(passwordForm.account.trim())
     }
-    errorMessage.value = error instanceof Error ? error.message : '密码登录失败'
+    errorMessage.value = localizeWebAuthError(auth.value, error, auth.value.text.passwordLoginFailed)
   } finally {
     loading.value = false
   }
@@ -381,7 +270,7 @@ async function submitCodeLogin() {
     if (error instanceof ApiError && error.messageKey === 'auth.user_banned') {
       handleBannedLogin(codeForm.account.trim())
     }
-    errorMessage.value = error instanceof Error ? error.message : '验证码登录失败'
+    errorMessage.value = localizeWebAuthError(auth.value, error, auth.value.text.codeLoginFailed)
   } finally {
     loading.value = false
   }
@@ -403,7 +292,7 @@ async function submitRegister() {
     })
     await completeAuth(session)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '注册失败'
+    errorMessage.value = localizeWebAuthError(auth.value, error, auth.value.text.registerFailed)
   } finally {
     loading.value = false
   }
@@ -424,9 +313,9 @@ async function submitResetPassword() {
     passwordForm.account = resetForm.account.trim()
     passwordForm.password = ''
     switchMode('password')
-    successMessage.value = '密码已重置，回到密码登录直接试。'
+    successMessage.value = auth.value.text.passwordResetSuccess
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '重置密码失败'
+    errorMessage.value = localizeWebAuthError(auth.value, error, auth.value.text.passwordResetFailed)
   } finally {
     loading.value = false
   }
@@ -437,11 +326,11 @@ async function submitAppeal() {
   const code = appealForm.code.trim()
   const reason = appealForm.reason.trim()
   if (!account || !code) {
-    errorMessage.value = '先填好账号和验证码，再提交申诉。'
+    errorMessage.value = auth.value.text.appealCredentialsRequired
     return
   }
   if (reason.length < 10) {
-    errorMessage.value = '申诉理由至少写 10 个字，把误封的情况说清楚。'
+    errorMessage.value = auth.value.text.appealReasonTooShort
     return
   }
 
@@ -458,9 +347,9 @@ async function submitAppeal() {
     })
     appealForm.code = ''
     appealForm.reason = ''
-    successMessage.value = `申诉 #${appealStatus.value.id} 已提交，运营会尽快复核，结果会同步到这里。`
+    successMessage.value = auth.value.appealSubmitted(appealStatus.value.id)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '申诉提交失败'
+    errorMessage.value = localizeWebAuthError(auth.value, error, auth.value.text.appealSubmitFailed)
   } finally {
     loading.value = false
   }
@@ -470,7 +359,7 @@ async function queryAppealProgress() {
   const account = appealForm.account.trim()
   const code = appealForm.code.trim()
   if (!account || !code) {
-    errorMessage.value = '查询进度也需要账号和一条新的验证码。'
+    errorMessage.value = auth.value.text.appealQueryCredentialsRequired
     return
   }
 
@@ -485,9 +374,9 @@ async function queryAppealProgress() {
       code,
     })
     appealForm.code = ''
-    successMessage.value = `已刷新申诉 #${appealStatus.value.id} 的最新进度。`
+    successMessage.value = auth.value.appealRefreshed(appealStatus.value.id)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '申诉进度查询失败'
+    errorMessage.value = localizeWebAuthError(auth.value, error, auth.value.text.appealQueryFailed)
   } finally {
     appealQuerying.value = false
   }
@@ -497,7 +386,7 @@ function backToPasswordLogin() {
   passwordForm.account = appealForm.account.trim()
   passwordForm.password = ''
   switchMode('password')
-  successMessage.value = '账号已解封，直接用密码登录即可。'
+  successMessage.value = auth.value.text.accountUnbanned
 }
 </script>
 
@@ -511,25 +400,25 @@ function backToPasswordLogin() {
           <aside class="auth-rail">
             <div class="auth-rail__top">
               <div class="auth-rail__brand">
-                <span class="auth-rail__mark">礼</span>
+                <span class="auth-rail__mark">{{ auth.text.brandMark }}</span>
                 <div class="auth-rail__copy">
-                  <p class="eyebrow">City Concierge</p>
-                  <strong>登录礼宾台</strong>
+                  <p class="eyebrow">{{ auth.text.brandEyebrow }}</p>
+                  <strong>{{ auth.text.brandTitle }}</strong>
                 </div>
               </div>
-              <span class="auth-rail__signal">M2 Flow</span>
+              <span class="auth-rail__signal">{{ auth.text.signal }}</span>
             </div>
 
             <div class="auth-dialog__hero">
-              <p class="eyebrow">用户中心 · {{ appState.region }}</p>
+              <p class="eyebrow">{{ auth.text.userCenter }} · {{ appState.region }}</p>
               <h2>{{ panelTitle }}</h2>
               <p>{{ panelSummary }}</p>
             </div>
 
             <article class="auth-resume-card" :class="{ 'is-redirected': !!state.redirectTo }">
               <div class="auth-resume-card__header">
-                <span class="auth-resume-card__tag">{{ state.redirectTo ? '拦截恢复' : '联调提示' }}</span>
-                <strong>{{ state.redirectTo ? '这次操作已经为你保留' : '账号链路已经准备就绪' }}</strong>
+                <span class="auth-resume-card__tag">{{ state.redirectTo ? auth.text.resumeTagRedirect : auth.text.resumeTagDefault }}</span>
+                <strong>{{ state.redirectTo ? auth.text.resumeTitleRedirect : auth.text.resumeTitleDefault }}</strong>
               </div>
               <p>{{ stageSummary }}</p>
 
@@ -583,7 +472,7 @@ function backToPasswordLogin() {
 
             <div class="auth-stage__banner">
               <div class="auth-stage__banner-copy">
-                <span class="auth-stage__banner-tag">{{ state.redirectTo ? '继续任务' : '礼宾引导' }}</span>
+                <span class="auth-stage__banner-tag">{{ state.redirectTo ? auth.text.bannerTagRedirect : auth.text.bannerTagDefault }}</span>
                 <strong>{{ stageHeadline }}</strong>
                 <p>{{ activeModeMeta.footer }}</p>
               </div>
@@ -598,10 +487,8 @@ function backToPasswordLogin() {
 
             <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
             <div v-if="bannedAccount && state.authMode !== 'appeal'" class="auth-ban-appeal-cta">
-              <p>
-                账号 <strong>{{ bannedAccount }}</strong> 当前处于封禁状态。如果你认为是误封，可以提交申诉，运营复核通过后会自动解封。
-              </p>
-              <button type="button" class="secondary-button" @click="openAppealFromBan">提交封禁申诉</button>
+              <p>{{ auth.bannedDescription(bannedAccount) }}</p>
+              <button type="button" class="secondary-button" @click="openAppealFromBan">{{ auth.text.bannedAction }}</button>
             </div>
             <p v-if="successMessage" class="feedback is-success">{{ successMessage }}</p>
             <p v-if="mockCodeHint" class="feedback">{{ mockCodeHint }}</p>
@@ -615,18 +502,18 @@ function backToPasswordLogin() {
                   @submit.prevent="submitPasswordLogin"
                 >
                   <label class="field">
-                    <span>邮箱 / 手机号</span>
-                    <input v-model="passwordForm.account" type="text" placeholder="user@example.com / +8613800000000" />
+                    <span>{{ auth.text.accountOrPhoneLabel }}</span>
+                    <input v-model="passwordForm.account" type="text" :placeholder="auth.text.accountPlaceholder" />
                   </label>
                   <label class="field">
-                    <span>密码</span>
-                    <input v-model="passwordForm.password" type="password" placeholder="输入登录密码" />
+                    <span>{{ auth.text.passwordLabel }}</span>
+                    <input v-model="passwordForm.password" type="password" :placeholder="auth.text.passwordPlaceholder" />
                   </label>
                   <p class="support-copy auth-support-copy">
-                    已有密码就直接走这条，拦截恢复最快，能少兜一圈就少兜一圈。
+                    {{ auth.text.passwordSupport }}
                   </p>
                   <button type="submit" class="primary-button auth-submit-button" :disabled="loading">
-                    {{ loading ? '登录中...' : '登录' }}
+                    {{ loading ? auth.text.signingIn : auth.text.signIn }}
                   </button>
                 </form>
 
@@ -637,8 +524,8 @@ function backToPasswordLogin() {
                   @submit.prevent="submitCodeLogin"
                 >
                   <div class="field">
-                    <span>账号类型</span>
-                    <div class="mode-type-switch" role="group" aria-label="账号类型">
+                    <span>{{ auth.text.accountTypeLabel }}</span>
+                    <div class="mode-type-switch" role="group" :aria-label="auth.text.accountTypeLabel">
                       <button
                         v-for="option in accountTypeOptions"
                         :key="`code-${option.value}`"
@@ -653,23 +540,23 @@ function backToPasswordLogin() {
                     </div>
                   </div>
                   <label class="field">
-                    <span>账号</span>
-                    <input v-model="codeForm.account" type="text" placeholder="收验证码的账号" />
+                    <span>{{ auth.text.accountLabel }}</span>
+                    <input v-model="codeForm.account" type="text" :placeholder="auth.text.codeAccountPlaceholder" />
                   </label>
                   <div class="inline-field inline-field--code">
                     <label class="field">
-                      <span>验证码</span>
-                      <input v-model="codeForm.code" type="text" placeholder="输入验证码" />
+                      <span>{{ auth.text.verificationCodeLabel }}</span>
+                      <input v-model="codeForm.code" type="text" :placeholder="auth.text.verificationCodePlaceholder" />
                     </label>
                     <button type="button" class="secondary-button" :disabled="sendingCode" @click="handleSendCode('code')">
-                      {{ sendingCode ? '发送中...' : '发验证码' }}
+                      {{ sendingCode ? auth.text.sending : auth.text.sendCode }}
                     </button>
                   </div>
                   <p class="support-copy auth-support-copy">
-                    本地环境会直接回显 mock 验证码，省得你来回切日志窗口找数字。
+                    {{ auth.text.codeSupport }}
                   </p>
                   <button type="submit" class="primary-button auth-submit-button" :disabled="loading">
-                    {{ loading ? '登录中...' : '验证码登录' }}
+                    {{ loading ? auth.text.signingIn : auth.text.codeSignIn }}
                   </button>
                 </form>
 
@@ -680,8 +567,8 @@ function backToPasswordLogin() {
                   @submit.prevent="submitRegister"
                 >
                   <div class="field">
-                    <span>账号类型</span>
-                    <div class="mode-type-switch" role="group" aria-label="账号类型">
+                    <span>{{ auth.text.accountTypeLabel }}</span>
+                    <div class="mode-type-switch" role="group" :aria-label="auth.text.accountTypeLabel">
                       <button
                         v-for="option in accountTypeOptions"
                         :key="`register-${option.value}`"
@@ -696,13 +583,13 @@ function backToPasswordLogin() {
                     </div>
                   </div>
                   <label class="field">
-                    <span>账号</span>
-                    <input v-model="registerForm.account" type="text" placeholder="用于注册的新账号" />
+                    <span>{{ auth.text.accountLabel }}</span>
+                    <input v-model="registerForm.account" type="text" :placeholder="auth.text.registerAccountPlaceholder" />
                   </label>
                   <div class="inline-field inline-field--code">
                     <label class="field">
-                      <span>验证码</span>
-                      <input v-model="registerForm.code" type="text" placeholder="输入验证码" />
+                      <span>{{ auth.text.verificationCodeLabel }}</span>
+                      <input v-model="registerForm.code" type="text" :placeholder="auth.text.verificationCodePlaceholder" />
                     </label>
                     <button
                       type="button"
@@ -710,22 +597,22 @@ function backToPasswordLogin() {
                       :disabled="sendingCode"
                       @click="handleSendCode('register')"
                     >
-                      {{ sendingCode ? '发送中...' : '发验证码' }}
+                      {{ sendingCode ? auth.text.sending : auth.text.sendCode }}
                     </button>
                   </div>
                   <label class="field">
-                    <span>昵称</span>
-                    <input v-model="registerForm.nickname" type="text" placeholder="不填就按系统默认昵称走" />
+                    <span>{{ auth.text.nicknameLabel }}</span>
+                    <input v-model="registerForm.nickname" type="text" :placeholder="auth.text.nicknamePlaceholder" />
                   </label>
                   <label class="field">
-                    <span>密码</span>
-                    <input v-model="registerForm.password" type="password" placeholder="设置登录密码" />
+                    <span>{{ auth.text.passwordLabel }}</span>
+                    <input v-model="registerForm.password" type="password" :placeholder="auth.text.registerPasswordPlaceholder" />
                   </label>
                   <p class="support-copy auth-support-copy">
-                    注册完成后直接进入登录态，适合第一次写点评或准备做互动的新用户。
+                    {{ auth.text.registerSupport }}
                   </p>
                   <button type="submit" class="primary-button auth-submit-button" :disabled="loading">
-                    {{ loading ? '注册中...' : '注册并登录' }}
+                    {{ loading ? auth.text.registering : auth.text.registerAndSignIn }}
                   </button>
                 </form>
 
@@ -736,8 +623,8 @@ function backToPasswordLogin() {
                   @submit.prevent="submitResetPassword"
                 >
                   <div class="field">
-                    <span>账号类型</span>
-                    <div class="mode-type-switch" role="group" aria-label="账号类型">
+                    <span>{{ auth.text.accountTypeLabel }}</span>
+                    <div class="mode-type-switch" role="group" :aria-label="auth.text.accountTypeLabel">
                       <button
                         v-for="option in accountTypeOptions"
                         :key="`reset-${option.value}`"
@@ -752,27 +639,27 @@ function backToPasswordLogin() {
                     </div>
                   </div>
                   <label class="field">
-                    <span>账号</span>
-                    <input v-model="resetForm.account" type="text" placeholder="找回密码的账号" />
+                    <span>{{ auth.text.accountLabel }}</span>
+                    <input v-model="resetForm.account" type="text" :placeholder="auth.text.resetAccountPlaceholder" />
                   </label>
                   <div class="inline-field inline-field--code">
                     <label class="field">
-                      <span>验证码</span>
-                      <input v-model="resetForm.code" type="text" placeholder="输入验证码" />
+                      <span>{{ auth.text.verificationCodeLabel }}</span>
+                      <input v-model="resetForm.code" type="text" :placeholder="auth.text.verificationCodePlaceholder" />
                     </label>
                     <button type="button" class="secondary-button" :disabled="sendingCode" @click="handleSendCode('reset')">
-                      {{ sendingCode ? '发送中...' : '发验证码' }}
+                      {{ sendingCode ? auth.text.sending : auth.text.sendCode }}
                     </button>
                   </div>
                   <label class="field">
-                    <span>新密码</span>
-                    <input v-model="resetForm.newPassword" type="password" placeholder="设置新密码" />
+                    <span>{{ auth.text.newPasswordLabel }}</span>
+                    <input v-model="resetForm.newPassword" type="password" :placeholder="auth.text.newPasswordPlaceholder" />
                   </label>
                   <p class="support-copy auth-support-copy">
-                    重置成功后会回到密码登录，别忘了用新密码把这条链路闭上。
+                    {{ auth.text.resetSupport }}
                   </p>
                   <button type="submit" class="primary-button auth-submit-button" :disabled="loading">
-                    {{ loading ? '重置中...' : '重置密码' }}
+                    {{ loading ? auth.text.resetting : auth.text.resetPassword }}
                   </button>
                 </form>
 
@@ -783,8 +670,8 @@ function backToPasswordLogin() {
                   @submit.prevent="submitAppeal"
                 >
                   <div class="field">
-                    <span>账号类型</span>
-                    <div class="mode-type-switch" role="group" aria-label="账号类型">
+                    <span>{{ auth.text.accountTypeLabel }}</span>
+                    <div class="mode-type-switch" role="group" :aria-label="auth.text.accountTypeLabel">
                       <button
                         v-for="option in accountTypeOptions"
                         :key="`appeal-${option.value}`"
@@ -799,29 +686,29 @@ function backToPasswordLogin() {
                     </div>
                   </div>
                   <label class="field">
-                    <span>被封禁的账号</span>
-                    <input v-model="appealForm.account" type="text" placeholder="被封禁的邮箱 / 手机号" />
+                    <span>{{ auth.text.bannedAccountLabel }}</span>
+                    <input v-model="appealForm.account" type="text" :placeholder="auth.text.bannedAccountPlaceholder" />
                   </label>
                   <div class="inline-field inline-field--code">
                     <label class="field">
-                      <span>验证码</span>
-                      <input v-model="appealForm.code" type="text" placeholder="输入验证码" />
+                      <span>{{ auth.text.verificationCodeLabel }}</span>
+                      <input v-model="appealForm.code" type="text" :placeholder="auth.text.verificationCodePlaceholder" />
                     </label>
                     <button type="button" class="secondary-button" :disabled="sendingCode" @click="handleSendCode('appeal')">
-                      {{ sendingCode ? '发送中...' : '发验证码' }}
+                      {{ sendingCode ? auth.text.sending : auth.text.sendCode }}
                     </button>
                   </div>
                   <label class="field field--full">
-                    <span>申诉理由</span>
+                    <span>{{ auth.text.appealReasonLabel }}</span>
                     <textarea
                       v-model="appealForm.reason"
                       rows="4"
-                      placeholder="说明你认为误封的原因（10-500 字），运营会人工复核。"
+                      :placeholder="auth.text.appealReasonPlaceholder"
                     />
                   </label>
                   <div v-if="appealStatus" class="appeal-status-card" data-testid="appeal-status">
                     <div class="appeal-status-card__header">
-                      <strong>申诉 #{{ appealStatus.id }}</strong>
+                      <strong>{{ auth.text.appealLabel }} #{{ appealStatus.id }}</strong>
                       <span
                         class="appeal-status-card__state"
                         :class="{
@@ -829,34 +716,34 @@ function backToPasswordLogin() {
                           'is-rejected': appealStatus.status === 2,
                         }"
                       >
-                        {{ appealStatus.statusText }}
+                        {{ auth.appealStatusLabel(appealStatus.status, appealStatus.statusText) }}
                       </span>
                     </div>
-                    <p v-if="appealStatus.banReason">封禁原因：{{ appealStatus.banReason }}</p>
-                    <p v-if="appealStatus.reason">申诉理由：{{ appealStatus.reason }}</p>
+                    <p v-if="appealStatus.banReason">{{ auth.text.banReasonLabel }}{{ appealStatus.banReason }}</p>
+                    <p v-if="appealStatus.reason">{{ auth.text.appealReasonDisplayLabel }}{{ appealStatus.reason }}</p>
                     <p v-if="appealStatus.status === 2 && appealStatus.rejectReason">
-                      驳回原因：{{ appealStatus.rejectReason }}
+                      {{ auth.text.rejectReasonLabel }}{{ appealStatus.rejectReason }}
                     </p>
-                    <p v-if="appealStatus.status === 1">申诉已通过，账号已解封，回到密码登录即可正常进入。</p>
+                    <p v-if="appealStatus.status === 1">{{ auth.text.appealApproved }}</p>
                     <button
                       v-if="appealStatus.status === 1"
                       type="button"
                       class="secondary-button"
                       @click="backToPasswordLogin"
                     >
-                      回到密码登录
+                      {{ auth.text.backToPassword }}
                     </button>
                     <div class="appeal-status-card__meta">
-                      <span>提交于 {{ appealStatus.submittedAt || '--' }}</span>
-                      <span v-if="appealStatus.auditedAt">审核于 {{ appealStatus.auditedAt }}</span>
+                      <span>{{ auth.text.submittedAtLabel }} {{ appealStatus.submittedAt ? formatWebDateTime(appealStatus.submittedAt, auth.tag) : '--' }}</span>
+                      <span v-if="appealStatus.auditedAt">{{ auth.text.reviewedAtLabel }} {{ formatWebDateTime(appealStatus.auditedAt, auth.tag) }}</span>
                     </div>
                   </div>
                   <p class="support-copy auth-support-copy">
-                    提交和查询进度都用同一个验证码入口；审核通过后账号自动解封，直接回密码登录。
+                    {{ auth.text.appealSupport }}
                   </p>
                   <div class="appeal-actions">
                     <button type="submit" class="primary-button auth-submit-button" :disabled="loading">
-                      {{ loading ? '提交中...' : '提交申诉' }}
+                      {{ loading ? auth.text.submitting : auth.text.submitAppeal }}
                     </button>
                     <button
                       type="button"
@@ -864,7 +751,7 @@ function backToPasswordLogin() {
                       :disabled="appealQuerying"
                       @click="queryAppealProgress"
                     >
-                      {{ appealQuerying ? '查询中...' : '查询申诉进度' }}
+                      {{ appealQuerying ? auth.text.querying : auth.text.queryAppeal }}
                     </button>
                   </div>
                 </form>
