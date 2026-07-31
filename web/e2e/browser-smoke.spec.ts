@@ -209,7 +209,7 @@ test.describe('browser smoke', () => {
     await page.goto('/shops/1/reviews/new')
 
     const authDialog = page.locator('.auth-dialog')
-    await expect(authDialog.getByRole('heading', { name: '先把登录链路跑顺' })).toBeVisible()
+    await expect(authDialog.getByRole('heading', { name: '先完成账号登录' })).toBeVisible()
     await expect(authDialog.getByRole('button', { name: '登录', exact: true })).toBeVisible()
   })
 
@@ -217,7 +217,7 @@ test.describe('browser smoke', () => {
     await page.goto('/shops/1/reviews/new')
 
     const authDialog = page.locator('.auth-dialog')
-    await expect(authDialog.getByRole('heading', { name: '先把登录链路跑顺' })).toBeVisible()
+    await expect(authDialog.getByRole('heading', { name: '先完成账号登录' })).toBeVisible()
 
     await authDialog.getByLabel('邮箱 / 手机号').fill('smoke@example.test')
     await authDialog.getByLabel('密码').fill('Smoke123456')
@@ -345,7 +345,7 @@ test.describe('browser smoke', () => {
     })
 
     await page.goto(`${adminBaseURL}/data/meta`)
-    await expect(page.getByRole('main').getByRole('heading', { name: '基础数据' })).toBeVisible()
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Basic Data' })).toBeVisible()
     await expect(page.getByText('Dining', { exact: true })).toBeVisible()
     await expect(page.getByTestId('create-category')).toHaveCount(0)
 
