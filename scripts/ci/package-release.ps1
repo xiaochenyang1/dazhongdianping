@@ -33,6 +33,10 @@ if (-not $OutputDir) {
     $OutputDir = Join-Path $repoRoot "artifacts"
 }
 
+if ($Version -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') {
+    throw "Release version contains unsupported characters: $Version"
+}
+
 function Invoke-Native {
     param(
         [string]$FilePath,

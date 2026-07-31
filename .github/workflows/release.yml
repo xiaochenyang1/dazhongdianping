@@ -102,12 +102,27 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       - name: Package release
+        id: package
         if: steps.deployment-config.outputs.configured == 'true'
         shell: pwsh
         run: |
           $bundle = ./scripts/ci/package-release.ps1
           if (-not (Test-Path -LiteralPath $bundle)) { throw "Release bundle path was not produced" }
+          if (-not (Test-Path -LiteralPath "$bundle.sha256")) { throw "Release bundle checksum was not produced" }
           "APP_RELEASE_BUNDLE=$bundle" >> $env:GITHUB_ENV
+          "bundle=$bundle" >> $env:GITHUB_OUTPUT
+          "checksum=$bundle.sha256" >> $env:GITHUB_OUTPUT
+          "bundle_name=$([System.IO.Path]::GetFileNameWithoutExtension($bundle))" >> $env:GITHUB_OUTPUT
+      - name: Upload test release artifact
+        if: steps.deployment-config.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ env.DEPLOY_ENVIRONMENT }}-${{ env.DEPLOY_REGION }}-${{ steps.package.outputs.bundle_name }}
+          path: |
+            ${{ steps.package.outputs.bundle }}
+            ${{ steps.package.outputs.checksum }}
+          if-no-files-found: error
+          retention-days: 30
       - name: Deploy test
         if: steps.deployment-config.outputs.configured == 'true'
         shell: pwsh
@@ -163,11 +178,25 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       - name: Package release
+        id: package
         shell: pwsh
         run: |
           $bundle = ./scripts/ci/package-release.ps1
           if (-not (Test-Path -LiteralPath $bundle)) { throw "Release bundle path was not produced" }
+          if (-not (Test-Path -LiteralPath "$bundle.sha256")) { throw "Release bundle checksum was not produced" }
           "APP_RELEASE_BUNDLE=$bundle" >> $env:GITHUB_ENV
+          "bundle=$bundle" >> $env:GITHUB_OUTPUT
+          "checksum=$bundle.sha256" >> $env:GITHUB_OUTPUT
+          "bundle_name=$([System.IO.Path]::GetFileNameWithoutExtension($bundle))" >> $env:GITHUB_OUTPUT
+      - name: Upload pre release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ env.DEPLOY_ENVIRONMENT }}-${{ env.DEPLOY_REGION }}-${{ steps.package.outputs.bundle_name }}
+          path: |
+            ${{ steps.package.outputs.bundle }}
+            ${{ steps.package.outputs.checksum }}
+          if-no-files-found: error
+          retention-days: 30
       - name: Deploy pre
         shell: pwsh
         run: ./scripts/ci/deploy-release.ps1
@@ -222,11 +251,25 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       - name: Package release
+        id: package
         shell: pwsh
         run: |
           $bundle = ./scripts/ci/package-release.ps1
           if (-not (Test-Path -LiteralPath $bundle)) { throw "Release bundle path was not produced" }
+          if (-not (Test-Path -LiteralPath "$bundle.sha256")) { throw "Release bundle checksum was not produced" }
           "APP_RELEASE_BUNDLE=$bundle" >> $env:GITHUB_ENV
+          "bundle=$bundle" >> $env:GITHUB_OUTPUT
+          "checksum=$bundle.sha256" >> $env:GITHUB_OUTPUT
+          "bundle_name=$([System.IO.Path]::GetFileNameWithoutExtension($bundle))" >> $env:GITHUB_OUTPUT
+      - name: Upload prod release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ env.DEPLOY_ENVIRONMENT }}-${{ env.DEPLOY_REGION }}-${{ steps.package.outputs.bundle_name }}
+          path: |
+            ${{ steps.package.outputs.bundle }}
+            ${{ steps.package.outputs.checksum }}
+          if-no-files-found: error
+          retention-days: 30
       - name: Deploy prod
         shell: pwsh
         run: ./scripts/ci/deploy-release.ps1

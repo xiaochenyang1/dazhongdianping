@@ -53,6 +53,9 @@ $releaseWorkflow = Get-Content -LiteralPath $releaseWorkflowPath -Raw
 $rollbackWorkflow = Get-Content -LiteralPath $rollbackWorkflowPath -Raw
 
 Assert-ThrowsLike {
+    & $packageScriptPath -Version "../unsafe" -DryRun
+} "Release version contains unsupported characters" "package release must reject unsafe versions before creating output paths"
+Assert-ThrowsLike {
     & $deployScriptPath `
         -ReleaseBundle "missing.zip" `
         -Environment "test" `
@@ -88,6 +91,7 @@ Assert-True ($packageScript -match 'ForEach-Object \{ Write-Host \$_ \}') "packa
 Assert-True ($packageScript -match 'merchant-web') "package release must build and package merchant-web"
 Assert-True ($packageScript -match 'Get-FileHash\s+-Algorithm\s+SHA256') "package release must calculate the bundle SHA-256"
 Assert-True ($packageScript -match '\.sha256') "package release must emit a .sha256 checksum file"
+Assert-True ($packageScript -match 'Release version contains unsupported characters') "package release must validate the version before constructing output paths"
 Assert-True ($deployScript -match 'DEPLOY_SSH_PORT') "deploy release must accept the configured SSH port"
 Assert-True ($deployScript -match 'Get-FileHash\s+-Algorithm\s+SHA256') "deploy release must calculate the local bundle SHA-256"
 Assert-True ($deployScript -match 'sha256sum\s+--check') "deploy release must verify the uploaded bundle with remote sha256sum"
@@ -128,7 +132,11 @@ Assert-True ($releaseWorkflow -match "vars\.DEPLOY_MERCHANT_SERVICE") "release w
 Assert-True ($releaseWorkflow -match "merchant-web/package-lock\.json") "release workflow must cache merchant-web dependencies"
 Assert-True ($releaseWorkflow -match "npm ci --prefix merchant-web") "release workflow must install merchant-web dependencies"
 Assert-True ($releaseWorkflow -match "Release bundle path was not produced") "release workflow must validate the packaged bundle path"
+Assert-True ($releaseWorkflow -match "Release bundle checksum was not produced") "release workflow must validate the packaged checksum path"
 Assert-True ($releaseWorkflow -match "package-release\.ps1") "release workflow must package a release bundle"
+Assert-True (([regex]::Matches($releaseWorkflow, "actions/upload-artifact@v4")).Count -eq 3) "release workflow must upload server artifacts for test, pre, and prod"
+Assert-True (([regex]::Matches($releaseWorkflow, "retention-days:\s*30")).Count -eq 3) "server release artifacts must be retained for 30 days"
+Assert-True (([regex]::Matches($releaseWorkflow, "steps\.package\.outputs\.checksum")).Count -eq 3) "each server artifact must include its checksum sidecar"
 Assert-True ($releaseWorkflow -match "PUBLIC_SITE_URL") "release workflow must pass the public SEO site URL"
 Assert-True ($releaseWorkflow -match "PRERENDER_API_BASE_URL") "release workflow must pass the real SEO snapshot API base URL"
 Assert-True ($releaseWorkflow -match "deploy-release\.ps1") "release workflow must invoke deploy-release.ps1"
