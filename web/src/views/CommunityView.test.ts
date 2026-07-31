@@ -1,6 +1,7 @@
 import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const communityMocks = vi.hoisted(() => ({ fetchPosts: vi.fn(), fetchPost: vi.fn(), fetchPostComments: vi.fn() }))
 vi.mock('@/services/community', () => communityMocks)
@@ -31,12 +32,13 @@ async function mountCommunityView(host: HTMLElement) {
 }
 
 describe('read-only community views', () => {
-  beforeEach(() => { communityMocks.fetchPosts.mockReset(); communityMocks.fetchPost.mockReset(); communityMocks.fetchPostComments.mockReset() })
+  beforeEach(() => { communityMocks.fetchPosts.mockReset(); communityMocks.fetchPost.mockReset(); communityMocks.fetchPostComments.mockReset(); localStorage.clear(); useAppContext().setRegion('EU') })
 
   it('renders the public feed with app guidance and no PC interactions', async () => {
     communityMocks.fetchPosts.mockResolvedValue({ list: [{ id: 7, userId: 9, userName: '伦敦小王', title: '伦敦周末市场指南', content: '周六上午选择最多。', contentType: 1, likeCount: 3, commentCount: 1, images: [], topics: ['伦敦生活'], createdAt: '2026-07-16' }], total: 1, page: 1, pageSize: 12, hasMore: false })
     const host = document.createElement('div'); const app = await mountCommunityView(host); await flushView()
-    expect(host.textContent).toContain('伦敦周末市场指南'); expect(host.textContent).toContain('下载 APP 参与互动')
+    expect(host.textContent).toContain('伦敦周末市场指南'); expect(host.textContent).toContain('Use the app to join conversations')
+    expect(host.textContent).toContain('16/07/2026 00:00')
     expect([...host.querySelectorAll('button, a')].map((element) => element.textContent)).not.toEqual(expect.arrayContaining(['写帖子', '点赞', '发私信']))
     expect(host.querySelector('a[href="/community/posts/7"]')).not.toBeNull()
     expect(host.querySelector('a[href="/users/9"]')).not.toBeNull()

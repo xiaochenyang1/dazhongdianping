@@ -1,20 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchPosts } from '@/services/community'
 import type { CommunityPost } from '@/types/community'
 import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
+import { useAppContext } from '@/composables/useAppContext'
+import { communityStringsForRegion, localizeWebCommunityError } from '@/core/web_community_localizations'
+import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
+import { formatWebDateTime } from '@/core/web_localizations'
 
 const posts=ref<CommunityPost[]>([]),errorMessage=ref('')
+const { state } = useAppContext()
+const copy = computed(() => communityStringsForRegion(state.region))
+const certificationCopy = computed(() => discoveryStringsForRegion(state.region).shopCard)
 useSeoMeta(() => ({
-  title: '华人社区',
-  description: '只读浏览欧洲华人攻略、探店和生活经验。',
+  title: copy.value.feed.seoTitle,
+  description: copy.value.feed.seoDescription,
   canonical: '/community',
   jsonLd: {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: '华人社区',
-    description: '只读浏览欧洲华人攻略、探店和生活经验。',
+    name: copy.value.feed.seoTitle,
+    description: copy.value.feed.seoDescription,
     url: absoluteSeoUrl('/community'),
     mainEntity: {
       '@type': 'ItemList',
@@ -28,13 +35,13 @@ useSeoMeta(() => ({
     },
   },
 }))
-onMounted(async()=>{try{posts.value=(await fetchPosts()).list}catch(e){errorMessage.value=e instanceof Error?e.message:'社区加载失败'}})
+onMounted(async()=>{try{posts.value=(await fetchPosts()).list}catch(e){errorMessage.value=localizeWebCommunityError(copy.value,e,copy.value.feed.loadFailed)}})
 </script>
 
 <template>
   <section class="page-section">
-    <div class="page-header"><div><p class="eyebrow">Community · 只读版</p><h1>欧洲华人的生活经验，不该散落在聊天记录里。</h1><p>PC 端负责浏览和搜索收录；发布、点赞、关注与私信留在 APP。</p></div></div>
-    <p class="feedback">下载 APP 参与互动、发布攻略和管理自己的帖子。<RouterLink to="/groups">浏览官方圈子</RouterLink> · <RouterLink to="/topics">查看话题广场与热榜</RouterLink></p>
+    <div class="page-header"><div><p class="eyebrow">{{ copy.feed.eyebrow }}</p><h1>{{ copy.feed.title }}</h1><p>{{ copy.feed.summary }}</p></div></div>
+    <p class="feedback">{{ copy.feed.appGuidance }} <RouterLink to="/groups">{{ copy.feed.groups }}</RouterLink> · <RouterLink to="/topics">{{ copy.feed.topics }}</RouterLink></p>
     <p v-if="errorMessage" class="feedback is-error">{{errorMessage}}</p>
     <div class="rank-list">
       <article v-for="post in posts" :key="post.id" class="content-card rank-item">
@@ -42,14 +49,14 @@ onMounted(async()=>{try{posts.value=(await fetchPosts()).list}catch(e){errorMess
           <p class="eyebrow name-with-badge">
             <RouterLink :to="`/users/${post.userId}`">{{ post.userName }}</RouterLink>
             <span v-if="post.authorCertification" class="verified-badge verified-badge--compact">
-              {{ post.authorCertification.label }}
+              {{ certificationCopy.certificationLabel(post.authorCertification.code, post.authorCertification.label) }}
             </span>
-            <span>· {{ post.createdAt }}</span>
+            <span>· {{ formatWebDateTime(post.createdAt, copy.tag) }}</span>
           </p>
           <h2><RouterLink :to="`/community/posts/${post.id}`">{{ post.title }}</RouterLink></h2>
           <p>{{ post.content }}</p>
           <div class="tag-row"><span v-for="topic in post.topics" :key="topic">#{{ topic }}</span></div>
-          <small>喜欢 {{ post.likeCount }} · 评论 {{ post.commentCount }}</small>
+          <small>{{ copy.feed.likes }} {{ post.likeCount }} · {{ copy.feed.comments }} {{ post.commentCount }}</small>
         </div>
       </article>
     </div>
