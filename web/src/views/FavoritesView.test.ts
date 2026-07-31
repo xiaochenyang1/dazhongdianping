@@ -5,11 +5,16 @@ const favoriteMocks = vi.hoisted(() => ({
   fetchFavorites: vi.fn(),
   removeFavorite: vi.fn(),
 }))
+const appContextMock = vi.hoisted(() => ({
+  state: undefined as unknown as { region: 'CN' | 'EU' },
+}))
 
 vi.mock('@/services/favorite', () => favoriteMocks)
-vi.mock('@/composables/useAppContext', () => ({
-  useAppContext: () => ({ state: { region: 'CN' } }),
-}))
+vi.mock('@/composables/useAppContext', async () => {
+  const { reactive } = await import('vue')
+  appContextMock.state = reactive({ region: 'CN' as 'CN' | 'EU' })
+  return { useAppContext: () => ({ state: appContextMock.state }) }
+})
 vi.mock('vue-router', () => ({
   RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : to.path"><slot /></a>' },
 }))
@@ -35,6 +40,7 @@ describe('FavoritesView', () => {
   beforeEach(() => {
     favoriteMocks.fetchFavorites.mockReset()
     favoriteMocks.removeFavorite.mockReset()
+    appContextMock.state.region = 'CN'
     favoriteMocks.fetchFavorites.mockResolvedValue({
       list: [
         {
@@ -175,6 +181,20 @@ describe('FavoritesView', () => {
 
     expect(favoriteMocks.removeFavorite).toHaveBeenCalledWith(2, 88)
     expect(host.textContent).toContain('已取消帖子收藏')
+    app.unmount()
+  })
+
+  it('localizes favorite types, certification and dates for EU', async () => {
+    appContextMock.state.region = 'EU'
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('Saved items')
+    expect(host.textContent).toContain('Verified merchant')
+    expect(host.textContent).toContain('View post')
+    expect(host.textContent).toContain('25/07/2026')
+    expect(host.textContent).not.toContain('认证商户')
+    expect(host.textContent).not.toContain('查看帖子')
     app.unmount()
   })
 })

@@ -109,4 +109,17 @@ describe('BrowseHistoryView', () => {
     expect(historyMocks.clearBrowseHistory).toHaveBeenCalled()
     second.app.unmount()
   })
+
+  it('localizes history controls and dates for EU', async () => {
+    appContextMock.state.region = 'EU'
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('Browsing history')
+    expect(host.textContent).toContain('Viewed 2 times')
+    expect(host.textContent).toContain('24/07/2026')
+    expect(host.textContent).toContain('View again')
+    expect(host.textContent).not.toContain('看过 2 次')
+    app.unmount()
+  })
 })
