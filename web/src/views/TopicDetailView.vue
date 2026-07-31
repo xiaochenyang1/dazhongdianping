@@ -21,7 +21,7 @@ let requestSequence = 0
 useSeoMeta(() => {
   const canonicalPath = `/topics/${props.topicId}`
   const currentTopic = topic.value
-  if (!currentTopic) return { title: copy.value.topics.detailSeoTitle, description: copy.value.topics.detailSeoDescription(0, 0, ''), canonical: canonicalPath, robots: 'noindex,nofollow' }
+  if (!currentTopic) return { title: copy.value.topics.detailSeoTitle, description: copy.value.topics.detailSeoFallbackDescription, canonical: canonicalPath, robots: 'noindex,nofollow' }
   const canonical = absoluteSeoUrl(canonicalPath)
   return {
     title: `#${currentTopic.name}`,
@@ -48,7 +48,7 @@ useSeoMeta(() => {
   }
 })
 
-watch(() => props.topicId, async (topicId) => {
+watch([() => props.topicId, () => appState.region], async ([topicId]) => {
   const request = ++requestSequence
   topic.value = null
   posts.value = []
@@ -96,7 +96,7 @@ watch(() => props.topicId, async (topicId) => {
           <p>{{ post.content }}</p>
           <div class="post-foot">
             <span v-for="name in post.topics" :key="name">#{{ name }}</span>
-            <small>{{ copy.topics.likes }} {{ post.likeCount }} · {{ copy.topics.comments }} {{ post.commentCount }}</small>
+            <small>{{ copy.topics.likes(post.likeCount) }} · {{ copy.topics.comments(post.commentCount) }}</small>
           </div>
         </article>
       </div>

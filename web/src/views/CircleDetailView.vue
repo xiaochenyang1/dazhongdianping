@@ -1,10 +1,80 @@
 <script setup lang="ts">
-import {computed,ref,watch} from 'vue';import {RouterLink} from 'vue-router';import {fetchCircle,fetchCirclePosts,type PublicCircle} from '@/services/circle';import type {CommunityPost} from '@/types/community'
-import {absoluteSeoUrl,toSeoDescription,useSeoMeta} from '@/composables/useSeoMeta'
-import {useAppContext} from '@/composables/useAppContext';import {communityStringsForRegion,localizeWebCommunityError} from '@/core/web_community_localizations';import {discoveryStringsForRegion} from '@/core/web_discovery_localizations';import {formatWebDateTime} from '@/core/web_localizations'
-const props=defineProps<{circleId:number}>(),{state}=useAppContext(),copy=computed(()=>communityStringsForRegion(state.region)),certificationCopy=computed(()=>discoveryStringsForRegion(state.region).shopCard),circle=ref<PublicCircle|null>(null),posts=ref<CommunityPost[]>([]),error=ref('');let requestSequence=0
-watch(()=>props.circleId,async(circleId)=>{const request=++requestSequence;circle.value=null;posts.value=[];error.value='';try{const[detail,page]=await Promise.all([fetchCircle(circleId),fetchCirclePosts(circleId)]);if(request!==requestSequence)return;circle.value=detail;posts.value=page.list}catch(e){if(request===requestSequence)error.value=localizeWebCommunityError(copy.value,e,copy.value.circles.loadFailed)}},{immediate:true})
-useSeoMeta(()=>{const path=`/groups/${props.circleId}`,current=circle.value;if(!current)return{title:copy.value.circles.detailSeoTitle,description:copy.value.circles.detailSeoDescription,canonical:path,robots:'noindex,nofollow'};return{title:current.name,description:current.description,canonical:path,image:current.coverUrl||undefined,jsonLd:{'@context':'https://schema.org','@type':'CollectionPage',name:current.name,description:current.description,url:absoluteSeoUrl(path),about:{'@type':'Organization',name:current.name},mainEntity:{'@type':'ItemList',itemListElement:posts.value.map((post,index)=>({'@type':'ListItem',position:index+1,name:post.title,url:absoluteSeoUrl(`/community/posts/${post.id}`),description:toSeoDescription(post.content)}))}}}})
+import { computed, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
+import { fetchCircle, fetchCirclePosts, type PublicCircle } from '@/services/circle'
+import type { CommunityPost } from '@/types/community'
+import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
+import { useAppContext } from '@/composables/useAppContext'
+import { communityStringsForRegion, localizeWebCommunityError } from '@/core/web_community_localizations'
+import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
+import { formatWebDateTime } from '@/core/web_localizations'
+
+const props = defineProps<{ circleId: number }>()
+const { state } = useAppContext()
+const copy = computed(() => communityStringsForRegion(state.region))
+const certificationCopy = computed(() => discoveryStringsForRegion(state.region).shopCard)
+const circle = ref<PublicCircle | null>(null)
+const posts = ref<CommunityPost[]>([])
+const error = ref('')
+let requestSequence = 0
+
+watch(
+  [() => props.circleId, () => state.region],
+  async ([circleId]) => {
+    const request = ++requestSequence
+    circle.value = null
+    posts.value = []
+    error.value = ''
+    try {
+      const [detail, page] = await Promise.all([fetchCircle(circleId), fetchCirclePosts(circleId)])
+      if (request !== requestSequence) return
+      circle.value = detail
+      posts.value = page.list
+    } catch (cause) {
+      if (request === requestSequence) {
+        error.value = localizeWebCommunityError(copy.value, cause, copy.value.circles.loadFailed)
+      }
+    }
+  },
+  { immediate: true },
+)
+
+useSeoMeta(() => {
+  const path = `/groups/${props.circleId}`
+  const current = circle.value
+  if (!current) {
+    return {
+      title: copy.value.circles.detailSeoTitle,
+      description: copy.value.circles.detailSeoDescription,
+      canonical: path,
+      robots: 'noindex,nofollow',
+    }
+  }
+  return {
+    title: current.name,
+    description: current.description,
+    canonical: path,
+    image: current.coverUrl || undefined,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: current.name,
+      description: current.description,
+      url: absoluteSeoUrl(path),
+      about: { '@type': 'Organization', name: current.name },
+      mainEntity: {
+        '@type': 'ItemList',
+        itemListElement: posts.value.map((post, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: post.title,
+          url: absoluteSeoUrl(`/community/posts/${post.id}`),
+          description: toSeoDescription(post.content),
+        })),
+      },
+    },
+  }
+})
 </script>
-<template><section class="page-section"><p v-if="error" class="feedback is-error">{{error}}</p><template v-if="circle"><header class="circle-hero"><p class="eyebrow">{{circle.region}} · {{copy.circles.official}}</p><h1>{{circle.name}}</h1><p>{{circle.description}}</p><strong>{{copy.circles.counts(circle.memberCount,circle.postCount)}}</strong></header><div class="rank-list"><article v-for="post in posts" :key="post.id" class="content-card rank-item"><div class="rank-item__body"><p class="eyebrow name-with-badge"><RouterLink :to="`/users/${post.userId}`">{{post.userName}}</RouterLink><span v-if="post.authorCertification" class="verified-badge verified-badge--compact">{{certificationCopy.certificationLabel(post.authorCertification.code,post.authorCertification.label)}}</span><span>· {{formatWebDateTime(post.createdAt,copy.tag)}}</span></p><h2><RouterLink :to="`/community/posts/${post.id}`">{{post.title}}</RouterLink></h2><p>{{post.content}}</p><small>{{copy.circles.likes}} {{post.likeCount}} · {{copy.circles.comments}} {{post.commentCount}}</small></div></article></div></template></section></template>
+<template><section class="page-section"><p v-if="error" class="feedback is-error">{{error}}</p><template v-if="circle"><header class="circle-hero"><p class="eyebrow">{{circle.region}} · {{copy.circles.official}}</p><h1>{{circle.name}}</h1><p>{{circle.description}}</p><strong>{{copy.circles.counts(circle.memberCount,circle.postCount)}}</strong></header><div class="rank-list"><article v-for="post in posts" :key="post.id" class="content-card rank-item"><div class="rank-item__body"><p class="eyebrow name-with-badge"><RouterLink :to="`/users/${post.userId}`">{{post.userName}}</RouterLink><span v-if="post.authorCertification" class="verified-badge verified-badge--compact">{{certificationCopy.certificationLabel(post.authorCertification.code,post.authorCertification.label)}}</span><span>· {{formatWebDateTime(post.createdAt,copy.tag)}}</span></p><h2><RouterLink :to="`/community/posts/${post.id}`">{{post.title}}</RouterLink></h2><p>{{post.content}}</p><small>{{copy.circles.likes(post.likeCount)}} · {{copy.circles.comments(post.commentCount)}}</small></div></article></div></template></section></template>
 <style scoped>.circle-hero{padding:34px;border-radius:30px;background:linear-gradient(135deg,#ffe4d4,#fff9f4);box-shadow:0 18px 44px rgba(90,45,24,.1);margin-bottom:24px}.circle-hero h1{font-size:38px;margin:8px 0}.circle-hero strong{font-variant-numeric:tabular-nums}</style>

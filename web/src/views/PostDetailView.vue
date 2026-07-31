@@ -118,8 +118,8 @@ useSeoMeta(() => {
 })
 
 watch(
-  () => props.postId,
-  async (postId) => {
+  [() => props.postId, () => appState.region],
+  async ([postId]) => {
     const request = ++requestSequence
     post.value = null
     comments.value = []

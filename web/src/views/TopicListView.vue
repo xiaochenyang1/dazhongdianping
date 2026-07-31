@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchHotTopics, fetchTopics, type PublicTopic } from '@/services/topic'
 import { absoluteSeoUrl, useSeoMeta } from '@/composables/useSeoMeta'
@@ -12,6 +12,7 @@ const loading = ref(false)
 const error = ref('')
 const { state: appState } = useAppContext()
 const copy = computed(() => communityStringsForRegion(appState.region))
+let requestSequence = 0
 
 useSeoMeta(() => ({
   title: copy.value.topics.seoTitle,
@@ -37,19 +38,29 @@ useSeoMeta(() => ({
 }))
 
 async function load(nextMode: 'recommended' | 'hot') {
+  const request = ++requestSequence
   mode.value = nextMode
   loading.value = true
   error.value = ''
+  topics.value = []
   try {
-    topics.value = (nextMode === 'hot' ? await fetchHotTopics() : await fetchTopics('recommended')).list
+    const page = nextMode === 'hot' ? await fetchHotTopics() : await fetchTopics('recommended')
+    if (request !== requestSequence) return
+    topics.value = page.list
   } catch (cause) {
-    error.value = localizeWebCommunityError(copy.value, cause, copy.value.topics.loadFailed)
+    if (request === requestSequence) {
+      error.value = localizeWebCommunityError(copy.value, cause, copy.value.topics.loadFailed)
+    }
   } finally {
-    loading.value = false
+    if (request === requestSequence) loading.value = false
   }
 }
 
-onMounted(() => load('recommended'))
+watch(
+  () => appState.region,
+  () => void load(mode.value),
+  { immediate: true },
+)
 </script>
 
 <template>

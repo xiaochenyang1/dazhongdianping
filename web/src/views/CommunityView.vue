@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchPosts } from '@/services/community'
 import type { CommunityPost } from '@/types/community'
@@ -9,10 +9,13 @@ import { communityStringsForRegion, localizeWebCommunityError } from '@/core/web
 import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
 import { formatWebDateTime } from '@/core/web_localizations'
 
-const posts=ref<CommunityPost[]>([]),errorMessage=ref('')
+const posts = ref<CommunityPost[]>([])
+const errorMessage = ref('')
 const { state } = useAppContext()
 const copy = computed(() => communityStringsForRegion(state.region))
 const certificationCopy = computed(() => discoveryStringsForRegion(state.region).shopCard)
+let requestSequence = 0
+
 useSeoMeta(() => ({
   title: copy.value.feed.seoTitle,
   description: copy.value.feed.seoDescription,
@@ -35,7 +38,25 @@ useSeoMeta(() => ({
     },
   },
 }))
-onMounted(async()=>{try{posts.value=(await fetchPosts()).list}catch(e){errorMessage.value=localizeWebCommunityError(copy.value,e,copy.value.feed.loadFailed)}})
+
+watch(
+  () => state.region,
+  async () => {
+    const request = ++requestSequence
+    posts.value = []
+    errorMessage.value = ''
+    try {
+      const page = await fetchPosts()
+      if (request !== requestSequence) return
+      posts.value = page.list
+    } catch (error) {
+      if (request === requestSequence) {
+        errorMessage.value = localizeWebCommunityError(copy.value, error, copy.value.feed.loadFailed)
+      }
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -56,7 +77,7 @@ onMounted(async()=>{try{posts.value=(await fetchPosts()).list}catch(e){errorMess
           <h2><RouterLink :to="`/community/posts/${post.id}`">{{ post.title }}</RouterLink></h2>
           <p>{{ post.content }}</p>
           <div class="tag-row"><span v-for="topic in post.topics" :key="topic">#{{ topic }}</span></div>
-          <small>{{ copy.feed.likes }} {{ post.likeCount }} · {{ copy.feed.comments }} {{ post.commentCount }}</small>
+          <small>{{ copy.feed.likes(post.likeCount) }} · {{ copy.feed.comments(post.commentCount) }}</small>
         </div>
       </article>
     </div>
