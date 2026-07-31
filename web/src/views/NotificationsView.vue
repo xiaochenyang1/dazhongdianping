@@ -1,12 +1,23 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAppContext } from '@/composables/useAppContext'
 import { useNotifications } from '@/composables/useNotifications'
+import { formatWebDateTime } from '@/core/web_localizations'
+import {
+  localizeWebNotificationError,
+  notificationDisplayContent,
+  notificationDisplayTitle,
+  notificationHint,
+  notificationStringsForRegion,
+} from '@/core/web_notification_localizations'
 import { fetchNotifications } from '@/services/notification'
 import type { UserNotification } from '@/types/notification'
 
 const router = useRouter()
+const { state: appState } = useAppContext()
 const { state, refresh, markRead, markAllRead } = useNotifications()
+const copy = computed(() => notificationStringsForRegion(appState.region))
 
 const loading = ref(false)
 const loadingMore = ref(false)
@@ -33,34 +44,6 @@ function notificationRoute(item: UserNotification) {
   return item.linkUrl.split('?')[0] || null
 }
 
-function notificationHint(item: UserNotification) {
-  if (item.type === 'message.direct') return '请在 APP 查看私信'
-  if (item.type === 'reservation.reminder') return '预订提醒'
-  if (item.type === 'coupon.reminder') return '券码到期提醒'
-  if (item.type === 'coupon.expired') return '券码已过期'
-  if (item.type === 'order.paid') return '支付成功'
-  if (item.type === 'order.refund.result') return '退款结果'
-  if (item.type === 'reservation.created') return '预订创建'
-  if (item.type === 'reservation.status') return '预订状态'
-  if (item.type === 'review.audit.result') return '点评审核'
-  if (item.type === 'expert.certification.result') return '达人认证'
-  if (item.type === 'post.audit.result') return '帖子审核'
-  if (item.type === 'coupon.verified') return '券码核销'
-  if (item.type === 'review.hidden') return '点评处理'
-  if (item.type === 'social.mention') return '@提醒'
-  if (item.type === 'topic.update') return '话题更新'
-  if (item.type === 'review.like') return '点评获赞'
-  if (item.type === 'review.comment') return '点评评论'
-  if (item.type === 'review.comment.reply') return '评论回复'
-  if (item.type === 'review.reply') return '商家回复'
-  if (item.type === 'post.comment') return '帖子评论'
-  if (item.type === 'post.comment.reply') return '帖子评论回复'
-  if (item.type === 'post.like') return '帖子获赞'
-  if (item.type === 'post.repost') return '帖子转发'
-  if (item.type === 'social.follow') return '新增关注'
-  return item.type
-}
-
 async function load(reset = true) {
   if (reset) {
     loading.value = true
@@ -78,7 +61,7 @@ async function load(reset = true) {
       await refresh()
     }
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '通知加载失败'
+    error.value = localizeWebNotificationError(copy.value, cause, copy.value.page.loadFailed)
   } finally {
     loading.value = false
     loadingMore.value = false
@@ -112,26 +95,32 @@ async function handleMarkAll() {
   try {
     await markAllRead()
     items.value = items.value.map((item) => ({ ...item, read: true }))
-    success.value = '全部通知已标记为已读'
+    success.value = copy.value.page.markAllSuccess
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '全部已读失败'
+    error.value = localizeWebNotificationError(copy.value, cause, copy.value.page.markAllFailed)
   } finally {
     acting.value = false
   }
 }
 
-onMounted(() => {
-  void load(true)
-})
+watch(
+  () => appState.region,
+  () => {
+    items.value = []
+    success.value = ''
+    void load(true)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">消息中心</p>
-        <h1>赞评、预订提醒和系统通知都在这里。</h1>
-        <p>支持单条已读和全部已读；私信通知请到 APP 查看完整会话。</p>
+        <p class="eyebrow">{{ copy.page.eyebrow }}</p>
+        <h1>{{ copy.page.title }}</h1>
+        <p>{{ copy.page.summary }}</p>
       </div>
       <button
         type="button"
@@ -140,14 +129,14 @@ onMounted(() => {
         :disabled="acting || state.unreadCount === 0"
         @click="handleMarkAll"
       >
-        全部已读{{ state.unreadCount ? `（${state.unreadCount}）` : '' }}
+        {{ copy.page.markAllRead(state.unreadCount) }}
       </button>
     </div>
 
     <p v-if="error" class="feedback is-error">{{ error }}</p>
     <p v-if="success" class="feedback is-success">{{ success }}</p>
-    <p v-if="loading" class="feedback">通知加载中...</p>
-    <p v-else-if="items.length === 0" class="feedback">暂时没有通知。</p>
+    <p v-if="loading" class="feedback">{{ copy.page.loading }}</p>
+    <p v-else-if="items.length === 0" class="feedback">{{ copy.page.empty }}</p>
 
     <div v-else class="review-list">
       <article
@@ -159,16 +148,18 @@ onMounted(() => {
       >
         <div class="shop-card__heading">
           <strong>
-            {{ item.title }}
+            {{ notificationDisplayTitle(copy, item) }}
             <template v-if="item.aggregateCount > 1"> · x{{ item.aggregateCount }}</template>
           </strong>
-          <span class="status-pill">{{ item.read ? '已读' : '未读' }}</span>
+          <span class="status-pill">{{ item.read ? copy.page.read : copy.page.unread }}</span>
         </div>
-        <p>{{ item.content }}</p>
+        <p>{{ notificationDisplayContent(copy, item) }}</p>
         <div class="hero-actions">
-          <span class="muted">{{ item.createdAt }} · {{ notificationHint(item) }}</span>
+          <span class="muted">
+            {{ formatWebDateTime(item.createdAt, copy.tag) }} · {{ notificationHint(copy, item) }}
+          </span>
           <button type="button" class="secondary-button" @click="openItem(item)">
-            {{ notificationRoute(item) ? '查看详情' : '标记已读' }}
+            {{ notificationRoute(item) ? copy.page.viewDetails : copy.page.markRead }}
           </button>
         </div>
       </article>
@@ -176,7 +167,7 @@ onMounted(() => {
 
     <div v-if="hasMore" class="hero-actions" style="margin-top: 16px">
       <button type="button" class="secondary-button" :disabled="loadingMore" @click="loadMore">
-        {{ loadingMore ? '加载中...' : '加载更多' }}
+        {{ loadingMore ? copy.page.loadingMore : copy.page.loadMore }}
       </button>
     </div>
   </section>

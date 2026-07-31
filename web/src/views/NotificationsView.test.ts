@@ -1,5 +1,6 @@
 import { createApp, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const notificationServiceMocks = vi.hoisted(() => ({
   fetchNotifications: vi.fn(),
@@ -55,6 +56,7 @@ describe('NotificationsView', () => {
     notificationStateMocks.markAllRead.mockReset()
     routerMocks.push.mockReset()
     notificationStateMocks.state.unreadCount = 2
+    useAppContext().setRegion('CN')
     notificationServiceMocks.fetchNotifications.mockResolvedValue({
       list: [
         {
@@ -632,6 +634,22 @@ describe('NotificationsView', () => {
 
     expect(notificationStateMocks.markRead).toHaveBeenCalled()
     expect(routerMocks.push).toHaveBeenCalledWith('/users/9')
+    app.unmount()
+  })
+
+  it('localizes backend notification templates and dates for EU', async () => {
+    useAppContext().setRegion('EU')
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('Notifications')
+    expect(host.textContent).toContain('Booking reminder')
+    expect(host.textContent).toContain('Your booking starts soon')
+    expect(host.textContent).toContain('Voucher expiring soon')
+    expect(host.textContent).toContain('24/07/2026 16:00')
+    expect(host.textContent).not.toContain('预订提醒（2 小时）')
+    expect(host.textContent).not.toContain('券码即将过期')
+    expect(host.textContent).toContain('你好')
     app.unmount()
   })
 })

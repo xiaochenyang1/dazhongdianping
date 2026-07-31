@@ -14,7 +14,13 @@ import {
 import type { SearchHistoryItem, SearchHotWord, SearchSuggestion } from '@/types/browse'
 import { useNotifications } from '@/composables/useNotifications'
 import type { UserNotification } from '@/types/notification'
-import { applyWebDocumentMeta, webStringsForRegion } from '@/core/web_localizations'
+import { applyWebDocumentMeta, formatWebDateTime, webStringsForRegion } from '@/core/web_localizations'
+import {
+  notificationDisplayContent,
+  notificationDisplayTitle,
+  notificationHint as localizedNotificationHint,
+  notificationStringsForRegion,
+} from '@/core/web_notification_localizations'
 
 interface SearchPanelItem {
   key: string
@@ -49,6 +55,7 @@ let hotWordsRequestId = 0
 let searchHistoryRequestId = 0
 
 const strings = computed(() => webStringsForRegion(state.region))
+const notificationStrings = computed(() => notificationStringsForRegion(state.region))
 const navItems = computed(() => strings.value.nav)
 applyWebDocumentMeta(state.region, route.name)
 const userInitial = computed(() => (
@@ -175,8 +182,7 @@ function notificationRoute(item: UserNotification) {
 }
 
 function notificationHint(item: UserNotification) {
-  const hint = strings.value.notifications.hints[item.type]
-  return hint ? ` · ${hint}` : ''
+  return ` · ${localizedNotificationHint(notificationStrings.value, item)}`
 }
 
 async function handleMarkAllNotificationsRead() {
@@ -490,9 +496,9 @@ watch(
             <p v-if="notificationState.loading" class="notification-empty">{{ strings.notifications.loading }}</p>
             <p v-else-if="notificationState.items.length === 0" class="notification-empty">{{ strings.notifications.empty }}</p>
             <button v-for="item in notificationState.items" :key="item.id" type="button" class="notification-item" :class="{ unread: !item.read }" @click="handleNotificationClick(item)">
-              <strong>{{ item.title }}<template v-if="item.aggregateCount > 1"> · x{{ item.aggregateCount }}</template></strong>
-              <span>{{ item.content }}</span>
-              <small>{{ item.createdAt }}{{ notificationHint(item) }}</small>
+              <strong>{{ notificationDisplayTitle(notificationStrings, item) }}<template v-if="item.aggregateCount > 1"> · x{{ item.aggregateCount }}</template></strong>
+              <span>{{ notificationDisplayContent(notificationStrings, item) }}</span>
+              <small>{{ formatWebDateTime(item.createdAt, notificationStrings.tag) }}{{ notificationHint(item) }}</small>
             </button>
           </div>
         </div>
