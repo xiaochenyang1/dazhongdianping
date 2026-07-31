@@ -2826,9 +2826,16 @@ class AppLocalizations {
   String _withName(String key, String name) =>
       _text(key).replaceFirst('{name}', name);
 
+  bool get _isEnglish => tag.toLowerCase().startsWith('en');
+
+  String _englishCount(int count, String singular, [String? plural]) {
+    final unit = count == 1 ? singular : (plural ?? '${singular}s');
+    return '$count $unit';
+  }
+
   String _appendNotificationRemark(String base, String? remark) {
     if (remark == null || remark.trim().isEmpty) return base;
-    final separator = tag.startsWith('en') ? ': ' : '：';
+    final separator = _isEnglish ? ': ' : '：';
     return '$base$separator${remark.trim()}';
   }
 
@@ -2926,7 +2933,9 @@ class AppLocalizations {
   String get rankTypeMustEat => _text('rankTypeMustEat');
   String get rankTypeTopRated => _text('rankTypeTopRated');
   String get rankTypeTrending => _text('rankTypeTrending');
-  String shopCount(int count) => _withCount('shopCount', count);
+  String shopCount(int count) => _isEnglish
+      ? _englishCount(count, 'place')
+      : _withCount('shopCount', count);
   String topShop(String name) => _withName('topShop', name);
   String rankDetailLoadFailed(Object error) =>
       _withError('rankDetailLoadFailed', error);
@@ -2948,7 +2957,9 @@ class AppLocalizations {
   String get activityTypeMerchantSupport =>
       _text('activityTypeMerchantSupport');
   String get activityTypeContentTopic => _text('activityTypeContentTopic');
-  String resourceCount(int count) => _withCount('resourceCount', count);
+  String resourceCount(int count) => _isEnglish
+      ? _englishCount(count, 'resource')
+      : _withCount('resourceCount', count);
   String activityDetailLoadFailed(Object error) =>
       _withError('activityDetailLoadFailed', error);
   String get activityErrorNotFoundOrOffline =>
@@ -3226,9 +3237,8 @@ class AppLocalizations {
     required String code,
     required int days,
   }) {
-    if (tag.startsWith('en')) {
-      final unit = days == 1 ? 'day' : 'days';
-      return '$code expires in $days $unit';
+    if (_isEnglish) {
+      return '$code expires in ${_englishCount(days, 'day')}';
     }
     return _text(
       'notificationCouponExpiringInDays',
@@ -3313,10 +3323,16 @@ class AppLocalizations {
     required int level,
     required String region,
     required int points,
-  }) => _text('levelRegionPoints')
-      .replaceFirst('{level}', '$level')
-      .replaceFirst('{region}', region)
-      .replaceFirst('{points}', '$points');
+  }) {
+    if (_isEnglish) {
+      return 'Lv.$level · $region · ${_englishCount(points, 'point')}';
+    }
+    return _text('levelRegionPoints')
+        .replaceFirst('{level}', '$level')
+        .replaceFirst('{region}', region)
+        .replaceFirst('{points}', '$points');
+  }
+
   String growthValueLabel(int value) =>
       _text('growthValueLabel').replaceFirst('{value}', '$value');
   String get accountSettings => _text('accountSettings');
@@ -3329,10 +3345,16 @@ class AppLocalizations {
     required int level,
     required int growth,
     required int points,
-  }) => _text('growthRecordsSubtitle')
-      .replaceFirst('{level}', '$level')
-      .replaceFirst('{growth}', '$growth')
-      .replaceFirst('{points}', '$points');
+  }) {
+    if (_isEnglish) {
+      return 'Lv.$level · growth $growth · ${_englishCount(points, 'point')}';
+    }
+    return _text('growthRecordsSubtitle')
+        .replaceFirst('{level}', '$level')
+        .replaceFirst('{growth}', '$growth')
+        .replaceFirst('{points}', '$points');
+  }
+
   String get myMessages => _text('myMessages');
   String get blockedUsers => _text('blockedUsers');
   String get myCircles => _text('myCircles');
@@ -3356,9 +3378,15 @@ class AppLocalizations {
   String communityLoadFailed(Object error) =>
       _withError('communityLoadFailed', error);
   String get noCommunityPosts => _text('noCommunityPosts');
-  String postMetaStats({required int likes, required int comments}) => _text(
-    'postMetaStats',
-  ).replaceFirst('{likes}', '$likes').replaceFirst('{comments}', '$comments');
+  String postMetaStats({required int likes, required int comments}) {
+    if (_isEnglish) {
+      return ' · ❤ $likes · ${_englishCount(comments, 'comment')}';
+    }
+    return _text(
+      'postMetaStats',
+    ).replaceFirst('{likes}', '$likes').replaceFirst('{comments}', '$comments');
+  }
+
   String get hotTab => _text('hotTab');
   String get followingTopicsTab => _text('followingTopicsTab');
   String loadMoreTopicsFailed(Object error) =>
@@ -3376,15 +3404,31 @@ class AppLocalizations {
     required int posts,
     required int likes,
     required int comments,
-  }) => _text('topicSevenDayStats')
-      .replaceFirst('{posts}', '$posts')
-      .replaceFirst('{likes}', '$likes')
-      .replaceFirst('{comments}', '$comments');
-  String topicFollowMeta({required int followers, required int posts}) => _text(
-    'topicFollowMeta',
-  ).replaceFirst('{followers}', '$followers').replaceFirst('{posts}', '$posts');
-  String topicFollowerCount(int count) =>
-      _text('topicFollowerCount').replaceFirst('{count}', '$count');
+  }) {
+    if (_isEnglish) {
+      return '7 days: ${_englishCount(posts, 'post')} · '
+          '${_englishCount(likes, 'like')} · '
+          '${_englishCount(comments, 'comment')}';
+    }
+    return _text('topicSevenDayStats')
+        .replaceFirst('{posts}', '$posts')
+        .replaceFirst('{likes}', '$likes')
+        .replaceFirst('{comments}', '$comments');
+  }
+
+  String topicFollowMeta({required int followers, required int posts}) {
+    if (_isEnglish) {
+      return '${_englishCount(followers, 'follower')} · '
+          '${_englishCount(posts, 'public post')}';
+    }
+    return _text('topicFollowMeta')
+        .replaceFirst('{followers}', '$followers')
+        .replaceFirst('{posts}', '$posts');
+  }
+
+  String topicFollowerCount(int count) => _isEnglish
+      ? _englishCount(count, 'follower')
+      : _text('topicFollowerCount').replaceFirst('{count}', '$count');
   String get topicErrorNotFound => _text('topicErrorNotFound');
   String get topicErrorUnavailable => _text('topicErrorUnavailable');
   String get topicErrorFollowFailed => _text('topicErrorFollowFailed');
@@ -3409,9 +3453,16 @@ class AppLocalizations {
   String get circleErrorJoinedOnlyLoginRequired =>
       _text('circleErrorJoinedOnlyLoginRequired');
   String get circleErrorNotFound => _text('circleErrorNotFound');
-  String circleMeta({required int members, required int posts}) => _text(
-    'circleMeta',
-  ).replaceFirst('{members}', '$members').replaceFirst('{posts}', '$posts');
+  String circleMeta({required int members, required int posts}) {
+    if (_isEnglish) {
+      return '${_englishCount(members, 'member')} · '
+          '${_englishCount(posts, 'post')}';
+    }
+    return _text(
+      'circleMeta',
+    ).replaceFirst('{members}', '$members').replaceFirst('{posts}', '$posts');
+  }
+
   String circleStatusUpdateFailed(Object error) =>
       _withError('circleStatusUpdateFailed', error);
   String get joined => _text('joined');
@@ -3643,11 +3694,17 @@ class AppLocalizations {
     required String time,
     required int people,
     required String status,
-  }) => _text('reservationListMeta')
-      .replaceFirst('{no}', no)
-      .replaceFirst('{time}', time)
-      .replaceFirst('{people}', '$people')
-      .replaceFirst('{status}', status);
+  }) {
+    if (_isEnglish) {
+      return '$no\n$time · ${_englishCount(people, 'guest')} · $status';
+    }
+    return _text('reservationListMeta')
+        .replaceFirst('{no}', no)
+        .replaceFirst('{time}', time)
+        .replaceFirst('{people}', '$people')
+        .replaceFirst('{status}', status);
+  }
+
   String get onlineReservation => _text('onlineReservation');
   String get selectSlotFirst => _text('selectSlotFirst');
   String reservationCreated({required String no, required String status}) =>
@@ -3675,7 +3732,9 @@ class AppLocalizations {
   String get reservationErrorNotFound => _text('reservationErrorNotFound');
   String dateLabel(String date) =>
       _text('dateLabel').replaceFirst('{date}', date);
-  String peopleCount(int count) => _withCount('peopleCount', count);
+  String peopleCount(int count) => _isEnglish
+      ? _englishCount(count, 'guest')
+      : _withCount('peopleCount', count);
   String slotsLoadFailed(Object error) => _withError('slotsLoadFailed', error);
   String slotRemaining({
     required String start,
@@ -3701,10 +3760,15 @@ class AppLocalizations {
   String get confirmReschedule => _text('confirmReschedule');
   String get reservationRescheduled => _text('reservationRescheduled');
   String get rescheduleReason => _text('rescheduleReason');
-  String reservationTimePeople({required String time, required int people}) =>
-      _text(
-        'reservationTimePeople',
-      ).replaceFirst('{time}', time).replaceFirst('{people}', '$people');
+  String reservationTimePeople({required String time, required int people}) {
+    if (_isEnglish) {
+      return '$time · ${_englishCount(people, 'guest')}';
+    }
+    return _text(
+      'reservationTimePeople',
+    ).replaceFirst('{time}', time).replaceFirst('{people}', '$people');
+  }
+
   String rescheduleSlotMeta({
     required String start,
     required String mode,
@@ -3789,9 +3853,16 @@ class AppLocalizations {
       _text(
         'replyToPreview',
       ).replaceFirst('{name}', name).replaceFirst('{content}', content);
-  String likeCommentStats({required int likes, required int comments}) => _text(
-    'likeCommentStats',
-  ).replaceFirst('{likes}', '$likes').replaceFirst('{comments}', '$comments');
+  String likeCommentStats({required int likes, required int comments}) {
+    if (_isEnglish) {
+      return '${_englishCount(likes, 'like')} · '
+          '${_englishCount(comments, 'comment')}';
+    }
+    return _text(
+      'likeCommentStats',
+    ).replaceFirst('{likes}', '$likes').replaceFirst('{comments}', '$comments');
+  }
+
   String get loadMoreComments => _text('loadMoreComments');
 
   String get maxNineImages => _text('maxNineImages');
@@ -4084,10 +4155,12 @@ class AppLocalizations {
   String balanceAfterLabel(Object value) =>
       _text('balanceAfterLabel').replaceFirst('{value}', '$value');
   String get privacyHero => _text('privacyHero');
-  String exportDailyLimit(int count) =>
-      _text('exportDailyLimit').replaceFirst('{count}', '$count');
-  String exportFileRetention(int hours) =>
-      _text('exportFileRetention').replaceFirst('{hours}', '$hours');
+  String exportDailyLimit(int count) => _isEnglish
+      ? 'Up to ${_englishCount(count, 'time')} per day'
+      : _text('exportDailyLimit').replaceFirst('{count}', '$count');
+  String exportFileRetention(int hours) => _isEnglish
+      ? 'Files kept for ${_englishCount(hours, 'hour')}'
+      : _text('exportFileRetention').replaceFirst('{hours}', '$hours');
   String get canCancelBeforeDeadline => _text('canCancelBeforeDeadline');
   String get creatingExport => _text('creatingExport');
   String get recordingAcceptance => _text('recordingAcceptance');
@@ -4578,8 +4651,9 @@ class AppLocalizations {
   String browseHistoryLoadFailed(Object error) =>
       _withError('browseHistoryLoadFailed', error);
   String get noBrowseHistory => _text('noBrowseHistory');
-  String browseViewCount(int count) =>
-      _text('browseViewCount').replaceFirst('{count}', '$count');
+  String browseViewCount(int count) => _isEnglish
+      ? 'Viewed ${_englishCount(count, 'time')}'
+      : _text('browseViewCount').replaceFirst('{count}', '$count');
   String get deleteBrowseHistoryTooltip => _text('deleteBrowseHistoryTooltip');
   String get clearAll => _text('clearAll');
   String get postSubmittedForAudit => _text('postSubmittedForAudit');
@@ -4605,7 +4679,9 @@ class AppLocalizations {
       _withError('reportSubmitFailed', error);
   String get cancelReply => _text('cancelReply');
   String get saySomethingUsefulShort => _text('saySomethingUsefulShort');
-  String likeCountLabel(int count) => _withCount('likeCountLabel', count);
+  String likeCountLabel(int count) => _isEnglish
+      ? _englishCount(count, 'like')
+      : _withCount('likeCountLabel', count);
   String replyingToUser(String name) =>
       _text('replyingToUser').replaceFirst('{name}', name);
   String get simplifiedChinese => _text('simplifiedChinese');
@@ -4616,9 +4692,12 @@ class AppLocalizations {
   String get reviewsMetric => _text('reviewsMetric');
   String get noFollowers => _text('noFollowers');
   String get noFollowing => _text('noFollowing');
-  String levelFollowersMeta({required int level, required int count}) => _text(
-    'levelFollowersMeta',
-  ).replaceFirst('{level}', '$level').replaceFirst('{count}', '$count');
+  String levelFollowersMeta({required int level, required int count}) =>
+      _isEnglish
+      ? 'Lv.$level · ${_englishCount(count, 'follower')}'
+      : _text(
+          'levelFollowersMeta',
+        ).replaceFirst('{level}', '$level').replaceFirst('{count}', '$count');
   String followedAtLabel(String time) =>
       _text('followedAtLabel').replaceFirst('{time}', time);
   String shopHash(Object id) => _text('shopHash').replaceFirst('{id}', '$id');

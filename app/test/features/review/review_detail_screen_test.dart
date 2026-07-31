@@ -379,7 +379,7 @@ void main() {
       find.text('Taste 5.0 · Environment 4.0 · Service 4.5 · Avg spend €18.50'),
       findsOneWidget,
     );
-    expect(find.textContaining('3 likes · 1 comments'), findsOneWidget);
+    expect(find.textContaining('3 likes · 1 comment'), findsOneWidget);
     expect(find.textContaining('Merchant reply: 谢谢支持'), findsOneWidget);
     expect(find.text('Approved'), findsOneWidget);
     expect(find.text('Local expert'), findsOneWidget);

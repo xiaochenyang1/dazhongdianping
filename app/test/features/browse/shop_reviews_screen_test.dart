@@ -386,6 +386,6 @@ void main() {
 
     expect(find.text('Berlin Tea House · Reviews'), findsOneWidget);
     expect(find.text('Load more'), findsOneWidget);
-    expect(find.textContaining('2 likes · 1 comments'), findsOneWidget);
+    expect(find.textContaining('2 likes · 1 comment'), findsOneWidget);
   });
 }

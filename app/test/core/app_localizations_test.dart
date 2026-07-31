@@ -314,7 +314,7 @@ void main() {
     expect(AppLocalizations.forTag('zh-CN').recommendedTab, '推荐');
     expect(
       AppLocalizations.forTag('en').postMetaStats(likes: 2, comments: 3),
-      ' · ❤ 2 · comments 3',
+      ' · ❤ 2 · 3 comments',
     );
     expect(AppLocalizations.forTag('en').topicPlaza, 'Topics');
     expect(AppLocalizations.forTag('en').hotTab, 'Trending');
@@ -602,6 +602,72 @@ void main() {
       'Local expert certification status updated',
     );
     expect(AppLocalizations.forTag('zh-CN').deleteBrowseHistoryTooltip, '删除足迹');
+  });
+
+  test('English count labels use singular and plural nouns', () {
+    final en = AppLocalizations.forTag('en-US');
+
+    expect(en.shopCount(1), '1 place');
+    expect(en.shopCount(2), '2 places');
+    expect(en.resourceCount(1), '1 resource');
+    expect(en.resourceCount(2), '2 resources');
+    expect(
+      en.levelRegionPoints(level: 2, region: 'EU', points: 1),
+      'Lv.2 · EU · 1 point',
+    );
+    expect(
+      en.growthRecordsSubtitle(level: 2, growth: 10, points: 2),
+      'Lv.2 · growth 10 · 2 points',
+    );
+    expect(en.postMetaStats(likes: 1, comments: 1), ' · ❤ 1 · 1 comment');
+    expect(
+      en.topicSevenDayStats(posts: 1, likes: 1, comments: 1),
+      '7 days: 1 post · 1 like · 1 comment',
+    );
+    expect(
+      en.topicFollowMeta(followers: 1, posts: 1),
+      '1 follower · 1 public post',
+    );
+    expect(en.topicFollowerCount(1), '1 follower');
+    expect(en.circleMeta(members: 1, posts: 1), '1 member · 1 post');
+    expect(en.peopleCount(1), '1 guest');
+    expect(
+      en.reservationListMeta(
+        no: 'R1',
+        time: '12:00',
+        people: 1,
+        status: 'Confirmed',
+      ),
+      'R1\n12:00 · 1 guest · Confirmed',
+    );
+    expect(
+      en.reservationTimePeople(time: '12:00', people: 1),
+      '12:00 · 1 guest',
+    );
+    expect(en.likeCommentStats(likes: 1, comments: 2), '1 like · 2 comments');
+    expect(en.exportDailyLimit(1), 'Up to 1 time per day');
+    expect(en.exportFileRetention(1), 'Files kept for 1 hour');
+    expect(en.browseViewCount(1), 'Viewed 1 time');
+    expect(en.likeCountLabel(1), '1 like');
+    expect(en.levelFollowersMeta(level: 3, count: 1), 'Lv.3 · 1 follower');
+    expect(
+      en.notificationCouponExpiringInDays(code: 'CP1', days: 1),
+      'CP1 expires in 1 day',
+    );
+
+    final uppercaseEnglish = AppLocalizations.forTag('EN-GB');
+    expect(uppercaseEnglish.shopCount(1), '1 place');
+    expect(
+      uppercaseEnglish.notificationCouponExpiringInDays(code: 'CP2', days: 1),
+      'CP2 expires in 1 day',
+    );
+
+    final simplified = AppLocalizations.forTag('zh-CN');
+    expect(
+      simplified.topicFollowMeta(followers: 1, posts: 1),
+      '1 人关注 · 1 篇公开帖子',
+    );
+    expect(simplified.likeCommentStats(likes: 1, comments: 1), '点赞 1 · 评论 1');
   });
 
   test('delegate supports every configured app locale', () async {
