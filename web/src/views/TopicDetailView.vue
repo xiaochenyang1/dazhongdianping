@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchTopic, fetchTopicPosts, type PublicTopic } from '@/services/topic'
 import type { CommunityPost } from '@/types/community'
 import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
+import { useAppContext } from '@/composables/useAppContext'
+import { communityStringsForRegion, localizeWebCommunityError } from '@/core/web_community_localizations'
+import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
+import { formatWebDateTime } from '@/core/web_localizations'
 
 const props = defineProps<{ topicId: number }>()
+const { state: appState } = useAppContext()
+const copy = computed(() => communityStringsForRegion(appState.region))
+const certificationCopy = computed(() => discoveryStringsForRegion(appState.region).shopCard)
 const topic = ref<PublicTopic | null>(null)
 const posts = ref<CommunityPost[]>([])
 const error = ref('')
@@ -14,17 +21,17 @@ let requestSequence = 0
 useSeoMeta(() => {
   const canonicalPath = `/topics/${props.topicId}`
   const currentTopic = topic.value
-  if (!currentTopic) return { title: '话题详情', description: '查看话题热度构成和公开社区帖子。', canonical: canonicalPath, robots: 'noindex,nofollow' }
+  if (!currentTopic) return { title: copy.value.topics.detailSeoTitle, description: copy.value.topics.detailSeoDescription(0, 0, ''), canonical: canonicalPath, robots: 'noindex,nofollow' }
   const canonical = absoluteSeoUrl(canonicalPath)
   return {
     title: `#${currentTopic.name}`,
-    description: `${currentTopic.followerCount} 人关注，${currentTopic.postCount} 篇公开帖子。${currentTopic.name} 的城市生活讨论与经验分享。`,
+    description: copy.value.topics.detailSeoDescription(currentTopic.followerCount, currentTopic.postCount, currentTopic.name),
     canonical: canonicalPath,
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'CollectionPage',
       name: currentTopic.name,
-      description: `${currentTopic.followerCount} 人关注，${currentTopic.postCount} 篇公开帖子。`,
+      description: copy.value.topics.audience(currentTopic.followerCount, currentTopic.postCount),
       url: canonical,
       about: { '@type': 'Thing', name: currentTopic.name },
       mainEntity: {
@@ -52,7 +59,7 @@ watch(() => props.topicId, async (topicId) => {
     topic.value = detail
     posts.value = page.list
   } catch (cause) {
-    if (request === requestSequence) error.value = cause instanceof Error ? cause.message : '话题加载失败'
+    if (request === requestSequence) error.value = localizeWebCommunityError(copy.value, cause, copy.value.topics.loadFailed)
   }
 }, { immediate: true })
 </script>
@@ -63,14 +70,14 @@ watch(() => props.topicId, async (topicId) => {
     <template v-if="topic">
       <header class="detail-hero">
         <div>
-          <p class="eyebrow">{{ topic.region }} · PUBLIC TOPIC</p>
+          <p class="eyebrow">{{ topic.region }} · {{ copy.topics.publicTopic }}</p>
           <h1>#{{ topic.name }}</h1>
-          <p>{{ topic.followerCount }} 人关注 · {{ topic.postCount }} 篇公开帖子</p>
+          <p>{{ copy.topics.followerCount(topic.followerCount) }} · {{ copy.topics.postCount(topic.postCount) }}</p>
         </div>
         <div class="heat-seal">
-          <span>7 DAY HEAT</span>
+          <span>{{ copy.topics.heatLabel }}</span>
           <strong>{{ topic.hotScore }}</strong>
-          <small>{{ topic.postCount7d }} 帖 · {{ topic.likeCount7d }} 赞 · {{ topic.commentCount7d }} 评论</small>
+          <small>{{ copy.topics.composition(topic.postCount7d, topic.likeCount7d, topic.commentCount7d) }}</small>
         </div>
       </header>
 
@@ -80,16 +87,16 @@ watch(() => props.topicId, async (topicId) => {
             <span class="name-with-badge">
               <RouterLink :to="`/users/${post.userId}`">{{ post.userName }}</RouterLink>
               <span v-if="post.authorCertification" class="verified-badge verified-badge--compact">
-                {{ post.authorCertification.label }}
+                {{ certificationCopy.certificationLabel(post.authorCertification.code, post.authorCertification.label) }}
               </span>
             </span>
-            <span>{{ post.createdAt }}</span>
+            <span>{{ formatWebDateTime(post.createdAt, copy.tag) }}</span>
           </div>
           <h2><RouterLink :to="`/community/posts/${post.id}`">{{ post.title }}</RouterLink></h2>
           <p>{{ post.content }}</p>
           <div class="post-foot">
             <span v-for="name in post.topics" :key="name">#{{ name }}</span>
-            <small>喜欢 {{ post.likeCount }} · 评论 {{ post.commentCount }}</small>
+            <small>{{ copy.topics.likes }} {{ post.likeCount }} · {{ copy.topics.comments }} {{ post.commentCount }}</small>
           </div>
         </article>
       </div>

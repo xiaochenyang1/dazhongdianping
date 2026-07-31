@@ -64,7 +64,7 @@ describe('read-only community views', () => {
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/users/:id', component: EmptyView }] })
     await router.push('/users/1'); await router.isReady()
     const host = document.createElement('div'); const app = createApp(PostDetailView, { postId: 7 }); app.use(router); app.mount(host); await flushView()
-    expect(host.textContent).toContain('周六上午选择最多'); expect(host.textContent).toContain('很实用'); expect(host.textContent).not.toContain('点赞')
+    expect(host.textContent).toContain('周六上午选择最多'); expect(host.textContent).toContain('很实用'); expect(host.textContent).toContain('Public comments'); expect(host.textContent).not.toContain('点赞')
     app.unmount()
   })
 

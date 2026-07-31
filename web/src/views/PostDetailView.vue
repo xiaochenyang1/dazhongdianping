@@ -4,9 +4,16 @@ import { useRoute } from 'vue-router'
 import { fetchPost, fetchPostComments } from '@/services/community'
 import type { CommunityComment, CommunityPost } from '@/types/community'
 import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
+import { useAppContext } from '@/composables/useAppContext'
+import { communityStringsForRegion, localizeWebCommunityError } from '@/core/web_community_localizations'
+import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
+import { formatWebDateTime } from '@/core/web_localizations'
 
 const props = defineProps<{ postId: number }>()
 const route = useRoute()
+const { state: appState } = useAppContext()
+const copy = computed(() => communityStringsForRegion(appState.region))
+const certificationCopy = computed(() => discoveryStringsForRegion(appState.region).shopCard)
 
 const post = ref<CommunityPost | null>(null)
 const comments = ref<CommunityComment[]>([])
@@ -16,8 +23,8 @@ let requestSequence = 0
 
 const auditBanner = computed(() => {
   const marker = String(route.query.audit || '')
-  if (marker === 'approved') return '平台已通过你的帖子，现已公开展示。'
-  if (marker === 'rejected') return '平台未通过你的帖子，可到 APP「我的帖子」查看驳回原因并修改重提。'
+  if (marker === 'approved') return copy.value.post.auditApproved
+  if (marker === 'rejected') return copy.value.post.auditRejected
   return ''
 })
 
@@ -45,10 +52,10 @@ async function sharePost() {
       document.execCommand('copy')
       textarea.remove()
     }
-    shareMessage.value = '分享链接已准备好'
+    shareMessage.value = copy.value.post.shareReady
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return
-    shareMessage.value = error instanceof Error ? error.message : '分享失败，请稍后重试'
+    shareMessage.value = localizeWebCommunityError(copy.value, error, copy.value.post.shareFailed)
   }
 }
 
@@ -64,8 +71,8 @@ useSeoMeta(() => {
   const currentPost = post.value
   if (!currentPost) {
     return {
-      title: '社区帖子',
-      description: '阅读公开社区帖子与评论。',
+      title: copy.value.post.seoTitle,
+      description: copy.value.post.seoDescription,
       canonical: canonicalPath,
       robots: 'noindex,nofollow',
     }
@@ -124,7 +131,7 @@ watch(
       comments.value = normalizeCommunityComments(page.list)
     } catch (error) {
       if (request === requestSequence) {
-        errorMessage.value = error instanceof Error ? error.message : '帖子加载失败'
+        errorMessage.value = localizeWebCommunityError(copy.value, error, copy.value.post.loadFailed)
       }
     }
   },
@@ -140,9 +147,9 @@ watch(
           <span class="name-with-badge">
             <RouterLink :to="`/users/${post.userId}`">{{ post.userName }}</RouterLink>
             <span v-if="post.authorCertification" class="verified-badge verified-badge--compact">
-              {{ post.authorCertification.label }}
+              {{ certificationCopy.certificationLabel(post.authorCertification.code, post.authorCertification.label) }}
             </span>
-            <span>· {{ post.createdAt }}</span>
+            <span>· {{ formatWebDateTime(post.createdAt, copy.tag) }}</span>
           </span>
         </p>
         <h1>{{ post.title }}</h1>
@@ -157,7 +164,7 @@ watch(
           data-testid="share-post"
           @click="sharePost"
         >
-          分享
+          {{ copy.post.share }}
         </button>
       </div>
     </div>
@@ -173,26 +180,26 @@ watch(
       </div>
     </article>
 
-    <p class="feedback">PC 端现在还是只读；想互动就去 APP，别在这儿硬抠按钮。</p>
+    <p class="feedback">{{ copy.post.readOnly }}</p>
 
     <section class="content-card">
-      <h2>公开评论</h2>
+      <h2>{{ copy.post.commentsTitle }}</h2>
       <div v-if="comments.length > 0" class="review-list review-list--threaded">
         <article v-for="item in comments" :key="item.id" class="review-card">
           <strong>{{ item.userName }}</strong>
           <p>{{ item.content }}</p>
-          <span>{{ item.createdAt }}</span>
+          <span>{{ formatWebDateTime(item.createdAt, copy.tag) }}</span>
           <div v-if="item.replies.length" class="comment-thread">
             <article v-for="reply in item.replies" :key="reply.id" class="review-card review-card--reply">
               <strong>{{ reply.userName }}</strong>
-              <p v-if="reply.replyTo" class="reply-context">回复 {{ reply.replyTo.userName }}：{{ reply.replyTo.content }}</p>
+              <p v-if="reply.replyTo" class="reply-context">{{ copy.post.replyContext(reply.replyTo.userName, reply.replyTo.content) }}</p>
               <p>{{ reply.content }}</p>
-              <span>{{ reply.createdAt }}</span>
+              <span>{{ formatWebDateTime(reply.createdAt, copy.tag) }}</span>
             </article>
           </div>
         </article>
       </div>
-      <p v-else class="feedback">这条帖子下面还没人开口。</p>
+      <p v-else class="feedback">{{ copy.post.noComments }}</p>
     </section>
   </section>
 

@@ -1,5 +1,6 @@
 import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const mocks = vi.hoisted(() => ({
   fetchTopics: vi.fn(),
@@ -52,6 +53,8 @@ const topic = {
 describe('topic read-only views', () => {
   beforeEach(() => {
     Object.values(mocks).forEach((mock) => mock.mockReset())
+    localStorage.clear()
+    useAppContext().setRegion('EU')
     mocks.fetchTopics.mockResolvedValue({ list: [topic], total: 1, page: 1, pageSize: 30, hasMore: false })
     mocks.fetchHotTopics.mockResolvedValue({ list: [topic], total: 1, page: 1, pageSize: 30, hasMore: false })
     mocks.fetchTopic.mockResolvedValue(topic)
@@ -80,7 +83,8 @@ describe('topic read-only views', () => {
     expect(host.textContent).toContain('伦敦咖啡')
     expect(host.textContent).not.toContain('关注话题')
 
-    const hotButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('最近 7 天热榜'))
+    expect(host.textContent).toContain('What people in the city keep talking about.')
+    const hotButton = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Last 7 days'))
     if (!hotButton) throw new Error('缺少热榜切换按钮')
     hotButton.click()
     await Promise.resolve()
@@ -89,8 +93,8 @@ describe('topic read-only views', () => {
 
     expect(mocks.fetchHotTopics).toHaveBeenCalledTimes(1)
     expect(host.textContent).toContain('TOP 1')
-    expect(host.textContent).toContain('热度 169')
-    expect(host.textContent).toContain('2 帖 · 3 赞 · 4 评论')
+    expect(host.textContent).toContain('Heat 169')
+    expect(host.textContent).toContain('2 posts · 3 likes · 4 comments')
     expect(host.textContent).not.toContain('发布帖子')
     app.unmount()
   })
@@ -108,7 +112,7 @@ describe('topic read-only views', () => {
 
   it('renders topic detail posts and author links without write controls', async () => {
     const { host, app } = await mount(TopicDetailView, { topicId: 31 })
-    expect(host.textContent).toContain('88 人关注')
+    expect(host.textContent).toContain('88 followers')
     expect(host.textContent).toContain('周末咖啡地图')
     expect(host.querySelector('a[data-to="/community/posts/7"]')).not.toBeNull()
     expect(host.querySelector('a[data-to="/users/9"]')).not.toBeNull()

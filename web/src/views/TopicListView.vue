@@ -1,23 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchHotTopics, fetchTopics, type PublicTopic } from '@/services/topic'
 import { absoluteSeoUrl, useSeoMeta } from '@/composables/useSeoMeta'
+import { useAppContext } from '@/composables/useAppContext'
+import { communityStringsForRegion, localizeWebCommunityError } from '@/core/web_community_localizations'
 
 const topics = ref<PublicTopic[]>([])
 const mode = ref<'recommended' | 'hot'>('recommended')
 const loading = ref(false)
 const error = ref('')
+const { state: appState } = useAppContext()
+const copy = computed(() => communityStringsForRegion(appState.region))
 
 useSeoMeta(() => ({
-  title: '话题广场',
-  description: mode.value === 'hot' ? '浏览最近 7 天公开帖子、点赞与评论计算出的城市话题热榜。' : '浏览当前区域推荐话题与公开社区讨论。',
+  title: copy.value.topics.seoTitle,
+  description: copy.value.topics.seoDescription(mode.value === 'hot'),
   canonical: '/topics',
   jsonLd: {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: '话题广场',
-    description: '浏览当前区域推荐话题与最近 7 天热榜。',
+    name: copy.value.topics.seoTitle,
+    description: copy.value.topics.schemaDescription,
     url: absoluteSeoUrl('/topics'),
     mainEntity: {
       '@type': 'ItemList',
@@ -26,7 +30,7 @@ useSeoMeta(() => ({
         position: index + 1,
         name: topic.name,
         url: absoluteSeoUrl(`/topics/${topic.id}`),
-        description: `${topic.postCount} 篇公开帖子，${topic.followerCount} 人关注`,
+        description: copy.value.topics.audience(topic.followerCount, topic.postCount),
       })),
     },
   },
@@ -39,7 +43,7 @@ async function load(nextMode: 'recommended' | 'hot') {
   try {
     topics.value = (nextMode === 'hot' ? await fetchHotTopics() : await fetchTopics('recommended')).list
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '话题加载失败'
+    error.value = localizeWebCommunityError(copy.value, cause, copy.value.topics.loadFailed)
   } finally {
     loading.value = false
   }
@@ -52,18 +56,18 @@ onMounted(() => load('recommended'))
   <section class="page-section topic-index">
     <header class="topic-hero">
       <div>
-        <p class="eyebrow">CITY TOPIC INDEX · 只读</p>
-        <h1>城市里正在被反复谈起的事。</h1>
-        <p>推荐是编辑选择，热榜按最近 7 天公开帖子、点赞与评论计算。参与关注和发帖请使用 APP。</p>
+        <p class="eyebrow">{{ copy.topics.eyebrow }}</p>
+        <h1>{{ copy.topics.title }}</h1>
+        <p>{{ copy.topics.summary }}</p>
       </div>
-      <div class="mode-switch" aria-label="话题榜单切换">
-        <button type="button" :class="{ active: mode === 'recommended' }" @click="load('recommended')">编辑推荐</button>
-        <button type="button" :class="{ active: mode === 'hot' }" @click="load('hot')">最近 7 天热榜</button>
+      <div class="mode-switch" :aria-label="copy.topics.switchAria">
+        <button type="button" :class="{ active: mode === 'recommended' }" @click="load('recommended')">{{ copy.topics.recommended }}</button>
+        <button type="button" :class="{ active: mode === 'hot' }" @click="load('hot')">{{ copy.topics.hot }}</button>
       </div>
     </header>
 
     <p v-if="error" class="feedback is-error">{{ error }}</p>
-    <p v-if="loading" class="feedback">正在整理当前区域的话题...</p>
+    <p v-if="loading" class="feedback">{{ copy.topics.loading }}</p>
 
     <div v-else class="topic-ledger">
       <RouterLink
@@ -72,16 +76,16 @@ onMounted(() => load('recommended'))
         :to="`/topics/${topic.id}`"
         class="topic-entry"
       >
-        <div class="entry-rank">{{ mode === 'hot' ? `TOP ${index + 1}` : String(index + 1).padStart(2, '0') }}</div>
+        <div class="entry-rank">{{ mode === 'hot' ? copy.topics.top(index + 1) : copy.topics.rank(index + 1) }}</div>
         <div class="entry-main">
           <div class="entry-title-row">
             <h2>{{ topic.name }}</h2>
-            <span v-if="topic.recommended" class="recommend-mark">编辑推荐</span>
+            <span v-if="topic.recommended" class="recommend-mark">{{ copy.topics.recommendedMark }}</span>
           </div>
-          <p class="composition">{{ topic.postCount7d }} 帖 · {{ topic.likeCount7d }} 赞 · {{ topic.commentCount7d }} 评论</p>
-          <p class="audience">{{ topic.followerCount }} 人关注 · {{ topic.postCount }} 篇公开帖子</p>
+          <p class="composition">{{ copy.topics.composition(topic.postCount7d, topic.likeCount7d, topic.commentCount7d) }}</p>
+          <p class="audience">{{ copy.topics.audience(topic.followerCount, topic.postCount) }}</p>
         </div>
-        <strong class="heat">热度 {{ topic.hotScore }}</strong>
+        <strong class="heat">{{ copy.topics.heat(topic.hotScore) }}</strong>
       </RouterLink>
     </div>
   </section>
