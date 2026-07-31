@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAppContext } from '@/composables/useAppContext'
 import { useUserSession } from '@/composables/useUserSession'
+import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
+import { formatWebDateTime } from '@/core/web_localizations'
+import { localizeWebProfileError, profileStringsForRegion } from '@/core/web_profile_localizations'
 import { getBrowserDeviceId } from '@/lib/device-id'
 import {
   applyCurrentUserExpertCertification,
@@ -13,7 +17,10 @@ import {
 } from '@/services/auth'
 
 const { state, setCurrentUser } = useUserSession()
+const { state: appState } = useAppContext()
 const route = useRoute()
+const copy = computed(() => profileStringsForRegion(appState.region))
+const certificationCopy = computed(() => discoveryStringsForRegion(appState.region).shopCard)
 
 const loading = ref(false)
 const saving = ref(false)
@@ -35,8 +42,8 @@ const expertErrorMessage = ref('')
 const expertSuccessMessage = ref('')
 const expertBanner = computed(() => {
   const marker = String(route.query.expert || '')
-  if (marker === 'approved') return '平台已通过你的本地达人认证，公开资料现可展示达人标识。'
-  if (marker === 'rejected') return '平台未通过你的本地达人认证，请查看驳回原因后重新申请。'
+  if (marker === 'approved') return copy.value.expertApprovedBanner
+  if (marker === 'rejected') return copy.value.expertRejectedBanner
   return ''
 })
 
@@ -63,7 +70,7 @@ const passwordForm = reactive({
   confirmPassword: '',
 })
 
-const bindTargetLabel = computed(() => (bindForm.type === 'email' ? '邮箱' : '手机号'))
+const bindTargetLabel = computed(() => (bindForm.type === 'email' ? copy.value.email : copy.value.phone))
 const expertCertification = computed(() => state.currentUser?.expertCertification ?? null)
 const expertStatusClass = computed(() => {
   const status = expertCertification.value?.status ?? 0
@@ -78,21 +85,21 @@ const expertStatusClass = computed(() => {
 const expertButtonText = computed(() => {
   const status = expertCertification.value?.status ?? 0
   if (status === 1) {
-    return '审核中'
+    return copy.value.reviewing
   }
   if (status === 2) {
-    return '已认证'
+    return copy.value.certified
   }
   if (status === 3) {
-    return '重新提交申请'
+    return copy.value.resubmitExpert
   }
-  return '提交达人申请'
+  return copy.value.submitExpert
 })
 const passwordHint = computed(() => {
   if (state.currentUser?.hasPassword) {
-    return '当前账号已经有密码了，改密码时得把旧密码填对。'
+    return copy.value.hasPasswordHint
   }
-  return '当前账号还没设过密码，旧密码可以留空，直接补一个新密码就行。'
+  return copy.value.noPasswordHint
 })
 
 function applyProfile() {
@@ -115,7 +122,7 @@ async function bootstrap() {
     setCurrentUser(profile)
     applyProfile()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '资料加载失败'
+    errorMessage.value = localizeWebProfileError(copy.value, error, copy.value.loadFailed)
   } finally {
     loading.value = false
   }
@@ -135,9 +142,9 @@ async function saveProfile() {
     })
     setCurrentUser(profile)
     applyProfile()
-    successMessage.value = '资料已更新。'
+    successMessage.value = copy.value.saved
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '资料保存失败'
+    errorMessage.value = localizeWebProfileError(copy.value, error, copy.value.saveFailed)
   } finally {
     saving.value = false
   }
@@ -146,7 +153,7 @@ async function saveProfile() {
 async function sendBindCode() {
   const account = bindForm.account.trim()
   if (!account) {
-    bindErrorMessage.value = `先把${bindTargetLabel.value}填上，再点发验证码。`
+    bindErrorMessage.value = copy.value.fillTarget(bindTargetLabel.value)
     bindSuccessMessage.value = ''
     return
   }
@@ -163,10 +170,10 @@ async function sendBindCode() {
       account,
       deviceId: browserDeviceId,
     })
-    bindSuccessMessage.value = `${bindTargetLabel.value}验证码已发送，${response.nextRetrySeconds} 秒后可重发。`
-    bindCodeHint.value = response.mockCode ? `本地 mock 验证码：${response.mockCode}` : ''
+    bindSuccessMessage.value = copy.value.codeSent(bindTargetLabel.value, response.nextRetrySeconds)
+    bindCodeHint.value = response.mockCode ? copy.value.mockCode(response.mockCode) : ''
   } catch (error) {
-    bindErrorMessage.value = error instanceof Error ? error.message : '验证码发送失败'
+    bindErrorMessage.value = localizeWebProfileError(copy.value, error, copy.value.sendCodeFailed)
   } finally {
     bindSending.value = false
   }
@@ -176,7 +183,7 @@ async function submitBind() {
   const account = bindForm.account.trim()
   const code = bindForm.code.trim()
   if (!account || !code) {
-    bindErrorMessage.value = `${bindTargetLabel.value}和验证码都得填，别想糊弄过去。`
+    bindErrorMessage.value = copy.value.fillAccountAndCode(bindTargetLabel.value)
     bindSuccessMessage.value = ''
     return
   }
@@ -195,9 +202,9 @@ async function submitBind() {
     applyProfile()
     bindForm.code = ''
     bindCodeHint.value = ''
-    bindSuccessMessage.value = `${bindTargetLabel.value}已绑定成功。`
+    bindSuccessMessage.value = copy.value.bound(bindTargetLabel.value)
   } catch (error) {
-    bindErrorMessage.value = error instanceof Error ? error.message : '账号绑定失败'
+    bindErrorMessage.value = localizeWebProfileError(copy.value, error, copy.value.bindFailed)
   } finally {
     binding.value = false
   }
@@ -209,12 +216,12 @@ async function submitPassword() {
   const confirmPassword = passwordForm.confirmPassword.trim()
 
   if (!newPassword || !confirmPassword) {
-    passwordErrorMessage.value = '新密码和确认密码都得填。'
+    passwordErrorMessage.value = copy.value.passwordRequired
     passwordSuccessMessage.value = ''
     return
   }
   if (newPassword !== confirmPassword) {
-    passwordErrorMessage.value = '两次输入的新密码对不上。'
+    passwordErrorMessage.value = copy.value.passwordsMismatch
     passwordSuccessMessage.value = ''
     return
   }
@@ -237,9 +244,9 @@ async function submitPassword() {
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
-    passwordSuccessMessage.value = '密码已经更新。'
+    passwordSuccessMessage.value = copy.value.passwordUpdated
   } catch (error) {
-    passwordErrorMessage.value = error instanceof Error ? error.message : '密码更新失败'
+    passwordErrorMessage.value = localizeWebProfileError(copy.value, error, copy.value.passwordFailed)
   } finally {
     passwordSaving.value = false
   }
@@ -253,17 +260,17 @@ async function submitExpertCertification() {
   const status = state.currentUser.expertCertification?.status ?? 0
   const reason = expertForm.reason.trim()
   if (status === 2) {
-    expertErrorMessage.value = '你已经是认证达人了，别搁这儿重复递单。'
+    expertErrorMessage.value = copy.value.expertAlreadyApproved
     expertSuccessMessage.value = ''
     return
   }
   if (status === 1) {
-    expertErrorMessage.value = '当前申请还在审核中，先别重复提交。'
+    expertErrorMessage.value = copy.value.expertPending
     expertSuccessMessage.value = ''
     return
   }
   if (!reason) {
-    expertErrorMessage.value = '申请理由不能为空，别拿空气申请达人。'
+    expertErrorMessage.value = copy.value.expertReasonRequired
     expertSuccessMessage.value = ''
     return
   }
@@ -280,94 +287,107 @@ async function submitExpertCertification() {
     })
     expertForm.reason = certification.reason
     expertSuccessMessage.value = certification.status === 1
-      ? '达人认证申请已经递上去了，等后台审核。'
-      : '达人认证状态已更新。'
+      ? copy.value.expertSubmitted
+      : copy.value.expertUpdated
   } catch (error) {
-    expertErrorMessage.value = error instanceof Error ? error.message : '达人认证申请提交失败'
+    expertErrorMessage.value = localizeWebProfileError(copy.value, error, copy.value.expertFailed)
   } finally {
     expertApplying.value = false
   }
 }
 
-void bootstrap()
+watch(
+  () => appState.region,
+  () => {
+    successMessage.value = ''
+    bindErrorMessage.value = ''
+    bindSuccessMessage.value = ''
+    passwordErrorMessage.value = ''
+    passwordSuccessMessage.value = ''
+    expertErrorMessage.value = ''
+    expertSuccessMessage.value = ''
+    void bootstrap()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <div class="page-stack">
     <section class="hero-panel hero-panel--single">
       <div class="hero-panel__content">
-        <p class="eyebrow">我的资料</p>
-        <h1>资料、绑定、改密都得在这儿闭环，不然这用户中心就太糊弄了。</h1>
-        <p class="hero-panel__summary">这次把用户中心剩的硬骨头一块啃掉，别老挂在文档里装存在感。</p>
+        <p class="eyebrow">{{ copy.heroEyebrow }}</p>
+        <h1>{{ copy.heroTitle }}</h1>
+        <p class="hero-panel__summary">{{ copy.heroSummary }}</p>
       </div>
     </section>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
     <p v-if="successMessage" class="feedback is-success">{{ successMessage }}</p>
-    <p v-if="loading" class="feedback">资料加载中...</p>
+    <p v-if="loading" class="feedback">{{ copy.loading }}</p>
 
     <template v-else-if="state.currentUser">
       <section class="content-section">
         <div class="section-header">
           <div>
-            <p class="eyebrow">基础资料</p>
-            <h2>先把能改的字段改通，别让资料页只会看不会动。</h2>
+            <p class="eyebrow">{{ copy.basicProfile }}</p>
+            <h2>{{ copy.basicProfileTitle }}</h2>
           </div>
         </div>
 
         <form class="review-form" @submit.prevent="saveProfile">
           <div class="field-row field-row--two">
             <label class="field">
-              <span>昵称</span>
-              <input v-model="form.nickname" type="text" maxlength="64" placeholder="昵称" />
+              <span>{{ copy.nickname }}</span>
+              <input v-model="form.nickname" type="text" maxlength="64" :placeholder="copy.nickname" />
             </label>
             <label class="field">
-              <span>头像 URL</span>
+              <span>{{ copy.avatarUrl }}</span>
               <input v-model="form.avatar" type="text" maxlength="255" placeholder="https://..." />
             </label>
           </div>
 
           <div class="field-row field-row--two">
             <label class="field">
-              <span>性别</span>
+              <span>{{ copy.gender }}</span>
               <select v-model="form.gender">
-                <option :value="0">未知</option>
-                <option :value="1">男</option>
-                <option :value="2">女</option>
+                <option :value="0">{{ copy.genderUnknown }}</option>
+                <option :value="1">{{ copy.genderMale }}</option>
+                <option :value="2">{{ copy.genderFemale }}</option>
               </select>
             </label>
             <label class="field">
-              <span>偏好区域</span>
+              <span>{{ copy.preferredRegion }}</span>
               <input :value="state.currentUser.preferredRegion" type="text" readonly />
             </label>
           </div>
 
           <label class="field field--full">
-            <span>签名</span>
-            <textarea v-model="form.signature" rows="4" maxlength="255" spellcheck="false" placeholder="写点能代表你的话。" />
+            <span>{{ copy.signature }}</span>
+            <textarea v-model="form.signature" rows="4" maxlength="255" spellcheck="false" :placeholder="copy.signaturePlaceholder" />
           </label>
 
           <div class="profile-grid">
             <div class="hero-metric">
-              <span>邮箱</span>
-              <strong>{{ state.currentUser.email || '未绑定' }}</strong>
+              <span>{{ copy.email }}</span>
+              <strong>{{ state.currentUser.email || copy.unbound }}</strong>
             </div>
             <div class="hero-metric">
-              <span>手机号</span>
-              <strong>{{ state.currentUser.phone || '未绑定' }}</strong>
+              <span>{{ copy.phone }}</span>
+              <strong>{{ state.currentUser.phone || copy.unbound }}</strong>
             </div>
             <div class="hero-metric">
-              <span>等级 / 积分 / 成长值</span>
-              <strong>Lv.{{ state.currentUser.level }} · {{ state.currentUser.points }} 积分 · {{ state.currentUser.growthValue }} 成长值</strong>
+              <span>{{ copy.accountStats }}</span>
+              <strong>{{ copy.stats(state.currentUser.level, state.currentUser.points, state.currentUser.growthValue) }}</strong>
             </div>
           </div>
 
           <div class="hero-actions">
             <button type="submit" class="primary-button" :disabled="saving">
-              {{ saving ? '保存中...' : '保存资料' }}
+              {{ saving ? copy.saving : copy.saveProfile }}
             </button>
-            <RouterLink to="/user/growth-records" class="secondary-button">查看成长值流水</RouterLink>
-            <RouterLink to="/user/privacy" class="secondary-button">进入隐私中心</RouterLink>
+            <RouterLink to="/user/growth-records" class="secondary-button">{{ copy.growthHistory }}</RouterLink>
+            <RouterLink to="/user/privacy" class="secondary-button">{{ copy.privacyCenter }}</RouterLink>
           </div>
         </form>
       </section>
@@ -375,8 +395,8 @@ void bootstrap()
       <section class="content-section">
         <div class="section-header">
           <div>
-            <p class="eyebrow">账户安全</p>
-            <h2>绑定账号和改密码这两件事，终于不用再留到“下次一定”了。</h2>
+            <p class="eyebrow">{{ copy.accountSecurity }}</p>
+            <h2>{{ copy.accountSecurityTitle }}</h2>
           </div>
         </div>
 
@@ -384,8 +404,8 @@ void bootstrap()
           <article class="manage-card">
             <div class="manage-card__header">
               <div>
-                <p class="eyebrow">绑定账号</p>
-                <h3>邮箱和手机号都能补绑或换绑。</h3>
+                <p class="eyebrow">{{ copy.accountBinding }}</p>
+                <h3>{{ copy.accountBindingTitle }}</h3>
               </div>
             </div>
 
@@ -396,10 +416,10 @@ void bootstrap()
             <form class="review-form" @submit.prevent="submitBind">
               <div class="field-row field-row--two">
                 <label class="field">
-                  <span>绑定类型</span>
+                  <span>{{ copy.bindType }}</span>
                   <select v-model="bindForm.type">
-                    <option value="email">邮箱</option>
-                    <option value="phone">手机号</option>
+                    <option value="email">{{ copy.email }}</option>
+                    <option value="phone">{{ copy.phone }}</option>
                   </select>
                 </label>
                 <label class="field">
@@ -414,17 +434,17 @@ void bootstrap()
 
               <div class="inline-field">
                 <label class="field">
-                  <span>验证码</span>
-                  <input v-model="bindForm.code" type="text" placeholder="输入验证码" />
+                  <span>{{ copy.verificationCode }}</span>
+                  <input v-model="bindForm.code" type="text" :placeholder="copy.codePlaceholder" />
                 </label>
                 <button type="button" class="secondary-button" :disabled="bindSending" @click="sendBindCode">
-                  {{ bindSending ? '发送中...' : '发送验证码' }}
+                  {{ bindSending ? copy.sending : copy.sendCode }}
                 </button>
               </div>
 
               <div class="hero-actions">
                 <button type="submit" class="primary-button" :disabled="binding">
-                  {{ binding ? '绑定中...' : '确认绑定' }}
+                  {{ binding ? copy.binding : copy.confirmBind }}
                 </button>
               </div>
             </form>
@@ -433,8 +453,8 @@ void bootstrap()
           <article class="manage-card">
             <div class="manage-card__header">
               <div>
-                <p class="eyebrow">修改密码</p>
-                <h3>有旧密码就校验，没密码就直接补设置。</h3>
+                <p class="eyebrow">{{ copy.changePassword }}</p>
+                <h3>{{ copy.changePasswordTitle }}</h3>
               </div>
             </div>
 
@@ -445,23 +465,23 @@ void bootstrap()
             <form class="review-form" @submit.prevent="submitPassword">
               <div class="field-row field-row--two">
                 <label class="field">
-                  <span>旧密码</span>
-                  <input v-model="passwordForm.oldPassword" type="password" placeholder="已有密码时填写" />
+                  <span>{{ copy.oldPassword }}</span>
+                  <input v-model="passwordForm.oldPassword" type="password" :placeholder="copy.oldPasswordPlaceholder" />
                 </label>
                 <label class="field">
-                  <span>新密码</span>
-                  <input v-model="passwordForm.newPassword" type="password" placeholder="设置新密码" />
+                  <span>{{ copy.newPassword }}</span>
+                  <input v-model="passwordForm.newPassword" type="password" :placeholder="copy.newPasswordPlaceholder" />
                 </label>
               </div>
 
               <label class="field">
-                <span>确认新密码</span>
-                <input v-model="passwordForm.confirmPassword" type="password" placeholder="再输一遍新密码" />
+                <span>{{ copy.confirmPassword }}</span>
+                <input v-model="passwordForm.confirmPassword" type="password" :placeholder="copy.confirmPasswordPlaceholder" />
               </label>
 
               <div class="hero-actions">
                 <button type="submit" class="primary-button" :disabled="passwordSaving">
-                  {{ passwordSaving ? '保存中...' : '更新密码' }}
+                  {{ passwordSaving ? copy.saving : copy.updatePassword }}
                 </button>
               </div>
             </form>
@@ -472,18 +492,18 @@ void bootstrap()
       <section class="content-section">
         <div class="section-header">
           <div>
-            <p class="eyebrow">达人认证</p>
-            <h2>申请走后台审核，通过了再公开挂标，别拿自封头衔糊弄人。</h2>
+            <p class="eyebrow">{{ copy.expertCertification }}</p>
+            <h2>{{ copy.expertCertificationTitle }}</h2>
           </div>
         </div>
 
         <article class="manage-card">
           <div class="manage-card__header">
             <div>
-              <p class="eyebrow">当前状态</p>
-              <h3>只展示已通过且有效的认证，待审和驳回不会往公开资料上硬贴标签。</h3>
+              <p class="eyebrow">{{ copy.currentStatus }}</p>
+              <h3>{{ copy.currentStatusTitle }}</h3>
             </div>
-            <span :class="expertStatusClass">{{ expertCertification?.statusText || '未申请' }}</span>
+            <span :class="expertStatusClass">{{ copy.expertStatus(expertCertification?.status ?? 0) }}</span>
           </div>
 
           <p v-if="expertBanner" class="feedback is-success" data-testid="expert-audit-banner">{{ expertBanner }}</p>
@@ -492,35 +512,37 @@ void bootstrap()
 
           <div class="profile-grid">
             <div class="hero-metric">
-              <span>公开标识</span>
+              <span>{{ copy.publicBadge }}</span>
               <strong v-if="expertCertification?.badge">
-                <span class="verified-badge verified-badge--compact">{{ expertCertification.badge.label }}</span>
+                <span class="verified-badge verified-badge--compact">
+                  {{ certificationCopy.certificationLabel(expertCertification.badge.code, expertCertification.badge.label) }}
+                </span>
               </strong>
-              <strong v-else>未公开展示</strong>
+              <strong v-else>{{ copy.badgeHidden }}</strong>
             </div>
             <div class="hero-metric">
-              <span>提交时间</span>
-              <strong>{{ expertCertification?.submittedAt || '还没提交' }}</strong>
+              <span>{{ copy.submittedAt }}</span>
+              <strong>{{ expertCertification?.submittedAt ? formatWebDateTime(expertCertification.submittedAt, copy.tag) : copy.notSubmitted }}</strong>
             </div>
             <div class="hero-metric">
-              <span>审核时间</span>
-              <strong>{{ expertCertification?.reviewedAt || '暂无' }}</strong>
+              <span>{{ copy.reviewedAt }}</span>
+              <strong>{{ expertCertification?.reviewedAt ? formatWebDateTime(expertCertification.reviewedAt, copy.tag) : copy.unavailable }}</strong>
             </div>
           </div>
 
           <p v-if="expertCertification?.rejectReason" class="feedback is-error">
-            驳回原因：{{ expertCertification.rejectReason }}
+            {{ copy.rejectReason }}: {{ expertCertification.rejectReason }}
           </p>
 
           <form class="review-form" @submit.prevent="submitExpertCertification">
             <label class="field field--full">
-              <span>申请理由</span>
+              <span>{{ copy.applicationReason }}</span>
               <textarea
                 v-model="expertForm.reason"
                 rows="5"
                 maxlength="500"
                 spellcheck="false"
-                placeholder="比如你长期在哪个城市写探店、发攻略，公开内容为什么值得给你挂上达人标识。"
+                :placeholder="copy.reasonPlaceholder"
                 :disabled="expertCertification?.status === 1 || expertCertification?.status === 2"
               />
             </label>
@@ -530,7 +552,7 @@ void bootstrap()
                 class="primary-button"
                 :disabled="expertApplying || expertCertification?.status === 1 || expertCertification?.status === 2"
               >
-                {{ expertApplying ? '提交中...' : expertButtonText }}
+                {{ expertApplying ? copy.submitting : expertButtonText }}
               </button>
             </div>
           </form>

@@ -1,5 +1,6 @@
 import { createApp, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const authMocks = vi.hoisted(() => ({
   applyCurrentUserExpertCertification: vi.fn(),
@@ -60,6 +61,7 @@ describe('ProfileView', () => {
     Object.values(authMocks).forEach((mock) => mock.mockReset())
     sessionMocks.setCurrentUser.mockClear()
     sessionMocks.state.currentUser = null
+    useAppContext().setRegion('CN')
     routeState.query = { expert: 'approved' }
     authMocks.fetchCurrentUser.mockResolvedValue({
       id: 9,
@@ -90,6 +92,26 @@ describe('ProfileView', () => {
     expect(host.querySelector('[data-testid="expert-audit-banner"]')?.textContent).toContain(
       '平台已通过你的本地达人认证',
     )
+    app.unmount()
+  })
+
+  it('localizes expert status and reloads account data for EU', async () => {
+    useAppContext().setRegion('EU')
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('My profile')
+    expect(host.textContent).toContain('Local expert')
+    expect(host.textContent).toContain('Approved')
+    expect(host.textContent).toContain('25/07/2026 10:00')
+    expect(host.querySelector('[data-testid="expert-audit-banner"]')?.textContent).toContain(
+      'certification was approved',
+    )
+    expect(host.textContent).not.toContain('已通过')
+
+    useAppContext().setRegion('CN')
+    await flush()
+    expect(authMocks.fetchCurrentUser).toHaveBeenCalledTimes(2)
     app.unmount()
   })
 })
