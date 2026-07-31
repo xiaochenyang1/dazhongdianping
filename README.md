@@ -277,8 +277,11 @@ npm run build
 
 ```powershell
 $env:PUBLIC_SITE_URL = "https://www.example.com"
+$env:PRERENDER_REGION = "EU"
 npm run build
 ```
+
+`PRERENDER_REGION` 默认为 `CN`；设置为 `EU` 时，7 个静态入口会使用英文标题、摘要、品牌和文档语言生成，不会把 CN 入口文案发布到 EU 制品。
 
 动态公开详情可通过 `PRERENDER_ROUTE_MANIFEST` 指向额外 JSON 路由快照；未提供真实数据快照时不会生成虚假的详情页。
 
@@ -292,6 +295,7 @@ npm run build:prerender:data
 ```
 
 数据快照构建默认严格校验任一公开接口失败并终止；只有明确接受部分快照时才设置 `PRERENDER_STRICT=0`，构建日志会逐项输出跳过原因。
+动态详情快照中的系统字段、计数、日期和回退文案同样按 `PRERENDER_REGION` 生成；商户名、帖子正文等后端公开内容保留原文。
 
 浏览器冒烟:
 

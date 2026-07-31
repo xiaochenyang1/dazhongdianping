@@ -1,5 +1,8 @@
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { buildPrerenderHtml, canonicalUrl, normalizeRoutePath } from './prerender.mjs'
+import { buildPrerenderHtml, canonicalUrl, normalizeRoutePath, prerender } from './prerender.mjs'
 
 const template = `<!doctype html><html><head><meta name="description" content="old"><title>Old</title></head><body><div id="app"></div><script type="module" src="/assets/app.js"></script></body></html>`
 const routes = [
@@ -44,5 +47,23 @@ describe('web prerender', () => {
     expect(html).toContain('"@type":"CollectionPage"')
     expect(html).not.toContain('content="old"')
     expect(html).toContain('src="/assets/app.js"')
+  })
+
+  it('selects the English route manifest and document chrome for EU builds', async () => {
+    const distDir = await mkdtemp(path.join(os.tmpdir(), 'dzdp-prerender-eu-'))
+    try {
+      await writeFile(path.join(distDir, 'index.html'), template, 'utf8')
+      const manifest = await prerender({ distDir, region: 'EU', siteUrl: 'https://eu.example.test' })
+      const html = await readFile(path.join(distDir, 'shops', 'index.html'), 'utf8')
+
+      expect(manifest).toMatchObject({ region: 'EU', sitemap: true })
+      expect(manifest.routes).toHaveLength(7)
+      expect(html).toContain('<html lang="en">')
+      expect(html).toContain('<title>Places | Local Reviews (Demo)</title>')
+      expect(html).toContain('aria-label="Public page links"')
+      expect(html).not.toMatch(/[一-龥]/)
+    } finally {
+      await rm(distDir, { recursive: true, force: true })
+    }
   })
 })

@@ -1,0 +1,58 @@
+[
+  {
+    "path": "/",
+    "title": "Home",
+    "description": "Browse local recommendations, selected places and city guides.",
+    "heading": "Find local places worth the trip",
+    "summary": "Explore public places, categories, rankings and community stories in the current region.",
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/shops",
+    "title": "Places",
+    "description": "Filter local places by city, category, area, price, rating and opening status.",
+    "heading": "Find local places with useful filters",
+    "summary": "Browse places in the current region and narrow results by location, price, rating, offers and opening status.",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/ranks",
+    "title": "City rankings",
+    "description": "Browse published must-try, top-rated and popular city rankings.",
+    "heading": "Explore published city rankings",
+    "summary": "Each ranking preserves its published places, period and rule version.",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/activities",
+    "title": "Activities",
+    "description": "Browse live campaigns and activity resources in the current region.",
+    "heading": "Browse current activities",
+    "summary": "View active collections of places, offers, rankings and other published resources.",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/community",
+    "title": "Community",
+    "description": "Read public local guides, place recommendations and community experiences.",
+    "heading": "Read public community stories",
+    "summary": "The website provides read-only posts; publishing, interactions and direct messages remain in the app.",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/groups",
+    "title": "Official groups",
+    "description": "Browse official community groups in the current region.",
+    "heading": "Browse official groups",
+    "summary": "View group information, member counts and public posts; joining and publishing remain in the app.",
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/topics",
+    "title": "Topics",
+    "description": "Browse recommended topics and the latest seven-day popularity ranking.",
+    "heading": "Explore topics and the seven-day ranking",
+    "summary": "View recommended topics, public posts and an explainable seven-day popularity snapshot.",
+    "schemaType": "CollectionPage"
+  }
+]

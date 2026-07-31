@@ -4,7 +4,20 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const defaultDistDir = path.join(webRoot, 'dist')
-const defaultRouteManifestPath = path.join(webRoot, 'seo-routes.json')
+
+const PRERENDER_LOCALES = {
+  CN: { tag: 'zh-CN', brand: '大众点评(仿)', publicLinks: '公开页面入口' },
+  EU: { tag: 'en', brand: 'Local Reviews (Demo)', publicLinks: 'Public page links' },
+}
+
+function prerenderLocale(region) {
+  if (!PRERENDER_LOCALES[region]) throw new Error('PRERENDER_REGION must be CN or EU')
+  return PRERENDER_LOCALES[region]
+}
+
+function defaultRouteManifestPath(region) {
+  return path.join(webRoot, region === 'EU' ? 'seo-routes.eu.json' : 'seo-routes.json')
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -66,7 +79,7 @@ function removeGeneratedSeo(html) {
     .replace(/\s*<script\s+type=["']application\/ld\+json["'][^>]*data-prerender-seo[^>]*>[\s\S]*?<\/script>/gi, '')
 }
 
-function renderFallback(route, routes) {
+function renderFallback(route, routes, locale) {
   const links = routes
     .filter((item) => item.path !== route.path && item.path.split('/').filter(Boolean).length <= 1)
     .slice(0, 12)
@@ -78,15 +91,16 @@ function renderFallback(route, routes) {
     `<h1>${escapeHtml(route.heading)}</h1>`,
     `<p>${escapeHtml(route.summary)}</p>`,
     route.contentHtml || '',
-    links ? `<nav aria-label="公开页面入口">${links}</nav>` : '',
+    links ? `<nav aria-label="${locale.publicLinks}">${links}</nav>` : '',
     '</main>',
   ].join('')
 }
 
-export function buildPrerenderHtml(template, route, routes, siteUrl = '') {
+export function buildPrerenderHtml(template, route, routes, siteUrl = '', region = 'CN') {
+  const locale = prerenderLocale(region)
   const normalizedRoute = { ...route, path: normalizeRoutePath(route.path) }
   const canonical = canonicalUrl(normalizedRoute.path, siteUrl)
-  const pageTitle = `${normalizedRoute.title} | 大众点评(仿)`
+  const pageTitle = `${normalizedRoute.title} | ${locale.brand}`
   const schema = normalizedRoute.jsonLd ?? {
     '@context': 'https://schema.org',
     '@type': normalizedRoute.schemaType || 'WebPage',
@@ -108,6 +122,7 @@ export function buildPrerenderHtml(template, route, routes, siteUrl = '') {
   ].filter(Boolean).join('\n    ')
 
   let html = removeGeneratedSeo(template)
+  html = html.replace(/<html(?:\s+lang=["'][^"']*["'])?/i, `<html lang="${locale.tag}"`)
   if (/<title>[\s\S]*?<\/title>/i.test(html)) {
     html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`)
   } else {
@@ -115,7 +130,7 @@ export function buildPrerenderHtml(template, route, routes, siteUrl = '') {
   }
   html = html.replace('</head>', `    ${seoTags}\n  </head>`)
 
-  const fallback = `<div id="app">${renderFallback(normalizedRoute, routes)}</div>`
+  const fallback = `<div id="app">${renderFallback(normalizedRoute, routes, locale)}</div>`
   if (!/<div\s+id=["']app["']\s*>\s*<\/div>/i.test(html)) {
     throw new Error('Built index.html must contain an empty #app element before prerendering')
   }
@@ -184,8 +199,10 @@ async function writeSitemap(distDir, routes, siteUrl) {
 }
 
 export async function prerender(options = {}) {
+  const region = options.region ?? process.env.PRERENDER_REGION ?? 'CN'
+  prerenderLocale(region)
   const distDir = path.resolve(options.distDir || defaultDistDir)
-  const routeManifestPath = path.resolve(options.routeManifestPath || defaultRouteManifestPath)
+  const routeManifestPath = path.resolve(options.routeManifestPath || defaultRouteManifestPath(region))
   const siteUrl = parseSiteUrl(options.siteUrl ?? process.env.PUBLIC_SITE_URL)
   const configuredExtraRouteManifestPath = options.extraRouteManifestPath ?? process.env.PRERENDER_ROUTE_MANIFEST
   const defaultExtraRouteManifestPath = path.join(distDir, 'prerender-routes.json')
@@ -199,13 +216,14 @@ export async function prerender(options = {}) {
   for (const route of routes) {
     const outputPath = routeOutputPath(distDir, route.path)
     await mkdir(path.dirname(outputPath), { recursive: true })
-    await writeFile(outputPath, buildPrerenderHtml(template, route, routes, siteUrl), 'utf8')
+    await writeFile(outputPath, buildPrerenderHtml(template, route, routes, siteUrl, region), 'utf8')
     outputs.push({ path: route.path, file: path.relative(distDir, outputPath), canonical: canonicalUrl(route.path, siteUrl) })
   }
 
   const sitemap = await writeSitemap(distDir, routes, siteUrl)
   const manifest = {
     generatedAt: new Date().toISOString(),
+    region,
     siteUrl: siteUrl || null,
     sitemap,
     routes: outputs,

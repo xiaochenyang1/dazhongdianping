@@ -98,4 +98,110 @@ describe('public SEO snapshot exporter', () => {
     expect(byPath.get('/activities/5001').contentHtml).toContain('火锅局')
     expect(get).toHaveBeenCalledWith('/api/c/v1/shops/10001/reviews', { page: 1, pageSize: 10 })
   })
+
+  it('generates EU snapshot chrome and stable labels in English', async () => {
+    const get = vi.fn(async (endpoint) => {
+      const fixtures = {
+        '/api/c/v1/search/shops': { list: [{ id: 20001 }], total: 1 },
+        '/api/c/v1/shops/20001': {
+          id: 20001,
+          name: 'Maison Sichuan Paris',
+          cityName: 'Paris',
+          categoryName: 'Dining',
+          areaName: 'Le Marais',
+          summary: '',
+          address: '',
+          phone: '',
+          businessHours: '',
+          score: 4.7,
+        },
+        '/api/c/v1/shops/20001/reviews': { list: [{ id: 2 }], total: 1 },
+        '/api/c/v1/reviews/2': {
+          id: 2,
+          shopId: 20001,
+          shopName: 'Maison Sichuan Paris',
+          userName: '',
+          content: '',
+          scoreOverall: 4.8,
+          auditStatus: 1,
+          status: 1,
+          createdAt: '2026-07-01 18:30:00',
+        },
+        '/api/c/v1/posts': { list: [{ id: 8 }], total: 1 },
+        '/api/c/v1/posts/8': {
+          id: 8,
+          userId: 10,
+          userName: '',
+          title: '',
+          content: '',
+          topics: [],
+          images: [],
+          createdAt: '2026-07-02 12:00:00',
+        },
+        '/api/c/v1/ranks': [{ id: 30002, name: 'Paris dining list' }],
+        '/api/c/v1/ranks/30002': {
+          id: 30002,
+          name: 'Paris dining list',
+          type: 1,
+          typeText: '必吃榜',
+          cityName: 'Paris',
+          categoryName: 'Dining',
+          period: '',
+          updatedAt: '2026-07-03 09:15:00',
+          items: [{ position: 1, reason: 'Consistently good', shop: { id: 20001, name: 'Maison Sichuan Paris' } }],
+        },
+        '/api/c/v1/activities': [{ id: 5002, name: 'Summer dining' }],
+        '/api/c/v1/activities/5002': {
+          id: 5002,
+          name: 'Summer dining',
+          cityName: 'Paris',
+          channel: 4,
+          channelText: '活动页',
+          items: [{ title: '', subtitle: '', targetName: '', linkUrl: '/shops/20001' }],
+        },
+        '/api/c/v1/groups': { list: [{ id: 3 }], total: 1 },
+        '/api/c/v1/groups/3': {
+          id: 3,
+          name: 'Paris community',
+          description: '',
+          memberCount: 12,
+          postCount: 1,
+        },
+        '/api/c/v1/groups/3/posts': { list: [{ id: 8, title: '' }], total: 1 },
+        '/api/c/v1/topics': { list: [{ id: 4 }], total: 1 },
+        '/api/c/v1/topics/4': {
+          id: 4,
+          name: 'Paris weekends',
+          followerCount: 9,
+          postCount: 1,
+          hotScore: 18,
+        },
+        '/api/c/v1/topics/4/posts': { list: [{ id: 8, title: '' }], total: 1 },
+      }
+      return fixtures[endpoint] ?? null
+    })
+
+    const result = await collectPublicSeoRoutes({
+      get,
+      region: 'EU',
+      siteUrl: 'https://eu.example.test',
+      pageSize: 10,
+      maxReviews: 10,
+      maxPosts: 10,
+    })
+    const byPath = new Map(result.routes.map((route) => [route.path, route]))
+
+    expect(result.routes).toHaveLength(7)
+    expect(JSON.stringify(result.routes)).not.toMatch(/[一-龥]/)
+    expect(byPath.get('/shops/20001').contentHtml).toContain('View place reviews')
+    expect(byPath.get('/reviews/2')).toMatchObject({
+      title: 'Maison Sichuan Paris review - Anonymous user',
+      summary: expect.stringContaining('4.8/5'),
+    })
+    expect(byPath.get('/reviews/2').contentHtml).toContain('01/07/2026 18:30')
+    expect(byPath.get('/ranks/30002').description).toContain('Must-try ranking, updated 03/07/2026 09:15')
+    expect(byPath.get('/activities/5002').summary).toContain('Activity page · 1 public resource')
+    expect(byPath.get('/groups/3').contentHtml).toContain('12 members')
+    expect(byPath.get('/topics/4').summary).toContain('9 followers · 1 public post')
+  })
 })
