@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick } from 'vue'
-import { createMemoryHistory, createRouter, RouterLink } from 'vue-router'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import ActivityDetailView from './ActivityDetailView.vue'
 import ActivityListView from './ActivityListView.vue'
 
@@ -45,7 +45,6 @@ async function mountView(component: any, props: Record<string, unknown> = {}) {
     }),
   )
   app.use(router)
-  app.component('RouterLink', RouterLink)
   app.mount(host)
   mountedApps.push(app)
   await nextTick()

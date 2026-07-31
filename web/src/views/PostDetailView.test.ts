@@ -21,6 +21,11 @@ vi.mock('vue-router', () => ({
 
 import PostDetailView from './PostDetailView.vue'
 
+const RouterLinkStub = {
+  props: ['to'],
+  template: '<a :href="typeof to === \'string\' ? to : to.path"><slot /></a>',
+}
+
 async function flush() {
   await Promise.resolve()
   await Promise.resolve()
@@ -32,6 +37,7 @@ async function flush() {
 function mount(postId = 88) {
   const host = document.createElement('div')
   const app = createApp(PostDetailView, { postId })
+  app.component('RouterLink', RouterLinkStub)
   app.mount(host)
   return { app, host }
 }

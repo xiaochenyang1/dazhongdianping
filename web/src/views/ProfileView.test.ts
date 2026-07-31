@@ -41,6 +41,11 @@ vi.mock('vue-router', () => ({
 
 import ProfileView from './ProfileView.vue'
 
+const RouterLinkStub = {
+  props: ['to'],
+  template: '<a :href="typeof to === \'string\' ? to : to.path"><slot /></a>',
+}
+
 async function flush() {
   await Promise.resolve()
   await Promise.resolve()
@@ -52,6 +57,7 @@ async function flush() {
 function mount() {
   const host = document.createElement('div')
   const app = createApp(ProfileView)
+  app.component('RouterLink', RouterLinkStub)
   app.mount(host)
   return { app, host }
 }
