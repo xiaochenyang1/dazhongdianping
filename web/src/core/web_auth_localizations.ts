@@ -1,4 +1,5 @@
 import type { Region } from '@/types/browse'
+import { formatEnglishCount } from './web_count_localizations'
 import type { AuthMode } from '@/types/auth'
 import { localeForRegion } from '@/core/web_localizations'
 
@@ -336,7 +337,7 @@ const enStrings: WebAuthStrings = {
     { label: 'Session region', value: region },
   ],
   bannedDescription: (account) => `${account} is currently banned. Submit an appeal if you believe the ban should be reviewed; approval restores sign-in automatically.`,
-  codeSent: (seconds) => `Verification code sent. You can request another in ${seconds} seconds.`,
+  codeSent: (seconds) => `Verification code sent. You can request another in ${formatEnglishCount(seconds, 'second')}.`,
   mockCode: (code) => `Local mock verification code: ${code}`,
   appealSubmitted: (id) => `Appeal #${id} was submitted. The latest result will appear here.`,
   appealRefreshed: (id) => `Appeal #${id} status refreshed.`,

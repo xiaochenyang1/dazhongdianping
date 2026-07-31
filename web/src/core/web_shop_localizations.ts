@@ -1,4 +1,5 @@
 import type { Region } from '@/types/browse'
+import { formatEnglishCount, isSingularEnglishCount } from './web_count_localizations'
 
 export interface WebShopStrings {
   tag: 'zh-CN' | 'en'
@@ -44,8 +45,8 @@ export interface WebShopStrings {
     previewEyebrow: string
     previewTitle: string
     previewViewAll: string
-    likes: string
-    comments: string
+    likes: (count: number) => string
+    comments: (count: number) => string
     viewDetails: string
     noReviews: string
     nearbyEyebrow: string
@@ -87,8 +88,8 @@ export interface WebShopStrings {
     withoutImages: string
     apply: string
     noReviews: string
-    likes: string
-    comments: string
+    likes: (count: number) => string
+    comments: (count: number) => string
     viewDetails: string
     loadingMore: string
     loadMore: string
@@ -140,8 +141,8 @@ const zhCnStrings: WebShopStrings = {
     previewEyebrow: '点评预览',
     previewTitle: '公开点评已经接上了，前台现在能顺手跳去看详情。',
     previewViewAll: '全部点评',
-    likes: '点赞',
-    comments: '评论',
+    likes: (count) => `点赞 ${count}`,
+    comments: (count) => `评论 ${count}`,
     viewDetails: '查看详情',
     noReviews: '这家店还没有公开点评，想补第一条就直接去写点评。',
     nearbyEyebrow: '附近推荐',
@@ -183,8 +184,8 @@ const zhCnStrings: WebShopStrings = {
     withoutImages: '无图',
     apply: '应用',
     noReviews: '这家店暂时没有公开点评。',
-    likes: '点赞',
-    comments: '评论',
+    likes: (count) => `点赞 ${count}`,
+    comments: (count) => `评论 ${count}`,
     viewDetails: '查看详情',
     loadingMore: '加载中...',
     loadMore: '加载更多点评',
@@ -236,8 +237,8 @@ const enStrings: WebShopStrings = {
     previewEyebrow: 'Review preview',
     previewTitle: 'Read public reviews and open any one for the full conversation.',
     previewViewAll: 'All reviews',
-    likes: 'likes',
-    comments: 'comments',
+    likes: (count) => formatEnglishCount(count, 'like'),
+    comments: (count) => formatEnglishCount(count, 'comment'),
     viewDetails: 'View details',
     noReviews: 'No public reviews yet. Be the first to write one.',
     nearbyEyebrow: 'Nearby picks',
@@ -252,7 +253,7 @@ const enStrings: WebShopStrings = {
     moreLoadFailed: 'Could not load more reviews',
     loading: 'Loading reviews...',
     loaded: 'Loaded',
-    moreAvailable: (count) => `${count} more public reviews are available.`,
+    moreAvailable: (count) => `${formatEnglishCount(count, 'more public review', 'more public reviews')} ${isSingularEnglishCount(count) ? 'is' : 'are'} available.`,
     allLoaded: 'You have reached the end of these public reviews.',
     averageSpend: 'Average spend',
     priceDetail: 'The spend range matches the place profile.',
@@ -272,15 +273,15 @@ const enStrings: WebShopStrings = {
     scoreSort: 'Rating',
     minScore: 'Minimum rating',
     any: 'Any',
-    points: (score) => `${score} points`,
+    points: (score) => formatEnglishCount(score, 'point'),
     images: 'Photos',
     allImages: 'All',
     withImages: 'With photos',
     withoutImages: 'Without photos',
     apply: 'Apply',
     noReviews: 'No public reviews for this place yet.',
-    likes: 'likes',
-    comments: 'comments',
+    likes: (count) => formatEnglishCount(count, 'like'),
+    comments: (count) => formatEnglishCount(count, 'comment'),
     viewDetails: 'View details',
     loadingMore: 'Loading...',
     loadMore: 'Load more reviews',

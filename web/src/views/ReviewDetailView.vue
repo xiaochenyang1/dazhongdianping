@@ -463,7 +463,7 @@ watch(
         <span :class="auditClass">{{ copy.detail.auditStatusLabel(review.auditStatus, review.auditStatusText) }}</span>
         <p class="support-copy">{{ copy.detail.taste }} {{ review.scoreTaste }} · {{ copy.detail.ambience }} {{ review.scoreEnv }} · {{ copy.detail.service }} {{ review.scoreService }}</p>
         <p class="support-copy">
-          {{ copy.detail.likes }} {{ review.likeCount }} · {{ copy.detail.comments }} {{ review.commentCount }}
+          {{ copy.detail.likes(review.likeCount) }} · {{ copy.detail.comments(review.commentCount) }}
           <span v-if="interactionEnabled && review.likedByCurrentUser"> · {{ copy.detail.likedByYou }}</span>
         </p>
         <p v-if="review.auditRemark" class="feedback is-error">{{ copy.detail.rejectReason }}: {{ review.auditRemark }}</p>

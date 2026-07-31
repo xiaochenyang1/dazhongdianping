@@ -1,4 +1,5 @@
 import type { Region } from '@/types/browse'
+import { formatEnglishCount, isSingularEnglishCount } from './web_count_localizations'
 
 type SortKey = 'smart' | 'score' | 'popular' | 'distance'
 
@@ -276,12 +277,12 @@ const enStrings: WebDiscoveryStrings = {
     factCity: 'City',
     factFilters: 'Filters',
     loading: 'Loading',
-    partialResults: (count) => `Showing the first ${count} places. Refine the filters to narrow the list.`,
-    allResults: (count) => `All ${count} matching places are shown.`,
+    partialResults: (count) => `Showing ${formatEnglishCount(count, 'place')}. Refine the filters to narrow the list.`,
+    allResults: (count) => `${formatEnglishCount(count, 'matching place')} ${isSingularEnglishCount(count) ? 'is' : 'are'} shown.`,
     areaScope: (area) => `Search limited to ${area}.`,
     cityScope: 'Search currently covers the whole city.',
     defaultBrowse: 'Default view',
-    contextCount: (count) => `${count} active filters`,
+    contextCount: (count) => formatEnglishCount(count, 'active filter'),
     moreResults: 'More results are available. Refine the filters or load the next page.',
     resultsComplete: 'You have reached the end of these results.',
     filtersEyebrow: 'Filters',

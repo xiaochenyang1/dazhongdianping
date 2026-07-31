@@ -343,6 +343,7 @@ describe('ReviewDetailView', () => {
     app.mount(host)
     await flushView()
 
+    expect(host.textContent).toContain('2 likes · 1 comment')
     const canonical = document.head.querySelector('link[rel="canonical"]')
     expect(canonical?.getAttribute('href')).toBe(`${window.location.origin}/reviews/301`)
     const schema = JSON.parse(document.head.querySelector('script[type="application/ld+json"]')?.textContent ?? '{}')

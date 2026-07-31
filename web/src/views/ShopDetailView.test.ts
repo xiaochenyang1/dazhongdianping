@@ -100,7 +100,7 @@ describe('ShopDetailView', () => {
     expect(host.textContent).toContain('Verified merchant')
     expect(host.textContent).toContain('Overall rating')
     expect(host.textContent).toContain('05/07/2026 12:00')
-    expect(host.textContent).toContain('likes 2 · comments 1 · View details')
+    expect(host.textContent).toContain('2 likes · 1 comment · View details')
     expect(host.textContent).not.toContain('认证商户')
     expect(host.textContent).not.toContain('¥')
     app.unmount()

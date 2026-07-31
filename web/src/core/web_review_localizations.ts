@@ -1,4 +1,5 @@
 import type { Region } from '@/types/browse'
+import { formatEnglishCount } from './web_count_localizations'
 
 export interface WebReviewStrings {
   tag: 'zh-CN' | 'en'
@@ -42,8 +43,8 @@ export interface WebReviewStrings {
     taste: string
     ambience: string
     service: string
-    likes: string
-    comments: string
+    likes: (count: number) => string
+    comments: (count: number) => string
     likedByYou: string
     rejectReason: string
     bodyEyebrow: string
@@ -168,8 +169,8 @@ const zhCnStrings: WebReviewStrings = {
     taste: '口味',
     ambience: '环境',
     service: '服务',
-    likes: '点赞',
-    comments: '评论',
+    likes: (count) => `点赞 ${count}`,
+    comments: (count) => `评论 ${count}`,
     likedByYou: '你已点赞',
     rejectReason: '驳回原因',
     bodyEyebrow: '点评正文',
@@ -294,8 +295,8 @@ const enStrings: WebReviewStrings = {
     taste: 'Food',
     ambience: 'Ambience',
     service: 'Service',
-    likes: 'likes',
-    comments: 'comments',
+    likes: (count) => formatEnglishCount(count, 'like'),
+    comments: (count) => formatEnglishCount(count, 'comment'),
     likedByYou: 'Liked by you',
     rejectReason: 'Moderation note',
     bodyEyebrow: 'Review',
@@ -342,7 +343,7 @@ const enStrings: WebReviewStrings = {
     missingShop: 'Place information is missing, so this review cannot be created.',
     loadFailed: 'Could not load the review editor',
     maxImages: 'You can upload up to 9 images',
-    remainingImages: (count) => `You can add ${count} more images. Extra files were skipped.`,
+    remainingImages: (count) => `You can add ${formatEnglishCount(count, 'more image', 'more images')}. Extra files were skipped.`,
     uploadedImages: (count) => `${count} ${count === 1 ? 'image' : 'images'} uploaded.`,
     uploadFailed: 'Could not upload the image',
     submitFailed: 'Could not submit the review',
@@ -363,7 +364,7 @@ const enStrings: WebReviewStrings = {
     uploadEyebrow: 'Photo upload',
     uploadTitle: 'Add photos directly from this device.',
     uploading: 'Uploading images...',
-    uploadedCount: (count) => `${count} / 9 images uploaded`,
+    uploadedCount: (count) => `${formatEnglishCount(count, 'image')} uploaded · 9 maximum`,
     selectImages: 'Select images',
     uploadSupport: 'JPG, PNG or GIF. Up to 5 MB each and 9 images total.',
     imageAlt: (index) => `Review image ${index}`,

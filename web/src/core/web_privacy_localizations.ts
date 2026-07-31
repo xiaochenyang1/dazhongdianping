@@ -1,5 +1,6 @@
 import type { Region } from '@/types/browse'
 import type { PrivacyExportModule } from '@/types/privacy'
+import { formatEnglishCount } from './web_count_localizations'
 
 interface ModuleText { label: string; description: string }
 
@@ -67,11 +68,11 @@ const enStrings = {
   deleteStatus: (status: number) => ({ 0: 'Pending confirmation', 1: 'Cooling-off period', 2: 'Processing', 3: 'Completed', 4: 'Cancelled', 5: 'Rejected' } as Record<number, string>)[status] || 'Unknown status',
   loadFailed: 'Could not load the privacy centre', selectModule: 'Select at least one export module.', exportCreated: 'Export task created. Download it when the file is ready.', exportFailed: 'Could not create the export task',
   downloadStarted: (id: number) => `Export task #${id} started downloading.`, downloadFailed: 'Could not download the export file', accountRequired: 'Select a currently linked account first.',
-  deleteCodeSent: (seconds: number) => `Deletion code sent. You can resend in ${seconds} seconds.`, mockCode: (code: string) => `Local test code: ${code}`, deleteCodeFailed: 'Could not send the deletion code',
+  deleteCodeSent: (seconds: number) => `Deletion code sent. You can resend in ${formatEnglishCount(seconds, 'second')}.`, mockCode: (code: string) => `Local test code: ${code}`, deleteCodeFailed: 'Could not send the deletion code',
   accountReasonRequired: 'Enter a verification account and deletion reason.', codeRequired: 'Enter the verification code.', passwordRequired: 'Enter your login password.',
   deleteSubmitted: 'Deletion request submitted. You can cancel it during the cooling-off period.', deleteSubmitFailed: 'Could not submit the deletion request', deleteCancelled: 'Deletion request cancelled. Your account will remain active.', deleteCancelFailed: 'Could not cancel the deletion request',
   heroEyebrow: 'Privacy centre', heroTitle: 'Manage exports, agreements, devices and account deletion.', heroSummary: 'Review task status, file retention and the account deletion cooling-off period.',
-  dataExport: 'Data export', dailyLimit: (count: number | string) => `Up to ${count} times per day`, retention: (hours: number | string) => `Files kept for ${hours} hours`,
+  dataExport: 'Data export', dailyLimit: (count: number | string) => `Up to ${formatEnglishCount(count, 'time')} per day`, retention: (hours: number | string) => `Files kept for ${formatEnglishCount(hours, 'hour')}`,
   accountDeletion: 'Account deletion', coolingOff: (days: number | string) => `${days}-day cooling-off`, deleteRule: 'Cancel before the deadline. After it, the account and personal data are processed under the deletion rules.', loading: 'Loading privacy rules and tasks...',
   exportTitle: 'Choose the scope and generate a time-limited ZIP.', authenticatedDownload: 'Authenticated download', creating: 'Creating...', createExport: 'Create export task', task: (id: number) => `Task #${id}`,
   unspecifiedModules: 'No modules specified', createdAt: 'Created', expiresAt: 'Expires', format: 'Format', downloading: 'Downloading...', downloadZip: 'Download ZIP', noExports: 'No export tasks yet.',

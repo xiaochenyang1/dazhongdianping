@@ -239,7 +239,7 @@ watch(
               <span>{{ formatWebDateTime(review.createdAt, copy.tag) }} · {{ review.score.toFixed(1) }}</span>
             </div>
             <p>{{ review.content }}</p>
-            <span class="review-card__foot">{{ copy.reviews.likes }} {{ review.likedCount }} · {{ copy.reviews.comments }} {{ review.commentCount }} · {{ copy.reviews.viewDetails }}</span>
+            <span class="review-card__foot">{{ copy.reviews.likes(review.likedCount) }} · {{ copy.reviews.comments(review.commentCount) }} · {{ copy.reviews.viewDetails }}</span>
           </article>
         </RouterLink>
       </div>

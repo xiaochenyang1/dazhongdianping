@@ -1,4 +1,5 @@
 import type { Region } from '@/types/browse'
+import { formatEnglishCount } from './web_count_localizations'
 import type { WebLocaleTag } from '@/core/web_localizations'
 
 export interface WebUserStrings {
@@ -177,7 +178,7 @@ const enStrings: WebUserStrings = {
     loadFailed: 'Could not load growth history', eyebrow: 'Growth history', title: 'Track every growth and points change.',
     summary: 'Review rewards from reviews, interactions and completed orders.', backProfile: 'Back to profile', myReviews: 'My reviews', currentLevel: 'Current level',
     pointsAndGrowth: 'Points / growth', latest: 'Latest entry', noRecords: 'No entries', listEyebrow: 'History', listTitle: 'Review growth and points changes by date.',
-    pageSize: 'Rows per page', rows: (count) => `${count} rows`, refresh: 'Refresh history', loading: 'Loading growth history...',
+    pageSize: 'Rows per page', rows: (count) => formatEnglishCount(count, 'row'), refresh: 'Refresh history', loading: 'Loading growth history...',
     empty: 'No growth or points history yet.', defaultRemark: 'Reward credited to your account.', change: 'Change', balance: 'Balance',
     creditedAt: 'Credited', action: 'Action', business: (id) => `Reference #${id}`, viewReview: 'View review',
     pagination: (page, total) => `Page ${page} · ${total} total`, type: (type, fallback) => ({ 1: 'Growth value', 2: 'Points' })[type] || fallback,

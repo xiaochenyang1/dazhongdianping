@@ -1,4 +1,5 @@
 import type { Region } from '@/types/browse'
+import { formatEnglishCount } from './web_count_localizations'
 
 const zhCnStrings = {
   tag: 'zh-CN' as const,
@@ -33,7 +34,7 @@ const enStrings = {
   email: 'Email', phone: 'Phone', reviewing: 'Under review', certified: 'Certified', resubmitExpert: 'Resubmit application', submitExpert: 'Apply for expert status',
   hasPasswordHint: 'This account already has a password. Changing it requires the current one.', noPasswordHint: 'This account has no password yet. You can set a new one directly.',
   loadFailed: 'Could not load account profile', saveFailed: 'Could not save profile', saved: 'Profile updated.',
-  fillTarget: (target: string) => `Enter ${target.toLowerCase()} first.`, codeSent: (target: string, seconds: number) => `${target} code sent. You can resend in ${seconds} seconds.`,
+  fillTarget: (target: string) => `Enter ${target.toLowerCase()} first.`, codeSent: (target: string, seconds: number) => `${target} code sent. You can resend in ${formatEnglishCount(seconds, 'second')}.`,
   mockCode: (code: string) => `Local test code: ${code}`, sendCodeFailed: 'Could not send the verification code', fillAccountAndCode: (target: string) => `Enter the ${target.toLowerCase()} and verification code.`,
   bound: (target: string) => `${target} bound successfully.`, bindFailed: 'Could not bind the account', passwordRequired: 'Enter and confirm the new password.',
   passwordsMismatch: 'New passwords do not match.', passwordUpdated: 'Password updated.', passwordFailed: 'Could not update the password',
@@ -42,7 +43,7 @@ const enStrings = {
   heroEyebrow: 'My profile', heroTitle: 'Manage your profile, linked accounts and password.', heroSummary: 'Changes are validated by the backend and applied to your current account.', loading: 'Loading profile...',
   basicProfile: 'Basic profile', basicProfileTitle: 'Update your public profile and preferences.', nickname: 'Nickname', avatarUrl: 'Avatar URL', gender: 'Gender', genderUnknown: 'Unknown', genderMale: 'Male', genderFemale: 'Female',
   preferredRegion: 'Preferred region', signature: 'Bio', signaturePlaceholder: 'Add a short public bio.', unbound: 'Not bound', accountStats: 'Level / points / growth',
-  stats: (level: number, points: number, growth: number) => `Lv.${level} · ${points} points · ${growth} growth`, saving: 'Saving...', saveProfile: 'Save profile', growthHistory: 'View growth history', privacyCenter: 'Open privacy centre',
+  stats: (level: number, points: number, growth: number) => `Lv.${level} · ${formatEnglishCount(points, 'point')} · ${growth} growth`, saving: 'Saving...', saveProfile: 'Save profile', growthHistory: 'View growth history', privacyCenter: 'Open privacy centre',
   accountSecurity: 'Account security', accountSecurityTitle: 'Manage linked accounts and your login password.', accountBinding: 'Account binding', accountBindingTitle: 'Bind or replace an email address or phone number.', bindType: 'Binding type', verificationCode: 'Verification code', codePlaceholder: 'Enter verification code', sending: 'Sending...', sendCode: 'Send code', binding: 'Binding...', confirmBind: 'Confirm binding',
   changePassword: 'Change password', changePasswordTitle: 'Verify the current password, or set one directly if the account has none.', oldPassword: 'Current password', oldPasswordPlaceholder: 'Required when a password exists', newPassword: 'New password', newPasswordPlaceholder: 'Set a new password', confirmPassword: 'Confirm new password', confirmPasswordPlaceholder: 'Enter the new password again', updatePassword: 'Update password',
   expertCertification: 'Local expert certification', expertCertificationTitle: 'Apply for a public local expert badge through moderation.', currentStatus: 'Current status', currentStatusTitle: 'Only approved and active certifications appear on public profiles.',
