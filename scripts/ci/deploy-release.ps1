@@ -45,10 +45,11 @@ function Invoke-Native {
 if ($DryRun) {
     Write-Output "Plan:"
     Write-Output "1. Upload the release bundle over SSH/SCP."
-    Write-Output "2. Extract the bundle under a versioned releases directory below the remote root."
-    Write-Output "3. Switch the remote current symlink to the new release."
-    Write-Output "4. Restart the backend, web, admin-web, and merchant-web services."
-    Write-Output "5. Run smoke checks against the deployed environment."
+    Write-Output "2. Verify the remote bundle SHA-256 integrity before extracting it."
+    Write-Output "3. Extract the bundle under a versioned releases directory below the remote root."
+    Write-Output "4. Switch the remote current symlink to the new release."
+    Write-Output "5. Restart the backend, web, admin-web, and merchant-web services."
+    Write-Output "6. Run smoke checks against the deployed environment."
     exit 0
 }
 
@@ -72,6 +73,7 @@ $sshPath = (Get-Command ssh -ErrorAction Stop).Source
 $scpPath = (Get-Command scp -ErrorAction Stop).Source
 $resolvedBundle = (Resolve-Path -LiteralPath $ReleaseBundle).Path
 $bundleName = [System.IO.Path]::GetFileName($resolvedBundle)
+$bundleSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolvedBundle).Hash.ToLowerInvariant()
 $version = [System.IO.Path]::GetFileNameWithoutExtension($bundleName).Replace("dazhongdianping-release-", "")
 $remoteReleaseRoot = "$RemoteRoot/releases"
 $remoteReleaseDir = "$remoteReleaseRoot/$version"
@@ -96,6 +98,7 @@ Invoke-Native -FilePath $scpPath -Arguments @(
 
 $remoteDeployScript = @"
 set -euo pipefail
+printf '%s  %s\n' '$bundleSha256' '$remoteBundlePath' | sha256sum --check --status
 mkdir -p '$remoteReleaseRoot'
 rm -rf '$remoteReleaseDir'
 mkdir -p '$remoteReleaseDir'

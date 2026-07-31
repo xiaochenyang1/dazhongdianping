@@ -61,12 +61,14 @@ if ($DryRun) {
     Write-Output "5. If PUBLIC_SITE_URL and PRERENDER_API_BASE_URL are configured, build real SEO snapshots for PRERENDER_REGION=$prerenderRegion."
     Write-Output "6. Assemble backend jar + web dist + admin-web dist + merchant-web dist into a release bundle under $OutputDir."
     Write-Output "7. Write a release manifest for version $Version."
+    Write-Output "8. Generate a SHA-256 checksum beside the release bundle."
     exit 0
 }
 
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 $stagingDir = Join-Path ([System.IO.Path]::GetTempPath()) ("dazhongdianping-release-" + [System.Guid]::NewGuid().ToString("N"))
 $bundlePath = Join-Path (Resolve-Path $OutputDir) "dazhongdianping-release-$Version.zip"
+$checksumPath = "$bundlePath.sha256"
 
 try {
     New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
@@ -121,7 +123,14 @@ try {
     if (Test-Path -LiteralPath $bundlePath) {
         Remove-Item -LiteralPath $bundlePath -Force
     }
+    if (Test-Path -LiteralPath $checksumPath) {
+        Remove-Item -LiteralPath $checksumPath -Force
+    }
     Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath $bundlePath
+
+    $bundleSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $bundlePath).Hash.ToLowerInvariant()
+    "$bundleSha256  $([System.IO.Path]::GetFileName($bundlePath))" |
+        Set-Content -LiteralPath $checksumPath -Encoding ascii
 
     Write-Output $bundlePath
 }
