@@ -18,6 +18,25 @@ function Assert-True {
     }
 }
 
+function Assert-ThrowsLike {
+    param(
+        [scriptblock]$Action,
+        [string]$Pattern,
+        [string]$Message
+    )
+
+    try {
+        & $Action | Out-Null
+    }
+    catch {
+        if ($_.Exception.Message -match $Pattern) {
+            return
+        }
+        throw "$Message. Unexpected error: $($_.Exception.Message)"
+    }
+    throw $Message
+}
+
 Assert-True (Test-Path -LiteralPath $packageScriptPath) "scripts/ci/package-release.ps1 must exist"
 Assert-True (Test-Path -LiteralPath $deployScriptPath) "scripts/ci/deploy-release.ps1 must exist"
 Assert-True (Test-Path -LiteralPath $rollbackScriptPath) "scripts/ci/rollback-release.ps1 must exist"
@@ -32,6 +51,23 @@ $deployScript = Get-Content -LiteralPath $deployScriptPath -Raw
 $rollbackScript = Get-Content -LiteralPath $rollbackScriptPath -Raw
 $releaseWorkflow = Get-Content -LiteralPath $releaseWorkflowPath -Raw
 $rollbackWorkflow = Get-Content -LiteralPath $rollbackWorkflowPath -Raw
+
+Assert-ThrowsLike {
+    & $deployScriptPath `
+        -ReleaseBundle "missing.zip" `
+        -Environment "test" `
+        -RemoteHost "deploy.example.com" `
+        -RemoteUser "deploy" `
+        -RemoteRoot "/srv/../root"
+} "RemoteRoot must be" "deploy release must reject unsafe remote paths before connecting"
+Assert-ThrowsLike {
+    & $rollbackScriptPath `
+        -Environment "test" `
+        -RemoteHost "deploy.example.com" `
+        -RemoteUser "deploy" `
+        -RemoteRoot "/srv/dazhongdianping" `
+        -TargetVersion "v1'; touch injected; '"
+} "Release version contains unsupported characters" "rollback release must reject unsafe target versions before connecting"
 
 Assert-True ($packageDryRunText -match "backend.*jar") "package release dry-run must mention backend jar packaging"
 Assert-True ($packageDryRunText -match "web.*dist") "package release dry-run must mention web dist packaging"
@@ -55,7 +91,14 @@ Assert-True ($deployScript -match 'DEPLOY_SSH_PORT') "deploy release must accept
 Assert-True ($deployScript -match 'Get-FileHash\s+-Algorithm\s+SHA256') "deploy release must calculate the local bundle SHA-256"
 Assert-True ($deployScript -match 'sha256sum\s+--check') "deploy release must verify the uploaded bundle with remote sha256sum"
 Assert-True ($deployScript.IndexOf("sha256sum --check") -lt $deployScript.IndexOf("rm -rf")) "deploy release must verify integrity before deleting or extracting a release directory"
+Assert-True ($deployScript -match 'Assert-SafeRemoteRoot') "deploy release must validate the remote root before using it in shell commands"
+Assert-True ($deployScript -match 'Assert-SafeReleaseVersion') "deploy release must validate the release version"
+Assert-True ($deployScript -match 'Assert-SafeServiceNames') "deploy release must validate systemd service names"
 Assert-True ($rollbackScript -match 'DEPLOY_SSH_PORT') "rollback release must accept the configured SSH port"
+Assert-True ($rollbackScript -match 'Assert-SafeRemoteRoot') "rollback release must validate the remote root before using it in shell commands"
+Assert-True ($rollbackScript -match 'Assert-SafeReleaseVersion') "rollback release must validate an explicit target version"
+Assert-True ($rollbackScript -match 'Assert-SafeServiceNames') "rollback release must validate systemd service names"
+Assert-True ($rollbackScript -match 'Resolved rollback version contains unsupported characters') "rollback release must validate an automatically resolved target on the remote host"
 Assert-True ($deployScript -match 'DEPLOY_MERCHANT_SERVICE') "deploy release must restart the configured merchant-web service"
 Assert-True ($rollbackScript -match 'DEPLOY_MERCHANT_SERVICE') "rollback release must restart the configured merchant-web service"
 

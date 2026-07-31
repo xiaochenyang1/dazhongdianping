@@ -41,6 +41,35 @@ function Invoke-Native {
     }
 }
 
+function Assert-SafeRemoteRoot {
+    param([string]$Value)
+
+    if ($Value -eq "/" -or
+        $Value -notmatch '^/[A-Za-z0-9._/-]+$' -or
+        $Value -match '(^|/)\.{1,2}(/|$)' -or
+        $Value.Contains("//")) {
+        throw "RemoteRoot must be a non-root absolute path containing only safe path segments"
+    }
+}
+
+function Assert-SafeReleaseVersion {
+    param([string]$Value)
+
+    if ($Value -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') {
+        throw "Release version contains unsupported characters: $Value"
+    }
+}
+
+function Assert-SafeServiceNames {
+    param([string[]]$Names)
+
+    foreach ($name in $Names) {
+        if ($name -notmatch '^[A-Za-z0-9_.@-]+$') {
+            throw "Service name contains unsupported characters: $name"
+        }
+    }
+}
+
 if ($DryRun) {
     Write-Output "Plan:"
     Write-Output "1. Resolve the requested or previous stable release on the remote host."
@@ -61,11 +90,21 @@ foreach ($pair in @{
     }
 }
 
+if ($RemotePort -lt 1 -or $RemotePort -gt 65535) {
+    throw "RemotePort must be between 1 and 65535"
+}
+Assert-SafeRemoteRoot -Value $RemoteRoot
+$RemoteRoot = $RemoteRoot.TrimEnd("/")
+if (-not [string]::IsNullOrWhiteSpace($TargetVersion)) {
+    Assert-SafeReleaseVersion -Value $TargetVersion
+}
+
 $sshPath = (Get-Command ssh -ErrorAction Stop).Source
 $remoteAddress = "$RemoteUser@$RemoteHost"
 $systemdServices = @($BackendServiceName, $WebServiceName, $AdminServiceName, $MerchantServiceName) |
     Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
     ForEach-Object { $_.Trim() }
+Assert-SafeServiceNames -Names $systemdServices
 $restartCommand = if ($systemdServices.Count -gt 0) {
     "sudo systemctl restart " + ($systemdServices -join " ")
 }
@@ -90,6 +129,10 @@ else {
 $remoteRollbackScript = @"
 set -euo pipefail
 $targetClause
+if [[ ! "`$target" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]; then
+  echo "Resolved rollback version contains unsupported characters" >&2
+  exit 1
+fi
 if [ ! -d '$RemoteRoot/releases/'"`$target" ]; then
   echo "Target release not found: `"${target}" >&2
   exit 1

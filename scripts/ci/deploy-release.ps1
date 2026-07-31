@@ -42,6 +42,35 @@ function Invoke-Native {
     }
 }
 
+function Assert-SafeRemoteRoot {
+    param([string]$Value)
+
+    if ($Value -eq "/" -or
+        $Value -notmatch '^/[A-Za-z0-9._/-]+$' -or
+        $Value -match '(^|/)\.{1,2}(/|$)' -or
+        $Value.Contains("//")) {
+        throw "RemoteRoot must be a non-root absolute path containing only safe path segments"
+    }
+}
+
+function Assert-SafeReleaseVersion {
+    param([string]$Value)
+
+    if ($Value -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') {
+        throw "Release version contains unsupported characters: $Value"
+    }
+}
+
+function Assert-SafeServiceNames {
+    param([string[]]$Names)
+
+    foreach ($name in $Names) {
+        if ($name -notmatch '^[A-Za-z0-9_.@-]+$') {
+            throw "Service name contains unsupported characters: $name"
+        }
+    }
+}
+
 if ($DryRun) {
     Write-Output "Plan:"
     Write-Output "1. Upload the release bundle over SSH/SCP."
@@ -65,6 +94,12 @@ foreach ($pair in @{
     }
 }
 
+if ($RemotePort -lt 1 -or $RemotePort -gt 65535) {
+    throw "RemotePort must be between 1 and 65535"
+}
+Assert-SafeRemoteRoot -Value $RemoteRoot
+$RemoteRoot = $RemoteRoot.TrimEnd("/")
+
 if (-not (Test-Path -LiteralPath $ReleaseBundle)) {
     throw "Release bundle not found: $ReleaseBundle"
 }
@@ -74,7 +109,12 @@ $scpPath = (Get-Command scp -ErrorAction Stop).Source
 $resolvedBundle = (Resolve-Path -LiteralPath $ReleaseBundle).Path
 $bundleName = [System.IO.Path]::GetFileName($resolvedBundle)
 $bundleSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolvedBundle).Hash.ToLowerInvariant()
-$version = [System.IO.Path]::GetFileNameWithoutExtension($bundleName).Replace("dazhongdianping-release-", "")
+$bundleMatch = [regex]::Match($bundleName, '^dazhongdianping-release-([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.zip$')
+if (-not $bundleMatch.Success) {
+    throw "Release bundle name must match dazhongdianping-release-<version>.zip"
+}
+$version = $bundleMatch.Groups[1].Value
+Assert-SafeReleaseVersion -Value $version
 $remoteReleaseRoot = "$RemoteRoot/releases"
 $remoteReleaseDir = "$remoteReleaseRoot/$version"
 $remoteBundlePath = "$RemoteRoot/$bundleName"
@@ -83,6 +123,7 @@ $remoteAddress = "$RemoteUser@$RemoteHost"
 $systemdServices = @($BackendServiceName, $WebServiceName, $AdminServiceName, $MerchantServiceName) |
     Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
     ForEach-Object { $_.Trim() }
+Assert-SafeServiceNames -Names $systemdServices
 $restartCommand = if ($systemdServices.Count -gt 0) {
     "sudo systemctl restart " + ($systemdServices -join " ")
 }
