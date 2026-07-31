@@ -4,6 +4,9 @@ import { useRoute } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
 import { useUserSession } from '@/composables/useUserSession'
 import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
+import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
+import { formatWebDateTime } from '@/core/web_localizations'
+import { localizeWebReviewError, reviewStringsForRegion } from '@/core/web_review_localizations'
 import { formatMoney } from '@/lib/currency'
 import {
   createReviewComment,
@@ -34,17 +37,19 @@ const commentsErrorMessage = ref('')
 const interactionMessage = ref('')
 const interactionErrorMessage = ref('')
 const review = ref<ReviewDetail | null>(null)
+const copy = computed(() => reviewStringsForRegion(appState.region))
+const certificationCopy = computed(() => discoveryStringsForRegion(appState.region).shopCard)
 const auditBanner = computed(() => {
   if (!props.owned) return ''
   const marker = String(route.query.audit || '')
-  if (marker === 'approved') return '平台已通过你的点评，现可公开展示。'
-  if (marker === 'rejected') return '平台未通过你的点评，请查看驳回原因后修改重提。'
+  if (marker === 'approved') return copy.value.detail.auditApproved
+  if (marker === 'rejected') return copy.value.detail.auditRejected
   return ''
 })
 const hiddenBanner = computed(() => {
   if (!props.owned) return ''
   const marker = String(route.query.hidden || '')
-  if (marker === 'appeal') return '商户申诉成立，你的点评已从公开展示中隐藏。'
+  if (marker === 'appeal') return copy.value.detail.hiddenByAppeal
   return ''
 })
 const comments = ref<ReviewComment[]>([])
@@ -67,7 +72,7 @@ async function shareReview() {
   if (!review.value) return
   shareMessage.value = ''
   const payload = {
-    title: `${review.value.shopName}点评 - ${review.value.userName}`,
+    title: copy.value.detail.shareTitle(review.value.shopName, review.value.userName),
     text: `${review.value.shopName} · ${review.value.userName} · ★ ${review.value.scoreOverall}`,
     url: window.location.href,
   }
@@ -87,10 +92,10 @@ async function shareReview() {
       document.execCommand('copy')
       textarea.remove()
     }
-    shareMessage.value = '分享链接已准备好'
+    shareMessage.value = copy.value.detail.shareReady
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return
-    shareMessage.value = error instanceof Error ? error.message : '分享失败，请稍后重试'
+    shareMessage.value = localizeWebReviewError(copy.value, error, copy.value.detail.shareFailed)
   }
 }
 
@@ -100,16 +105,16 @@ useSeoMeta(() => {
   const isPublic = !props.owned && currentReview?.auditStatus === 1 && currentReview.status === 1
   if (!currentReview) {
     return {
-      title: props.owned ? '我的点评详情' : '点评详情',
-      description: '查看公开点评详情、图片、点赞、评论和举报入口。',
+      title: props.owned ? copy.value.detail.ownedSeoTitle : copy.value.detail.publicSeoTitle,
+      description: copy.value.detail.seoDescription,
       canonical: canonicalPath,
       robots: 'noindex,nofollow',
     }
   }
 
   return {
-    title: `${currentReview.shopName}点评 - ${currentReview.userName}`,
-    description: toSeoDescription(`${currentReview.shopName} 的公开点评：${currentReview.content}`),
+    title: copy.value.detail.seoTitleFor(currentReview.shopName, currentReview.userName),
+    description: toSeoDescription(copy.value.detail.seoDescriptionFor(currentReview.shopName, currentReview.content)),
     canonical: canonicalPath,
     robots: isPublic ? 'index,follow' : 'noindex,nofollow',
     image: currentReview.images[0]?.url,
@@ -192,7 +197,7 @@ async function loadReview() {
   reportPanelOpen.value = false
   activeReplyTarget.value = null
   if (Number.isNaN(targetReviewId)) {
-    errorMessage.value = '点评 ID 不合法'
+    errorMessage.value = copy.value.detail.invalidId
     loading.value = false
     return
   }
@@ -213,7 +218,7 @@ async function loadReview() {
     }
   } catch (error) {
     if (requestId === reviewRequestId) {
-      errorMessage.value = error instanceof Error ? error.message : '点评详情加载失败'
+      errorMessage.value = localizeWebReviewError(copy.value, error, copy.value.detail.loadFailed)
     }
   } finally {
     if (requestId === reviewRequestId) loading.value = false
@@ -238,7 +243,7 @@ async function loadComments(reviewId = props.reviewId, parentRequestId = reviewR
     comments.value = normalizeReviewComments(page.list)
   } catch (error) {
     if (parentRequestId === reviewRequestId && requestId === commentsRequestId) {
-      commentsErrorMessage.value = error instanceof Error ? error.message : '评论列表加载失败'
+      commentsErrorMessage.value = localizeWebReviewError(copy.value, error, copy.value.detail.commentsLoadFailed)
     }
   } finally {
     if (parentRequestId === reviewRequestId && requestId === commentsRequestId) {
@@ -268,9 +273,9 @@ async function handleToggleLike(resumedReviewId?: unknown) {
     } else {
       await loadReview()
     }
-    interactionMessage.value = result.liked ? '这次点赞真落下去了。' : '点赞已经取消。'
+    interactionMessage.value = result.liked ? copy.value.detail.liked : copy.value.detail.likeRemoved
   } catch (error) {
-    interactionErrorMessage.value = error instanceof Error ? error.message : '点赞操作失败'
+    interactionErrorMessage.value = localizeWebReviewError(copy.value, error, copy.value.detail.likeFailed)
   } finally {
     likeLoading.value = false
   }
@@ -288,7 +293,7 @@ async function submitComment(resumedReviewId?: unknown, resumedContent?: unknown
   const replyTo =
     activeReplyTarget.value && activeReplyTarget.value.id > 0 ? activeReplyTarget.value.id : undefined
   if (!content) {
-    interactionErrorMessage.value = '评论内容不能为空'
+    interactionErrorMessage.value = copy.value.detail.commentRequired
     return
   }
   if (!ensureSignedIn(() => submitComment(targetReviewId, content))) {
@@ -308,9 +313,9 @@ async function submitComment(resumedReviewId?: unknown, resumedContent?: unknown
     }
     commentContent.value = ''
     activeReplyTarget.value = null
-    interactionMessage.value = replyTo ? '回复已经发出去了。' : '评论已经发出去了。'
+    interactionMessage.value = replyTo ? copy.value.detail.replySent : copy.value.detail.commentSent
   } catch (error) {
-    interactionErrorMessage.value = error instanceof Error ? error.message : '评论发布失败'
+    interactionErrorMessage.value = localizeWebReviewError(copy.value, error, copy.value.detail.commentFailed)
   } finally {
     commentSubmitting.value = false
   }
@@ -338,7 +343,7 @@ async function submitReport(resumedReviewId?: unknown, resumedReason?: unknown) 
   const reasonSource = typeof resumedReason === 'string' ? resumedReason : reportReason.value
   const reason = reasonSource.trim()
   if (!reason) {
-    interactionErrorMessage.value = '举报理由不能为空'
+    interactionErrorMessage.value = copy.value.detail.reportRequired
     return
   }
   if (!ensureSignedIn(() => submitReport(targetReviewId, reason))) {
@@ -355,9 +360,9 @@ async function submitReport(resumedReviewId?: unknown, resumedReason?: unknown) 
     }
     reportReason.value = ''
     reportPanelOpen.value = false
-    interactionMessage.value = '举报已提交，后台会复核这条点评。'
+    interactionMessage.value = copy.value.detail.reportSent
   } catch (error) {
-    interactionErrorMessage.value = error instanceof Error ? error.message : '举报提交失败'
+    interactionErrorMessage.value = localizeWebReviewError(copy.value, error, copy.value.detail.reportFailed)
   } finally {
     reportSubmitting.value = false
   }
@@ -388,12 +393,12 @@ watch(
 
 <template>
   <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
-  <p v-else-if="loading" class="feedback">点评详情加载中...</p>
+  <p v-else-if="loading" class="feedback">{{ copy.detail.loading }}</p>
 
   <template v-else-if="review">
     <section class="detail-hero detail-hero--compact">
       <div class="detail-hero__body">
-        <p class="eyebrow">{{ owned ? '我的点评详情' : '公开点评详情' }}</p>
+        <p class="eyebrow">{{ owned ? copy.detail.ownedEyebrow : copy.detail.publicEyebrow }}</p>
         <h1>{{ review.shopName }}</h1>
         <p v-if="auditBanner" class="feedback is-success" data-testid="review-audit-banner">{{ auditBanner }}</p>
         <p v-if="hiddenBanner" class="feedback is-error" data-testid="review-hidden-banner">{{ hiddenBanner }}</p>
@@ -406,30 +411,30 @@ watch(
               <span>{{ review.userName }}</span>
             </template>
             <span v-if="review.authorCertification" class="verified-badge verified-badge--compact">
-              {{ review.authorCertification.label }}
+              {{ certificationCopy.certificationLabel(review.authorCertification.code, review.authorCertification.label) }}
             </span>
-            <span>· {{ appState.region }} · {{ review.createdAt }}</span>
+            <span>· {{ appState.region }} · {{ formatWebDateTime(review.createdAt, copy.tag) }}</span>
           </span>
-          <span v-if="owned"> · 最后更新 {{ review.updatedAt }}</span>
+          <span v-if="owned"> · {{ copy.detail.lastUpdated }} {{ formatWebDateTime(review.updatedAt, copy.tag) }}</span>
         </p>
 
         <div class="detail-hero__stats">
           <div>
-            <span>综合评分</span>
+            <span>{{ copy.detail.overallScore }}</span>
             <strong>{{ review.scoreOverall.toFixed(1) }}</strong>
           </div>
           <div>
-            <span>人均消费</span>
+            <span>{{ copy.detail.averageSpend }}</span>
             <strong>{{ formatMoney(review.cost, review.currency, 2) }}</strong>
           </div>
           <div>
-            <span>审核状态</span>
-            <strong>{{ review.auditStatusText }}</strong>
+            <span>{{ copy.detail.auditStatus }}</span>
+            <strong>{{ copy.detail.auditStatusLabel(review.auditStatus, review.auditStatusText) }}</strong>
           </div>
         </div>
 
         <div class="hero-actions">
-          <RouterLink :to="`/shops/${review.shopId}`" class="secondary-button">回到门店</RouterLink>
+          <RouterLink :to="`/shops/${review.shopId}`" class="secondary-button">{{ copy.detail.backToShop }}</RouterLink>
           <button
             v-if="!owned"
             type="button"
@@ -437,11 +442,11 @@ watch(
             data-testid="share-review"
             @click="shareReview"
           >
-            分享
+            {{ copy.detail.share }}
           </button>
-          <RouterLink v-if="owned" :to="`/reviews/${review.id}/edit`" class="primary-link">继续编辑</RouterLink>
+          <RouterLink v-if="owned" :to="`/reviews/${review.id}/edit`" class="primary-link">{{ copy.detail.continueEditing }}</RouterLink>
           <RouterLink v-if="owned && review.auditStatus === 1" :to="`/reviews/${review.id}`" class="ghost-button">
-            看公开页
+            {{ copy.detail.viewPublic }}
           </RouterLink>
         </div>
         <p
@@ -455,21 +460,21 @@ watch(
       </div>
 
       <div class="hero-aside">
-        <span :class="auditClass">{{ review.auditStatusText }}</span>
-        <p class="support-copy">口味 {{ review.scoreTaste }} · 环境 {{ review.scoreEnv }} · 服务 {{ review.scoreService }}</p>
+        <span :class="auditClass">{{ copy.detail.auditStatusLabel(review.auditStatus, review.auditStatusText) }}</span>
+        <p class="support-copy">{{ copy.detail.taste }} {{ review.scoreTaste }} · {{ copy.detail.ambience }} {{ review.scoreEnv }} · {{ copy.detail.service }} {{ review.scoreService }}</p>
         <p class="support-copy">
-          点赞 {{ review.likeCount }} · 评论 {{ review.commentCount }}
-          <span v-if="interactionEnabled && review.likedByCurrentUser"> · 你已点赞</span>
+          {{ copy.detail.likes }} {{ review.likeCount }} · {{ copy.detail.comments }} {{ review.commentCount }}
+          <span v-if="interactionEnabled && review.likedByCurrentUser"> · {{ copy.detail.likedByYou }}</span>
         </p>
-        <p v-if="review.auditRemark" class="feedback is-error">驳回原因：{{ review.auditRemark }}</p>
+        <p v-if="review.auditRemark" class="feedback is-error">{{ copy.detail.rejectReason }}: {{ review.auditRemark }}</p>
       </div>
     </section>
 
     <section class="content-section">
       <div class="section-header">
         <div>
-          <p class="eyebrow">点评正文</p>
-          <h2>该说的体验都摆这儿，别整那些空心文案。</h2>
+          <p class="eyebrow">{{ copy.detail.bodyEyebrow }}</p>
+          <h2>{{ copy.detail.bodyTitle }}</h2>
         </div>
       </div>
       <p class="rich-copy">{{ review.content }}</p>
@@ -481,68 +486,68 @@ watch(
     <section class="content-section">
       <div class="section-header">
         <div>
-          <p class="eyebrow">点评图片</p>
-          <h2>现在已经接了本地上传，图片 URL 不用再手填那套破事了。</h2>
+          <p class="eyebrow">{{ copy.detail.imagesEyebrow }}</p>
+          <h2>{{ copy.detail.imagesTitle }}</h2>
         </div>
       </div>
       <div v-if="review.images.length > 0" class="photo-grid">
         <img v-for="image in review.images" :key="image.id" :src="image.url" :alt="review.shopName" />
       </div>
-      <p v-else class="feedback">这条点评当前没有图片。</p>
+      <p v-else class="feedback">{{ copy.detail.noImages }}</p>
     </section>
 
     <section v-if="interactionEnabled" class="content-section">
       <div class="section-header">
         <div>
-          <p class="eyebrow">互动区</p>
-          <h2>点赞、评论、举报这套链路已经落了，别再只是看个热闹。</h2>
+          <p class="eyebrow">{{ copy.detail.interactionEyebrow }}</p>
+          <h2>{{ copy.detail.interactionTitle }}</h2>
         </div>
       </div>
 
       <div class="interaction-toolbar">
         <button type="button" class="primary-button" :disabled="likeLoading" @click="handleToggleLike">
-          {{ review.likedByCurrentUser ? '取消点赞' : '给个赞' }} · {{ review.likeCount }}
+          {{ review.likedByCurrentUser ? copy.detail.unlike : copy.detail.like }} · {{ review.likeCount }}
         </button>
         <button type="button" class="ghost-button" @click="reportPanelOpen = !reportPanelOpen">
-          {{ reportPanelOpen ? '先收起举报' : '举报这条点评' }}
+          {{ reportPanelOpen ? copy.detail.collapseReport : copy.detail.reportReview }}
         </button>
         <button v-if="!sessionState.accessToken" type="button" class="secondary-button" @click="promptLogin">
-          登录后互动
+          {{ copy.detail.signInToInteract }}
         </button>
       </div>
 
       <div v-if="reportPanelOpen" class="report-panel">
         <label class="field field--full">
-          <span>举报理由</span>
+          <span>{{ copy.detail.reportReason }}</span>
           <textarea
             v-model="reportReason"
             maxlength="200"
-            placeholder="别写空话，直接说你觉得哪儿有问题。"
+            :placeholder="copy.detail.reportPlaceholder"
           />
         </label>
         <div class="report-panel__actions">
-          <button type="button" class="secondary-button" @click="reportPanelOpen = false">取消</button>
+          <button type="button" class="secondary-button" @click="reportPanelOpen = false">{{ copy.detail.cancel }}</button>
           <button type="button" class="primary-button" :disabled="reportSubmitting" @click="submitReport">
-            {{ reportSubmitting ? '提交中...' : '提交举报' }}
+            {{ reportSubmitting ? copy.detail.submitting : copy.detail.submitReport }}
           </button>
         </div>
       </div>
 
       <div class="comment-composer">
         <label class="field field--full">
-          <span>写条评论</span>
+          <span>{{ copy.detail.commentLabel }}</span>
           <textarea
             v-model="commentContent"
             maxlength="300"
-            placeholder="说人话，别整复制粘贴那一套。"
+            :placeholder="copy.detail.commentPlaceholder"
           />
         </label>
         <div v-if="activeReplyTarget" class="reply-banner">
-          <span class="support-copy">正在回复 {{ activeReplyTarget.userName }}</span>
-          <button type="button" class="ghost-button" @click="clearReplyTarget">取消回复</button>
+          <span class="support-copy">{{ copy.detail.replyingTo(activeReplyTarget.userName) }}</span>
+          <button type="button" class="ghost-button" @click="clearReplyTarget">{{ copy.detail.cancelReply }}</button>
         </div>
         <div class="comment-composer__actions">
-          <span class="support-copy">{{ sessionState.accessToken ? '当前评论会直接公开展示在这条点评下。' : '登录后才能评论。' }}</span>
+          <span class="support-copy">{{ sessionState.accessToken ? copy.detail.commentPublic : copy.detail.signInToComment }}</span>
           <button
             v-if="sessionState.accessToken"
             type="button"
@@ -550,9 +555,9 @@ watch(
             :disabled="commentSubmitting"
             @click="submitComment"
           >
-            {{ commentSubmitting ? '发布中...' : '发布评论' }}
+            {{ commentSubmitting ? copy.detail.publishing : copy.detail.publishComment }}
           </button>
-          <button v-else type="button" class="secondary-button" @click="submitComment">先登录再说</button>
+          <button v-else type="button" class="secondary-button" @click="submitComment">{{ copy.detail.signInFirst }}</button>
         </div>
       </div>
 
@@ -561,13 +566,13 @@ watch(
 
       <div class="section-header section-header--compact">
         <div>
-          <p class="eyebrow">评论列表</p>
-          <h2>现在是真盖楼了，回谁、挂哪层，都别再装没看见。</h2>
+          <p class="eyebrow">{{ copy.detail.commentsEyebrow }}</p>
+          <h2>{{ copy.detail.commentsTitle }}</h2>
         </div>
       </div>
 
       <p v-if="commentsErrorMessage" class="feedback is-error">{{ commentsErrorMessage }}</p>
-      <p v-else-if="commentsLoading" class="feedback">评论列表加载中...</p>
+      <p v-else-if="commentsLoading" class="feedback">{{ copy.detail.commentsLoading }}</p>
       <div v-else-if="comments.length > 0" class="comment-list">
         <article v-for="item in comments" :key="item.id" class="comment-card">
           <div class="comment-card__header">
@@ -579,11 +584,11 @@ watch(
                 {{ item.userName }}
               </template>
             </strong>
-            <span>{{ item.createdAt }}<template v-if="item.mine"> · 我的评论</template></span>
+            <span>{{ formatWebDateTime(item.createdAt, copy.tag) }}<template v-if="item.mine"> · {{ copy.detail.myComment }}</template></span>
           </div>
           <p>{{ item.content }}</p>
           <div class="comment-card__actions">
-            <button type="button" class="ghost-button" @click="startReply(item)">回复</button>
+            <button type="button" class="ghost-button" @click="startReply(item)">{{ copy.detail.reply }}</button>
           </div>
           <div v-if="item.replies.length > 0" class="comment-replies">
             <article v-for="reply in item.replies" :key="reply.id" class="comment-card comment-card--reply">
@@ -596,18 +601,18 @@ watch(
                     {{ reply.userName }}
                   </template>
                 </strong>
-                <span>{{ reply.createdAt }}<template v-if="reply.mine"> · 我的回复</template></span>
+                <span>{{ formatWebDateTime(reply.createdAt, copy.tag) }}<template v-if="reply.mine"> · {{ copy.detail.myReply }}</template></span>
               </div>
-              <p v-if="reply.replyTo" class="reply-context">回复 {{ reply.replyTo.userName }}：{{ reply.replyTo.content }}</p>
+              <p v-if="reply.replyTo" class="reply-context">{{ copy.detail.replyContext(reply.replyTo.userName, reply.replyTo.content) }}</p>
               <p>{{ reply.content }}</p>
               <div class="comment-card__actions">
-                <button type="button" class="ghost-button" @click="startReply(reply)">回复</button>
+                <button type="button" class="ghost-button" @click="startReply(reply)">{{ copy.detail.reply }}</button>
               </div>
             </article>
           </div>
         </article>
       </div>
-      <p v-else class="feedback">这条点评现在还没人评论，你要不先开个头。</p>
+      <p v-else class="feedback">{{ copy.detail.noComments }}</p>
     </section>
   </template>
 </template>

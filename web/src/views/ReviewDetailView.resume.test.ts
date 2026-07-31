@@ -1,5 +1,6 @@
 import { createApp, defineComponent, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 import { useUserSession } from '@/composables/useUserSession'
 
 const reviewMocks = vi.hoisted(() => ({
@@ -74,6 +75,7 @@ describe('ReviewDetailView guest resume actions', () => {
   beforeEach(() => {
     Object.values(reviewMocks).forEach((mock) => mock.mockReset())
     localStorage.clear()
+    useAppContext().setRegion('CN')
     const session = useUserSession()
     session.clearSession()
     session.closeAuthDialog()

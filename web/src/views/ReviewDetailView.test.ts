@@ -1,5 +1,6 @@
 import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const reviewMocks = vi.hoisted(() => ({
   createReviewComment: vi.fn(),
@@ -50,6 +51,8 @@ describe('ReviewDetailView', () => {
     sessionMocks.openAuthDialog.mockReset()
     routeState.fullPath = '/reviews/301'
     routeState.query = {}
+    localStorage.clear()
+    useAppContext().setRegion('EU')
   })
 
   it('renders a GBP review cost from the response currency', async () => {
@@ -59,6 +62,7 @@ describe('ReviewDetailView', () => {
       shopName: 'London Kitchen',
       userId: 0,
       userName: 'Guest',
+      authorCertification: { code: 'verified_merchant', label: '认证商户' },
       content: 'Solid meal',
       scoreOverall: 4.5,
       scoreTaste: 4.5,
@@ -88,6 +92,11 @@ describe('ReviewDetailView', () => {
 
     expect(reviewMocks.fetchReviewDetail).toHaveBeenCalledWith(301)
     expect(host.textContent).toContain('£42.00 GBP')
+    expect(host.textContent).toContain('Public review')
+    expect(host.textContent).toContain('Overall rating')
+    expect(host.textContent).toContain('10/07/2026 12:00')
+    expect(host.textContent).toContain('Verified merchant')
+    expect(host.textContent).not.toContain('认证商户')
     expect(host.textContent).not.toContain('¥42.00')
     expect(host.textContent).not.toContain('€42.00')
     app.unmount()
@@ -133,12 +142,12 @@ describe('ReviewDetailView', () => {
 
     expect(share).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'London Dumplings点评 - Aya',
+        title: 'London Dumplings review by Aya',
         url: expect.any(String),
       }),
     )
     expect(host.querySelector('[data-testid="share-review-message"]')?.textContent).toContain(
-      '分享链接已准备好',
+      'Share link is ready',
     )
     app.unmount()
     Reflect.deleteProperty(navigator, 'share')
@@ -182,8 +191,10 @@ describe('ReviewDetailView', () => {
 
     expect(reviewMocks.fetchOwnedReviewDetail).toHaveBeenCalledWith(55)
     expect(host.querySelector('[data-testid="review-audit-banner"]')?.textContent).toContain(
-      '平台已通过你的点评',
+      'Your review was approved',
     )
+    expect(host.textContent).toContain('Moderation statusApproved')
+    expect(host.textContent).not.toContain('已通过')
     app.unmount()
   })
 
@@ -224,7 +235,7 @@ describe('ReviewDetailView', () => {
     await flushView()
 
     expect(host.querySelector('[data-testid="review-hidden-banner"]')?.textContent).toContain(
-      '商户申诉成立',
+      'merchant appeal was accepted',
     )
     app.unmount()
   })

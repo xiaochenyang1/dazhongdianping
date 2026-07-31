@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
+import { localizeWebReviewError, reviewStringsForRegion } from '@/core/web_review_localizations'
 import { fetchShopDetail } from '@/services/browse'
 import { uploadImage } from '@/services/file'
 import { createReview, fetchOwnedReviewDetail, updateReview } from '@/services/review'
@@ -44,9 +45,10 @@ const form = reactive({
 })
 
 const isEditing = computed(() => typeof props.reviewId === 'number' && !Number.isNaN(props.reviewId))
-const pageTitle = computed(() => (isEditing.value ? '编辑点评' : '写点评'))
+const copy = computed(() => reviewStringsForRegion(appState.region))
+const pageTitle = computed(() => (isEditing.value ? copy.value.editor.editTitle : copy.value.editor.createTitle))
 const pageSummary = computed(() =>
-  isEditing.value ? '改完会重新进入审核，图片现在可以直接本地上传。' : '本地版本已经接了图片上传，别再手填 URL 了。',
+  isEditing.value ? copy.value.editor.editSummary : copy.value.editor.createSummary,
 )
 
 function fillEditorForm(detail: Awaited<ReturnType<typeof fetchOwnedReviewDetail>>) {
@@ -78,7 +80,7 @@ async function loadEditor() {
     }
 
     if (!props.shopId || Number.isNaN(props.shopId)) {
-      throw new Error('门店信息不完整，没法写点评。')
+      throw new Error(copy.value.editor.missingShop)
     }
 
     const shop = await fetchShopDetail(props.shopId)
@@ -93,7 +95,7 @@ async function loadEditor() {
     form.shopId = shop.id
     form.currency = shop.currency
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '点评编辑页加载失败'
+    errorMessage.value = localizeWebReviewError(copy.value, error, copy.value.editor.loadFailed)
   } finally {
     loading.value = false
   }
@@ -133,7 +135,7 @@ async function handleImageSelection(event: Event) {
   clearUploadFeedback()
 
   if (form.images.length >= 9) {
-    uploadErrorMessage.value = '最多只能上传 9 张图片'
+    uploadErrorMessage.value = copy.value.editor.maxImages
     if (input) {
       input.value = ''
     }
@@ -144,7 +146,7 @@ async function handleImageSelection(event: Event) {
   const filesToUpload = selectedFiles.slice(0, availableSlots)
 
   if (filesToUpload.length < selectedFiles.length) {
-    uploadErrorMessage.value = `最多还能上传 ${availableSlots} 张图片，多出来的这批先别硬塞。`
+    uploadErrorMessage.value = copy.value.editor.remainingImages(availableSlots)
   }
 
   uploading.value = true
@@ -157,10 +159,10 @@ async function handleImageSelection(event: Event) {
       uploadedCount += 1
     }
     if (uploadedCount > 0) {
-      uploadMessage.value = `已上传 ${uploadedCount} 张图片。`
+      uploadMessage.value = copy.value.editor.uploadedImages(uploadedCount)
     }
   } catch (error) {
-    uploadErrorMessage.value = error instanceof Error ? error.message : '图片上传失败'
+    uploadErrorMessage.value = localizeWebReviewError(copy.value, error, copy.value.editor.uploadFailed)
   } finally {
     uploading.value = false
     if (input) {
@@ -194,7 +196,7 @@ async function submitReview() {
 
     await router.push(`/user/reviews/${detail.id}`)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '点评提交失败'
+    errorMessage.value = localizeWebReviewError(copy.value, error, copy.value.editor.submitFailed)
   } finally {
     saving.value = false
   }
@@ -214,7 +216,7 @@ watch(
     <section class="hero-panel hero-panel--single">
       <div class="hero-panel__content">
         <p class="eyebrow">{{ pageTitle }}</p>
-        <h1>{{ shopMeta?.name ?? '点评表单' }}</h1>
+        <h1>{{ shopMeta?.name ?? copy.editor.formFallback }}</h1>
         <p class="hero-panel__summary">{{ pageSummary }}</p>
         <p v-if="shopMeta?.cityName || shopMeta?.areaName" class="support-copy">
           {{ appState.region }} · {{ shopMeta?.cityName }} <span v-if="shopMeta?.areaName">· {{ shopMeta?.areaName }}</span>
@@ -223,37 +225,37 @@ watch(
     </section>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="feedback">点评表单加载中...</p>
+    <p v-else-if="loading" class="feedback">{{ copy.editor.loading }}</p>
 
     <form v-else class="content-section review-form" @submit.prevent="submitReview">
       <div class="section-header">
         <div>
-          <p class="eyebrow">评分与正文</p>
-          <h2>把关键体验填完整，审核和聚合才有意义。</h2>
+          <p class="eyebrow">{{ copy.editor.ratingsEyebrow }}</p>
+          <h2>{{ copy.editor.ratingsTitle }}</h2>
         </div>
       </div>
 
       <div class="field-row">
         <label class="field">
-          <span>综合评分</span>
+          <span>{{ copy.editor.overallScore }}</span>
           <select v-model="form.scoreOverall">
             <option v-for="value in [5, 4, 3, 2, 1]" :key="`overall-${value}`" :value="value">{{ value }}</option>
           </select>
         </label>
         <label class="field">
-          <span>口味评分</span>
+          <span>{{ copy.editor.tasteScore }}</span>
           <select v-model="form.scoreTaste">
             <option v-for="value in [5, 4, 3, 2, 1]" :key="`taste-${value}`" :value="value">{{ value }}</option>
           </select>
         </label>
         <label class="field">
-          <span>环境评分</span>
+          <span>{{ copy.editor.ambienceScore }}</span>
           <select v-model="form.scoreEnv">
             <option v-for="value in [5, 4, 3, 2, 1]" :key="`env-${value}`" :value="value">{{ value }}</option>
           </select>
         </label>
         <label class="field">
-          <span>服务评分</span>
+          <span>{{ copy.editor.serviceScore }}</span>
           <select v-model="form.scoreService">
             <option v-for="value in [5, 4, 3, 2, 1]" :key="`service-${value}`" :value="value">{{ value }}</option>
           </select>
@@ -262,11 +264,11 @@ watch(
 
       <div class="field-row field-row--two">
         <label class="field">
-          <span>消费金额</span>
-          <input v-model="form.cost" type="number" min="0" step="0.01" placeholder="本次消费金额" />
+          <span>{{ copy.editor.spend }}</span>
+          <input v-model="form.cost" type="number" min="0" step="0.01" :placeholder="copy.editor.spendPlaceholder" />
         </label>
         <label class="field">
-          <span>货币</span>
+          <span>{{ copy.editor.currency }}</span>
           <select v-model="form.currency">
             <option value="CNY">CNY</option>
             <option value="EUR">EUR</option>
@@ -276,31 +278,31 @@ watch(
       </div>
 
       <label class="field">
-        <span>标签</span>
-        <input v-model="form.tagsInput" type="text" placeholder="用逗号分隔，比如：适合聚餐, 出锅稳, 回头率高" />
+        <span>{{ copy.editor.tags }}</span>
+        <input v-model="form.tagsInput" type="text" :placeholder="copy.editor.tagsPlaceholder" />
       </label>
 
       <label class="field field--full">
-        <span>点评正文</span>
+        <span>{{ copy.editor.body }}</span>
         <textarea
           v-model="form.content"
           rows="7"
           maxlength="500"
           spellcheck="false"
-          placeholder="把真实体验说清楚，别整五个字就想糊过去。"
+          :placeholder="copy.editor.bodyPlaceholder"
         />
       </label>
 
       <div class="section-header section-header--compact">
         <div>
-          <p class="eyebrow">图片上传</p>
-          <h2>现在直接传本地图片，别再靠手填 URL 硬顶了。</h2>
+          <p class="eyebrow">{{ copy.editor.uploadEyebrow }}</p>
+          <h2>{{ copy.editor.uploadTitle }}</h2>
         </div>
-        <span class="support-copy">{{ uploading ? '图片上传中...' : `当前已上传 ${form.images.length} / 9 张` }}</span>
+        <span class="support-copy">{{ uploading ? copy.editor.uploading : copy.editor.uploadedCount(form.images.length) }}</span>
       </div>
 
       <label class="field field--full">
-        <span>选择图片</span>
+        <span>{{ copy.editor.selectImages }}</span>
         <input
           class="file-input"
           type="file"
@@ -311,26 +313,26 @@ watch(
         />
       </label>
 
-      <p class="support-copy">支持 jpg / png / gif，单张最多 5MB，最多 9 张。</p>
+      <p class="support-copy">{{ copy.editor.uploadSupport }}</p>
       <p v-if="uploadMessage" class="feedback is-success">{{ uploadMessage }}</p>
       <p v-if="uploadErrorMessage" class="feedback is-error">{{ uploadErrorMessage }}</p>
 
       <div v-if="form.images.length > 0" class="photo-grid">
         <article v-for="(image, index) in form.images" :key="`${image}-${index}`" class="uploaded-image-card">
-          <img :src="image" :alt="`点评图片 ${index + 1}`" />
+          <img :src="image" :alt="copy.editor.imageAlt(index + 1)" />
           <div class="uploaded-image-card__footer">
-            <span>图片 {{ index + 1 }}</span>
-            <button type="button" class="ghost-button" @click="removeImageField(index)">移除</button>
+            <span>{{ copy.editor.imageLabel(index + 1) }}</span>
+            <button type="button" class="ghost-button" @click="removeImageField(index)">{{ copy.editor.remove }}</button>
           </div>
         </article>
       </div>
-      <p v-else class="feedback">还没上传图片，当前已经能直接从本地选图了。</p>
+      <p v-else class="feedback">{{ copy.editor.noImages }}</p>
 
       <div class="hero-actions">
         <button type="submit" class="primary-button" :disabled="saving || uploading">
-          {{ saving ? '提交中...' : isEditing ? '保存并重新提审' : '提交点评' }}
+          {{ saving ? copy.editor.submitting : isEditing ? copy.editor.saveAndResubmit : copy.editor.submitReview }}
         </button>
-        <RouterLink class="secondary-button" :to="shopMeta ? `/shops/${shopMeta.id}` : '/shops'">返回门店</RouterLink>
+        <RouterLink class="secondary-button" :to="shopMeta ? `/shops/${shopMeta.id}` : '/shops'">{{ copy.editor.backToShop }}</RouterLink>
       </div>
     </form>
   </div>

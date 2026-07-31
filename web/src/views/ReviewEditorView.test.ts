@@ -20,7 +20,7 @@ vi.mock('@/services/browse', () => browseMocks)
 vi.mock('@/services/file', () => fileMocks)
 vi.mock('@/services/review', () => reviewMocks)
 vi.mock('@/composables/useAppContext', () => ({
-  useAppContext: () => ({ state: { region: 'CN' } }),
+  useAppContext: () => ({ state: { region: 'EU' } }),
 }))
 vi.mock('vue-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('vue-router')>()
@@ -69,6 +69,11 @@ describe('ReviewEditorView', () => {
     app.component('RouterLink', RouterLinkStub)
     app.mount(host)
     await flushView()
+
+    expect(host.textContent).toContain('Write a review')
+    expect(host.textContent).toContain('Ratings and review')
+    expect(host.textContent).toContain('Photo upload')
+    expect(host.textContent).not.toMatch(/[一-龥]/)
 
     const selects = Array.from(host.querySelectorAll('select'))
     const currencySelect = selects[selects.length - 1] as HTMLSelectElement
