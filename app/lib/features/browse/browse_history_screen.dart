@@ -6,6 +6,7 @@ import 'package:dazhongdianping_app/features/reservation/reservation_repository.
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
 
 class BrowseHistoryScreen extends StatefulWidget {
@@ -290,7 +291,11 @@ class _BrowseHistoryScreenState extends State<BrowseHistoryScreen> {
                 final subtitle = [
                   if (location.isNotEmpty) location,
                   strings.browseViewCount(item.viewCount),
-                  if (item.lastViewedAt.isNotEmpty) item.lastViewedAt,
+                  if (item.lastViewedAt.isNotEmpty)
+                    formatDisplayDateTime(
+                      item.lastViewedAt,
+                      locale: strings.tag,
+                    ),
                   if (strings
                       .certificationBadgeLabel(
                         code: item.merchantCertificationCode,

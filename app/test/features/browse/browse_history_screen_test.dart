@@ -373,6 +373,7 @@ void main() {
 
     expect(find.text('Browse history'), findsOneWidget);
     expect(find.textContaining('Viewed 2 times'), findsOneWidget);
+    expect(find.textContaining('25/07/2026 18:00'), findsOneWidget);
     expect(find.byTooltip('Delete history item'), findsNWidgets(2));
   });
 }
