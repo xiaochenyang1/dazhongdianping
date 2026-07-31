@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useAppContext } from '@/composables/useAppContext'
+import { formatWebDateTime } from '@/core/web_localizations'
+import { localizeWebUserError, userStringsForRegion } from '@/core/web_user_localizations'
 import { fetchUserFollowers, fetchUserFollowing } from '@/services/auth'
 import type { SocialUserSummary } from '@/types/auth'
 
 const props = defineProps<{ userId: number; mode: 'followers' | 'following' }>()
+const { state } = useAppContext()
+const copy = computed(() => userStringsForRegion(state.region))
 const users = ref<SocialUserSummary[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 
-onMounted(async () => {
+async function load() {
+  errorMessage.value = ''
+  users.value = []
   try {
     const page = props.mode === 'followers'
       ? await fetchUserFollowers(props.userId, { page: 1, pageSize: 50 })
@@ -16,26 +23,31 @@ onMounted(async () => {
     users.value = page.list
     total.value = page.total
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '关系列表加载失败'
+    errorMessage.value = localizeWebUserError(copy.value, error, copy.value.relationships.loadFailed)
   }
-})
+}
+
+watch([() => props.userId, () => props.mode, () => state.region], () => void load(), { immediate: true })
 </script>
 
 <template>
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">公开关系 · 只读</p>
-        <h1>{{ mode === 'followers' ? `粉丝 ${total} 人` : `关注 ${total} 人` }}</h1>
-        <p>PC 端只展示公开关系，不提供关注或取关操作。</p>
+        <p class="eyebrow">{{ copy.relationships.eyebrow }}</p>
+        <h1>{{ mode === 'followers' ? copy.relationships.followers(total) : copy.relationships.following(total) }}</h1>
+        <p>{{ copy.relationships.summary }}</p>
       </div>
     </div>
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
+    <p v-else-if="users.length === 0" class="feedback">
+      {{ mode === 'followers' ? copy.relationships.emptyFollowers : copy.relationships.emptyFollowing }}
+    </p>
     <div v-else class="review-list">
       <RouterLink v-for="user in users" :key="user.id" :to="`/users/${user.id}`" class="content-card review-card">
         <strong>{{ user.nickname }}</strong>
-        <p>{{ user.signature || `Lv.${user.level} · 粉丝 ${user.followerCount}` }}</p>
-        <span>建立关系于 {{ user.followedAt }}</span>
+        <p>{{ user.signature || `Lv.${user.level} · ${copy.relationships.followerCount(user.followerCount)}` }}</p>
+        <span>{{ copy.relationships.followedAt }} {{ formatWebDateTime(user.followedAt, copy.tag) }}</span>
       </RouterLink>
     </div>
   </section>

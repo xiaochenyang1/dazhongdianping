@@ -1,5 +1,6 @@
 import { createApp, defineComponent, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const authMocks = vi.hoisted(() => ({
   fetchCurrentUser: vi.fn(),
@@ -36,6 +37,7 @@ describe('UserGrowthRecordsView', () => {
   beforeEach(() => {
     Object.values(authMocks).forEach((mock) => mock.mockReset())
     Object.values(sessionMocks).forEach((mock) => mock.mockReset())
+    useAppContext().setRegion('CN')
   })
 
   it('renders growth records and refreshes the current user summary', async () => {
@@ -139,6 +141,34 @@ describe('UserGrowthRecordsView', () => {
     await flushView()
 
     expect(host.textContent).toContain('现在还没有流水')
+    app.unmount()
+  })
+
+  it('localizes growth record enums and reloads on region change', async () => {
+    authMocks.fetchCurrentUser.mockResolvedValue({ level: 2, points: 4, growthValue: 10 })
+    authMocks.fetchUserGrowthRecords.mockResolvedValue({
+      list: [{
+        id: 1, type: 1, typeText: '成长值', action: 'review_create', actionText: '发布点评', bizId: 701,
+        changeAmount: 10, balanceAfter: 10, remark: '发布点评奖励', createdAt: '2026-07-11 18:00:00',
+      }],
+      total: 1, page: 1, pageSize: 10, hasMore: false,
+    })
+    useAppContext().setRegion('EU')
+
+    const host = document.createElement('div')
+    const app = createApp(UserGrowthRecordsView)
+    app.component('RouterLink', RouterLinkStub)
+    app.mount(host)
+    await flushView()
+
+    expect(host.textContent).toContain('Growth value +10')
+    expect(host.textContent).toContain('Review publishing reward')
+    expect(host.textContent).toContain('11/07/2026 18:00')
+    expect(host.textContent).not.toContain('发布点评奖励')
+
+    useAppContext().setRegion('CN')
+    await flushView()
+    expect(authMocks.fetchUserGrowthRecords).toHaveBeenCalledTimes(2)
     app.unmount()
   })
 })

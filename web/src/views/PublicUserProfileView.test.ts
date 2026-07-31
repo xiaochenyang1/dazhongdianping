@@ -84,7 +84,9 @@ describe('PublicUserProfileView', () => {
 
     expect(authMocks.fetchPublicUserProfile).toHaveBeenCalledTimes(2)
     expect(authMocks.fetchPublicUserProfile).toHaveBeenNthCalledWith(2, 9002)
-    expect(host.textContent).toContain('公开点评 1 条')
+    expect(host.textContent).toContain('1 public review')
+    expect(host.textContent).toContain('18 followers')
+    expect(host.textContent).not.toContain('公开点评 1 条')
     app.unmount()
   })
 })

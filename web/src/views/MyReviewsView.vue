@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useAppContext } from '@/composables/useAppContext'
+import { formatWebDateTime } from '@/core/web_localizations'
+import { localizeWebReviewError, reviewStringsForRegion } from '@/core/web_review_localizations'
+import { localizeWebUserError, userStringsForRegion } from '@/core/web_user_localizations'
 import { deleteReview, listUserReviews } from '@/services/review'
 import type { PageResult } from '@/types/browse'
 import type { UserReviewSummary } from '@/types/review'
 
 const { state: appState } = useAppContext()
+const copy = computed(() => userStringsForRegion(appState.region))
+const reviewCopy = computed(() => reviewStringsForRegion(appState.region))
 
 const loading = ref(false)
 const deletingId = ref<number | null>(null)
@@ -30,7 +35,7 @@ async function loadReviews() {
       pageSize: filters.pageSize,
     })
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '我的点评加载失败'
+    errorMessage.value = localizeWebReviewError(reviewCopy.value, error, copy.value.reviews.loadFailed)
   } finally {
     loading.value = false
   }
@@ -52,7 +57,7 @@ function statusClass(auditStatus: number) {
 }
 
 async function handleDelete(reviewId: number) {
-  if (!window.confirm('确认删除这条点评？删了可不会自己长回来。')) {
+  if (!window.confirm(copy.value.reviews.deleteConfirm)) {
     return
   }
 
@@ -62,10 +67,10 @@ async function handleDelete(reviewId: number) {
 
   try {
     await deleteReview(reviewId)
-    successMessage.value = `点评 #${reviewId} 已删除。`
+    successMessage.value = copy.value.reviews.deleted(reviewId)
     await loadReviews()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '点评删除失败'
+    errorMessage.value = localizeWebUserError(copy.value, error, copy.value.reviews.deleteFailed)
   } finally {
     deletingId.value = null
   }
@@ -101,52 +106,52 @@ watch(
   <div class="page-stack">
     <section class="hero-panel hero-panel--single">
       <div class="hero-panel__content">
-        <p class="eyebrow">我的点评</p>
-        <h1>写过的、待审的、被驳回的，都得在这儿看得明明白白。</h1>
-        <p class="hero-panel__summary">当前区域 {{ appState.region }}，前台现在已经接上后端点评闭环，不用再靠数据库猜状态。</p>
+        <p class="eyebrow">{{ copy.reviews.eyebrow }}</p>
+        <h1>{{ copy.reviews.title }}</h1>
+        <p class="hero-panel__summary">{{ copy.reviews.summary(appState.region) }}</p>
       </div>
     </section>
 
     <section class="content-section">
       <div class="section-header">
         <div>
-          <p class="eyebrow">筛选</p>
-          <h2>先把审核状态捋顺，再看具体内容。</h2>
+          <p class="eyebrow">{{ copy.reviews.filters }}</p>
+          <h2>{{ copy.reviews.filtersTitle }}</h2>
         </div>
       </div>
 
       <div class="field-row field-row--two">
         <label class="field">
-          <span>审核状态</span>
+          <span>{{ copy.reviews.auditStatus }}</span>
           <select v-model="filters.auditStatus">
-            <option value="">全部状态</option>
-            <option value="0">待审</option>
-            <option value="1">通过</option>
-            <option value="2">驳回</option>
+            <option value="">{{ copy.reviews.allStatuses }}</option>
+            <option value="0">{{ copy.reviews.status(0) }}</option>
+            <option value="1">{{ copy.reviews.status(1) }}</option>
+            <option value="2">{{ copy.reviews.status(2) }}</option>
           </select>
         </label>
 
         <div class="hero-actions hero-actions--align-end">
-          <button type="button" class="primary-button" @click="applyFilters">应用筛选</button>
-          <button type="button" class="secondary-button" @click="loadReviews">刷新</button>
+          <button type="button" class="primary-button" @click="applyFilters">{{ copy.reviews.apply }}</button>
+          <button type="button" class="secondary-button" @click="loadReviews">{{ copy.common.refresh }}</button>
         </div>
       </div>
 
       <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
       <p v-if="successMessage" class="feedback is-success">{{ successMessage }}</p>
-      <p v-if="loading" class="feedback">我的点评加载中...</p>
+      <p v-if="loading" class="feedback">{{ copy.reviews.loading }}</p>
       <p v-else-if="!pageState || pageState.list.length === 0" class="feedback">
-        当前还没有点评记录，先去门店详情页写一条。
+        {{ copy.reviews.empty }}
       </p>
 
       <div class="stack-list">
         <article v-for="item in pageState?.list" :key="item.id" class="manage-card">
           <div class="manage-card__header">
             <div>
-              <p class="eyebrow">点评 #{{ item.id }}</p>
+              <p class="eyebrow">{{ copy.reviews.review(item.id) }}</p>
               <h3>{{ item.shopName }}</h3>
             </div>
-            <span :class="statusClass(item.auditStatus)">{{ item.auditStatusText }}</span>
+            <span :class="statusClass(item.auditStatus)">{{ reviewCopy.detail.auditStatusLabel(item.auditStatus, item.auditStatusText) }}</span>
           </div>
 
           <p class="manage-card__copy">{{ item.content }}</p>
@@ -155,21 +160,21 @@ watch(
             <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
           </div>
 
-          <p v-if="item.auditRemark" class="feedback is-error">驳回原因：{{ item.auditRemark }}</p>
+          <p v-if="item.auditRemark" class="feedback is-error">{{ copy.reviews.rejectReason }}: {{ item.auditRemark }}</p>
 
           <div class="manage-card__footer">
-            <span>评分 {{ item.scoreOverall.toFixed(1) }} · 创建于 {{ item.createdAt }}</span>
+            <span>{{ copy.reviews.ratingAndDate(item.scoreOverall.toFixed(1), formatWebDateTime(item.createdAt, copy.tag)) }}</span>
             <div class="hero-actions">
-              <RouterLink :to="`/user/reviews/${item.id}`" class="ghost-button">查看详情</RouterLink>
-              <RouterLink :to="`/reviews/${item.id}/edit`" class="secondary-button">编辑</RouterLink>
-              <RouterLink v-if="item.auditStatus === 1" :to="`/reviews/${item.id}`" class="ghost-button">公开页</RouterLink>
+              <RouterLink :to="`/user/reviews/${item.id}`" class="ghost-button">{{ copy.reviews.viewDetails }}</RouterLink>
+              <RouterLink :to="`/reviews/${item.id}/edit`" class="secondary-button">{{ copy.reviews.edit }}</RouterLink>
+              <RouterLink v-if="item.auditStatus === 1" :to="`/reviews/${item.id}`" class="ghost-button">{{ copy.reviews.publicPage }}</RouterLink>
               <button
                 type="button"
                 class="ghost-button danger-button"
                 :disabled="deletingId === item.id"
                 @click="handleDelete(item.id)"
               >
-                {{ deletingId === item.id ? '删除中...' : '删除' }}
+                {{ deletingId === item.id ? copy.reviews.deleting : copy.reviews.delete }}
               </button>
             </div>
           </div>
@@ -178,11 +183,11 @@ watch(
 
       <div class="pager">
         <button type="button" class="ghost-button" :disabled="(pageState?.page ?? 1) <= 1" @click="goPrevPage">
-          上一页
+          {{ copy.common.previous }}
         </button>
-        <span>第 {{ pageState?.page ?? 1 }} 页</span>
+        <span>{{ copy.reviews.page(pageState?.page ?? 1) }}</span>
         <button type="button" class="ghost-button" :disabled="!pageState?.hasMore" @click="goNextPage">
-          下一页
+          {{ copy.common.next }}
         </button>
       </div>
     </section>
