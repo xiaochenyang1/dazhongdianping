@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/message/message_error_localizer.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:flutter/material.dart';
@@ -202,10 +203,18 @@ class _ConversationListScreenState extends State<ConversationListScreen> {
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                   subtitle: Text(
-                    item.lastMessagePreview,
-                    maxLines: 1,
+                    [
+                      item.lastMessagePreview,
+                      if (item.lastMessageAt.isNotEmpty)
+                        formatDisplayDateTime(
+                          item.lastMessageAt,
+                          locale: AppLocalizations.of(context).tag,
+                        ),
+                    ].where((part) => part.isNotEmpty).join('\n'),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  isThreeLine: item.lastMessageAt.isNotEmpty,
                   trailing: item.unreadCount > 0
                       ? Container(
                           padding: const EdgeInsets.symmetric(
@@ -549,13 +558,34 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                           ],
                         ),
-                        child: Text(
-                          message.content,
-                          style: TextStyle(
-                            color: mine
-                                ? Colors.white
-                                : const Color(0xFF292522),
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              message.content,
+                              style: TextStyle(
+                                color: mine
+                                    ? Colors.white
+                                    : const Color(0xFF292522),
+                              ),
+                            ),
+                            if (message.createdAt.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                formatDisplayDateTime(
+                                  message.createdAt,
+                                  locale: AppLocalizations.of(context).tag,
+                                ),
+                                style: TextStyle(
+                                  color: mine
+                                      ? Colors.white70
+                                      : const Color(0xFF6B625D),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     );

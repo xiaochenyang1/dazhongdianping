@@ -63,7 +63,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
             'peerNickname': page == 1 ? '伦敦小王' : '巴黎小李',
             'peerAvatar': '',
             'lastMessagePreview': '周末探店？',
-            'lastMessageAt': '10:00',
+            'lastMessageAt': '2026-07-31 10:00:00',
             'unreadCount': 2,
           },
           if (overlapConversationPages && page == 2)
@@ -73,7 +73,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
               'peerNickname': '过期会话摘要',
               'peerAvatar': '',
               'lastMessagePreview': '过期内容',
-              'lastMessageAt': '09:00',
+              'lastMessageAt': '2026-07-31 09:00:00',
               'unreadCount': 9,
             },
         ],
@@ -104,7 +104,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
           'toUserId': 8,
           'content': page == 1 ? '周末探店？' : '上周那家也不错',
           'read': false,
-          'createdAt': '10:00',
+          'createdAt': '2026-07-31 10:00:00',
         },
         if (overlapMessagePages && page == 2)
           {
@@ -114,7 +114,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
             'toUserId': 8,
             'content': '过期的消息副本',
             'read': false,
-            'createdAt': '10:00',
+            'createdAt': '2026-07-31 10:00:00',
           },
       ],
       'total': 2,
@@ -159,7 +159,7 @@ class ScreenMessageApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
       'toUserId': 9,
       'content': content,
       'read': false,
-      'createdAt': '10:01',
+      'createdAt': '2026-07-31 10:01:00',
     };
   }
 
@@ -227,6 +227,23 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Messages'), findsOneWidget);
+    expect(find.textContaining('31/07/2026 10:00'), findsOneWidget);
+  });
+
+  testWidgets('chat localizes message timestamps in English', (tester) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: ChatScreen(
+          repository: MessageRepository(ScreenMessageApi()),
+          conversation: testConversation,
+          currentUserId: 8,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('31/07/2026 10:00'), findsOneWidget);
   });
 
   testWidgets('conversation list localizes load errors in English', (
