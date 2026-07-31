@@ -36,7 +36,7 @@
 - 管理端种子导入失败时会生成真实本地错误明细文件，批次查询返回同一条 `errorFile` 路径。
 - 当前后端默认运行配置已指向 `MySQL`；可直接导入 MySQL 的脚本已补到 `sql/mysql/`，并带公开点评、点评图片、点赞/评论演示数据、审核演示数据、`user_expert_certification` 表与 `audit:expert_certification:*` 权限种子，以及可直接密码登录的 C 端演示账号。`H2` 仍保留为 `h2` profile 和测试环境使用。
 - 文件上传默认仍可本地落盘，也已接入 S3 兼容对象存储上传入口：配置 `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_*` 后，`POST /api/c/v1/files/upload` 会上传到对象存储并返回公开 URL。
-- `CI/CD` 已补本地复用脚本和 GitHub Actions:`scripts/ci/verify-all.ps1` 负责后端测试、Web/管理端/商户端测试与构建，以及可选 Flutter、MySQL、S3 兼容对象存储、Elasticsearch、浏览器冒烟 / E2E；`ci.yml` 当前同时起 MySQL 8、Redis 7、MinIO、Elasticsearch 8 服务,执行 `-IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeElasticsearchSmoke`;`.github/workflows/nightly.yml` 已补定时夜跑和手工触发,会追加 `-IncludeBrowserE2E`;`.github/workflows/release.yml` 已补测试环境自动部署和 `pre/prod` 手工发版入口,`.github/workflows/rollback.yml` 已补手工回滚入口,配套 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已落库。
+- `CI/CD` 已补本地复用脚本和 GitHub Actions:`scripts/ci/verify-all.ps1` 负责后端测试、Web/管理端/商户端测试与构建，以及可选 Flutter、MySQL、S3 兼容对象存储、Elasticsearch、浏览器冒烟 / E2E；`ci.yml` 当前同时起 MySQL 8、Redis 7、MinIO、Elasticsearch 8 服务,执行 `-IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeElasticsearchSmoke`;`.github/workflows/nightly.yml` 已补定时夜跑和手工触发,会追加 `-IncludeBrowserE2E`;`.github/workflows/release.yml` 已补测试环境自动部署和 `pre/prod` 手工发版入口,`.github/workflows/rollback.yml` 已补手工回滚入口,配套 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已落库，发布包和部署 / 回滚服务均覆盖 `web`、`admin-web`、`merchant-web`。
 
 完整的“已完成 / 部分完成 / 外部待验收”证据请看 `docs/当前已完成功能与SQL导入说明.md` 的“全局功能完成矩阵”；根 README 只保留启动入口和阶段摘要，不再重复维护第二套完成判断。
 

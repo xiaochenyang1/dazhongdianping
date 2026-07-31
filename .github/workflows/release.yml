@@ -45,6 +45,7 @@ jobs:
       DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
       DEPLOY_WEB_SERVICE: ${{ vars.DEPLOY_WEB_SERVICE }}
       DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
+      DEPLOY_MERCHANT_SERVICE: ${{ vars.DEPLOY_MERCHANT_SERVICE }}
       DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
@@ -82,11 +83,13 @@ jobs:
           cache-dependency-path: |
             web/package-lock.json
             admin-web/package-lock.json
+            merchant-web/package-lock.json
       - name: Install frontend dependencies
         if: steps.deployment-config.outputs.configured == 'true'
         run: |
           npm ci --prefix web
           npm ci --prefix admin-web
+          npm ci --prefix merchant-web
       - name: Make Maven wrapper executable
         if: steps.deployment-config.outputs.configured == 'true'
         run: chmod +x backend/mvnw
@@ -124,6 +127,7 @@ jobs:
       DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
       DEPLOY_WEB_SERVICE: ${{ vars.DEPLOY_WEB_SERVICE }}
       DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
+      DEPLOY_MERCHANT_SERVICE: ${{ vars.DEPLOY_MERCHANT_SERVICE }}
       DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
@@ -143,10 +147,12 @@ jobs:
           cache-dependency-path: |
             web/package-lock.json
             admin-web/package-lock.json
+            merchant-web/package-lock.json
       - name: Install frontend dependencies
         run: |
           npm ci --prefix web
           npm ci --prefix admin-web
+          npm ci --prefix merchant-web
       - name: Make Maven wrapper executable
         run: chmod +x backend/mvnw
       - name: Prepare SSH
@@ -180,6 +186,7 @@ jobs:
       DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
       DEPLOY_WEB_SERVICE: ${{ vars.DEPLOY_WEB_SERVICE }}
       DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
+      DEPLOY_MERCHANT_SERVICE: ${{ vars.DEPLOY_MERCHANT_SERVICE }}
       DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
@@ -199,10 +206,12 @@ jobs:
           cache-dependency-path: |
             web/package-lock.json
             admin-web/package-lock.json
+            merchant-web/package-lock.json
       - name: Install frontend dependencies
         run: |
           npm ci --prefix web
           npm ci --prefix admin-web
+          npm ci --prefix merchant-web
       - name: Make Maven wrapper executable
         run: chmod +x backend/mvnw
       - name: Prepare SSH

@@ -38,6 +38,7 @@ jobs:
       DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
       DEPLOY_WEB_SERVICE: ${{ vars.DEPLOY_WEB_SERVICE }}
       DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
+      DEPLOY_MERCHANT_SERVICE: ${{ vars.DEPLOY_MERCHANT_SERVICE }}
       DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
       TARGET_VERSION: ${{ inputs.target_version }}
     steps:

@@ -9,6 +9,7 @@ param(
     [string]$BackendServiceName,
     [string]$WebServiceName,
     [string]$AdminServiceName,
+    [string]$MerchantServiceName,
     [string]$SmokeUrls,
     [switch]$DryRun
 )
@@ -26,6 +27,7 @@ if (-not $RemoteRoot) { $RemoteRoot = if ($env:DEPLOY_REMOTE_ROOT) { $env:DEPLOY
 if (-not $BackendServiceName) { $BackendServiceName = if ($env:DEPLOY_BACKEND_SERVICE) { $env:DEPLOY_BACKEND_SERVICE } else { "dzdp-backend" } }
 if (-not $WebServiceName) { $WebServiceName = if ($env:DEPLOY_WEB_SERVICE) { $env:DEPLOY_WEB_SERVICE } else { "dzdp-web" } }
 if (-not $AdminServiceName) { $AdminServiceName = if ($env:DEPLOY_ADMIN_SERVICE) { $env:DEPLOY_ADMIN_SERVICE } else { "dzdp-admin-web" } }
+if (-not $MerchantServiceName) { $MerchantServiceName = if ($env:DEPLOY_MERCHANT_SERVICE) { $env:DEPLOY_MERCHANT_SERVICE } else { "dzdp-merchant-web" } }
 if (-not $SmokeUrls) { $SmokeUrls = if ($env:DEPLOY_SMOKE_URLS) { $env:DEPLOY_SMOKE_URLS } else { "" } }
 
 function Invoke-Native {
@@ -45,7 +47,7 @@ if ($DryRun) {
     Write-Output "1. Upload the release bundle over SSH/SCP."
     Write-Output "2. Extract the bundle under a versioned releases directory below the remote root."
     Write-Output "3. Switch the remote current symlink to the new release."
-    Write-Output "4. Restart the backend, web, and admin-web services."
+    Write-Output "4. Restart the backend, web, admin-web, and merchant-web services."
     Write-Output "5. Run smoke checks against the deployed environment."
     exit 0
 }
@@ -76,7 +78,7 @@ $remoteReleaseDir = "$remoteReleaseRoot/$version"
 $remoteBundlePath = "$RemoteRoot/$bundleName"
 $remoteCurrentPath = "$RemoteRoot/current"
 $remoteAddress = "$RemoteUser@$RemoteHost"
-$systemdServices = @($BackendServiceName, $WebServiceName, $AdminServiceName) |
+$systemdServices = @($BackendServiceName, $WebServiceName, $AdminServiceName, $MerchantServiceName) |
     Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
     ForEach-Object { $_.Trim() }
 $restartCommand = if ($systemdServices.Count -gt 0) {

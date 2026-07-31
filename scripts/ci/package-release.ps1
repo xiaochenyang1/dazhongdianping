@@ -10,6 +10,7 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $backendDir = Join-Path $repoRoot "backend"
 $webDir = Join-Path $repoRoot "web"
 $adminDir = Join-Path $repoRoot "admin-web"
+$merchantDir = Join-Path $repoRoot "merchant-web"
 $publicSiteUrl = $env:PUBLIC_SITE_URL
 $prerenderApiBaseUrl = $env:PRERENDER_API_BASE_URL
 $prerenderRegion = if ($env:PRERENDER_REGION) { $env:PRERENDER_REGION } else { "CN" }
@@ -56,9 +57,10 @@ if ($DryRun) {
     Write-Output "1. Build the backend jar with backend/mvnw.cmd -DskipTests package."
     Write-Output "2. Build web dist with npm run build under web."
     Write-Output "3. Build admin-web dist with npm run build under admin-web."
-    Write-Output "4. If PUBLIC_SITE_URL and PRERENDER_API_BASE_URL are configured, build real SEO snapshots for PRERENDER_REGION=$prerenderRegion."
-    Write-Output "5. Assemble backend jar + web dist + admin-web dist into a release bundle under $OutputDir."
-    Write-Output "6. Write a release manifest for version $Version."
+    Write-Output "4. Build merchant-web dist with npm run build under merchant-web."
+    Write-Output "5. If PUBLIC_SITE_URL and PRERENDER_API_BASE_URL are configured, build real SEO snapshots for PRERENDER_REGION=$prerenderRegion."
+    Write-Output "6. Assemble backend jar + web dist + admin-web dist + merchant-web dist into a release bundle under $OutputDir."
+    Write-Output "7. Write a release manifest for version $Version."
     exit 0
 }
 
@@ -77,6 +79,7 @@ try {
         Invoke-Native -FilePath "npm" -Arguments @("run", "build:prerender:data") -WorkingDirectory $webDir
     }
     Invoke-Native -FilePath "npm" -Arguments @("run", "build") -WorkingDirectory $adminDir
+    Invoke-Native -FilePath "npm" -Arguments @("run", "build") -WorkingDirectory $merchantDir
 
     $backendJar = Get-ChildItem -File -LiteralPath (Join-Path $backendDir "target") -Filter "*.jar" |
         Where-Object { $_.Name -notmatch "-(sources|javadoc)\.jar$" } |
@@ -89,11 +92,13 @@ try {
     $backendOutputDir = Join-Path $stagingDir "backend"
     $webOutputDir = Join-Path $stagingDir "web"
     $adminOutputDir = Join-Path $stagingDir "admin-web"
-    New-Item -ItemType Directory -Path $backendOutputDir, $webOutputDir, $adminOutputDir -Force | Out-Null
+    $merchantOutputDir = Join-Path $stagingDir "merchant-web"
+    New-Item -ItemType Directory -Path $backendOutputDir, $webOutputDir, $adminOutputDir, $merchantOutputDir -Force | Out-Null
 
     Copy-Item -LiteralPath $backendJar.FullName -Destination (Join-Path $backendOutputDir $backendJar.Name)
     Copy-Item -LiteralPath (Join-Path $webDir "dist") -Destination $webOutputDir -Recurse
     Copy-Item -LiteralPath (Join-Path $adminDir "dist") -Destination $adminOutputDir -Recurse
+    Copy-Item -LiteralPath (Join-Path $merchantDir "dist") -Destination $merchantOutputDir -Recurse
 
     $manifest = [ordered]@{
         version = $Version
@@ -101,6 +106,7 @@ try {
         commitSha = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { "" }
         bundleName = [System.IO.Path]::GetFileName($bundlePath)
         backendJar = $backendJar.Name
+        frontends = @("web", "admin-web", "merchant-web")
         seoSnapshot = [ordered]@{
             enabled = $seoSnapshotEnabled
             siteUrl = if ($seoSnapshotEnabled) { $publicSiteUrl } else { "" }

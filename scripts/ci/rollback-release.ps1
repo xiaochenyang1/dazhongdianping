@@ -9,6 +9,7 @@ param(
     [string]$BackendServiceName,
     [string]$WebServiceName,
     [string]$AdminServiceName,
+    [string]$MerchantServiceName,
     [string]$SmokeUrls,
     [switch]$DryRun
 )
@@ -25,6 +26,7 @@ if (-not $RemoteRoot) { $RemoteRoot = if ($env:DEPLOY_REMOTE_ROOT) { $env:DEPLOY
 if (-not $BackendServiceName) { $BackendServiceName = if ($env:DEPLOY_BACKEND_SERVICE) { $env:DEPLOY_BACKEND_SERVICE } else { "dzdp-backend" } }
 if (-not $WebServiceName) { $WebServiceName = if ($env:DEPLOY_WEB_SERVICE) { $env:DEPLOY_WEB_SERVICE } else { "dzdp-web" } }
 if (-not $AdminServiceName) { $AdminServiceName = if ($env:DEPLOY_ADMIN_SERVICE) { $env:DEPLOY_ADMIN_SERVICE } else { "dzdp-admin-web" } }
+if (-not $MerchantServiceName) { $MerchantServiceName = if ($env:DEPLOY_MERCHANT_SERVICE) { $env:DEPLOY_MERCHANT_SERVICE } else { "dzdp-merchant-web" } }
 if (-not $SmokeUrls) { $SmokeUrls = if ($env:DEPLOY_SMOKE_URLS) { $env:DEPLOY_SMOKE_URLS } else { "" } }
 
 function Invoke-Native {
@@ -43,7 +45,7 @@ if ($DryRun) {
     Write-Output "Plan:"
     Write-Output "1. Resolve the requested or previous stable release on the remote host."
     Write-Output "2. Point the remote current symlink back to the previous stable release."
-    Write-Output "3. Restart the backend, web, and admin-web services."
+    Write-Output "3. Restart the backend, web, admin-web, and merchant-web services."
     Write-Output "4. Run smoke checks after rollback."
     exit 0
 }
@@ -61,7 +63,7 @@ foreach ($pair in @{
 
 $sshPath = (Get-Command ssh -ErrorAction Stop).Source
 $remoteAddress = "$RemoteUser@$RemoteHost"
-$systemdServices = @($BackendServiceName, $WebServiceName, $AdminServiceName) |
+$systemdServices = @($BackendServiceName, $WebServiceName, $AdminServiceName, $MerchantServiceName) |
     Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
     ForEach-Object { $_.Trim() }
 $restartCommand = if ($systemdServices.Count -gt 0) {
