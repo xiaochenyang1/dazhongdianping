@@ -234,6 +234,7 @@ class AppLocalizations {
     'followingTopicsLoginRequired': '登录后查看关注的话题，不会额外生成独立动态流。',
     'goLogin': '去登录',
     'hotScore': '热度 {score}',
+    'hotCalculatedAt': '热度更新于 {time}',
     'topicSevenDayStats': '7 天：{posts} 帖 · {likes} 赞 · {comments} 评论',
     'topicFollowMeta': '{followers} 人关注 · {posts} 篇公开帖子',
     'topicFollowerCount': '{count} 人关注',
@@ -1120,6 +1121,7 @@ class AppLocalizations {
     'followingTopicsLoginRequired': '登入後查看追蹤的話題，不會額外產生獨立動態流。',
     'goLogin': '去登入',
     'hotScore': '熱度 {score}',
+    'hotCalculatedAt': '熱度更新於 {time}',
     'topicSevenDayStats': '7 天：{posts} 帖 · {likes} 讚 · {comments} 評論',
     'topicFollowMeta': '{followers} 人追蹤 · {posts} 篇公開貼文',
     'topicFollowerCount': '{count} 人追蹤',
@@ -2035,6 +2037,7 @@ class AppLocalizations {
         'Sign in to see followed topics. This does not create a separate feed.',
     'goLogin': 'Sign in',
     'hotScore': 'Heat {score}',
+    'hotCalculatedAt': 'Heat updated {time}',
     'topicSevenDayStats':
         '7 days: {posts} posts · {likes} likes · {comments} comments',
     'topicFollowMeta': '{followers} followers · {posts} public posts',
@@ -3367,6 +3370,8 @@ class AppLocalizations {
   String get goLogin => _text('goLogin');
   String hotScore(num score) =>
       _text('hotScore').replaceFirst('{score}', '$score');
+  String hotCalculatedAt(String time) =>
+      _text('hotCalculatedAt').replaceFirst('{time}', time);
   String topicSevenDayStats({
     required int posts,
     required int likes,

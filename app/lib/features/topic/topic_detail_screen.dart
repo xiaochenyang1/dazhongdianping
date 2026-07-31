@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/post_detail_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_error_localizer.dart';
@@ -203,6 +204,15 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (topic.calculatedAt.isNotEmpty)
+                  Text(
+                    strings.hotCalculatedAt(
+                      formatDisplayDateTime(
+                        topic.calculatedAt,
+                        locale: strings.tag,
+                      ),
+                    ),
+                  ),
                 Text(
                   strings.topicSevenDayStats(
                     posts: topic.postCount7d,

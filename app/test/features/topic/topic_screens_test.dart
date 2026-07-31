@@ -204,6 +204,26 @@ void main() {
     expect(find.text('For you'), findsOneWidget);
     expect(find.text('Trending'), findsOneWidget);
     expect(find.text('Following'), findsOneWidget);
+    expect(find.text('Heat updated 17/07/2026 19:00'), findsOneWidget);
+  });
+
+  testWidgets('topic detail localizes heat calculation time in English', (
+    tester,
+  ) async {
+    final api = TopicScreenApi();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: TopicDetailScreen(
+          repository: TopicRepository(api),
+          initial: TopicSummary.fromJson(api.topic()),
+          canInteract: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Heat updated 17/07/2026 19:00'), findsOneWidget);
   });
 
   testWidgets('topic plaza localizes load errors in English', (tester) async {

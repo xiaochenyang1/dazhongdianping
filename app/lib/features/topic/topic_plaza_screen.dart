@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/topic/topic_detail_screen.dart';
 import 'package:dazhongdianping_app/features/topic/topic_error_localizer.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
@@ -347,6 +348,18 @@ class _TopicCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+              if (topic.calculatedAt.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  strings.hotCalculatedAt(
+                    formatDisplayDateTime(
+                      topic.calculatedAt,
+                      locale: strings.tag,
+                    ),
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               const SizedBox(height: 5),
               Text(
                 strings.topicSevenDayStats(
