@@ -119,6 +119,7 @@ $remoteReleaseRoot = "$RemoteRoot/releases"
 $remoteReleaseDir = "$remoteReleaseRoot/$version"
 $remoteBundlePath = "$RemoteRoot/$bundleName"
 $remoteCurrentPath = "$RemoteRoot/current"
+$remotePreviousPath = "$RemoteRoot/previous"
 $remoteAddress = "$RemoteUser@$RemoteHost"
 $systemdServices = @($BackendServiceName, $WebServiceName, $AdminServiceName, $MerchantServiceName) |
     Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
@@ -140,10 +141,23 @@ Invoke-Native -FilePath $scpPath -Arguments @(
 $remoteDeployScript = @"
 set -euo pipefail
 printf '%s  %s\n' '$bundleSha256' '$remoteBundlePath' | sha256sum --check --status
+active_release=`$(readlink -f '$remoteCurrentPath' || true)
+if [ -n "`$active_release" ]; then
+  case "`$active_release" in
+    '$remoteReleaseRoot'/*) ;;
+    *)
+      echo "Current release points outside the managed releases directory" >&2
+      exit 1
+      ;;
+  esac
+fi
 mkdir -p '$remoteReleaseRoot'
 rm -rf '$remoteReleaseDir'
 mkdir -p '$remoteReleaseDir'
 unzip -oq '$remoteBundlePath' -d '$remoteReleaseDir'
+if [ -n "`$active_release" ] && [ "`$active_release" != '$remoteReleaseDir' ]; then
+  ln -sfn "`$active_release" '$remotePreviousPath'
+fi
 ln -sfn '$remoteReleaseDir' '$remoteCurrentPath'
 $restartCommand
 "@

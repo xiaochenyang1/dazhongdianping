@@ -72,10 +72,11 @@ function Assert-SafeServiceNames {
 
 if ($DryRun) {
     Write-Output "Plan:"
-    Write-Output "1. Resolve the requested or previous stable release on the remote host."
-    Write-Output "2. Point the remote current symlink back to the previous stable release."
-    Write-Output "3. Restart the backend, web, admin-web, and merchant-web services."
-    Write-Output "4. Run smoke checks after rollback."
+    Write-Output "1. Resolve the requested or tracked previous stable release on the remote host, falling back to the newest non-current release."
+    Write-Output "2. Preserve the currently active release as the next previous target."
+    Write-Output "3. Point the remote current symlink back to the selected release."
+    Write-Output "4. Restart the backend, web, admin-web, and merchant-web services."
+    Write-Output "5. Run smoke checks after rollback."
     exit 0
 }
 
@@ -114,8 +115,29 @@ else {
 
 $targetClause = if ([string]::IsNullOrWhiteSpace($TargetVersion)) {
     @"
-versions=`$(find '$RemoteRoot/releases' -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
-target=`$(printf '%s\n' "`$versions" | tail -n 2 | head -n 1)
+current_release=`$(readlink -f '$RemoteRoot/current' || true)
+previous_release=`$(readlink -f '$RemoteRoot/previous' || true)
+if [ -n "`$previous_release" ]; then
+  case "`$previous_release" in
+    '$RemoteRoot/releases'/*) ;;
+    *)
+      echo "Previous release points outside the managed releases directory" >&2
+      exit 1
+      ;;
+  esac
+fi
+target=''
+if [ -n "`$previous_release" ] && [ "`$previous_release" != "`$current_release" ]; then
+  target=`$(basename "`$previous_release")
+else
+  while IFS= read -r candidate; do
+    if [[ "`$candidate" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] &&
+       [ '$RemoteRoot/releases/'"`$candidate" != "`$current_release" ]; then
+      target="`$candidate"
+      break
+    fi
+  done < <(find '$RemoteRoot/releases' -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' | sort -nr | sed 's/^[^ ]* //')
+fi
 if [ -z "`$target" ]; then
   echo "No previous stable release found" >&2
   exit 1
@@ -136,6 +158,20 @@ fi
 if [ ! -d '$RemoteRoot/releases/'"`$target" ]; then
   echo "Target release not found: `"${target}" >&2
   exit 1
+fi
+current_release=`$(readlink -f '$RemoteRoot/current' || true)
+if [ -n "`$current_release" ]; then
+  case "`$current_release" in
+    '$RemoteRoot/releases'/*) ;;
+    *)
+      echo "Current release points outside the managed releases directory" >&2
+      exit 1
+      ;;
+  esac
+fi
+target_release='$RemoteRoot/releases/'"`$target"
+if [ -n "`$current_release" ] && [ "`$current_release" != "`$target_release" ]; then
+  ln -sfn "`$current_release" '$RemoteRoot/previous'
 fi
 ln -sfn '$RemoteRoot/releases/'"`$target" '$RemoteRoot/current'
 $restartCommand
