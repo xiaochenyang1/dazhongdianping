@@ -2,6 +2,7 @@ import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/user/privacy_export_saver.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
 
 class PrivacyOverviewScreen extends StatefulWidget {
@@ -701,7 +702,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                       '${_policyName(log.policyType)} · ${log.version}',
                     ),
                     subtitle: Text(
-                      '${log.acceptedAt} · ${log.locale}\n${log.userAgent}',
+                      '${formatDisplayDateTime(log.acceptedAt, locale: AppLocalizations.of(context).tag)} · ${log.locale}\n${log.userAgent}',
                     ),
                     isThreeLine: true,
                   ),
@@ -727,7 +728,7 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                       '${_platformName(device.platform)} · ${device.appVersion}',
                     ),
                     subtitle: Text(
-                      '${device.deviceUid}\n${_deviceStatusText(AppLocalizations.of(context), device.status)} · ${AppLocalizations.of(context).lastActiveAt(device.lastActiveAt ?? '—')}',
+                      '${device.deviceUid}\n${_deviceStatusText(AppLocalizations.of(context), device.status)} · ${AppLocalizations.of(context).lastActiveAt(device.lastActiveAt == null ? '—' : formatDisplayDateTime(device.lastActiveAt!, locale: AppLocalizations.of(context).tag))}',
                     ),
                     isThreeLine: true,
                     trailing: device.active
@@ -868,9 +869,17 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
               ),
               const SizedBox(height: 8),
               Text(task.modules.map(strings.exportModuleLabel).join(' / ')),
-              Text(strings.createdAtLabel(task.createdAt)),
+              Text(
+                strings.createdAtLabel(
+                  formatDisplayDateTime(task.createdAt, locale: strings.tag),
+                ),
+              ),
               if (task.expireAt != null)
-                Text(strings.expiresAtLabel('${task.expireAt}')),
+                Text(
+                  strings.expiresAtLabel(
+                    formatDisplayDateTime(task.expireAt!, locale: strings.tag),
+                  ),
+                ),
               if (task.failReason.isNotEmpty)
                 Text(
                   task.failReason,
@@ -917,7 +926,16 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
             ),
             const SizedBox(height: 8),
             Text(strings.reasonLabel(task.reason)),
-            Text(strings.coolingOffDeadline(task.coolingOffExpireAt ?? '—')),
+            Text(
+              strings.coolingOffDeadline(
+                task.coolingOffExpireAt == null
+                    ? '—'
+                    : formatDisplayDateTime(
+                        task.coolingOffExpireAt!,
+                        locale: strings.tag,
+                      ),
+              ),
+            ),
             if (task.canCancel) ...[
               const SizedBox(height: 12),
               OutlinedButton(

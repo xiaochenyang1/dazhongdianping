@@ -13,6 +13,7 @@ import 'package:dazhongdianping_app/features/trade/coupons_screen.dart';
 import 'package:dazhongdianping_app/features/trade/orders_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
@@ -197,9 +198,9 @@ class UserCollectionScreen extends StatelessWidget {
       UserCollection.orders =>
         '${item['dealTitle'] ?? ''} · ${item['shopName'] ?? ''} · $payStatus',
       UserCollection.coupons =>
-        '${item['dealTitle'] ?? ''} · ${item['shopName'] ?? ''} · $couponStatus · ${item['expireAt'] ?? ''}',
+        '${item['dealTitle'] ?? ''} · ${item['shopName'] ?? ''} · $couponStatus · ${formatDisplayDate('${item['expireAt'] ?? ''}', locale: strings.tag)}',
       UserCollection.reservations =>
-        '${(item['shop'] as Map<String, dynamic>?)?['name'] ?? ''} · ${item['reserveTime'] ?? ''} · $reservationStatus',
+        '${(item['shop'] as Map<String, dynamic>?)?['name'] ?? ''} · ${formatDisplayDateTime('${item['reserveTime'] ?? ''}', locale: strings.tag)} · $reservationStatus',
       UserCollection.favorites => _favoriteSubtitle(context, item),
     };
   }
@@ -219,14 +220,24 @@ class UserCollectionScreen extends StatelessWidget {
         if (location.isNotEmpty) location,
         if (score != null) '★ $score',
         if ('$createdAt'.isNotEmpty)
-          AppLocalizations.of(context).favoritedAt('$createdAt'),
+          AppLocalizations.of(context).favoritedAt(
+            formatDisplayDateTime(
+              '$createdAt',
+              locale: AppLocalizations.of(context).tag,
+            ),
+          ),
       ].join(' · ');
     }
     if (targetType == 2) {
       return [
         AppLocalizations.of(context).postLabel,
         if ('$createdAt'.isNotEmpty)
-          AppLocalizations.of(context).favoritedAt('$createdAt'),
+          AppLocalizations.of(context).favoritedAt(
+            formatDisplayDateTime(
+              '$createdAt',
+              locale: AppLocalizations.of(context).tag,
+            ),
+          ),
       ].join(' · ');
     }
     return jsonEncode(item);

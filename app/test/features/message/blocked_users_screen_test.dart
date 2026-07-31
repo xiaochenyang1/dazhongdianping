@@ -111,6 +111,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Blocked users'), findsOneWidget);
+    expect(find.textContaining('Blocked at: 26/07/2026 12:00'), findsOneWidget);
+    expect(find.textContaining('2026-07-26'), findsNothing);
   });
 
   testWidgets('blocked users load later pages and unblock a user', (

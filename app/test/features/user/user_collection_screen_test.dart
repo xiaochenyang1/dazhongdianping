@@ -505,6 +505,9 @@ void main() {
     expect(find.text('伦敦周末市场指南'), findsOneWidget);
     expect(find.textContaining('门店'), findsOneWidget);
     expect(find.textContaining('帖子'), findsOneWidget);
+    expect(find.textContaining('2026/7/25 18:00'), findsOneWidget);
+    expect(find.textContaining('2026/7/25 18:10'), findsOneWidget);
+    expect(find.textContaining('2026-07-25'), findsNothing);
   });
 
   testWidgets('user collection localizes raw backend statuses in English', (

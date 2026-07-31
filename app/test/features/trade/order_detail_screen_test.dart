@@ -427,7 +427,13 @@ void main() {
 
     expect(find.text('Coupon details'), findsOneWidget);
     expect(find.textContaining('Available'), findsOneWidget);
+    expect(find.textContaining('Valid until 31/12/2026'), findsOneWidget);
+    expect(
+      find.textContaining('Deal validity 01/01/2026 ~ 31/12/2026'),
+      findsOneWidget,
+    );
     expect(find.textContaining('待使用'), findsNothing);
+    expect(find.textContaining('2026-12-31'), findsNothing);
   });
 
   testWidgets('coupon detail guards duplicate clipboard writes', (

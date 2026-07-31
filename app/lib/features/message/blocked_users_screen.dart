@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/message/message_error_localizer.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:flutter/material.dart';
@@ -233,7 +234,12 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                 subtitle: user.blockedAt.isEmpty
                     ? null
                     : Text(
-                        AppLocalizations.of(context).blockedAt(user.blockedAt),
+                        AppLocalizations.of(context).blockedAt(
+                          formatDisplayDateTime(
+                            user.blockedAt,
+                            locale: AppLocalizations.of(context).tag,
+                          ),
+                        ),
                       ),
                 trailing: TextButton(
                   key: Key('blocked-user-unblock-${user.id}'),

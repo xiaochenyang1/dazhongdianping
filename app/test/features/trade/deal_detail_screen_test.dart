@@ -59,6 +59,27 @@ Widget localizedApp({
 }
 
 void main() {
+  testWidgets('deal detail localizes validity dates in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: DealDetailScreen(
+          repository: TradeRepository(DealDetailApi()),
+          dealId: 5,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Valid 01/07/2026 ~ 31/12/2026'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('2026-12-31'), findsNothing);
+  });
+
   testWidgets('deal detail localizes load errors in English', (tester) async {
     final api = DealDetailApi()..dealError = const ApiException('团购不存在');
     await tester.pumpWidget(

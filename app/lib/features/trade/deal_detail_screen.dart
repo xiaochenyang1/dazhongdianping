@@ -81,8 +81,10 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
 
           final detail = snapshot.data!;
           final validity = [
-            if (detail.validStart.isNotEmpty) detail.validStart,
-            if (detail.validEnd.isNotEmpty) detail.validEnd,
+            if (detail.validStart.isNotEmpty)
+              formatDisplayDate(detail.validStart, locale: strings.tag),
+            if (detail.validEnd.isNotEmpty)
+              formatDisplayDate(detail.validEnd, locale: strings.tag),
           ].join(' ~ ');
           return ListView(
             padding: const EdgeInsets.all(16),

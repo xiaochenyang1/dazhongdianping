@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:flutter/material.dart';
 
@@ -233,7 +234,11 @@ class _GrowthRecordsScreenState extends State<GrowthRecordsScreen> {
                           [
                             if (typeText.isNotEmpty) typeText,
                             if (remarkText.isNotEmpty) remarkText,
-                            if (item.createdAt.isNotEmpty) item.createdAt,
+                            if (item.createdAt.isNotEmpty)
+                              formatDisplayDateTime(
+                                item.createdAt,
+                                locale: strings.tag,
+                              ),
                             strings.balanceAfterLabel(item.balanceAfter),
                           ].where((part) => part.isNotEmpty).join(' · '),
                         ),

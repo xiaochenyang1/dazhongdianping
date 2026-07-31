@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/trade/order_detail_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_error_localizer.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
@@ -249,7 +250,12 @@ class _CouponsScreenState extends State<CouponsScreen> {
                     );
                     final expiryText = coupon.expireAt.isEmpty
                         ? strings.noExpiry
-                        : strings.validUntilDate(coupon.expireAt);
+                        : strings.validUntilDate(
+                            formatDisplayDate(
+                              coupon.expireAt,
+                              locale: strings.tag,
+                            ),
+                          );
                     return Card(
                       key: Key('coupon-card-${coupon.code}'),
                       color: isHighlight

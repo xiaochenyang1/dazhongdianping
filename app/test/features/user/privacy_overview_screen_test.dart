@@ -395,11 +395,13 @@ void main() {
     await scrollTo(tester, find.text('协议留痕'));
     expect(find.text('协议留痕'), findsOneWidget);
     expect(find.textContaining('Flutter/1.0'), findsOneWidget);
+    expect(find.textContaining('2026/7/16 10:00'), findsWidgets);
     await scrollTo(tester, find.text('设备管理'));
     expect(find.text('设备管理'), findsOneWidget);
     expect(find.textContaining('android-001'), findsOneWidget);
     await scrollTo(tester, find.text('撤销删除申请'));
     expect(find.text('撤销删除申请'), findsOneWidget);
+    expect(find.textContaining('2026-07-'), findsNothing);
   });
 
   testWidgets(

@@ -116,7 +116,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Coupons'), findsOneWidget);
     expect(find.text('Available'), findsOneWidget);
-    expect(find.textContaining('Valid until 2026-12-31'), findsOneWidget);
+    expect(find.textContaining('Valid until 31/12/2026'), findsOneWidget);
+    expect(find.textContaining('2026-12-31'), findsNothing);
   });
 
   testWidgets('coupons screen retries an initial load failure', (tester) async {

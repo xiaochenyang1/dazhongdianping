@@ -169,6 +169,8 @@ void main() {
     expect(find.text('发布点评'), findsNWidgets(2));
     expect(find.text('+10'), findsOneWidget);
     expect(find.text('+5'), findsOneWidget);
+    expect(find.textContaining('2026/7/25 18:00'), findsNWidgets(2));
+    expect(find.textContaining('2026-07-25'), findsNothing);
   });
 
   testWidgets('growth records load later pages without duplicate ids', (

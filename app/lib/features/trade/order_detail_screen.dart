@@ -365,7 +365,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               child: ListTile(
                 title: Text(coupon.code),
                 subtitle: Text(
-                  '${strings.couponStatusLabel(status: coupon.status, fallback: coupon.statusText)} · ${coupon.expireAt}',
+                  '${strings.couponStatusLabel(status: coupon.status, fallback: coupon.statusText)} · ${formatDisplayDate(coupon.expireAt, locale: strings.tag)}',
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
@@ -563,7 +563,10 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                         strings.validUntilDate(
                           coupon.expireAt.isEmpty
                               ? strings.noExpiry
-                              : coupon.expireAt,
+                              : formatDisplayDate(
+                                  coupon.expireAt,
+                                  locale: strings.tag,
+                                ),
                         ),
                       ),
                       if (detail != null &&
@@ -573,14 +576,27 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                           strings.dealValidityRange(
                             start: detail.validStart.isEmpty
                                 ? '—'
-                                : detail.validStart,
+                                : formatDisplayDate(
+                                    detail.validStart,
+                                    locale: strings.tag,
+                                  ),
                             end: detail.validEnd.isEmpty
                                 ? '—'
-                                : detail.validEnd,
+                                : formatDisplayDate(
+                                    detail.validEnd,
+                                    locale: strings.tag,
+                                  ),
                           ),
                         ),
                       if (detail != null && detail.verifyAt.isNotEmpty)
-                        Text(strings.verifiedAt(detail.verifyAt)),
+                        Text(
+                          strings.verifiedAt(
+                            formatDisplayDateTime(
+                              detail.verifyAt,
+                              locale: strings.tag,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
