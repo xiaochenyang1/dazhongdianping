@@ -1,14 +1,20 @@
-import { createApp, defineComponent, nextTick } from 'vue'
+import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const rankMocks = vi.hoisted(() => ({
   fetchRanks: vi.fn(),
   fetchRankDetail: vi.fn(),
 }))
-const contextMocks = vi.hoisted(() => ({ state: { region: 'EU' as const, cityId: 101 } }))
+const contextMocks = vi.hoisted(() => ({
+  state: undefined as unknown as { region: 'CN' | 'EU'; cityId: number },
+}))
 
 vi.mock('@/services/rank', () => rankMocks)
-vi.mock('@/composables/useAppContext', () => ({ useAppContext: () => contextMocks }))
+vi.mock('@/composables/useAppContext', async () => {
+  const { reactive } = await vi.importActual<typeof import('vue')>('vue')
+  contextMocks.state = reactive({ region: 'EU', cityId: 101 })
+  return { useAppContext: () => contextMocks }
+})
 vi.mock('vue-router', () => ({
   RouterLink: defineComponent({ props: ['to'], template: '<a><slot /></a>' }),
 }))
@@ -67,6 +73,54 @@ describe('Rank views', () => {
     expect(host.textContent).toContain('Average €36 EUR')
     expect(host.textContent).toContain('Verified merchant')
     expect(host.textContent).not.toContain('认证商户')
+    app.unmount()
+  })
+
+  it('reloads a reused ranking route by region and ignores stale responses', async () => {
+    const pending: Array<(value: any) => void> = []
+    rankMocks.fetchRankDetail.mockImplementation(
+      () => new Promise((resolve) => pending.push(resolve)),
+    )
+    const rankId = ref(1)
+    const Root = defineComponent({
+      setup: () => () => h(RankDetailView, { rankId: rankId.value }),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.component('RouterLink', RouterLinkStub)
+    app.mount(host)
+    await nextTick()
+
+    rankId.value = 2
+    await nextTick()
+    contextMocks.state.region = 'CN'
+    await nextTick()
+    expect(rankMocks.fetchRankDetail.mock.calls).toEqual([[1], [2], [2]])
+
+    pending[2]({
+      id: 2, name: 'CN ranking', type: 1, typeText: 'must try', region: 'CN', cityId: 1,
+      cityName: 'Shanghai', categoryId: 2, categoryName: 'Dining', period: '2026 Q3',
+      updatedAt: '2026-07-15 12:00', items: [],
+    })
+    await Promise.resolve()
+    await nextTick()
+    pending[1]({
+      id: 2, name: 'stale route ranking', type: 1, typeText: 'must try', region: 'EU', cityId: 101,
+      cityName: 'Paris', categoryId: 2, categoryName: 'Dining', period: '2026 Q3',
+      updatedAt: '2026-07-15 12:00', items: [],
+    })
+    pending[0]({
+      id: 1, name: 'stale region ranking', type: 1, typeText: 'must try', region: 'EU', cityId: 101,
+      cityName: 'Paris', categoryId: 2, categoryName: 'Dining', period: '2026 Q3',
+      updatedAt: '2026-07-15 12:00', items: [],
+    })
+    await Promise.resolve()
+    await nextTick()
+
+    expect(host.textContent).toContain('CN ranking')
+    expect(host.textContent).not.toContain('stale route ranking')
+    expect(host.textContent).not.toContain('stale region ranking')
+    expect(host.textContent).toContain('返回榜单')
     app.unmount()
   })
 })

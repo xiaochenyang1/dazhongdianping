@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { formatMoney } from '@/lib/currency'
 import { useAppContext } from '@/composables/useAppContext'
@@ -16,16 +16,26 @@ const errorMessage = ref('')
 const { state } = useAppContext()
 const copy = computed(() => campaignStringsForRegion(state.region))
 const certificationCopy = computed(() => discoveryStringsForRegion(state.region).shopCard)
+let requestSequence = 0
 
-onMounted(async () => {
+async function loadDetail() {
+  const request = ++requestSequence
+  loading.value = true
+  errorMessage.value = ''
+  rank.value = null
   try {
-    rank.value = await fetchRankDetail(props.rankId)
+    const result = await fetchRankDetail(props.rankId)
+    if (request === requestSequence) rank.value = result
   } catch (error) {
-    errorMessage.value = localizeWebCampaignError(copy.value, error, copy.value.rank.detailLoadFailed)
+    if (request === requestSequence) {
+      errorMessage.value = localizeWebCampaignError(copy.value, error, copy.value.rank.detailLoadFailed)
+    }
   } finally {
-    loading.value = false
+    if (request === requestSequence) loading.value = false
   }
-})
+}
+
+watch([() => props.rankId, () => state.region], () => void loadDetail(), { immediate: true })
 </script>
 
 <template>

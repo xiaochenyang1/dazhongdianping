@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick } from 'vue'
 import { createMemoryHistory, createRouter, RouterLink } from 'vue-router'
 import ActivityDetailView from './ActivityDetailView.vue'
@@ -10,13 +10,17 @@ const serviceMocks = vi.hoisted(() => ({
 }))
 
 const contextMocks = vi.hoisted(() => ({
-  state: { region: 'EU' as const, cityId: 101 },
+  state: undefined as unknown as { region: 'CN' | 'EU'; cityId: number },
 }))
 
 vi.mock('@/services/activity', () => serviceMocks)
-vi.mock('@/composables/useAppContext', () => ({
-  useAppContext: () => contextMocks,
-}))
+vi.mock('@/composables/useAppContext', async () => {
+  const { reactive } = await vi.importActual<typeof import('vue')>('vue')
+  contextMocks.state = reactive({ region: 'EU', cityId: 101 })
+  return { useAppContext: () => contextMocks }
+})
+
+const mountedApps: Array<{ unmount: () => void }> = []
 
 async function mountView(component: any, props: Record<string, unknown> = {}) {
   const host = document.createElement('div')
@@ -43,6 +47,7 @@ async function mountView(component: any, props: Record<string, unknown> = {}) {
   app.use(router)
   app.component('RouterLink', RouterLink)
   app.mount(host)
+  mountedApps.push(app)
   await nextTick()
   await Promise.resolve()
   await nextTick()
@@ -56,6 +61,10 @@ describe('Activity views', () => {
     serviceMocks.fetchActivityDetail.mockReset()
     contextMocks.state.region = 'EU'
     contextMocks.state.cityId = 101
+  })
+
+  afterEach(() => {
+    mountedApps.splice(0).forEach((app) => app.unmount())
   })
 
   it('renders the public activity list from the current city', async () => {
@@ -149,5 +158,38 @@ describe('Activity views', () => {
     expect(host.textContent).toContain('Open external link')
     const external = host.querySelector('a[href="https://promo.example.com/eu/school"]')
     expect(external).not.toBeNull()
+  })
+
+  it('reloads activity detail by region and ignores the stale response', async () => {
+    const pending: Array<(value: any) => void> = []
+    serviceMocks.fetchActivityDetail.mockImplementation(
+      () => new Promise((resolve) => pending.push(resolve)),
+    )
+
+    const host = await mountView(ActivityDetailView, { activityId: 5001 })
+    contextMocks.state.region = 'CN'
+    await nextTick()
+    expect(serviceMocks.fetchActivityDetail).toHaveBeenCalledTimes(2)
+
+    pending[1]({
+      id: 5001, name: 'CN activity', code: 'cn_activity', region: 'CN', cityId: 1,
+      cityName: 'Shanghai', channel: 4, channelText: 'activity', type: 2,
+      typeText: 'seasonal', cover: '/cn.jpg', landingUrl: '', rule: {},
+      startAt: null, endAt: null, items: [],
+    })
+    await Promise.resolve()
+    await nextTick()
+    pending[0]({
+      id: 5001, name: 'stale EU activity', code: 'eu_activity', region: 'EU', cityId: 101,
+      cityName: 'Paris', channel: 4, channelText: 'activity', type: 2,
+      typeText: 'seasonal', cover: '/eu.jpg', landingUrl: '', rule: {},
+      startAt: null, endAt: null, items: [],
+    })
+    await Promise.resolve()
+    await nextTick()
+
+    expect(host.textContent).toContain('CN activity')
+    expect(host.textContent).not.toContain('stale EU activity')
+    expect(host.textContent).toContain('返回活动列表')
   })
 })

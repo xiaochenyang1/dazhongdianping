@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
 import { campaignStringsForRegion, localizeWebCampaignError } from '@/core/web_campaign_localizations'
@@ -13,17 +13,22 @@ const loading = ref(true)
 const errorMessage = ref('')
 const { state } = useAppContext()
 const copy = computed(() => campaignStringsForRegion(state.region))
+let requestSequence = 0
 
 async function loadDetail() {
+  const request = ++requestSequence
   loading.value = true
   errorMessage.value = ''
   activity.value = null
   try {
-    activity.value = await fetchActivityDetail(props.activityId)
+    const result = await fetchActivityDetail(props.activityId)
+    if (request === requestSequence) activity.value = result
   } catch (error) {
-    errorMessage.value = localizeWebCampaignError(copy.value, error, copy.value.activity.detailLoadFailed)
+    if (request === requestSequence) {
+      errorMessage.value = localizeWebCampaignError(copy.value, error, copy.value.activity.detailLoadFailed)
+    }
   } finally {
-    loading.value = false
+    if (request === requestSequence) loading.value = false
   }
 }
 
@@ -38,15 +43,10 @@ function isExternal(item: ActivityItem) {
   return item.targetType === 6 || item.linkUrl.startsWith('http://') || item.linkUrl.startsWith('https://')
 }
 
-onMounted(() => {
-  void loadDetail()
-})
-
 watch(
-  () => props.activityId,
-  () => {
-    void loadDetail()
-  },
+  [() => props.activityId, () => state.region],
+  () => void loadDetail(),
+  { immediate: true },
 )
 </script>
 
