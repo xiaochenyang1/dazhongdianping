@@ -16,6 +16,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $remotePortWasExplicitlySupplied = $PSBoundParameters.ContainsKey("RemotePort")
+$rollbackScriptPath = Join-Path $PSScriptRoot "rollback-release.ps1"
 
 if (-not $ReleaseBundle) { $ReleaseBundle = if ($env:APP_RELEASE_BUNDLE) { $env:APP_RELEASE_BUNDLE } else { "" } }
 if (-not $Environment) { $Environment = if ($env:DEPLOY_ENVIRONMENT) { $env:DEPLOY_ENVIRONMENT } else { "" } }
@@ -79,6 +80,7 @@ if ($DryRun) {
     Write-Output "4. Switch the remote current symlink to the new release."
     Write-Output "5. Restart the backend, web, admin-web, and merchant-web services."
     Write-Output "6. Run smoke checks against the deployed environment."
+    Write-Output "7. If smoke checks fail, automatically restore the tracked previous release and keep the deployment failed."
     exit 0
 }
 
@@ -168,13 +170,37 @@ Invoke-Native -FilePath $sshPath -Arguments @(
     "bash -lc ""$remoteDeployScript"""
 )
 
-if (-not [string]::IsNullOrWhiteSpace($SmokeUrls)) {
-    foreach ($url in ($SmokeUrls -split "[,\r\n]+" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) {
-        $response = Invoke-WebRequest -Uri $url.Trim() -UseBasicParsing -TimeoutSec 15
-        if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 500) {
-            throw "Smoke URL returned unexpected status: $($url.Trim()) => $($response.StatusCode)"
+try {
+    if (-not [string]::IsNullOrWhiteSpace($SmokeUrls)) {
+        foreach ($url in ($SmokeUrls -split "[,\r\n]+" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) {
+            $response = Invoke-WebRequest -Uri $url.Trim() -UseBasicParsing -TimeoutSec 15
+            if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 500) {
+                throw "Smoke URL returned unexpected status: $($url.Trim()) => $($response.StatusCode)"
+            }
         }
     }
+}
+catch {
+    $smokeFailure = $_.Exception.Message
+    try {
+        & $rollbackScriptPath `
+            -Environment $Environment `
+            -Region $Region `
+            -RemoteHost $RemoteHost `
+            -RemotePort $RemotePort `
+            -RemoteUser $RemoteUser `
+            -RemoteRoot $RemoteRoot `
+            -BackendServiceName $BackendServiceName `
+            -WebServiceName $WebServiceName `
+            -AdminServiceName $AdminServiceName `
+            -MerchantServiceName $MerchantServiceName `
+            -SmokeUrls " " |
+            ForEach-Object { Write-Host $_ }
+    }
+    catch {
+        throw "Deployment smoke checks failed: $smokeFailure. Automatic rollback also failed: $($_.Exception.Message)"
+    }
+    throw "Deployment smoke checks failed and the previous release was automatically restored: $smokeFailure"
 }
 
 Write-Output "deployed $version to $Environment/$Region"
