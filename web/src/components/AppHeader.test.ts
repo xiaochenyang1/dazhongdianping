@@ -92,6 +92,24 @@ describe('AppHeader', () => {
     useAppContext().setRegion('CN')
   })
 
+  it('switches the global shell to English for the EU region', async () => {
+    useAppContext().setRegion('EU')
+    const host = document.createElement('div')
+    const app = createApp(AppHeader)
+    app.mount(host)
+    await flushView()
+
+    expect(host.textContent).toContain('Local Reviews (Demo)')
+    expect(host.textContent).toContain('Home')
+    expect(host.textContent).toContain('Places')
+    expect(host.textContent).toContain('Europe site')
+    expect(host.textContent).toContain('Notifications')
+    expect(host.querySelector('input[type="search"]')?.getAttribute('placeholder'))
+      .toBe('Search hotpot, coffee or an area')
+    expect(document.documentElement.lang).toBe('en')
+    app.unmount()
+  })
+
   it('reloads current-region hot words and search history after switching region with an empty keyword', async () => {
     browseMocks.fetchHotSearchWords
       .mockResolvedValueOnce([{ term: '火锅', score: 9 }])

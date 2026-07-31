@@ -14,6 +14,7 @@ import {
 import type { SearchHistoryItem, SearchHotWord, SearchSuggestion } from '@/types/browse'
 import { useNotifications } from '@/composables/useNotifications'
 import type { UserNotification } from '@/types/notification'
+import { applyWebDocumentMeta, webStringsForRegion } from '@/core/web_localizations'
 
 interface SearchPanelItem {
   key: string
@@ -47,34 +48,22 @@ let suggestionRequestId = 0
 let hotWordsRequestId = 0
 let searchHistoryRequestId = 0
 
-const navItems = [
-  { to: '/', label: '首页' },
-  { to: '/shops', label: '商户列表' },
-  { to: '/ranks', label: '城市榜单', matchPrefix: '/ranks' },
-  { to: '/activities', label: '运营活动', matchPrefix: '/activities' },
-  { to: '/community', label: '华人社区', matchPrefix: '/community' },
-  { to: '/user/reviews', label: '我的点评', matchPrefix: '/user/reviews' },
-  { to: '/user/favorites', label: '我的收藏', matchPrefix: '/user/favorites' },
-  { to: '/user/notifications', label: '消息中心', matchPrefix: '/user/notifications' },
-  { to: '/user/browse-history', label: '我的足迹', matchPrefix: '/user/browse-history' },
-  { to: '/user/orders', label: '我的订单', matchPrefix: '/user/orders' },
-  { to: '/user/coupons', label: '我的券', matchPrefix: '/user/coupons' },
-  { to: '/user/reservations', label: '我的预订', matchPrefix: '/user/reservations' },
-  { to: '/user/profile', label: '我的资料', matchPrefix: '/user/profile' },
-  { to: '/user/growth-records', label: '成长值流水', matchPrefix: '/user/growth-records' },
-]
-
-const userInitial = computed(() => (sessionState.currentUser?.nickname?.slice(0, 1) || '我').toUpperCase())
+const strings = computed(() => webStringsForRegion(state.region))
+const navItems = computed(() => strings.value.nav)
+applyWebDocumentMeta(state.region, route.name)
+const userInitial = computed(() => (
+  sessionState.currentUser?.nickname?.slice(0, 1) || strings.value.session.userInitial
+).toUpperCase())
 const searchPanelSections = computed<SearchPanelSection[]>(() => {
   const keyword = searchKeyword.value.trim()
   if (keyword) {
     return [
       {
-        label: '猜你要找',
+        label: strings.value.search.suggested,
         items: suggestions.value.map((item) => ({
           key: `${item.type}-${item.refId}-${item.term}`,
           term: item.term,
-          meta: item.type === 'shop' ? '商户' : '分类',
+          meta: item.type === 'shop' ? strings.value.search.shop : strings.value.search.category,
         })),
       },
     ].filter((section) => section.items.length > 0)
@@ -84,8 +73,8 @@ const searchPanelSections = computed<SearchPanelSection[]>(() => {
 
   if (sessionState.currentUser && searchHistory.value.length > 0) {
     sections.push({
-      label: '最近搜过',
-      actionLabel: '清空',
+      label: strings.value.search.recent,
+      actionLabel: strings.value.search.clear,
       items: searchHistory.value.map((item) => ({
         key: `history-${item.id}`,
         term: item.keyword,
@@ -97,11 +86,11 @@ const searchPanelSections = computed<SearchPanelSection[]>(() => {
 
   if (hotWords.value.length > 0) {
     sections.push({
-      label: '当前热词',
+      label: strings.value.search.hot,
       items: hotWords.value.map((item) => ({
         key: `hot-${item.term}`,
         term: item.term,
-        meta: `${item.score} 热度`,
+        meta: strings.value.search.heat(item.score),
       })),
     })
   }
@@ -186,79 +175,8 @@ function notificationRoute(item: UserNotification) {
 }
 
 function notificationHint(item: UserNotification) {
-  if (item.type === 'message.direct') {
-    return ' · 请在 APP 查看'
-  }
-  if (item.type === 'reservation.reminder') {
-    return ' · 预订提醒'
-  }
-  if (item.type === 'coupon.reminder') {
-    return ' · 券码到期提醒'
-  }
-  if (item.type === 'coupon.expired') {
-    return ' · 券码已过期'
-  }
-  if (item.type === 'order.paid') {
-    return ' · 支付成功'
-  }
-  if (item.type === 'order.refund.result') {
-    return ' · 退款结果'
-  }
-  if (item.type === 'reservation.created') {
-    return ' · 预订创建'
-  }
-  if (item.type === 'reservation.status') {
-    return ' · 预订状态'
-  }
-  if (item.type === 'review.audit.result') {
-    return ' · 点评审核'
-  }
-  if (item.type === 'expert.certification.result') {
-    return ' · 达人认证'
-  }
-  if (item.type === 'post.audit.result') {
-    return ' · 帖子审核'
-  }
-  if (item.type === 'coupon.verified') {
-    return ' · 券码核销'
-  }
-  if (item.type === 'review.hidden') {
-    return ' · 点评处理'
-  }
-  if (item.type === 'topic.update') {
-    return ' · 话题更新'
-  }
-  if (item.type === 'social.mention') {
-    return ' · @提醒'
-  }
-  if (item.type === 'review.like') {
-    return ' · 点评获赞'
-  }
-  if (item.type === 'review.comment') {
-    return ' · 点评评论'
-  }
-  if (item.type === 'review.comment.reply') {
-    return ' · 评论回复'
-  }
-  if (item.type === 'review.reply') {
-    return ' · 商家回复'
-  }
-  if (item.type === 'post.comment') {
-    return ' · 帖子评论'
-  }
-  if (item.type === 'post.comment.reply') {
-    return ' · 帖子评论回复'
-  }
-  if (item.type === 'post.like') {
-    return ' · 帖子获赞'
-  }
-  if (item.type === 'post.repost') {
-    return ' · 帖子转发'
-  }
-  if (item.type === 'social.follow') {
-    return ' · 新增关注'
-  }
-  return ''
+  const hint = strings.value.notifications.hints[item.type]
+  return hint ? ` · ${hint}` : ''
 }
 
 async function handleMarkAllNotificationsRead() {
@@ -418,6 +336,7 @@ watch(
 watch(
   () => state.region,
   () => {
+    applyWebDocumentMeta(state.region, route.name)
     suggestionRequestId += 1
     hotWordsRequestId += 1
     searchHistoryRequestId += 1
@@ -447,10 +366,10 @@ watch(
       <RouterLink class="brand" to="/">
         <span class="brand__mark">DP</span>
         <div class="brand__copy">
-          <p class="brand__title">大众点评(仿)</p>
+          <p class="brand__title">{{ strings.brand.title }}</p>
           <div class="brand__meta">
-            <p class="brand__subtitle">M1 PC Web Scaffold</p>
-            <span class="brand__signal">Live Flow</span>
+            <p class="brand__subtitle">{{ strings.brand.subtitle }}</p>
+            <span class="brand__signal">{{ strings.brand.signal }}</span>
           </div>
         </div>
       </RouterLink>
@@ -468,19 +387,19 @@ watch(
       </nav>
 
       <form class="header-search" role="search" @submit.prevent="submitSearch">
-        <label class="header-search__label" for="global-shop-search">搜索商户</label>
+        <label class="header-search__label" for="global-shop-search">{{ strings.search.label }}</label>
         <input
           id="global-shop-search"
           v-model="searchKeyword"
           type="search"
-          aria-label="搜索商户"
-          placeholder="搜火锅、咖啡、商圈"
+          :aria-label="strings.search.label"
+          :placeholder="strings.search.placeholder"
           autocomplete="off"
           @focus="handleSearchFocus"
           @blur="handleSearchBlur"
         />
-        <button type="submit">搜索</button>
-        <div v-if="showSearchPanel" class="search-popover" role="listbox" aria-label="搜索建议">
+        <button type="submit">{{ strings.search.submit }}</button>
+        <div v-if="showSearchPanel" class="search-popover" role="listbox" :aria-label="strings.search.suggestionsAria">
           <template v-for="section in searchPanelSections" :key="section.label">
             <div class="search-popover__heading">
               <p class="search-popover__label">{{ section.label }}</p>
@@ -492,7 +411,7 @@ watch(
                 @mousedown.prevent
                 @click="handleClearSearchHistory"
               >
-                {{ clearingSearchHistory ? '清空中...' : section.actionLabel }}
+                {{ clearingSearchHistory ? strings.search.clearing : section.actionLabel }}
               </button>
             </div>
             <div
@@ -512,7 +431,7 @@ watch(
                 v-if="item.historyId"
                 type="button"
                 class="search-popover__remove"
-                aria-label="删除这条搜索历史"
+                :aria-label="strings.search.removeHistoryAria"
                 @mousedown.prevent
                 @click="handleRemoveSearchHistoryItem(item.historyId)"
               >
@@ -520,14 +439,14 @@ watch(
               </button>
             </div>
           </template>
-          <p v-if="searchHistoryLoading" class="search-popover__loading">搜索历史加载中...</p>
-          <p v-if="searchLoading" class="search-popover__loading">搜索中...</p>
+          <p v-if="searchHistoryLoading" class="search-popover__loading">{{ strings.search.historyLoading }}</p>
+          <p v-if="searchLoading" class="search-popover__loading">{{ strings.search.loading }}</p>
         </div>
       </form>
 
       <div class="header-actions">
         <div class="region-switch">
-          <span class="region-switch__label">区域视角</span>
+          <span class="region-switch__label">{{ strings.region.label }}</span>
           <div class="region-switch__actions">
             <button
               type="button"
@@ -546,30 +465,30 @@ watch(
               EU
             </button>
           </div>
-          <strong class="region-switch__value">{{ state.region === 'CN' ? '国内站视角' : '欧洲站视角' }}</strong>
+          <strong class="region-switch__value">{{ state.region === 'CN' ? strings.region.cnPerspective : strings.region.euPerspective }}</strong>
         </div>
 
         <button v-if="!sessionState.currentUser" type="button" class="primary-button header-login" @click="handleLogin">
-          登录 / 注册
+          {{ strings.session.login }}
         </button>
 
         <template v-else>
         <div class="notification-menu">
           <button type="button" class="ghost-button notification-button" @click="notificationOpen = !notificationOpen">
-            通知
+            {{ strings.notifications.trigger }}
             <span v-if="notificationState.unreadCount" class="notification-badge">{{ notificationState.unreadCount }}</span>
           </button>
           <div v-if="notificationOpen" class="notification-popover">
             <div class="notification-popover__head">
-              <strong>消息通知</strong>
-              <span>{{ notificationState.connected ? '实时在线' : '离线补偿' }}</span>
+              <strong>{{ strings.notifications.heading }}</strong>
+              <span>{{ notificationState.connected ? strings.notifications.connected : strings.notifications.offline }}</span>
               <div class="notification-popover__actions">
-                <button v-if="notificationState.unreadCount" type="button" class="ghost-button" data-testid="mark-all-notifications" @click.stop="handleMarkAllNotificationsRead">全部已读</button>
-                <RouterLink class="text-link" to="/user/notifications" @click="notificationOpen = false">查看全部</RouterLink>
+                <button v-if="notificationState.unreadCount" type="button" class="ghost-button" data-testid="mark-all-notifications" @click.stop="handleMarkAllNotificationsRead">{{ strings.notifications.markAllRead }}</button>
+                <RouterLink class="text-link" to="/user/notifications" @click="notificationOpen = false">{{ strings.notifications.viewAll }}</RouterLink>
               </div>
             </div>
-            <p v-if="notificationState.loading" class="notification-empty">加载中...</p>
-            <p v-else-if="notificationState.items.length === 0" class="notification-empty">暂无通知</p>
+            <p v-if="notificationState.loading" class="notification-empty">{{ strings.notifications.loading }}</p>
+            <p v-else-if="notificationState.items.length === 0" class="notification-empty">{{ strings.notifications.empty }}</p>
             <button v-for="item in notificationState.items" :key="item.id" type="button" class="notification-item" :class="{ unread: !item.read }" @click="handleNotificationClick(item)">
               <strong>{{ item.title }}<template v-if="item.aggregateCount > 1"> · x{{ item.aggregateCount }}</template></strong>
               <span>{{ item.content }}</span>
@@ -581,11 +500,11 @@ watch(
         <div class="session-chip">
           <span class="session-chip__avatar">{{ userInitial }}</span>
           <div class="session-chip__meta">
-            <strong>{{ sessionState.currentUser.nickname || '已登录用户' }}</strong>
+            <strong>{{ sessionState.currentUser.nickname || strings.session.userFallback }}</strong>
             <span>Lv.{{ sessionState.currentUser.level }} · {{ sessionState.currentUser.preferredRegion }}</span>
           </div>
           <button type="button" class="ghost-button" :disabled="logoutLoading" @click="handleLogout">
-            {{ logoutLoading ? '退出中...' : '退出' }}
+            {{ logoutLoading ? strings.session.loggingOut : strings.session.logout }}
           </button>
         </div>
         </template>

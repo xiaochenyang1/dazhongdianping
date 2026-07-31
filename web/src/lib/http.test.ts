@@ -164,7 +164,7 @@ describe('HTTP session refresh', () => {
       { refreshToken: 'old-refresh' },
       {
         headers: {
-          'Accept-Language': 'zh-CN',
+          'Accept-Language': 'en',
           'X-Region': 'EU',
         },
       },

@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserSession } from '@/composables/useUserSession'
+import { useAppContext } from '@/composables/useAppContext'
+import { applyWebDocumentMeta } from '@/core/web_localizations'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -241,19 +243,7 @@ router.beforeEach((to, from) => {
 })
 
 router.afterEach((to) => {
-  const title = typeof to.meta.title === 'string' ? to.meta.title : '大众点评(仿)'
-  const description =
-    typeof to.meta.description === 'string'
-      ? to.meta.description
-      : '大众点评仿站本地生活平台，支持商户浏览、点评、审核和用户中心。'
-  document.title = `${title} | 大众点评(仿)`
-  let descriptionTag = document.querySelector('meta[name="description"]')
-  if (!descriptionTag) {
-    descriptionTag = document.createElement('meta')
-    descriptionTag.setAttribute('name', 'description')
-    document.head.appendChild(descriptionTag)
-  }
-  descriptionTag.setAttribute('content', description)
+  applyWebDocumentMeta(useAppContext().state.region, to.name)
 })
 
 export default router

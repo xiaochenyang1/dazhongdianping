@@ -2,6 +2,7 @@ import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 import { useAppContext } from '@/composables/useAppContext'
 import { useUserSession, type UserSessionSnapshot } from '@/composables/useUserSession'
 import type { AuthSessionResponse } from '@/types/auth'
+import { localeForRegion, webStringsForRegion } from '@/core/web_localizations'
 
 interface ApiEnvelope<T> {
   code: number
@@ -40,7 +41,7 @@ function enrichMessage(message: string, traceId?: string) {
 function buildHeaders(accessToken?: string) {
   const { state: appState } = useAppContext()
   const headers: Record<string, string> = {
-    'Accept-Language': 'zh-CN',
+    'Accept-Language': localeForRegion(appState.region),
     'X-Region': appState.region,
   }
 
@@ -104,6 +105,7 @@ function refreshSession(snapshot: UserSessionSnapshot) {
   }
 
   const region = appState.region
+  const strings = webStringsForRegion(region)
   let promise: Promise<boolean>
   promise = (async () => {
     try {
@@ -112,14 +114,14 @@ function refreshSession(snapshot: UserSessionSnapshot) {
         { refreshToken: snapshot.refreshToken },
         {
           headers: {
-            'Accept-Language': 'zh-CN',
+            'Accept-Language': localeForRegion(region),
             'X-Region': region,
           },
         },
       )
 
       if (response.data.code !== 0) {
-        throw new Error(response.data.message || '刷新登录态失败')
+        throw new Error(response.data.message || strings.common.refreshSessionFailed)
       }
 
       return session.rotateSessionIfCurrent(snapshot, response.data.data)
@@ -174,6 +176,7 @@ interface RetryableRequestConfig extends AxiosRequestConfig {
 async function request<T>(config: RetryableRequestConfig) {
   const session = useUserSession()
   const sentSession = session.snapshotSession()
+  const strings = webStringsForRegion(useAppContext().state.region)
 
   try {
     const response = await http.request<ApiEnvelope<T>>({
@@ -185,7 +188,7 @@ async function request<T>(config: RetryableRequestConfig) {
     })
 
     if (response.data.code !== 0) {
-      throw new ApiError(enrichMessage(response.data.message || '请求失败', response.data.traceId), {
+      throw new ApiError(enrichMessage(response.data.message || strings.common.requestFailed, response.data.traceId), {
         messageKey: response.data.messageKey,
         traceId: response.data.traceId,
       })
@@ -212,19 +215,20 @@ async function request<T>(config: RetryableRequestConfig) {
         session.clearSessionIfCurrent(sentSession)
       }
 
-      const message = typeof envelope?.message === 'string' ? envelope.message : error.message || '请求失败'
+      const message = typeof envelope?.message === 'string' ? envelope.message : error.message || strings.common.requestFailed
       const traceId = typeof envelope?.traceId === 'string' ? envelope.traceId : undefined
       const messageKey = typeof envelope?.messageKey === 'string' ? envelope.messageKey : undefined
       throw new ApiError(enrichMessage(message, traceId), { status, messageKey, traceId })
     }
 
-    throw new ApiError('请求失败')
+    throw new ApiError(strings.common.requestFailed)
   }
 }
 
 async function downloadRequest(config: RetryableRequestConfig): Promise<Blob> {
   const session = useUserSession()
   const sentSession = session.snapshotSession()
+  const strings = webStringsForRegion(useAppContext().state.region)
 
   try {
     const response = await http.request<Blob>({
@@ -252,10 +256,10 @@ async function downloadRequest(config: RetryableRequestConfig): Promise<Blob> {
         session.clearSessionIfCurrent(sentSession)
       }
 
-      throw new Error(error.message || '文件下载失败')
+      throw new Error(error.message || strings.common.downloadFailed)
     }
 
-    throw new Error('文件下载失败')
+    throw new Error(strings.common.downloadFailed)
   }
 }
 
