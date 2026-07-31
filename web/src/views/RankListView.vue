@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
+import { campaignStringsForRegion, localizeWebCampaignError } from '@/core/web_campaign_localizations'
+import { formatWebDateTime } from '@/core/web_localizations'
 import { fetchRanks } from '@/services/rank'
 import type { RankSummary } from '@/types/rank'
 
@@ -10,6 +12,8 @@ const ranks = ref<RankSummary[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 const activeType = ref<number | undefined>()
+const copy = computed(() => campaignStringsForRegion(state.region))
+const rankTypes = computed(() => [1, 2, 3].map((id) => ({ id, name: copy.value.rank.typeLabel(id) })))
 
 async function loadRanks() {
   loading.value = true
@@ -17,7 +21,7 @@ async function loadRanks() {
   try {
     ranks.value = await fetchRanks({ cityId: state.cityId, type: activeType.value })
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '榜单加载失败'
+    errorMessage.value = localizeWebCampaignError(copy.value, error, copy.value.rank.listLoadFailed)
   } finally {
     loading.value = false
   }
@@ -35,22 +39,22 @@ watch(() => [state.region, state.cityId], loadRanks, { immediate: true })
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">城市榜单</p>
-        <h1>榜单看的是发布快照，不拿实时 SQL 临场发挥。</h1>
-        <p>当前区域 {{ state.region }}，每一份排名都能追到规则版本和榜单周期。</p>
+        <p class="eyebrow">{{ copy.rank.eyebrow }}</p>
+        <h1>{{ copy.rank.title }}</h1>
+        <p>{{ copy.rank.summary(state.region) }}</p>
       </div>
     </div>
 
     <div class="filters-panel__actions rank-type-tabs">
-      <button type="button" :class="activeType == null ? 'primary-button' : 'secondary-button'" @click="selectType()">全部</button>
-      <button v-for="item in [{ id: 1, name: '必吃榜' }, { id: 2, name: '好评榜' }, { id: 3, name: '热门榜' }]" :key="item.id" type="button" :class="activeType === item.id ? 'primary-button' : 'secondary-button'" @click="selectType(item.id)">
+      <button type="button" :class="activeType == null ? 'primary-button' : 'secondary-button'" @click="selectType()">{{ copy.rank.all }}</button>
+      <button v-for="item in rankTypes" :key="item.id" type="button" :class="activeType === item.id ? 'primary-button' : 'secondary-button'" @click="selectType(item.id)">
         {{ item.name }}
       </button>
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="feedback">榜单快照加载中...</p>
-    <p v-else-if="ranks.length === 0" class="feedback">当前城市还没有已发布榜单。</p>
+    <p v-else-if="loading" class="feedback">{{ copy.rank.loading }}</p>
+    <p v-else-if="ranks.length === 0" class="feedback">{{ copy.rank.empty }}</p>
 
     <div class="rank-grid">
       <RouterLink v-for="rank in ranks" :key="rank.id" :to="`/ranks/${rank.id}`" class="rank-card">
@@ -58,11 +62,11 @@ watch(() => [state.region, state.cityId], loadRanks, { immediate: true })
         <div class="rank-card__body">
           <div class="shop-card__heading">
             <h2>{{ rank.name }}</h2>
-            <span class="status-pill is-deal">{{ rank.typeText }}</span>
+            <span class="status-pill is-deal">{{ copy.rank.typeLabel(rank.type, rank.typeText) }}</span>
           </div>
           <p>{{ rank.cityName }} · {{ rank.categoryName }} · {{ rank.period }}</p>
-          <strong>榜首：{{ rank.topShopName }}</strong>
-          <span>共 {{ rank.itemCount }} 家 · {{ rank.updatedAt }} 更新</span>
+          <strong>{{ copy.rank.leader }}: {{ rank.topShopName }}</strong>
+          <span>{{ copy.rank.placeCount(rank.itemCount) }} · {{ copy.rank.updated }} {{ formatWebDateTime(rank.updatedAt, copy.tag) }}</span>
         </div>
       </RouterLink>
     </div>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
+import { campaignStringsForRegion, localizeWebCampaignError } from '@/core/web_campaign_localizations'
+import { formatWebDateTime } from '@/core/web_localizations'
 import { fetchActivities } from '@/services/activity'
 import type { ActivitySummary } from '@/types/activity'
 
@@ -11,13 +13,11 @@ const loading = ref(false)
 const errorMessage = ref('')
 const activeChannel = ref<number | undefined>()
 
-const channels = [
-  { id: 1, name: '首页' },
-  { id: 2, name: '搜索' },
-  { id: 3, name: '频道' },
-  { id: 4, name: '活动页' },
-  { id: 5, name: '社区' },
-]
+const copy = computed(() => campaignStringsForRegion(state.region))
+const channels = computed(() => [1, 2, 3, 4, 5].map((id) => ({
+  id,
+  name: copy.value.activity.channelLabel(id),
+})))
 
 async function loadActivities() {
   loading.value = true
@@ -29,7 +29,7 @@ async function loadActivities() {
       limit: 20,
     })
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '活动列表加载失败'
+    errorMessage.value = localizeWebCampaignError(copy.value, error, copy.value.activity.listLoadFailed)
   } finally {
     loading.value = false
   }
@@ -47,11 +47,9 @@ watch(() => [state.region, state.cityId], loadActivities, { immediate: true })
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">运营活动</p>
-        <h1>管理端配好的专题，终于能直接在 C 端被点开。</h1>
-        <p>
-          当前区域 {{ state.region }} · 只展示状态为“上线中”且在有效期内的活动。
-        </p>
+        <p class="eyebrow">{{ copy.activity.eyebrow }}</p>
+        <h1>{{ copy.activity.title }}</h1>
+        <p>{{ copy.activity.summary(state.region) }}</p>
       </div>
     </div>
 
@@ -61,7 +59,7 @@ watch(() => [state.region, state.cityId], loadActivities, { immediate: true })
         :class="activeChannel == null ? 'primary-button' : 'secondary-button'"
         @click="selectChannel()"
       >
-        全部频道
+        {{ copy.activity.allChannels }}
       </button>
       <button
         v-for="item in channels"
@@ -75,8 +73,8 @@ watch(() => [state.region, state.cityId], loadActivities, { immediate: true })
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="feedback">活动加载中...</p>
-    <p v-else-if="activities.length === 0" class="feedback">当前城市暂时没有上线活动。</p>
+    <p v-else-if="loading" class="feedback">{{ copy.activity.loading }}</p>
+    <p v-else-if="activities.length === 0" class="feedback">{{ copy.activity.empty }}</p>
 
     <div class="activity-grid">
       <RouterLink
@@ -89,11 +87,11 @@ watch(() => [state.region, state.cityId], loadActivities, { immediate: true })
         <div class="activity-card__body">
           <div class="shop-card__heading">
             <h2>{{ activity.name }}</h2>
-            <span class="status-pill is-deal">{{ activity.typeText }}</span>
+            <span class="status-pill is-deal">{{ copy.activity.typeLabel(activity.type, activity.typeText) }}</span>
           </div>
-          <p>{{ activity.cityName }} · {{ activity.channelText }} · {{ activity.itemCount }} 个资源</p>
+          <p>{{ activity.cityName }} · {{ copy.activity.channelLabel(activity.channel, activity.channelText) }} · {{ copy.activity.resourceCount(activity.itemCount) }}</p>
           <span v-if="activity.startAt || activity.endAt">
-            {{ activity.startAt || '不限开始' }} — {{ activity.endAt || '不限结束' }}
+            {{ activity.startAt ? formatWebDateTime(activity.startAt, copy.tag) : copy.activity.noStart }} — {{ activity.endAt ? formatWebDateTime(activity.endAt, copy.tag) : copy.activity.noEnd }}
           </span>
         </div>
       </RouterLink>

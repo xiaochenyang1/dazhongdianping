@@ -86,8 +86,10 @@ describe('Activity views', () => {
       limit: 20,
     })
     expect(host.textContent).toContain('欧洲开学季聚餐专题')
-    expect(host.textContent).toContain('活动页')
-    expect(host.textContent).toContain('3 个资源')
+    expect(host.textContent).toContain('Seasonal campaign')
+    expect(host.textContent).toContain('Activities')
+    expect(host.textContent).toContain('3 items')
+    expect(host.textContent).toContain('01/07/2026 00:00')
   })
 
   it('renders activity detail items with internal and external links', async () => {
@@ -143,8 +145,8 @@ describe('Activity views', () => {
     expect(serviceMocks.fetchActivityDetail).toHaveBeenCalledWith(5001)
     expect(host.textContent).toContain('欧洲开学季聚餐专题')
     expect(host.textContent).toContain('巴黎华人火锅局')
-    expect(host.textContent).toContain('查看店铺')
-    expect(host.textContent).toContain('打开外链')
+    expect(host.textContent).toContain('View place')
+    expect(host.textContent).toContain('Open external link')
     const external = host.querySelector('a[href="https://promo.example.com/eu/school"]')
     expect(external).not.toBeNull()
   })
