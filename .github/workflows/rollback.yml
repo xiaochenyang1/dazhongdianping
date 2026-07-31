@@ -45,7 +45,7 @@ jobs:
       DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
       TARGET_VERSION: ${{ inputs.target_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Prepare SSH
         shell: bash
         run: |
