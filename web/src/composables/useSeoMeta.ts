@@ -1,4 +1,6 @@
 import { onBeforeUnmount, toValue, watchEffect, type MaybeRefOrGetter } from 'vue'
+import { useAppContext } from '@/composables/useAppContext'
+import { webStringsForRegion } from '@/core/web_localizations'
 
 export interface SeoMetaInput {
   title: string
@@ -78,9 +80,9 @@ function upsertJsonLd(schema: Record<string, unknown> | null | undefined, owner:
   document.head.appendChild(element)
 }
 
-function applySeoMeta(meta: SeoMetaInput, owner: string) {
+function applySeoMeta(meta: SeoMetaInput, owner: string, brandTitle: string) {
   const canonical = canonicalSeoUrl(meta.canonical)
-  const title = meta.title.endsWith(' | 大众点评(仿)') ? meta.title : `${meta.title} | 大众点评(仿)`
+  const title = meta.title.endsWith(` | ${brandTitle}`) ? meta.title : `${meta.title} | ${brandTitle}`
   const description = toSeoDescription(meta.description)
 
   document.title = title
@@ -114,6 +116,11 @@ function cleanupSeoOwner(owner: string) {
 
 export function useSeoMeta(source: MaybeRefOrGetter<SeoMetaInput>): void {
   const owner = `page-seo-${++ownerSequence}`
-  watchEffect(() => applySeoMeta(toValue(source), owner))
+  const { state } = useAppContext()
+  watchEffect(() => applySeoMeta(
+    toValue(source),
+    owner,
+    webStringsForRegion(state.region).brand.title,
+  ))
   onBeforeUnmount(() => cleanupSeoOwner(owner))
 }

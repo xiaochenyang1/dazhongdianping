@@ -1,5 +1,6 @@
 import { createApp, defineComponent, nextTick, ref } from 'vue'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { useAppContext } from './useAppContext'
 import { absoluteSeoUrl, useSeoMeta } from './useSeoMeta'
 
 async function flush() {
@@ -8,6 +9,11 @@ async function flush() {
 }
 
 describe('useSeoMeta', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useAppContext().setRegion('CN')
+  })
+
   it('keeps asset query strings while canonical URLs drop query and hash', () => {
     expect(absoluteSeoUrl('/shops/1?preview=1#details')).toBe(`${window.location.origin}/shops/1?preview=1#details`)
 
@@ -33,5 +39,21 @@ describe('useSeoMeta', () => {
       expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
       expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
     })
+  })
+
+  it('uses the current regional brand in the document title', () => {
+    useAppContext().setRegion('EU')
+    const View = defineComponent({
+      setup: () => {
+        useSeoMeta({ title: 'Place details', description: 'Description', canonical: '/shops/2' })
+        return () => null
+      },
+    })
+    const host = document.createElement('div')
+    const app = createApp(View)
+    app.mount(host)
+
+    expect(document.title).toBe('Place details | Local Reviews (Demo)')
+    app.unmount()
   })
 })

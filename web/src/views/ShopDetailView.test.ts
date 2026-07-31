@@ -72,8 +72,17 @@ describe('ShopDetailView', () => {
       merchantCertification: { code: 'verified_merchant', label: '认证商户' },
     })
     browseMocks.fetchShopReviews.mockResolvedValue({
-      list: [],
-      total: 0,
+      list: [{
+        id: 11,
+        userName: 'Alex',
+        authorCertification: { code: 'verified_merchant', label: '认证商户' },
+        score: 4.8,
+        content: 'Excellent dinner.',
+        likedCount: 2,
+        commentCount: 1,
+        createdAt: '2026-07-05 12:00',
+      }],
+      total: 1,
       page: 1,
       pageSize: 3,
       hasMore: false,
@@ -88,7 +97,11 @@ describe('ShopDetailView', () => {
     expect(host.textContent).toContain('€36 EUR')
     expect(host.textContent).toContain('€14 EUR')
     expect(host.textContent).toContain('+33142345678')
-    expect(host.textContent).toContain('认证商户')
+    expect(host.textContent).toContain('Verified merchant')
+    expect(host.textContent).toContain('Overall rating')
+    expect(host.textContent).toContain('05/07/2026 12:00')
+    expect(host.textContent).toContain('likes 2 · comments 1 · View details')
+    expect(host.textContent).not.toContain('认证商户')
     expect(host.textContent).not.toContain('¥')
     app.unmount()
   })
@@ -130,7 +143,7 @@ describe('ShopDetailView', () => {
     await flushView()
 
     expect(share).toHaveBeenCalledWith(expect.objectContaining({ title: 'Maison Sichuan Paris', url: expect.any(String) }))
-    expect(host.textContent).toContain('分享链接已准备好')
+    expect(host.textContent).toContain('Share link is ready')
     app.unmount()
     Reflect.deleteProperty(navigator, 'share')
   })
@@ -182,7 +195,7 @@ describe('ShopDetailView', () => {
     app.mount(host)
     await flushView()
 
-    expect(host.textContent).toContain('附近相似门店')
+    expect(host.textContent).toContain('Similar places nearby')
     expect(host.textContent).toContain('Nearby Sichuan Bistro')
     expect(host.textContent).toContain('850 m')
     app.unmount()
@@ -223,6 +236,7 @@ describe('ShopDetailView', () => {
     const canonical = document.head.querySelector('link[rel="canonical"]')
     expect(canonical?.getAttribute('href')).toBe(`${window.location.origin}/shops/20001`)
     expect(document.title).toContain('Maison Sichuan Paris')
+    expect(document.title).toContain('Local Reviews (Demo)')
     expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toContain('川味馆子')
     const schema = JSON.parse(document.head.querySelector('script[type="application/ld+json"]')?.textContent ?? '{}')
     expect(schema).toMatchObject({ '@type': 'Restaurant', name: 'Maison Sichuan Paris', url: canonical?.getAttribute('href') })
@@ -331,6 +345,7 @@ describe('ShopDetailView', () => {
     await flushView()
 
     expect(host.textContent).toContain('Maison Sichuan Paris')
-    expect(host.textContent).toContain('认证商户')
+    expect(host.textContent).toContain('Verified merchant')
+    expect(host.textContent).not.toContain('认证商户')
     app.unmount()
   })

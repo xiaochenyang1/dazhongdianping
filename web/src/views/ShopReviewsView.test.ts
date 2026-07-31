@@ -56,6 +56,7 @@ describe('ShopReviewsView', () => {
           {
             id: 2,
             userName: 'Newest',
+            authorCertification: { code: 'verified_merchant', label: '认证商户' },
             score: 4.8,
             content: 'Newest review',
             likedCount: 0,
@@ -93,10 +94,14 @@ describe('ShopReviewsView', () => {
     await flushView()
 
     expect(browseMocks.fetchShopReviews).toHaveBeenNthCalledWith(1, 20001, 1, 20)
-    expect(host.textContent).toContain('公开点评2')
+    expect(host.textContent).toContain('Public reviews2')
+    expect(host.textContent).toContain('Public reviews for Maison Sichuan Paris')
+    expect(host.textContent).toContain('Verified merchant')
+    expect(host.textContent).toContain('05/07/2026 12:00')
+    expect(host.textContent).not.toContain('认证商户')
 
     const loadMoreButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('加载更多点评'),
+      button.textContent?.includes('Load more reviews'),
     )
     expect(loadMoreButton).toBeDefined()
     loadMoreButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
