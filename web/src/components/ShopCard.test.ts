@@ -1,9 +1,16 @@
 import { createApp } from 'vue'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 import ShopCard from './ShopCard.vue'
 
 describe('ShopCard', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useAppContext().setRegion('CN')
+  })
+
   it('renders an EUR shop price from the response currency', () => {
+    useAppContext().setRegion('EU')
     const host = document.createElement('div')
     const app = createApp(ShopCard, {
       shop: {
@@ -24,7 +31,9 @@ describe('ShopCard', () => {
 
     app.mount(host)
 
-    expect(host.textContent).toContain('人均 €36 EUR')
+    expect(host.textContent).toContain('Average €36 EUR')
+    expect(host.textContent).toContain('Open now')
+    expect(host.textContent).toContain('Offer available')
     expect(host.textContent).not.toContain('¥')
     app.unmount()
   })
@@ -56,6 +65,7 @@ describe('ShopCard', () => {
   })
 
   it('renders verified merchant badge next to the shop name', () => {
+    useAppContext().setRegion('EU')
     const host = document.createElement('div')
     const app = createApp(ShopCard, {
       shop: {
@@ -79,7 +89,8 @@ describe('ShopCard', () => {
     app.mount(host)
 
     expect(host.textContent).toContain('Maison Sichuan Paris')
-    expect(host.textContent).toContain('认证商户')
+    expect(host.textContent).toContain('Verified merchant')
+    expect(host.textContent).not.toContain('认证商户')
     app.unmount()
   })
 })

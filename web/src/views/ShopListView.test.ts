@@ -61,7 +61,7 @@ function deferred<T>() {
 
 function applyFilters(host: HTMLElement) {
   const button = [...host.querySelectorAll('button')]
-    .find((item) => item.textContent?.includes('应用筛选'))
+    .find((item) => item.textContent?.includes('Apply filters'))
   if (!button) throw new Error('missing apply filters button')
   button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 }
@@ -85,6 +85,9 @@ describe('ShopListView', () => {
     const { app, host } = mount()
     await flush()
     expect(host.textContent).toContain('First shop')
+    expect(host.textContent).toContain('Find the right place for this visit.')
+    expect(host.textContent).toContain('Places available in the EU region')
+    expect(host.textContent).not.toMatch(/[一-龥]/)
 
     setInput(host, 'filter-min-price', '10')
     setInput(host, 'filter-max-price', '50')
@@ -98,7 +101,7 @@ describe('ShopListView', () => {
     openSelect.dispatchEvent(new Event('change', { bubbles: true }))
     await nextTick()
 
-    const apply = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('应用筛选'))
+    const apply = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Apply filters'))
     expect(apply).toBeDefined()
     apply?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
     await flush()
@@ -146,7 +149,7 @@ describe('ShopListView', () => {
     expect(browseMocks.fetchShops).toHaveBeenNthCalledWith(2, expect.objectContaining({ page: 2, pageSize: 12 }))
     expect(host.textContent).toContain('First shop')
     expect(host.textContent).toContain('Second shop')
-    expect(host.textContent).toContain('当前命中2')
+    expect(host.textContent).toContain('Matches2')
     expect(host.querySelector('[data-testid="load-more-shops"]')).toBeNull()
     app.unmount()
   })
@@ -194,7 +197,8 @@ describe('ShopListView', () => {
     citySelect.dispatchEvent(new Event('change', { bubbles: true }))
     await flush()
 
-    expect(host.textContent).toContain('商圈加载失败')
+    expect(host.textContent).toContain('Could not load areas')
+    expect(host.textContent).not.toContain('商圈加载失败')
     expect(browseMocks.fetchShops).not.toHaveBeenCalled()
     app.unmount()
   })

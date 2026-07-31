@@ -4,6 +4,10 @@ import { RouterLink } from 'vue-router'
 import { useRoute } from 'vue-router'
 import ShopCard from '@/components/ShopCard.vue'
 import { useAppContext } from '@/composables/useAppContext'
+import {
+  discoveryStringsForRegion,
+  localizeWebDiscoveryError,
+} from '@/core/web_discovery_localizations'
 import { fetchAreas, fetchCategories, fetchCities, fetchShops } from '@/services/browse'
 import type { Area, CategoryNode, City, ShopListItem } from '@/types/browse'
 
@@ -26,6 +30,7 @@ let bootstrapRequestId = 0
 let areaRequestId = 0
 let shopRequestId = 0
 let cityChangeRequestId = 0
+const copy = computed(() => discoveryStringsForRegion(state.region))
 
 const filters = reactive({
   keyword: routeKeyword(),
@@ -40,14 +45,7 @@ const filters = reactive({
   openNow: '',
 })
 
-const sortLabelMap = {
-  smart: '智能排序',
-  score: '评分优先',
-  popular: '热门优先',
-  distance: '距离优先',
-} as const
-
-const activeCityName = computed(() => cities.value.find((item) => item.id === filters.cityId)?.name ?? '未选城市')
+const activeCityName = computed(() => cities.value.find((item) => item.id === filters.cityId)?.name ?? copy.value.shopList.unselectedCity)
 const activeAreaName = computed(() => areas.value.find((item) => item.id === filters.areaId)?.name ?? '')
 const activeCategoryName = computed(() => {
   if (!filters.categoryId) {
@@ -69,10 +67,11 @@ const activeCategoryName = computed(() => {
 })
 
 const activeFilterTags = computed(() => {
-  const tags = [`区域 ${state.region}`, activeCityName.value]
+  const strings = copy.value.shopList
+  const tags = [strings.regionTag(state.region), activeCityName.value]
 
   if (filters.keyword.trim()) {
-    tags.push(`关键词 ${filters.keyword.trim()}`)
+    tags.push(strings.keywordTag(filters.keyword.trim()))
   }
 
   if (activeCategoryName.value) {
@@ -84,39 +83,41 @@ const activeFilterTags = computed(() => {
   }
 
   if (filters.sort !== 'smart') {
-    tags.push(sortLabelMap[filters.sort as keyof typeof sortLabelMap])
+    tags.push(strings.sorts[filters.sort as keyof typeof strings.sorts])
   }
 
   if (filters.minPrice || filters.maxPrice) {
-    tags.push(`人均 ${filters.minPrice || '不限'} - ${filters.maxPrice || '不限'}`)
+    tags.push(strings.priceTag(filters.minPrice || strings.any, filters.maxPrice || strings.any))
   }
-  if (filters.minScore) tags.push(`评分 >= ${filters.minScore}`)
-  if (filters.hasDeal === 'true') tags.push('有团购')
-  if (filters.hasDeal === 'false') tags.push('无团购')
-  if (filters.openNow === 'true') tags.push('营业中')
-  if (filters.openNow === 'false') tags.push('休息中')
+  if (filters.minScore) tags.push(strings.scoreTag(filters.minScore))
+  if (filters.hasDeal === 'true') tags.push(strings.hasDealTag)
+  if (filters.hasDeal === 'false') tags.push(strings.noDealTag)
+  if (filters.openNow === 'true') tags.push(strings.openTag)
+  if (filters.openNow === 'false') tags.push(strings.closedTag)
 
   return tags
 })
 
 const resultFacts = computed(() => [
   {
-    label: '当前命中',
-    value: loading.value ? '加载中' : String(shopTotal.value),
+    label: copy.value.shopList.factMatches,
+    value: loading.value ? copy.value.shopList.loading : String(shopTotal.value),
     detail:
       shopTotal.value > shops.value.length
-        ? `当前只先摊开 ${shops.value.length} 家，别一口气把列表灌满。`
-        : `这轮返回的 ${shops.value.length} 家门店已经全部展示完。`,
+        ? copy.value.shopList.partialResults(shops.value.length)
+        : copy.value.shopList.allResults(shops.value.length),
   },
   {
-    label: '当前城市',
+    label: copy.value.shopList.factCity,
     value: activeCityName.value,
-    detail: activeAreaName.value ? `当前已经收进 ${activeAreaName.value} 商圈。` : '当前先按整座城市控制搜索范围。',
+    detail: activeAreaName.value ? copy.value.shopList.areaScope(activeAreaName.value) : copy.value.shopList.cityScope,
   },
   {
-    label: '筛选状态',
-    value: filters.sort === 'smart' && activeFilterTags.value.length <= 2 ? '默认浏览' : `${activeFilterTags.value.length} 条上下文`,
-    detail: shopHasMore.value ? '后端还有更多结果，继续细筛会更利索。' : '当前结果已经收口，再换条件看更直接。',
+    label: copy.value.shopList.factFilters,
+    value: filters.sort === 'smart' && activeFilterTags.value.length <= 2
+      ? copy.value.shopList.defaultBrowse
+      : copy.value.shopList.contextCount(activeFilterTags.value.length),
+    detail: shopHasMore.value ? copy.value.shopList.moreResults : copy.value.shopList.resultsComplete,
   },
 ])
 
@@ -161,7 +162,7 @@ async function bootstrapPage() {
     await loadShops()
   } catch (error) {
     if (requestId === bootstrapRequestId) {
-      errorMessage.value = error instanceof Error ? error.message : '商户列表加载失败'
+      errorMessage.value = localizeWebDiscoveryError(copy.value, error, copy.value.shopList.loadFailed)
     }
   } finally {
     if (requestId === bootstrapRequestId) loading.value = false
@@ -233,7 +234,7 @@ async function loadShops(append = false) {
     shopHasMore.value = page.hasMore
   } catch (error) {
     if (requestId !== shopRequestId) return
-    const message = error instanceof Error ? error.message : '商户列表加载失败'
+    const message = localizeWebDiscoveryError(copy.value, error, copy.value.shopList.loadFailed)
     if (append) loadMoreErrorMessage.value = message
     else errorMessage.value = message
   } finally {
@@ -259,7 +260,7 @@ function optionalBoolean(value: string) {
 function resolveUserLocation() {
   return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
     if (!navigator.geolocation) {
-      reject(new Error('当前浏览器不支持定位，无法按距离排序。'))
+      reject(new Error(copy.value.shopList.geolocationUnsupported))
       return
     }
 
@@ -268,7 +269,7 @@ function resolveUserLocation() {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
       }),
-      () => reject(new Error('定位未授权或获取失败，无法按距离排序。')),
+      () => reject(new Error(copy.value.shopList.geolocationFailed)),
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
     )
   })
@@ -292,7 +293,7 @@ async function onCityChange(value: string) {
     if (await loadAreas()) await loadShops()
   } catch (error) {
     if (requestId === cityChangeRequestId) {
-      errorMessage.value = error instanceof Error ? error.message : '商圈加载失败'
+      errorMessage.value = localizeWebDiscoveryError(copy.value, error, copy.value.shopList.areasLoadFailed)
     }
   } finally {
     if (requestId === cityChangeRequestId) loading.value = false
@@ -340,27 +341,24 @@ watch(
     <aside class="filters-panel">
       <div class="section-header">
         <div>
-          <p class="eyebrow">筛选区</p>
-          <h2>先把最小可用的列表过滤闭环跑通。</h2>
+          <p class="eyebrow">{{ copy.shopList.filtersEyebrow }}</p>
+          <h2>{{ copy.shopList.filtersTitle }}</h2>
         </div>
       </div>
 
-      <p class="support-copy">
-        当前会话会带着 <strong>{{ state.region }}</strong> 区域和
-        <strong>{{ activeCityName }}</strong> 城市一起筛，先把串区这种低级错误堵死。
-      </p>
+      <p class="support-copy">{{ copy.shopList.filtersSupport(state.region, activeCityName) }}</p>
 
       <div class="tag-row">
         <span v-for="tag in activeFilterTags" :key="tag">{{ tag }}</span>
       </div>
 
       <label class="field">
-        <span>关键词</span>
-        <input v-model="filters.keyword" type="text" placeholder="店名、标签、地址" />
+        <span>{{ copy.shopList.keywordLabel }}</span>
+        <input v-model="filters.keyword" type="text" :placeholder="copy.shopList.keywordPlaceholder" />
       </label>
 
       <label class="field">
-        <span>城市</span>
+        <span>{{ copy.shopList.cityLabel }}</span>
         <select :value="filters.cityId" @change="void onCityChange(($event.target as HTMLSelectElement).value)">
           <option v-for="city in cities" :key="city.id" :value="city.id">
             {{ city.name }}
@@ -369,9 +367,9 @@ watch(
       </label>
 
       <label class="field">
-        <span>商圈</span>
+        <span>{{ copy.shopList.areaLabel }}</span>
         <select v-model="filters.areaId">
-          <option :value="undefined">全部商圈</option>
+          <option :value="undefined">{{ copy.shopList.allAreas }}</option>
           <option v-for="area in areas" :key="area.id" :value="area.id">
             {{ area.name }}
           </option>
@@ -379,9 +377,9 @@ watch(
       </label>
 
       <label class="field">
-        <span>一级分类</span>
+        <span>{{ copy.shopList.categoryLabel }}</span>
         <select v-model="filters.categoryId">
-          <option :value="undefined">全部分类</option>
+          <option :value="undefined">{{ copy.shopList.allCategories }}</option>
           <option v-for="category in categories" :key="category.id" :value="category.id">
             {{ category.name }}
           </option>
@@ -389,65 +387,60 @@ watch(
       </label>
 
       <label class="field">
-        <span>排序</span>
+        <span>{{ copy.shopList.sortLabel }}</span>
         <select v-model="filters.sort">
-          <option value="smart">智能排序</option>
-          <option value="score">评分优先</option>
-          <option value="popular">热门优先</option>
-          <option value="distance">距离优先</option>
+          <option v-for="(label, value) in copy.shopList.sorts" :key="value" :value="value">{{ label }}</option>
         </select>
       </label>
 
       <div class="filter-inline-grid">
         <label class="field">
-          <span>最低人均</span>
-          <input v-model="filters.minPrice" data-testid="filter-min-price" type="number" min="0" step="1" placeholder="不限" />
+          <span>{{ copy.shopList.minPriceLabel }}</span>
+          <input v-model="filters.minPrice" data-testid="filter-min-price" type="number" min="0" step="1" :placeholder="copy.shopList.any" />
         </label>
         <label class="field">
-          <span>最高人均</span>
-          <input v-model="filters.maxPrice" data-testid="filter-max-price" type="number" min="0" step="1" placeholder="不限" />
+          <span>{{ copy.shopList.maxPriceLabel }}</span>
+          <input v-model="filters.maxPrice" data-testid="filter-max-price" type="number" min="0" step="1" :placeholder="copy.shopList.any" />
         </label>
       </div>
 
       <label class="field">
-        <span>最低评分</span>
-        <input v-model="filters.minScore" data-testid="filter-min-score" type="number" min="0" max="5" step="0.1" placeholder="不限" />
+        <span>{{ copy.shopList.minScoreLabel }}</span>
+        <input v-model="filters.minScore" data-testid="filter-min-score" type="number" min="0" max="5" step="0.1" :placeholder="copy.shopList.any" />
       </label>
 
       <label class="field">
-        <span>团购</span>
+        <span>{{ copy.shopList.dealLabel }}</span>
         <select v-model="filters.hasDeal" data-testid="filter-has-deal">
-          <option value="">不限</option>
-          <option value="true">有团购</option>
-          <option value="false">无团购</option>
+          <option value="">{{ copy.shopList.any }}</option>
+          <option value="true">{{ copy.shopList.hasDeal }}</option>
+          <option value="false">{{ copy.shopList.noDeal }}</option>
         </select>
       </label>
 
       <label class="field">
-        <span>营业状态</span>
+        <span>{{ copy.shopList.openStatusLabel }}</span>
         <select v-model="filters.openNow" data-testid="filter-open-now">
-          <option value="">不限</option>
-          <option value="true">营业中</option>
-          <option value="false">休息中</option>
+          <option value="">{{ copy.shopList.any }}</option>
+          <option value="true">{{ copy.shopList.openNow }}</option>
+          <option value="false">{{ copy.shopList.closed }}</option>
         </select>
       </label>
 
       <div class="filters-panel__actions">
-        <button type="button" class="primary-button" @click="loadShops()">应用筛选</button>
-        <button type="button" class="secondary-button" @click="resetFilters">重置</button>
+        <button type="button" class="primary-button" @click="loadShops()">{{ copy.shopList.applyFilters }}</button>
+        <button type="button" class="secondary-button" @click="resetFilters">{{ copy.shopList.reset }}</button>
       </div>
     </aside>
 
     <div class="list-results">
       <div class="section-header">
         <div>
-          <p class="eyebrow">商户列表</p>
-          <h2>当前区域 {{ state.region }}，先把可浏览链路做扎实。</h2>
-          <p class="support-copy">
-            头部搜索、列表筛选和区域切换现在共用同一套查询上下文，不再让结果一会儿东一会儿西。
-          </p>
+          <p class="eyebrow">{{ copy.shopList.resultsEyebrow }}</p>
+          <h2>{{ copy.shopList.resultsTitle(state.region) }}</h2>
+          <p class="support-copy">{{ copy.shopList.resultsSupport }}</p>
         </div>
-        <RouterLink to="/" class="text-link">返回首页</RouterLink>
+        <RouterLink to="/" class="text-link">{{ copy.shopList.backHome }}</RouterLink>
       </div>
 
       <div class="detail-hero__stats">
@@ -459,8 +452,8 @@ watch(
       </div>
 
       <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
-      <p v-else-if="loading" class="feedback">正在拉取商户列表...</p>
-      <p v-else-if="shops.length === 0" class="feedback">当前筛选下没有数据，先别怀疑人生，改个条件试试。</p>
+      <p v-else-if="loading" class="feedback">{{ copy.shopList.loadingResults }}</p>
+      <p v-else-if="shops.length === 0" class="feedback">{{ copy.shopList.emptyResults }}</p>
 
       <div class="shop-grid">
         <RouterLink v-for="shop in shops" :key="shop.id" :to="`/shops/${shop.id}`" class="shop-grid__link">
@@ -476,7 +469,7 @@ watch(
         :disabled="loadingMore"
         @click="loadShops(true)"
       >
-        {{ loadingMore ? '加载中...' : '加载更多门店' }}
+        {{ loadingMore ? copy.shopList.loadingMore : copy.shopList.loadMore }}
       </button>
     </div>
   </section>

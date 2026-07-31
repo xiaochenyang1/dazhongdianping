@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useAppContext } from '@/composables/useAppContext'
+import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
 import { formatMoney } from '@/lib/currency'
 import type { ShopListItem } from '@/types/browse'
 
 defineProps<{
   shop: ShopListItem
 }>()
+
+const { state } = useAppContext()
+const copy = computed(() => discoveryStringsForRegion(state.region).shopCard)
 
 function formatDistance(distanceMeters: number) {
   if (distanceMeters < 1000) {
@@ -22,13 +28,13 @@ function formatDistance(distanceMeters: number) {
         <h3 class="name-with-badge">
           {{ shop.name }}
           <span v-if="shop.merchantCertification" class="verified-badge verified-badge--compact">
-            {{ shop.merchantCertification.label }}
+            {{ copy.certificationLabel(shop.merchantCertification.code, shop.merchantCertification.label) }}
           </span>
         </h3>
         <span class="shop-card__score">{{ shop.score.toFixed(1) }}</span>
       </div>
       <p class="shop-card__meta">
-        {{ shop.cityName }} · {{ shop.areaName }} · 人均 {{ formatMoney(shop.pricePerCapita, shop.currency) }}
+        {{ shop.cityName }} · {{ shop.areaName }} · {{ copy.averageSpend }} {{ formatMoney(shop.pricePerCapita, shop.currency) }}
       </p>
       <p class="shop-card__address">{{ shop.address }}</p>
       <div class="shop-card__tags">
@@ -36,11 +42,11 @@ function formatDistance(distanceMeters: number) {
       </div>
       <div class="shop-card__foot">
         <span :class="shop.openNow ? 'status-pill is-open' : 'status-pill is-closed'">
-          {{ shop.openNow ? '营业中' : '休息中' }}
+          {{ shop.openNow ? copy.openNow : copy.closed }}
         </span>
-        <span v-if="shop.hasDeal" class="status-pill is-deal">有团购</span>
+        <span v-if="shop.hasDeal" class="status-pill is-deal">{{ copy.dealAvailable }}</span>
         <span v-if="shop.distanceMeters != null" class="status-pill">
-          距你 {{ formatDistance(shop.distanceMeters) }}
+          {{ copy.distanceFromYou(formatDistance(shop.distanceMeters)) }}
         </span>
       </div>
     </div>
