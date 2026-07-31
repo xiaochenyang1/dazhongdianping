@@ -1,5 +1,6 @@
 import { createApp, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const privacyMocks = vi.hoisted(() => ({
   acceptPrivacyPolicy: vi.fn(),
@@ -64,6 +65,7 @@ describe('PrivacyCenterView', () => {
   beforeEach(() => {
     Object.values(privacyMocks).forEach((mock) => mock.mockReset())
     Object.values(authMocks).forEach((mock) => mock.mockReset())
+    useAppContext().setRegion('CN')
     privacyMocks.fetchPrivacyOverview.mockResolvedValue({
       exportRule: { dailyLimit: 2, defaultFormat: 'zip', expireHours: 24 },
       deleteRule: { coolingOffDays: 7, reverifyRequired: true },
@@ -278,6 +280,33 @@ describe('PrivacyCenterView', () => {
     clickButton(host, '撤销删除申请')
     await flushView()
     expect(privacyMocks.cancelPrivacyDeleteTask).toHaveBeenCalledWith(12)
+    app.unmount()
+  })
+
+  it('localizes privacy modules and statuses and reloads data for EU', async () => {
+    privacyMocks.acceptPrivacyPolicy.mockResolvedValue({ id: 4 })
+    useAppContext().setRegion('EU')
+    const host = document.createElement('div')
+    const app = createApp(PrivacyCenterView)
+    app.mount(host)
+    await flushView()
+
+    expect(host.textContent).toContain('Privacy centre')
+    expect(host.textContent).toContain('Account data')
+    expect(host.textContent).toContain('Direct messages')
+    expect(host.textContent).toContain('Ready to download')
+    expect(host.textContent).toContain('13/07/2026 08:00')
+    expect(host.textContent).toContain('Active')
+    expect(host.textContent).not.toContain('账号数据')
+    expect(host.textContent).not.toContain('可下载')
+
+    clickButton(host, 'Confirm privacy policy')
+    await flushView()
+    expect(privacyMocks.acceptPrivacyPolicy).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en' }))
+
+    useAppContext().setRegion('CN')
+    await flushView()
+    expect(privacyMocks.fetchPrivacyOverview).toHaveBeenCalledTimes(3)
     app.unmount()
   })
 })
