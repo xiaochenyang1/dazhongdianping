@@ -34,6 +34,9 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-test-CN
+      cancel-in-progress: false
     environment: test
     env:
       DEPLOY_ENVIRONMENT: test
@@ -131,6 +134,9 @@ jobs:
   deploy-pre:
     if: github.event_name == 'workflow_dispatch' && inputs.environment == 'pre'
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-pre-${{ inputs.region }}
+      cancel-in-progress: false
     environment: pre
     env:
       DEPLOY_ENVIRONMENT: pre
@@ -204,6 +210,9 @@ jobs:
   deploy-prod:
     if: github.event_name == 'workflow_dispatch' && inputs.environment == 'prod'
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-prod-${{ inputs.region }}
+      cancel-in-progress: false
     environment: prod
     env:
       DEPLOY_ENVIRONMENT: prod

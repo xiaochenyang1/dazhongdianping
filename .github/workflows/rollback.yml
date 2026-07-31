@@ -27,6 +27,9 @@ on:
 jobs:
   rollback:
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ inputs.environment }}-${{ inputs.region }}
+      cancel-in-progress: false
     environment: ${{ inputs.environment }}
     env:
       DEPLOY_ENVIRONMENT: ${{ inputs.environment }}

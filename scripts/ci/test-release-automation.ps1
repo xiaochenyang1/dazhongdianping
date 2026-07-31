@@ -143,6 +143,10 @@ Assert-True ($releaseWorkflow -match "deploy-release\.ps1") "release workflow mu
 Assert-True ($releaseWorkflow -match "environment:\s*test") "release workflow must use the test environment gate"
 Assert-True ($releaseWorkflow -match "environment:\s*pre") "release workflow must use the pre environment gate"
 Assert-True ($releaseWorkflow -match "environment:\s*prod") "release workflow must use the prod environment gate"
+Assert-True ($releaseWorkflow -match "group:\s*release-test-CN") "test deployments must use the shared test/CN concurrency group"
+Assert-True ($releaseWorkflow -match 'group:\s*release-pre-\$\{\{ inputs\.region \}\}') "pre deployments must serialize by region"
+Assert-True ($releaseWorkflow -match 'group:\s*release-prod-\$\{\{ inputs\.region \}\}') "prod deployments must serialize by region"
+Assert-True (([regex]::Matches($releaseWorkflow, "cancel-in-progress:\s*false")).Count -eq 3) "release jobs must queue instead of cancelling an active deployment"
 
 Assert-True ($rollbackWorkflow -match "workflow_dispatch:") "rollback workflow must be manually dispatched"
 Assert-True ($rollbackWorkflow -match "rollback-release\.ps1") "rollback workflow must invoke rollback-release.ps1"
@@ -152,5 +156,7 @@ Assert-True ($rollbackWorkflow -match "vars\.DEPLOY_SSH_PORT") "rollback workflo
 Assert-True ($rollbackWorkflow -match "vars\.DEPLOY_SSH_USER") "rollback workflow must map environment SSH user configuration"
 Assert-True ($rollbackWorkflow -match "vars\.DEPLOY_REMOTE_ROOT") "rollback workflow must map environment remote root configuration"
 Assert-True ($rollbackWorkflow -match "vars\.DEPLOY_MERCHANT_SERVICE") "rollback workflow must map the merchant-web service"
+Assert-True ($rollbackWorkflow -match 'group:\s*release-\$\{\{ inputs\.environment \}\}-\$\{\{ inputs\.region \}\}') "rollback must share the environment/region deployment concurrency group"
+Assert-True ($rollbackWorkflow -match "cancel-in-progress:\s*false") "rollback must queue instead of interrupting an active deployment"
 
 Write-Output "release automation contract passed"
