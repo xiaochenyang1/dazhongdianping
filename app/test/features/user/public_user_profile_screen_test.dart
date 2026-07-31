@@ -364,6 +364,27 @@ void main() {
     expect(find.textContaining('用户不存在'), findsNothing);
   });
 
+  testWidgets('relationship list localizes follow timestamps in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: UserRelationshipsScreen(
+          repository: UserRepository(SocialProfileApi()),
+          userId: 9,
+          followers: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Followed since 20/07/2026 10:00'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('relationship list localizes load more errors in English', (
     tester,
   ) async {

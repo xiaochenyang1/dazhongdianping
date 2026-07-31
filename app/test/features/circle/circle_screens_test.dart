@@ -407,6 +407,24 @@ void main() {
     expect(find.textContaining('圈子不存在'), findsNothing);
   });
 
+  testWidgets('circle members localize join timestamps in English', (
+    tester,
+  ) async {
+    final api = CircleScreenApi();
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: CircleMembersScreen(
+          repository: CircleRepository(api),
+          circle: AppCircle.fromJson(api.circle()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Joined 17/07/2026 10:00'), findsOneWidget);
+  });
+
   testWidgets('circle members guard duplicate retries', (tester) async {
     final gate = Completer<void>();
     final api = CircleScreenApi()

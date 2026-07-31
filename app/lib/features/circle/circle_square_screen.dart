@@ -1,4 +1,5 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/circle/circle_error_localizer.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
@@ -794,10 +795,20 @@ class _CircleMembersScreenState extends State<CircleMembersScreen> {
                 ),
                 title: Text(member.nickname),
                 subtitle: Text(
-                  member.signature.isEmpty
-                      ? 'Lv.${member.level}'
-                      : member.signature,
+                  [
+                    member.signature.isEmpty
+                        ? 'Lv.${member.level}'
+                        : member.signature,
+                    if (member.joinedAt.isNotEmpty)
+                      AppLocalizations.of(context).joinedAtLabel(
+                        formatDisplayDateTime(
+                          member.joinedAt,
+                          locale: AppLocalizations.of(context).tag,
+                        ),
+                      ),
+                  ].join('\n'),
                 ),
+                isThreeLine: member.joinedAt.isNotEmpty,
               ),
             );
           },

@@ -264,6 +264,7 @@ class AppLocalizations {
     'circleNewPosts': '圈子新帖',
     'loadMoreMembersFailed': '加载更多成员失败：{error}',
     'circleMembersTitle': '{name}成员',
+    'joinedAtLabel': '加入于 {time}',
     'membersLoadFailed': '成员加载失败：{error}',
     'directMessages': '私信',
     'directMessageUser': '私信用户',
@@ -875,6 +876,7 @@ class AppLocalizations {
     'noFollowers': '暂无粉丝',
     'noFollowing': '暂无关注',
     'levelFollowersMeta': 'Lv.{level} · 粉丝 {count}',
+    'followedAtLabel': '建立关系于 {time}',
     'shopHash': '门店 #{id}',
     'postHash': '帖子 #{id}',
     'recordHash': '记录 #{id}',
@@ -1148,6 +1150,7 @@ class AppLocalizations {
     'circleNewPosts': '圈子新貼',
     'loadMoreMembersFailed': '載入更多成員失敗：{error}',
     'circleMembersTitle': '{name}成員',
+    'joinedAtLabel': '加入於 {time}',
     'membersLoadFailed': '成員載入失敗：{error}',
     'directMessages': '私信',
     'directMessageUser': '私信使用者',
@@ -1759,6 +1762,7 @@ class AppLocalizations {
     'noFollowers': '暫無粉絲',
     'noFollowing': '暫無追蹤',
     'levelFollowersMeta': 'Lv.{level} · 粉絲 {count}',
+    'followedAtLabel': '建立關係於 {time}',
     'shopHash': '店家 #{id}',
     'postHash': '貼文 #{id}',
     'recordHash': '記錄 #{id}',
@@ -2066,6 +2070,7 @@ class AppLocalizations {
     'circleNewPosts': 'New circle posts',
     'loadMoreMembersFailed': 'Could not load more members: {error}',
     'circleMembersTitle': '{name} members',
+    'joinedAtLabel': 'Joined {time}',
     'membersLoadFailed': 'Could not load members: {error}',
     'directMessages': 'Messages',
     'directMessageUser': 'Message user',
@@ -2760,6 +2765,7 @@ class AppLocalizations {
     'noFollowers': 'No followers yet',
     'noFollowing': 'Not following anyone yet',
     'levelFollowersMeta': 'Lv.{level} · {count} followers',
+    'followedAtLabel': 'Followed since {time}',
     'shopHash': 'Place #{id}',
     'postHash': 'Post #{id}',
     'recordHash': 'Record #{id}',
@@ -3413,6 +3419,8 @@ class AppLocalizations {
       _withError('loadMoreMembersFailed', error);
   String circleMembersTitle(String name) =>
       _text('circleMembersTitle').replaceFirst('{name}', name);
+  String joinedAtLabel(String time) =>
+      _text('joinedAtLabel').replaceFirst('{time}', time);
   String membersLoadFailed(Object error) =>
       _withError('membersLoadFailed', error);
   String get directMessages => _text('directMessages');
@@ -4606,6 +4614,8 @@ class AppLocalizations {
   String levelFollowersMeta({required int level, required int count}) => _text(
     'levelFollowersMeta',
   ).replaceFirst('{level}', '$level').replaceFirst('{count}', '$count');
+  String followedAtLabel(String time) =>
+      _text('followedAtLabel').replaceFirst('{time}', time);
   String shopHash(Object id) => _text('shopHash').replaceFirst('{id}', '$id');
   String postHash(Object id) => _text('postHash').replaceFirst('{id}', '$id');
   String recordHash(Object id) =>

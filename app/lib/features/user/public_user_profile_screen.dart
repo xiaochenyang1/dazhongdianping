@@ -1,5 +1,6 @@
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:flutter/material.dart';
 
@@ -488,13 +489,23 @@ class _UserRelationshipsScreenState extends State<UserRelationshipsScreen> {
               child: ListTile(
                 title: Text(user.nickname),
                 subtitle: Text(
-                  user.signature.isEmpty
-                      ? AppLocalizations.of(context).levelFollowersMeta(
-                          level: user.level,
-                          count: user.followerCount,
-                        )
-                      : user.signature,
+                  [
+                    user.signature.isEmpty
+                        ? AppLocalizations.of(context).levelFollowersMeta(
+                            level: user.level,
+                            count: user.followerCount,
+                          )
+                        : user.signature,
+                    if (user.followedAt.isNotEmpty)
+                      AppLocalizations.of(context).followedAtLabel(
+                        formatDisplayDateTime(
+                          user.followedAt,
+                          locale: AppLocalizations.of(context).tag,
+                        ),
+                      ),
+                  ].join('\n'),
                 ),
+                isThreeLine: user.followedAt.isNotEmpty,
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
