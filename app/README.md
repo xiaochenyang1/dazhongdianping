@@ -43,4 +43,22 @@ DZDP_ANDROID_KEY_PASSWORD=your-key-password
 忽略 `key.properties`、`*.jks` 和 `*.keystore`，不要提交签名文件或密码。未配置
 时 debug 构建不受影响，release 构建会明确失败，不会回退到 debug 签名。
 
+仓库的 `.github/workflows/mobile-release.yml` 提供手工签名构建入口。先在 GitHub
+的 `test`、`pre`、`prod` Environment 中配置变量
+`DZDP_ANDROID_APPLICATION_ID`、`DZDP_APP_API_BASE_URL`（必须为绝对 HTTPS URL），
+并配置以下 secrets：
+
+- `DZDP_ANDROID_KEYSTORE_BASE64`：release keystore 文件的 Base64 内容。
+- `DZDP_ANDROID_KEY_ALIAS`
+- `DZDP_ANDROID_STORE_PASSWORD`
+- `DZDP_ANDROID_KEY_PASSWORD`
+
+触发 `mobile-release` 时必须选择环境、区域并填写语义版本号和正整数构建号。流水线
+会先运行 Flutter 测试与静态分析，再生成签名 AAB、SHA-256 文件和
+`mobile-release-manifest.json`，作为保留 30 天的 GitHub Actions artifact 上传。
+所选区域会通过 `APP_REGION` 编译为首次启动区域，API 地址会通过
+`API_BASE_URL` 编译进应用；用户仍可在应用内切换 CN/EU。
+解码后的 keystore 只存在于 runner 临时目录，并在成功或失败后清理。该入口只生成
+可追溯的签名制品；上传 Google Play 仍需目标商店账号和发布审批。
+
 真实地图、支付和推送仍需要对应供应商账号、密钥、sandbox/pre 环境与真机验收，仓库当前只声明已经实际接通和自动验证的能力。

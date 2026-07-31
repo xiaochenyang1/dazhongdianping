@@ -5,8 +5,16 @@ extension AppRegionCode on AppRegion {
 }
 
 class AppConfig {
+  static const compiledRegionCode = String.fromEnvironment(
+    'APP_REGION',
+    defaultValue: 'EU',
+  );
+  static const defaultRegion = compiledRegionCode == 'CN'
+      ? AppRegion.cn
+      : AppRegion.eu;
+
   const AppConfig({
-    this.region = AppRegion.eu,
+    this.region = defaultRegion,
     this.apiBaseUrl = const String.fromEnvironment(
       'API_BASE_URL',
       defaultValue: 'http://10.0.2.2:8080',

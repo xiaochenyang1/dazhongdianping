@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('settings switch region and locale', () {
     final settings = AppSettings();
-    expect(settings.region, AppRegion.eu);
+    expect(settings.region, AppConfig.defaultRegion);
     expect(settings.localeTag, 'zh-CN');
 
     settings.setRegion(AppRegion.cn);

@@ -2,7 +2,7 @@ import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:flutter/foundation.dart';
 
 class AppSettings extends ChangeNotifier {
-  AppRegion _region = AppRegion.eu;
+  AppRegion _region = AppConfig.defaultRegion;
   String _localeTag = 'zh-CN';
 
   AppRegion get region => _region;
