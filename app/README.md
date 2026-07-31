@@ -27,4 +27,20 @@ flutter analyze
 flutter build web --no-wasm-dry-run
 ```
 
+Android 正式构建必须配置生产 application ID 和 release keystore。可在不入库的
+`android/key.properties` 中填写：
+
+```properties
+DZDP_ANDROID_APPLICATION_ID=com.yourcompany.dazhongdianping
+DZDP_ANDROID_KEYSTORE_PATH=/absolute/path/to/release.jks
+DZDP_ANDROID_KEY_ALIAS=your-key-alias
+DZDP_ANDROID_STORE_PASSWORD=your-store-password
+DZDP_ANDROID_KEY_PASSWORD=your-key-password
+```
+
+相对 keystore 路径从 `app/android/` 解析。CI 也可使用同名环境变量或 Gradle
+属性（`-P...`）；优先级依次为 Gradle 属性、环境变量、`key.properties`。仓库已
+忽略 `key.properties`、`*.jks` 和 `*.keystore`，不要提交签名文件或密码。未配置
+时 debug 构建不受影响，release 构建会明确失败，不会回退到 debug 签名。
+
 真实地图、支付和推送仍需要对应供应商账号、密钥、sandbox/pre 环境与真机验收，仓库当前只声明已经实际接通和自动验证的能力。
