@@ -1,5 +1,6 @@
 import { createApp, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const serviceMocks = vi.hoisted(() => ({
   fetchReservation: vi.fn(),
@@ -36,6 +37,7 @@ function mount(reservationId = 33) {
 
 describe('ReservationDetailView', () => {
   beforeEach(() => {
+    useAppContext().setRegion('CN')
     Object.values(serviceMocks).forEach((mock) => mock.mockReset())
     routeState.query = {}
     serviceMocks.fetchReservation.mockResolvedValue({
@@ -80,6 +82,20 @@ describe('ReservationDetailView', () => {
       '商户已确认你的预订',
     )
     expect(host.textContent).toContain('商户确认')
+    app.unmount()
+  })
+
+  it('localizes reservation status and timeline values for EU', async () => {
+    useAppContext().setRegion('EU')
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('Confirmed')
+    expect(host.textContent).toContain('Confirmed by place')
+    expect(host.textContent).toContain('Place')
+    expect(host.textContent).toContain('25/07/2026')
+    expect(host.textContent).not.toContain('已确认')
+    expect(host.textContent).not.toContain('商户确认')
     app.unmount()
   })
 })

@@ -1,24 +1,25 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useAppContext } from '@/composables/useAppContext'
+import { formatWebTradeDate, localizeWebTradeError, tradeStringsForRegion } from '@/core/web_trade_localizations'
 import { fetchCoupons } from '@/services/trade'
 import type { Coupon } from '@/types/trade'
 
 const route = useRoute()
 const router = useRouter()
+const { state } = useAppContext()
+const copy = computed(() => tradeStringsForRegion(state.region))
 
 const coupons = ref<Coupon[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 const highlightCode = ref('')
 
-const statusTabs = [
-  { value: undefined as number | undefined, label: '全部' },
-  { value: 1, label: '待使用' },
-  { value: 2, label: '已使用' },
-  { value: 3, label: '已过期' },
-  { value: 4, label: '已退款' },
-]
+const statusTabs = computed(() => [
+  { value: undefined as number | undefined, label: copy.value.statuses.all },
+  ...[1, 2, 3, 4].map((value) => ({ value, label: copy.value.statuses.coupon(value) })),
+])
 
 const activeStatus = computed<number | undefined>(() => {
   const raw = route.query.status
@@ -28,11 +29,7 @@ const activeStatus = computed<number | undefined>(() => {
 })
 
 function statusLabel(status?: number) {
-  if (status === 1) return '待使用'
-  if (status === 2) return '已使用'
-  if (status === 3) return '已过期'
-  if (status === 4) return '已退款'
-  return '全部'
+  return status == null ? copy.value.statuses.all : copy.value.statuses.coupon(status)
 }
 
 async function load() {
@@ -42,7 +39,7 @@ async function load() {
     const result = await fetchCoupons(activeStatus.value, 1, 50)
     coupons.value = result.list
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '券加载失败'
+    errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.coupons.loadFailed)
   } finally {
     loading.value = false
   }
@@ -55,19 +52,14 @@ async function switchStatus(status?: number) {
   await router.replace({ path: '/user/coupons', query })
 }
 
-onMounted(async () => {
-  const rawCode = route.query.code
-  highlightCode.value = String(Array.isArray(rawCode) ? rawCode[0] || '' : rawCode || '')
-  await load()
-})
-
 watch(
-  () => [route.query.status, route.query.code],
+  [() => route.query.status, () => route.query.code, () => state.region],
   async () => {
     const rawCode = route.query.code
     highlightCode.value = String(Array.isArray(rawCode) ? rawCode[0] || '' : rawCode || '')
     await load()
   },
+  { immediate: true },
 )
 </script>
 
@@ -75,11 +67,11 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">我的券</p>
-        <h1>每张券独立核销，退款、过期和到期提醒也各算各的。</h1>
+        <p class="eyebrow">{{ copy.coupons.eyebrow }}</p>
+        <h1>{{ copy.coupons.title }}</h1>
         <p>
-          当前筛选：{{ statusLabel(activeStatus) }}
-          <template v-if="highlightCode"> · 定位券码 {{ highlightCode }}</template>
+          {{ copy.coupons.currentFilter(statusLabel(activeStatus)) }}
+          <template v-if="highlightCode"> · {{ copy.coupons.highlightedCode(highlightCode) }}</template>
         </p>
       </div>
     </div>
@@ -99,8 +91,8 @@ watch(
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="feedback">券码加载中...</p>
-    <p v-else-if="coupons.length === 0" class="feedback">当前筛选下暂无券码。</p>
+    <p v-else-if="loading" class="feedback">{{ copy.coupons.loading }}</p>
+    <p v-else-if="coupons.length === 0" class="feedback">{{ copy.coupons.empty }}</p>
 
     <div v-else class="rank-grid">
       <RouterLink
@@ -115,8 +107,12 @@ watch(
         <div class="rank-card__body">
           <h2>{{ coupon.dealTitle }}</h2>
           <strong>{{ coupon.code }}</strong>
-          <span>{{ coupon.shopName }} · {{ coupon.statusText }} · 有效期至 {{ coupon.expireAt || '不限期' }}</span>
-          <span class="muted">查看二维码与使用规则</span>
+          <span>
+            {{ coupon.shopName }} · {{ copy.statuses.coupon(coupon.status, coupon.statusText) }} ·
+            {{ copy.coupons.expiresAt }}
+            {{ coupon.expireAt ? formatWebTradeDate(coupon.expireAt, copy.tag) : copy.coupons.noExpiry }}
+          </span>
+          <span class="muted">{{ copy.coupons.viewDetails }}</span>
         </div>
       </RouterLink>
     </div>

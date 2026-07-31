@@ -1,5 +1,6 @@
 import { createApp, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const tradeMocks = vi.hoisted(() => ({
   fetchCouponDetail: vi.fn(),
@@ -32,6 +33,7 @@ function mount(code = 'CPABC123') {
 
 describe('CouponDetailView', () => {
   beforeEach(() => {
+    useAppContext().setRegion('CN')
     tradeMocks.fetchCouponDetail.mockReset()
     tradeMocks.fetchCouponDetail.mockResolvedValue({
       id: 11,
@@ -81,6 +83,20 @@ describe('CouponDetailView', () => {
     const { app, host } = mount('MISSING')
     await flush()
     expect(host.textContent).toContain('券码不存在')
+    app.unmount()
+  })
+
+  it('does not expose backend Chinese status or verification hints in EU', async () => {
+    useAppContext().setRegion('EU')
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('Available')
+    expect(host.textContent).toContain('Ready to redeem')
+    expect(host.textContent).toContain('Show this QR code or voucher code')
+    expect(host.textContent).toContain('31/12/2026')
+    expect(host.textContent).not.toContain('待使用')
+    expect(host.textContent).not.toContain('到店后出示')
     app.unmount()
   })
 })

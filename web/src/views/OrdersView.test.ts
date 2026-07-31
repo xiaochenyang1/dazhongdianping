@@ -1,5 +1,6 @@
 import { createApp, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAppContext } from '@/composables/useAppContext'
 
 const tradeMocks = vi.hoisted(() => ({
   fetchOrders: vi.fn(),
@@ -70,6 +71,7 @@ describe('OrdersView', () => {
     tradeMocks.refundOrder.mockReset()
     routerMocks.replace.mockReset()
     routeState.query = {}
+    useAppContext().setRegion('CN')
     tradeMocks.fetchOrders.mockResolvedValue({
       list: [unpaidOrder],
       total: 1,
@@ -123,6 +125,27 @@ describe('OrdersView', () => {
     expect(tradeMocks.cancelOrder).toHaveBeenCalledWith(10)
     expect(tradeMocks.fetchOrders).toHaveBeenCalledTimes(2)
     expect(host.textContent).toContain('订单 OD-10 已取消')
+    app.unmount()
+  })
+
+  it('uses EU labels and reloads orders when the region changes', async () => {
+    useAppContext().setRegion('EU')
+    tradeMocks.fetchOrders
+      .mockResolvedValueOnce({ list: [unpaidOrder], total: 1, page: 1, pageSize: 50, hasMore: false })
+      .mockResolvedValueOnce({ list: [{ ...unpaidOrder, orderNo: 'CN-20' }], total: 1, page: 1, pageSize: 50, hasMore: false })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('Current filter: All')
+    expect(host.textContent).toContain('Pending payment')
+    expect(host.textContent).not.toContain('待支付')
+
+    useAppContext().setRegion('CN')
+    await flush()
+
+    expect(tradeMocks.fetchOrders).toHaveBeenCalledTimes(2)
+    expect(host.textContent).toContain('CN-20')
     app.unmount()
   })
 })

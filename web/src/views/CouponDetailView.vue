@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAppContext } from '@/composables/useAppContext'
+import { formatWebDateTime } from '@/core/web_localizations'
+import { formatWebTradeDate, localizeWebTradeError, tradeStringsForRegion } from '@/core/web_trade_localizations'
 import { fetchCouponDetail } from '@/services/trade'
 import type { CouponDetail } from '@/types/trade'
 
 const props = defineProps<{ code: string }>()
+const { state } = useAppContext()
+const copy = computed(() => tradeStringsForRegion(state.region))
 
 const coupon = ref<CouponDetail | null>(null)
 const loading = ref(false)
@@ -13,7 +18,7 @@ const copied = ref(false)
 
 const usableLabel = computed(() => {
   if (!coupon.value) return ''
-  return coupon.value.usable ? '可核销' : '不可核销'
+  return coupon.value.usable ? copy.value.couponDetail.usable : copy.value.couponDetail.unusable
 })
 
 async function load() {
@@ -24,7 +29,7 @@ async function load() {
     coupon.value = await fetchCouponDetail(props.code)
   } catch (error) {
     coupon.value = null
-    errorMessage.value = error instanceof Error ? error.message : '券码详情加载失败'
+    errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.couponDetail.loadFailed)
   } finally {
     loading.value = false
   }
@@ -37,19 +42,16 @@ async function copyCode() {
     copied.value = true
   } catch {
     copied.value = false
-    errorMessage.value = '复制失败，请手动选择券码'
+    errorMessage.value = copy.value.couponDetail.copyFailed
   }
 }
 
-onMounted(() => {
-  void load()
-})
-
 watch(
-  () => props.code,
+  [() => props.code, () => state.region],
   () => {
     void load()
   },
+  { immediate: true },
 )
 </script>
 
@@ -57,15 +59,17 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">券码详情</p>
+        <p class="eyebrow">{{ copy.couponDetail.eyebrow }}</p>
         <h1>{{ coupon?.dealTitle || props.code }}</h1>
-        <p v-if="coupon">{{ coupon.shopName }} · {{ coupon.statusText }} · {{ usableLabel }}</p>
+        <p v-if="coupon">
+          {{ coupon.shopName }} · {{ copy.statuses.coupon(coupon.status, coupon.statusText) }} · {{ usableLabel }}
+        </p>
       </div>
-      <RouterLink class="secondary-button" to="/user/coupons">返回我的券</RouterLink>
+      <RouterLink class="secondary-button" to="/user/coupons">{{ copy.couponDetail.back }}</RouterLink>
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="feedback">券码详情加载中...</p>
+    <p v-else-if="loading" class="feedback">{{ copy.couponDetail.loading }}</p>
 
     <template v-else-if="coupon">
       <section class="content-card coupon-detail-card" data-testid="coupon-detail-card">
@@ -74,31 +78,41 @@ watch(
             v-if="coupon.qrImageUrl"
             class="coupon-qr"
             :src="coupon.qrImageUrl"
-            :alt="`券码二维码 ${coupon.code}`"
+            :alt="copy.couponDetail.qrAlt(coupon.code)"
             data-testid="coupon-qr-image"
           />
-          <p class="muted">{{ coupon.verifyHint }}</p>
+          <p class="muted">{{ copy.couponDetail.verifyHint(coupon.verifyHint) }}</p>
         </div>
 
         <div class="coupon-meta">
-          <p class="eyebrow">券码</p>
+          <p class="eyebrow">{{ copy.couponDetail.code }}</p>
           <strong data-testid="coupon-detail-code">{{ coupon.code }}</strong>
           <div class="hero-actions">
             <button type="button" class="secondary-button" data-testid="copy-coupon-code" @click="copyCode">
-              {{ copied ? '已复制' : '复制券码' }}
+              {{ copied ? copy.couponDetail.copied : copy.couponDetail.copyCode }}
             </button>
-            <RouterLink class="secondary-button" :to="`/user/orders/${coupon.orderId}`">查看订单</RouterLink>
-            <RouterLink class="secondary-button" :to="`/shops/${coupon.shopId}`">查看门店</RouterLink>
+            <RouterLink class="secondary-button" :to="`/user/orders/${coupon.orderId}`">{{ copy.couponDetail.viewOrder }}</RouterLink>
+            <RouterLink class="secondary-button" :to="`/shops/${coupon.shopId}`">{{ copy.couponDetail.viewPlace }}</RouterLink>
           </div>
           <ul class="coupon-facts">
-            <li><span>状态</span><strong>{{ coupon.statusText }}</strong></li>
-            <li><span>有效期至</span><strong>{{ coupon.expireAt || '不限期' }}</strong></li>
-            <li><span>团购有效期</span><strong>{{ coupon.validStart || '—' }} ~ {{ coupon.validEnd || '—' }}</strong></li>
-            <li v-if="coupon.verifyAt"><span>核销时间</span><strong>{{ coupon.verifyAt }}</strong></li>
+            <li><span>{{ copy.couponDetail.status }}</span><strong>{{ copy.statuses.coupon(coupon.status, coupon.statusText) }}</strong></li>
+            <li>
+              <span>{{ copy.couponDetail.expiresAt }}</span>
+              <strong>{{ coupon.expireAt ? formatWebTradeDate(coupon.expireAt, copy.tag) : copy.couponDetail.noExpiry }}</strong>
+            </li>
+            <li>
+              <span>{{ copy.couponDetail.offerValidity }}</span>
+              <strong>
+                {{ coupon.validStart ? formatWebTradeDate(coupon.validStart, copy.tag) : copy.common.notAvailable }}
+                ~
+                {{ coupon.validEnd ? formatWebTradeDate(coupon.validEnd, copy.tag) : copy.common.notAvailable }}
+              </strong>
+            </li>
+            <li v-if="coupon.verifyAt"><span>{{ copy.couponDetail.redeemedAt }}</span><strong>{{ formatWebDateTime(coupon.verifyAt, copy.tag) }}</strong></li>
           </ul>
           <div class="coupon-rules">
-            <h2>使用规则</h2>
-            <p>{{ coupon.rules || '暂无补充规则' }}</p>
+            <h2>{{ copy.couponDetail.rules }}</h2>
+            <p>{{ coupon.rules || copy.couponDetail.noRules }}</p>
           </div>
         </div>
       </section>

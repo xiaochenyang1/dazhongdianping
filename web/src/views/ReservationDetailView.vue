@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAppContext } from '@/composables/useAppContext'
+import { formatWebDateTime } from '@/core/web_localizations'
+import { localizeWebTradeError, tradeStringsForRegion } from '@/core/web_trade_localizations'
 import { addDaysToDateInput, toLocalDateInputValue } from '@/lib/local-date'
 import {
   cancelReservation,
@@ -12,6 +15,8 @@ import type { Reservation, ReservationSlot } from '@/types/reservation'
 
 const props = defineProps<{ reservationId: number }>()
 const route = useRoute()
+const { state } = useAppContext()
+const copy = computed(() => tradeStringsForRegion(state.region))
 
 const reservation = ref<Reservation | null>(null)
 const minimumDate = toLocalDateInputValue()
@@ -22,14 +27,15 @@ const successMessage = ref('')
 
 const statusBanner = computed(() => {
   const marker = String(route.query.status || '')
-  if (marker === 'confirmed') return '商户已确认你的预订。'
-  if (marker === 'arrived') return '商户已确认你到店。'
-  if (marker === 'rejected') return '商户已拒绝本次预订。'
-  if (marker === 'no_show') return '商户已将本次预订标记为爽约。'
+  if (marker === 'confirmed') return copy.value.reservationDetail.confirmedBanner
+  if (marker === 'arrived') return copy.value.reservationDetail.arrivedBanner
+  if (marker === 'rejected') return copy.value.reservationDetail.rejectedBanner
+  if (marker === 'no_show') return copy.value.reservationDetail.noShowBanner
   return ''
 })
 
 async function load() {
+  errorMessage.value = ''
   reservation.value = await fetchReservation(props.reservationId)
   const suggestedDate = addDaysToDateInput(reservation.value.reserveTime, 1)
   date.value = suggestedDate < minimumDate ? minimumDate : suggestedDate
@@ -38,17 +44,22 @@ async function load() {
 async function cancel() {
   try {
     reservation.value = await cancelReservation(props.reservationId)
-    successMessage.value = '预订已取消。'
+    successMessage.value = copy.value.reservationDetail.cancelSuccess
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '取消失败'
+    errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.reservationDetail.cancelFailed)
   }
 }
 
 async function findSlots() {
   if (!reservation.value) return
-  slots.value = (
-    await fetchReservationSlots(reservation.value.shop.id, date.value, reservation.value.peopleCount)
-  ).list
+  errorMessage.value = ''
+  try {
+    slots.value = (
+      await fetchReservationSlots(reservation.value.shop.id, date.value, reservation.value.peopleCount)
+    ).list
+  } catch (error) {
+    errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.reservationDetail.slotLoadFailed)
+  }
 }
 
 async function reschedule(slot: ReservationSlot) {
@@ -57,29 +68,39 @@ async function reschedule(slot: ReservationSlot) {
       props.reservationId,
       slot.slotId,
       `${date.value} ${slot.startTime}`,
-      '用户在线改期',
+      copy.value.reservationDetail.rescheduleReason,
     )
     slots.value = []
-    successMessage.value = '改期申请已提交。'
+    successMessage.value = copy.value.reservationDetail.rescheduleSuccess
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '改期失败'
+    errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.reservationDetail.rescheduleFailed)
   }
 }
 
-onMounted(() => {
-  void load().catch((error) => {
-    errorMessage.value = error instanceof Error ? error.message : '预订加载失败'
-  })
-})
+watch(
+  [() => props.reservationId, () => state.region],
+  () => {
+    reservation.value = null
+    slots.value = []
+    successMessage.value = ''
+    void load().catch((error) => {
+      errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.reservationDetail.loadFailed)
+    })
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <section v-if="reservation" class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">预订 {{ reservation.reservationNo }}</p>
+        <p class="eyebrow">{{ copy.reservationDetail.reservation }} {{ reservation.reservationNo }}</p>
         <h1>{{ reservation.shop.name }}</h1>
-        <p>{{ reservation.reserveTime }} · {{ reservation.peopleCount }} 人 · {{ reservation.statusText }}</p>
+        <p>
+          {{ formatWebDateTime(reservation.reserveTime, copy.tag) }} · {{ copy.common.people(reservation.peopleCount) }} ·
+          {{ copy.statuses.reservation(reservation.status, reservation.statusText) }}
+        </p>
       </div>
     </div>
 
@@ -88,10 +109,10 @@ onMounted(() => {
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
 
     <div class="hero-actions">
-      <button v-if="reservation.canCancel" class="secondary-button" type="button" @click="cancel">取消预订</button>
+      <button v-if="reservation.canCancel" class="secondary-button" type="button" @click="cancel">{{ copy.reservationDetail.cancel }}</button>
       <template v-if="reservation.canReschedule">
         <input v-model="date" type="date" :min="minimumDate" />
-        <button class="secondary-button" type="button" @click="findSlots">查询改期时段</button>
+        <button class="secondary-button" type="button" @click="findSlots">{{ copy.reservationDetail.findSlots }}</button>
       </template>
     </div>
 
@@ -104,21 +125,25 @@ onMounted(() => {
         :disabled="!slot.available"
         @click="reschedule(slot)"
       >
-        {{ slot.startTime }} · {{ slot.confirmModeText }} · 余 {{ slot.remainingCount }}
+        {{ slot.startTime }} · {{ copy.statuses.confirmMode(slot.confirmMode, slot.confirmModeText) }} ·
+        {{ copy.common.remaining(slot.remainingCount) }}
       </button>
     </div>
 
     <section class="content-card">
-      <h2>变更时间线</h2>
+      <h2>{{ copy.reservationDetail.timeline }}</h2>
       <div class="review-list">
         <article
-          v-for="item in reservation.timeline"
+          v-for="item in reservation.timeline || []"
           :key="item.createdAt + '-' + item.actionType + '-' + (item.remark || '')"
           class="review-card"
         >
-          <strong>{{ item.actionText }}</strong>
-          <p>{{ item.remark || '—' }}</p>
-          <span>{{ item.operatorText }} · {{ item.createdAt }}</span>
+          <strong>{{ copy.statuses.timelineAction(item.actionType, item.actionText) }}</strong>
+          <p>{{ copy.statuses.timelineRemark(item.actionType, item.remark) }}</p>
+          <span>
+            {{ copy.statuses.operator(item.operatorType, item.operatorText) }} ·
+            {{ formatWebDateTime(item.createdAt, copy.tag) }}
+          </span>
         </article>
       </div>
     </section>

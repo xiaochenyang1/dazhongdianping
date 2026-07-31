@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useAppContext } from '@/composables/useAppContext'
+import { formatWebDateTime } from '@/core/web_localizations'
+import { localizeWebTradeError, tradeStringsForRegion } from '@/core/web_trade_localizations'
 import { fetchReservations } from '@/services/reservation'
 import type { Reservation } from '@/types/reservation'
 
 const route = useRoute()
 const router = useRouter()
+const { state } = useAppContext()
+const copy = computed(() => tradeStringsForRegion(state.region))
 
 const list = ref<Reservation[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 
-const statusTabs = [
-  { value: undefined as number | undefined, label: '全部' },
-  { value: 0, label: '待确认' },
-  { value: 1, label: '已确认' },
-  { value: 2, label: '已到店' },
-  { value: 3, label: '用户取消' },
-  { value: 4, label: '商户拒绝' },
-  { value: 5, label: '爽约' },
-]
+const statusTabs = computed(() => [
+  { value: undefined as number | undefined, label: copy.value.statuses.all },
+  ...[0, 1, 2, 3, 4, 5].map((value) => ({ value, label: copy.value.statuses.reservation(value) })),
+])
 
 const activeStatus = computed<number | undefined>(() => {
   const raw = route.query.status
@@ -29,13 +29,7 @@ const activeStatus = computed<number | undefined>(() => {
 })
 
 function statusLabel(status?: number) {
-  if (status === 0) return '待确认'
-  if (status === 1) return '已确认'
-  if (status === 2) return '已到店'
-  if (status === 3) return '用户取消'
-  if (status === 4) return '商户拒绝'
-  if (status === 5) return '爽约'
-  return '全部'
+  return status == null ? copy.value.statuses.all : copy.value.statuses.reservation(status)
 }
 
 async function load() {
@@ -45,7 +39,7 @@ async function load() {
     const result = await fetchReservations(activeStatus.value, 1, 50)
     list.value = result.list
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '预订加载失败'
+    errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.reservations.loadFailed)
   } finally {
     loading.value = false
   }
@@ -57,15 +51,12 @@ async function switchStatus(status?: number) {
   await router.replace({ path: '/user/reservations', query })
 }
 
-onMounted(() => {
-  void load()
-})
-
 watch(
-  () => route.query.status,
+  [() => route.query.status, () => state.region],
   () => {
     void load()
   },
+  { immediate: true },
 )
 </script>
 
@@ -73,9 +64,9 @@ watch(
   <section class="page-section">
     <div class="page-header">
       <div>
-        <p class="eyebrow">我的预订</p>
-        <h1>待确认、已确认、取消和改期都在一条时间线上。</h1>
-        <p>当前筛选：{{ statusLabel(activeStatus) }}</p>
+        <p class="eyebrow">{{ copy.reservations.eyebrow }}</p>
+        <h1>{{ copy.reservations.title }}</h1>
+        <p>{{ copy.reservations.currentFilter(statusLabel(activeStatus)) }}</p>
       </div>
     </div>
 
@@ -94,8 +85,8 @@ watch(
     </div>
 
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
-    <p v-if="loading" class="feedback">预订加载中...</p>
-    <p v-else-if="list.length === 0" class="feedback">当前筛选下暂无预订。</p>
+    <p v-if="loading" class="feedback">{{ copy.reservations.loading }}</p>
+    <p v-else-if="list.length === 0" class="feedback">{{ copy.reservations.empty }}</p>
 
     <div v-else class="rank-list">
       <RouterLink
@@ -108,9 +99,9 @@ watch(
         <img :src="item.shop.coverImage" :alt="item.shop.name" />
         <div class="rank-item__body">
           <h2>{{ item.shop.name }}</h2>
-          <p>{{ item.reserveTime }} · {{ item.peopleCount }} 人</p>
-          <p class="muted">预订号 {{ item.reservationNo }}</p>
-          <span class="status-pill">{{ item.statusText }}</span>
+          <p>{{ formatWebDateTime(item.reserveTime, copy.tag) }} · {{ copy.common.people(item.peopleCount) }}</p>
+          <p class="muted">{{ copy.reservations.reservationNo(item.reservationNo) }}</p>
+          <span class="status-pill">{{ copy.statuses.reservation(item.status, item.statusText) }}</span>
         </div>
       </RouterLink>
     </div>
