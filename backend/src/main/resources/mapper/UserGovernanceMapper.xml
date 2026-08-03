@@ -78,6 +78,26 @@
         ORDER BY last_active_at DESC, id DESC
     </select>
 
+    <select id="selectPushDevicesByUserId" resultType="com.tuowei.dazhongdianping.module.auth.model.UserDeviceRow">
+        SELECT id,
+               user_id,
+               device_uid,
+               platform,
+               push_channel,
+               push_token,
+               app_version,
+               status,
+               last_active_at,
+               created_at,
+               updated_at
+        FROM user_device
+        WHERE user_id = #{userId}
+          AND status = 1
+          AND push_channel IN (1, 2)
+          AND push_token != ''
+        ORDER BY last_active_at DESC, id DESC
+    </select>
+
     <insert id="insertDevice" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_device(
             user_id, device_uid, platform, push_channel, push_token,
@@ -111,6 +131,16 @@
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
           AND user_id = #{userId}
+    </update>
+
+    <update id="deactivatePushToken">
+        UPDATE user_device
+        SET push_channel = 0,
+            push_token = '',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{deviceId}
+          AND status = 1
+          AND push_token = #{pushToken}
     </update>
 
     <update id="logoutDevice">

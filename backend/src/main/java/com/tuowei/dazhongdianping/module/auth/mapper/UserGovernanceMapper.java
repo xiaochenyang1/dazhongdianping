@@ -16,11 +16,15 @@ public interface UserGovernanceMapper {
 
     List<UserDeviceRow> selectDevicesByUserId(@Param("userId") Long userId);
 
+    List<UserDeviceRow> selectPushDevicesByUserId(@Param("userId") Long userId);
+
     void insertDevice(UserDeviceRow row);
 
     int updateDeviceRegistration(UserDeviceRow row);
 
     int updateDevicePushToken(UserDeviceRow row);
+
+    int deactivatePushToken(@Param("deviceId") Long deviceId, @Param("pushToken") String pushToken);
 
     int logoutDevice(@Param("deviceId") Long deviceId, @Param("userId") Long userId);
 }

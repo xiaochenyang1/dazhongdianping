@@ -96,3 +96,20 @@ app:
       access-key: ${APP_S3_ACCESS_KEY:}
       secret-key: ${APP_S3_SECRET_KEY:}
       path-style-access-enabled: ${APP_S3_PATH_STYLE_ACCESS_ENABLED:false}
+  push:
+    enabled: ${APP_PUSH_ENABLED:false}
+    max-attempts: ${APP_PUSH_MAX_ATTEMPTS:3}
+    initial-backoff-millis: ${APP_PUSH_INITIAL_BACKOFF_MILLIS:250}
+    fcm:
+      project-id: ${APP_PUSH_FCM_PROJECT_ID:}
+      client-email: ${APP_PUSH_FCM_CLIENT_EMAIL:}
+      private-key: ${APP_PUSH_FCM_PRIVATE_KEY:}
+      token-url: ${APP_PUSH_FCM_TOKEN_URL:https://oauth2.googleapis.com/token}
+      api-base-url: ${APP_PUSH_FCM_API_BASE_URL:https://fcm.googleapis.com}
+    apns:
+      team-id: ${APP_PUSH_APNS_TEAM_ID:}
+      key-id: ${APP_PUSH_APNS_KEY_ID:}
+      private-key: ${APP_PUSH_APNS_PRIVATE_KEY:}
+      topic: ${APP_PUSH_APNS_TOPIC:}
+      endpoint: ${APP_PUSH_APNS_ENDPOINT:}
+      production: ${APP_PUSH_APNS_PRODUCTION:false}

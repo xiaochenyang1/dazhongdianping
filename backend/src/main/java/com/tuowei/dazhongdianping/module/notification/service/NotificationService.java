@@ -19,10 +19,14 @@ public class NotificationService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final NotificationMapper mapper;
     private final NotificationSessionRegistry sessions;
+    private final PushDispatchService pushDispatchService;
 
-    public NotificationService(NotificationMapper mapper, NotificationSessionRegistry sessions) {
+    public NotificationService(NotificationMapper mapper,
+                               NotificationSessionRegistry sessions,
+                               PushDispatchService pushDispatchService) {
         this.mapper = mapper;
         this.sessions = sessions;
+        this.pushDispatchService = pushDispatchService;
     }
 
     public PageResult<Map<String, Object>> list(Long userId, String region, Integer page, Integer pageSize) {
@@ -79,9 +83,18 @@ public class NotificationService {
             stored = mapper.findOwned(row.getId(), userId, region);
         }
         Map<String, Object> response = toResponse(stored);
+        PushMessage pushMessage = new PushMessage(
+                stored.getId(),
+                stored.getType(),
+                stored.getTitle(),
+                stored.getContent(),
+                stored.getLinkUrl(),
+                stored.getRegion()
+        );
         Runnable send = () -> {
             if ("GLOBAL".equals(region)) sessions.sendAllRegions(userId, Map.of("type", "notification.new", "data", response));
             else sessions.send(userId, region, Map.of("type", "notification.new", "data", response));
+            pushDispatchService.dispatch(userId, pushMessage);
         };
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

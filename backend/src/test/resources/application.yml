@@ -74,3 +74,7 @@ app:
   file-storage:
     base-dir: local-storage/uploads
     max-image-bytes: 5242880
+  push:
+    enabled: false
+    max-attempts: 3
+    initial-backoff-millis: 0

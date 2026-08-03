@@ -1,8 +1,8 @@
 # 当前已完成功能与 SQL 导入说明
 
-> 最后更新:2026-07-21
+> 最后更新:2026-08-02
 > M7 补充：已完成帖子与转发、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、关注流、私信、官方圈子、区域化话题广场、7 天热榜、三端页面、管理端治理和话题隐私治理。
-> 适用范围:当前仓库真实已落地的 `M1` 至 `M7` 本地闭环；真实欧洲支付、Google Maps、FCM/APNs、认证商户号和目标环境凭证联调仍未完成
+> 适用范围:当前仓库真实已落地的 `M1` 至 `M7` 本地闭环；FCM/APNs 服务端适配器已落地，但真实凭证、真机 smoke、真实欧洲支付、Google Maps 和目标环境凭证联调仍未完成
 
 ## 1. 现在已经做完了什么
 
@@ -61,7 +61,7 @@
 - 帖子正文在审核通过时解析合法 `@昵称` 并发送独立 `social.mention` 通知；帖子评论创建时即时解析 `@昵称`，同一条内容内同一用户只提醒一次，跳过自己、不存在用户和重名用户，通知沿用现有 WebSocket/REST 聚合链路。
 - Flutter 已完成社区流、帖子详情、发帖/编辑、图片上传、话题、点赞、评论、转发/取消转发和举报；PC Web 仅提供 `/community` 与帖子详情只读展示及 APP 引导。
 - 管理端 `/audit/posts` 支持按区域查询 `bizType=4` 任务并通过/驳回；隐私 ZIP 的 `posts.json` 导出本人真实帖子。
-- 真实 FCM/APNs 推送仍未实现；帖子转发、关注流、私信、官方圈子和话题广场/热榜已实现。
+- 移动推送适配器已实现：通知事务提交后异步投递，Android 走 FCM HTTP v1 服务账号 OAuth2，iOS 走 APNs token-based ES256；临时 HTTP/网络错误最多按配置重试，确定失效 token 条件清空，站内通知/WebSocket 保留为补偿来源。真实凭证、真机接收和目标环境 smoke 仍待验收。
 
 ### 1.5.1 M7 话题广场、7 天热榜与治理
 
@@ -225,8 +225,8 @@
 | 点评发布 / 互动 / 审核 | 已完成 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `review/review_image/review_like/review_comment/review_report/audit_task`；`02_seed_data.sql` 预置公开点评、点评图片、点赞、评论、待审 / 驳回审核任务；`review_report` 表会建好,但默认不塞演示举报记录,免得你第一次点举报就撞重复 | 写点评、编辑点评、删除点评、点评详情、点赞 / 评论 / 举报、管理端审核 |
 | 本地图片上传 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 这块不靠额外导库表跑上传文件本身；上传文件落 `backend/local-storage/uploads`；点评提交后图片 URL 仍落到 `review_image` | 写点评 / 编辑点评时选本地图片上传并预览 |
 | 隐私中心 | 已完成当前可用闭环 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `privacy_export_task/privacy_delete_task`;导出文件运行时落 `backend/local-storage/privacy-exports` | 创建数据导出、认证下载 ZIP、提交账号删除、冷静期内撤销 |
-| M7 帖子内容闭环 | 已完成第一阶段 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md` | `01_schema.sql` 建 `post/post_image/topic/post_topic/post_like/post_repost/post_comment/post_report`；审核复用 `audit_task.biz_type=4` | Flutter 点赞、评论、转发/取消转发、帖子正文/评论 `@提醒` 等互动，PC 只读，管理端审核、帖子隐私导出；不含关注/私信/圈子/真实推送 |
-| M7 关注关系与关注流 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `01_schema.sql` 建 `user_follow`，`user_notification` 增加 `actor_user_id`；关注通知使用 `GLOBAL` | 关注/取关、粉丝/关注列表、区域关注流、Flutter 双流与公开主页、PC 只读关系、`follows` 隐私导出；不含私信/圈子/真实推送 |
+| M7 帖子内容闭环 | 已完成第一阶段 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md` | `01_schema.sql` 建 `post/post_image/topic/post_topic/post_like/post_repost/post_comment/post_report`；审核复用 `audit_task.biz_type=4` | Flutter 点赞、评论、转发/取消转发、帖子正文/评论 `@提醒` 等互动，PC 只读，管理端审核、帖子隐私导出；移动推送由统一适配器补充，真实凭证仍待验收 |
+| M7 关注关系与关注流 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `01_schema.sql` 建 `user_follow`，`user_notification` 增加 `actor_user_id`；关注通知使用 `GLOBAL` | 关注/取关、粉丝/关注列表、区域关注流、Flutter 双流与公开主页、PC 只读关系、`follows` 隐私导出；移动推送由统一适配器补充，真实凭证仍待验收 |
 | M7 APP 私信 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `conversation/message/user_block/message_report` | 1v1 文本（发送中显示进度，失败保留草稿并可直接重试）、会话列表分页（首次失败可重试、刷新失败保留列表）、消息历史向前分页（首次加载失败可重试且不误确认已读；已读同步失败仍保留已加载历史并明确提示），以及 Flutter 分页黑名单管理与解除拉黑（首次失败可重试、刷新失败保留名单；会话举报/拉黑进行中禁止重复提交）；列表保留分页元数据并按 ID 去重，另含举报、WebSocket、`messages` 导出与注销治理；PC Web 无入口 |
 | M7 官方圈子 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `circle/circle_member`，`post.circle_id` | 区域官方圈子、加入退出、成员发帖、管理端维护、Flutter 完整互动、PC 只读、`circles` 隐私治理 |
 | M7 话题广场与热榜 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `topic/post_topic/topic_follow/topic_hot_snapshot` | Flutter 可关注，PC Web 只读，管理端治理/不可逆合并，数据库 7 天热榜，`topics` 隐私导出与注销治理 |
@@ -241,8 +241,9 @@
 | M5 商户经营后端 | 已完成 | 入驻、员工 RBAC、门店范围、预订、团购、订单退款、门店草稿、点评回复申诉已落地 | 无后端主流程缺口 | 后端权限、状态机、跨商户和跨区域测试通过 |
 | 商户端与管理端完整闭环 | 部分完成 | `merchant-web` 已有注册、登录、资质、看板（含待办与快捷入口）、门店草稿编辑/提交审核/驳回原因回显、员工、预订（确认/拒绝/到店/爽约）、预订时段配置、团购创建/编辑/上下架/驳回原因回显、退款、券码核销和点评页面；管理端已有数据库 RBAC、控制台经营/审核概览与快捷入口（门店/交易指标按城市或门店白名单过滤）、Banner、搜索热词、运营活动、分类/城市/商圈、订单退款查询/平台仲裁/对账补偿、商户资质/点评/申诉/帖子/门店草稿/团购审核、门店、榜单、成长、圈子和话题治理，审计日志、隐私任务查询，以及 C 端用户治理（查询/详情/封禁/解封，封禁即时吊销登录态、拦截密码与验证码登录并写审计日志）和用户封禁申诉闭环（免登录提交/查询申诉、`/audit/user-appeals` 审核页、通过自动解封、直接解封自动了结待审申诉、Web 登录弹层申诉入口）；内容举报聚合治理（`/audit/reports`，点评/帖子/私信举报列表与 dismiss/hide 处理） | 真实支付渠道原路退款未接 | 已完成的 B/Admin 页面、权限、区域范围、角色实时收权、账号停用 `401`、审计日志/隐私任务/订单退款查询与仲裁补偿、基础数据、用户治理和封禁申诉真实后端 E2E 通过；其余经营深度与第三方集成另行验收 |
 | PC Web 产品缺口 | 部分完成 | 首页、列表、详情、搜索、交易、预订、用户中心和社区只读页已落地；商户高级筛选、真实分页、点评排序/评分/带图筛选、分享、门店相似推荐、公开页客户端运行时 metadata、登录用户门店浏览足迹（每用户每区域最多 50 条）、C 端运营活动公开列表/详情与首页透出、消息中心页（列表/分页/全部已读），券码通知定位，以及按 `PRERENDER_REGION` 区域化的 7 个静态公开入口和可选真实 API 详情快照预渲染、构建清单、sitemap/robots 已接入 | 常驻 SSR 服务、CN/EU 独立域名与缓存策略、真实部署验收 | 组件测试、后端查询测试、CN/EU 预渲染/快照脚本测试和本地 H2 快照构建已有证据；目标环境自动化尚未验收 |
-| 社区与消息尾项 | 部分完成 | 帖子、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、认证商户号、转发、关注流、私信、圈子、话题和通知聚合已落地；Flutter 通知中心支持分页、未读筛选及刷新失败保留数据；敏感词库管理 + 点评/帖子/评论/私信写入拦截已落地（`operations:sensitive_word:*`） | 真实移动推送、第三方机审 | 自动化覆盖已落地的社交关系、达人/认证商户审核与公开 badge、通知去重、`@提醒` 分发、隐私治理、敏感词拦截和 Flutter 转发/互动链路；尾项仍待实现 |
-| Flutter 与真实第三方 | 部分完成 | Flutter 具备区域切换和应用级简体中文/繁体中文/英文委托；首页搜索、榜单活动、通知、用户中心、社区话题圈子、私信黑名单、交易预订点评认证、隐私账户达人成长、公开主页/收藏/足迹/门店详情点评/帖子详情编辑完整链路已迁移三语言，英文动态计数已覆盖单复数；未配置能力会诚实禁用；Android release 强制 production application ID 与独立 keystore，手工流水线可按环境/区域生成带 manifest 和 SHA-256 的签名 AAB | 点评翻译、Google Maps、Stripe/PayPal/支付宝/微信、FCM/APNs、邮件短信、内容审核与 Google Play 上传 | 多域三语言组件测试、Flutter 全量测试、未配置阻断验证和移动发布工作流契约通过；真实 sandbox、凭证、商店账号和供应商联调仍待验收 |
+| 社区与消息尾项 | 部分完成 | 帖子、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、认证商户号、转发、关注流、私信、圈子、话题和通知聚合已落地；Flutter 通知中心支持分页、未读筛选及刷新失败保留数据；敏感词库管理 + 点评/帖子/评论/私信写入拦截已落地（`operations:sensitive_word:*`）；FCM/APNs 服务端适配器、重试和失效 token 停用已落地 | 真实移动推送凭证/真机 smoke、第三方机审 | 自动化覆盖已落地的社交关系、达人/认证商户审核与公开 badge、通知去重、`@提醒` 分发、隐私治理、敏感词拦截、推送契约和 Flutter 转发/互动链路；外部推送仍待验收 |
+| 移动推送适配器 | 部分完成（代码已落地） | `PushProvider` 统一契约；FCM HTTP v1 服务账号 JWT/OAuth2；APNs ES256 JWT；通知事务提交后异步投递；临时 HTTP/网络错误退避重试；确定失效 token 条件清空；`PushProviderTest`、`PushDispatchServiceTest` 通过 | 真实 FCM/APNs 凭证、Android/iOS 真机接收、前后台/杀进程和目标环境 smoke | 本地 mock HTTP 契约与服务层测试通过；无真实凭证时保持关闭，不把代码接入写成外部服务验收 |
+| Flutter 与真实第三方 | 部分完成 | Flutter 具备区域切换和应用级简体中文/繁体中文/英文委托；首页搜索、榜单活动、通知、用户中心、社区话题圈子、私信黑名单、交易预订点评认证、隐私账户达人成长、公开主页/收藏/足迹/门店详情点评/帖子详情编辑完整链路已迁移三语言，英文动态计数已覆盖单复数；未配置能力会诚实禁用；Android release 强制 production application ID 与独立 keystore，手工流水线可按环境/区域生成带 manifest 和 SHA-256 的签名 AAB | 点评翻译、Google Maps、Stripe/PayPal/支付宝/微信、真实 FCM/APNs smoke、邮件短信、内容审核与 Google Play 上传 | 多域三语言组件测试、Flutter 全量测试、未配置阻断验证和移动发布工作流契约通过；真实 sandbox、凭证、商店账号和供应商联调仍待验收 |
 | 目标环境与上线执行 | 外部待验收 | MySQL、Redis、S3、ES、发布回滚脚本及 CI workflow 已存在；服务器 release bundle、部署和回滚均覆盖 C 端 Web、管理端与商户端 | 真实云资源、域名证书、CDN、SSH、预算、联系人和供应商账号 | 仅脚本和 workflow 已准备；目标环境发布/回滚演练尚未执行 |
 
 ## 3. SQL 怎么导
@@ -435,4 +436,4 @@
 
 1. `scripts/ci/mysql-smoke.ps1` 已经在临时 `MySQL 8` 实例上跑绿；如果要复用宿主机 `MySQL80`,先把它那套 root 凭证修好。
 2. 接着给目标环境的 `MySQL / Redis / 对象存储 / SSH` 参数补齐,跑绿现有 `storage-smoke.ps1`、`deploy-release.ps1` 和 `rollback-release.ps1`。
-3. 继续推进真实移动推送，以及真实支付、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、认证商户号、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、话题广场/热榜已经落地。
+3. 用真实 FCM/APNs 凭证完成设备注册、前后台接收、失效 token 和重试 smoke，再推进真实支付、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、认证商户号、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、话题广场/热榜已经落地。

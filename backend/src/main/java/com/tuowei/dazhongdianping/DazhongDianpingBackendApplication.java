@@ -3,6 +3,7 @@ package com.tuowei.dazhongdianping;
 import com.tuowei.dazhongdianping.config.FileStorageProperties;
 import com.tuowei.dazhongdianping.config.InfrastructureProperties;
 import com.tuowei.dazhongdianping.config.PrivacyProperties;
+import com.tuowei.dazhongdianping.config.PushProperties;
 import com.tuowei.dazhongdianping.config.SearchProperties;
 import com.tuowei.dazhongdianping.config.SendCodeRateLimitProperties;
 import com.tuowei.dazhongdianping.config.VerificationCodeProperties;
@@ -21,7 +22,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         SendCodeRateLimitProperties.class,
         VerificationCodeProperties.class,
         PrivacyProperties.class,
-        SearchProperties.class
+        SearchProperties.class,
+        PushProperties.class
 })
 public class DazhongDianpingBackendApplication {
 
