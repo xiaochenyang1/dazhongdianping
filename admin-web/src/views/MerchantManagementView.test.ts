@@ -5,6 +5,9 @@ const mocks = vi.hoisted(() => ({
   listAdminMerchants: vi.fn(),
   getAdminMerchant: vi.fn(),
   updateAdminMerchantStatus: vi.fn(),
+  listAdminMerchantOperators: vi.fn(),
+  getAdminMerchantOperator: vi.fn(),
+  updateAdminMerchantOperatorStatus: vi.fn(),
 }))
 
 const sessionMock = vi.hoisted(() => ({
@@ -62,9 +65,47 @@ const merchants = [
   },
 ]
 
+const operators = [
+  {
+    id: 13001,
+    merchantId: 1001,
+    account: 'manager@example.com',
+    name: 'Front Desk Manager',
+    phone: '13800139999',
+    email: 'manager@example.com',
+    shopScopeType: 2,
+    shopScopeText: '指定门店',
+    shopIds: [10001],
+    roleNames: ['店长'],
+    status: 1,
+    statusText: '正常',
+    disableReason: '',
+    createdAt: '2026-07-01 08:00:00',
+    updatedAt: '2026-07-30 09:00:00',
+  },
+  {
+    id: 13002,
+    merchantId: 1001,
+    account: 'verifier@example.com',
+    name: 'Coupon Verifier',
+    phone: '',
+    email: 'verifier@example.com',
+    shopScopeType: 1,
+    shopScopeText: '全部门店',
+    shopIds: [],
+    roleNames: ['核销员'],
+    status: 2,
+    statusText: '已停用',
+    disableReason: 'Scope violation',
+    createdAt: '2026-07-02 08:00:00',
+    updatedAt: '2026-07-31 09:00:00',
+  },
+]
+
 async function flush() {
-  await Promise.resolve()
-  await Promise.resolve()
+  for (let index = 0; index < 6; index += 1) {
+    await Promise.resolve()
+  }
   await nextTick()
 }
 
@@ -102,6 +143,7 @@ describe('MerchantManagementView', () => {
     sessionMock.state.permissions = ['system:merchant:read', 'system:merchant:write']
     sessionMock.state.region = 'EU'
     mocks.listAdminMerchants.mockResolvedValue({ list: merchants, total: 2, page: 1, pageSize: 20, hasMore: false })
+    mocks.listAdminMerchantOperators.mockResolvedValue({ list: operators, total: 2, page: 1, pageSize: 20, hasMore: false })
   })
 
   it('loads merchants and applies all filters including pending audit status', async () => {
@@ -203,6 +245,128 @@ describe('MerchantManagementView', () => {
     expect(host.textContent).toContain('Details')
     expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Disable'))).toBe(false)
     expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Restore'))).toBe(false)
+    app.unmount()
+  })
+
+  it('opens staff accounts and filters by keyword and status', async () => {
+    const { app, host } = mount()
+    await flush()
+
+    click(host, 'Staff accounts')
+    await flush()
+
+    expect(mocks.listAdminMerchantOperators).toHaveBeenCalledWith(1001, {
+      keyword: undefined,
+      status: undefined,
+      page: 1,
+      pageSize: 20,
+    })
+    expect(host.textContent).toContain('Front Desk Manager')
+    expect(host.textContent).toContain('店长')
+    expect(host.textContent).toContain('Selected shops: 10001')
+    expect(host.textContent).toContain('Only staff accounts appear here.')
+
+    input(host, 'merchant-operator-keyword', 'verifier')
+    select(host, 'merchant-operator-status', '2')
+    await nextTick()
+    const applyButtons = [...host.querySelectorAll('button')].filter((button) => button.textContent?.includes('Apply filters'))
+    applyButtons[applyButtons.length - 1]?.click()
+    await flush()
+
+    expect(mocks.listAdminMerchantOperators).toHaveBeenLastCalledWith(1001, {
+      keyword: 'verifier',
+      status: 2,
+      page: 1,
+      pageSize: 20,
+    })
+    app.unmount()
+  })
+
+  it('keeps the newest merchant staff result when requests resolve out of order', async () => {
+    let resolveFirst: (value: unknown) => void = () => undefined
+    let resolveSecond: (value: unknown) => void = () => undefined
+    mocks.listAdminMerchantOperators
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve }))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve }))
+    const { app, host } = mount()
+    await flush()
+
+    click(host, 'Staff accounts', 0)
+    click(host, 'Staff accounts', 1)
+    resolveSecond({
+      list: [{ ...operators[0], id: 23001, merchantId: 1002, name: 'Newest Merchant Staff' }],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+    await flush()
+    resolveFirst({ list: operators, total: 2, page: 1, pageSize: 20, hasMore: false })
+    await flush()
+
+    expect(host.textContent).toContain('梧桐咖啡 · Staff Accounts')
+    expect(host.textContent).toContain('Newest Merchant Staff')
+    expect(host.textContent).not.toContain('Coupon Verifier')
+    app.unmount()
+  })
+
+  it('loads staff details including the latest disable reason', async () => {
+    mocks.getAdminMerchantOperator.mockResolvedValue(operators[1])
+    const { app, host } = mount()
+    await flush()
+    click(host, 'Staff accounts')
+    await flush()
+
+    click(host, 'Details', 3)
+    await flush()
+
+    expect(mocks.getAdminMerchantOperator).toHaveBeenCalledWith(1001, 13002)
+    expect(host.textContent).toContain('Latest disable reason')
+    expect(host.textContent).toContain('Scope violation')
+    app.unmount()
+  })
+
+  it('requires a reason to disable staff and can restore a disabled staff account', async () => {
+    mocks.updateAdminMerchantOperatorStatus.mockResolvedValue(operators[0])
+    const { app, host } = mount()
+    await flush()
+    click(host, 'Staff accounts')
+    await flush()
+
+    click(host, 'Disable', 1)
+    await nextTick()
+    click(host, 'Confirm disable')
+    await flush()
+    expect(mocks.updateAdminMerchantOperatorStatus).not.toHaveBeenCalled()
+    expect(host.textContent).toContain('A staff disable reason is required.')
+
+    const textarea = host.querySelector<HTMLTextAreaElement>('[name="staffDisableReason"]')
+    if (!textarea) throw new Error('missing textarea: staffDisableReason')
+    textarea.value = 'Outside assigned shop scope'
+    textarea.dispatchEvent(new Event('input'))
+    await nextTick()
+    click(host, 'Confirm disable')
+    await flush()
+
+    expect(mocks.updateAdminMerchantOperatorStatus).toHaveBeenCalledWith(1001, 13001, {
+      action: 'disable',
+      reason: 'Outside assigned shop scope',
+    })
+    expect(mocks.listAdminMerchantOperators).toHaveBeenCalledTimes(2)
+    expect(mocks.listAdminMerchants).toHaveBeenCalledTimes(2)
+
+    mocks.updateAdminMerchantOperatorStatus.mockClear()
+    const disabledStaffRow = [...host.querySelectorAll('tr')].find((row) => row.textContent?.includes('Coupon Verifier'))
+    const restoreButton = [...(disabledStaffRow?.querySelectorAll('button') ?? [])].find((button) =>
+      button.textContent?.includes('Restore'),
+    )
+    if (!restoreButton) throw new Error('missing disabled staff restore button')
+    restoreButton.click()
+    await flush()
+    expect(mocks.updateAdminMerchantOperatorStatus).toHaveBeenCalledWith(1001, 13002, {
+      action: 'enable',
+      reason: '',
+    })
     app.unmount()
   })
 })

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -39,8 +40,8 @@ class AdminMerchantManagementControllerTest {
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.list[0].id").value(1002))
                 .andExpect(jsonPath("$.data.list[0].shopCount").value(1))
-                .andExpect(jsonPath("$.data.list[0].operatorCount").value(1))
-                .andExpect(jsonPath("$.data.list[0].activeOperatorCount").value(1))
+                .andExpect(jsonPath("$.data.list[0].operatorCount").value(0))
+                .andExpect(jsonPath("$.data.list[0].activeOperatorCount").value(0))
                 .andExpect(jsonPath("$.data.list[0].auditStatusText").value("已通过"))
                 .andExpect(jsonPath("$.data.list[0].statusText").value("正常"));
 
@@ -139,6 +140,109 @@ class AdminMerchantManagementControllerTest {
                         + "[?(@.code == 'system.merchants')].path").value("/system/merchants"));
     }
 
+    @Test
+    void shouldListFilterAndInspectMerchantOperatorsInsideCurrentRegion() throws Exception {
+        String staffAccount = "admin-operator-" + UUID.randomUUID() + "@example.com";
+        long operatorId = createStaff(staffAccount);
+        String token = adminToken();
+
+        mockMvc.perform(get("/api/admin/v1/merchants/1001/operators")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN")
+                        .param("keyword", staffAccount)
+                        .param("status", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].id").value(operatorId))
+                .andExpect(jsonPath("$.data.list[0].roleNames[0]").value("核销员"))
+                .andExpect(jsonPath("$.data.list[0].shopScopeType").value(2))
+                .andExpect(jsonPath("$.data.list[0].shopIds[0]").value(10001));
+
+        mockMvc.perform(get("/api/admin/v1/merchants/1001/operators/{operatorId}", operatorId)
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.account").value(staffAccount))
+                .andExpect(jsonPath("$.data.statusText").value("正常"));
+
+        mockMvc.perform(get("/api/admin/v1/merchants/2001/operators")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("商户不存在"));
+    }
+
+    @Test
+    void shouldDisableMerchantOperatorInvalidateTokenAndAllowRestore() throws Exception {
+        String staffAccount = "admin-disable-" + UUID.randomUUID() + "@example.com";
+        long operatorId = createStaff(staffAccount);
+        String staffToken = merchantToken(staffAccount, "Staff#123456");
+        String ownerToken = merchantToken("merchant_cn_hotpot@example.com", "merchant123456");
+        String adminToken = adminToken();
+
+        mockMvc.perform(put("/api/admin/v1/merchants/1001/operators/{operatorId}/status", operatorId)
+                        .header("Authorization", bearer(adminToken))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"disable\",\"reason\":\"超范围操作券码\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value(2))
+                .andExpect(jsonPath("$.data.disableReason").value("超范围操作券码"));
+
+        mockMvc.perform(get("/api/b/v1/account/me")
+                        .header("Authorization", bearer(staffToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/b/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(merchantLoginBody(staffAccount, "Staff#123456")))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/b/v1/account/me")
+                        .header("Authorization", bearer(ownerToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.operator.type").value("owner"));
+
+        Integer disableLogs = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_log
+                WHERE action='merchant_operator_disable' AND target=? AND detail='超范围操作券码'
+                """, Integer.class, "merchant_operator:" + operatorId);
+        assertThat(disableLogs).isEqualTo(1);
+
+        mockMvc.perform(put("/api/admin/v1/merchants/1001/operators/{operatorId}/status", operatorId)
+                        .header("Authorization", bearer(adminToken))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"enable\",\"reason\":\"复核通过\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value(1));
+
+        merchantToken(staffAccount, "Staff#123456");
+    }
+
+    @Test
+    void shouldRequireOperatorDisableReasonAndNeverExposeOwnerAsStaff() throws Exception {
+        String staffAccount = "admin-reason-" + UUID.randomUUID() + "@example.com";
+        long operatorId = createStaff(staffAccount);
+        String token = adminToken();
+
+        mockMvc.perform(put("/api/admin/v1/merchants/1001/operators/{operatorId}/status", operatorId)
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"disable\",\"reason\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("停用商户员工必须填写原因"));
+
+        mockMvc.perform(put("/api/admin/v1/merchants/1001/operators/11001/status")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"disable\",\"reason\":\"不应允许\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("商户员工不存在"));
+    }
+
     private String adminToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -146,6 +250,29 @@ class AdminMerchantManagementControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return readToken(result);
+    }
+
+    private long createStaff(String account) throws Exception {
+        String ownerToken = merchantToken("merchant_cn_hotpot@example.com", "merchant123456");
+        MvcResult result = mockMvc.perform(post("/api/b/v1/staffs")
+                        .header("Authorization", bearer(ownerToken))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "account": "%s",
+                                  "password": "Staff#123456",
+                                  "name": "Test Operator",
+                                  "phone": "13800139999",
+                                  "email": "%s",
+                                  "roleIds": [12],
+                                  "shopScopeType": 2,
+                                  "shopIds": [10001]
+                                }
+                                """.formatted(account, account)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).at("/data/id").asLong();
     }
 
     private String merchantToken(String account, String password) throws Exception {

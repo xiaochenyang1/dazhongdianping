@@ -707,6 +707,24 @@ export interface AdminMerchant {
   updatedAt: string
 }
 
+export interface AdminMerchantOperator {
+  id: number
+  merchantId: number
+  account: string
+  name: string
+  phone: string
+  email: string
+  shopScopeType: number
+  shopScopeText: string
+  shopIds: number[]
+  roleNames: string[]
+  status: number
+  statusText: string
+  disableReason: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CategoryChild {
   id: number
   name: string

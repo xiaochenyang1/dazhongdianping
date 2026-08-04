@@ -651,6 +651,69 @@ export interface AdminStrings {
     disableReasonField: string
     disablePlaceholder: string
     confirmDisable: string
+    staff: {
+      action: string
+      eyebrow: string
+      heading: (merchant: string) => string
+      description: string
+      loadError: string
+      detailLoadError: string
+      disableReasonRequired: string
+      disableError: string
+      enableError: string
+      disabledMessage: (operator: string) => string
+      enabledMessage: (operator: string) => string
+      metaLoading: string
+      metaSummary: (total: number) => string
+      filters: {
+        keyword: string
+        keywordPlaceholder: string
+        status: string
+        all: string
+        active: string
+        disabled: string
+        apply: string
+      }
+      tableHeaders: {
+        operator: string
+        contact: string
+        roles: string
+        shopScope: string
+        status: string
+        actions: string
+      }
+      loading: string
+      empty: string
+      operatorFallback: (operatorId: number) => string
+      operatorIdLabel: (operatorId: number) => string
+      contactFallback: string
+      rolesFallback: string
+      allShops: string
+      selectedShops: (shopIds: number[]) => string
+      detailAction: string
+      disableAction: string
+      enableAction: string
+      previousPage: string
+      page: (page: number) => string
+      nextPage: string
+      detailLoading: string
+      detailEyebrow: string
+      detailSummary: (account: string) => string
+      detailFields: {
+        roles: string
+        shopScope: string
+        status: string
+        disableReason: string
+        createdAt: string
+        updatedAt: string
+      }
+      close: string
+      disableEyebrow: string
+      disableDescription: string
+      disableReasonField: string
+      disablePlaceholder: string
+      confirmDisable: string
+    }
   }
   auditLogs: {
     eyebrow: string
@@ -3023,6 +3086,69 @@ const zhCnStrings: AdminStrings = {
     disableReasonField: '停用原因',
     disablePlaceholder: '例如：多次违反平台经营规则',
     confirmDisable: '确认停用',
+    staff: {
+      action: '员工账号',
+      eyebrow: '员工治理',
+      heading: (merchant) => `${merchant} · 员工账号`,
+      description: '这里只展示员工账号，商户主账号不会出现在列表中，也不能从该入口停用。',
+      loadError: '员工账号加载失败',
+      detailLoadError: '员工详情加载失败',
+      disableReasonRequired: '停用员工必须填写原因',
+      disableError: '停用员工失败',
+      enableError: '恢复员工失败',
+      disabledMessage: (operator) => `员工 ${operator} 已停用，现有登录态已失效。`,
+      enabledMessage: (operator) => `员工 ${operator} 已恢复。`,
+      metaLoading: '加载中...',
+      metaSummary: (total) => `共 ${total} 个员工账号`,
+      filters: {
+        keyword: '关键词',
+        keywordPlaceholder: '账号 / 姓名 / 手机 / 邮箱',
+        status: '账号状态',
+        all: '全部',
+        active: '正常',
+        disabled: '已停用',
+        apply: '应用筛选',
+      },
+      tableHeaders: {
+        operator: '员工',
+        contact: '联系方式',
+        roles: '角色',
+        shopScope: '门店范围',
+        status: '状态',
+        actions: '操作',
+      },
+      loading: '员工账号加载中...',
+      empty: '该商户当前筛选下没有员工账号。',
+      operatorFallback: (operatorId) => `operator:${operatorId}`,
+      operatorIdLabel: (operatorId) => `ID ${operatorId}`,
+      contactFallback: '--',
+      rolesFallback: '未分配角色',
+      allShops: '全部门店',
+      selectedShops: (shopIds) => `指定门店：${shopIds.join(', ') || '--'}`,
+      detailAction: '详情',
+      disableAction: '停用',
+      enableAction: '恢复',
+      previousPage: '上一页',
+      page: (page) => `第 ${page} 页`,
+      nextPage: '下一页',
+      detailLoading: '员工详情加载中...',
+      detailEyebrow: '员工详情',
+      detailSummary: (account) => `登录账号 ${account}`,
+      detailFields: {
+        roles: '角色',
+        shopScope: '门店范围',
+        status: '账号状态',
+        disableReason: '最近停用原因',
+        createdAt: '创建时间',
+        updatedAt: '更新时间',
+      },
+      close: '关闭',
+      disableEyebrow: '停用员工',
+      disableDescription: '停用会让该员工的现有登录态立即失效并阻断重新登录，不影响商户主账号和其他员工。',
+      disableReasonField: '停用原因',
+      disablePlaceholder: '例如：超出授权门店操作',
+      confirmDisable: '确认停用',
+    },
   },
   auditLogs: {
     eyebrow: 'Audit Trail',
@@ -5293,6 +5419,69 @@ const enStrings: AdminStrings = {
     disableReasonField: 'Disable reason',
     disablePlaceholder: 'For example: Repeated violations of platform rules',
     confirmDisable: 'Confirm disable',
+    staff: {
+      action: 'Staff accounts',
+      eyebrow: 'Staff Governance',
+      heading: (merchant) => `${merchant} · Staff Accounts`,
+      description: 'Only staff accounts appear here. The merchant owner account is excluded and cannot be disabled from this view.',
+      loadError: 'Failed to load staff accounts.',
+      detailLoadError: 'Failed to load staff details.',
+      disableReasonRequired: 'A staff disable reason is required.',
+      disableError: 'Failed to disable the staff account.',
+      enableError: 'Failed to restore the staff account.',
+      disabledMessage: (operator) => `Staff account ${operator} was disabled. Its active sessions were revoked.`,
+      enabledMessage: (operator) => `Staff account ${operator} was restored.`,
+      metaLoading: 'Loading...',
+      metaSummary: (total) => `${total} staff accounts`,
+      filters: {
+        keyword: 'Keyword',
+        keywordPlaceholder: 'Account / name / phone / email',
+        status: 'Account status',
+        all: 'All',
+        active: 'Active',
+        disabled: 'Disabled',
+        apply: 'Apply filters',
+      },
+      tableHeaders: {
+        operator: 'Staff',
+        contact: 'Contact',
+        roles: 'Roles',
+        shopScope: 'Shop scope',
+        status: 'Status',
+        actions: 'Actions',
+      },
+      loading: 'Loading staff accounts...',
+      empty: 'No staff accounts match the current filters.',
+      operatorFallback: (operatorId) => `operator:${operatorId}`,
+      operatorIdLabel: (operatorId) => `ID ${operatorId}`,
+      contactFallback: '--',
+      rolesFallback: 'No assigned roles',
+      allShops: 'All shops',
+      selectedShops: (shopIds) => `Selected shops: ${shopIds.join(', ') || '--'}`,
+      detailAction: 'Details',
+      disableAction: 'Disable',
+      enableAction: 'Restore',
+      previousPage: 'Previous',
+      page: (page) => `Page ${page}`,
+      nextPage: 'Next',
+      detailLoading: 'Loading staff details...',
+      detailEyebrow: 'Staff Details',
+      detailSummary: (account) => `Sign-in account ${account}`,
+      detailFields: {
+        roles: 'Roles',
+        shopScope: 'Shop scope',
+        status: 'Account status',
+        disableReason: 'Latest disable reason',
+        createdAt: 'Created at',
+        updatedAt: 'Updated at',
+      },
+      close: 'Close',
+      disableEyebrow: 'Disable Staff Account',
+      disableDescription: 'The staff member is signed out immediately and cannot sign in again. The owner and other staff accounts are unaffected.',
+      disableReasonField: 'Disable reason',
+      disablePlaceholder: 'For example: Actions outside the assigned shop scope',
+      confirmDisable: 'Confirm disable',
+    },
   },
   auditLogs: {
     eyebrow: 'Audit Trail',

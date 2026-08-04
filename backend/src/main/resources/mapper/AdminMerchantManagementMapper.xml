@@ -16,8 +16,8 @@
         m.created_at,
         m.updated_at,
         (SELECT COUNT(*) FROM shop s WHERE s.merchant_id = m.id AND s.is_deleted = FALSE) AS shop_count,
-        (SELECT COUNT(*) FROM merchant_operator mo WHERE mo.merchant_id = m.id AND mo.is_deleted = FALSE) AS operator_count,
-        (SELECT COUNT(*) FROM merchant_operator mo WHERE mo.merchant_id = m.id AND mo.is_deleted = FALSE AND mo.status = 1) AS active_operator_count
+        (SELECT COUNT(*) FROM merchant_operator mo WHERE mo.merchant_id = m.id AND mo.operator_type = 2 AND mo.is_deleted = FALSE) AS operator_count,
+        (SELECT COUNT(*) FROM merchant_operator mo WHERE mo.merchant_id = m.id AND mo.operator_type = 2 AND mo.is_deleted = FALSE AND mo.status = 1) AS active_operator_count
     </sql>
 
     <sql id="merchantFilters">
@@ -76,5 +76,91 @@
           AND region = #{region}
           AND is_deleted = FALSE
           AND status = #{expectedStatus}
+    </update>
+
+    <sql id="merchantOperatorFilters">
+        AND mo.merchant_id = #{merchantId}
+        AND m.region = #{region}
+        AND mo.operator_type = 2
+        AND mo.is_deleted = FALSE
+        AND m.is_deleted = FALSE
+        <if test="query.keyword != null">
+            AND (
+                LOWER(mo.account) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR LOWER(mo.name) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR LOWER(mo.email) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR mo.phone LIKE CONCAT('%', #{query.keyword}, '%')
+            )
+        </if>
+        <if test="query.status != null">
+            AND mo.status = #{query.status}
+        </if>
+    </sql>
+
+    <select id="countMerchantOperators" resultType="long">
+        SELECT COUNT(*)
+        FROM merchant_operator mo
+        JOIN merchant m ON m.id = mo.merchant_id
+        WHERE 1 = 1
+        <include refid="merchantOperatorFilters"/>
+    </select>
+
+    <select id="selectMerchantOperators"
+            resultType="com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperatorRow">
+        SELECT mo.id, mo.merchant_id, mo.account, mo.name, mo.phone, mo.email,
+               mo.shop_scope_type, mo.status, mo.created_at, mo.updated_at
+        FROM merchant_operator mo
+        JOIN merchant m ON m.id = mo.merchant_id
+        WHERE 1 = 1
+        <include refid="merchantOperatorFilters"/>
+        ORDER BY mo.id DESC
+        LIMIT #{query.pageSize} OFFSET #{query.offset}
+    </select>
+
+    <select id="selectMerchantOperatorById"
+            resultType="com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperatorRow">
+        SELECT mo.id, mo.merchant_id, mo.account, mo.name, mo.phone, mo.email,
+               mo.shop_scope_type, mo.status, mo.created_at, mo.updated_at
+        FROM merchant_operator mo
+        JOIN merchant m ON m.id = mo.merchant_id
+        WHERE mo.id = #{operatorId}
+          AND mo.merchant_id = #{merchantId}
+          AND m.region = #{region}
+          AND mo.operator_type = 2
+          AND mo.is_deleted = FALSE
+          AND m.is_deleted = FALSE
+    </select>
+
+    <select id="selectMerchantOperatorRoleNames" resultType="string">
+        SELECT mr.name
+        FROM merchant_role mr
+        JOIN merchant_operator_role mor ON mor.role_id = mr.id
+        WHERE mor.operator_id = #{operatorId}
+          AND mr.status = 1
+        ORDER BY mr.id
+    </select>
+
+    <select id="selectMerchantOperatorShopIds" resultType="long">
+        SELECT shop_id
+        FROM merchant_operator_shop
+        WHERE operator_id = #{operatorId}
+        ORDER BY shop_id
+    </select>
+
+    <update id="updateMerchantOperatorStatus">
+        UPDATE merchant_operator
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{operatorId}
+          AND merchant_id = #{merchantId}
+          AND operator_type = 2
+          AND is_deleted = FALSE
+          AND status = #{expectedStatus}
+          AND EXISTS (
+              SELECT 1 FROM merchant m
+              WHERE m.id = merchant_operator.merchant_id
+                AND m.region = #{region}
+                AND m.is_deleted = FALSE
+          )
     </update>
 </mapper>

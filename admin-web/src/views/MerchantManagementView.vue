@@ -2,8 +2,15 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
 import { adminStringsForRegion } from '@/core/admin_localizations'
-import { getAdminMerchant, listAdminMerchants, updateAdminMerchantStatus } from '@/services/admin'
-import type { AdminMerchant, PageResult } from '@/types/admin'
+import {
+  getAdminMerchant,
+  getAdminMerchantOperator,
+  listAdminMerchantOperators,
+  listAdminMerchants,
+  updateAdminMerchantOperatorStatus,
+  updateAdminMerchantStatus,
+} from '@/services/admin'
+import type { AdminMerchant, AdminMerchantOperator, PageResult } from '@/types/admin'
 
 const { state } = useAdminSession()
 const strings = computed(() => adminStringsForRegion(state.region))
@@ -17,6 +24,15 @@ const pageState = ref<PageResult<AdminMerchant> | null>(null)
 const detail = ref<AdminMerchant | null>(null)
 const disableTarget = ref<AdminMerchant | null>(null)
 const disableReason = ref('')
+const staffMerchant = ref<AdminMerchant | null>(null)
+const staffPageState = ref<PageResult<AdminMerchantOperator> | null>(null)
+const staffLoading = ref(false)
+const staffDetail = ref<AdminMerchantOperator | null>(null)
+const staffDetailLoading = ref(false)
+const staffDisableTarget = ref<AdminMerchantOperator | null>(null)
+const staffDisableReason = ref('')
+let staffRequestId = 0
+let staffDetailRequestId = 0
 const filters = reactive({
   keyword: '',
   merchantId: '',
@@ -24,6 +40,7 @@ const filters = reactive({
   status: '',
   page: 1,
 })
+const staffFilters = reactive({ keyword: '', status: '', page: 1 })
 
 const canWrite = computed(() => state.permissions.includes('system:merchant:write'))
 
@@ -66,6 +83,30 @@ function auditPillClass(merchant: AdminMerchant) {
 
 function accountPillClass(merchant: AdminMerchant) {
   return merchant.status === 1 ? 'status-pill--good' : 'status-pill--warn'
+}
+
+function operatorLabel(operator: AdminMerchantOperator) {
+  return operator.name || strings.value.merchantManagement.staff.operatorFallback(operator.id)
+}
+
+function operatorStatusText(operator: AdminMerchantOperator) {
+  return operator.status === 1
+    ? strings.value.merchantManagement.staff.filters.active
+    : strings.value.merchantManagement.staff.filters.disabled
+}
+
+function operatorScopeText(operator: AdminMerchantOperator) {
+  return operator.shopScopeType === 1
+    ? strings.value.merchantManagement.staff.allShops
+    : strings.value.merchantManagement.staff.selectedShops(operator.shopIds)
+}
+
+function operatorRolesText(operator: AdminMerchantOperator) {
+  return operator.roleNames.join(', ') || strings.value.merchantManagement.staff.rolesFallback
+}
+
+function operatorPillClass(operator: AdminMerchantOperator) {
+  return operator.status === 1 ? 'status-pill--good' : 'status-pill--warn'
 }
 
 async function load() {
@@ -159,12 +200,141 @@ async function enable(merchant: AdminMerchant) {
   }
 }
 
+async function loadStaff() {
+  const merchant = staffMerchant.value
+  if (!merchant) return
+  const requestId = ++staffRequestId
+  staffLoading.value = true
+  errorMessage.value = ''
+  try {
+    const result = await listAdminMerchantOperators(merchant.id, {
+      keyword: normalizeText(staffFilters.keyword),
+      status: normalizePositiveNumber(staffFilters.status),
+      page: staffFilters.page,
+      pageSize,
+    })
+    if (requestId === staffRequestId && staffMerchant.value?.id === merchant.id) {
+      staffPageState.value = result
+    }
+  } catch (cause) {
+    if (requestId === staffRequestId && staffMerchant.value?.id === merchant.id) {
+      errorMessage.value = cause instanceof Error ? cause.message : strings.value.merchantManagement.staff.loadError
+    }
+  } finally {
+    if (requestId === staffRequestId) staffLoading.value = false
+  }
+}
+
+async function openStaff(merchant: AdminMerchant) {
+  staffMerchant.value = merchant
+  staffFilters.keyword = ''
+  staffFilters.status = ''
+  staffFilters.page = 1
+  staffDetail.value = null
+  staffDisableTarget.value = null
+  await loadStaff()
+}
+
+async function applyStaffFilters() {
+  staffFilters.page = 1
+  await loadStaff()
+}
+
+async function goStaffPage(page: number) {
+  staffFilters.page = Math.max(1, page)
+  await loadStaff()
+}
+
+function closeStaff() {
+  staffRequestId += 1
+  staffDetailRequestId += 1
+  staffMerchant.value = null
+  staffPageState.value = null
+  staffDetail.value = null
+  staffDisableTarget.value = null
+}
+
+async function openStaffDetail(operator: AdminMerchantOperator) {
+  const merchant = staffMerchant.value
+  if (!merchant) return
+  const requestId = ++staffDetailRequestId
+  staffDetailLoading.value = true
+  staffDetail.value = null
+  errorMessage.value = ''
+  try {
+    const result = await getAdminMerchantOperator(merchant.id, operator.id)
+    if (requestId === staffDetailRequestId && staffMerchant.value?.id === merchant.id) {
+      staffDetail.value = result
+    }
+  } catch (cause) {
+    if (requestId === staffDetailRequestId && staffMerchant.value?.id === merchant.id) {
+      errorMessage.value = cause instanceof Error ? cause.message : strings.value.merchantManagement.staff.detailLoadError
+    }
+  } finally {
+    if (requestId === staffDetailRequestId) staffDetailLoading.value = false
+  }
+}
+
+function openStaffDisable(operator: AdminMerchantOperator) {
+  staffDisableTarget.value = operator
+  staffDisableReason.value = ''
+  errorMessage.value = ''
+  successMessage.value = ''
+}
+
+async function confirmStaffDisable() {
+  const merchant = staffMerchant.value
+  const target = staffDisableTarget.value
+  if (!merchant || !target) return
+  const reason = staffDisableReason.value.trim()
+  if (!reason) {
+    errorMessage.value = strings.value.merchantManagement.staff.disableReasonRequired
+    return
+  }
+  acting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await updateAdminMerchantOperatorStatus(merchant.id, target.id, { action: 'disable', reason })
+    successMessage.value = strings.value.merchantManagement.staff.disabledMessage(operatorLabel(target))
+    staffDisableTarget.value = null
+    staffDisableReason.value = ''
+    if (staffDetail.value?.id === target.id) staffDetail.value = null
+    await loadStaff()
+    await load()
+  } catch (cause) {
+    errorMessage.value = cause instanceof Error ? cause.message : strings.value.merchantManagement.staff.disableError
+  } finally {
+    acting.value = false
+  }
+}
+
+async function enableStaff(operator: AdminMerchantOperator) {
+  const merchant = staffMerchant.value
+  if (!merchant) return
+  acting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await updateAdminMerchantOperatorStatus(merchant.id, operator.id, { action: 'enable', reason: '' })
+    successMessage.value = strings.value.merchantManagement.staff.enabledMessage(operatorLabel(operator))
+    if (staffDetail.value?.id === operator.id) staffDetail.value = null
+    await loadStaff()
+    await load()
+  } catch (cause) {
+    errorMessage.value = cause instanceof Error ? cause.message : strings.value.merchantManagement.staff.enableError
+  } finally {
+    acting.value = false
+  }
+}
+
 watch(
   () => state.region,
   () => {
     filters.page = 1
     detail.value = null
     disableTarget.value = null
+    closeStaff()
     void load()
   },
   { immediate: true },
@@ -257,6 +427,7 @@ watch(
               <td>
                 <div class="table-actions">
                   <button class="table-action" type="button" @click="openDetail(merchant)">{{ strings.merchantManagement.detailAction }}</button>
+                  <button class="table-action" type="button" @click="openStaff(merchant)">{{ strings.merchantManagement.staff.action }}</button>
                   <button v-if="canWrite && merchant.status === 1" class="table-action table-action--danger" type="button" :disabled="acting" @click="openDisable(merchant)">{{ strings.merchantManagement.disableAction }}</button>
                   <button v-if="canWrite && merchant.status === 2" class="table-action" type="button" :disabled="acting" @click="enable(merchant)">{{ strings.merchantManagement.enableAction }}</button>
                 </div>
@@ -270,6 +441,72 @@ watch(
         <button class="ghost-button system-pager-button" type="button" :disabled="filters.page <= 1" @click="goPage(filters.page - 1)">{{ strings.merchantManagement.previousPage }}</button>
         <span class="numeric-cell">{{ strings.merchantManagement.page(filters.page) }}</span>
         <button class="ghost-button system-pager-button" type="button" :disabled="!pageState?.hasMore" @click="goPage(filters.page + 1)">{{ strings.merchantManagement.nextPage }}</button>
+      </div>
+    </article>
+
+    <article v-if="staffMerchant" class="content-card system-table-card">
+      <div class="system-table-card__meta">
+        <div>
+          <p class="eyebrow">{{ strings.merchantManagement.staff.eyebrow }}</p>
+          <strong>{{ strings.merchantManagement.staff.heading(merchantLabel(staffMerchant)) }}</strong>
+          <p class="inline-note">{{ strings.merchantManagement.staff.description }}</p>
+        </div>
+        <button class="ghost-button" type="button" @click="closeStaff">{{ strings.merchantManagement.staff.close }}</button>
+      </div>
+
+      <div class="toolbar-grid toolbar-grid--filters">
+        <label class="field">
+          <span>{{ strings.merchantManagement.staff.filters.keyword }}</span>
+          <input v-model="staffFilters.keyword" name="merchant-operator-keyword" :placeholder="strings.merchantManagement.staff.filters.keywordPlaceholder" />
+        </label>
+        <label class="field">
+          <span>{{ strings.merchantManagement.staff.filters.status }}</span>
+          <select v-model="staffFilters.status" name="merchant-operator-status">
+            <option value="">{{ strings.merchantManagement.staff.filters.all }}</option>
+            <option value="1">{{ strings.merchantManagement.staff.filters.active }}</option>
+            <option value="2">{{ strings.merchantManagement.staff.filters.disabled }}</option>
+          </select>
+        </label>
+        <div class="toolbar-actions">
+          <button class="primary-button" type="button" @click="applyStaffFilters">{{ strings.merchantManagement.staff.filters.apply }}</button>
+        </div>
+      </div>
+
+      <div class="system-table-card__meta">
+        <span>{{ staffLoading ? strings.merchantManagement.staff.metaLoading : strings.merchantManagement.staff.metaSummary(staffPageState?.total ?? 0) }}</span>
+      </div>
+      <div class="table-shell">
+        <table class="data-table">
+          <thead><tr>
+            <th>{{ strings.merchantManagement.staff.tableHeaders.operator }}</th>
+            <th>{{ strings.merchantManagement.staff.tableHeaders.contact }}</th>
+            <th>{{ strings.merchantManagement.staff.tableHeaders.roles }}</th>
+            <th>{{ strings.merchantManagement.staff.tableHeaders.shopScope }}</th>
+            <th>{{ strings.merchantManagement.staff.tableHeaders.status }}</th>
+            <th>{{ strings.merchantManagement.staff.tableHeaders.actions }}</th>
+          </tr></thead>
+          <tbody>
+            <tr v-if="staffLoading"><td colspan="6" class="table-empty">{{ strings.merchantManagement.staff.loading }}</td></tr>
+            <tr v-else-if="!staffPageState?.list.length"><td colspan="6" class="table-empty">{{ strings.merchantManagement.staff.empty }}</td></tr>
+            <tr v-for="operator in staffPageState?.list" :key="operator.id">
+              <td><strong>{{ operatorLabel(operator) }}</strong><p class="inline-note">{{ strings.merchantManagement.staff.operatorIdLabel(operator.id) }}</p><p class="code-box">{{ operator.account }}</p></td>
+              <td><strong>{{ operator.phone || strings.merchantManagement.staff.contactFallback }}</strong><p class="inline-note">{{ operator.email || strings.merchantManagement.staff.contactFallback }}</p></td>
+              <td><span class="tag-list">{{ operatorRolesText(operator) }}</span></td>
+              <td><span class="region-list">{{ operatorScopeText(operator) }}</span></td>
+              <td><span class="status-pill" :class="operatorPillClass(operator)">{{ operatorStatusText(operator) }}</span></td>
+              <td><div class="table-actions">
+                <button class="table-action" type="button" @click="openStaffDetail(operator)">{{ strings.merchantManagement.staff.detailAction }}</button>
+                <button v-if="canWrite && operator.status === 1" class="table-action table-action--danger" type="button" :disabled="acting" @click="openStaffDisable(operator)">{{ strings.merchantManagement.staff.disableAction }}</button>
+                <button v-if="canWrite && operator.status === 2" class="table-action" type="button" :disabled="acting" @click="enableStaff(operator)">{{ strings.merchantManagement.staff.enableAction }}</button>
+              </div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <button class="ghost-button system-pager-button" type="button" :disabled="staffFilters.page <= 1" @click="goStaffPage(staffFilters.page - 1)">{{ strings.merchantManagement.staff.previousPage }}</button>
+        <span class="numeric-cell">{{ strings.merchantManagement.staff.page(staffFilters.page) }}</span>
+        <button class="ghost-button system-pager-button" type="button" :disabled="!staffPageState?.hasMore" @click="goStaffPage(staffFilters.page + 1)">{{ strings.merchantManagement.staff.nextPage }}</button>
       </div>
     </article>
 
@@ -306,6 +543,29 @@ watch(
       <div class="form-actions">
         <button class="ghost-button" type="button" @click="disableTarget = null">{{ strings.common.cancel }}</button>
         <button class="secondary-button" type="button" :disabled="acting" @click="confirmDisable">{{ strings.merchantManagement.confirmDisable }}</button>
+      </div>
+    </div>
+
+    <div v-if="staffDetailLoading" class="audit-drawer"><p class="inline-note">{{ strings.merchantManagement.staff.detailLoading }}</p></div>
+    <div v-else-if="staffDetail" class="audit-drawer">
+      <div><p class="eyebrow">{{ strings.merchantManagement.staff.detailEyebrow }}</p><h2>{{ operatorLabel(staffDetail) }}</h2><p>{{ strings.merchantManagement.staff.detailSummary(staffDetail.account) }}</p></div>
+      <dl class="detail-grid">
+        <div><dt>{{ strings.merchantManagement.staff.detailFields.roles }}</dt><dd>{{ operatorRolesText(staffDetail) }}</dd></div>
+        <div><dt>{{ strings.merchantManagement.staff.detailFields.shopScope }}</dt><dd>{{ operatorScopeText(staffDetail) }}</dd></div>
+        <div><dt>{{ strings.merchantManagement.staff.detailFields.status }}</dt><dd>{{ operatorStatusText(staffDetail) }}</dd></div>
+        <div><dt>{{ strings.merchantManagement.staff.detailFields.disableReason }}</dt><dd>{{ staffDetail.disableReason || '--' }}</dd></div>
+        <div><dt>{{ strings.merchantManagement.staff.detailFields.createdAt }}</dt><dd>{{ staffDetail.createdAt || '--' }}</dd></div>
+        <div><dt>{{ strings.merchantManagement.staff.detailFields.updatedAt }}</dt><dd>{{ staffDetail.updatedAt || '--' }}</dd></div>
+      </dl>
+      <div class="form-actions"><button class="ghost-button" type="button" @click="staffDetail = null">{{ strings.merchantManagement.staff.close }}</button></div>
+    </div>
+
+    <div v-if="staffDisableTarget" class="audit-drawer">
+      <div><p class="eyebrow">{{ strings.merchantManagement.staff.disableEyebrow }}</p><h2>{{ operatorLabel(staffDisableTarget) }}</h2><p>{{ strings.merchantManagement.staff.disableDescription }}</p></div>
+      <label class="field field--full"><span>{{ strings.merchantManagement.staff.disableReasonField }}</span><textarea v-model="staffDisableReason" name="staffDisableReason" rows="4" :placeholder="strings.merchantManagement.staff.disablePlaceholder" /></label>
+      <div class="form-actions">
+        <button class="ghost-button" type="button" @click="staffDisableTarget = null">{{ strings.common.cancel }}</button>
+        <button class="secondary-button" type="button" :disabled="acting" @click="confirmStaffDisable">{{ strings.merchantManagement.staff.confirmDisable }}</button>
       </div>
     </div>
   </section>

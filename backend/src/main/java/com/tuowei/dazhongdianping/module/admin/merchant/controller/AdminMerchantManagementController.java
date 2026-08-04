@@ -4,8 +4,10 @@ import com.tuowei.dazhongdianping.common.api.ApiResponse;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.module.admin.auth.AdminPermission;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantQuery;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperatorQuery;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.request.AdminMerchantStatusRequest;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.response.AdminMerchantResponse;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.response.AdminMerchantOperatorResponse;
 import com.tuowei.dazhongdianping.module.admin.merchant.service.AdminMerchantManagementService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -40,6 +42,24 @@ public class AdminMerchantManagementController {
         return ApiResponse.success(service.getMerchant(merchantId));
     }
 
+    @GetMapping("/{merchantId}/operators")
+    @AdminPermission("system:merchant:read")
+    public ApiResponse<PageResult<AdminMerchantOperatorResponse>> operators(
+            @PathVariable Long merchantId,
+            @Valid AdminMerchantOperatorQuery query
+    ) {
+        return ApiResponse.success(service.listMerchantOperators(merchantId, query));
+    }
+
+    @GetMapping("/{merchantId}/operators/{operatorId}")
+    @AdminPermission("system:merchant:read")
+    public ApiResponse<AdminMerchantOperatorResponse> operatorDetail(
+            @PathVariable Long merchantId,
+            @PathVariable Long operatorId
+    ) {
+        return ApiResponse.success(service.getMerchantOperator(merchantId, operatorId));
+    }
+
     @PutMapping("/{merchantId}/status")
     @AdminPermission("system:merchant:write")
     public ApiResponse<AdminMerchantResponse> updateStatus(
@@ -49,6 +69,22 @@ public class AdminMerchantManagementController {
     ) {
         return ApiResponse.success(service.updateMerchantStatus(
                 merchantId,
+                request,
+                httpServletRequest.getRemoteAddr()
+        ));
+    }
+
+    @PutMapping("/{merchantId}/operators/{operatorId}/status")
+    @AdminPermission("system:merchant:write")
+    public ApiResponse<AdminMerchantOperatorResponse> updateOperatorStatus(
+            @PathVariable Long merchantId,
+            @PathVariable Long operatorId,
+            @Valid @RequestBody AdminMerchantStatusRequest request,
+            HttpServletRequest httpServletRequest
+    ) {
+        return ApiResponse.success(service.updateMerchantOperatorStatus(
+                merchantId,
+                operatorId,
                 request,
                 httpServletRequest.getRemoteAddr()
         ));

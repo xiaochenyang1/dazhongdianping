@@ -10,8 +10,11 @@ import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
 import com.tuowei.dazhongdianping.module.admin.merchant.mapper.AdminMerchantManagementMapper;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantQuery;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantRow;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperatorQuery;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperatorRow;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.request.AdminMerchantStatusRequest;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.response.AdminMerchantResponse;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.response.AdminMerchantOperatorResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -56,6 +59,31 @@ public class AdminMerchantManagementService {
         return toResponse(requireMerchant(merchantId));
     }
 
+    public PageResult<AdminMerchantOperatorResponse> listMerchantOperators(
+            Long merchantId,
+            AdminMerchantOperatorQuery query
+    ) {
+        requireMerchant(merchantId);
+        query.normalize();
+        String region = RegionContext.getRegion().name();
+        long total = mapper.countMerchantOperators(merchantId, region, query);
+        List<AdminMerchantOperatorResponse> list = mapper.selectMerchantOperators(merchantId, region, query).stream()
+                .map(this::toOperatorResponse)
+                .toList();
+        return new PageResult<>(
+                list,
+                total,
+                query.getPage(),
+                query.getPageSize(),
+                query.getOffset() + list.size() < total
+        );
+    }
+
+    public AdminMerchantOperatorResponse getMerchantOperator(Long merchantId, Long operatorId) {
+        requireMerchant(merchantId);
+        return toOperatorResponse(requireMerchantOperator(merchantId, operatorId));
+    }
+
     @Transactional
     public AdminMerchantResponse updateMerchantStatus(Long merchantId,
                                                       AdminMerchantStatusRequest request,
@@ -89,6 +117,48 @@ public class AdminMerchantManagementService {
         return toResponse(requireMerchant(merchantId));
     }
 
+    @Transactional
+    public AdminMerchantOperatorResponse updateMerchantOperatorStatus(
+            Long merchantId,
+            Long operatorId,
+            AdminMerchantStatusRequest request,
+            String requestIp
+    ) {
+        requireMerchant(merchantId);
+        String action = normalizeAction(request.getAction());
+        String reason = StringUtils.hasText(request.getReason()) ? request.getReason().trim() : "";
+        AdminMerchantOperatorRow operator = requireMerchantOperator(merchantId, operatorId);
+        int expectedStatus = "disable".equals(action) ? STATUS_ACTIVE : STATUS_DISABLED;
+        int nextStatus = "disable".equals(action) ? STATUS_DISABLED : STATUS_ACTIVE;
+
+        if (nextStatus == STATUS_DISABLED && !StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("停用商户员工必须填写原因");
+        }
+        if (operator.getStatus() == null || operator.getStatus() != expectedStatus) {
+            throw new IllegalArgumentException(nextStatus == STATUS_DISABLED
+                    ? "商户员工当前状态不允许停用"
+                    : "商户员工当前状态不允许恢复");
+        }
+        if (mapper.updateMerchantOperatorStatus(
+                merchantId,
+                operatorId,
+                RegionContext.getRegion().name(),
+                expectedStatus,
+                nextStatus
+        ) == 0) {
+            throw new IllegalArgumentException("商户员工状态已变更，请刷新后重试");
+        }
+
+        adminAuditMapper.insertAuditLog(
+                currentAdmin().adminId(),
+                nextStatus == STATUS_DISABLED ? "merchant_operator_disable" : "merchant_operator_enable",
+                "merchant_operator:" + operatorId,
+                reason,
+                normalizeIp(requestIp)
+        );
+        return toOperatorResponse(requireMerchantOperator(merchantId, operatorId));
+    }
+
     private void changeStatus(AdminMerchantRow merchant, int expectedStatus, int status) {
         if (merchant.getStatus() == null || merchant.getStatus() != expectedStatus) {
             throw new IllegalArgumentException(status == STATUS_DISABLED
@@ -109,6 +179,18 @@ public class AdminMerchantManagementService {
         AdminMerchantRow row = mapper.selectMerchantById(merchantId, RegionContext.getRegion().name());
         if (row == null) {
             throw new NotFoundException("商户不存在");
+        }
+        return row;
+    }
+
+    private AdminMerchantOperatorRow requireMerchantOperator(Long merchantId, Long operatorId) {
+        AdminMerchantOperatorRow row = mapper.selectMerchantOperatorById(
+                merchantId,
+                operatorId,
+                RegionContext.getRegion().name()
+        );
+        if (row == null) {
+            throw new NotFoundException("商户员工不存在");
         }
         return row;
     }
@@ -135,8 +217,38 @@ public class AdminMerchantManagementService {
         );
     }
 
+    private AdminMerchantOperatorResponse toOperatorResponse(AdminMerchantOperatorRow row) {
+        int status = row.getStatus() == null ? STATUS_DISABLED : row.getStatus();
+        int shopScopeType = row.getShopScopeType() == null ? 2 : row.getShopScopeType();
+        return new AdminMerchantOperatorResponse(
+                row.getId(),
+                row.getMerchantId(),
+                safeText(row.getAccount()),
+                safeText(row.getName()),
+                safeText(row.getPhone()),
+                safeText(row.getEmail()),
+                shopScopeType,
+                shopScopeType == 1 ? "全部门店" : "指定门店",
+                mapper.selectMerchantOperatorShopIds(row.getId()),
+                mapper.selectMerchantOperatorRoleNames(row.getId()),
+                status,
+                status == STATUS_ACTIVE ? "正常" : "已停用",
+                status == STATUS_DISABLED ? latestOperatorDisableReason(row.getId()) : "",
+                formatDateTime(row.getCreatedAt()),
+                formatDateTime(row.getUpdatedAt())
+        );
+    }
+
     private String latestDisableReason(Long merchantId) {
         String reason = adminAuditMapper.selectLatestAuditLogDetail("merchant_disable", "merchant:" + merchantId);
+        return reason == null ? "" : reason;
+    }
+
+    private String latestOperatorDisableReason(Long operatorId) {
+        String reason = adminAuditMapper.selectLatestAuditLogDetail(
+                "merchant_operator_disable",
+                "merchant_operator:" + operatorId
+        );
         return reason == null ? "" : reason;
     }
 

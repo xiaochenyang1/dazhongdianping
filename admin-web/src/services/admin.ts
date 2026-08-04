@@ -57,6 +57,7 @@ import type {
   LevelConfig,
   AdminMerchantApplication,
   AdminMerchant,
+  AdminMerchantOperator,
 } from '@/types/admin'
 
 export interface AdminShopQuery {
@@ -463,6 +464,28 @@ export function updateAdminMerchantStatus(
   payload: { action: 'disable' | 'enable'; reason: string },
 ) {
   return apiPut<AdminMerchant>(`/api/admin/v1/merchants/${merchantId}/status`, payload)
+}
+
+export function listAdminMerchantOperators(
+  merchantId: number,
+  query: { keyword?: string; status?: number; page?: number; pageSize?: number },
+) {
+  return apiGet<PageResult<AdminMerchantOperator>>(`/api/admin/v1/merchants/${merchantId}/operators`, query)
+}
+
+export function getAdminMerchantOperator(merchantId: number, operatorId: number) {
+  return apiGet<AdminMerchantOperator>(`/api/admin/v1/merchants/${merchantId}/operators/${operatorId}`)
+}
+
+export function updateAdminMerchantOperatorStatus(
+  merchantId: number,
+  operatorId: number,
+  payload: { action: 'disable' | 'enable'; reason: string },
+) {
+  return apiPut<AdminMerchantOperator>(
+    `/api/admin/v1/merchants/${merchantId}/operators/${operatorId}/status`,
+    payload,
+  )
 }
 
 export function listRankConfigs() {
