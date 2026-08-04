@@ -127,10 +127,12 @@ export interface MerchantStrings {
     loadError: string
     actionError: string
     rejectReasonRequired: string
+    rescheduleRequired: string
     successRejected: (reservationNo: string) => string
     successConfirmed: (reservationNo: string) => string
     successArrived: (reservationNo: string) => string
     successNoShow: (reservationNo: string) => string
+    successRescheduled: (reservationNo: string) => string
     statusLabel: string
     statusOptions: {
       all: string
@@ -156,6 +158,10 @@ export interface MerchantStrings {
     reject: string
     arrive: string
     noShow: string
+    reschedule: string
+    rescheduleSlotPlaceholder: string
+    rescheduleReasonPlaceholder: string
+    rescheduleSlotOption: (shopName: string, date: string, startTime: string, endTime: string, remainingCount: number) => string
     noAction: string
     empty: string
   }
@@ -718,10 +724,12 @@ const zhCnStrings: MerchantStrings = {
     loadError: '预订加载失败',
     actionError: '预订操作失败',
     rejectReasonRequired: '请填写拒绝原因',
+    rescheduleRequired: '请选择新时段并填写改期原因',
     successRejected: (reservationNo) => `预订 ${reservationNo} 已拒绝`,
     successConfirmed: (reservationNo) => `预订 ${reservationNo} 已确认`,
     successArrived: (reservationNo) => `预订 ${reservationNo} 已确认到店`,
     successNoShow: (reservationNo) => `预订 ${reservationNo} 已标记爽约`,
+    successRescheduled: (reservationNo) => `预订 ${reservationNo} 已改期`,
     statusLabel: '状态',
     statusOptions: {
       all: '全部',
@@ -747,6 +755,11 @@ const zhCnStrings: MerchantStrings = {
     reject: '拒绝',
     arrive: '确认到店',
     noShow: '标记爽约',
+    reschedule: '改期',
+    rescheduleSlotPlaceholder: '选择新时段',
+    rescheduleReasonPlaceholder: '填写改期原因',
+    rescheduleSlotOption: (shopName, date, startTime, endTime, remainingCount) =>
+      `${shopName} ${date} ${startTime}-${endTime}（余 ${remainingCount}）`,
     noAction: '无需处理',
     empty: '当前筛选下没有预订。',
   },
@@ -1348,10 +1361,12 @@ const enStrings: MerchantStrings = {
     loadError: 'Failed to load reservations.',
     actionError: 'Failed to update the reservation.',
     rejectReasonRequired: 'Enter a rejection reason.',
+    rescheduleRequired: 'Select a new slot and enter a reschedule reason.',
     successRejected: (reservationNo) => `Reservation ${reservationNo} rejected.`,
     successConfirmed: (reservationNo) => `Reservation ${reservationNo} confirmed.`,
     successArrived: (reservationNo) => `Reservation ${reservationNo} marked as arrived.`,
     successNoShow: (reservationNo) => `Reservation ${reservationNo} marked as no-show.`,
+    successRescheduled: (reservationNo) => `Reservation ${reservationNo} rescheduled.`,
     statusLabel: 'Status',
     statusOptions: {
       all: 'All',
@@ -1377,6 +1392,11 @@ const enStrings: MerchantStrings = {
     reject: 'Reject',
     arrive: 'Mark arrived',
     noShow: 'Mark no-show',
+    reschedule: 'Reschedule',
+    rescheduleSlotPlaceholder: 'Select a new slot',
+    rescheduleReasonPlaceholder: 'Enter reschedule reason',
+    rescheduleSlotOption: (shopName, date, startTime, endTime, remainingCount) =>
+      `${shopName} ${date} ${startTime}-${endTime} (${remainingCount} remaining)`,
     noAction: 'No action required',
     empty: 'No reservations match the current filter.',
   },

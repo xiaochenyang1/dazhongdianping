@@ -6,9 +6,12 @@ import {
   arriveReservation,
   confirmReservation,
   fetchReservations,
+  fetchReservationSlots,
   markReservationNoShow,
   rejectReservation,
+  rescheduleReservation,
   type MerchantReservation,
+  type MerchantReservationSlot,
 } from '@/services/merchant'
 
 const props = withDefaults(defineProps<{ permissions?: string[] }>(), {
@@ -23,6 +26,7 @@ const error = ref('')
 const success = ref('')
 const items = ref<MerchantReservation[]>([])
 const rejectReasons = reactive<Record<number, string>>({})
+const availableSlots = ref<MerchantReservationSlot[]>([])
 const canManageReservations = computed(() => props.permissions.includes('reservation:confirm'))
 const canArriveReservations = computed(
   () => props.permissions.includes('reservation:arrive') || props.permissions.includes('reservation:confirm'),
@@ -44,13 +48,32 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    items.value = (
+    const reservations = (
       await fetchReservations({
         page: 1,
         pageSize: 50,
         status: filters.status === '' ? undefined : Number(filters.status),
       })
     ).list
+    items.value = reservations
+    reservations.forEach((item) => {
+      if (item.canReschedule && !rescheduleData[item.id]) {
+        rescheduleData[item.id] = { reason: '' }
+      }
+    })
+    if (canManageReservations.value) {
+      try {
+        availableSlots.value = (
+          await fetchReservationSlots({
+            enabled: true,
+            page: 1,
+            pageSize: 100,
+          })
+        ).list
+      } catch {
+        availableSlots.value = []
+      }
+    }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : strings.value.reservations.loadError
   } finally {
@@ -61,18 +84,37 @@ async function load() {
 function canAct(item: MerchantReservation) {
   return Boolean(
     (canManageReservations.value && (item.canConfirm || item.canReject)) ||
-      (canArriveReservations.value && (item.canArrive || item.canNoShow)),
+      (canArriveReservations.value && (item.canArrive || item.canNoShow)) ||
+      (canManageReservations.value && item.canReschedule),
+  )
+}
+
+const rescheduleData = reactive<Record<number, { slotId?: number; reason: string }>>({})
+
+function slotsFor(item: MerchantReservation) {
+  return availableSlots.value.filter(
+    (slot) =>
+      slot.shopId === item.shop.id &&
+      slot.id !== item.slotId &&
+      slot.remainingCount >= (item.peopleCount ?? 1),
   )
 }
 
 async function act(
   item: MerchantReservation,
-  type: 'confirm' | 'reject' | 'arrive' | 'no-show',
+  type: 'confirm' | 'reject' | 'arrive' | 'no-show' | 'reschedule',
 ) {
   if (type === 'confirm' || type === 'reject') {
     if (!canManageReservations.value) return
-  } else if (!canArriveReservations.value) {
-    return
+  } else if (type === 'arrive' || type === 'no-show') {
+    if (!canArriveReservations.value) return
+  } else if (type === 'reschedule') {
+    if (!canManageReservations.value) return
+    const data = rescheduleData[item.id]
+    if (!data?.slotId || !data.reason.trim()) {
+      error.value = strings.value.reservations.rescheduleRequired
+      return
+    }
   }
 
   actingId.value = item.id
@@ -93,9 +135,17 @@ async function act(
     } else if (type === 'arrive') {
       await arriveReservation(item.id)
       success.value = strings.value.reservations.successArrived(item.reservationNo)
-    } else {
+    } else if (type === 'no-show') {
       await markReservationNoShow(item.id)
       success.value = strings.value.reservations.successNoShow(item.reservationNo)
+    } else if (type === 'reschedule') {
+      const data = rescheduleData[item.id]!
+      await rescheduleReservation(item.id, {
+        slotId: data.slotId!,
+        reason: data.reason.trim(),
+      })
+      success.value = strings.value.reservations.successRescheduled(item.reservationNo)
+      delete rescheduleData[item.id]
     }
     delete rejectReasons[item.id]
     await load()
@@ -212,6 +262,41 @@ onMounted(load)
                 >
                   {{ strings.reservations.noShow }}
                 </button>
+                <div
+                  v-if="canManageReservations && item.canReschedule"
+                  class="row-actions"
+                  :data-testid="`reschedule-reservation-${item.id}`"
+                >
+                  <select
+                    v-model="rescheduleData[item.id].slotId"
+                    :name="`reservation-slot-${item.id}`"
+                  >
+                    <option :value="undefined">{{ strings.reservations.rescheduleSlotPlaceholder }}</option>
+                    <option v-for="slot in slotsFor(item)" :key="slot.id" :value="slot.id">
+                      {{ strings.reservations.rescheduleSlotOption(
+                        slot.shopName || item.shop.name,
+                        slot.bizDate,
+                        slot.startTime,
+                        slot.endTime,
+                        slot.remainingCount,
+                      ) }}
+                    </option>
+                  </select>
+                  <input
+                    v-model="rescheduleData[item.id].reason"
+                    :name="`reservation-reschedule-reason-${item.id}`"
+                    maxlength="255"
+                    :placeholder="strings.reservations.rescheduleReasonPlaceholder"
+                  />
+                  <button
+                    type="button"
+                    :data-testid="`reschedule-reservation-btn-${item.id}`"
+                    :disabled="actingId === item.id"
+                    @click="act(item, 'reschedule')"
+                  >
+                    {{ strings.reservations.reschedule }}
+                  </button>
+                </div>
               </div>
               <span v-else class="muted">{{ strings.reservations.noAction }}</span>
             </td>

@@ -135,6 +135,7 @@ export interface MerchantReservation {
   id: number
   reservationNo: string
   shop: { id: number; name: string }
+  slotId: number
   reserveTime: string
   status: number
   statusText: string
@@ -321,6 +322,7 @@ export function confirmReservation(id: number) { return apiPost<Record<string, u
 export function rejectReservation(id: number, reason: string) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/reject`, { reason }) }
 export function arriveReservation(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/arrive`) }
 export function markReservationNoShow(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/no-show`) }
+export function rescheduleReservation(id: number, payload: { slotId: number; reason: string }) { return apiPost<Record<string, unknown>>(`/api/b/v1/reservations/${id}/reschedule`, payload) }
 export function fetchReservationSlots(params?: object) { return apiGet<PageResult<MerchantReservationSlot>>('/api/b/v1/reservation-slots', params) }
 export function createReservationSlot(payload: MerchantReservationSlotPayload) { return apiPost<MerchantReservationSlot>('/api/b/v1/reservation-slots', payload) }
 export function updateReservationSlot(id: number, payload: MerchantReservationSlotPayload) { return apiPut<MerchantReservationSlot>(`/api/b/v1/reservation-slots/${id}`, payload) }
