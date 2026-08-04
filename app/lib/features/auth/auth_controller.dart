@@ -202,4 +202,10 @@ class AuthController extends ChangeNotifier {
       // Do not block auth if push or device registration is unavailable.
     }
   }
+
+  @override
+  void dispose() {
+    deviceLifecycle?.dispose();
+    super.dispose();
+  }
 }

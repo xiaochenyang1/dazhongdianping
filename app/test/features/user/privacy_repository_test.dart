@@ -4,7 +4,8 @@ import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/features/user/privacy_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class PrivacyFakeApi implements JsonApi, BinaryApi, JsonDeleteApi {
+class PrivacyFakeApi
+    implements JsonApi, BinaryApi, JsonDeleteApi, JsonMutationApi {
   String? path;
   Map<String, Object?>? query;
   Object? body;
@@ -207,6 +208,24 @@ class PrivacyFakeApi implements JsonApi, BinaryApi, JsonDeleteApi {
   }
 
   @override
+  Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
+    this.path = path;
+    this.body = body;
+    return {
+      'id': 7,
+      'deviceUid': 'android-001',
+      'platform': 2,
+      'pushChannel': 2,
+      'pushTokenSet': true,
+      'appVersion': '1.2.0',
+      'status': 1,
+      'lastActiveAt': '2026-07-16 12:00:00',
+      'createdAt': '2026-07-16 09:00:00',
+      'updatedAt': '2026-07-16 12:00:00',
+    };
+  }
+
+  @override
   Future<Uint8List> getBytes(String path) async {
     this.path = path;
     return Uint8List.fromList([1, 2, 3]);
@@ -249,6 +268,42 @@ void main() {
         ),
       ),
     );
+    expect(
+      () => repository.updateDevicePushToken(
+        deviceId: 7,
+        pushChannel: 2,
+        pushToken: 'fcm-token',
+        appVersion: '1.2.0',
+      ),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.message,
+          'message',
+          '当前 API 客户端不支持 push token update',
+        ),
+      ),
+    );
+  });
+
+  test('privacy repository syncs a rotated push token', () async {
+    final api = PrivacyFakeApi();
+    final repository = PrivacyRepository(api);
+
+    final device = await repository.updateDevicePushToken(
+      deviceId: 7,
+      pushChannel: 2,
+      pushToken: 'rotated-fcm-token',
+      appVersion: '1.2.0',
+    );
+
+    expect(api.path, '/api/c/v1/devices/7/push-token');
+    expect(api.body, {
+      'pushChannel': 2,
+      'pushToken': 'rotated-fcm-token',
+      'appVersion': '1.2.0',
+    });
+    expect(device.pushTokenSet, isTrue);
+    expect(device.pushChannel, 2);
   });
 
   test('privacy repository maps overview rules and latest tasks', () async {

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 class FakeDeviceLifecycle implements DeviceLifecycle {
   int registrations = 0;
   int logouts = 0;
+  int disposals = 0;
 
   @override
   Future<void> registerCurrentDevice() async {
@@ -17,6 +18,11 @@ class FakeDeviceLifecycle implements DeviceLifecycle {
   @override
   Future<void> logoutCurrentDevice() async {
     logouts++;
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposals++;
   }
 }
 
@@ -124,5 +130,18 @@ void main() {
 
     expect(controller.currentUser?.nickname, 'Updated User');
     expect(notifications, 1);
+  });
+
+  test('controller disposes its device lifecycle', () {
+    final devices = FakeDeviceLifecycle();
+    final controller = AuthController(
+      repository: AuthRepository(ControllerAuthApi()),
+      store: MemorySessionStore(),
+      deviceLifecycle: devices,
+    );
+
+    controller.dispose();
+
+    expect(devices.disposals, 1);
   });
 }

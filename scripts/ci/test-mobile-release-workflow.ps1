@@ -29,6 +29,7 @@ Assert-True ($workflow -match "DZDP_ANDROID_KEYSTORE_BASE64:.*secrets\.DZDP_ANDR
 Assert-True ($workflow -match "DZDP_ANDROID_KEY_ALIAS:.*secrets\.DZDP_ANDROID_KEY_ALIAS") "mobile release must read the key alias from environment secrets"
 Assert-True ($workflow -match "DZDP_ANDROID_STORE_PASSWORD:.*secrets\.DZDP_ANDROID_STORE_PASSWORD") "mobile release must read the store password from environment secrets"
 Assert-True ($workflow -match "DZDP_ANDROID_KEY_PASSWORD:.*secrets\.DZDP_ANDROID_KEY_PASSWORD") "mobile release must read the key password from environment secrets"
+Assert-True ($workflow -match "DZDP_FIREBASE_ANDROID_CONFIG_BASE64:.*secrets\.DZDP_FIREBASE_ANDROID_CONFIG_BASE64") "mobile release must read optional Firebase configuration from environment secrets"
 Assert-True ($workflow -match "base64 --decode") "mobile release must decode the keystore at runtime"
 Assert-True ($workflow -match "flutter test") "mobile release must run Flutter tests"
 Assert-True ($workflow -match "flutter analyze") "mobile release must run Flutter analysis"
@@ -37,6 +38,7 @@ Assert-True ($workflow -match "--build-name") "mobile release must stamp the req
 Assert-True ($workflow -match "--build-number") "mobile release must stamp the requested build number"
 Assert-True ($workflow -match '--dart-define "API_BASE_URL=\$DZDP_APP_API_BASE_URL"') "mobile release must compile the selected API base URL into the app"
 Assert-True ($workflow -match '--dart-define "APP_REGION=\$RELEASE_REGION"') "mobile release must compile the selected initial region into the app"
+Assert-True ($workflow -match '--dart-define "FIREBASE_CONFIGURED=\$FIREBASE_CONFIGURED"') "mobile release must compile whether Firebase is configured into the app"
 Assert-True ($workflow -match "jarsigner -verify") "mobile release must verify the app bundle signature"
 Assert-True ($workflow -match "META-INF/.*RSA.*DSA.*EC") "mobile release must require an app bundle signing block"
 Assert-True ($workflow -match "sha256sum") "mobile release must checksum the app bundle"
@@ -45,5 +47,6 @@ Assert-True ($workflow -match "actions/upload-artifact@v4") "mobile release must
 Assert-True ($workflow -match "if-no-files-found: error") "mobile release must fail when the app bundle is missing"
 Assert-True ($workflow -match "if: always\(\)") "mobile release must always clean up the keystore"
 Assert-True ($workflow -match "rm -f.*dzdp-android-release\.jks") "mobile release must remove the decoded keystore"
+Assert-True ($workflow -match "rm -f.*google-services\.json") "mobile release must remove the decoded Firebase configuration"
 
 Write-Output "mobile release workflow contract passed"

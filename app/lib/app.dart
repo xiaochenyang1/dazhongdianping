@@ -2,6 +2,7 @@ import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/app_settings.dart';
+import 'package:dazhongdianping_app/core/push_service.dart';
 import 'package:dazhongdianping_app/core/session_store.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
@@ -54,6 +55,8 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
   @override
   void initState() {
     super.initState();
+    final thirdPartyConfig = const ThirdPartyConfig();
+    final pushTokenService = PushTokenServiceFactory.create(thirdPartyConfig);
     apiClient = ApiClient(
       config: const AppConfig(),
       tokenProvider: sessionStore.readAccessToken,
@@ -66,6 +69,8 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
       deviceLifecycle: ApiDeviceLifecycle(
         repository: PrivacyRepository(apiClient),
         identityStore: SecureDeviceIdentityStore(),
+        thirdPartyConfig: thirdPartyConfig,
+        pushTokenService: pushTokenService,
       ),
     );
     authController.initialize();

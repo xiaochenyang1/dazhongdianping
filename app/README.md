@@ -11,6 +11,7 @@
 - 通知列表、未读消息 ACK 和首页登录保护入口。
 - 隐私中心：规则与任务历史、创建导出、认证 ZIP 下载并保存到设备、验证码/密码复核删除申请、冷静期撤销。
 - Google Maps、Stripe/PayPal、FCM/APNs 的配置边界和未配置保护；未配置时不会使用 mock 冒充真实接通。
+- Android 登录设备会在配置 Firebase 后登记 FCM token，iOS 登记 APNs token；token 轮换会同步回后端，退出时停用当前设备。
 
 本地运行：
 
@@ -52,12 +53,14 @@ DZDP_ANDROID_KEY_PASSWORD=your-key-password
 - `DZDP_ANDROID_KEY_ALIAS`
 - `DZDP_ANDROID_STORE_PASSWORD`
 - `DZDP_ANDROID_KEY_PASSWORD`
+- `DZDP_FIREBASE_ANDROID_CONFIG_BASE64`：可选，Firebase `google-services.json` 的 Base64 内容；未配置时发布包保持推送关闭。
 
 触发 `mobile-release` 时必须选择环境、区域并填写语义版本号和正整数构建号。流水线
 会先运行 Flutter 测试与静态分析，再生成签名 AAB、SHA-256 文件和
 `mobile-release-manifest.json`，作为保留 30 天的 GitHub Actions artifact 上传。
 所选区域会通过 `APP_REGION` 编译为首次启动区域，API 地址会通过
-`API_BASE_URL` 编译进应用；用户仍可在应用内切换 CN/EU。
+`API_BASE_URL` 编译进应用；存在 Firebase 配置时流水线还会写入
+`FIREBASE_CONFIGURED=true`。用户仍可在应用内切换 CN/EU。
 解码后的 keystore 只存在于 runner 临时目录，并在成功或失败后清理。该入口只生成
 可追溯的签名制品；上传 Google Play 仍需目标商店账号和发布审批。
 

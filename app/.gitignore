@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Native push credentials are injected locally or by the release workflow.
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+
 # Symbolication related
 app.*.symbols
 

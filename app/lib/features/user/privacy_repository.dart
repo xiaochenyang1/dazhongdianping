@@ -401,6 +401,30 @@ class PrivacyRepository {
     return UserDevice.fromJson(result);
   }
 
+  /// 推送 token 轮换后回传服务端，否则 `PushDispatchService` 会一直拿着失效 token。
+  Future<UserDevice> updateDevicePushToken({
+    required int deviceId,
+    required int pushChannel,
+    required String pushToken,
+    required String appVersion,
+  }) async {
+    if (api is! JsonMutationApi) {
+      throw unsupportedApiClientCapability(
+        'push token update',
+        languageTag: apiClientLanguageTag(api),
+      );
+    }
+    final result = await (api as JsonMutationApi).putJson(
+      '/api/c/v1/devices/$deviceId/push-token',
+      body: {
+        'pushChannel': pushChannel,
+        'pushToken': pushToken,
+        'appVersion': appVersion,
+      },
+    );
+    return UserDevice.fromJson(result);
+  }
+
   Future<UserDevice> logoutDevice(int deviceId) async {
     if (api is! JsonDeleteApi) {
       throw unsupportedApiClientCapability(

@@ -7,6 +7,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+if (file("google-services.json").isFile) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 val defaultApplicationId = "com.example.dazhongdianping_app"
 val releaseProperties = Properties()
 val releasePropertiesFile = rootProject.file("key.properties")

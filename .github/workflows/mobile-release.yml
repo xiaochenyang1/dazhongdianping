@@ -51,6 +51,7 @@ jobs:
       DZDP_ANDROID_KEY_ALIAS: ${{ secrets.DZDP_ANDROID_KEY_ALIAS }}
       DZDP_ANDROID_STORE_PASSWORD: ${{ secrets.DZDP_ANDROID_STORE_PASSWORD }}
       DZDP_ANDROID_KEY_PASSWORD: ${{ secrets.DZDP_ANDROID_KEY_PASSWORD }}
+      DZDP_FIREBASE_ANDROID_CONFIG_BASE64: ${{ secrets.DZDP_FIREBASE_ANDROID_CONFIG_BASE64 }}
       RELEASE_ENVIRONMENT: ${{ inputs.environment }}
       RELEASE_REGION: ${{ inputs.region }}
       RELEASE_BUILD_NAME: ${{ inputs.build_name }}
@@ -118,6 +119,22 @@ jobs:
           chmod 600 "$keystore_path"
           echo "DZDP_ANDROID_KEYSTORE_PATH=$keystore_path" >> "$GITHUB_ENV"
 
+      - name: Prepare optional Firebase configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          firebase_config="app/android/app/google-services.json"
+          if [[ -n "${DZDP_FIREBASE_ANDROID_CONFIG_BASE64:-}" ]]; then
+            printf '%s' "$DZDP_FIREBASE_ANDROID_CONFIG_BASE64" | base64 --decode > "$firebase_config"
+            if [[ ! -s "$firebase_config" ]]; then
+              echo "::error::Decoded Firebase Android configuration is empty."
+              exit 1
+            fi
+            echo "FIREBASE_CONFIGURED=true" >> "$GITHUB_ENV"
+          else
+            echo "FIREBASE_CONFIGURED=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Verify Flutter app
         working-directory: app
         run: |
@@ -133,6 +150,7 @@ jobs:
           --build-number "$RELEASE_BUILD_NUMBER"
           --dart-define "API_BASE_URL=$DZDP_APP_API_BASE_URL"
           --dart-define "APP_REGION=$RELEASE_REGION"
+          --dart-define "FIREBASE_CONFIGURED=$FIREBASE_CONFIGURED"
 
       - name: Package Android release artifact
         id: package
@@ -191,7 +209,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Remove release keystore
+      - name: Remove temporary release credentials
         if: always()
         shell: bash
-        run: rm -f "$RUNNER_TEMP/dzdp-android-release.jks"
+        run: rm -f "$RUNNER_TEMP/dzdp-android-release.jks" app/android/app/google-services.json
