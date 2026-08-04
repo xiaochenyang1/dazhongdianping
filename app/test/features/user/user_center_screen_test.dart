@@ -7,6 +7,7 @@ import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
+import 'package:dazhongdianping_app/features/user/daily_check_in_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_center_screen.dart';
 import 'package:dazhongdianping_app/features/user/user_repository.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,8 @@ class CenterFakeApi implements JsonApi, JsonMutationApi {
   final bool failFirst;
   Object? profileError;
   int profileRequests = 0;
+  int checkInStatusRequests = 0;
+  int checkInRequests = 0;
   Completer<void>? retryGate;
 
   @override
@@ -26,6 +29,17 @@ class CenterFakeApi implements JsonApi, JsonMutationApi {
     String path, {
     Map<String, Object?>? query,
   }) async {
+    if (path == '/api/c/v1/user/check-in/status') {
+      checkInStatusRequests++;
+      return {
+        'checkedInToday': false,
+        'streakDays': 2,
+        'totalCount': 6,
+        'todayGrowthReward': 2,
+        'todayPointsReward': 1,
+        'lastCheckInAt': '2026-08-03 09:00:00',
+      };
+    }
     profileRequests++;
     if (profileError != null) {
       throw profileError!;
@@ -46,8 +60,20 @@ class CenterFakeApi implements JsonApi, JsonMutationApi {
   }
 
   @override
-  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async =>
-      {};
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    if (path == '/api/c/v1/user/check-in') {
+      checkInRequests++;
+      return {
+        'checkedInToday': true,
+        'streakDays': 3,
+        'totalCount': 7,
+        'todayGrowthReward': 2,
+        'todayPointsReward': 1,
+        'lastCheckInAt': '2026-08-04 09:00:00',
+      };
+    }
+    return {};
+  }
 
   @override
   Future<Map<String, dynamic>> putJson(String path, {Object? body}) async {
@@ -126,6 +152,7 @@ void main() {
     expect(find.text('Account settings'), findsOneWidget);
     expect(find.text('Local expert certification'), findsOneWidget);
     expect(find.text('Growth history'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('My reviews'), 200);
     expect(find.text('My reviews'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Privacy center'), 200);
     expect(find.text('Privacy center'), findsOneWidget);
@@ -206,6 +233,7 @@ void main() {
     expect(find.text('账户设置'), findsOneWidget);
     expect(find.text('本地达人认证'), findsOneWidget);
     expect(find.text('成长值流水'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('我的点评'), 200);
     expect(find.text('我的点评'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('我的收藏'), 200);
     expect(find.text('我的收藏'), findsOneWidget);
@@ -222,6 +250,44 @@ void main() {
     expect(find.text('我的足迹'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('隐私中心'), 200);
     expect(find.text('隐私中心'), findsOneWidget);
+  });
+
+  testWidgets('user center opens daily check-in and refreshes after return', (
+    tester,
+  ) async {
+    final api = CenterFakeApi();
+    final auth = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        home: UserCenterScreen(
+          repository: UserRepository(api),
+          authController: auth,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('user-center-check-in')),
+      160,
+    );
+    await tester.tap(find.byKey(const Key('user-center-check-in')));
+    await tester.pumpAndSettle();
+    expect(find.byType(DailyCheckInScreen), findsOneWidget);
+    expect(api.checkInStatusRequests, 1);
+
+    await tester.tap(find.byKey(const Key('check-in-submit')));
+    await tester.pumpAndSettle();
+    expect(api.checkInRequests, 1);
+    expect(find.text('今日已签到'), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(DailyCheckInScreen), findsNothing);
+    expect(api.profileRequests, 2);
   });
 
   testWidgets('user center reflects profile changes from account settings', (

@@ -25,6 +25,7 @@ public class UserGrowthService {
     private static final String ACTION_REVIEW_LIKED = "review_liked";
     private static final String ACTION_REVIEW_IMAGE = "review_image";
     private static final String ACTION_ORDER_COMPLETE = "order_complete";
+    private static final String ACTION_CHECK_IN = "check_in";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final AuthCommandMapper authCommandMapper;
@@ -51,6 +52,11 @@ public class UserGrowthService {
     @Transactional
     public void rewardForCompletedOrder(Long userId, Long orderId) {
         rewardAction(userId, ACTION_ORDER_COMPLETE, orderId);
+    }
+
+    @Transactional
+    public void rewardForCheckIn(Long userId, Long checkInId) {
+        rewardAction(userId, ACTION_CHECK_IN, checkInId);
     }
 
     private void rewardAction(Long userId, String action, Long bizId) {
@@ -159,6 +165,9 @@ public class UserGrowthService {
         }
         if (ACTION_REVIEW_CREATE.equals(action)) {
             return "发布点评";
+        }
+        if (ACTION_CHECK_IN.equals(action)) {
+            return "每日签到";
         }
         return "系统奖励";
     }

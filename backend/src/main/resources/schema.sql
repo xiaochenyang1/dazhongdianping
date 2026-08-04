@@ -1130,3 +1130,16 @@ CREATE TABLE IF NOT EXISTS post_comment_report (
 );
 CREATE INDEX IF NOT EXISTS idx_post_comment_report_comment ON post_comment_report(comment_id, status, is_deleted, id);
 CREATE UNIQUE INDEX IF NOT EXISTS uk_post_comment_report_user ON post_comment_report(comment_id, reporter_user_id);
+
+-- 每日签到
+CREATE TABLE IF NOT EXISTS user_check_in (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    check_in_date DATE NOT NULL,
+    streak_days INT NOT NULL DEFAULT 1,
+    growth_value INT NOT NULL DEFAULT 0,
+    points INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_user_check_in_date UNIQUE(user_id, check_in_date)
+);
+CREATE INDEX IF NOT EXISTS idx_user_check_in_user ON user_check_in(user_id, check_in_date, id);

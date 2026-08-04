@@ -52,6 +52,7 @@ String? _localizedAuthErrorByMessage(AppLocalizations strings, String message) {
     'avatar 不能超过 255 字' => strings.authErrorProfileAvatarTooLong,
     'signature 不能超过 255 字' => strings.authErrorProfileSignatureTooLong,
     '用户资料更新失败' => strings.authErrorProfileUpdateFailed,
+    '今天已经签过到了' => strings.checkInErrorAlreadyChecked,
     _ => null,
   };
 }

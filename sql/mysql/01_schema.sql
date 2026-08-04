@@ -1123,3 +1123,16 @@ CREATE TABLE IF NOT EXISTS post_comment_report (
   KEY idx_post_comment_report_comment(comment_id, status, is_deleted, id),
   UNIQUE KEY uk_post_comment_report_user(comment_id, reporter_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 每日签到
+CREATE TABLE IF NOT EXISTS user_check_in (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  check_in_date DATE NOT NULL,
+  streak_days INT NOT NULL DEFAULT 1,
+  growth_value INT NOT NULL DEFAULT 0,
+  points INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_check_in_date(user_id, check_in_date),
+  KEY idx_user_check_in_user(user_id, check_in_date, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

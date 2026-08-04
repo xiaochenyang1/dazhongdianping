@@ -12,6 +12,7 @@ class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
     String path, {
     Map<String, Object?>? query,
   }) async {
+    this.path = path;
     this.query = query;
     if (path == '/api/c/v1/user/me') {
       return {
@@ -97,6 +98,16 @@ class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         'hasMore': false,
       };
     }
+    if (path == '/api/c/v1/user/check-in/status') {
+      return {
+        'checkedInToday': false,
+        'streakDays': 3,
+        'totalCount': 12,
+        'todayGrowthReward': 2,
+        'todayPointsReward': 1,
+        'lastCheckInAt': '2026-08-03 09:00:00',
+      };
+    }
     if (path == '/api/c/v1/user/expert-certification') {
       return {
         'id': 0,
@@ -135,6 +146,16 @@ class UserFakeApi implements JsonApi, JsonMutationApi, JsonDeleteApi {
         'reviewedAt': '',
         'effectiveStartAt': '',
         'effectiveEndAt': '',
+      };
+    }
+    if (path == '/api/c/v1/user/check-in') {
+      return {
+        'checkedInToday': true,
+        'streakDays': 4,
+        'totalCount': 13,
+        'todayGrowthReward': 2,
+        'todayPointsReward': 1,
+        'lastCheckInAt': '2026-08-04 09:00:00',
       };
     }
     if (path == '/api/c/v1/auth/send-code') {
@@ -373,6 +394,25 @@ void main() {
     expect(page.items.first.actionText, '发布点评');
     expect(page.items.first.changeAmount, 10);
     expect(page.items.last.typeText, '积分');
+  });
+
+  test('user repository loads status and submits daily check-in', () async {
+    final api = UserFakeApi();
+    final repository = UserRepository(api);
+
+    final before = await repository.loadCheckInStatus();
+    expect(api.path, '/api/c/v1/user/check-in/status');
+    expect(before.checkedInToday, isFalse);
+    expect(before.streakDays, 3);
+    expect(before.totalCount, 12);
+    expect(before.lastCheckInAt, '2026-08-03 09:00:00');
+
+    final after = await repository.checkIn();
+    expect(api.path, '/api/c/v1/user/check-in');
+    expect(after.checkedInToday, isTrue);
+    expect(after.streakDays, 4);
+    expect(after.todayGrowthReward, 2);
+    expect(after.todayPointsReward, 1);
   });
 
   test('user repository loads and applies expert certification', () async {

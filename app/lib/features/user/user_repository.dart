@@ -155,6 +155,34 @@ class UserGrowthRecordPage {
   final bool hasMore;
 }
 
+class UserCheckInStatus {
+  const UserCheckInStatus({
+    required this.checkedInToday,
+    required this.streakDays,
+    required this.totalCount,
+    required this.todayGrowthReward,
+    required this.todayPointsReward,
+    required this.lastCheckInAt,
+  });
+
+  final bool checkedInToday;
+  final int streakDays;
+  final int totalCount;
+  final int todayGrowthReward;
+  final int todayPointsReward;
+  final String lastCheckInAt;
+
+  factory UserCheckInStatus.fromJson(Map<String, dynamic> json) =>
+      UserCheckInStatus(
+        checkedInToday: json['checkedInToday'] as bool? ?? false,
+        streakDays: (json['streakDays'] as num?)?.toInt() ?? 0,
+        totalCount: (json['totalCount'] as num?)?.toInt() ?? 0,
+        todayGrowthReward: (json['todayGrowthReward'] as num?)?.toInt() ?? 0,
+        todayPointsReward: (json['todayPointsReward'] as num?)?.toInt() ?? 0,
+        lastCheckInAt: json['lastCheckInAt'] as String? ?? '',
+      );
+}
+
 class ExpertCertificationStatus {
   const ExpertCertificationStatus({
     required this.id,
@@ -466,6 +494,15 @@ class UserRepository {
     final result = await api.getJson('/api/c/v1/user/expert-certification');
     return ExpertCertificationStatus.fromJson(result);
   }
+
+  Future<UserCheckInStatus> loadCheckInStatus() async =>
+      UserCheckInStatus.fromJson(
+        await api.getJson('/api/c/v1/user/check-in/status'),
+      );
+
+  Future<UserCheckInStatus> checkIn() async => UserCheckInStatus.fromJson(
+    await api.postJson('/api/c/v1/user/check-in'),
+  );
 
   Future<ExpertCertificationStatus> applyExpertCertification(
     String reason,

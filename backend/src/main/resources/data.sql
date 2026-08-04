@@ -343,7 +343,8 @@ INSERT INTO growth_rule (id, action, action_name, growth_value, points, daily_li
     (1, 'review_create', '发布点评', 10, 5, 5, TRUE),
     (2, 'review_liked', '点评获赞', 2, 1, 20, TRUE),
     (3, 'review_image', '上传点评图片', 3, 1, 10, TRUE),
-    (4, 'order_complete', '完成订单', 20, 10, 0, TRUE);
+    (4, 'order_complete', '完成订单', 20, 10, 0, TRUE),
+    (5, 'check_in', '每日签到', 2, 1, 1, TRUE);
 
 INSERT INTO level_config (level, min_growth, level_name, icon, privilege_json, enabled) VALUES
     (1, 0, '新手', '', '{}', TRUE), (2, 20, '探索者', '', '{}', TRUE),

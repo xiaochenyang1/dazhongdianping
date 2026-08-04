@@ -8,11 +8,13 @@ import com.tuowei.dazhongdianping.module.auth.model.request.UserExpertCertificat
 import com.tuowei.dazhongdianping.module.auth.model.request.UserPasswordUpdateRequest;
 import com.tuowei.dazhongdianping.module.auth.model.request.UserProfileUpdateRequest;
 import com.tuowei.dazhongdianping.module.auth.model.response.AuthCurrentUserResponse;
+import com.tuowei.dazhongdianping.module.auth.model.response.UserCheckInStatusResponse;
 import com.tuowei.dazhongdianping.module.auth.model.response.UserGrowthRecordResponse;
 import com.tuowei.dazhongdianping.module.auth.model.response.UserExpertCertificationStatusResponse;
 import com.tuowei.dazhongdianping.module.auth.model.response.UserPublicProfileResponse;
 import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.auth.service.PublicAuthService;
+import com.tuowei.dazhongdianping.module.auth.service.UserCheckInService;
 import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
@@ -32,18 +34,31 @@ public class UserProfileController {
     private final PublicAuthService publicAuthService;
     private final UserGrowthService userGrowthService;
     private final UserExpertCertificationService userExpertCertificationService;
+    private final UserCheckInService userCheckInService;
 
     public UserProfileController(PublicAuthService publicAuthService,
                                  UserGrowthService userGrowthService,
-                                 UserExpertCertificationService userExpertCertificationService) {
+                                 UserExpertCertificationService userExpertCertificationService,
+                                 UserCheckInService userCheckInService) {
         this.publicAuthService = publicAuthService;
         this.userGrowthService = userGrowthService;
         this.userExpertCertificationService = userExpertCertificationService;
+        this.userCheckInService = userCheckInService;
     }
 
     @GetMapping("/me")
     public ApiResponse<AuthCurrentUserResponse> me() {
         return ApiResponse.success(publicAuthService.currentUser());
+    }
+
+    @PostMapping("/check-in")
+    public ApiResponse<UserCheckInStatusResponse> checkIn() {
+        return ApiResponse.success("签到成功", "user.check_in_success", userCheckInService.checkIn());
+    }
+
+    @GetMapping("/check-in/status")
+    public ApiResponse<UserCheckInStatusResponse> checkInStatus() {
+        return ApiResponse.success(userCheckInService.status());
     }
 
     @GetMapping("/growth/records")

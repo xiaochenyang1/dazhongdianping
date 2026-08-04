@@ -205,6 +205,18 @@ class AppLocalizations {
     'localExpertCertificationSubtitle': '提交或重提本地达人申请',
     'growthRecords': '成长值流水',
     'growthRecordsSubtitle': 'Lv.{level} · 成长值 {growth} · 积分 {points}',
+    'dailyCheckIn': '每日签到',
+    'dailyCheckInSubtitle': '连续签到 {streak} 天 · 累计 {total} 次',
+    'checkInAction': '立即签到',
+    'checkedInTodayLabel': '今日已签到',
+    'checkInRewardHint': '今日可得成长值 +{growth} · 积分 +{points}',
+    'checkInRewardEarned': '今日已获得成长值 +{growth} · 积分 +{points}',
+    'checkInSuccess': '签到成功',
+    'checkInFailed': '签到失败：{error}',
+    'checkInErrorAlreadyChecked': '今天已经签过到了。',
+    'checkInStatusLoadFailed': '签到状态加载失败：{error}',
+    'lastCheckInAtLabel': '上次签到 {time}',
+    'noCheckInYet': '还没有签到记录',
     'deleteComment': '删除评论',
     'deleteCommentConfirm': '删除后不可恢复，确认删除这条评论吗？',
     'commentDeleted': '评论已删除',
@@ -1101,6 +1113,18 @@ class AppLocalizations {
     'localExpertCertificationSubtitle': '提交或重新提交在地達人申請',
     'growthRecords': '成長值流水',
     'growthRecordsSubtitle': 'Lv.{level} · 成長值 {growth} · 積分 {points}',
+    'dailyCheckIn': '每日簽到',
+    'dailyCheckInSubtitle': '連續簽到 {streak} 天 · 累計 {total} 次',
+    'checkInAction': '立即簽到',
+    'checkedInTodayLabel': '今日已簽到',
+    'checkInRewardHint': '今日可得成長值 +{growth} · 積分 +{points}',
+    'checkInRewardEarned': '今日已獲得成長值 +{growth} · 積分 +{points}',
+    'checkInSuccess': '簽到成功',
+    'checkInFailed': '簽到失敗：{error}',
+    'checkInErrorAlreadyChecked': '今天已經簽過到了。',
+    'checkInStatusLoadFailed': '簽到狀態載入失敗：{error}',
+    'lastCheckInAtLabel': '上次簽到 {time}',
+    'noCheckInYet': '還沒有簽到紀錄',
     'deleteComment': '刪除評論',
     'deleteCommentConfirm': '刪除後不可恢復，確認刪除這則留言嗎？',
     'commentDeleted': '留言已刪除',
@@ -2024,6 +2048,18 @@ class AppLocalizations {
         'Submit or resubmit a local expert application',
     'growthRecords': 'Growth history',
     'growthRecordsSubtitle': 'Lv.{level} · growth {growth} · points {points}',
+    'dailyCheckIn': 'Daily check-in',
+    'dailyCheckInSubtitle': '{streak}-day streak · {total} total check-ins',
+    'checkInAction': 'Check in',
+    'checkedInTodayLabel': 'Checked in today',
+    'checkInRewardHint': 'Today rewards growth +{growth} · points +{points}',
+    'checkInRewardEarned': 'Earned growth +{growth} · points +{points} today',
+    'checkInSuccess': 'Checked in',
+    'checkInFailed': 'Could not check in: {error}',
+    'checkInErrorAlreadyChecked': 'You already checked in today.',
+    'checkInStatusLoadFailed': 'Could not load check-in status: {error}',
+    'lastCheckInAtLabel': 'Last check-in {time}',
+    'noCheckInYet': 'No check-ins yet',
     'deleteComment': 'Delete comment',
     'deleteCommentConfirm': 'This cannot be undone. Delete this comment?',
     'commentDeleted': 'Comment deleted',
@@ -3383,6 +3419,30 @@ class AppLocalizations {
         .replaceFirst('{growth}', '$growth')
         .replaceFirst('{points}', '$points');
   }
+
+  String get dailyCheckIn => _text('dailyCheckIn');
+  String dailyCheckInSubtitle({required int streak, required int total}) =>
+      _text(
+        'dailyCheckInSubtitle',
+      ).replaceFirst('{streak}', '$streak').replaceFirst('{total}', '$total');
+
+  String get checkInAction => _text('checkInAction');
+  String get checkedInTodayLabel => _text('checkedInTodayLabel');
+  String checkInRewardHint({required int growth, required int points}) => _text(
+    'checkInRewardHint',
+  ).replaceFirst('{growth}', '$growth').replaceFirst('{points}', '$points');
+  String checkInRewardEarned({required int growth, required int points}) =>
+      _text(
+        'checkInRewardEarned',
+      ).replaceFirst('{growth}', '$growth').replaceFirst('{points}', '$points');
+  String get checkInSuccess => _text('checkInSuccess');
+  String checkInFailed(Object error) => _withError('checkInFailed', error);
+  String get checkInErrorAlreadyChecked => _text('checkInErrorAlreadyChecked');
+  String checkInStatusLoadFailed(Object error) =>
+      _withError('checkInStatusLoadFailed', error);
+  String lastCheckInAtLabel(String time) =>
+      _text('lastCheckInAtLabel').replaceFirst('{time}', time);
+  String get noCheckInYet => _text('noCheckInYet');
 
   String get deleteComment => _text('deleteComment');
   String get deleteCommentConfirm => _text('deleteCommentConfirm');

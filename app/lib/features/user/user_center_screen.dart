@@ -8,6 +8,7 @@ import 'package:dazhongdianping_app/features/message/blocked_users_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
+import 'package:dazhongdianping_app/features/user/daily_check_in_screen.dart';
 import 'package:dazhongdianping_app/features/user/expert_certification_screen.dart';
 import 'package:dazhongdianping_app/features/user/growth_records_screen.dart';
 import 'package:dazhongdianping_app/features/user/privacy_overview_screen.dart';
@@ -233,6 +234,22 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: widget.onMessages,
                 ),
+              ListTile(
+                key: const Key('user-center-check-in'),
+                leading: const Icon(Icons.event_available_outlined),
+                title: Text(strings.dailyCheckIn),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          DailyCheckInScreen(repository: widget.repository),
+                    ),
+                  );
+                  // Check-in changes points/growth, so refresh the header.
+                  await _reload();
+                },
+              ),
               ListTile(
                 leading: const Icon(Icons.block_outlined),
                 title: Text(strings.blockedUsers),

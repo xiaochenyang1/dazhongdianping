@@ -292,6 +292,59 @@
         FROM growth_rule WHERE action = #{action} AND enabled = TRUE
     </select>
 
+    <insert id="insertUserCheckIn" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_check_in(
+            user_id,
+            check_in_date,
+            streak_days,
+            growth_value,
+            points,
+            created_at
+        )
+        VALUES (
+            #{userId},
+            #{checkInDate},
+            #{streakDays},
+            #{growthValue},
+            #{points},
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="selectUserCheckInOnDate" resultType="com.tuowei.dazhongdianping.module.auth.model.UserCheckInRow">
+        SELECT id,
+               user_id,
+               check_in_date,
+               streak_days,
+               growth_value,
+               points,
+               created_at
+        FROM user_check_in
+        WHERE user_id = #{userId}
+          AND check_in_date = #{checkInDate}
+        LIMIT 1
+    </select>
+
+    <select id="selectLatestUserCheckIn" resultType="com.tuowei.dazhongdianping.module.auth.model.UserCheckInRow">
+        SELECT id,
+               user_id,
+               check_in_date,
+               streak_days,
+               growth_value,
+               points,
+               created_at
+        FROM user_check_in
+        WHERE user_id = #{userId}
+        ORDER BY check_in_date DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <select id="countUserCheckIns" resultType="long">
+        SELECT COUNT(1)
+        FROM user_check_in
+        WHERE user_id = #{userId}
+    </select>
+
     <select id="countDailyGrowthActions" resultType="long">
         SELECT COUNT(1) FROM growth_points_log
         WHERE user_id = #{userId} AND action = #{action} AND type = 1

@@ -2,10 +2,12 @@ package com.tuowei.dazhongdianping.module.auth.mapper;
 
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.model.GrowthPointsLogRow;
+import com.tuowei.dazhongdianping.module.auth.model.UserCheckInRow;
 import com.tuowei.dazhongdianping.module.auth.model.GrowthRuleRow;
 import com.tuowei.dazhongdianping.module.auth.model.UserGrowthRecordQuery;
 import com.tuowei.dazhongdianping.module.auth.model.UserSessionRow;
 import com.tuowei.dazhongdianping.module.auth.model.VerificationCodeRow;
+import java.time.LocalDate;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
@@ -51,6 +53,15 @@ public interface AuthCommandMapper {
     long countGrowthPointsLogs(UserGrowthRecordQuery query);
 
     List<GrowthPointsLogRow> selectGrowthPointsLogs(UserGrowthRecordQuery query);
+
+    void insertUserCheckIn(UserCheckInRow row);
+
+    UserCheckInRow selectUserCheckInOnDate(@Param("userId") Long userId,
+                                           @Param("checkInDate") LocalDate checkInDate);
+
+    UserCheckInRow selectLatestUserCheckIn(@Param("userId") Long userId);
+
+    long countUserCheckIns(@Param("userId") Long userId);
 
     long countGrowthPointsLogsByAction(@Param("userId") Long userId,
                                        @Param("action") String action,
