@@ -3,6 +3,7 @@ package com.tuowei.dazhongdianping.module.admin.merchant.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
 import com.tuowei.dazhongdianping.common.admin.AdminSession;
 import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
@@ -41,6 +42,9 @@ public class AdminMerchantApplicationService {
         int normalizedPage = page == null ? 1 : Math.max(1, page);
         int normalizedPageSize = pageSize == null ? 20 : Math.min(100, Math.max(1, pageSize));
         String region = RegionContext.getRegion().name();
+        if (!hasAllCitiesScope(admin(), region)) {
+            return new PageResult<>(List.of(), 0, normalizedPage, normalizedPageSize, false);
+        }
         long total = merchantIdentityMapper.countApplications(region, status);
         List<Map<String, Object>> list = merchantIdentityMapper.selectApplications(
                 region,
@@ -64,9 +68,13 @@ public class AdminMerchantApplicationService {
             String requestIp
     ) {
         AdminSession admin = admin();
+        String region = RegionContext.getRegion().name();
+        if (!hasAllCitiesScope(admin, region)) {
+            throw new NotFoundException("商户资质申请不存在");
+        }
         MerchantApplicationRow application = merchantIdentityMapper.selectAdminApplication(
                 merchantId,
-                RegionContext.getRegion().name()
+                region
         );
         if (application == null) {
             throw new NotFoundException("商户资质申请不存在");
@@ -88,7 +96,7 @@ public class AdminMerchantApplicationService {
         );
         return applicationMap(merchantIdentityMapper.selectAdminApplication(
                 merchantId,
-                RegionContext.getRegion().name()
+                region
         ));
     }
 
@@ -131,5 +139,10 @@ public class AdminMerchantApplicationService {
             throw new UnauthorizedException("管理员登录状态不存在");
         }
         return admin;
+    }
+
+    private boolean hasAllCitiesScope(AdminSession admin, String region) {
+        AdminCityScope scope = admin.cityScopes().get(region);
+        return scope != null && scope.allCities();
     }
 }
