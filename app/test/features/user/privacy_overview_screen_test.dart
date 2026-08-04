@@ -390,6 +390,7 @@ void main() {
     expect(find.text('预订数据'), findsOneWidget);
     expect(find.text('收藏数据'), findsOneWidget);
     expect(find.text('关注关系'), findsOneWidget);
+    await scrollTo(tester, find.text('任务 #8'));
     expect(find.text('任务 #8'), findsOneWidget);
     expect(find.text('下载 ZIP'), findsOneWidget);
     await scrollTo(tester, find.text('协议留痕'));
@@ -582,6 +583,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await scrollTo(tester, find.text('创建导出任务'));
     await tester.tap(find.text('创建导出任务'));
     await tester.pumpAndSettle();
 
@@ -598,6 +600,9 @@ void main() {
         'messages',
         'circles',
         'topics',
+        'browse_history',
+        'check_ins',
+        'points_exchanges',
       ],
       'format': 'zip',
     });
@@ -605,7 +610,13 @@ void main() {
     expect(find.text('关注关系'), findsOneWidget);
     expect(find.text('圈子关系'), findsOneWidget);
     expect(find.text('话题关注'), findsOneWidget);
-    expect(find.text('帖子、关注关系、私信、圈子和话题关注均支持真实导出。'), findsOneWidget);
+    expect(find.text('签到记录'), findsOneWidget);
+    expect(find.text('积分兑换'), findsOneWidget);
+    expect(
+      find.text('帖子、关注关系、私信、圈子、话题关注、浏览足迹、签到记录和积分兑换均支持真实导出。'),
+      findsOneWidget,
+    );
+    await scrollTo(tester, find.text('任务 #10'));
     expect(find.text('任务 #10'), findsOneWidget);
   });
 
@@ -656,6 +667,7 @@ void main() {
     createAction();
     await tester.pumpAndSettle();
 
+    await scrollTo(tester, find.text('任务 #10'));
     expect(find.text('任务 #10'), findsOneWidget);
     api.exportPageGates[2]!.complete();
     await tester.pumpAndSettle();

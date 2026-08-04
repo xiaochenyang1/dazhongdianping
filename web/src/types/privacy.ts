@@ -12,6 +12,8 @@ export type PrivacyExportModule =
   | 'messages'
   | 'circles'
   | 'topics'
+  | 'check_ins'
+  | 'points_exchanges'
 
 export interface PrivacyExportRule {
   dailyLimit: number

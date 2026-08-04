@@ -160,6 +160,8 @@ describe('PrivacyCenterView', () => {
         'messages',
         'circles',
         'topics',
+        'check_ins',
+        'points_exchanges',
       ],
       format: 'zip',
     })

@@ -683,7 +683,10 @@ class AppLocalizations {
     'exportModuleMessages': '私信数据',
     'exportModuleCircles': '圈子关系',
     'exportModuleTopics': '话题关注',
-    'privacyExportHint': '帖子、关注关系、私信、圈子和话题关注均支持真实导出。',
+    'exportModuleBrowseHistory': '浏览足迹',
+    'exportModuleCheckIns': '签到记录',
+    'exportModulePointsExchanges': '积分兑换',
+    'privacyExportHint': '帖子、关注关系、私信、圈子、话题关注、浏览足迹、签到记录和积分兑换均支持真实导出。',
     'noExportTasks': '还没有导出任务',
     'agreementRecordsHint': '记录你确认过的用户协议和隐私政策版本，省得日后各说各话。',
     'noAgreementRecords': '还没有协议同意记录。',
@@ -1621,7 +1624,10 @@ class AppLocalizations {
     'exportModuleMessages': '私信資料',
     'exportModuleCircles': '圈子關係',
     'exportModuleTopics': '話題追蹤',
-    'privacyExportHint': '貼文、追蹤關係、私信、圈子和話題追蹤均支援真實匯出。',
+    'exportModuleBrowseHistory': '瀏覽足跡',
+    'exportModuleCheckIns': '簽到紀錄',
+    'exportModulePointsExchanges': '積分兌換',
+    'privacyExportHint': '貼文、追蹤關係、私信、圈子、話題追蹤、瀏覽足跡、簽到紀錄和積分兌換均支援真實匯出。',
     'noExportTasks': '還沒有匯出任務',
     'agreementRecordsHint': '記錄你確認過的使用者協議和隱私政策版本，省得日後各說各話。',
     'noAgreementRecords': '還沒有協議同意記錄。',
@@ -2653,8 +2659,12 @@ class AppLocalizations {
     'exportModuleMessages': 'Message data',
     'exportModuleCircles': 'Circle memberships',
     'exportModuleTopics': 'Topic follows',
+    'exportModuleBrowseHistory': 'Browsing history',
+    'exportModuleCheckIns': 'Check-ins',
+    'exportModulePointsExchanges': 'Points redemptions',
     'privacyExportHint':
-        'Posts, follows, messages, circles and topic follows support real exports.',
+        'Posts, follows, messages, circles, topic follows, browsing history, '
+        'check-ins and points redemptions support real exports.',
     'noExportTasks': 'No export tasks yet',
     'agreementRecordsHint':
         'We keep the terms and privacy versions you accepted, so records stay clear later.',
@@ -4274,6 +4284,10 @@ class AppLocalizations {
   String get exportModuleMessages => _text('exportModuleMessages');
   String get exportModuleCircles => _text('exportModuleCircles');
   String get exportModuleTopics => _text('exportModuleTopics');
+  String get exportModuleBrowseHistory => _text('exportModuleBrowseHistory');
+  String get exportModuleCheckIns => _text('exportModuleCheckIns');
+  String get exportModulePointsExchanges =>
+      _text('exportModulePointsExchanges');
   String get privacyExportHint => _text('privacyExportHint');
   String get noExportTasks => _text('noExportTasks');
   String get agreementRecordsHint => _text('agreementRecordsHint');
@@ -4539,6 +4553,9 @@ class AppLocalizations {
       'messages' => exportModuleMessages,
       'circles' => exportModuleCircles,
       'topics' => exportModuleTopics,
+      'browse_history' => exportModuleBrowseHistory,
+      'check_ins' => exportModuleCheckIns,
+      'points_exchanges' => exportModulePointsExchanges,
       _ => module,
     };
   }

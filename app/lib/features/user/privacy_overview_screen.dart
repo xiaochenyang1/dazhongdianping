@@ -36,6 +36,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   bool _includeMessages = true;
   bool _includeCircles = true;
   bool _includeTopics = true;
+  bool _includeBrowseHistory = true;
+  bool _includeCheckIns = true;
+  bool _includePointsExchanges = true;
   bool _creatingExport = false;
   bool _loadingMoreExports = false;
   bool _retrying = false;
@@ -258,6 +261,9 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       if (_includeMessages) 'messages',
       if (_includeCircles) 'circles',
       if (_includeTopics) 'topics',
+      if (_includeBrowseHistory) 'browse_history',
+      if (_includeCheckIns) 'check_ins',
+      if (_includePointsExchanges) 'points_exchanges',
     ];
     if (modules.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -612,6 +618,33 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                     selected: _includeTopics,
                     onSelected: (selected) {
                       setState(() => _includeTopics = selected);
+                    },
+                  ),
+                  FilterChip(
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleBrowseHistory,
+                    ),
+                    selected: _includeBrowseHistory,
+                    onSelected: (selected) {
+                      setState(() => _includeBrowseHistory = selected);
+                    },
+                  ),
+                  FilterChip(
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleCheckIns,
+                    ),
+                    selected: _includeCheckIns,
+                    onSelected: (selected) {
+                      setState(() => _includeCheckIns = selected);
+                    },
+                  ),
+                  FilterChip(
+                    label: Text(
+                      AppLocalizations.of(context).exportModulePointsExchanges,
+                    ),
+                    selected: _includePointsExchanges,
+                    onSelected: (selected) {
+                      setState(() => _includePointsExchanges = selected);
                     },
                   ),
                 ],

@@ -16,6 +16,8 @@ const zhModules: Record<PrivacyExportModule, ModuleText> = {
   messages: { label: '私信数据', description: '会话成员、文本消息、已读时间、举报和拉黑关系。' },
   circles: { label: '圈子关系', description: '已加入的官方圈子、成员身份和加入时间。' },
   topics: { label: '话题关系', description: '已关注的话题、关注时间和当前公开状态。' },
+  check_ins: { label: '签到记录', description: '每日签到日期、连续天数和获得的成长值与积分。' },
+  points_exchanges: { label: '积分兑换', description: '积分兑换单、消耗积分、发放状态和兑换码。' },
 }
 
 const enModules: Record<PrivacyExportModule, ModuleText> = {
@@ -30,6 +32,8 @@ const enModules: Record<PrivacyExportModule, ModuleText> = {
   messages: { label: 'Direct messages', description: 'Conversation members, messages, read dates, reports and blocks.' },
   circles: { label: 'Group memberships', description: 'Official groups, membership roles and join dates.' },
   topics: { label: 'Followed topics', description: 'Followed topics, follow dates and current public status.' },
+  check_ins: { label: 'Check-ins', description: 'Daily check-in dates, streaks and the growth and points earned.' },
+  points_exchanges: { label: 'Points redemptions', description: 'Redemption orders, points spent, fulfilment status and redeem codes.' },
 }
 
 const zhCnStrings = {

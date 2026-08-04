@@ -30,7 +30,7 @@
 - `M2` 已完成后端认证 + 点评/审核/互动最小闭环,`web` 已接登录弹层、游客拦截恢复、写点评/编辑点评、我的点评、点评详情互动、我的资料 / 账号绑定 / 改密码、成长值流水页、公开用户主页:验证码发送、注册、验证码登录、密码登录、重置密码、`refresh`、`logout`、`/user/me`、`PUT /user/profile`、`POST /user/bind`、`PUT /user/password`、`GET /user/:id`、`GET /user/growth/records`、点评发布/编辑/删除/详情/我的点评、点赞/评论/举报、本地图片上传、审核任务通过/驳回、门店评分聚合回写;游客点赞/评论/举报触发登录后可自动续执行原动作。
 - `M3` 搜索、榜单、收藏与轻积分代码链路已补：搜索支持 MySQL/Elasticsearch provider、索引重建/增量同步、拼音/纠错/筛选/距离排序，CI 与 nightly 会启动 Elasticsearch 8 跑真实 smoke；榜单支持版本化发布/回滚，Web 已接榜单与门店收藏。
 - 轻积分 / 等级已覆盖发点评、点评获赞、带图点评和完成订单四类触发：奖励读取 `growth_rule`，按业务 ID 幂等，等级读取 `level_config` 阈值；管理端可维护成长规则与 `Lv1-Lv8`，`GET /api/c/v1/user/growth/records` 可分页查询流水。
-- 隐私中心已补当前可用闭环:后端已有概览、数据导出、认证 ZIP 下载、删除申请、冷静期撤销与到期匿名化;`web` 已新增 `/user/privacy`,真实后端 E2E 已覆盖创建导出、下载、提交删除申请和撤销。
+- 隐私中心已补当前可用闭环:后端已有概览、数据导出、认证 ZIP 下载、删除申请、冷静期撤销与到期匿名化;`web` 已新增 `/user/privacy`,真实导出覆盖足迹、签到记录和积分兑换，兑换码仅按已发放状态导出；真实后端 E2E 已覆盖创建导出、下载、提交删除申请和撤销。
 - `send-code` 验证码限流已完成:按 `scene + account`、`deviceId`、`IP` 返回 `429 + Retry-After`,默认本地内存,配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis。
 - `Idempotency-Key` 重复提交保护已完成:同 key + 同请求体复用首个响应,同 key + 不同请求体返回 `409`;默认本地内存,配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis,`web` 通用写请求会自动带 key。
 - `/api/b/v1` 已完成 M5a/M5b1/M5b2/M5b3/M5b4 后端闭环：数据库商户账号、注册入驻、资质审核、员工 RBAC/门店范围、预订工作台、券核销、经营看板、团购提交审核/上下架、门店订单与整单退款审核、门店基础资料/相册/菜单完整草稿审核，以及点评列表、商家回复、点评申诉和管理端申诉审核均已落地。

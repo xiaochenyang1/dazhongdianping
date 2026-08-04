@@ -107,7 +107,7 @@ class UserPrivacyControllerTest {
     }
 
     @Test
-    void shouldExportOwnedPostsWithoutPretendingMessagesExist() throws Exception {
+    void shouldExportOwnedPostsWithoutIncludingUnrequestedModules() throws Exception {
         SessionFixture session = registerUser("privacy-posts@example.com", "PostsPass1!");
         mockMvc.perform(post("/api/c/v1/posts")
                         .header("Authorization", bearer(session.accessToken()))
@@ -141,8 +141,11 @@ class UserPrivacyControllerTest {
 
         assertJsonText(root, "/modules/posts/0/title", "隐私导出里的社区帖子");
         assertJsonText(root, "/modules/posts/0/content", "这条帖子必须真实进入导出结果。");
-        if (!root.at("/modules/messages").isMissingNode()) {
-            throw new AssertionError("私信尚未实现，不能导出空 messages 模块冒充完成");
+        // 只请求了 posts，导出包不得夹带其它模块的空壳节点冒充完成度。
+        for (String unrequested : new String[] {"messages", "orders", "reviews", "check_ins", "points_exchanges"}) {
+            if (!root.at("/modules/" + unrequested).isMissingNode()) {
+                throw new AssertionError("未请求的模块 " + unrequested + " 不应出现在导出结果里");
+            }
         }
     }
 
@@ -284,6 +287,58 @@ class UserPrivacyControllerTest {
     }
 
     @Test
+    void shouldExportCheckInsAndOnlyUsablePointsRedeemCodes() throws Exception {
+        SessionFixture session = registerUser("privacy-points@example.com", "PointsPass1!");
+        jdbcTemplate.update("""
+                INSERT INTO user_check_in(user_id,check_in_date,streak_days,growth_value,points,created_at)
+                VALUES(?,?,?,?,?,?)
+                """, session.userId(), java.sql.Date.valueOf("2026-08-03"), 3, 2, 1,
+                Timestamp.valueOf(LocalDateTime.of(2026, 8, 3, 9, 30)));
+        Long productId = jdbcTemplate.queryForObject(
+                "SELECT id FROM points_product WHERE region='CN' ORDER BY id LIMIT 1", Long.class);
+        jdbcTemplate.update("""
+                INSERT INTO points_exchange(
+                    user_id,product_id,product_name,region,points_cost,quantity,status,
+                    redeem_code,remark,fulfilled_at
+                ) VALUES
+                    (?,?,?,'CN',100,1,0,'PTPENDINGPRIVATE','等待人工发放',NULL),
+                    (?,?,?,'CN',100,1,1,'PTFULFILLED001','已发放',?),
+                    (?,?,?,'CN',100,1,2,'PTCANCELLED001','已取消',NULL)
+                """,
+                session.userId(), productId, "隐私导出代金券",
+                session.userId(), productId, "隐私导出代金券",
+                Timestamp.valueOf(LocalDateTime.of(2026, 8, 3, 10, 0)),
+                session.userId(), productId, "隐私导出代金券");
+
+        MvcResult create = mockMvc.perform(post("/api/c/v1/privacy/export-tasks")
+                        .header("Authorization", bearer(session.accessToken()))
+                        .header("Idempotency-Key", "privacy-points-export-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"modules\":[\"check_ins\",\"points_exchanges\"],\"format\":\"zip\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.modules[0]").value("check_ins"))
+                .andExpect(jsonPath("$.data.modules[1]").value("points_exchanges"))
+                .andReturn();
+        MvcResult download = mockMvc.perform(get("/api/c/v1/privacy/export-tasks/{taskId}/download",
+                        readText(create, "/data/id"))
+                        .header("Authorization", bearer(session.accessToken())))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode root = objectMapper.readTree(unzipSingleEntry(download.getResponse().getContentAsByteArray()));
+
+        assertJsonText(root, "/modules/check_ins/0/checkInDate", "2026-08-03");
+        assertJsonText(root, "/modules/check_ins/0/streakDays", 3);
+        assertJsonText(root, "/modules/check_ins/0/growthValue", 2);
+        assertJsonText(root, "/modules/check_ins/0/points", 1);
+        assertJsonText(root, "/modules/points_exchanges/0/statusText", "待发放");
+        assertJsonText(root, "/modules/points_exchanges/0/redeemCode", "");
+        assertJsonText(root, "/modules/points_exchanges/1/statusText", "已发放");
+        assertJsonText(root, "/modules/points_exchanges/1/redeemCode", "PTFULFILLED001");
+        assertJsonText(root, "/modules/points_exchanges/2/statusText", "已取消");
+        assertJsonText(root, "/modules/points_exchanges/2/redeemCode", "");
+    }
+
+    @Test
     void shouldExportOrdersReservationsAndFavoritesFromLandedBusinessTables() throws Exception {
         SessionFixture session = registerUser("privacy-business@example.com", "BusinessPass1!");
         jdbcTemplate.update(
@@ -387,6 +442,10 @@ class UserPrivacyControllerTest {
     @Test
     void shouldProcessExpiredDeleteTaskAndBlockAccess() throws Exception {
         SessionFixture session = registerUser("privacy-delete@example.com", "DeletePass1!");
+        jdbcTemplate.update("""
+                INSERT INTO user_check_in(user_id,check_in_date,streak_days,growth_value,points)
+                VALUES(?,?,?,?,?)
+                """, session.userId(), java.sql.Date.valueOf("2026-08-04"), 1, 2, 1);
         jdbcTemplate.update("INSERT INTO app_user(nickname,email,preferred_region,status,is_deleted) VALUES('注销关系对端','delete-related@example.com','EU',1,FALSE)");
         Long relatedUserId = jdbcTemplate.queryForObject("SELECT id FROM app_user WHERE email='delete-related@example.com'", Long.class);
         jdbcTemplate.update("INSERT INTO user_follow(follower_user_id,followed_user_id) VALUES(?,?)", session.userId(), relatedUserId);
@@ -531,6 +590,8 @@ class UserPrivacyControllerTest {
                 "SELECT COUNT(1) FROM topic_hot_snapshot WHERE topic_id=?", Integer.class, deletionTopicOne);
         Integer remainingPostReposts = jdbcTemplate.queryForObject(
                 "SELECT COUNT(1) FROM post_repost WHERE user_id=?", Integer.class, session.userId());
+        Integer remainingCheckIns = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM user_check_in WHERE user_id=?", Integer.class, session.userId());
         Integer governedRepostCount = jdbcTemplate.queryForObject(
                 "SELECT repost_count FROM post WHERE id=?", Integer.class, deletionRepostPostId);
         Integer remainingRepostsOnOwnedPost = jdbcTemplate.queryForObject(
@@ -561,6 +622,7 @@ class UserPrivacyControllerTest {
         if (governedTopicTwoCount == null || governedTopicTwoCount != 0) throw new AssertionError("话题二关注数没有按真实关系重算");
         if (preservedTopicSnapshots == null || preservedTopicSnapshots != 1) throw new AssertionError("匿名热榜快照不应按用户删除");
         if (remainingPostReposts == null || remainingPostReposts != 0) throw new AssertionError("用户注销后帖子转发关系没有清理");
+        if (remainingCheckIns == null || remainingCheckIns != 0) throw new AssertionError("用户注销后签到记录没有清理");
         if (governedRepostCount == null || governedRepostCount != 0) throw new AssertionError("用户注销后帖子转发数没有按真实关系重算");
         if (remainingRepostsOnOwnedPost == null || remainingRepostsOnOwnedPost != 0) throw new AssertionError("用户注销后原帖上的他人转发关系没有治理");
         if (governedOwnedRepostCount == null || governedOwnedRepostCount != 0) throw new AssertionError("用户注销后原帖转发数没有重算");

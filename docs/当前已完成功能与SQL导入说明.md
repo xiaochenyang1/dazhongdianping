@@ -49,10 +49,10 @@
 ### 1.4 隐私中心当前闭环
 
 - 后端已完成隐私概览、数据导出任务、ZIP 下载、删除申请、冷静期撤销和到期匿名化。
-- 当前真实可导出 `account`、`reviews`、`orders`、`reservations`、`favorites`、`posts`、`follows`、`messages`、`circles`、`topics`。
+- 当前真实可导出 `account`、`reviews`、`orders`、`reservations`、`favorites`、`posts`、`browse_history`、`follows`、`messages`、`circles`、`topics`、`check_ins`、`points_exchanges`；积分兑换导出仅暴露已发放兑换码。
 - `web` 与 Flutter 隐私中心均支持创建导出、带登录态下载、验证码/密码校验删除和冷静期撤销，并已接入协议接受留痕、设备登记/列表、Push token 脱敏状态和主动停用设备。
 - 后端自动化已覆盖导出 ZIP 内容、下载、删除撤销、冷静期到期处理、注销到期后的设备停用与登录阻断；Playwright 真实后端 E2E 已覆盖创建导出、下载、创建删除申请和撤销。
-- `topics` 导出包含话题 `id/name/region/followedAt`；注销删除本人话题关注并按真实行数刷新 `follower_count`，帖子话题关联与热榜快照保持不动。
+- `topics` 导出包含话题 `id/name/region/followedAt`，`check_ins` 导出包含签到奖励，`points_exchanges` 导出遵循兑换码可用状态；注销删除本人签到记录和话题关注并按真实行数刷新 `follower_count`，帖子话题关联与热榜快照保持不动。
 
 ### 1.5 M7 帖子内容第一阶段
 

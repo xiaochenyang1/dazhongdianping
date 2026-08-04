@@ -6,6 +6,7 @@ import com.tuowei.dazhongdianping.module.auth.model.PrivacyDeleteTaskRow;
 import com.tuowei.dazhongdianping.module.auth.model.PrivacyExportTaskRow;
 import com.tuowei.dazhongdianping.module.auth.model.PrivacyTaskQuery;
 import com.tuowei.dazhongdianping.module.auth.model.TopicFollowExportRow;
+import com.tuowei.dazhongdianping.module.auth.model.UserCheckInRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
 import com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationRow;
@@ -86,6 +87,10 @@ public interface UserPrivacyMapper {
     List<FavoriteRow> selectFavoritesByUserId(@Param("userId") Long userId);
 
     List<GrowthPointsLogRow> selectGrowthPointsLogsByUserId(@Param("userId") Long userId);
+
+    List<UserCheckInRow> selectCheckInsForExport(@Param("userId") Long userId);
+
+    int deleteCheckInsByUserId(@Param("userId") Long userId);
 
     List<SearchHistoryRow> selectSearchHistoryByUserId(@Param("userId") Long userId);
     List<FollowExportRow> selectFollowingForExport(@Param("userId") Long userId);

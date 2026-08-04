@@ -29,6 +29,8 @@ import com.tuowei.dazhongdianping.module.auth.model.response.PrivacyOverviewResp
 import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
 import com.tuowei.dazhongdianping.module.favorite.model.FavoriteRow;
 import com.tuowei.dazhongdianping.module.community.model.PostRepostRow;
+import com.tuowei.dazhongdianping.module.points.mapper.PointsMapper;
+import com.tuowei.dazhongdianping.module.points.service.PointsMallService;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.trade.model.OrderRow;
@@ -82,13 +84,16 @@ public class UserPrivacyService {
             "follows",
             "messages",
             "circles",
-            "topics"
+            "topics",
+            "check_ins",
+            "points_exchanges"
     );
     private static final String DEFAULT_EXPORT_FORMAT = "zip";
 
     private final AuthCommandMapper authCommandMapper;
     private final UserPrivacyMapper userPrivacyMapper;
     private final BrowseQueryMapper browseQueryMapper;
+    private final PointsMapper pointsMapper;
     private final PrivacyProperties privacyProperties;
     private final ObjectMapper objectMapper;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -97,11 +102,13 @@ public class UserPrivacyService {
     public UserPrivacyService(AuthCommandMapper authCommandMapper,
                               UserPrivacyMapper userPrivacyMapper,
                               BrowseQueryMapper browseQueryMapper,
+                              PointsMapper pointsMapper,
                               PrivacyProperties privacyProperties,
                               ObjectMapper objectMapper) {
         this.authCommandMapper = authCommandMapper;
         this.userPrivacyMapper = userPrivacyMapper;
         this.browseQueryMapper = browseQueryMapper;
+        this.pointsMapper = pointsMapper;
         this.privacyProperties = privacyProperties;
         this.objectMapper = objectMapper;
     }
@@ -300,6 +307,7 @@ public class UserPrivacyService {
             userPrivacyMapper.deleteBrowseHistoryByUserId(userId);
             userPrivacyMapper.deleteSearchHistoryByUserId(userId);
             userPrivacyMapper.deleteGrowthPointsLogsByUserId(userId);
+            userPrivacyMapper.deleteCheckInsByUserId(userId);
             userPrivacyMapper.deleteFollowRelationsByUserId(userId);
             userPrivacyMapper.deleteNotificationsByUserId(userId);
             userPrivacyMapper.anonymizeActorNotificationsByActor(userId);
@@ -484,6 +492,8 @@ public class UserPrivacyService {
                 case "messages" -> buildMessageModule(currentUser.getId());
                 case "circles" -> userPrivacyMapper.selectCirclesForExport(currentUser.getId());
                 case "topics" -> userPrivacyMapper.selectTopicsForExport(currentUser.getId());
+                case "check_ins" -> buildCheckInModule(currentUser.getId());
+                case "points_exchanges" -> buildPointsExchangeModule(currentUser.getId());
                 default -> List.of();
             });
         }
@@ -603,6 +613,44 @@ public class UserPrivacyService {
         result.put("conversations", userPrivacyMapper.selectMessageConversationsForExport(userId));
         result.put("messages", userPrivacyMapper.selectMessagesForExport(userId));
         return result;
+    }
+
+    private List<Map<String, Object>> buildCheckInModule(Long userId) {
+        return userPrivacyMapper.selectCheckInsForExport(userId).stream()
+                .map(row -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", row.getId());
+                    item.put("checkInDate", row.getCheckInDate() == null ? "" : row.getCheckInDate().toString());
+                    item.put("streakDays", row.getStreakDays());
+                    item.put("growthValue", row.getGrowthValue());
+                    item.put("points", row.getPoints());
+                    item.put("createdAt", formatDateTime(row.getCreatedAt()));
+                    return item;
+                })
+                .toList();
+    }
+
+    private List<Map<String, Object>> buildPointsExchangeModule(Long userId) {
+        return pointsMapper.selectExchangesForExport(userId).stream()
+                .map(row -> {
+                    int status = row.getStatus() == null ? 0 : row.getStatus();
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", row.getId());
+                    item.put("productId", row.getProductId());
+                    item.put("productName", row.getProductName());
+                    item.put("region", row.getRegion());
+                    item.put("pointsCost", row.getPointsCost());
+                    item.put("quantity", row.getQuantity());
+                    item.put("status", status);
+                    item.put("statusText", PointsMallService.exchangeStatusText(status));
+                    // 人工发放单在待处理时只有内部占位码；与用户端一致，仅已发放时导出兑换码。
+                    item.put("redeemCode", status == 1 ? row.getRedeemCode() : "");
+                    item.put("remark", row.getRemark());
+                    item.put("fulfilledAt", formatDateTime(row.getFulfilledAt()));
+                    item.put("createdAt", formatDateTime(row.getCreatedAt()));
+                    return item;
+                })
+                .toList();
     }
 
     private List<Map<String, Object>> buildOrderModule(Long userId) {

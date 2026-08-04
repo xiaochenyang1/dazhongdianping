@@ -550,4 +550,9 @@
             updated_at=CURRENT_TIMESTAMP
         WHERE id=#{topicId}
     </update>
+    <select id="selectCheckInsForExport" resultType="com.tuowei.dazhongdianping.module.auth.model.UserCheckInRow">
+        SELECT id,user_id,check_in_date,streak_days,growth_value,points,created_at
+        FROM user_check_in WHERE user_id=#{userId} ORDER BY check_in_date ASC, id ASC
+    </select>
+    <delete id="deleteCheckInsByUserId">DELETE FROM user_check_in WHERE user_id=#{userId}</delete>
 </mapper>
