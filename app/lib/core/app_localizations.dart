@@ -217,6 +217,36 @@ class AppLocalizations {
     'checkInStatusLoadFailed': '签到状态加载失败：{error}',
     'lastCheckInAtLabel': '上次签到 {time}',
     'noCheckInYet': '还没有签到记录',
+    'pointsMall': '积分商城',
+    'pointsMallSubtitle': '用积分兑换权益',
+    'pointsBalanceLabel': '当前积分 {points}',
+    'pointsProductsTab': '积分商品',
+    'pointsExchangesTab': '兑换记录',
+    'pointsPriceLabel': '{points} 积分',
+    'pointsStockLabel': '库存 {count}',
+    'pointsLimitLabel': '每人限兑 {count} 次',
+    'pointsLimitUnlimited': '不限兑换次数',
+    'pointsSoldOut': '已兑完',
+    'pointsExchangeAction': '立即兑换',
+    'pointsExchangeConfirmTitle': '确认兑换',
+    'pointsExchangeConfirmMessage': '将消耗 {points} 积分兑换「{name}」，确认继续吗？',
+    'pointsExchangeSuccess': '兑换成功',
+    'pointsExchangeFailed': '兑换失败：{error}',
+    'pointsProductsLoadFailed': '积分商品加载失败：{error}',
+    'pointsExchangesLoadFailed': '兑换记录加载失败：{error}',
+    'noPointsProducts': '暂无积分商品',
+    'noPointsExchanges': '暂无兑换记录',
+    'pointsExchangeStatusPending': '待发放',
+    'pointsExchangeStatusFulfilled': '已发放',
+    'pointsExchangeStatusCancelled': '已取消',
+    'pointsRedeemCodeLabel': '兑换码 {code}',
+    'pointsRedeemCodePending': '兑换码待发放',
+    'pointsFulfillTypeAuto': '自动发码',
+    'pointsFulfillTypeManual': '人工发放',
+    'pointsErrorInsufficientBalance': '积分不足，请先积累更多积分',
+    'pointsErrorSoldOut': '商品已兑完，请选择其他商品',
+    'pointsErrorExchangeLimit': '已达到该商品的兑换上限',
+    'pointsErrorProductUnavailable': '商品不存在或已下架',
     'deleteComment': '删除评论',
     'deleteCommentConfirm': '删除后不可恢复，确认删除这条评论吗？',
     'commentDeleted': '评论已删除',
@@ -1125,6 +1155,36 @@ class AppLocalizations {
     'checkInStatusLoadFailed': '簽到狀態載入失敗：{error}',
     'lastCheckInAtLabel': '上次簽到 {time}',
     'noCheckInYet': '還沒有簽到紀錄',
+    'pointsMall': '積分商城',
+    'pointsMallSubtitle': '用積分兌換權益',
+    'pointsBalanceLabel': '目前積分 {points}',
+    'pointsProductsTab': '積分商品',
+    'pointsExchangesTab': '兌換紀錄',
+    'pointsPriceLabel': '{points} 積分',
+    'pointsStockLabel': '庫存 {count}',
+    'pointsLimitLabel': '每人限兌 {count} 次',
+    'pointsLimitUnlimited': '不限兌換次數',
+    'pointsSoldOut': '已兌完',
+    'pointsExchangeAction': '立即兌換',
+    'pointsExchangeConfirmTitle': '確認兌換',
+    'pointsExchangeConfirmMessage': '將消耗 {points} 積分兌換「{name}」，確認繼續嗎？',
+    'pointsExchangeSuccess': '兌換成功',
+    'pointsExchangeFailed': '兌換失敗：{error}',
+    'pointsProductsLoadFailed': '積分商品載入失敗：{error}',
+    'pointsExchangesLoadFailed': '兌換紀錄載入失敗：{error}',
+    'noPointsProducts': '暫無積分商品',
+    'noPointsExchanges': '暫無兌換紀錄',
+    'pointsExchangeStatusPending': '待發放',
+    'pointsExchangeStatusFulfilled': '已發放',
+    'pointsExchangeStatusCancelled': '已取消',
+    'pointsRedeemCodeLabel': '兌換碼 {code}',
+    'pointsRedeemCodePending': '兌換碼待發放',
+    'pointsFulfillTypeAuto': '自動發碼',
+    'pointsFulfillTypeManual': '人工發放',
+    'pointsErrorInsufficientBalance': '積分不足，請先累積更多積分',
+    'pointsErrorSoldOut': '商品已兌完，請選擇其他商品',
+    'pointsErrorExchangeLimit': '已達到該商品的兌換上限',
+    'pointsErrorProductUnavailable': '商品不存在或已下架',
     'deleteComment': '刪除評論',
     'deleteCommentConfirm': '刪除後不可恢復，確認刪除這則留言嗎？',
     'commentDeleted': '留言已刪除',
@@ -2060,6 +2120,39 @@ class AppLocalizations {
     'checkInStatusLoadFailed': 'Could not load check-in status: {error}',
     'lastCheckInAtLabel': 'Last check-in {time}',
     'noCheckInYet': 'No check-ins yet',
+    'pointsMall': 'Points mall',
+    'pointsMallSubtitle': 'Redeem your points for rewards',
+    'pointsBalanceLabel': '{points} points available',
+    'pointsProductsTab': 'Products',
+    'pointsExchangesTab': 'Redemptions',
+    'pointsPriceLabel': '{points} points',
+    'pointsStockLabel': 'Stock {count}',
+    'pointsLimitLabel': 'Limit {count} per person',
+    'pointsLimitUnlimited': 'No redemption limit',
+    'pointsSoldOut': 'Sold out',
+    'pointsExchangeAction': 'Redeem',
+    'pointsExchangeConfirmTitle': 'Confirm redemption',
+    'pointsExchangeConfirmMessage':
+        'This spends {points} points on "{name}". Continue?',
+    'pointsExchangeSuccess': 'Redeemed',
+    'pointsExchangeFailed': 'Could not redeem: {error}',
+    'pointsProductsLoadFailed': 'Could not load points products: {error}',
+    'pointsExchangesLoadFailed': 'Could not load redemptions: {error}',
+    'noPointsProducts': 'No points products yet',
+    'noPointsExchanges': 'No redemptions yet',
+    'pointsExchangeStatusPending': 'Pending',
+    'pointsExchangeStatusFulfilled': 'Fulfilled',
+    'pointsExchangeStatusCancelled': 'Cancelled',
+    'pointsRedeemCodeLabel': 'Redeem code {code}',
+    'pointsRedeemCodePending': 'Redeem code pending',
+    'pointsFulfillTypeAuto': 'Auto code',
+    'pointsFulfillTypeManual': 'Manual fulfilment',
+    'pointsErrorInsufficientBalance':
+        'Not enough points. Earn more points first.',
+    'pointsErrorSoldOut': 'This product is sold out. Choose another product.',
+    'pointsErrorExchangeLimit':
+        'You have reached this product\'s redemption limit.',
+    'pointsErrorProductUnavailable': 'This product is unavailable or unlisted.',
     'deleteComment': 'Delete comment',
     'deleteCommentConfirm': 'This cannot be undone. Delete this comment?',
     'commentDeleted': 'Comment deleted',
@@ -3443,6 +3536,68 @@ class AppLocalizations {
   String lastCheckInAtLabel(String time) =>
       _text('lastCheckInAtLabel').replaceFirst('{time}', time);
   String get noCheckInYet => _text('noCheckInYet');
+
+  String get pointsMall => _text('pointsMall');
+  String get pointsMallSubtitle => _text('pointsMallSubtitle');
+  String pointsBalanceLabel(int points) {
+    if (_isEnglish) {
+      return '${_englishCount(points, 'point')} available';
+    }
+    return _text('pointsBalanceLabel').replaceFirst('{points}', '$points');
+  }
+
+  String get pointsProductsTab => _text('pointsProductsTab');
+  String get pointsExchangesTab => _text('pointsExchangesTab');
+  String pointsPriceLabel(int points) {
+    if (_isEnglish) {
+      return _englishCount(points, 'point');
+    }
+    return _text('pointsPriceLabel').replaceFirst('{points}', '$points');
+  }
+
+  String pointsStockLabel(int count) => _withCount('pointsStockLabel', count);
+  String pointsLimitLabel(int count) => _withCount('pointsLimitLabel', count);
+  String get pointsLimitUnlimited => _text('pointsLimitUnlimited');
+  String get pointsSoldOut => _text('pointsSoldOut');
+  String get pointsExchangeAction => _text('pointsExchangeAction');
+  String get pointsExchangeConfirmTitle => _text('pointsExchangeConfirmTitle');
+  String pointsExchangeConfirmMessage({
+    required int points,
+    required String name,
+  }) => _text(
+    'pointsExchangeConfirmMessage',
+  ).replaceFirst('{points}', '$points').replaceFirst('{name}', name);
+  String get pointsExchangeSuccess => _text('pointsExchangeSuccess');
+  String pointsExchangeFailed(Object error) =>
+      _withError('pointsExchangeFailed', error);
+  String pointsProductsLoadFailed(Object error) =>
+      _withError('pointsProductsLoadFailed', error);
+  String pointsExchangesLoadFailed(Object error) =>
+      _withError('pointsExchangesLoadFailed', error);
+  String get noPointsProducts => _text('noPointsProducts');
+  String get noPointsExchanges => _text('noPointsExchanges');
+  String pointsExchangeStatusLabel(int status, {String fallback = ''}) =>
+      switch (status) {
+        0 => _text('pointsExchangeStatusPending'),
+        1 => _text('pointsExchangeStatusFulfilled'),
+        2 => _text('pointsExchangeStatusCancelled'),
+        _ => fallback,
+      };
+  String pointsRedeemCodeLabel(String code) =>
+      _text('pointsRedeemCodeLabel').replaceFirst('{code}', code);
+  String get pointsRedeemCodePending => _text('pointsRedeemCodePending');
+  String pointsFulfillTypeLabel(int fulfillType, {String fallback = ''}) =>
+      switch (fulfillType) {
+        1 => _text('pointsFulfillTypeAuto'),
+        2 => _text('pointsFulfillTypeManual'),
+        _ => fallback,
+      };
+  String get pointsErrorInsufficientBalance =>
+      _text('pointsErrorInsufficientBalance');
+  String get pointsErrorSoldOut => _text('pointsErrorSoldOut');
+  String get pointsErrorExchangeLimit => _text('pointsErrorExchangeLimit');
+  String get pointsErrorProductUnavailable =>
+      _text('pointsErrorProductUnavailable');
 
   String get deleteComment => _text('deleteComment');
   String get deleteCommentConfirm => _text('deleteCommentConfirm');

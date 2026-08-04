@@ -24,7 +24,8 @@ public class UserAuthInterceptor implements HandlerInterceptor {
         if (isPublicReviewReadRequest(request) || isPublicPostReadRequest(request)
                 || isPublicUserProfileReadRequest(request) || isPublicShopReadRequest(request)
                 || isPublicSearchReadRequest(request)
-                || isPublicCircleReadRequest(request) || isPublicTopicReadRequest(request)) {
+                || isPublicCircleReadRequest(request) || isPublicTopicReadRequest(request)
+                || isPublicPointsProductReadRequest(request)) {
             if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
                 UserSessionContext.set(publicAuthService.authenticate(authorization.substring(7)));
             }
@@ -81,6 +82,13 @@ public class UserAuthInterceptor implements HandlerInterceptor {
         return "GET".equalsIgnoreCase(request.getMethod())
                 && request.getRequestURI() != null
                 && request.getRequestURI().matches("^/api/c/v1/topics(?:/hot|/\\d+(?:/posts)?)?$");
+    }
+
+    private boolean isPublicPointsProductReadRequest(HttpServletRequest request) {
+        // 积分商品列表/详情允许游客浏览；兑换与兑换记录仍需登录。
+        return "GET".equalsIgnoreCase(request.getMethod())
+                && request.getRequestURI() != null
+                && request.getRequestURI().matches("^/api/c/v1/points/products(/\\d+)?$");
     }
 
     @Override

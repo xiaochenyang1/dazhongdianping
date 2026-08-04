@@ -22,6 +22,11 @@ import type {
   AdminOperationActivityItem,
   AdminOperationActivityItemPayload,
   AdminOperationActivityPayload,
+  AdminPointsProduct,
+  AdminPointsProductPayload,
+  AdminPointsExchange,
+  AdminPointsExchangeQuery,
+  AdminPointsExchangeResolvePayload,
   AdminPrivacyTask,
   AdminImportBatch,
   AdminImportPayload,
@@ -387,6 +392,38 @@ export function updateAdminOperationActivityItemStatus(activityId: number, itemI
 
 export function removeAdminOperationActivityItem(activityId: number, itemId: number) {
   return apiDelete<void>(`/api/admin/v1/operations/activities/${activityId}/items/${itemId}`)
+}
+
+export function listAdminPointsProducts(query: { page?: number; pageSize?: number } = {}) {
+  return apiGet<PageResult<AdminPointsProduct>>('/api/admin/v1/points/products', query)
+}
+
+export function createAdminPointsProduct(payload: AdminPointsProductPayload) {
+  return apiPost<AdminPointsProduct>('/api/admin/v1/points/products', payload)
+}
+
+export function updateAdminPointsProduct(productId: number, payload: AdminPointsProductPayload) {
+  return apiPut<AdminPointsProduct>(`/api/admin/v1/points/products/${productId}`, payload)
+}
+
+export function updateAdminPointsProductStatus(productId: number, status: number) {
+  return apiPut<AdminPointsProduct>(`/api/admin/v1/points/products/${productId}/status`, { status })
+}
+
+export function removeAdminPointsProduct(productId: number) {
+  return apiDelete<void>(`/api/admin/v1/points/products/${productId}`)
+}
+
+export function listAdminPointsExchanges(query: AdminPointsExchangeQuery = {}) {
+  return apiGet<PageResult<AdminPointsExchange>>('/api/admin/v1/points/exchanges', query)
+}
+
+export function fulfillAdminPointsExchange(exchangeId: number, payload: AdminPointsExchangeResolvePayload = {}) {
+  return apiPost<AdminPointsExchange>(`/api/admin/v1/points/exchanges/${exchangeId}/fulfill`, payload)
+}
+
+export function cancelAdminPointsExchange(exchangeId: number, payload: AdminPointsExchangeResolvePayload = {}) {
+  return apiPost<AdminPointsExchange>(`/api/admin/v1/points/exchanges/${exchangeId}/cancel`, payload)
 }
 
 export function passAuditTask(taskId: number, payload: { remark?: string }) {

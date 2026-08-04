@@ -38,6 +38,8 @@ export interface AdminStrings {
     hotwordManagement: string
     sensitiveWordManagement: string
     activityManagement: string
+    pointsProductManagement: string
+    pointsExchangeManagement: string
     systemAdmins: string
     systemRoles: string
     systemUsers: string
@@ -1965,6 +1967,111 @@ export interface AdminStrings {
     page: (page: number) => string
     nextPage: string
   }
+  pointsProducts: {
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    create: string
+    listEyebrow: string
+    listHeading: string
+    tableHeaders: {
+      name: string
+      points: string
+      stock: string
+      limit: string
+      exchanged: string
+      fulfillType: string
+      status: string
+      sort: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    statusText: (status: number) => string
+    fulfillTypeText: (fulfillType: number, fallback?: string) => string
+    soldOut: string
+    unlimited: string
+    edit: string
+    enable: string
+    disable: string
+    delete: string
+    deleteConfirm: (name: string) => string
+    created: string
+    updated: string
+    enabled: string
+    disabled: string
+    deleted: string
+    editorEyebrow: (editing: boolean) => string
+    editorHeading: (editing: boolean) => string
+    labels: {
+      name: string
+      coverImage: string
+      description: string
+      pointsPrice: string
+      stock: string
+      limitPerUser: string
+      fulfillType: string
+      sort: string
+    }
+    fulfillOptions: {
+      auto: string
+      manual: string
+    }
+    limitHint: string
+    saving: string
+    save: string
+    readOnly: string
+    loadError: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+  }
+  pointsExchanges: {
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    filters: {
+      status: string
+      keyword: string
+    }
+    keywordPlaceholder: string
+    statusOptions: {
+      all: string
+      pending: string
+      fulfilled: string
+      cancelled: string
+    }
+    query: string
+    tableHeaders: {
+      id: string
+      user: string
+      product: string
+      points: string
+      status: string
+      redeemCode: string
+      remark: string
+      time: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    statusText: (status: number, fallback?: string) => string
+    fulfillAction: string
+    cancelAction: string
+    cancelConfirm: (id: number, points: number) => string
+    redeemCodePlaceholder: string
+    remarkPlaceholder: string
+    fulfilledMessage: (id: number, redeemCode: string) => string
+    cancelledMessage: (id: number, points: number) => string
+    loadError: string
+    actionError: string
+    readOnly: string
+    handled: string
+    fallbackText: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+  }
 }
 
 export type AdminRouteTitleKey = keyof AdminStrings['routeTitles']
@@ -1994,6 +2101,8 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/operations/hotwords': 'hotwordManagement',
   '/operations/sensitive-words': 'sensitiveWordManagement',
   '/operations/activities': 'activityManagement',
+  '/operations/points-products': 'pointsProductManagement',
+  '/operations/points-exchanges': 'pointsExchangeManagement',
   '/system/admins': 'systemAdmins',
   '/system/roles': 'systemRoles',
   '/system/users': 'systemUsers',
@@ -2225,6 +2334,8 @@ const zhCnStrings: AdminStrings = {
     hotwordManagement: '搜索热词',
     sensitiveWordManagement: '敏感词库',
     activityManagement: '运营活动',
+    pointsProductManagement: '积分商品',
+    pointsExchangeManagement: '积分兑换',
     systemAdmins: '管理员账号',
     systemRoles: '角色与权限',
     systemUsers: '用户管理',
@@ -4256,6 +4367,121 @@ const zhCnStrings: AdminStrings = {
     page: (page) => `第 ${page} 页`,
     nextPage: '下一页',
   },
+  pointsProducts: {
+    eyebrow: 'Points Mall',
+    heading: '积分商品',
+    description: (region) => `${region === 'EU' ? '欧洲区' : '中国区'}积分商城的上架商品。改价、改库存都会立刻影响用户端兑换。`,
+    create: '新增商品',
+    listEyebrow: 'Product List',
+    listHeading: '商品列表',
+    tableHeaders: {
+      name: '商品',
+      points: '所需积分',
+      stock: '库存',
+      limit: '每人限兑',
+      exchanged: '已兑换',
+      fulfillType: '发放方式',
+      status: '状态',
+      sort: '排序',
+      actions: '操作',
+    },
+    loading: '加载中...',
+    empty: '暂无积分商品',
+    statusText: (status) => (status === 1 ? '已上架' : '已下架'),
+    fulfillTypeText: (fulfillType, fallback) => {
+      if (fulfillType === 1) return '自动发码'
+      if (fulfillType === 2) return '人工发放'
+      return fallback || `方式 ${fulfillType}`
+    },
+    soldOut: '已兑完',
+    unlimited: '不限',
+    edit: '编辑',
+    enable: '上架',
+    disable: '下架',
+    delete: '删除',
+    deleteConfirm: (name) => `确认删除积分商品「${name}」？已产生的兑换记录不会被删除。`,
+    created: '积分商品已创建',
+    updated: '积分商品已更新',
+    enabled: '积分商品已上架',
+    disabled: '积分商品已下架',
+    deleted: '积分商品已删除',
+    editorEyebrow: (editing) => (editing ? 'Edit Product' : 'New Product'),
+    editorHeading: (editing) => (editing ? '编辑积分商品' : '新增积分商品'),
+    labels: {
+      name: '商品名称',
+      coverImage: '封面图',
+      description: '商品说明',
+      pointsPrice: '所需积分',
+      stock: '库存',
+      limitPerUser: '每人限兑',
+      fulfillType: '发放方式',
+      sort: '排序',
+    },
+    fulfillOptions: {
+      auto: '自动发码',
+      manual: '人工发放',
+    },
+    limitHint: '填 0 表示不限制每人兑换次数。',
+    saving: '保存中...',
+    save: '保存商品',
+    readOnly: '当前账号只有只读权限，无法维护积分商品。',
+    loadError: '积分商品加载失败',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+  },
+  pointsExchanges: {
+    eyebrow: 'Points Fulfilment',
+    heading: '积分兑换记录',
+    description: (region) => `${region === 'EU' ? '欧洲区' : '中国区'}用户的积分兑换单。人工发放的单子需要在这里补兑换码。`,
+    filters: {
+      status: '状态',
+      keyword: '关键词',
+    },
+    keywordPlaceholder: '用户昵称 / 商品名 / 兑换码',
+    statusOptions: {
+      all: '全部',
+      pending: '待发放',
+      fulfilled: '已发放',
+      cancelled: '已取消',
+    },
+    query: '查询',
+    tableHeaders: {
+      id: '兑换单',
+      user: '用户',
+      product: '商品',
+      points: '消耗积分',
+      status: '状态',
+      redeemCode: '兑换码',
+      remark: '备注',
+      time: '创建时间',
+      actions: '操作',
+    },
+    loading: '加载中...',
+    empty: '暂无兑换记录',
+    statusText: (status, fallback) => {
+      if (status === 0) return '待发放'
+      if (status === 1) return '已发放'
+      if (status === 2) return '已取消'
+      return fallback || `状态 ${status}`
+    },
+    fulfillAction: '确认发放',
+    cancelAction: '取消并退积分',
+    cancelConfirm: (id, points) => `确认取消兑换单 #${id}？将退回 ${points} 积分并恢复库存。`,
+    redeemCodePlaceholder: '兑换码（人工发放必填）',
+    remarkPlaceholder: '备注（选填）',
+    fulfilledMessage: (id, redeemCode) =>
+      redeemCode ? `兑换单 #${id} 已发放，兑换码 ${redeemCode}` : `兑换单 #${id} 已发放`,
+    cancelledMessage: (id, points) => `兑换单 #${id} 已取消，已退回 ${points} 积分`,
+    loadError: '兑换记录加载失败',
+    actionError: '操作失败',
+    readOnly: '当前账号只有只读权限，无法处理兑换单。',
+    handled: '该兑换单已处理完成。',
+    fallbackText: '--',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+  },
 }
 
 const enStrings: AdminStrings = {
@@ -4294,6 +4520,8 @@ const enStrings: AdminStrings = {
     hotwordManagement: 'Hot Keywords',
     sensitiveWordManagement: 'Sensitive Words',
     activityManagement: 'Operation Activities',
+    pointsProductManagement: 'Points Products',
+    pointsExchangeManagement: 'Points Redemptions',
     systemAdmins: 'Admin Accounts',
     systemRoles: 'Roles & Permissions',
     systemUsers: 'User Management',
@@ -6337,6 +6565,124 @@ const enStrings: AdminStrings = {
     deadlineFallback: '--',
     exportFilePending: 'File not generated yet',
     verificationMethod: (method) => `Verification: ${method}`,
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+  },
+  pointsProducts: {
+    eyebrow: 'Points Mall',
+    heading: 'Points Products',
+    description: (region) =>
+      `Products listed in the ${region === 'EU' ? 'Europe' : 'Mainland China'} points mall. Price and stock changes take effect for shoppers immediately.`,
+    create: 'New product',
+    listEyebrow: 'Product List',
+    listHeading: 'Products',
+    tableHeaders: {
+      name: 'Product',
+      points: 'Points',
+      stock: 'Stock',
+      limit: 'Per-user limit',
+      exchanged: 'Redeemed',
+      fulfillType: 'Fulfilment',
+      status: 'Status',
+      sort: 'Sort',
+      actions: 'Actions',
+    },
+    loading: 'Loading...',
+    empty: 'No points products yet.',
+    statusText: (status) => (status === 1 ? 'Listed' : 'Unlisted'),
+    fulfillTypeText: (fulfillType, fallback) => {
+      if (fulfillType === 1) return 'Auto code'
+      if (fulfillType === 2) return 'Manual'
+      return fallback || `Type ${fulfillType}`
+    },
+    soldOut: 'Sold out',
+    unlimited: 'Unlimited',
+    edit: 'Edit',
+    enable: 'List',
+    disable: 'Unlist',
+    delete: 'Delete',
+    deleteConfirm: (name) => `Delete points product "${name}"? Existing redemptions are kept.`,
+    created: 'Points product created.',
+    updated: 'Points product updated.',
+    enabled: 'Points product listed.',
+    disabled: 'Points product unlisted.',
+    deleted: 'Points product deleted.',
+    editorEyebrow: (editing) => (editing ? 'Edit Product' : 'New Product'),
+    editorHeading: (editing) => (editing ? 'Edit points product' : 'New points product'),
+    labels: {
+      name: 'Name',
+      coverImage: 'Cover image',
+      description: 'Description',
+      pointsPrice: 'Points price',
+      stock: 'Stock',
+      limitPerUser: 'Per-user limit',
+      fulfillType: 'Fulfilment',
+      sort: 'Sort',
+    },
+    fulfillOptions: {
+      auto: 'Auto code',
+      manual: 'Manual',
+    },
+    limitHint: 'Use 0 for no per-user redemption limit.',
+    saving: 'Saving...',
+    save: 'Save product',
+    readOnly: 'This account is read-only and cannot maintain points products.',
+    loadError: 'Failed to load points products.',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+  },
+  pointsExchanges: {
+    eyebrow: 'Points Fulfilment',
+    heading: 'Points Redemptions',
+    description: (region) =>
+      `Redemption orders from ${region === 'EU' ? 'Europe' : 'Mainland China'} users. Manual orders need a redeem code entered here.`,
+    filters: {
+      status: 'Status',
+      keyword: 'Keyword',
+    },
+    keywordPlaceholder: 'Nickname / product / redeem code',
+    statusOptions: {
+      all: 'All',
+      pending: 'Pending',
+      fulfilled: 'Fulfilled',
+      cancelled: 'Cancelled',
+    },
+    query: 'Search',
+    tableHeaders: {
+      id: 'Order',
+      user: 'User',
+      product: 'Product',
+      points: 'Points spent',
+      status: 'Status',
+      redeemCode: 'Redeem code',
+      remark: 'Remark',
+      time: 'Created',
+      actions: 'Actions',
+    },
+    loading: 'Loading...',
+    empty: 'No redemptions yet.',
+    statusText: (status, fallback) => {
+      if (status === 0) return 'Pending'
+      if (status === 1) return 'Fulfilled'
+      if (status === 2) return 'Cancelled'
+      return fallback || `Status ${status}`
+    },
+    fulfillAction: 'Fulfil',
+    cancelAction: 'Cancel and refund',
+    cancelConfirm: (id, points) =>
+      `Cancel redemption #${id}? ${points} points will be refunded and stock restored.`,
+    redeemCodePlaceholder: 'Redeem code (required for manual fulfilment)',
+    remarkPlaceholder: 'Remark (optional)',
+    fulfilledMessage: (id, redeemCode) =>
+      redeemCode ? `Redemption #${id} fulfilled with code ${redeemCode}.` : `Redemption #${id} fulfilled.`,
+    cancelledMessage: (id, points) => `Redemption #${id} cancelled, ${points} points refunded.`,
+    loadError: 'Failed to load redemptions.',
+    actionError: 'Action failed.',
+    readOnly: 'This account is read-only and cannot process redemptions.',
+    handled: 'This redemption has already been processed.',
+    fallbackText: '--',
     previousPage: 'Previous',
     page: (page) => `Page ${page}`,
     nextPage: 'Next',

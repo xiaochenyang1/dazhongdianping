@@ -1136,3 +1136,45 @@ CREATE TABLE IF NOT EXISTS user_check_in (
   UNIQUE KEY uk_user_check_in_date(user_id, check_in_date),
   KEY idx_user_check_in_user(user_id, check_in_date, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 积分商城
+CREATE TABLE IF NOT EXISTS points_product (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  region VARCHAR(8) NOT NULL,
+  name VARCHAR(64) NOT NULL,
+  cover_image VARCHAR(255) NOT NULL DEFAULT '',
+  description VARCHAR(500) NOT NULL DEFAULT '',
+  points_price INT NOT NULL,
+  stock INT NOT NULL DEFAULT 0,
+  exchange_limit_per_user INT NOT NULL DEFAULT 0,
+  exchange_count INT NOT NULL DEFAULT 0,
+  -- 1=兑换即自动发放兑换码，2=需运营人工发放
+  fulfill_type TINYINT NOT NULL DEFAULT 1,
+  status TINYINT NOT NULL DEFAULT 1,
+  sort INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_deleted TINYINT(1) NOT NULL DEFAULT 0,
+  KEY idx_points_product_region_status(region, status, is_deleted, sort, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS points_exchange (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
+  product_name VARCHAR(64) NOT NULL,
+  region VARCHAR(8) NOT NULL DEFAULT 'CN',
+  points_cost INT NOT NULL,
+  quantity INT NOT NULL DEFAULT 1,
+  -- 0=待发放 1=已发放 2=已取消(积分已退回)
+  status TINYINT NOT NULL DEFAULT 0,
+  redeem_code VARCHAR(32) NOT NULL,
+  remark VARCHAR(255) NOT NULL DEFAULT '',
+  fulfilled_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_points_exchange_redeem_code(redeem_code),
+  KEY idx_points_exchange_user(user_id, created_at, id),
+  KEY idx_points_exchange_product(product_id, created_at, id),
+  KEY idx_points_exchange_region_status(region, status, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

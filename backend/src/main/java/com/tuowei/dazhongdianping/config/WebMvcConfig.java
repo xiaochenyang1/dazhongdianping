@@ -63,6 +63,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         ,"/api/c/v1/messages/**"
                         ,"/api/c/v1/groups/**"
                         ,"/api/c/v1/topics","/api/c/v1/topics/**"
+                        ,"/api/c/v1/points","/api/c/v1/points/**"
                 );
     }
 

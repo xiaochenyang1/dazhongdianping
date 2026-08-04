@@ -213,6 +213,14 @@
           AND is_deleted = FALSE
     </update>
 
+    <update id="updateUserPointsOnly">
+        UPDATE app_user
+        SET points = #{points},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+          AND is_deleted = FALSE
+    </update>
+
     <update id="updateUserGrowthProfile">
         UPDATE app_user
         SET growth_value = #{growthValue},

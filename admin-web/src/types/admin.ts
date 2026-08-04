@@ -354,6 +354,65 @@ export interface AdminOperationActivityItemPayload {
   extra: Record<string, unknown> | null
 }
 
+export interface AdminPointsProduct {
+  id: number
+  region: string
+  name: string
+  coverImage: string
+  description: string
+  pointsPrice: number
+  stock: number
+  exchangeLimitPerUser: number
+  exchangeCount: number
+  fulfillType: number
+  fulfillTypeText: string
+  status: number
+  sort: number
+  soldOut: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminPointsProductPayload {
+  name: string
+  coverImage: string
+  description: string
+  pointsPrice: number
+  stock: number
+  exchangeLimitPerUser: number
+  fulfillType: number
+  sort: number
+}
+
+export interface AdminPointsExchange {
+  id: number
+  userId: number
+  userNickname: string
+  productId: number
+  productName: string
+  region: string
+  pointsCost: number
+  quantity: number
+  status: number
+  statusText: string
+  redeemCode: string
+  remark: string
+  fulfilledAt: string
+  createdAt: string
+}
+
+export interface AdminPointsExchangeQuery {
+  status?: number
+  keyword?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface AdminPointsExchangeResolvePayload {
+  redeemCode?: string
+  remark?: string
+}
+
 export interface AdminAccountUpdatePayload {
   name: string
   roleIds: number[]

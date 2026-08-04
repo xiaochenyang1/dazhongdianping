@@ -90,7 +90,9 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (52, 'audit:report:read', '查看内容举报', 'audit', 1, 1),
     (53, 'audit:report:write', '处理内容举报', 'audit', 2, 1),
     (54, 'audit:merchant_verification:read', '查看认证商户', 'audit', 1, 1),
-    (55, 'audit:merchant_verification:write', '处理认证商户', 'audit', 2, 1);
+    (55, 'audit:merchant_verification:write', '处理认证商户', 'audit', 2, 1),
+    (56, 'operations:points:read', '查看积分商城商品', 'operations', 1, 1),
+    (57, 'operations:points:write', '维护积分商城商品', 'operations', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
@@ -100,7 +102,7 @@ INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM adm
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55),
-    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51),
+    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
@@ -364,3 +366,11 @@ INSERT INTO reservation_slot(id,shop_id,region,biz_date,start_time,end_time,capa
 INSERT INTO sensitive_word (region, word, match_mode, enabled, remark) VALUES
     ('CN', '违禁演示词', 1, TRUE, '本地联调演示敏感词'),
     ('EU', 'banned-demo', 1, TRUE, 'local demo sensitive word');
+
+INSERT INTO points_product (region, name, cover_image, description, points_price, stock, exchange_limit_per_user, exchange_count, fulfill_type, status, sort, is_deleted) VALUES
+  ('CN', '10 元到店代金券', 'https://cdn.example.com/points/cn-voucher-10.png', '全场通用，到店消费出示即可抵扣 10 元', 100, 500, 2, 0, 1, 1, 1, FALSE),
+  ('CN', '下午茶 5 折券', 'https://cdn.example.com/points/cn-tea-half.png', '合作下午茶门店消费 5 折，单次最高减 30 元', 200, 300, 1, 0, 1, 1, 2, FALSE),
+  ('CN', '周末会员周卡', 'https://cdn.example.com/points/cn-week-pass.png', '一周内门店订座与团购免排队特权', 500, 100, 1, 0, 2, 1, 3, FALSE),
+  ('EU', '€2 Dining Voucher', 'https://cdn.example.com/points/eu-voucher-2.png', 'Valid at all partner restaurants, €2 off per bill', 150, 500, 2, 0, 1, 1, 1, FALSE),
+  ('EU', 'Afternoon Tea 50% Off', 'https://cdn.example.com/points/eu-tea-half.png', 'Half price afternoon tea, up to €4 off', 250, 300, 1, 0, 1, 1, 2, FALSE),
+  ('EU', 'Member Week Pass', 'https://cdn.example.com/points/eu-week-pass.png', 'Priority booking and queue skip for one week', 600, 100, 1, 0, 2, 1, 3, FALSE);

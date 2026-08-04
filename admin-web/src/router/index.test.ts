@@ -163,4 +163,28 @@ describe('admin router permissions', () => {
     await router.push('/operations/activities')
     expect(router.currentRoute.value.path).toBe('/operations/activities')
   })
+
+  it('guards both points routes with the points read permission', async () => {
+    await router.push('/operations/points-products')
+    expect(router.currentRoute.value.path).toBe('/dashboard')
+
+    await router.push('/operations/points-exchanges')
+    expect(router.currentRoute.value.path).toBe('/dashboard')
+
+    const { setSession } = useAdminSession() as unknown as {
+      setSession: (token: string, profile: { id: number; account: string; name: string }, permissions: string[], regions: ('CN' | 'EU')[]) => void
+    }
+    setSession(
+      'admin-token',
+      { id: 7, account: 'auditor', name: '审核员' },
+      ['audit:review:read', 'operations:points:read'],
+      ['EU'],
+    )
+
+    await router.push('/operations/points-products')
+    expect(router.currentRoute.value.path).toBe('/operations/points-products')
+
+    await router.push('/operations/points-exchanges')
+    expect(router.currentRoute.value.path).toBe('/operations/points-exchanges')
+  })
 })

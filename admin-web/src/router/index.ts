@@ -182,6 +182,8 @@ const router = createRouter({
         { path: 'operations/hotwords', name: 'hotword-management', component: () => import('@/views/HotWordManagementView.vue'), meta: { requiresAuth: true, titleKey: 'hotwordManagement', requiredPermission: 'operations:hotword:read' } },
         { path: 'operations/sensitive-words', name: 'sensitive-word-management', component: () => import('@/views/SensitiveWordManagementView.vue'), meta: { requiresAuth: true, titleKey: 'sensitiveWordManagement', requiredPermission: 'operations:sensitive_word:read' } },
         { path: 'operations/activities', name: 'activity-management', component: () => import('@/views/OperationActivityManagementView.vue'), meta: { requiresAuth: true, titleKey: 'activityManagement', requiredPermission: 'operations:activity:read' } },
+        { path: 'operations/points-products', name: 'points-product-management', component: () => import('@/views/PointsProductManagementView.vue'), meta: { requiresAuth: true, titleKey: 'pointsProductManagement', requiredPermission: 'operations:points:read' } },
+        { path: 'operations/points-exchanges', name: 'points-exchange-management', component: () => import('@/views/PointsExchangeManagementView.vue'), meta: { requiresAuth: true, titleKey: 'pointsExchangeManagement', requiredPermission: 'operations:points:read' } },
         {
           path: 'system/admins',
           name: 'system-admins',

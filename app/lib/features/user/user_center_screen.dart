@@ -6,6 +6,8 @@ import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/message/blocked_users_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
+import 'package:dazhongdianping_app/features/points/points_mall_screen.dart';
+import 'package:dazhongdianping_app/features/points/points_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/account_settings_screen.dart';
 import 'package:dazhongdianping_app/features/user/daily_check_in_screen.dart';
@@ -247,6 +249,26 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                     ),
                   );
                   // Check-in changes points/growth, so refresh the header.
+                  await _reload();
+                },
+              ),
+              ListTile(
+                key: const Key('user-center-points-mall'),
+                leading: const Icon(Icons.redeem_outlined),
+                title: Text(strings.pointsMall),
+                subtitle: Text(strings.pointsBalanceLabel(profile.points)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PointsMallScreen(
+                        repository: PointsMallRepository(
+                          widget.repository.api,
+                        ),
+                        points: profile.points,
+                      ),
+                    ),
+                  );
                   await _reload();
                 },
               ),

@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.points.mapper.PointsMapper">
+
+    <sql id="productColumns">
+        id,
+        region,
+        name,
+        cover_image,
+        description,
+        points_price,
+        stock,
+        exchange_limit_per_user,
+        exchange_count,
+        fulfill_type,
+        status,
+        sort,
+        created_at,
+        updated_at,
+        is_deleted
+    </sql>
+
+    <sql id="exchangeColumns">
+        id,
+        user_id,
+        product_id,
+        product_name,
+        region,
+        points_cost,
+        quantity,
+        status,
+        redeem_code,
+        remark,
+        fulfilled_at,
+        created_at,
+        updated_at
+    </sql>
+
+    <select id="countOnlineProducts" resultType="long">
+        SELECT COUNT(1)
+        FROM points_product
+        WHERE region = #{region}
+          AND status = 1
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="selectOnlineProducts" resultType="com.tuowei.dazhongdianping.module.points.model.PointsProductRow">
+        SELECT <include refid="productColumns"/>
+        FROM points_product
+        WHERE region = #{region}
+          AND status = 1
+          AND is_deleted = FALSE
+        ORDER BY sort ASC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectOnlineProductById" resultType="com.tuowei.dazhongdianping.module.points.model.PointsProductRow">
+        SELECT <include refid="productColumns"/>
+        FROM points_product
+        WHERE id = #{id}
+          AND region = #{region}
+          AND status = 1
+          AND is_deleted = FALSE
+        LIMIT 1
+    </select>
+
+    <select id="selectProductByIdForUpdate" resultType="com.tuowei.dazhongdianping.module.points.model.PointsProductRow">
+        SELECT <include refid="productColumns"/>
+        FROM points_product
+        WHERE id = #{id}
+          AND region = #{region}
+          AND status = 1
+          AND is_deleted = FALSE
+        FOR UPDATE
+    </select>
+
+    <update id="decrementProductStock">
+        UPDATE points_product
+        SET stock = stock - 1,
+            exchange_count = exchange_count + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND region = #{region}
+          AND stock > 0
+          AND status = 1
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="restoreProductStock">
+        UPDATE points_product
+        SET stock = stock + 1,
+            exchange_count = CASE WHEN exchange_count > 0 THEN exchange_count - 1 ELSE 0 END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <select id="countUserExchanges" resultType="long">
+        SELECT COUNT(1)
+        FROM points_exchange
+        WHERE user_id = #{userId}
+          AND product_id = #{productId}
+          AND status &lt;&gt; 2
+    </select>
+
+    <insert id="insertExchange" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO points_exchange(
+            user_id,
+            product_id,
+            product_name,
+            region,
+            points_cost,
+            quantity,
+            status,
+            redeem_code,
+            remark,
+            fulfilled_at,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            #{userId},
+            #{productId},
+            #{productName},
+            #{region},
+            #{pointsCost},
+            #{quantity},
+            #{status},
+            #{redeemCode},
+            #{remark},
+            #{fulfilledAt},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="countUserExchangesAll" resultType="long">
+        SELECT COUNT(1)
+        FROM points_exchange
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectUserExchanges" resultType="com.tuowei.dazhongdianping.module.points.model.PointsExchangeRow">
+        SELECT <include refid="exchangeColumns"/>
+        FROM points_exchange
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectExchangeById" resultType="com.tuowei.dazhongdianping.module.points.model.PointsExchangeRow">
+        SELECT <include refid="exchangeColumns"/>
+        FROM points_exchange
+        WHERE id = #{id}
+          AND region = #{region}
+        LIMIT 1
+    </select>
+
+    <sql id="exchangeFilter">
+        <if test="status != null">
+            AND pe.status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                LOWER(pe.product_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(pe.redeem_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR LOWER(COALESCE(u.nickname, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            )
+        </if>
+    </sql>
+
+    <select id="countExchanges" resultType="long">
+        SELECT COUNT(1)
+        FROM points_exchange pe
+        LEFT JOIN app_user u ON u.id = pe.user_id
+        WHERE pe.region = #{region}
+        <include refid="exchangeFilter"/>
+    </select>
+
+    <select id="selectExchanges" resultType="com.tuowei.dazhongdianping.module.points.model.PointsExchangeRow">
+        SELECT pe.id,
+               pe.user_id,
+               pe.product_id,
+               pe.product_name,
+               pe.region,
+               pe.points_cost,
+               pe.quantity,
+               pe.status,
+               pe.redeem_code,
+               pe.remark,
+               pe.fulfilled_at,
+               pe.created_at,
+               pe.updated_at,
+               COALESCE(u.nickname, '') AS user_nickname
+        FROM points_exchange pe
+        LEFT JOIN app_user u ON u.id = pe.user_id
+        WHERE pe.region = #{region}
+        <include refid="exchangeFilter"/>
+        ORDER BY pe.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <update id="markExchangeFulfilled">
+        UPDATE points_exchange
+        SET status = 1,
+            redeem_code = #{redeemCode},
+            remark = #{remark},
+            fulfilled_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND status = 0
+    </update>
+
+    <update id="markExchangeCancelled">
+        UPDATE points_exchange
+        SET status = 2,
+            remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND status = 0
+    </update>
+
+    <select id="selectExchangesForExport" resultType="com.tuowei.dazhongdianping.module.points.model.PointsExchangeRow">
+        SELECT <include refid="exchangeColumns"/>
+        FROM points_exchange
+        WHERE user_id = #{userId}
+        ORDER BY id ASC
+    </select>
+
+    <select id="countProductsByRegion" resultType="long">
+        SELECT COUNT(1)
+        FROM points_product
+        WHERE region = #{region}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="selectProductsByRegion" resultType="com.tuowei.dazhongdianping.module.points.model.PointsProductRow">
+        SELECT <include refid="productColumns"/>
+        FROM points_product
+        WHERE region = #{region}
+          AND is_deleted = FALSE
+        ORDER BY sort ASC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectProductById" resultType="com.tuowei.dazhongdianping.module.points.model.PointsProductRow">
+        SELECT <include refid="productColumns"/>
+        FROM points_product
+        WHERE id = #{id}
+          AND region = #{region}
+          AND is_deleted = FALSE
+        LIMIT 1
+    </select>
+
+    <insert id="insertProduct" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO points_product(
+            region,
+            name,
+            cover_image,
+            description,
+            points_price,
+            stock,
+            exchange_limit_per_user,
+            fulfill_type,
+            sort,
+            status,
+            is_deleted
+        )
+        VALUES (
+            #{region},
+            #{name},
+            #{coverImage},
+            #{description},
+            #{pointsPrice},
+            #{stock},
+            #{exchangeLimitPerUser},
+            #{fulfillType},
+            #{sort},
+            #{status},
+            FALSE
+        )
+    </insert>
+
+    <update id="updateProduct">
+        UPDATE points_product
+        SET name = #{name},
+            cover_image = #{coverImage},
+            description = #{description},
+            points_price = #{pointsPrice},
+            stock = #{stock},
+            exchange_limit_per_user = #{exchangeLimitPerUser},
+            fulfill_type = #{fulfillType},
+            sort = #{sort},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="updateProductStatus">
+        UPDATE points_product
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="softDeleteProduct">
+        UPDATE points_product
+        SET is_deleted = TRUE,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </update>
+
+</mapper>

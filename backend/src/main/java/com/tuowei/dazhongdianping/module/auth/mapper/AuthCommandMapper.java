@@ -41,6 +41,8 @@ public interface AuthCommandMapper {
 
     int updateUserPhone(@Param("userId") Long userId, @Param("phone") String phone);
 
+    int updateUserPointsOnly(@Param("userId") Long userId, @Param("points") Integer points);
+
     int updateUserGrowthProfile(@Param("userId") Long userId,
                                 @Param("growthValue") Integer growthValue,
                                 @Param("level") Integer level,

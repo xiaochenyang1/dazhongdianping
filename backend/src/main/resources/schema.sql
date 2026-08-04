@@ -1143,3 +1143,45 @@ CREATE TABLE IF NOT EXISTS user_check_in (
     CONSTRAINT uk_user_check_in_date UNIQUE(user_id, check_in_date)
 );
 CREATE INDEX IF NOT EXISTS idx_user_check_in_user ON user_check_in(user_id, check_in_date, id);
+
+-- 积分商城
+CREATE TABLE IF NOT EXISTS points_product (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL,
+    name VARCHAR(64) NOT NULL,
+    cover_image VARCHAR(255) NOT NULL DEFAULT '',
+    description VARCHAR(500) NOT NULL DEFAULT '',
+    points_price INT NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    exchange_limit_per_user INT NOT NULL DEFAULT 0,
+    exchange_count INT NOT NULL DEFAULT 0,
+    -- 1=兑换即自动发放兑换码，2=需运营人工发放
+    fulfill_type TINYINT NOT NULL DEFAULT 1,
+    status TINYINT NOT NULL DEFAULT 1,
+    sort INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_points_product_region_status ON points_product(region, status, is_deleted, sort, id);
+
+CREATE TABLE IF NOT EXISTS points_exchange (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    product_name VARCHAR(64) NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    points_cost INT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    -- 0=待发放 1=已发放 2=已取消(积分已退回)
+    status TINYINT NOT NULL DEFAULT 0,
+    redeem_code VARCHAR(32) NOT NULL,
+    remark VARCHAR(255) NOT NULL DEFAULT '',
+    fulfilled_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_points_exchange_user ON points_exchange(user_id, created_at, id);
+CREATE INDEX IF NOT EXISTS idx_points_exchange_product ON points_exchange(product_id, created_at, id);
+CREATE INDEX IF NOT EXISTS idx_points_exchange_region_status ON points_exchange(region, status, id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_points_exchange_redeem_code ON points_exchange(redeem_code);

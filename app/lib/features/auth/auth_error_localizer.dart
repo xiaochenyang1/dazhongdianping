@@ -53,6 +53,10 @@ String? _localizedAuthErrorByMessage(AppLocalizations strings, String message) {
     'signature 不能超过 255 字' => strings.authErrorProfileSignatureTooLong,
     '用户资料更新失败' => strings.authErrorProfileUpdateFailed,
     '今天已经签过到了' => strings.checkInErrorAlreadyChecked,
+    '积分不足' => strings.pointsErrorInsufficientBalance,
+    '商品已兑完' => strings.pointsErrorSoldOut,
+    '已达到该商品的兑换上限' => strings.pointsErrorExchangeLimit,
+    '商品不存在或已下架' => strings.pointsErrorProductUnavailable,
     _ => null,
   };
 }

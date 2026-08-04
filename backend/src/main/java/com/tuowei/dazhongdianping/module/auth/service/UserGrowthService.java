@@ -26,6 +26,8 @@ public class UserGrowthService {
     private static final String ACTION_REVIEW_IMAGE = "review_image";
     private static final String ACTION_ORDER_COMPLETE = "order_complete";
     private static final String ACTION_CHECK_IN = "check_in";
+    public static final String ACTION_POINTS_EXCHANGE = "points_exchange";
+    public static final String ACTION_POINTS_EXCHANGE_REFUND = "points_exchange_refund";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final AuthCommandMapper authCommandMapper;
@@ -57,6 +59,46 @@ public class UserGrowthService {
     @Transactional
     public void rewardForCheckIn(Long userId, Long checkInId) {
         rewardAction(userId, ACTION_CHECK_IN, checkInId);
+    }
+
+    @Transactional
+    public void spendPoints(Long userId, String action, Long bizId, int points, String remark) {
+        AppUserRow userRow = authCommandMapper.selectUserByIdForUpdate(userId);
+        if (userRow == null || userRow.getStatus() == null || userRow.getStatus() != 1) {
+            throw new UnauthorizedException("用户状态不可用");
+        }
+        int balance = valueOrZero(userRow.getPoints());
+        if (balance < points) {
+            throw new IllegalArgumentException("积分不足");
+        }
+        int newBalance = balance - points;
+        if (authCommandMapper.updateUserPointsOnly(userId, newBalance) != 1) {
+            throw new IllegalStateException("积分扣减失败");
+        }
+
+        GrowthPointsLogRow row = new GrowthPointsLogRow();
+        row.setUserId(userId);
+        row.setType(POINTS_TYPE_VALUE);
+        row.setAction(action);
+        row.setBizId(bizId);
+        row.setChangeAmount(-points);
+        row.setBalanceAfter(newBalance);
+        row.setRemark(remark);
+        row.setCreatedAt(LocalDateTime.now());
+        authCommandMapper.insertGrowthPointsLog(row);
+    }
+
+    @Transactional
+    public void refundPoints(Long userId, String action, Long bizId, int points, String remark) {
+        AppUserRow userRow = authCommandMapper.selectUserByIdForUpdate(userId);
+        if (userRow == null) {
+            throw new UnauthorizedException("用户状态不可用");
+        }
+        int newBalance = valueOrZero(userRow.getPoints()) + points;
+        if (authCommandMapper.updateUserPointsOnly(userId, newBalance) != 1) {
+            throw new IllegalStateException("积分退回失败");
+        }
+        insertLog(userId, action, POINTS_TYPE_VALUE, bizId, points, newBalance, remark);
     }
 
     private void rewardAction(Long userId, String action, Long bizId) {
@@ -168,6 +210,12 @@ public class UserGrowthService {
         }
         if (ACTION_CHECK_IN.equals(action)) {
             return "每日签到";
+        }
+        if (ACTION_POINTS_EXCHANGE.equals(action)) {
+            return "积分兑换";
+        }
+        if (ACTION_POINTS_EXCHANGE_REFUND.equals(action)) {
+            return "兑换取消退回";
         }
         return "系统奖励";
     }
