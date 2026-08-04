@@ -261,7 +261,7 @@ export interface AdminSensitiveWordPayload {
 
 export interface AdminReport {
   id: number
-  reportType: 'review' | 'post' | 'message' | string
+  reportType: 'review' | 'post' | 'message' | 'review_comment' | 'post_comment' | string
   reportTypeText: string
   targetId: number
   targetType?: number | null

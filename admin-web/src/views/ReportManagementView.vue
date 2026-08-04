@@ -174,6 +174,8 @@ watch(
             <option value="review">{{ strings.reportManagement.reportTypeOptions.review }}</option>
             <option value="post">{{ strings.reportManagement.reportTypeOptions.post }}</option>
             <option value="message">{{ strings.reportManagement.reportTypeOptions.message }}</option>
+            <option value="review_comment">{{ strings.reportManagement.reportTypeOptions.reviewComment }}</option>
+            <option value="post_comment">{{ strings.reportManagement.reportTypeOptions.postComment }}</option>
           </select>
         </label>
         <label>

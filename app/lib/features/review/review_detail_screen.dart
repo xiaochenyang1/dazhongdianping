@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_error_localizer.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:flutter/material.dart';
+
+enum _ReviewCommentAction { delete, report }
 
 class ReviewDetailScreen extends StatefulWidget {
   const ReviewDetailScreen({
@@ -39,6 +43,8 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   bool _reloadingReview = false;
   bool _loadingMoreComments = false;
   bool _reloadingComments = false;
+  bool _commentActionDialogOpen = false;
+  final Set<int> _commentActionIds = <int>{};
   int _reviewRequestId = 0;
   int _commentRequestId = 0;
 
@@ -299,6 +305,137 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     }
   }
 
+  Future<void> _deleteComment(
+    ReviewDetail detail,
+    ReviewComment comment,
+  ) async {
+    if (_commentActionDialogOpen || _commentActionIds.contains(comment.id)) {
+      return;
+    }
+    setState(() => _commentActionDialogOpen = true);
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(AppLocalizations.of(context).deleteComment),
+          content: Text(AppLocalizations.of(context).deleteCommentConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(AppLocalizations.of(context).cancelAction),
+            ),
+            FilledButton(
+              key: Key('review-comment-delete-confirm-${comment.id}'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(AppLocalizations.of(context).confirmDelete),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _commentActionDialogOpen = false);
+    }
+    if (confirmed != true || !mounted) return;
+    setState(() => _commentActionIds.add(comment.id));
+    try {
+      await widget.repository.deleteComment(widget.reviewId, comment.id);
+      if (!mounted) return;
+      final removedCount = 1 + comment.replies.length;
+      final nextCount = detail.commentCount - removedCount;
+      _commentRequestId++;
+      setState(() {
+        _visibleReview = detail.copyWith(
+          commentCount: nextCount < 0 ? 0 : nextCount,
+        );
+        _comments = _loadComments();
+        _replyTarget = null;
+        _loadingMoreComments = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).commentDeleted)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      final strings = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            strings.deleteCommentFailed(localizeReviewError(strings, error)),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _commentActionIds.remove(comment.id));
+    }
+  }
+
+  Future<void> _reportComment(ReviewComment comment) async {
+    if (_commentActionDialogOpen || _commentActionIds.contains(comment.id)) {
+      return;
+    }
+    setState(() => _commentActionDialogOpen = true);
+    var draftReason = '';
+    String? reason;
+    try {
+      reason = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(AppLocalizations.of(context).reportComment),
+          content: TextField(
+            key: Key('review-comment-report-reason-${comment.id}'),
+            maxLength: 200,
+            maxLines: 4,
+            onChanged: (value) => draftReason = value,
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context).reportReason,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(AppLocalizations.of(context).cancelAction),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(draftReason.trim()),
+              child: Text(AppLocalizations.of(context).submitReport),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _commentActionDialogOpen = false);
+    }
+    if (reason == null || reason.isEmpty || !mounted) return;
+    setState(() => _commentActionIds.add(comment.id));
+    try {
+      await widget.repository.reportComment(
+        widget.reviewId,
+        comment.id,
+        reason,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).commentReportSubmitted),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      final strings = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            strings.reportCommentFailed(localizeReviewError(strings, error)),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _commentActionIds.remove(comment.id));
+    }
+  }
+
   void _openEditor(ReviewDetail detail) {
     Navigator.of(context)
         .push(
@@ -368,65 +505,97 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     }
   }
 
-  Widget _buildCommentItem(ReviewComment comment, {double indent = 0}) =>
-      Padding(
-        padding: EdgeInsets.only(left: indent),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(comment.userName),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (comment.replyTo != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        AppLocalizations.of(context).replyToPreview(
-                          name: comment.replyTo!.userName,
-                          content: comment.replyTo!.content,
-                        ),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+  Widget _buildCommentItem(
+    ReviewDetail detail,
+    ReviewComment comment, {
+    double indent = 0,
+  }) => Padding(
+    padding: EdgeInsets.only(left: indent),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(comment.userName),
+          trailing: widget.canInteract && !widget.owned
+              ? _commentActionIds.contains(comment.id)
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : PopupMenuButton<_ReviewCommentAction>(
+                        key: Key('review-comment-actions-${comment.id}'),
+                        icon: const Icon(Icons.more_vert),
+                        onSelected: (action) {
+                          if (action == _ReviewCommentAction.delete) {
+                            unawaited(_deleteComment(detail, comment));
+                          } else {
+                            unawaited(_reportComment(comment));
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: comment.mine
+                                ? _ReviewCommentAction.delete
+                                : _ReviewCommentAction.report,
+                            child: Text(
+                              comment.mine
+                                  ? AppLocalizations.of(context).deleteComment
+                                  : AppLocalizations.of(context).reportComment,
+                            ),
+                          ),
+                        ],
+                      )
+              : null,
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (comment.replyTo != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    AppLocalizations.of(context).replyToPreview(
+                      name: comment.replyTo!.userName,
+                      content: comment.replyTo!.content,
                     ),
-                  Text(comment.content),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Text(
-                        formatDisplayDateTime(
-                          comment.createdAt,
-                          locale: AppLocalizations.of(context).tag,
-                        ),
-                      ),
-                      if (widget.canInteract && !widget.owned)
-                        TextButton(
-                          key: Key('review-comment-reply-${comment.id}'),
-                          onPressed: () =>
-                              setState(() => _replyTarget = comment),
-                          child: Text(AppLocalizations.of(context).reply),
-                        ),
-                    ],
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
+                ),
+              Text(comment.content),
+              const SizedBox(height: 4),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  Text(
+                    formatDisplayDateTime(
+                      comment.createdAt,
+                      locale: AppLocalizations.of(context).tag,
+                    ),
+                  ),
+                  if (widget.canInteract && !widget.owned)
+                    TextButton(
+                      key: Key('review-comment-reply-${comment.id}'),
+                      onPressed: () => setState(() => _replyTarget = comment),
+                      child: Text(AppLocalizations.of(context).reply),
+                    ),
                 ],
               ),
-            ),
-            if (comment.replies.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: 20),
-                child: Column(
-                  children: comment.replies
-                      .map((reply) => _buildCommentItem(reply, indent: 8))
-                      .toList(),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
-      );
+        if (comment.replies.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Column(
+              children: comment.replies
+                  .map((reply) => _buildCommentItem(detail, reply, indent: 8))
+                  .toList(),
+            ),
+          ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -764,7 +933,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                   }
                   return Column(
                     children: [
-                      ...comments.map((comment) => _buildCommentItem(comment)),
+                      ...comments.map(
+                        (comment) => _buildCommentItem(review, comment),
+                      ),
                       if (page.hasMore)
                         OutlinedButton.icon(
                           key: const Key('review-comments-load-more'),

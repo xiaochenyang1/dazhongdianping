@@ -5,8 +5,10 @@ import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentListQuery;
 import com.tuowei.dazhongdianping.module.review.model.ReviewListQuery;
 import com.tuowei.dazhongdianping.module.review.model.request.ReviewCommentCreateRequest;
+import com.tuowei.dazhongdianping.module.review.model.request.ReviewCommentReportRequest;
 import com.tuowei.dazhongdianping.module.review.model.request.ReviewReportRequest;
 import com.tuowei.dazhongdianping.module.review.model.request.ReviewSaveRequest;
+import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentReportResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewDetailResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewLikeResponse;
@@ -63,6 +65,20 @@ public class ReviewController {
     public ApiResponse<PageResult<ReviewCommentResponse>> listComments(@PathVariable Long reviewId,
                                                                        @Valid ReviewCommentListQuery query) {
         return ApiResponse.success(reviewService.listComments(reviewId, query));
+    }
+
+    @DeleteMapping("/reviews/{reviewId}/comments/{commentId}")
+    public ApiResponse<Void> deleteComment(@PathVariable Long reviewId, @PathVariable Long commentId) {
+        reviewService.deleteComment(reviewId, commentId);
+        return ApiResponse.success("评论已删除", "review.comment_deleted", null);
+    }
+
+    @PostMapping("/reviews/{reviewId}/comments/{commentId}/report")
+    public ApiResponse<ReviewCommentReportResponse> reportComment(@PathVariable Long reviewId,
+                                                                  @PathVariable Long commentId,
+                                                                  @Valid @RequestBody ReviewCommentReportRequest request) {
+        return ApiResponse.success("举报已提交，等待审核", "review.comment_reported",
+                reviewService.reportComment(reviewId, commentId, request));
     }
 
     @PostMapping("/reviews/{reviewId}/report")

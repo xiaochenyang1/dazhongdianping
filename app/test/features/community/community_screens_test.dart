@@ -19,6 +19,7 @@ class CommunityScreenApi
   String? postPath;
   String? deletePath;
   Object? body;
+  final Set<int> deletedCommentIds = <int>{};
   Object? feedError;
   Object? followingFeedError;
   Object? postError;
@@ -99,8 +100,8 @@ class CommunityScreenApi
         throw StateError('comments unavailable');
       }
       await commentRetryGate?.future;
-      return {
-        'list': [
+      final comments = [
+        if (!deletedCommentIds.contains(page == 1 ? 11 : 13))
           {
             'id': page == 1 ? 11 : 13,
             'postId': 7,
@@ -110,28 +111,31 @@ class CommunityScreenApi
             'parentId': 0,
             'replyTo': null,
             'replies': [
-              {
-                'id': 12,
-                'postId': 7,
-                'userId': 13,
-                'userName': '楼中回复用户',
-                'content': '我补一层楼中回复。',
-                'parentId': 11,
-                'replyTo': {
-                  'id': 11,
-                  'userId': 10,
-                  'userName': '评论用户',
-                  'content': '收藏了。',
+              if (!deletedCommentIds.contains(12))
+                {
+                  'id': 12,
+                  'postId': 7,
+                  'userId': 13,
+                  'userName': '楼中回复用户',
+                  'content': '我补一层楼中回复。',
+                  'parentId': 11,
+                  'replyTo': {
+                    'id': 11,
+                    'userId': 10,
+                    'userName': '评论用户',
+                    'content': '收藏了。',
+                  },
+                  'replies': [],
+                  'mine': true,
+                  'createdAt': '2026-07-16 11:10:00',
                 },
-                'replies': [],
-                'mine': false,
-                'createdAt': '2026-07-16 11:10:00',
-              },
             ],
             'mine': false,
             'createdAt': '2026-07-16 11:00:00',
           },
-        ],
+      ];
+      return {
+        'list': comments,
         'total': paginateComments ? 2 : 1,
         'page': page,
         'pageSize': paginateComments ? 1 : 50,
@@ -268,6 +272,20 @@ class CommunityScreenApi
       failNextReport = false;
       throw StateError('report unavailable');
     }
+    final commentReportMatch = RegExp(
+      r'/api/c/v1/posts/7/comments/(\d+)/report$',
+    ).firstMatch(path);
+    if (commentReportMatch != null) {
+      return {
+        'id': 21,
+        'postId': 7,
+        'commentId': int.parse(commentReportMatch.group(1)!),
+        'reason': (body as Map)['reason'],
+        'status': 0,
+        'statusText': '待处理',
+        'createdAt': '2026-07-25 12:00:00',
+      };
+    }
     return post;
   }
 
@@ -277,6 +295,11 @@ class CommunityScreenApi
   @override
   Future<Map<String, dynamic>> deleteJson(String path) async {
     deletePath = path;
+    final commentMatch = RegExp(r'/comments/(\d+)$').firstMatch(path);
+    if (commentMatch != null) {
+      deletedCommentIds.add(int.parse(commentMatch.group(1)!));
+      return const {};
+    }
     if (path.endsWith('/repost')) {
       reposted = false;
       repostCount = 2;
@@ -944,6 +967,61 @@ void main() {
 
     expect(api.postPath, '/api/c/v1/posts/7/comments');
     expect(api.body, {'content': '楼中回复', 'replyTo': 11});
+  });
+
+  testWidgets('post detail reports a comment and deletes an owned reply', (
+    tester,
+  ) async {
+    final api = CommunityScreenApi();
+    await tester.pumpWidget(
+      localizedApp(
+        home: PostDetailScreen(
+          repository: CommunityRepository(api),
+          postId: 7,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('post-comment-actions-11')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('post-comment-actions-11')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('举报评论'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('post-comment-report-reason-11')),
+      '疑似引流',
+    );
+    await tester.tap(find.text('提交举报'));
+    await tester.pumpAndSettle();
+    expect(api.postPath, '/api/c/v1/posts/7/comments/11/report');
+    expect(api.body, {'reason': '疑似引流'});
+    expect(find.text('评论举报已提交，等待审核'), findsOneWidget);
+
+    ScaffoldMessenger.of(
+      tester.element(find.byType(PostDetailScreen)),
+    ).clearSnackBars();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('post-comment-actions-12')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('post-comment-actions-12')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除评论'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('post-comment-delete-confirm-12')));
+    await tester.pumpAndSettle();
+
+    expect(api.deletePath, '/api/c/v1/posts/7/comments/12');
+    expect(find.text('我补一层楼中回复。'), findsNothing);
+    expect(find.text('评论已删除'), findsOneWidget);
   });
 
   testWidgets('post detail localizes comment errors in English', (

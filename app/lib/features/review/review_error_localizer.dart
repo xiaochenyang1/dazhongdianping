@@ -12,6 +12,9 @@ String localizeReviewError(
     overrides: {
       '点评不存在': strings.reviewErrorNotFound,
       '你已经举报过这条点评了': strings.reviewErrorReportDuplicate,
+      '评论不存在': strings.commentErrorUnavailable,
+      '评论不存在或无权删除': strings.commentErrorUnavailable,
+      '你已经举报过这条评论了': strings.commentErrorReportDuplicate,
       '回复目标不存在': strings.reviewErrorReplyTargetMissing,
       '用户状态不可用': strings.reviewErrorUserUnavailable,
       '门店不存在或不可点评': strings.reviewErrorShopUnavailable,

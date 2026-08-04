@@ -14,6 +14,7 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
   final String currency;
   final List<String> posts = <String>[];
   final List<String> deletedPaths = <String>[];
+  Object? lastBody;
   bool liked = false;
   bool blankAuditStatusText = false;
   int likeCount = 3;
@@ -156,12 +157,25 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
       throw deleteError!;
     }
     deletedPaths.add(path);
+    final match = RegExp(r'/comments/(\d+)$').firstMatch(path);
+    if (match != null) {
+      final commentId = int.parse(match.group(1)!);
+      comments.removeWhere((comment) => comment['id'] == commentId);
+      for (final comment in comments) {
+        final replies = (comment['replies'] as List<dynamic>? ?? const [])
+            .cast<Map<String, dynamic>>()
+            .where((reply) => reply['id'] != commentId)
+            .toList();
+        comment['replies'] = replies;
+      }
+    }
     return const {};
   }
 
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     posts.add(path);
+    lastBody = body;
     if (path == '/api/c/v1/reviews/12/like') {
       if (likeError != null) {
         throw likeError!;
@@ -201,6 +215,21 @@ class DetailFakeApi implements JsonApi, JsonDeleteApi {
       return {
         'id': 1,
         'reviewId': 12,
+        'reason': (body as Map)['reason'],
+        'status': 0,
+        'statusText': '待处理',
+        'createdAt': '2026-07-25 12:00:00',
+      };
+    }
+    final commentReportMatch = RegExp(
+      r'/api/c/v1/reviews/12/comments/(\d+)/report$',
+    ).firstMatch(path);
+    if (commentReportMatch != null) {
+      reportRequests++;
+      return {
+        'id': 2,
+        'reviewId': 12,
+        'commentId': int.parse(commentReportMatch.group(1)!),
         'reason': (body as Map)['reason'],
         'status': 0,
         'statusText': '待处理',
@@ -504,6 +533,88 @@ void main() {
     await tester.pump();
     expect(api.posts, contains('/api/c/v1/reviews/12/report'));
     expect(find.text('举报已提交'), findsOneWidget);
+  });
+
+  testWidgets('public review reports another user comment', (tester) async {
+    final api = DetailFakeApi();
+    await tester.pumpWidget(
+      localizedApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('review-comment-actions-81')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('review-comment-actions-81')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('举报评论'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('review-comment-report-reason-81')),
+      '包含广告链接',
+    );
+    await tester.tap(find.text('提交举报'));
+    await tester.pumpAndSettle();
+
+    expect(api.posts, contains('/api/c/v1/reviews/12/comments/81/report'));
+    expect(api.lastBody, {'reason': '包含广告链接'});
+    expect(find.text('评论举报已提交，等待审核'), findsOneWidget);
+  });
+
+  testWidgets('public review deletes an owned comment and refreshes comments', (
+    tester,
+  ) async {
+    final api = DetailFakeApi();
+    api.comments.add({
+      'id': 83,
+      'reviewId': 12,
+      'userId': 1,
+      'userName': '我',
+      'content': '准备删除的评论',
+      'parentId': 0,
+      'replyTo': null,
+      'replies': const [],
+      'mine': true,
+      'createdAt': '2026-07-25 12:00:00',
+    });
+    await tester.pumpWidget(
+      localizedApp(
+        home: ReviewDetailScreen(
+          repository: ReviewRepository(api),
+          reviewId: 12,
+          canInteract: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('review-comment-actions-83')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -220));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('review-comment-actions-83')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除评论'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('review-comment-delete-confirm-83')));
+    await tester.pumpAndSettle();
+
+    expect(api.deletedPaths, contains('/api/c/v1/reviews/12/comments/83'));
+    expect(find.text('准备删除的评论'), findsNothing);
+    expect(find.text('评论已删除'), findsOneWidget);
   });
 
   testWidgets('public review detail localizes comment errors in English', (

@@ -93,6 +93,56 @@
             LEFT JOIN message m ON mr.target_type = 1 AND m.id = mr.target_id
             LEFT JOIN app_user fu ON fu.id = m.from_user_id
             WHERE 1 = 1
+
+            UNION ALL
+
+            SELECT
+                rcr.id,
+                'review_comment' AS report_type,
+                rcr.comment_id AS target_id,
+                CAST(NULL AS INTEGER) AS target_type,
+                rcr.reporter_user_id,
+                rcr.reporter_user_name,
+                rcr.reason,
+                rcr.status,
+                r.region AS region,
+                LEFT(rc.content, 120) AS target_summary,
+                rc.user_name AS target_author_name,
+                rc.user_id AS target_author_id,
+                rc.status AS target_audit_status,
+                CASE WHEN rc.is_deleted THEN 1 ELSE 0 END AS target_status,
+                rcr.created_at
+            FROM review_comment_report rcr
+            JOIN review_comment rc ON rc.id = rcr.comment_id
+            JOIN review r ON r.id = rc.review_id
+            WHERE rcr.is_deleted = FALSE
+              AND r.region = #{region}
+              AND rc.is_deleted = FALSE
+
+            UNION ALL
+
+            SELECT
+                pcr.id,
+                'post_comment' AS report_type,
+                pcr.comment_id AS target_id,
+                CAST(NULL AS INTEGER) AS target_type,
+                pcr.reporter_user_id,
+                pcr.reporter_user_name,
+                pcr.reason,
+                pcr.status,
+                p.region AS region,
+                LEFT(pc.content, 120) AS target_summary,
+                pc.user_name AS target_author_name,
+                pc.user_id AS target_author_id,
+                pc.status AS target_audit_status,
+                CASE WHEN pc.is_deleted THEN 1 ELSE 0 END AS target_status,
+                pcr.created_at
+            FROM post_comment_report pcr
+            JOIN post_comment pc ON pc.id = pcr.comment_id
+            JOIN post p ON p.id = pc.post_id
+            WHERE pcr.is_deleted = FALSE
+              AND p.region = #{region}
+              AND pc.is_deleted = FALSE
         ) reports
         WHERE 1 = 1
         <if test="reportType != null and reportType != ''">
@@ -202,6 +252,60 @@
         LIMIT 1
     </select>
 
+    <select id="selectReviewCommentReport" resultType="com.tuowei.dazhongdianping.module.admin.report.model.AdminReportRow">
+        SELECT
+            rcr.id,
+            'review_comment' AS report_type,
+            rcr.comment_id AS target_id,
+            CAST(NULL AS INTEGER) AS target_type,
+            rcr.reporter_user_id,
+            rcr.reporter_user_name,
+            rcr.reason,
+            rcr.status,
+            r.region AS region,
+            LEFT(rc.content, 120) AS target_summary,
+            rc.user_name AS target_author_name,
+            rc.user_id AS target_author_id,
+            rc.status AS target_audit_status,
+            CASE WHEN rc.is_deleted THEN 1 ELSE 0 END AS target_status,
+            rcr.created_at
+        FROM review_comment_report rcr
+        JOIN review_comment rc ON rc.id = rcr.comment_id
+        JOIN review r ON r.id = rc.review_id
+        WHERE rcr.id = #{id}
+          AND rcr.is_deleted = FALSE
+          AND r.region = #{region}
+          AND rc.is_deleted = FALSE
+        LIMIT 1
+    </select>
+
+    <select id="selectPostCommentReport" resultType="com.tuowei.dazhongdianping.module.admin.report.model.AdminReportRow">
+        SELECT
+            pcr.id,
+            'post_comment' AS report_type,
+            pcr.comment_id AS target_id,
+            CAST(NULL AS INTEGER) AS target_type,
+            pcr.reporter_user_id,
+            pcr.reporter_user_name,
+            pcr.reason,
+            pcr.status,
+            p.region AS region,
+            LEFT(pc.content, 120) AS target_summary,
+            pc.user_name AS target_author_name,
+            pc.user_id AS target_author_id,
+            pc.status AS target_audit_status,
+            CASE WHEN pc.is_deleted THEN 1 ELSE 0 END AS target_status,
+            pcr.created_at
+        FROM post_comment_report pcr
+        JOIN post_comment pc ON pc.id = pcr.comment_id
+        JOIN post p ON p.id = pc.post_id
+        WHERE pcr.id = #{id}
+          AND pcr.is_deleted = FALSE
+          AND p.region = #{region}
+          AND pc.is_deleted = FALSE
+        LIMIT 1
+    </select>
+
     <update id="resolveReviewReport">
         UPDATE review_report
         SET status = #{status}, updated_at = CURRENT_TIMESTAMP
@@ -250,6 +354,90 @@
         UPDATE post_report
         SET status = 1, updated_at = CURRENT_TIMESTAMP
         WHERE post_id = #{postId} AND status = 0 AND is_deleted = FALSE
+    </update>
+
+    <update id="resolveReviewCommentReport">
+        UPDATE review_comment_report
+        SET status = #{status}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND status = 0 AND is_deleted = FALSE
+    </update>
+
+    <update id="resolvePostCommentReport">
+        UPDATE post_comment_report
+        SET status = #{status}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND status = 0 AND is_deleted = FALSE
+    </update>
+
+    <update id="hideReviewComment">
+        UPDATE review_comment
+        SET status = 2,
+            audit_remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE (id = #{commentId} OR parent_id = #{commentId})
+          AND is_deleted = FALSE
+          AND EXISTS (
+              SELECT 1 FROM review r
+              WHERE r.id = review_comment.review_id
+                AND r.region = #{region}
+          )
+    </update>
+
+    <update id="hidePostComment">
+        UPDATE post_comment
+        SET status = 2,
+            audit_remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE (id = #{commentId} OR parent_id = #{commentId})
+          AND is_deleted = FALSE
+          AND EXISTS (
+              SELECT 1 FROM post p
+              WHERE p.id = post_comment.post_id
+                AND p.region = #{region}
+          )
+    </update>
+
+    <update id="resolvePendingReviewCommentReports">
+        UPDATE review_comment_report
+        SET status = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE comment_id IN (
+            SELECT id FROM review_comment
+            WHERE id = #{commentId} OR parent_id = #{commentId}
+        )
+          AND status = 0
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="resolvePendingPostCommentReports">
+        UPDATE post_comment_report
+        SET status = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE comment_id IN (
+            SELECT id FROM post_comment
+            WHERE id = #{commentId} OR parent_id = #{commentId}
+        )
+          AND status = 0
+          AND is_deleted = FALSE
+    </update>
+
+    <update id="refreshReviewCommentCountByCommentId">
+        UPDATE review
+        SET comment_count = (
+            SELECT COUNT(1) FROM review_comment rc
+            WHERE rc.review_id = review.id AND rc.status = 1 AND rc.is_deleted = FALSE
+        )
+        WHERE id = (
+            SELECT rc.review_id FROM review_comment rc WHERE rc.id = #{commentId}
+        )
+    </update>
+
+    <update id="refreshPostCommentCountByCommentId">
+        UPDATE post
+        SET comment_count = (
+            SELECT COUNT(1) FROM post_comment pc
+            WHERE pc.post_id = post.id AND pc.status = 1 AND pc.is_deleted = FALSE
+        )
+        WHERE id = (
+            SELECT pc.post_id FROM post_comment pc WHERE pc.id = #{commentId}
+        )
     </update>
 
 </mapper>

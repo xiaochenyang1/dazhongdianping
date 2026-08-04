@@ -147,6 +147,20 @@ class ReviewFakeApi
         'createdAt': '2026-07-25 12:00:00',
       };
     }
+    final commentReportMatch = RegExp(
+      r'/api/c/v1/reviews/12/comments/(\d+)/report$',
+    ).firstMatch(path);
+    if (commentReportMatch != null) {
+      return {
+        'id': 2,
+        'reviewId': 12,
+        'commentId': int.parse(commentReportMatch.group(1)!),
+        'reason': (body as Map)['reason'],
+        'status': 0,
+        'statusText': '待处理',
+        'createdAt': '2026-07-25 12:00:00',
+      };
+    }
     if (path.endsWith('/report')) {
       return {
         'id': 1,
@@ -358,6 +372,23 @@ void main() {
     final report = await repository.reportReview(12, '广告');
     expect(api.path, '/api/c/v1/reviews/12/report');
     expect(report.reason, '广告');
+  });
+
+  test('review repository deletes and reports comments', () async {
+    final api = ReviewFakeApi();
+    final repository = ReviewRepository(api);
+
+    await repository.deleteComment(12, 81);
+    expect(api.method, 'DELETE');
+    expect(api.path, '/api/c/v1/reviews/12/comments/81');
+
+    final report = await repository.reportComment(12, 81, '恶意引流');
+    expect(api.method, 'POST');
+    expect(api.path, '/api/c/v1/reviews/12/comments/81/report');
+    expect(api.body, {'reason': '恶意引流'});
+    expect(report.reviewId, 12);
+    expect(report.commentId, 81);
+    expect(report.reason, '恶意引流');
   });
 
   test('review repository deletes an owned review', () async {

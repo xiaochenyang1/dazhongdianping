@@ -1301,6 +1301,8 @@ export interface AdminStrings {
       review: string
       post: string
       message: string
+      reviewComment: string
+      postComment: string
     }
     statusOptions: {
       all: string
@@ -2038,6 +2040,8 @@ function zhReportTypeText(reportType: string, fallback?: string) {
   if (reportType === 'review') return '点评举报'
   if (reportType === 'post') return '帖子举报'
   if (reportType === 'message') return '私信举报'
+  if (reportType === 'review_comment') return '点评评论举报'
+  if (reportType === 'post_comment') return '帖子评论举报'
   return fallback || reportType
 }
 
@@ -2045,12 +2049,16 @@ function enReportTypeText(reportType: string, fallback?: string) {
   if (reportType === 'review') return 'Review report'
   if (reportType === 'post') return 'Post report'
   if (reportType === 'message') return 'Message report'
+  if (reportType === 'review_comment') return 'Review comment report'
+  if (reportType === 'post_comment') return 'Post comment report'
   return fallback || reportType
 }
 
 function zhReportTargetTypeText(reportType: string, targetType?: number | null, fallback?: string) {
   if (reportType === 'review') return '点评'
   if (reportType === 'post') return '帖子'
+  if (reportType === 'review_comment') return '点评评论'
+  if (reportType === 'post_comment') return '帖子评论'
   if (reportType === 'message') {
     if (targetType === 1) return '消息'
     if (targetType === 2) return '会话'
@@ -2062,6 +2070,8 @@ function zhReportTargetTypeText(reportType: string, targetType?: number | null, 
 function enReportTargetTypeText(reportType: string, targetType?: number | null, fallback?: string) {
   if (reportType === 'review') return 'Review'
   if (reportType === 'post') return 'Post'
+  if (reportType === 'review_comment') return 'Review comment'
+  if (reportType === 'post_comment') return 'Post comment'
   if (reportType === 'message') {
     if (targetType === 1) return 'Message'
     if (targetType === 2) return 'Conversation'
@@ -2091,6 +2101,11 @@ function zhReportTargetStatusText(
 ) {
   if (reportType === 'message') return '私信'
   if (targetAuditStatus == null) return fallback || ''
+  if (reportType === 'review_comment' || reportType === 'post_comment') {
+    if (targetAuditStatus === 1) return '公开'
+    if (targetAuditStatus === 2) return '已隐藏'
+    return '待审'
+  }
   if (targetAuditStatus === 1) return '公开'
   if (targetAuditStatus === 2) return '已隐藏/驳回'
   return '待审'
@@ -2103,6 +2118,11 @@ function enReportTargetStatusText(
 ) {
   if (reportType === 'message') return 'Direct message'
   if (targetAuditStatus == null) return fallback || ''
+  if (reportType === 'review_comment' || reportType === 'post_comment') {
+    if (targetAuditStatus === 1) return 'Visible'
+    if (targetAuditStatus === 2) return 'Hidden'
+    return 'Pending review'
+  }
   if (targetAuditStatus === 1) return 'Visible'
   if (targetAuditStatus === 2) return 'Hidden / rejected'
   return 'Pending review'
@@ -3485,6 +3505,8 @@ const zhCnStrings: AdminStrings = {
       review: '点评',
       post: '帖子',
       message: '私信',
+      reviewComment: '点评评论',
+      postComment: '帖子评论',
     },
     statusOptions: {
       all: '全部',
@@ -5568,6 +5590,8 @@ const enStrings: AdminStrings = {
       review: 'Review',
       post: 'Post',
       message: 'Message',
+      reviewComment: 'Review comment',
+      postComment: 'Post comment',
     },
     statusOptions: {
       all: 'All statuses',

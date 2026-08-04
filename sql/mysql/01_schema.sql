@@ -537,6 +537,7 @@ CREATE TABLE `review_comment` (
   `parent_id` BIGINT NOT NULL DEFAULT 0,
   `reply_to` BIGINT NOT NULL DEFAULT 0,
   `status` TINYINT NOT NULL DEFAULT 1,
+  `audit_remark` VARCHAR(255) NOT NULL DEFAULT '',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
@@ -707,6 +708,7 @@ CREATE TABLE `post_comment` (
   `parent_id` BIGINT NOT NULL DEFAULT 0,
   `reply_to` BIGINT NOT NULL DEFAULT 0,
   `status` TINYINT NOT NULL DEFAULT 1,
+  `audit_remark` VARCHAR(255) NOT NULL DEFAULT '',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
@@ -1090,3 +1092,34 @@ CREATE TABLE IF NOT EXISTS message_report (id BIGINT AUTO_INCREMENT PRIMARY KEY,
 CREATE TABLE IF NOT EXISTS circle (id BIGINT AUTO_INCREMENT PRIMARY KEY,region VARCHAR(8) NOT NULL,name VARCHAR(64) NOT NULL,description VARCHAR(500) NOT NULL DEFAULT '',cover_url VARCHAR(255) NOT NULL DEFAULT '',member_count INT NOT NULL DEFAULT 0,post_count INT NOT NULL DEFAULT 0,sort INT NOT NULL DEFAULT 0,status TINYINT NOT NULL DEFAULT 1,created_by BIGINT NOT NULL DEFAULT 0,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,is_deleted TINYINT(1) NOT NULL DEFAULT 0,UNIQUE KEY uk_circle_region_name(region,name),KEY idx_circle_region_status_sort(region,status,is_deleted,sort,id));
 CREATE TABLE IF NOT EXISTS circle_member (id BIGINT AUTO_INCREMENT PRIMARY KEY,circle_id BIGINT NOT NULL,user_id BIGINT NOT NULL,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uk_circle_member(circle_id,user_id),KEY idx_circle_member_user(user_id,circle_id));
 ALTER TABLE post ADD COLUMN circle_id BIGINT NULL, ADD KEY idx_post_circle_status(circle_id,audit_status,status,is_deleted,id);
+
+-- 评论治理：点评评论 / 帖子评论举报（2026-08 评论删除与举报闭环新增）
+CREATE TABLE IF NOT EXISTS review_comment_report (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  review_id BIGINT NOT NULL,
+  comment_id BIGINT NOT NULL,
+  reporter_user_id BIGINT NOT NULL,
+  reporter_user_name VARCHAR(64) NOT NULL,
+  reason VARCHAR(200) NOT NULL,
+  status TINYINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_deleted TINYINT(1) NOT NULL DEFAULT 0,
+  KEY idx_review_comment_report_comment(comment_id, status, is_deleted, id),
+  UNIQUE KEY uk_review_comment_report_user(comment_id, reporter_user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS post_comment_report (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  post_id BIGINT NOT NULL,
+  comment_id BIGINT NOT NULL,
+  reporter_user_id BIGINT NOT NULL,
+  reporter_user_name VARCHAR(64) NOT NULL,
+  reason VARCHAR(200) NOT NULL,
+  status TINYINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_deleted TINYINT(1) NOT NULL DEFAULT 0,
+  KEY idx_post_comment_report_comment(comment_id, status, is_deleted, id),
+  UNIQUE KEY uk_post_comment_report_user(comment_id, reporter_user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

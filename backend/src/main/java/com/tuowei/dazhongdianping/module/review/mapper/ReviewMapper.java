@@ -5,6 +5,7 @@ import com.tuowei.dazhongdianping.module.review.model.ReviewListQuery;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentListQuery;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewLikeRow;
+import com.tuowei.dazhongdianping.module.review.model.ReviewCommentReportRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewReportRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.merchant.review.model.ReviewMerchantReplyRow;
@@ -67,7 +68,19 @@ public interface ReviewMapper {
     ReviewReportRow selectReviewReportByReporter(@Param("reviewId") Long reviewId,
                                                  @Param("reporterUserId") Long reporterUserId);
 
+    void insertReviewCommentReport(ReviewCommentReportRow row);
+
+    ReviewCommentReportRow selectReviewCommentReportByReporter(@Param("commentId") Long commentId,
+                                                               @Param("reporterUserId") Long reporterUserId);
+
     int resolvePendingReviewReports(@Param("reviewId") Long reviewId);
+
+    int softDeleteReviewComment(@Param("reviewId") Long reviewId,
+                                @Param("commentId") Long commentId,
+                                @Param("userId") Long userId);
+
+    int softDeleteReviewCommentReplies(@Param("reviewId") Long reviewId,
+                                       @Param("parentId") Long parentId);
 
     int countReviewComments(@Param("reviewId") Long reviewId);
 

@@ -205,6 +205,15 @@ class AppLocalizations {
     'localExpertCertificationSubtitle': '提交或重提本地达人申请',
     'growthRecords': '成长值流水',
     'growthRecordsSubtitle': 'Lv.{level} · 成长值 {growth} · 积分 {points}',
+    'deleteComment': '删除评论',
+    'deleteCommentConfirm': '删除后不可恢复，确认删除这条评论吗？',
+    'commentDeleted': '评论已删除',
+    'deleteCommentFailed': '删除评论失败：{error}',
+    'reportComment': '举报评论',
+    'commentReportSubmitted': '评论举报已提交，等待审核',
+    'reportCommentFailed': '举报评论失败：{error}',
+    'commentErrorUnavailable': '评论不存在或无权操作。',
+    'commentErrorReportDuplicate': '你已经举报过这条评论，请勿重复提交。',
     'myMessages': '我的私信',
     'blockedUsers': '黑名单管理',
     'myCircles': '我的圈子',
@@ -1092,6 +1101,15 @@ class AppLocalizations {
     'localExpertCertificationSubtitle': '提交或重新提交在地達人申請',
     'growthRecords': '成長值流水',
     'growthRecordsSubtitle': 'Lv.{level} · 成長值 {growth} · 積分 {points}',
+    'deleteComment': '刪除評論',
+    'deleteCommentConfirm': '刪除後不可恢復，確認刪除這則留言嗎？',
+    'commentDeleted': '留言已刪除',
+    'deleteCommentFailed': '刪除留言失敗：{error}',
+    'reportComment': '檢舉留言',
+    'commentReportSubmitted': '留言檢舉已提交，等待審核',
+    'reportCommentFailed': '檢舉留言失敗：{error}',
+    'commentErrorUnavailable': '留言不存在或無權操作。',
+    'commentErrorReportDuplicate': '你已經檢舉過這則留言，請勿重複提交。',
     'myMessages': '我的私信',
     'blockedUsers': '黑名單管理',
     'myCircles': '我的圈子',
@@ -2006,6 +2024,17 @@ class AppLocalizations {
         'Submit or resubmit a local expert application',
     'growthRecords': 'Growth history',
     'growthRecordsSubtitle': 'Lv.{level} · growth {growth} · points {points}',
+    'deleteComment': 'Delete comment',
+    'deleteCommentConfirm': 'This cannot be undone. Delete this comment?',
+    'commentDeleted': 'Comment deleted',
+    'deleteCommentFailed': 'Could not delete comment: {error}',
+    'reportComment': 'Report comment',
+    'commentReportSubmitted': 'Comment report submitted for review',
+    'reportCommentFailed': 'Could not report comment: {error}',
+    'commentErrorUnavailable':
+        'This comment is unavailable or you cannot manage it.',
+    'commentErrorReportDuplicate':
+        'You already reported this comment. Do not submit it again.',
     'myMessages': 'Messages',
     'blockedUsers': 'Blocked users',
     'myCircles': 'My circles',
@@ -3354,6 +3383,19 @@ class AppLocalizations {
         .replaceFirst('{growth}', '$growth')
         .replaceFirst('{points}', '$points');
   }
+
+  String get deleteComment => _text('deleteComment');
+  String get deleteCommentConfirm => _text('deleteCommentConfirm');
+  String get commentDeleted => _text('commentDeleted');
+  String deleteCommentFailed(Object error) =>
+      _withError('deleteCommentFailed', error);
+  String get reportComment => _text('reportComment');
+  String get commentReportSubmitted => _text('commentReportSubmitted');
+  String reportCommentFailed(Object error) =>
+      _withError('reportCommentFailed', error);
+  String get commentErrorUnavailable => _text('commentErrorUnavailable');
+  String get commentErrorReportDuplicate =>
+      _text('commentErrorReportDuplicate');
 
   String get myMessages => _text('myMessages');
   String get blockedUsers => _text('blockedUsers');

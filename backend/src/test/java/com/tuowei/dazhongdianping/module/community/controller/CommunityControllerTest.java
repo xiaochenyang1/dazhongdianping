@@ -362,6 +362,78 @@ class CommunityControllerTest {
     }
 
     @Test
+    void shouldReportOwnedCommentAndCascadeDeleteItsThread() throws Exception {
+        RegisteredUser author = registerUser("删除评论帖子作者");
+        long firstPostId = createAndPublishPost(author.accessToken(), "第一条公开帖子");
+        long secondPostId = createAndPublishPost(author.accessToken(), "第二条公开帖子");
+
+        RegisteredUser owner = registerUser("帖子评论楼主");
+        MvcResult rootResult = mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", firstPostId)
+                        .header("Authorization", bearer(owner.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"这条根评论用于删除与举报回归。\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        long rootId = readLong(rootResult, "/data/id");
+
+        RegisteredUser reply = registerUser("帖子评论回复者");
+        MvcResult replyResult = mockMvc.perform(post("/api/c/v1/posts/{postId}/comments", firstPostId)
+                        .header("Authorization", bearer(reply.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"这是根评论下的回复。\",\"replyTo\":" + rootId + "}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        long replyId = readLong(replyResult, "/data/id");
+
+        RegisteredUser reporter = registerUser("帖子评论举报者");
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/comments/{commentId}/report", firstPostId, rootId)
+                        .header("Authorization", bearer(reporter.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"评论包含骚扰信息\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.postId").value(firstPostId))
+                .andExpect(jsonPath("$.data.commentId").value(rootId));
+
+        mockMvc.perform(post("/api/c/v1/posts/{postId}/comments/{commentId}/report", firstPostId, rootId)
+                        .header("Authorization", bearer(reporter.accessToken()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"重复举报\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(delete("/api/c/v1/posts/{postId}/comments/{commentId}", secondPostId, rootId)
+                        .header("Authorization", bearer(owner.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isBadRequest());
+        org.assertj.core.api.Assertions.assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM post_comment WHERE id IN (?,?) AND is_deleted=FALSE",
+                Long.class,
+                rootId,
+                replyId
+        )).isEqualTo(2L);
+
+        mockMvc.perform(delete("/api/c/v1/posts/{postId}/comments/{commentId}", firstPostId, rootId)
+                        .header("Authorization", bearer(owner.accessToken()))
+                        .header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.messageKey").value("post.comment_deleted"));
+        org.assertj.core.api.Assertions.assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM post_comment WHERE id IN (?,?) AND is_deleted=TRUE",
+                Long.class,
+                rootId,
+                replyId
+        )).isEqualTo(2L);
+        org.assertj.core.api.Assertions.assertThat(jdbcTemplate.queryForObject(
+                "SELECT comment_count FROM post WHERE id=?",
+                Integer.class,
+                firstPostId
+        )).isEqualTo(0);
+    }
+
+    @Test
     void shouldNotifyReplyTargetWhenPostCommentIsReplied() throws Exception {
         RegisteredUser author = registerUser("帖子楼主");
         MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
@@ -959,6 +1031,24 @@ class CommunityControllerTest {
                 Integer.class,
                 topicId
         );
+    }
+
+    private long createAndPublishPost(String authorToken, String title) throws Exception {
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(authorToken))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPayload(title, "这条帖子用于评论归属和线程删除回归。")))
+                .andExpect(status().isOk())
+                .andReturn();
+        long postId = readLong(created, "/data/id");
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{taskId}/pass", pendingTaskId(postId))
+                        .header("Authorization", bearer(loginAdmin()))
+                        .header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+        return postId;
     }
 
     private String registerUser() throws Exception {

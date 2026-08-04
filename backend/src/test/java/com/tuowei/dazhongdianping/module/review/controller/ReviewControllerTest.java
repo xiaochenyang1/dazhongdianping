@@ -467,6 +467,71 @@ class ReviewControllerTest {
     }
 
     @Test
+    void shouldReportOwnedCommentAndDeleteOnlyWithinItsReview() throws Exception {
+        String ownerToken = registerUser("review-comment-owner@example.com", "评论楼主");
+        MvcResult rootResult = mockMvc.perform(post("/api/c/v1/reviews/1/comments")
+                        .header("Authorization", bearer(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"这条根评论用于删除与举报回归。\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        long rootId = readLong(rootResult, "/data/id");
+
+        String replyToken = registerUser("review-comment-reply@example.com", "评论回复者");
+        MvcResult replyResult = mockMvc.perform(post("/api/c/v1/reviews/1/comments")
+                        .header("Authorization", bearer(replyToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"这是根评论下的回复。\",\"replyTo\":" + rootId + "}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        long replyId = readLong(replyResult, "/data/id");
+
+        String reporterToken = registerUser("review-comment-reporter@example.com", "评论举报者");
+        mockMvc.perform(post("/api/c/v1/reviews/1/comments/{commentId}/report", rootId)
+                        .header("Authorization", bearer(reporterToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"评论包含广告引流\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reviewId").value(1))
+                .andExpect(jsonPath("$.data.commentId").value(rootId))
+                .andExpect(jsonPath("$.data.status").value(0));
+
+        mockMvc.perform(post("/api/c/v1/reviews/1/comments/{commentId}/report", rootId)
+                        .header("Authorization", bearer(reporterToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"重复举报\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(delete("/api/c/v1/reviews/2/comments/{commentId}", rootId)
+                        .header("Authorization", bearer(ownerToken)))
+                .andExpect(status().isBadRequest());
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM review_comment WHERE id IN (?,?) AND is_deleted=FALSE",
+                Long.class,
+                rootId,
+                replyId
+        )).isEqualTo(2L);
+
+        mockMvc.perform(delete("/api/c/v1/reviews/1/comments/{commentId}", rootId)
+                        .header("Authorization", bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.messageKey").value("review.comment_deleted"));
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM review_comment WHERE id IN (?,?) AND is_deleted=TRUE",
+                Long.class,
+                rootId,
+                replyId
+        )).isEqualTo(2L);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT comment_count FROM review WHERE id=1",
+                Integer.class
+        )).isEqualTo(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM review_comment WHERE review_id=1 AND status=1 AND is_deleted=FALSE",
+                Integer.class
+        ));
+    }
+
+    @Test
     void shouldThreadReviewCommentsWithinSameReview() throws Exception {
         String parentToken = registerUser("review-thread-parent@example.com", "点评楼主");
         MvcResult parentResult = mockMvc.perform(post("/api/c/v1/reviews/1/comments")

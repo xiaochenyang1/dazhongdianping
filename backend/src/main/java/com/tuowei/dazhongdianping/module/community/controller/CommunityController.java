@@ -4,9 +4,11 @@ import com.tuowei.dazhongdianping.common.api.ApiResponse;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.module.community.model.request.PostSaveRequest;
 import com.tuowei.dazhongdianping.module.community.model.request.PostCommentCreateRequest;
+import com.tuowei.dazhongdianping.module.community.model.request.PostCommentReportRequest;
 import com.tuowei.dazhongdianping.module.community.model.request.PostReportRequest;
 import com.tuowei.dazhongdianping.module.community.model.response.PostResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostLikeResponse;
+import com.tuowei.dazhongdianping.module.community.model.response.PostCommentReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostRepostResponse;
@@ -102,6 +104,20 @@ public class CommunityController {
                                                                   @RequestParam(defaultValue = "1") Integer page,
                                                                   @RequestParam(defaultValue = "20") Integer pageSize) {
         return ApiResponse.success(communityService.comments(postId, page, pageSize));
+    }
+
+    @DeleteMapping("/posts/{postId}/comments/{commentId}")
+    public ApiResponse<Void> deleteComment(@PathVariable Long postId, @PathVariable Long commentId) {
+        communityService.deleteComment(postId, commentId);
+        return ApiResponse.success("评论已删除", "post.comment_deleted", null);
+    }
+
+    @PostMapping("/posts/{postId}/comments/{commentId}/report")
+    public ApiResponse<PostCommentReportResponse> reportComment(@PathVariable Long postId,
+                                                                @PathVariable Long commentId,
+                                                                @Valid @RequestBody PostCommentReportRequest request) {
+        return ApiResponse.success("举报已提交，等待审核", "post.comment_reported",
+                communityService.reportComment(postId, commentId, request));
     }
 
     @PostMapping("/posts/{postId}/report")

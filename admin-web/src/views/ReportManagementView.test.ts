@@ -50,6 +50,21 @@ const reports = {
   hasMore: false,
 }
 
+const commentReports = {
+  ...reports,
+  list: [
+    {
+      ...reports.list[0],
+      id: 12,
+      reportType: 'review_comment',
+      reportTypeText: '点评评论举报',
+      targetId: 81,
+      targetTypeText: '点评评论',
+      targetSummary: '快来加微信',
+    },
+  ],
+}
+
 async function flush() {
   await Promise.resolve()
   await Promise.resolve()
@@ -102,6 +117,42 @@ describe('ReportManagementView', () => {
       remark: undefined,
     })
     expect(host.textContent).toContain('Report #11 upheld and content hidden.')
+    app.unmount()
+  })
+
+  it('filters review and post comment reports', async () => {
+    const { app, host } = mount()
+    await flush()
+    const typeFilter = host.querySelector<HTMLSelectElement>('[data-testid="report-type-filter"]')!
+
+    typeFilter.value = 'review_comment'
+    typeFilter.dispatchEvent(new Event('change'))
+    await flush()
+    expect(adminMocks.listAdminReports).toHaveBeenLastCalledWith(
+      expect.objectContaining({ reportType: 'review_comment', status: 0, page: 1 }),
+    )
+
+    typeFilter.value = 'post_comment'
+    typeFilter.dispatchEvent(new Event('change'))
+    await flush()
+    expect(adminMocks.listAdminReports).toHaveBeenLastCalledWith(
+      expect.objectContaining({ reportType: 'post_comment', status: 0, page: 1 }),
+    )
+    app.unmount()
+  })
+
+  it('resolves a review comment report using its report type', async () => {
+    adminMocks.listAdminReports.mockResolvedValue(commentReports)
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.textContent).toContain('Review comment report')
+    host.querySelector<HTMLButtonElement>('[data-testid="report-hide"]')?.click()
+    await flush()
+    expect(adminMocks.resolveAdminReport).toHaveBeenCalledWith('review_comment', 12, {
+      action: 'hide',
+      remark: undefined,
+    })
     app.unmount()
   })
 

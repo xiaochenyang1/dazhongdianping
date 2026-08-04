@@ -122,6 +122,20 @@ class CommunityFakeApi
         'createdAt': '2026-07-16 12:00:00',
       };
     }
+    final commentReportMatch = RegExp(
+      r'/api/c/v1/posts/7/comments/(\d+)/report$',
+    ).firstMatch(path);
+    if (commentReportMatch != null) {
+      return {
+        'id': 13,
+        'postId': 7,
+        'commentId': int.parse(commentReportMatch.group(1)!),
+        'reason': (body as Map)['reason'],
+        'status': 0,
+        'statusText': '待处理',
+        'createdAt': '2026-07-25 12:00:00',
+      };
+    }
     if (path.endsWith('/report')) {
       return {
         'id': 13,
@@ -332,6 +346,23 @@ void main() {
       expect(reply.parentId, 11);
     },
   );
+
+  test('community repository deletes and reports comments', () async {
+    final api = CommunityFakeApi();
+    final repository = CommunityRepository(api);
+
+    await repository.deleteComment(7, 11);
+    expect(api.method, 'DELETE');
+    expect(api.path, '/api/c/v1/posts/7/comments/11');
+
+    final report = await repository.reportComment(7, 11, '违规广告');
+    expect(api.method, 'POST');
+    expect(api.path, '/api/c/v1/posts/7/comments/11/report');
+    expect(api.body, {'reason': '违规广告'});
+    expect(report.postId, 7);
+    expect(report.commentId, 11);
+    expect(report.reason, '违规广告');
+  });
 
   test('community repository reposts and removes a repost', () async {
     final api = CommunityFakeApi();

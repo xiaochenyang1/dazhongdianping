@@ -459,6 +459,7 @@ CREATE TABLE IF NOT EXISTS review_comment (
     parent_id BIGINT NOT NULL DEFAULT 0,
     reply_to BIGINT NOT NULL DEFAULT 0,
     status TINYINT NOT NULL DEFAULT 1,
+    audit_remark VARCHAR(255) NOT NULL DEFAULT '',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
@@ -634,6 +635,7 @@ CREATE TABLE IF NOT EXISTS post_comment (
     parent_id BIGINT NOT NULL DEFAULT 0,
     reply_to BIGINT NOT NULL DEFAULT 0,
     status TINYINT NOT NULL DEFAULT 1,
+    audit_remark VARCHAR(255) NOT NULL DEFAULT '',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
@@ -1097,3 +1099,34 @@ CREATE INDEX IF NOT EXISTS idx_user_shop_browse_history_user_region ON user_shop
 
 ALTER TABLE post ADD COLUMN IF NOT EXISTS circle_id BIGINT NULL;
 CREATE INDEX IF NOT EXISTS idx_post_circle_status ON post(circle_id,audit_status,status,is_deleted,id);
+
+-- 评论治理：点评评论 / 帖子评论举报
+CREATE TABLE IF NOT EXISTS review_comment_report (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    review_id BIGINT NOT NULL,
+    comment_id BIGINT NOT NULL,
+    reporter_user_id BIGINT NOT NULL,
+    reporter_user_name VARCHAR(64) NOT NULL,
+    reason VARCHAR(200) NOT NULL,
+    status TINYINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_review_comment_report_comment ON review_comment_report(comment_id, status, is_deleted, id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_review_comment_report_user ON review_comment_report(comment_id, reporter_user_id);
+
+CREATE TABLE IF NOT EXISTS post_comment_report (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    comment_id BIGINT NOT NULL,
+    reporter_user_id BIGINT NOT NULL,
+    reporter_user_name VARCHAR(64) NOT NULL,
+    reason VARCHAR(200) NOT NULL,
+    status TINYINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_post_comment_report_comment ON post_comment_report(comment_id, status, is_deleted, id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_post_comment_report_user ON post_comment_report(comment_id, reporter_user_id);

@@ -27,7 +27,8 @@ import org.springframework.util.StringUtils;
 public class AdminReportService {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final Set<String> REPORT_TYPES = Set.of("review", "post", "message");
+    private static final Set<String> REPORT_TYPES = Set.of(
+            "review", "post", "message", "review_comment", "post_comment");
     private static final Set<String> ACTIONS = Set.of("dismiss", "hide");
 
     private final AdminReportMapper mapper;
@@ -122,6 +123,24 @@ public class AdminReportService {
                 mapper.hidePost(row.getTargetId(), region(), remark);
                 mapper.resolvePendingPostReports(row.getTargetId());
             }
+        } else if ("review_comment".equals(type)) {
+            if (mapper.resolveReviewCommentReport(id, nextStatus) != 1) {
+                throw new IllegalArgumentException("举报状态已变更");
+            }
+            if ("hide".equals(action)) {
+                mapper.hideReviewComment(row.getTargetId(), region(), remark);
+                mapper.resolvePendingReviewCommentReports(row.getTargetId());
+                mapper.refreshReviewCommentCountByCommentId(row.getTargetId());
+            }
+        } else if ("post_comment".equals(type)) {
+            if (mapper.resolvePostCommentReport(id, nextStatus) != 1) {
+                throw new IllegalArgumentException("举报状态已变更");
+            }
+            if ("hide".equals(action)) {
+                mapper.hidePostComment(row.getTargetId(), region(), remark);
+                mapper.resolvePendingPostCommentReports(row.getTargetId());
+                mapper.refreshPostCommentCountByCommentId(row.getTargetId());
+            }
         } else {
             if (mapper.resolveMessageReport(id, nextStatus) != 1) {
                 throw new IllegalArgumentException("举报状态已变更");
@@ -144,6 +163,8 @@ public class AdminReportService {
             case "review" -> mapper.selectReviewReport(id, region());
             case "post" -> mapper.selectPostReport(id, region());
             case "message" -> mapper.selectMessageReport(id);
+            case "review_comment" -> mapper.selectReviewCommentReport(id, region());
+            case "post_comment" -> mapper.selectPostCommentReport(id, region());
             default -> null;
         };
         if (row == null) {
@@ -184,6 +205,8 @@ public class AdminReportService {
             case "review" -> "点评举报";
             case "post" -> "帖子举报";
             case "message" -> "私信举报";
+            case "review_comment" -> "点评评论举报";
+            case "post_comment" -> "帖子评论举报";
             default -> type;
         };
     }
@@ -210,6 +233,16 @@ public class AdminReportService {
         if ("message".equals(reportType)) {
             return "私信";
         }
+        if ("review_comment".equals(reportType) || "post_comment".equals(reportType)) {
+            if (auditStatus == null) {
+                return "";
+            }
+            return switch (auditStatus) {
+                case 2 -> "已隐藏";
+                case 1 -> "公开";
+                default -> "待审";
+            };
+        }
         if (auditStatus == null) {
             return "";
         }
@@ -226,7 +259,7 @@ public class AdminReportService {
         }
         String value = reportType.trim().toLowerCase(Locale.ROOT);
         if (!REPORT_TYPES.contains(value)) {
-            throw new IllegalArgumentException("reportType 仅支持 review/post/message");
+            throw new IllegalArgumentException("reportType 仅支持 review/post/message/review_comment/post_comment");
         }
         return value;
     }

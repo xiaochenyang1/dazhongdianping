@@ -17,6 +17,7 @@ import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterS
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentListQuery;
+import com.tuowei.dazhongdianping.module.review.model.ReviewCommentReportRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewImageRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewLikeRow;
@@ -24,9 +25,11 @@ import com.tuowei.dazhongdianping.module.review.model.ReviewListQuery;
 import com.tuowei.dazhongdianping.module.review.model.ReviewReportRow;
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.review.model.request.ReviewCommentCreateRequest;
+import com.tuowei.dazhongdianping.module.review.model.request.ReviewCommentReportRequest;
 import com.tuowei.dazhongdianping.module.review.model.request.ReviewReportRequest;
 import com.tuowei.dazhongdianping.module.review.model.request.ReviewSaveRequest;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentReplyResponse;
+import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentReportResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewDetailResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewImageResponse;
@@ -247,6 +250,51 @@ public class ReviewService {
                         repliesByParent.getOrDefault(row.getId(), List.of())))
                 .toList();
         return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);
+    }
+
+    @Transactional
+    public void deleteComment(Long reviewId, Long commentId) {
+        AppUserRow currentUser = currentUserRow();
+        requirePublicReview(reviewId);
+        if (reviewMapper.softDeleteReviewComment(reviewId, commentId, currentUser.getId()) != 1) {
+            throw new IllegalArgumentException("评论不存在或无权删除");
+        }
+        reviewMapper.softDeleteReviewCommentReplies(reviewId, commentId);
+        refreshInteractionCounts(reviewId);
+    }
+
+    @Transactional
+    public ReviewCommentReportResponse reportComment(Long reviewId,
+                                                     Long commentId,
+                                                     ReviewCommentReportRequest request) {
+        AppUserRow currentUser = currentUserRow();
+        ReviewRow review = requirePublicReview(reviewId);
+        if (reviewMapper.selectPublicReviewCommentById(reviewId, commentId) == null) {
+            throw new IllegalArgumentException("评论不存在");
+        }
+        if (reviewMapper.selectReviewCommentReportByReporter(commentId, currentUser.getId()) != null) {
+            throw new IllegalArgumentException("你已经举报过这条评论了");
+        }
+
+        ReviewCommentReportRow reportRow = new ReviewCommentReportRow();
+        reportRow.setReviewId(reviewId);
+        reportRow.setCommentId(commentId);
+        reportRow.setReporterUserId(currentUser.getId());
+        reportRow.setReporterUserName(resolveUserName(currentUser));
+        reportRow.setReason(request.getReason().trim());
+        reportRow.setStatus(0);
+        reportRow.setCreatedAt(LocalDateTime.now());
+        reviewMapper.insertReviewCommentReport(reportRow);
+
+        return new ReviewCommentReportResponse(
+                reportRow.getId(),
+                reviewId,
+                commentId,
+                reportRow.getReason(),
+                reportRow.getStatus(),
+                reportStatusText(reportRow.getStatus()),
+                formatDateTime(reportRow.getCreatedAt())
+        );
     }
 
     @Transactional

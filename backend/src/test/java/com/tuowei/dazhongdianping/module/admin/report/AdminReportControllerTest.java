@@ -118,6 +118,100 @@ class AdminReportControllerTest {
                 .andExpect(jsonPath("$.data.status").value(2));
     }
 
+    @Test
+    void shouldListAndHideReportedCommentThreads() throws Exception {
+        String adminToken = loginAdmin();
+        jdbc.update("""
+                INSERT INTO review_comment(id,review_id,user_id,user_name,content,parent_id,reply_to,status,is_deleted)
+                VALUES(99001,1,9001,'评论作者','需要治理的点评评论',0,0,1,FALSE),
+                      (99002,1,9002,'回复作者','跟随根评论的楼中回复',99001,99001,1,FALSE)
+                """);
+        jdbc.update("UPDATE review SET comment_count=(SELECT COUNT(1) FROM review_comment WHERE review_id=1 AND status=1 AND is_deleted=FALSE) WHERE id=1");
+        jdbc.update("""
+                INSERT INTO review_comment_report(review_id,comment_id,reporter_user_id,reporter_user_name,reason,status,is_deleted)
+                VALUES(1,99001,9003,'举报人甲','根评论广告引流',0,FALSE),
+                      (1,99002,9004,'举报人乙','楼中回复骚扰',0,FALSE)
+                """);
+        Long reviewCommentReportId = jdbc.queryForObject(
+                "SELECT id FROM review_comment_report WHERE comment_id=99001",
+                Long.class
+        );
+
+        mockMvc.perform(get("/api/admin/v1/audit/reports")
+                        .header("Authorization", bearer(adminToken))
+                        .header("X-Region", "CN")
+                        .param("reportType", "review_comment")
+                        .param("status", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.list[0].reportType").value("review_comment"));
+
+        mockMvc.perform(post("/api/admin/v1/audit/reports/review_comment/{id}/resolve", reviewCommentReportId)
+                        .header("Authorization", bearer(adminToken))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"hide\",\"remark\":\"确认评论违规\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value(1))
+                .andExpect(jsonPath("$.data.targetStatusText").value("已隐藏"));
+        org.junit.jupiter.api.Assertions.assertEquals(2, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM review_comment WHERE id IN (99001,99002) AND status=2",
+                Integer.class
+        ));
+        org.junit.jupiter.api.Assertions.assertEquals(2, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM review_comment_report WHERE comment_id IN (99001,99002) AND status=1",
+                Integer.class
+        ));
+        org.junit.jupiter.api.Assertions.assertEquals(
+                jdbc.queryForObject(
+                        "SELECT COUNT(1) FROM review_comment WHERE review_id=1 AND status=1 AND is_deleted=FALSE",
+                        Integer.class
+                ),
+                jdbc.queryForObject("SELECT comment_count FROM review WHERE id=1", Integer.class)
+        );
+
+        jdbc.update("""
+                INSERT INTO post(id,user_id,region,user_name,title,content,audit_status,status,is_deleted)
+                VALUES(99001,9001,'CN','帖子作者','评论治理测试帖','用于管理端评论治理回归。',1,1,FALSE)
+                """);
+        jdbc.update("""
+                INSERT INTO post_comment(id,post_id,user_id,user_name,content,parent_id,reply_to,status,is_deleted)
+                VALUES(99101,99001,9001,'评论作者','需要治理的帖子评论',0,0,1,FALSE),
+                      (99102,99001,9002,'回复作者','跟随根评论的楼中回复',99101,99101,1,FALSE)
+                """);
+        jdbc.update("UPDATE post SET comment_count=2 WHERE id=99001");
+        jdbc.update("""
+                INSERT INTO post_comment_report(post_id,comment_id,reporter_user_id,reporter_user_name,reason,status,is_deleted)
+                VALUES(99001,99101,9003,'举报人甲','根评论骚扰',0,FALSE),
+                      (99001,99102,9004,'举报人乙','楼中回复骚扰',0,FALSE)
+                """);
+        Long postCommentReportId = jdbc.queryForObject(
+                "SELECT id FROM post_comment_report WHERE comment_id=99101",
+                Long.class
+        );
+
+        mockMvc.perform(post("/api/admin/v1/audit/reports/post_comment/{id}/resolve", postCommentReportId)
+                        .header("Authorization", bearer(adminToken))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"hide\",\"remark\":\"确认评论违规\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value(1))
+                .andExpect(jsonPath("$.data.targetStatusText").value("已隐藏"));
+        org.junit.jupiter.api.Assertions.assertEquals(2, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM post_comment WHERE id IN (99101,99102) AND status=2",
+                Integer.class
+        ));
+        org.junit.jupiter.api.Assertions.assertEquals(2, jdbc.queryForObject(
+                "SELECT COUNT(1) FROM post_comment_report WHERE comment_id IN (99101,99102) AND status=1",
+                Integer.class
+        ));
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject(
+                "SELECT comment_count FROM post WHERE id=99001",
+                Integer.class
+        ));
+    }
+
     private String loginAdmin() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -30,17 +30,37 @@ public interface AdminReportMapper {
 
     AdminReportRow selectMessageReport(@Param("id") Long id);
 
+    AdminReportRow selectReviewCommentReport(@Param("id") Long id, @Param("region") String region);
+
+    AdminReportRow selectPostCommentReport(@Param("id") Long id, @Param("region") String region);
+
     int resolveReviewReport(@Param("id") Long id, @Param("status") Integer status);
 
     int resolvePostReport(@Param("id") Long id, @Param("status") Integer status);
 
     int resolveMessageReport(@Param("id") Long id, @Param("status") Integer status);
 
+    int resolveReviewCommentReport(@Param("id") Long id, @Param("status") Integer status);
+
+    int resolvePostCommentReport(@Param("id") Long id, @Param("status") Integer status);
+
     int hideReview(@Param("reviewId") Long reviewId, @Param("region") String region, @Param("remark") String remark);
 
     int hidePost(@Param("postId") Long postId, @Param("region") String region, @Param("remark") String remark);
 
+    int hideReviewComment(@Param("commentId") Long commentId, @Param("region") String region, @Param("remark") String remark);
+
+    int hidePostComment(@Param("commentId") Long commentId, @Param("region") String region, @Param("remark") String remark);
+
     int resolvePendingReviewReports(@Param("reviewId") Long reviewId);
 
     int resolvePendingPostReports(@Param("postId") Long postId);
+
+    int resolvePendingReviewCommentReports(@Param("commentId") Long commentId);
+
+    int resolvePendingPostCommentReports(@Param("commentId") Long commentId);
+
+    int refreshReviewCommentCountByCommentId(@Param("commentId") Long commentId);
+
+    int refreshPostCommentCountByCommentId(@Param("commentId") Long commentId);
 }

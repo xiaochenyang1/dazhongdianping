@@ -1,6 +1,7 @@
 package com.tuowei.dazhongdianping.module.community.mapper;
 
 import com.tuowei.dazhongdianping.module.community.model.PostRow;
+import com.tuowei.dazhongdianping.module.community.model.PostCommentReportRow;
 import com.tuowei.dazhongdianping.module.community.model.PostCommentRow;
 import com.tuowei.dazhongdianping.module.community.model.PostReportRow;
 import java.util.List;
@@ -48,7 +49,6 @@ public interface CommunityMapper {
     int countPostReposts(@Param("postId") Long postId);
     int refreshPostRepostCount(@Param("postId") Long postId);
     void insertPostComment(PostCommentRow row);
-    long countPostComments(@Param("postId") Long postId);
     long countRootPostComments(@Param("postId") Long postId);
     List<PostCommentRow> selectRootPostComments(@Param("postId") Long postId,
                                                 @Param("limit") Integer limit,
@@ -57,6 +57,14 @@ public interface CommunityMapper {
                                                   @Param("parentIds") List<Long> parentIds);
     PostCommentRow selectPostCommentById(@Param("postId") Long postId, @Param("commentId") Long commentId);
     int refreshPostCommentCount(@Param("postId") Long postId);
+    int softDeletePostComment(@Param("postId") Long postId,
+                              @Param("commentId") Long commentId,
+                              @Param("userId") Long userId);
+    int softDeletePostCommentReplies(@Param("postId") Long postId,
+                                     @Param("parentId") Long parentId);
+    PostCommentReportRow selectPostCommentReportByReporter(@Param("commentId") Long commentId,
+                                                           @Param("reporterUserId") Long reporterUserId);
+    void insertPostCommentReport(PostCommentReportRow row);
     PostReportRow selectPostReport(@Param("postId") Long postId, @Param("userId") Long userId);
     void insertPostReport(PostReportRow row);
 }

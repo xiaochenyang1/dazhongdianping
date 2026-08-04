@@ -14,15 +14,18 @@ import com.tuowei.dazhongdianping.module.community.mapper.CommunityMapper;
 import com.tuowei.dazhongdianping.module.circle.service.CircleService;
 import com.tuowei.dazhongdianping.module.circle.mapper.CircleMapper;
 import com.tuowei.dazhongdianping.module.community.model.PostRow;
+import com.tuowei.dazhongdianping.module.community.model.PostCommentReportRow;
 import com.tuowei.dazhongdianping.module.community.model.PostCommentRow;
 import com.tuowei.dazhongdianping.module.community.model.PostReportRow;
 import com.tuowei.dazhongdianping.module.community.model.request.PostSaveRequest;
 import com.tuowei.dazhongdianping.module.community.model.request.PostCommentCreateRequest;
+import com.tuowei.dazhongdianping.module.community.model.request.PostCommentReportRequest;
 import com.tuowei.dazhongdianping.module.community.model.request.PostReportRequest;
 import com.tuowei.dazhongdianping.module.community.model.response.PostResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostLikeResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentReplyResponse;
+import com.tuowei.dazhongdianping.module.community.model.response.PostCommentReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostRepostResponse;
 import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
@@ -319,6 +322,44 @@ public class CommunityService {
                 .map(row -> toComment(row, currentUserId, null, repliesByParent.getOrDefault(row.getId(), List.of())))
                 .toList();
         return new PageResult<>(list, total, currentPage, size, (currentPage - 1) * size + list.size() < total);
+    }
+
+    @Transactional
+    public void deleteComment(Long postId, Long commentId) {
+        UserSession user = currentUser();
+        requirePublicPost(postId);
+        if (communityMapper.softDeletePostComment(postId, commentId, user.userId()) != 1) {
+            throw new IllegalArgumentException("评论不存在或无权删除");
+        }
+        communityMapper.softDeletePostCommentReplies(postId, commentId);
+        communityMapper.refreshPostCommentCount(postId);
+        topicService.touchTopicsByPostId(postId);
+    }
+
+    @Transactional
+    public PostCommentReportResponse reportComment(Long postId,
+                                                   Long commentId,
+                                                   PostCommentReportRequest request) {
+        UserSession user = currentUser();
+        PostRow post = requirePublicPost(postId);
+        if (communityMapper.selectPostCommentById(postId, commentId) == null) {
+            throw new IllegalArgumentException("评论不存在");
+        }
+        if (communityMapper.selectPostCommentReportByReporter(commentId, user.userId()) != null) {
+            throw new IllegalArgumentException("你已经举报过这条评论了");
+        }
+        PostCommentReportRow row = new PostCommentReportRow();
+        row.setPostId(postId);
+        row.setCommentId(commentId);
+        row.setReporterUserId(user.userId());
+        row.setReporterUserName(communityMapper.selectUserName(user.userId()));
+        row.setReason(request.reason().trim());
+        row.setStatus(0);
+        row.setCreatedAt(LocalDateTime.now());
+        communityMapper.insertPostCommentReport(row);
+        return new PostCommentReportResponse(
+                row.getId(), postId, commentId, row.getReason(), row.getStatus(), "待处理", format(row.getCreatedAt())
+        );
     }
 
     @Transactional

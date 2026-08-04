@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/community/community_error_localizer.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
+
+enum _PostCommentAction { delete, report }
 
 class PostDetailScreen extends StatefulWidget {
   const PostDetailScreen({
@@ -37,6 +41,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _reloadingInitial = false;
   bool _loadingMoreComments = false;
   bool _reloadingComments = false;
+  bool _commentActionDialogOpen = false;
+  final Set<int> _commentActionIds = <int>{};
   int _commentRequestId = 0;
 
   @override
@@ -353,64 +359,211 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
-  Widget _buildCommentItem(CommunityComment comment, {double indent = 0}) =>
-      Padding(
-        padding: EdgeInsets.only(left: indent),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(comment.userName),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (comment.replyTo != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        AppLocalizations.of(context).replyToPreview(
-                          name: comment.replyTo!.userName,
-                          content: comment.replyTo!.content,
-                        ),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  Text(comment.content),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Text(
-                        formatDisplayDateTime(
-                          comment.createdAt,
-                          locale: AppLocalizations.of(context).tag,
-                        ),
-                      ),
-                      if (widget.canInteract)
-                        TextButton(
-                          key: Key('comment-reply-${comment.id}'),
-                          onPressed: () => _selectReply(comment),
-                          child: Text(AppLocalizations.of(context).reply),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
+  Future<void> _deleteComment(
+    CommunityPost post,
+    CommunityComment comment,
+  ) async {
+    if (_commentActionDialogOpen || _commentActionIds.contains(comment.id)) {
+      return;
+    }
+    setState(() => _commentActionDialogOpen = true);
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(AppLocalizations.of(context).deleteComment),
+          content: Text(AppLocalizations.of(context).deleteCommentConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(AppLocalizations.of(context).cancelAction),
             ),
-            if (comment.replies.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: 20),
-                child: Column(
-                  children: comment.replies
-                      .map((reply) => _buildCommentItem(reply, indent: 8))
-                      .toList(),
-                ),
-              ),
+            FilledButton(
+              key: Key('post-comment-delete-confirm-${comment.id}'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(AppLocalizations.of(context).confirmDelete),
+            ),
           ],
         ),
       );
+    } finally {
+      if (mounted) setState(() => _commentActionDialogOpen = false);
+    }
+    if (confirmed != true || !mounted) return;
+    setState(() => _commentActionIds.add(comment.id));
+    try {
+      await widget.repository.deleteComment(widget.postId, comment.id);
+      if (!mounted) return;
+      final removedCount = 1 + comment.replies.length;
+      final nextCount = post.commentCount - removedCount;
+      _commentRequestId++;
+      final comments = _loadComments();
+      setState(() {
+        _post = Future.value(
+          post.copyWith(commentCount: nextCount < 0 ? 0 : nextCount),
+        );
+        _comments = comments;
+        _replyTarget = null;
+        _loadingMoreComments = false;
+      });
+      _showMessage(AppLocalizations.of(context).commentDeleted);
+    } catch (error) {
+      if (!mounted) return;
+      final strings = AppLocalizations.of(context);
+      _showMessage(
+        strings.deleteCommentFailed(localizeCommunityError(strings, error)),
+      );
+    } finally {
+      if (mounted) setState(() => _commentActionIds.remove(comment.id));
+    }
+  }
+
+  Future<void> _reportComment(CommunityComment comment) async {
+    if (_commentActionDialogOpen || _commentActionIds.contains(comment.id)) {
+      return;
+    }
+    setState(() => _commentActionDialogOpen = true);
+    var draftReason = '';
+    String? reason;
+    try {
+      reason = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(AppLocalizations.of(context).reportComment),
+          content: TextField(
+            key: Key('post-comment-report-reason-${comment.id}'),
+            maxLength: 200,
+            maxLines: 4,
+            onChanged: (value) => draftReason = value,
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context).reportReason,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(AppLocalizations.of(context).cancelAction),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(draftReason.trim()),
+              child: Text(AppLocalizations.of(context).submitReport),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _commentActionDialogOpen = false);
+    }
+    if (reason == null || reason.isEmpty || !mounted) return;
+    setState(() => _commentActionIds.add(comment.id));
+    try {
+      await widget.repository.reportComment(widget.postId, comment.id, reason);
+      if (!mounted) return;
+      _showMessage(AppLocalizations.of(context).commentReportSubmitted);
+    } catch (error) {
+      if (!mounted) return;
+      final strings = AppLocalizations.of(context);
+      _showMessage(
+        strings.reportCommentFailed(localizeCommunityError(strings, error)),
+      );
+    } finally {
+      if (mounted) setState(() => _commentActionIds.remove(comment.id));
+    }
+  }
+
+  Widget _buildCommentItem(
+    CommunityPost post,
+    CommunityComment comment, {
+    double indent = 0,
+  }) => Padding(
+    padding: EdgeInsets.only(left: indent),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(comment.userName),
+          trailing: widget.canInteract
+              ? _commentActionIds.contains(comment.id)
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : PopupMenuButton<_PostCommentAction>(
+                        key: Key('post-comment-actions-${comment.id}'),
+                        icon: const Icon(Icons.more_vert),
+                        onSelected: (action) {
+                          if (action == _PostCommentAction.delete) {
+                            unawaited(_deleteComment(post, comment));
+                          } else {
+                            unawaited(_reportComment(comment));
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: comment.mine
+                                ? _PostCommentAction.delete
+                                : _PostCommentAction.report,
+                            child: Text(
+                              comment.mine
+                                  ? AppLocalizations.of(context).deleteComment
+                                  : AppLocalizations.of(context).reportComment,
+                            ),
+                          ),
+                        ],
+                      )
+              : null,
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (comment.replyTo != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    AppLocalizations.of(context).replyToPreview(
+                      name: comment.replyTo!.userName,
+                      content: comment.replyTo!.content,
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              Text(comment.content),
+              const SizedBox(height: 4),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  Text(
+                    formatDisplayDateTime(
+                      comment.createdAt,
+                      locale: AppLocalizations.of(context).tag,
+                    ),
+                  ),
+                  if (widget.canInteract)
+                    TextButton(
+                      key: Key('comment-reply-${comment.id}'),
+                      onPressed: () => _selectReply(comment),
+                      child: Text(AppLocalizations.of(context).reply),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (comment.replies.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Column(
+              children: comment.replies
+                  .map((reply) => _buildCommentItem(post, reply, indent: 8))
+                  .toList(),
+            ),
+          ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -659,7 +812,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 final page = snapshot.data!;
                 return Column(
                   children: [
-                    ...page.items.map((item) => _buildCommentItem(item)),
+                    ...page.items.map((item) => _buildCommentItem(post, item)),
                     if (page.hasMore)
                       OutlinedButton.icon(
                         key: const Key('post-comments-load-more'),

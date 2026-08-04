@@ -355,6 +355,38 @@ class ReviewReportResult {
       );
 }
 
+/// 评论举报回执，与 /reviews/{id}/comments/{id}/report 的响应字段一致。
+class ReviewCommentReportResult {
+  const ReviewCommentReportResult({
+    required this.id,
+    required this.reviewId,
+    required this.commentId,
+    required this.reason,
+    required this.status,
+    required this.statusText,
+    required this.createdAt,
+  });
+
+  final int id;
+  final int reviewId;
+  final int commentId;
+  final String reason;
+  final int status;
+  final String statusText;
+  final String createdAt;
+
+  factory ReviewCommentReportResult.fromJson(Map<String, dynamic> json) =>
+      ReviewCommentReportResult(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        reviewId: (json['reviewId'] as num?)?.toInt() ?? 0,
+        commentId: (json['commentId'] as num?)?.toInt() ?? 0,
+        reason: json['reason'] as String? ?? '',
+        status: (json['status'] as num?)?.toInt() ?? 0,
+        statusText: json['statusText'] as String? ?? '',
+        createdAt: json['createdAt'] as String? ?? '',
+      );
+}
+
 class ReviewSaveInput {
   const ReviewSaveInput({
     required this.shopId,
@@ -501,6 +533,23 @@ class ReviewRepository {
     );
     return ReviewReportResult.fromJson(result);
   }
+
+  Future<void> deleteComment(int reviewId, int commentId) async {
+    await _deleteApi.deleteJson(
+      '/api/c/v1/reviews/$reviewId/comments/$commentId',
+    );
+  }
+
+  Future<ReviewCommentReportResult> reportComment(
+    int reviewId,
+    int commentId,
+    String reason,
+  ) async => ReviewCommentReportResult.fromJson(
+    await api.postJson(
+      '/api/c/v1/reviews/$reviewId/comments/$commentId/report',
+      body: {'reason': reason},
+    ),
+  );
 
   Future<void> deleteReview(int reviewId) async {
     await _deleteApi.deleteJson('/api/c/v1/reviews/$reviewId');

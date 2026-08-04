@@ -118,9 +118,6 @@
         INSERT INTO post_comment(post_id,user_id,user_name,content,parent_id,reply_to,status,is_deleted)
         VALUES(#{postId},#{userId},#{userName},#{content},#{parentId},#{replyTo},1,FALSE)
     </insert>
-    <select id="countPostComments" resultType="long">
-        SELECT COUNT(1) FROM post_comment WHERE post_id=#{postId} AND status=1 AND is_deleted=FALSE
-    </select>
     <select id="countRootPostComments" resultType="long">
         SELECT COUNT(1) FROM post_comment WHERE post_id=#{postId} AND status=1 AND is_deleted=FALSE AND parent_id=0
     </select>
@@ -155,6 +152,26 @@
         LIMIT 1
     </select>
     <update id="refreshPostCommentCount">UPDATE post SET comment_count=(SELECT COUNT(1) FROM post_comment WHERE post_id=#{postId} AND status=1 AND is_deleted=FALSE) WHERE id=#{postId}</update>
+    <update id="softDeletePostComment">
+        UPDATE post_comment
+        SET is_deleted=TRUE, updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{commentId} AND post_id=#{postId} AND user_id=#{userId} AND is_deleted=FALSE
+    </update>
+    <update id="softDeletePostCommentReplies">
+        UPDATE post_comment
+        SET is_deleted=TRUE, updated_at=CURRENT_TIMESTAMP
+        WHERE post_id=#{postId} AND parent_id=#{parentId} AND is_deleted=FALSE
+    </update>
+    <select id="selectPostCommentReportByReporter" resultType="com.tuowei.dazhongdianping.module.community.model.PostCommentReportRow">
+        SELECT id,post_id,comment_id,reporter_user_id,reporter_user_name,reason,status,is_deleted,created_at,updated_at
+        FROM post_comment_report
+        WHERE comment_id=#{commentId} AND reporter_user_id=#{reporterUserId} AND is_deleted=FALSE
+        ORDER BY id DESC LIMIT 1
+    </select>
+    <insert id="insertPostCommentReport" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO post_comment_report(post_id,comment_id,reporter_user_id,reporter_user_name,reason,status,is_deleted)
+        VALUES(#{postId},#{commentId},#{reporterUserId},#{reporterUserName},#{reason},0,FALSE)
+    </insert>
     <select id="selectPostReport" resultType="com.tuowei.dazhongdianping.module.community.model.PostReportRow">
         SELECT id,post_id,reporter_user_id,reporter_user_name,reason,status,created_at FROM post_report
         WHERE post_id=#{postId} AND reporter_user_id=#{userId} AND is_deleted=FALSE LIMIT 1

@@ -262,6 +262,38 @@ class CommunityCommentPage {
   bool get hasMore => items.length < total;
 }
 
+/// 帖子评论举报回执，与 /posts/{id}/comments/{id}/report 的响应字段一致。
+class PostCommentReportResult {
+  const PostCommentReportResult({
+    required this.id,
+    required this.postId,
+    required this.commentId,
+    required this.reason,
+    required this.status,
+    required this.statusText,
+    required this.createdAt,
+  });
+
+  final int id;
+  final int postId;
+  final int commentId;
+  final String reason;
+  final int status;
+  final String statusText;
+  final String createdAt;
+
+  factory PostCommentReportResult.fromJson(Map<String, dynamic> json) =>
+      PostCommentReportResult(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        postId: (json['postId'] as num?)?.toInt() ?? 0,
+        commentId: (json['commentId'] as num?)?.toInt() ?? 0,
+        reason: json['reason'] as String? ?? '',
+        status: (json['status'] as num?)?.toInt() ?? 0,
+        statusText: json['statusText'] as String? ?? '',
+        createdAt: json['createdAt'] as String? ?? '',
+      );
+}
+
 class CommunityRepository {
   CommunityRepository(this.api);
   final JsonApi api;
@@ -385,6 +417,21 @@ class CommunityRepository {
       body: {'reason': reason},
     );
   }
+
+  Future<void> deleteComment(int postId, int commentId) async {
+    await _deleteApi.deleteJson('/api/c/v1/posts/$postId/comments/$commentId');
+  }
+
+  Future<PostCommentReportResult> reportComment(
+    int postId,
+    int commentId,
+    String reason,
+  ) async => PostCommentReportResult.fromJson(
+    await api.postJson(
+      '/api/c/v1/posts/$postId/comments/$commentId/report',
+      body: {'reason': reason},
+    ),
+  );
 
   Future<void> favoritePost(int postId) async {
     await api.postJson(
