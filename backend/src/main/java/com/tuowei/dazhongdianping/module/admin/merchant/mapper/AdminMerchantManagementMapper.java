@@ -4,6 +4,8 @@ import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantQuery
 import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantRow;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperatorQuery;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperatorRow;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperationLogQuery;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperationLogRow;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -48,4 +50,14 @@ public interface AdminMerchantManagementMapper {
                                      @Param("region") String region,
                                      @Param("expectedStatus") Integer expectedStatus,
                                      @Param("status") Integer status);
+
+    long countMerchantOperationLogs(@Param("merchantId") Long merchantId,
+                                    @Param("region") String region,
+                                    @Param("query") AdminMerchantOperationLogQuery query);
+
+    List<AdminMerchantOperationLogRow> selectMerchantOperationLogs(
+            @Param("merchantId") Long merchantId,
+            @Param("region") String region,
+            @Param("query") AdminMerchantOperationLogQuery query
+    );
 }

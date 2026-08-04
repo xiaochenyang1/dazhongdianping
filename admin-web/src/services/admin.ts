@@ -58,6 +58,7 @@ import type {
   AdminMerchantApplication,
   AdminMerchant,
   AdminMerchantOperator,
+  AdminMerchantOperationLog,
 } from '@/types/admin'
 
 export interface AdminShopQuery {
@@ -485,6 +486,23 @@ export function updateAdminMerchantOperatorStatus(
   return apiPut<AdminMerchantOperator>(
     `/api/admin/v1/merchants/${merchantId}/operators/${operatorId}/status`,
     payload,
+  )
+}
+
+export function listAdminMerchantOperationLogs(
+  merchantId: number,
+  query: {
+    operatorId?: number
+    action?: string
+    targetType?: string
+    keyword?: string
+    page?: number
+    pageSize?: number
+  },
+) {
+  return apiGet<PageResult<AdminMerchantOperationLog>>(
+    `/api/admin/v1/merchants/${merchantId}/operation-logs`,
+    query,
   )
 }
 

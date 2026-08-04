@@ -243,6 +243,51 @@ class AdminMerchantManagementControllerTest {
                 .andExpect(jsonPath("$.message").value("商户员工不存在"));
     }
 
+    @Test
+    void shouldListAndFilterMerchantOperationHistoryInsideCurrentRegion() throws Exception {
+        String staffAccount = "admin-history-" + UUID.randomUUID() + "@example.com";
+        long operatorId = createStaff(staffAccount);
+        String ownerToken = merchantToken("merchant_cn_hotpot@example.com", "merchant123456");
+        mockMvc.perform(put("/api/b/v1/staffs/{id}/status", operatorId)
+                        .header("Authorization", bearer(ownerToken))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":2}"))
+                .andExpect(status().isOk());
+
+        String token = adminToken();
+        mockMvc.perform(get("/api/admin/v1/merchants/1001/operation-logs")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN")
+                        .param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.hasMore").value(true))
+                .andExpect(jsonPath("$.data.list[0].action").value("staff_status"))
+                .andExpect(jsonPath("$.data.list[0].operatorId").value(11001))
+                .andExpect(jsonPath("$.data.list[0].operatorAccount").value("merchant_cn_hotpot@example.com"))
+                .andExpect(jsonPath("$.data.list[0].targetType").value("staff"))
+                .andExpect(jsonPath("$.data.list[0].targetId").value(operatorId));
+
+        mockMvc.perform(get("/api/admin/v1/merchants/1001/operation-logs")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN")
+                        .param("operatorId", "11001")
+                        .param("action", "STAFF_CREATE")
+                        .param("targetType", "STAFF")
+                        .param("keyword", "merchant_cn_hotpot"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].action").value("staff_create"))
+                .andExpect(jsonPath("$.data.list[0].targetId").value(operatorId));
+
+        mockMvc.perform(get("/api/admin/v1/merchants/2001/operation-logs")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("商户不存在"));
+    }
+
     private String adminToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

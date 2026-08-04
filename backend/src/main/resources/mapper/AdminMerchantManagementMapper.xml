@@ -163,4 +163,50 @@
                 AND m.is_deleted = FALSE
           )
     </update>
+
+    <sql id="merchantOperationLogFilters">
+        AND mol.merchant_id = #{merchantId}
+        AND m.region = #{region}
+        AND m.is_deleted = FALSE
+        <if test="query.operatorId != null">
+            AND mol.operator_id = #{query.operatorId}
+        </if>
+        <if test="query.action != null">
+            AND LOWER(mol.action) = LOWER(#{query.action})
+        </if>
+        <if test="query.targetType != null">
+            AND LOWER(mol.target_type) = LOWER(#{query.targetType})
+        </if>
+        <if test="query.keyword != null">
+            AND (
+                LOWER(COALESCE(mo.account, '')) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR LOWER(COALESCE(mo.name, '')) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR LOWER(COALESCE(mol.detail, '')) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+            )
+        </if>
+    </sql>
+
+    <select id="countMerchantOperationLogs" resultType="long">
+        SELECT COUNT(*)
+        FROM merchant_operation_log mol
+        JOIN merchant m ON m.id = mol.merchant_id
+        LEFT JOIN merchant_operator mo ON mo.id = mol.operator_id
+        WHERE 1 = 1
+        <include refid="merchantOperationLogFilters"/>
+    </select>
+
+    <select id="selectMerchantOperationLogs"
+            resultType="com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperationLogRow">
+        SELECT mol.id, mol.merchant_id, mol.operator_id,
+               COALESCE(mo.account, '') AS operator_account,
+               COALESCE(mo.name, '') AS operator_name,
+               mol.action, mol.target_type, mol.target_id, mol.detail, mol.created_at
+        FROM merchant_operation_log mol
+        JOIN merchant m ON m.id = mol.merchant_id
+        LEFT JOIN merchant_operator mo ON mo.id = mol.operator_id
+        WHERE 1 = 1
+        <include refid="merchantOperationLogFilters"/>
+        ORDER BY mol.id DESC
+        LIMIT #{query.pageSize} OFFSET #{query.offset}
+    </select>
 </mapper>

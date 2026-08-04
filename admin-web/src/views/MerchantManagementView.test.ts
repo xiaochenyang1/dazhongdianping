@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   listAdminMerchantOperators: vi.fn(),
   getAdminMerchantOperator: vi.fn(),
   updateAdminMerchantOperatorStatus: vi.fn(),
+  listAdminMerchantOperationLogs: vi.fn(),
 }))
 
 const sessionMock = vi.hoisted(() => ({
@@ -102,6 +103,33 @@ const operators = [
   },
 ]
 
+const operationLogs = [
+  {
+    id: 501,
+    merchantId: 1001,
+    operatorId: 11001,
+    operatorAccount: 'merchant_cn_hotpot@example.com',
+    operatorName: '王磊',
+    action: 'staff_create',
+    targetType: 'staff',
+    targetId: 13001,
+    detail: 'Front Desk Manager',
+    createdAt: '2026-08-04 10:00:00',
+  },
+  {
+    id: 500,
+    merchantId: 1001,
+    operatorId: 13001,
+    operatorAccount: 'manager@example.com',
+    operatorName: 'Front Desk Manager',
+    action: 'deal_on_shelf',
+    targetType: 'deal',
+    targetId: 30001,
+    detail: '',
+    createdAt: '2026-08-04 09:00:00',
+  },
+]
+
 async function flush() {
   for (let index = 0; index < 6; index += 1) {
     await Promise.resolve()
@@ -144,6 +172,7 @@ describe('MerchantManagementView', () => {
     sessionMock.state.region = 'EU'
     mocks.listAdminMerchants.mockResolvedValue({ list: merchants, total: 2, page: 1, pageSize: 20, hasMore: false })
     mocks.listAdminMerchantOperators.mockResolvedValue({ list: operators, total: 2, page: 1, pageSize: 20, hasMore: false })
+    mocks.listAdminMerchantOperationLogs.mockResolvedValue({ list: operationLogs, total: 2, page: 1, pageSize: 20, hasMore: false })
   })
 
   it('loads merchants and applies all filters including pending audit status', async () => {
@@ -307,6 +336,46 @@ describe('MerchantManagementView', () => {
     expect(host.textContent).toContain('梧桐咖啡 · Staff Accounts')
     expect(host.textContent).toContain('Newest Merchant Staff')
     expect(host.textContent).not.toContain('Coupon Verifier')
+    app.unmount()
+  })
+
+  it('opens merchant operation history and applies structured filters', async () => {
+    const { app, host } = mount()
+    await flush()
+
+    click(host, 'Operation history')
+    await flush()
+
+    expect(mocks.listAdminMerchantOperationLogs).toHaveBeenCalledWith(1001, {
+      operatorId: undefined,
+      action: undefined,
+      targetType: undefined,
+      keyword: undefined,
+      page: 1,
+      pageSize: 20,
+    })
+    expect(host.textContent).toContain('沪上渝里餐饮 · Operation History')
+    expect(host.textContent).toContain('Created staff')
+    expect(host.textContent).toContain('staff:13001')
+    expect(host.textContent).toContain('Published deal')
+
+    input(host, 'merchant-history-operator-id', '11001')
+    input(host, 'merchant-history-action', 'staff_create')
+    select(host, 'merchant-history-target-type', 'staff')
+    input(host, 'merchant-history-keyword', '王磊')
+    await nextTick()
+    const applyButtons = [...host.querySelectorAll('button')].filter((button) => button.textContent?.includes('Apply filters'))
+    applyButtons[applyButtons.length - 1]?.click()
+    await flush()
+
+    expect(mocks.listAdminMerchantOperationLogs).toHaveBeenLastCalledWith(1001, {
+      operatorId: 11001,
+      action: 'staff_create',
+      targetType: 'staff',
+      keyword: '王磊',
+      page: 1,
+      pageSize: 20,
+    })
     app.unmount()
   })
 

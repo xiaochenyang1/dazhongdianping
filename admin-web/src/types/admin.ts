@@ -725,6 +725,19 @@ export interface AdminMerchantOperator {
   updatedAt: string
 }
 
+export interface AdminMerchantOperationLog {
+  id: number
+  merchantId: number
+  operatorId: number
+  operatorAccount: string
+  operatorName: string
+  action: string
+  targetType: string
+  targetId: number
+  detail: string
+  createdAt: string
+}
+
 export interface CategoryChild {
   id: number
   name: string

@@ -12,9 +12,12 @@ import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantQuery
 import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantRow;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperatorQuery;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperatorRow;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperationLogQuery;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantOperationLogRow;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.request.AdminMerchantStatusRequest;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.response.AdminMerchantResponse;
 import com.tuowei.dazhongdianping.module.admin.merchant.model.response.AdminMerchantOperatorResponse;
+import com.tuowei.dazhongdianping.module.admin.merchant.model.response.AdminMerchantOperationLogResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -82,6 +85,27 @@ public class AdminMerchantManagementService {
     public AdminMerchantOperatorResponse getMerchantOperator(Long merchantId, Long operatorId) {
         requireMerchant(merchantId);
         return toOperatorResponse(requireMerchantOperator(merchantId, operatorId));
+    }
+
+    public PageResult<AdminMerchantOperationLogResponse> listMerchantOperationLogs(
+            Long merchantId,
+            AdminMerchantOperationLogQuery query
+    ) {
+        requireMerchant(merchantId);
+        query.normalize();
+        String region = RegionContext.getRegion().name();
+        long total = mapper.countMerchantOperationLogs(merchantId, region, query);
+        List<AdminMerchantOperationLogResponse> list = mapper.selectMerchantOperationLogs(merchantId, region, query)
+                .stream()
+                .map(this::toOperationLogResponse)
+                .toList();
+        return new PageResult<>(
+                list,
+                total,
+                query.getPage(),
+                query.getPageSize(),
+                query.getOffset() + list.size() < total
+        );
     }
 
     @Transactional
@@ -236,6 +260,21 @@ public class AdminMerchantManagementService {
                 status == STATUS_DISABLED ? latestOperatorDisableReason(row.getId()) : "",
                 formatDateTime(row.getCreatedAt()),
                 formatDateTime(row.getUpdatedAt())
+        );
+    }
+
+    private AdminMerchantOperationLogResponse toOperationLogResponse(AdminMerchantOperationLogRow row) {
+        return new AdminMerchantOperationLogResponse(
+                row.getId(),
+                row.getMerchantId(),
+                row.getOperatorId(),
+                safeText(row.getOperatorAccount()),
+                safeText(row.getOperatorName()),
+                safeText(row.getAction()),
+                safeText(row.getTargetType()),
+                row.getTargetId(),
+                safeText(row.getDetail()),
+                formatDateTime(row.getCreatedAt())
         );
     }
 

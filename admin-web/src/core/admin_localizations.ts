@@ -714,6 +714,51 @@ export interface AdminStrings {
       disablePlaceholder: string
       confirmDisable: string
     }
+    history: {
+      action: string
+      eyebrow: string
+      heading: (merchant: string) => string
+      description: string
+      loadError: string
+      metaLoading: string
+      metaSummary: (total: number) => string
+      filters: {
+        operatorId: string
+        operatorIdPlaceholder: string
+        action: string
+        actionPlaceholder: string
+        targetType: string
+        keyword: string
+        keywordPlaceholder: string
+        allTargets: string
+        targets: {
+          staff: string
+          shop: string
+          shopChange: string
+          deal: string
+          order: string
+          review: string
+        }
+        apply: string
+      }
+      tableHeaders: {
+        time: string
+        operator: string
+        action: string
+        target: string
+        detail: string
+      }
+      loading: string
+      empty: string
+      operatorFallback: (operatorId: number) => string
+      actionText: (action: string) => string
+      targetText: (targetType: string, targetId: number) => string
+      detailFallback: string
+      previousPage: string
+      page: (page: number) => string
+      nextPage: string
+      close: string
+    }
   }
   auditLogs: {
     eyebrow: string
@@ -3149,6 +3194,60 @@ const zhCnStrings: AdminStrings = {
       disablePlaceholder: '例如：超出授权门店操作',
       confirmDisable: '确认停用',
     },
+    history: {
+      action: '操作历史',
+      eyebrow: '经营留痕',
+      heading: (merchant) => `${merchant} · 操作历史`,
+      description: '展示员工、门店草稿、团购、退款和点评经营动作，按日志 ID 倒序返回。',
+      loadError: '商户操作历史加载失败',
+      metaLoading: '加载中...',
+      metaSummary: (total) => `共 ${total} 条操作记录`,
+      filters: {
+        operatorId: '操作人 ID',
+        operatorIdPlaceholder: '例如 11001',
+        action: '动作码',
+        actionPlaceholder: '例如 staff_create',
+        targetType: '目标类型',
+        keyword: '关键词',
+        keywordPlaceholder: '操作人账号 / 姓名 / 详情',
+        allTargets: '全部',
+        targets: {
+          staff: '员工',
+          shop: '门店',
+          shopChange: '门店草稿',
+          deal: '团购',
+          order: '订单',
+          review: '点评',
+        },
+        apply: '应用筛选',
+      },
+      tableHeaders: {
+        time: '时间',
+        operator: '操作人',
+        action: '动作',
+        target: '目标',
+        detail: '详情',
+      },
+      loading: '操作历史加载中...',
+      empty: '当前筛选下没有操作记录。',
+      operatorFallback: (operatorId) => `operator:${operatorId}`,
+      actionText: (action) => ({
+        staff_create: '创建员工', staff_update: '更新员工', staff_status: '变更员工状态',
+        shop_change_draft_create: '创建门店草稿', shop_change_submit: '提交门店草稿',
+        shop_change_pass: '门店草稿通过', shop_change_reject: '门店草稿驳回',
+        deal_create: '创建团购', deal_update: '更新团购', deal_on_shelf: '团购上架', deal_off_shelf: '团购下架',
+        refund_approve: '同意退款', refund_reject: '驳回退款',
+        review_reply_create: '创建点评回复', review_reply_update: '更新点评回复',
+        review_appeal_draft_create: '创建点评申诉草稿', review_appeal_save: '保存点评申诉',
+        review_appeal_submit: '提交点评申诉', review_appeal_pass: '点评申诉通过', review_appeal_reject: '点评申诉驳回',
+      } as Record<string, string>)[action] ?? action,
+      targetText: (targetType, targetId) => `${targetType || '--'}:${targetId}`,
+      detailFallback: '--',
+      previousPage: '上一页',
+      page: (page) => `第 ${page} 页`,
+      nextPage: '下一页',
+      close: '关闭',
+    },
   },
   auditLogs: {
     eyebrow: 'Audit Trail',
@@ -5481,6 +5580,60 @@ const enStrings: AdminStrings = {
       disableReasonField: 'Disable reason',
       disablePlaceholder: 'For example: Actions outside the assigned shop scope',
       confirmDisable: 'Confirm disable',
+    },
+    history: {
+      action: 'Operation history',
+      eyebrow: 'Operations Trail',
+      heading: (merchant) => `${merchant} · Operation History`,
+      description: 'Tracks staff, shop draft, deal, refund, and review operations in descending log order.',
+      loadError: 'Failed to load merchant operation history.',
+      metaLoading: 'Loading...',
+      metaSummary: (total) => `${total} operation records`,
+      filters: {
+        operatorId: 'Operator ID',
+        operatorIdPlaceholder: 'For example 11001',
+        action: 'Action code',
+        actionPlaceholder: 'For example staff_create',
+        targetType: 'Target type',
+        keyword: 'Keyword',
+        keywordPlaceholder: 'Operator account / name / detail',
+        allTargets: 'All',
+        targets: {
+          staff: 'Staff',
+          shop: 'Shop',
+          shopChange: 'Shop draft',
+          deal: 'Deal',
+          order: 'Order',
+          review: 'Review',
+        },
+        apply: 'Apply filters',
+      },
+      tableHeaders: {
+        time: 'Time',
+        operator: 'Operator',
+        action: 'Action',
+        target: 'Target',
+        detail: 'Detail',
+      },
+      loading: 'Loading operation history...',
+      empty: 'No operation records match the current filters.',
+      operatorFallback: (operatorId) => `operator:${operatorId}`,
+      actionText: (action) => ({
+        staff_create: 'Created staff', staff_update: 'Updated staff', staff_status: 'Changed staff status',
+        shop_change_draft_create: 'Created shop draft', shop_change_submit: 'Submitted shop draft',
+        shop_change_pass: 'Approved shop draft', shop_change_reject: 'Rejected shop draft',
+        deal_create: 'Created deal', deal_update: 'Updated deal', deal_on_shelf: 'Published deal', deal_off_shelf: 'Unpublished deal',
+        refund_approve: 'Approved refund', refund_reject: 'Rejected refund',
+        review_reply_create: 'Created review reply', review_reply_update: 'Updated review reply',
+        review_appeal_draft_create: 'Created review appeal draft', review_appeal_save: 'Saved review appeal',
+        review_appeal_submit: 'Submitted review appeal', review_appeal_pass: 'Approved review appeal', review_appeal_reject: 'Rejected review appeal',
+      } as Record<string, string>)[action] ?? action,
+      targetText: (targetType, targetId) => `${targetType || '--'}:${targetId}`,
+      detailFallback: '--',
+      previousPage: 'Previous',
+      page: (page) => `Page ${page}`,
+      nextPage: 'Next',
+      close: 'Close',
     },
   },
   auditLogs: {

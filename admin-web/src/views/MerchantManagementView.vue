@@ -6,11 +6,12 @@ import {
   getAdminMerchant,
   getAdminMerchantOperator,
   listAdminMerchantOperators,
+  listAdminMerchantOperationLogs,
   listAdminMerchants,
   updateAdminMerchantOperatorStatus,
   updateAdminMerchantStatus,
 } from '@/services/admin'
-import type { AdminMerchant, AdminMerchantOperator, PageResult } from '@/types/admin'
+import type { AdminMerchant, AdminMerchantOperationLog, AdminMerchantOperator, PageResult } from '@/types/admin'
 
 const { state } = useAdminSession()
 const strings = computed(() => adminStringsForRegion(state.region))
@@ -33,6 +34,10 @@ const staffDisableTarget = ref<AdminMerchantOperator | null>(null)
 const staffDisableReason = ref('')
 let staffRequestId = 0
 let staffDetailRequestId = 0
+const historyMerchant = ref<AdminMerchant | null>(null)
+const historyPageState = ref<PageResult<AdminMerchantOperationLog> | null>(null)
+const historyLoading = ref(false)
+let historyRequestId = 0
 const filters = reactive({
   keyword: '',
   merchantId: '',
@@ -41,6 +46,7 @@ const filters = reactive({
   page: 1,
 })
 const staffFilters = reactive({ keyword: '', status: '', page: 1 })
+const historyFilters = reactive({ operatorId: '', action: '', targetType: '', keyword: '', page: 1 })
 
 const canWrite = computed(() => state.permissions.includes('system:merchant:write'))
 
@@ -226,6 +232,7 @@ async function loadStaff() {
 }
 
 async function openStaff(merchant: AdminMerchant) {
+  closeHistory()
   staffMerchant.value = merchant
   staffFilters.keyword = ''
   staffFilters.status = ''
@@ -233,6 +240,64 @@ async function openStaff(merchant: AdminMerchant) {
   staffDetail.value = null
   staffDisableTarget.value = null
   await loadStaff()
+}
+
+function historyOperatorText(log: AdminMerchantOperationLog) {
+  return log.operatorName || log.operatorAccount || strings.value.merchantManagement.history.operatorFallback(log.operatorId)
+}
+
+async function loadHistory() {
+  const merchant = historyMerchant.value
+  if (!merchant) return
+  const requestId = ++historyRequestId
+  historyLoading.value = true
+  errorMessage.value = ''
+  try {
+    const result = await listAdminMerchantOperationLogs(merchant.id, {
+      operatorId: normalizePositiveNumber(historyFilters.operatorId),
+      action: normalizeText(historyFilters.action),
+      targetType: normalizeText(historyFilters.targetType),
+      keyword: normalizeText(historyFilters.keyword),
+      page: historyFilters.page,
+      pageSize,
+    })
+    if (requestId === historyRequestId && historyMerchant.value?.id === merchant.id) {
+      historyPageState.value = result
+    }
+  } catch (cause) {
+    if (requestId === historyRequestId && historyMerchant.value?.id === merchant.id) {
+      errorMessage.value = cause instanceof Error ? cause.message : strings.value.merchantManagement.history.loadError
+    }
+  } finally {
+    if (requestId === historyRequestId) historyLoading.value = false
+  }
+}
+
+async function openHistory(merchant: AdminMerchant) {
+  closeStaff()
+  historyMerchant.value = merchant
+  historyFilters.operatorId = ''
+  historyFilters.action = ''
+  historyFilters.targetType = ''
+  historyFilters.keyword = ''
+  historyFilters.page = 1
+  await loadHistory()
+}
+
+async function applyHistoryFilters() {
+  historyFilters.page = 1
+  await loadHistory()
+}
+
+async function goHistoryPage(page: number) {
+  historyFilters.page = Math.max(1, page)
+  await loadHistory()
+}
+
+function closeHistory() {
+  historyRequestId += 1
+  historyMerchant.value = null
+  historyPageState.value = null
 }
 
 async function applyStaffFilters() {
@@ -335,6 +400,7 @@ watch(
     detail.value = null
     disableTarget.value = null
     closeStaff()
+    closeHistory()
     void load()
   },
   { immediate: true },
@@ -428,6 +494,7 @@ watch(
                 <div class="table-actions">
                   <button class="table-action" type="button" @click="openDetail(merchant)">{{ strings.merchantManagement.detailAction }}</button>
                   <button class="table-action" type="button" @click="openStaff(merchant)">{{ strings.merchantManagement.staff.action }}</button>
+                  <button class="table-action" type="button" @click="openHistory(merchant)">{{ strings.merchantManagement.history.action }}</button>
                   <button v-if="canWrite && merchant.status === 1" class="table-action table-action--danger" type="button" :disabled="acting" @click="openDisable(merchant)">{{ strings.merchantManagement.disableAction }}</button>
                   <button v-if="canWrite && merchant.status === 2" class="table-action" type="button" :disabled="acting" @click="enable(merchant)">{{ strings.merchantManagement.enableAction }}</button>
                 </div>
@@ -507,6 +574,74 @@ watch(
         <button class="ghost-button system-pager-button" type="button" :disabled="staffFilters.page <= 1" @click="goStaffPage(staffFilters.page - 1)">{{ strings.merchantManagement.staff.previousPage }}</button>
         <span class="numeric-cell">{{ strings.merchantManagement.staff.page(staffFilters.page) }}</span>
         <button class="ghost-button system-pager-button" type="button" :disabled="!staffPageState?.hasMore" @click="goStaffPage(staffFilters.page + 1)">{{ strings.merchantManagement.staff.nextPage }}</button>
+      </div>
+    </article>
+
+    <article v-if="historyMerchant" class="content-card system-table-card">
+      <div class="system-table-card__meta">
+        <div>
+          <p class="eyebrow">{{ strings.merchantManagement.history.eyebrow }}</p>
+          <strong>{{ strings.merchantManagement.history.heading(merchantLabel(historyMerchant)) }}</strong>
+          <p class="inline-note">{{ strings.merchantManagement.history.description }}</p>
+        </div>
+        <button class="ghost-button" type="button" @click="closeHistory">{{ strings.merchantManagement.history.close }}</button>
+      </div>
+
+      <div class="toolbar-grid toolbar-grid--filters">
+        <label class="field">
+          <span>{{ strings.merchantManagement.history.filters.operatorId }}</span>
+          <input v-model="historyFilters.operatorId" name="merchant-history-operator-id" inputmode="numeric" :placeholder="strings.merchantManagement.history.filters.operatorIdPlaceholder" />
+        </label>
+        <label class="field">
+          <span>{{ strings.merchantManagement.history.filters.action }}</span>
+          <input v-model="historyFilters.action" name="merchant-history-action" :placeholder="strings.merchantManagement.history.filters.actionPlaceholder" />
+        </label>
+        <label class="field">
+          <span>{{ strings.merchantManagement.history.filters.targetType }}</span>
+          <select v-model="historyFilters.targetType" name="merchant-history-target-type">
+            <option value="">{{ strings.merchantManagement.history.filters.allTargets }}</option>
+            <option value="staff">{{ strings.merchantManagement.history.filters.targets.staff }}</option>
+            <option value="shop">{{ strings.merchantManagement.history.filters.targets.shop }}</option>
+            <option value="shop_change">{{ strings.merchantManagement.history.filters.targets.shopChange }}</option>
+            <option value="deal">{{ strings.merchantManagement.history.filters.targets.deal }}</option>
+            <option value="order">{{ strings.merchantManagement.history.filters.targets.order }}</option>
+            <option value="review">{{ strings.merchantManagement.history.filters.targets.review }}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ strings.merchantManagement.history.filters.keyword }}</span>
+          <input v-model="historyFilters.keyword" name="merchant-history-keyword" :placeholder="strings.merchantManagement.history.filters.keywordPlaceholder" />
+        </label>
+        <div class="toolbar-actions"><button class="primary-button" type="button" @click="applyHistoryFilters">{{ strings.merchantManagement.history.filters.apply }}</button></div>
+      </div>
+
+      <div class="system-table-card__meta"><span>{{ historyLoading ? strings.merchantManagement.history.metaLoading : strings.merchantManagement.history.metaSummary(historyPageState?.total ?? 0) }}</span></div>
+      <div class="table-shell">
+        <table class="data-table">
+          <thead><tr>
+            <th>{{ strings.merchantManagement.history.tableHeaders.time }}</th>
+            <th>{{ strings.merchantManagement.history.tableHeaders.operator }}</th>
+            <th>{{ strings.merchantManagement.history.tableHeaders.action }}</th>
+            <th>{{ strings.merchantManagement.history.tableHeaders.target }}</th>
+            <th>{{ strings.merchantManagement.history.tableHeaders.detail }}</th>
+          </tr></thead>
+          <tbody>
+            <tr v-if="historyLoading"><td colspan="5" class="table-empty">{{ strings.merchantManagement.history.loading }}</td></tr>
+            <tr v-else-if="!historyPageState?.list.length"><td colspan="5" class="table-empty">{{ strings.merchantManagement.history.empty }}</td></tr>
+            <tr v-for="log in historyPageState?.list" :key="log.id">
+              <td class="numeric-cell">{{ log.createdAt || '--' }}</td>
+              <td><strong>{{ historyOperatorText(log) }}</strong><p class="inline-note">{{ log.operatorAccount || strings.merchantManagement.history.operatorFallback(log.operatorId) }}</p></td>
+              <td><strong>{{ strings.merchantManagement.history.actionText(log.action) }}</strong><p class="code-box">{{ log.action }}</p></td>
+              <td><span class="code-box">{{ strings.merchantManagement.history.targetText(log.targetType, log.targetId) }}</span></td>
+              <td><span class="tag-list">{{ log.detail || strings.merchantManagement.history.detailFallback }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <button class="ghost-button system-pager-button" type="button" :disabled="historyFilters.page <= 1" @click="goHistoryPage(historyFilters.page - 1)">{{ strings.merchantManagement.history.previousPage }}</button>
+        <span class="numeric-cell">{{ strings.merchantManagement.history.page(historyFilters.page) }}</span>
+        <button class="ghost-button system-pager-button" type="button" :disabled="!historyPageState?.hasMore" @click="goHistoryPage(historyFilters.page + 1)">{{ strings.merchantManagement.history.nextPage }}</button>
       </div>
     </article>
 
