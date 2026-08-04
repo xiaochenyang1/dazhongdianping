@@ -45,6 +45,7 @@ public class AdminMenuService {
                         leaf("system.admins", "管理员账号", "/system/admins", "system:admin:read"),
                         leaf("system.roles", "角色权限", "/system/roles", "system:role:read"),
                         leaf("system.users", "用户管理", "/system/users", "system:user:read"),
+                        leaf("system.merchants", "商户账号", "/system/merchants", "system:merchant:read"),
                         leaf("system.audit_logs", "审计日志", "/system/audit-logs", "system:audit_log:read"),
                         leaf("system.privacy_tasks", "隐私任务", "/system/privacy-tasks", "system:privacy_task:read")
                 ))

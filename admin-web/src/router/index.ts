@@ -203,6 +203,12 @@ const router = createRouter({
           meta: { requiresAuth: true, titleKey: 'systemUsers', requiredPermission: 'system:user:read' },
         },
         {
+          path: 'system/merchants',
+          name: 'system-merchants',
+          component: () => import('@/views/MerchantManagementView.vue'),
+          meta: { requiresAuth: true, titleKey: 'systemMerchants', requiredPermission: 'system:merchant:read' },
+        },
+        {
           path: 'system/audit-logs',
           name: 'system-audit-logs',
           component: () => import('@/views/AdminAuditLogsView.vue'),

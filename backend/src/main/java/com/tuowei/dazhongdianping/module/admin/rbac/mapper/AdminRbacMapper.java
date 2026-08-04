@@ -16,9 +16,7 @@ import org.apache.ibatis.annotations.Param;
 public interface AdminRbacMapper {
     AdminUserRow selectUserByAccount(@Param("account") String account);
     AdminUserRow selectUserById(@Param("adminId") Long adminId);
-    List<AdminRoleRow> selectActiveRolesByAdminId(@Param("adminId") Long adminId);
     List<AdminPermissionRow> selectActivePermissionsByAdminId(@Param("adminId") Long adminId);
-    List<String> selectRegionsByAdminId(@Param("adminId") Long adminId);
     List<AdminRegionScopeRow> selectRegionScopesByAdminId(@Param("adminId") Long adminId);
     List<AdminCityScopeRow> selectCityScopesByAdminId(@Param("adminId") Long adminId);
     List<AdminCityScopeRow> selectActiveCityScopesByAdminId(@Param("adminId") Long adminId);

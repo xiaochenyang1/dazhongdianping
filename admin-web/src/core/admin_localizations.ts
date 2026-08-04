@@ -43,6 +43,7 @@ export interface AdminStrings {
     systemAdmins: string
     systemRoles: string
     systemUsers: string
+    systemMerchants: string
     systemAuditLogs: string
     systemPrivacyTasks: string
   }
@@ -579,6 +580,77 @@ export interface AdminStrings {
     banReasonField: string
     banPlaceholder: string
     confirmBan: string
+  }
+  merchantManagement: {
+    loadError: string
+    detailLoadError: string
+    disableReasonRequired: string
+    disableError: string
+    enableError: string
+    disabledMessage: (merchant: string) => string
+    enabledMessage: (merchant: string) => string
+    eyebrow: string
+    heading: string
+    description: (region: Region) => string
+    refresh: string
+    metaLoading: string
+    metaSummary: (total: number) => string
+    metaDescription: string
+    filters: {
+      keyword: string
+      merchantId: string
+      auditStatus: string
+      status: string
+      keywordPlaceholder: string
+      merchantIdPlaceholder: string
+      all: string
+      pending: string
+      approved: string
+      rejected: string
+      active: string
+      disabled: string
+      apply: string
+    }
+    tableHeaders: {
+      merchant: string
+      contact: string
+      auditStatus: string
+      accountStatus: string
+      resources: string
+      updatedAt: string
+      actions: string
+    }
+    loading: string
+    empty: string
+    merchantFallback: (merchantId: number) => string
+    merchantIdLabel: (merchantId: number) => string
+    contactFallback: string
+    resourceSummary: (shops: number, activeOperators: number, operators: number) => string
+    detailAction: string
+    disableAction: string
+    enableAction: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    detailLoading: string
+    detailEyebrow: string
+    detailSummary: (account: string, region: string) => string
+    detailFields: {
+      auditStatus: string
+      accountStatus: string
+      shops: string
+      operators: string
+      activeOperators: string
+      disableReason: string
+      createdAt: string
+      updatedAt: string
+    }
+    close: string
+    disableEyebrow: string
+    disableDescription: string
+    disableReasonField: string
+    disablePlaceholder: string
+    confirmDisable: string
   }
   auditLogs: {
     eyebrow: string
@@ -2106,6 +2178,7 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/system/admins': 'systemAdmins',
   '/system/roles': 'systemRoles',
   '/system/users': 'systemUsers',
+  '/system/merchants': 'systemMerchants',
   '/system/audit-logs': 'systemAuditLogs',
   '/system/privacy-tasks': 'systemPrivacyTasks',
 }
@@ -2339,6 +2412,7 @@ const zhCnStrings: AdminStrings = {
     systemAdmins: '管理员账号',
     systemRoles: '角色与权限',
     systemUsers: '用户管理',
+    systemMerchants: '商户账号',
     systemAuditLogs: '审计日志',
     systemPrivacyTasks: '隐私任务',
   },
@@ -2877,6 +2951,78 @@ const zhCnStrings: AdminStrings = {
     banReasonField: '封禁原因',
     banPlaceholder: '例如：发布垃圾广告',
     confirmBan: '确认封禁',
+  },
+  merchantManagement: {
+    loadError: '商户账号加载失败',
+    detailLoadError: '商户详情加载失败',
+    disableReasonRequired: '停用原因不能为空',
+    disableError: '停用商户失败',
+    enableError: '恢复商户失败',
+    disabledMessage: (merchant) => `商户 ${merchant} 已停用，全部商户端登录态已失效。`,
+    enabledMessage: (merchant) => `商户 ${merchant} 已恢复。`,
+    eyebrow: '商户治理',
+    heading: '商户账号',
+    description: (region) =>
+      `当前区域 ${region}。停用会立即阻断该商户及其员工登录，所有处置动作均写入审计日志。`,
+    refresh: '刷新列表',
+    metaLoading: '加载中...',
+    metaSummary: (total) => `共 ${total} 个商户`,
+    metaDescription: '支持按账号、企业、联系人、手机号、商户 ID、审核状态和账号状态筛选。',
+    filters: {
+      keyword: '关键词',
+      merchantId: '商户 ID',
+      auditStatus: '资质审核',
+      status: '账号状态',
+      keywordPlaceholder: '账号 / 企业 / 联系人 / 手机号',
+      merchantIdPlaceholder: '例如 1001',
+      all: '全部',
+      pending: '待审核',
+      approved: '已通过',
+      rejected: '已驳回',
+      active: '正常',
+      disabled: '已停用',
+      apply: '应用筛选',
+    },
+    tableHeaders: {
+      merchant: '商户',
+      contact: '联系人',
+      auditStatus: '资质审核',
+      accountStatus: '账号状态',
+      resources: '门店 / 员工',
+      updatedAt: '更新时间',
+      actions: '操作',
+    },
+    loading: '商户账号加载中...',
+    empty: '当前筛选下没有商户。',
+    merchantFallback: (merchantId) => `merchant:${merchantId}`,
+    merchantIdLabel: (merchantId) => `ID ${merchantId}`,
+    contactFallback: '--',
+    resourceSummary: (shops, activeOperators, operators) => `${shops} 家门店 · ${activeOperators}/${operators} 个员工账号启用`,
+    detailAction: '详情',
+    disableAction: '停用',
+    enableAction: '恢复',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    detailLoading: '商户详情加载中...',
+    detailEyebrow: '商户详情',
+    detailSummary: (account, region) => `${account} · 区域 ${region}`,
+    detailFields: {
+      auditStatus: '资质审核',
+      accountStatus: '账号状态',
+      shops: '门店数',
+      operators: '员工账号',
+      activeOperators: '启用员工',
+      disableReason: '最近停用原因',
+      createdAt: '注册时间',
+      updatedAt: '更新时间',
+    },
+    close: '关闭',
+    disableEyebrow: '停用商户',
+    disableDescription: '停用后该商户及其全部员工的现有登录态立即失效，重新登录也会被拦截。',
+    disableReasonField: '停用原因',
+    disablePlaceholder: '例如：多次违反平台经营规则',
+    confirmDisable: '确认停用',
   },
   auditLogs: {
     eyebrow: 'Audit Trail',
@@ -4525,6 +4671,7 @@ const enStrings: AdminStrings = {
     systemAdmins: 'Admin Accounts',
     systemRoles: 'Roles & Permissions',
     systemUsers: 'User Management',
+    systemMerchants: 'Merchant Accounts',
     systemAuditLogs: 'Audit Logs',
     systemPrivacyTasks: 'Privacy Tasks',
   },
@@ -5074,6 +5221,78 @@ const enStrings: AdminStrings = {
     banReasonField: 'Ban reason',
     banPlaceholder: 'For example: Posting spam ads',
     confirmBan: 'Confirm ban',
+  },
+  merchantManagement: {
+    loadError: 'Failed to load merchant accounts.',
+    detailLoadError: 'Failed to load merchant details.',
+    disableReasonRequired: 'A disable reason is required.',
+    disableError: 'Failed to disable the merchant.',
+    enableError: 'Failed to restore the merchant.',
+    disabledMessage: (merchant) => `Merchant ${merchant} was disabled. All merchant sessions were revoked.`,
+    enabledMessage: (merchant) => `Merchant ${merchant} was restored.`,
+    eyebrow: 'Merchant Governance',
+    heading: 'Merchant Accounts',
+    description: (region) =>
+      `Current region ${region}. Disabling blocks the merchant and all staff sign-ins immediately. Every action is written to the audit log.`,
+    refresh: 'Refresh list',
+    metaLoading: 'Loading...',
+    metaSummary: (total) => `${total} merchants`,
+    metaDescription: 'Filter by account, company, contact, phone, merchant ID, audit status, and account status.',
+    filters: {
+      keyword: 'Keyword',
+      merchantId: 'Merchant ID',
+      auditStatus: 'Application status',
+      status: 'Account status',
+      keywordPlaceholder: 'Account / company / contact / phone',
+      merchantIdPlaceholder: 'For example 1001',
+      all: 'All',
+      pending: 'Pending',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      active: 'Active',
+      disabled: 'Disabled',
+      apply: 'Apply filters',
+    },
+    tableHeaders: {
+      merchant: 'Merchant',
+      contact: 'Contact',
+      auditStatus: 'Application',
+      accountStatus: 'Account',
+      resources: 'Shops / staff',
+      updatedAt: 'Updated',
+      actions: 'Actions',
+    },
+    loading: 'Loading merchant accounts...',
+    empty: 'No merchants match the current filters.',
+    merchantFallback: (merchantId) => `merchant:${merchantId}`,
+    merchantIdLabel: (merchantId) => `ID ${merchantId}`,
+    contactFallback: '--',
+    resourceSummary: (shops, activeOperators, operators) => `${shops} shops · ${activeOperators}/${operators} staff accounts active`,
+    detailAction: 'Details',
+    disableAction: 'Disable',
+    enableAction: 'Restore',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    detailLoading: 'Loading merchant details...',
+    detailEyebrow: 'Merchant Details',
+    detailSummary: (account, region) => `${account} · Region ${region}`,
+    detailFields: {
+      auditStatus: 'Application status',
+      accountStatus: 'Account status',
+      shops: 'Shops',
+      operators: 'Staff accounts',
+      activeOperators: 'Active staff',
+      disableReason: 'Latest disable reason',
+      createdAt: 'Created at',
+      updatedAt: 'Updated at',
+    },
+    close: 'Close',
+    disableEyebrow: 'Disable Merchant',
+    disableDescription: 'All existing merchant and staff sessions are revoked immediately and subsequent sign-ins are blocked.',
+    disableReasonField: 'Disable reason',
+    disablePlaceholder: 'For example: Repeated violations of platform rules',
+    confirmDisable: 'Confirm disable',
   },
   auditLogs: {
     eyebrow: 'Audit Trail',

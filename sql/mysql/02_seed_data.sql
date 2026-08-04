@@ -100,7 +100,9 @@ INSERT INTO `admin_permission` (`id`, `code`, `name`, `category`, `permission_ty
   (54, 'audit:merchant_verification:read', '查看认证商户', 'audit', 1, 1),
   (55, 'audit:merchant_verification:write', '处理认证商户', 'audit', 2, 1),
   (56, 'operations:points:read', '查看积分商城商品', 'operations', 1, 1),
-  (57, 'operations:points:write', '维护积分商城商品', 'operations', 2, 1);
+  (57, 'operations:points:write', '维护积分商城商品', 'operations', 2, 1),
+  (58, 'system:merchant:read', '查看商户账号', 'system', 1, 1),
+  (59, 'system:merchant:write', '处置商户账号', 'system', 2, 1);
 
 INSERT INTO `admin_user_role` (`admin_id`, `role_id`) VALUES (1, 1);
 INSERT INTO `admin_region_scope` (`admin_id`, `region`, `all_cities`) VALUES
@@ -109,7 +111,7 @@ INSERT INTO `admin_region_scope` (`admin_id`, `region`, `all_cities`) VALUES
 INSERT INTO `admin_role_permission` (`role_id`, `permission_id`) SELECT 1, `id` FROM `admin_permission`;
 INSERT INTO `admin_role_permission` (`role_id`, `permission_id`) VALUES
   (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
-  (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55),
+  (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59),
   (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57),
   (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49);
 

@@ -56,6 +56,7 @@ import type {
   GrowthRulePayload,
   LevelConfig,
   AdminMerchantApplication,
+  AdminMerchant,
 } from '@/types/admin'
 
 export interface AdminShopQuery {
@@ -440,6 +441,28 @@ export function listMerchantApplications(query: { status?: number; page?: number
 
 export function auditMerchantApplication(merchantId: number, payload: { status: 1 | 2; reason: string }) {
   return apiPost<AdminMerchantApplication>(`/api/admin/v1/merchant-applications/${merchantId}/audit`, payload)
+}
+
+export function listAdminMerchants(query: {
+  keyword?: string
+  merchantId?: number
+  auditStatus?: number
+  status?: number
+  page?: number
+  pageSize?: number
+}) {
+  return apiGet<PageResult<AdminMerchant>>('/api/admin/v1/merchants', query)
+}
+
+export function getAdminMerchant(merchantId: number) {
+  return apiGet<AdminMerchant>(`/api/admin/v1/merchants/${merchantId}`)
+}
+
+export function updateAdminMerchantStatus(
+  merchantId: number,
+  payload: { action: 'disable' | 'enable'; reason: string },
+) {
+  return apiPut<AdminMerchant>(`/api/admin/v1/merchants/${merchantId}/status`, payload)
 }
 
 export function listRankConfigs() {

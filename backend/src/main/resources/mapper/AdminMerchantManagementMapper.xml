@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.merchant.mapper.AdminMerchantManagementMapper">
+
+    <sql id="merchantColumns">
+        m.id,
+        m.account,
+        m.company_name,
+        m.contact_name,
+        m.contact_phone,
+        m.region,
+        m.audit_status,
+        m.status,
+        m.created_at,
+        m.updated_at,
+        (SELECT COUNT(*) FROM shop s WHERE s.merchant_id = m.id AND s.is_deleted = FALSE) AS shop_count,
+        (SELECT COUNT(*) FROM merchant_operator mo WHERE mo.merchant_id = m.id AND mo.is_deleted = FALSE) AS operator_count,
+        (SELECT COUNT(*) FROM merchant_operator mo WHERE mo.merchant_id = m.id AND mo.is_deleted = FALSE AND mo.status = 1) AS active_operator_count
+    </sql>
+
+    <sql id="merchantFilters">
+        AND m.region = #{region}
+        AND m.is_deleted = FALSE
+        <if test="query.keyword != null">
+            AND (
+                LOWER(m.account) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR LOWER(m.company_name) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR LOWER(m.contact_name) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR m.contact_phone LIKE CONCAT('%', #{query.keyword}, '%')
+            )
+        </if>
+        <if test="query.merchantId != null">
+            AND m.id = #{query.merchantId}
+        </if>
+        <if test="query.auditStatus != null">
+            AND m.audit_status = #{query.auditStatus}
+        </if>
+        <if test="query.status != null">
+            AND m.status = #{query.status}
+        </if>
+    </sql>
+
+    <select id="countMerchants" resultType="long">
+        SELECT COUNT(*)
+        FROM merchant m
+        WHERE 1 = 1
+        <include refid="merchantFilters"/>
+    </select>
+
+    <select id="selectMerchants" resultType="com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantRow">
+        SELECT
+        <include refid="merchantColumns"/>
+        FROM merchant m
+        WHERE 1 = 1
+        <include refid="merchantFilters"/>
+        ORDER BY m.id DESC
+        LIMIT #{query.pageSize} OFFSET #{query.offset}
+    </select>
+
+    <select id="selectMerchantById" resultType="com.tuowei.dazhongdianping.module.admin.merchant.model.AdminMerchantRow">
+        SELECT
+        <include refid="merchantColumns"/>
+        FROM merchant m
+        WHERE m.id = #{merchantId}
+          AND m.region = #{region}
+          AND m.is_deleted = FALSE
+    </select>
+
+    <update id="updateMerchantStatus">
+        UPDATE merchant
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{merchantId}
+          AND region = #{region}
+          AND is_deleted = FALSE
+          AND status = #{expectedStatus}
+    </update>
+</mapper>

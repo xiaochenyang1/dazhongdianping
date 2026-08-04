@@ -688,6 +688,25 @@ export interface AdminMerchantApplication {
   auditedAt: string
 }
 
+export interface AdminMerchant {
+  id: number
+  account: string
+  companyName: string
+  contactName: string
+  contactPhone: string
+  region: Region
+  auditStatus: number
+  auditStatusText: string
+  status: number
+  statusText: string
+  shopCount: number
+  operatorCount: number
+  activeOperatorCount: number
+  disableReason: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CategoryChild {
   id: number
   name: string

@@ -16,15 +16,6 @@
         WHERE id = #{adminId}
     </select>
 
-    <select id="selectActiveRolesByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRoleRow">
-        SELECT ar.id, ar.code, ar.name, ar.description, ar.status, ar.built_in
-        FROM admin_role ar
-        JOIN admin_user_role aur ON aur.role_id = ar.id
-        WHERE aur.admin_id = #{adminId}
-          AND ar.status = 1
-        ORDER BY ar.id
-    </select>
-
     <select id="selectActivePermissionsByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminPermissionRow">
         SELECT DISTINCT ap.id, ap.code, ap.name, ap.category, ap.permission_type, ap.status
         FROM admin_permission ap
@@ -34,13 +25,6 @@
         WHERE aur.admin_id = #{adminId}
           AND ap.status = 1
         ORDER BY ap.code
-    </select>
-
-    <select id="selectRegionsByAdminId" resultType="string">
-        SELECT region
-        FROM admin_region_scope
-        WHERE admin_id = #{adminId}
-        ORDER BY region
     </select>
 
     <select id="selectRegionScopesByAdminId" resultType="com.tuowei.dazhongdianping.module.admin.rbac.model.AdminRegionScopeRow">
