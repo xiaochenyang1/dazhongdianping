@@ -288,13 +288,135 @@ class AdminMerchantManagementControllerTest {
                 .andExpect(jsonPath("$.message").value("商户不存在"));
     }
 
+    @Test
+    void shouldRequireFullMerchantShopCoverageForAccountGovernance() throws Exception {
+        long beijingShopId = 990001L;
+        long noShopMerchantId = 990002L;
+        jdbc.update("""
+                INSERT INTO shop (
+                    id, merchant_id, category_id, city_id, area_id, latitude, longitude, region,
+                    name, cover_url, phone, score, taste_score, env_score, service_score, review_count,
+                    price_per_capita, currency, address, business_hours, summary, has_deal, open_now,
+                    status, created_at, updated_at, is_deleted, tags
+                )
+                SELECT ?, merchant_id, category_id, 2, 21, latitude, longitude, region,
+                    CONCAT(name, ' 北京店'), cover_url, phone, score, taste_score, env_score, service_score,
+                    review_count, price_per_capita, currency, '北京市朝阳区测试路1号', business_hours,
+                    summary, has_deal, open_now, status, created_at, updated_at, is_deleted, tags
+                FROM shop WHERE id = 10001
+                """, beijingShopId);
+        jdbc.update("""
+                INSERT INTO merchant (
+                    id, account, company_name, contact_name, contact_phone, region,
+                    audit_status, status, is_deleted
+                ) VALUES (?, 'no-shop-scope@test.local', '无门店范围测试商户', 'Test', '13800138888',
+                    'CN', 1, 1, FALSE)
+                """, noShopMerchantId);
+
+        String cityScopedToken = scopedAdminToken("city", new Long[]{1L}, new Long[]{});
+        mockMvc.perform(get("/api/admin/v1/merchants")
+                        .header("Authorization", bearer(cityScopedToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].id").value(1002));
+
+        mockMvc.perform(get("/api/admin/v1/merchants/1001")
+                        .header("Authorization", bearer(cityScopedToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("商户不存在"));
+        mockMvc.perform(get("/api/admin/v1/merchants/{merchantId}", noShopMerchantId)
+                        .header("Authorization", bearer(cityScopedToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/admin/v1/merchants/1001/operators")
+                        .header("Authorization", bearer(cityScopedToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/admin/v1/merchants/1001/operation-logs")
+                        .header("Authorization", bearer(cityScopedToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/api/admin/v1/merchants/1001/status")
+                        .header("Authorization", bearer(cityScopedToken))
+                        .header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"disable\",\"reason\":\"不应越权\"}"))
+                .andExpect(status().isNotFound());
+        assertThat(jdbc.queryForObject("SELECT status FROM merchant WHERE id=1001", Integer.class)).isEqualTo(1);
+
+        String partialShopToken = scopedAdminToken("partial", new Long[]{}, new Long[]{10001L});
+        mockMvc.perform(get("/api/admin/v1/merchants/1001")
+                        .header("Authorization", bearer(partialShopToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isNotFound());
+
+        String fullShopToken = scopedAdminToken(
+                "full", new Long[]{}, new Long[]{10001L, beijingShopId});
+        mockMvc.perform(get("/api/admin/v1/merchants/1001")
+                        .header("Authorization", bearer(fullShopToken))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(1001))
+                .andExpect(jsonPath("$.data.shopCount").value(2));
+
+        mockMvc.perform(get("/api/admin/v1/merchants/{merchantId}", noShopMerchantId)
+                        .header("Authorization", bearer(adminToken()))
+                        .header("X-Region", "CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(noShopMerchantId))
+                .andExpect(jsonPath("$.data.shopCount").value(0));
+    }
+
     private String adminToken() throws Exception {
+        return adminToken("admin");
+    }
+
+    private String adminToken(String account) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"account\":\"admin\",\"password\":\"admin123456\"}"))
+                        .content("{\"account\":\"" + account + "\",\"password\":\"admin123456\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
         return readToken(result);
+    }
+
+    private String scopedAdminToken(String label, Long[] cityIds, Long[] shopIds) throws Exception {
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        String account = "merchant-scope-" + label + "-" + suffix + "@test.local";
+        String roleCode = "merchant_scope_" + suffix;
+        String passwordHash = jdbc.queryForObject(
+                "SELECT password_hash FROM admin_user WHERE id=1", String.class);
+        jdbc.update(
+                "INSERT INTO admin_user(account,password_hash,name,status) VALUES(?,?,?,1)",
+                account, passwordHash, "商户范围测试管理员");
+        Long adminId = jdbc.queryForObject(
+                "SELECT id FROM admin_user WHERE account=?", Long.class, account);
+        jdbc.update(
+                "INSERT INTO admin_role(code,name,description,status,built_in) VALUES(?,?,?,1,FALSE)",
+                roleCode, "商户范围测试角色", "商户治理城市与门店范围集成测试");
+        Long roleId = jdbc.queryForObject(
+                "SELECT id FROM admin_role WHERE code=?", Long.class, roleCode);
+        jdbc.update("INSERT INTO admin_user_role(admin_id,role_id) VALUES(?,?)", adminId, roleId);
+        jdbc.update("""
+                INSERT INTO admin_role_permission(role_id,permission_id)
+                SELECT ?,id FROM admin_permission
+                WHERE code IN ('system:merchant:read','system:merchant:write')
+                """, roleId);
+        jdbc.update(
+                "INSERT INTO admin_region_scope(admin_id,region,all_cities) VALUES(?,'CN',FALSE)", adminId);
+        for (Long cityId : cityIds) {
+            jdbc.update(
+                    "INSERT INTO admin_city_scope(admin_id,region,city_id) VALUES(?,'CN',?)",
+                    adminId, cityId);
+        }
+        for (Long shopId : shopIds) {
+            jdbc.update(
+                    "INSERT INTO admin_shop_scope(admin_id,region,shop_id) VALUES(?,'CN',?)",
+                    adminId, shopId);
+        }
+        return adminToken(account);
     }
 
     private long createStaff(String account) throws Exception {

@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.module.admin.merchant.service;
 
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
 import com.tuowei.dazhongdianping.common.admin.AdminSession;
 import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -45,8 +47,11 @@ public class AdminMerchantManagementService {
     public PageResult<AdminMerchantResponse> listMerchants(AdminMerchantQuery query) {
         query.normalize();
         String region = RegionContext.getRegion().name();
-        long total = mapper.countMerchants(query, region);
-        List<AdminMerchantResponse> list = mapper.selectMerchants(query, region).stream()
+        AdminCityScope scope = currentScope(region);
+        long total = mapper.countMerchants(query, region, scope.allCities(), scope.cityIds(), scope.shopIds());
+        List<AdminMerchantResponse> list = mapper.selectMerchants(
+                        query, region, scope.allCities(), scope.cityIds(), scope.shopIds())
+                .stream()
                 .map(this::toResponse)
                 .toList();
         return new PageResult<>(
@@ -69,8 +74,12 @@ public class AdminMerchantManagementService {
         requireMerchant(merchantId);
         query.normalize();
         String region = RegionContext.getRegion().name();
-        long total = mapper.countMerchantOperators(merchantId, region, query);
-        List<AdminMerchantOperatorResponse> list = mapper.selectMerchantOperators(merchantId, region, query).stream()
+        AdminCityScope scope = currentScope(region);
+        long total = mapper.countMerchantOperators(
+                merchantId, region, query, scope.allCities(), scope.cityIds(), scope.shopIds());
+        List<AdminMerchantOperatorResponse> list = mapper.selectMerchantOperators(
+                        merchantId, region, query, scope.allCities(), scope.cityIds(), scope.shopIds())
+                .stream()
                 .map(this::toOperatorResponse)
                 .toList();
         return new PageResult<>(
@@ -94,8 +103,11 @@ public class AdminMerchantManagementService {
         requireMerchant(merchantId);
         query.normalize();
         String region = RegionContext.getRegion().name();
-        long total = mapper.countMerchantOperationLogs(merchantId, region, query);
-        List<AdminMerchantOperationLogResponse> list = mapper.selectMerchantOperationLogs(merchantId, region, query)
+        AdminCityScope scope = currentScope(region);
+        long total = mapper.countMerchantOperationLogs(
+                merchantId, region, query, scope.allCities(), scope.cityIds(), scope.shopIds());
+        List<AdminMerchantOperationLogResponse> list = mapper.selectMerchantOperationLogs(
+                        merchantId, region, query, scope.allCities(), scope.cityIds(), scope.shopIds())
                 .stream()
                 .map(this::toOperationLogResponse)
                 .toList();
@@ -163,12 +175,17 @@ public class AdminMerchantManagementService {
                     ? "商户员工当前状态不允许停用"
                     : "商户员工当前状态不允许恢复");
         }
+        String region = RegionContext.getRegion().name();
+        AdminCityScope scope = currentScope(region);
         if (mapper.updateMerchantOperatorStatus(
                 merchantId,
                 operatorId,
-                RegionContext.getRegion().name(),
+                region,
                 expectedStatus,
-                nextStatus
+                nextStatus,
+                scope.allCities(),
+                scope.cityIds(),
+                scope.shopIds()
         ) == 0) {
             throw new IllegalArgumentException("商户员工状态已变更，请刷新后重试");
         }
@@ -189,18 +206,26 @@ public class AdminMerchantManagementService {
                     ? "商户当前状态不允许停用"
                     : "商户当前状态不允许恢复");
         }
+        String region = RegionContext.getRegion().name();
+        AdminCityScope scope = currentScope(region);
         if (mapper.updateMerchantStatus(
                 merchant.getId(),
-                RegionContext.getRegion().name(),
+                region,
                 expectedStatus,
-                status
+                status,
+                scope.allCities(),
+                scope.cityIds(),
+                scope.shopIds()
         ) == 0) {
             throw new IllegalArgumentException("商户状态已变更，请刷新后重试");
         }
     }
 
     private AdminMerchantRow requireMerchant(Long merchantId) {
-        AdminMerchantRow row = mapper.selectMerchantById(merchantId, RegionContext.getRegion().name());
+        String region = RegionContext.getRegion().name();
+        AdminCityScope scope = currentScope(region);
+        AdminMerchantRow row = mapper.selectMerchantById(
+                merchantId, region, scope.allCities(), scope.cityIds(), scope.shopIds());
         if (row == null) {
             throw new NotFoundException("商户不存在");
         }
@@ -208,10 +233,15 @@ public class AdminMerchantManagementService {
     }
 
     private AdminMerchantOperatorRow requireMerchantOperator(Long merchantId, Long operatorId) {
+        String region = RegionContext.getRegion().name();
+        AdminCityScope scope = currentScope(region);
         AdminMerchantOperatorRow row = mapper.selectMerchantOperatorById(
                 merchantId,
                 operatorId,
-                RegionContext.getRegion().name()
+                region,
+                scope.allCities(),
+                scope.cityIds(),
+                scope.shopIds()
         );
         if (row == null) {
             throw new NotFoundException("商户员工不存在");
@@ -313,6 +343,11 @@ public class AdminMerchantManagementService {
             throw new UnauthorizedException("管理员登录状态不存在");
         }
         return session;
+    }
+
+    private AdminCityScope currentScope(String region) {
+        AdminCityScope scope = currentAdmin().cityScopes().get(region);
+        return scope == null ? new AdminCityScope(false, Set.of(), Set.of()) : scope;
     }
 
     private long safeCount(Long value) {

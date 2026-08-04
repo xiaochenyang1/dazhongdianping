@@ -23,6 +23,7 @@
     <sql id="merchantFilters">
         AND m.region = #{region}
         AND m.is_deleted = FALSE
+        <include refid="merchantScopeFilter"/>
         <if test="query.keyword != null">
             AND (
                 LOWER(m.account) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
@@ -39,6 +40,41 @@
         </if>
         <if test="query.status != null">
             AND m.status = #{query.status}
+        </if>
+    </sql>
+
+    <sql id="merchantScopeFilter">
+        <if test="!allCities">
+            AND EXISTS (
+                SELECT 1
+                FROM shop merchant_scope_shop
+                WHERE merchant_scope_shop.merchant_id = m.id
+                  AND merchant_scope_shop.is_deleted = FALSE
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM shop merchant_scope_shop
+                WHERE merchant_scope_shop.merchant_id = m.id
+                  AND merchant_scope_shop.is_deleted = FALSE
+                  AND
+                  <choose>
+                      <when test="!cityIds.isEmpty() and !shopIds.isEmpty()">
+                          merchant_scope_shop.city_id NOT IN
+                          <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">#{cityId}</foreach>
+                          AND merchant_scope_shop.id NOT IN
+                          <foreach collection="shopIds" item="shopId" open="(" separator="," close=")">#{shopId}</foreach>
+                      </when>
+                      <when test="!cityIds.isEmpty()">
+                          merchant_scope_shop.city_id NOT IN
+                          <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">#{cityId}</foreach>
+                      </when>
+                      <when test="!shopIds.isEmpty()">
+                          merchant_scope_shop.id NOT IN
+                          <foreach collection="shopIds" item="shopId" open="(" separator="," close=")">#{shopId}</foreach>
+                      </when>
+                      <otherwise>1 = 1</otherwise>
+                  </choose>
+            )
         </if>
     </sql>
 
@@ -66,16 +102,18 @@
         WHERE m.id = #{merchantId}
           AND m.region = #{region}
           AND m.is_deleted = FALSE
+        <include refid="merchantScopeFilter"/>
     </select>
 
     <update id="updateMerchantStatus">
-        UPDATE merchant
+        UPDATE merchant m
         SET status = #{status},
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = #{merchantId}
-          AND region = #{region}
-          AND is_deleted = FALSE
-          AND status = #{expectedStatus}
+        WHERE m.id = #{merchantId}
+          AND m.region = #{region}
+          AND m.is_deleted = FALSE
+          AND m.status = #{expectedStatus}
+        <include refid="merchantScopeFilter"/>
     </update>
 
     <sql id="merchantOperatorFilters">
@@ -84,6 +122,7 @@
         AND mo.operator_type = 2
         AND mo.is_deleted = FALSE
         AND m.is_deleted = FALSE
+        <include refid="merchantScopeFilter"/>
         <if test="query.keyword != null">
             AND (
                 LOWER(mo.account) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
@@ -129,6 +168,7 @@
           AND mo.operator_type = 2
           AND mo.is_deleted = FALSE
           AND m.is_deleted = FALSE
+        <include refid="merchantScopeFilter"/>
     </select>
 
     <select id="selectMerchantOperatorRoleNames" resultType="string">
@@ -161,6 +201,7 @@
               WHERE m.id = merchant_operator.merchant_id
                 AND m.region = #{region}
                 AND m.is_deleted = FALSE
+                <include refid="merchantScopeFilter"/>
           )
     </update>
 
@@ -168,6 +209,7 @@
         AND mol.merchant_id = #{merchantId}
         AND m.region = #{region}
         AND m.is_deleted = FALSE
+        <include refid="merchantScopeFilter"/>
         <if test="query.operatorId != null">
             AND mol.operator_id = #{query.operatorId}
         </if>
