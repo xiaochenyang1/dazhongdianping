@@ -18,7 +18,7 @@ test.skip(process.env.PLAYWRIGHT_REAL_BACKEND !== '1', 'requires PLAYWRIGHT_REAL
 
 async function loginFromAuthDialog(page: Page, account: string, password: string) {
   const authDialog = page.locator('.auth-dialog')
-  await expect(authDialog.getByRole('heading', { name: '先把登录链路跑顺' })).toBeVisible()
+  await expect(authDialog).toBeVisible()
   await authDialog.getByLabel('邮箱 / 手机号').fill(account)
   await authDialog.getByLabel('密码').fill(password)
   await authDialog.getByRole('button', { name: '登录', exact: true }).click()
@@ -433,7 +433,7 @@ test.describe.serial('real backend review flow', () => {
     await expect(page.getByText('举报已提交，后台会复核这条点评。')).toBeVisible()
 
     await page.goto('/user/growth-records')
-    await expect(page.getByRole('heading', { name: /每一笔成长值和积分都摊开看/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '每一笔成长值和积分都清晰可查。' })).toBeVisible()
     await expect(page.locator(`a[href="/user/reviews/${reviewId}"]`).first()).toBeVisible()
     await expect(page.getByText('发布点评奖励').first()).toBeVisible()
   })
@@ -487,6 +487,112 @@ test.describe.serial('real backend review flow', () => {
     } finally {
       await reportContext.close()
     }
+
+    const commentReportReason = `评论举报 E2E ${Date.now()}`
+    const commentAuthorSession = await expectApiSuccess<{ accessToken: string }>(
+      await request.post(`${backendBaseURL}/api/c/v1/auth/login/password`, {
+        headers: {
+          'Accept-Language': 'zh-CN',
+          'X-Region': 'CN',
+        },
+        data: {
+          account: 'demo.cn@example.com',
+          password: 'Demo123456',
+        },
+      }),
+    )
+    const seededComment = await expectApiSuccess<{ id: number; content: string }>(
+      await request.post(`${backendBaseURL}/api/c/v1/reviews/${reviewId}/comments`, {
+        headers: {
+          'Accept-Language': 'zh-CN',
+          'Authorization': `Bearer ${commentAuthorSession.accessToken}`,
+          'Idempotency-Key': `pw-cmt-${Date.now()}`,
+          'X-Region': 'CN',
+        },
+        data: {
+          content: `待举报评论 ${Date.now()}`,
+        },
+      }),
+    )
+
+    const commentReportContext = await browser.newContext()
+    try {
+      const commentReportPage = await commentReportContext.newPage()
+      await commentReportPage.goto(`/reviews/${reviewId}`)
+      await expect(commentReportPage.getByText(seededComment.content)).toBeVisible()
+      // Guest report opens auth first; panel appears after login resume.
+      await commentReportPage.getByTestId(`comment-report-${seededComment.id}`).click()
+      await loginFromAuthDialog(commentReportPage, '+447700900999', 'Demo123456')
+      await expect(commentReportPage).toHaveURL(new RegExp(`/reviews/${reviewId}$`))
+      await expect(commentReportPage.getByTestId(`comment-report-reason-${seededComment.id}`)).toBeVisible()
+      await commentReportPage.getByTestId(`comment-report-reason-${seededComment.id}`).fill(commentReportReason)
+      await commentReportPage.getByTestId(`comment-report-submit-${seededComment.id}`).click()
+      await expect(commentReportPage.getByText('评论举报已提交，后台会复核。')).toBeVisible()
+    } finally {
+      await commentReportContext.close()
+    }
+  })
+
+  test('completes daily check-in and points mall exchange against the real backend', async ({ page, request }) => {
+    const adminSession = await expectApiSuccess<{ accessToken: string }>(
+      await request.post(`${backendBaseURL}/api/admin/v1/auth/login`, {
+        headers: {
+          'Accept-Language': 'zh-CN',
+          'X-Region': 'CN',
+        },
+        data: {
+          account: 'admin',
+          password: 'admin123456',
+        },
+      }),
+    )
+
+    const productName = `E2E 低价积分商品 ${Date.now()}`
+    const product = await expectApiSuccess<{ id: number; name: string; pointsPrice: number }>(
+      await request.post(`${backendBaseURL}/api/admin/v1/points/products`, {
+        headers: adminHeaders(adminSession.accessToken, 'CN'),
+        data: {
+          name: productName,
+          coverImage: '',
+          description: 'Playwright 低价兑换样例',
+          pointsPrice: 1,
+          stock: 20,
+          exchangeLimitPerUser: 5,
+          fulfillType: 1,
+          sort: 0,
+        },
+      }),
+    )
+    expect(product.pointsPrice).toBe(1)
+
+    await page.goto('/user/check-in')
+    await loginFromAuthDialog(page, 'demo.cn@example.com', 'Demo123456')
+    await expect(page).toHaveURL(/\/user\/check-in/)
+    await expect(page.getByTestId('check-in-status')).toBeVisible()
+
+    const alreadyCheckedIn = await page.getByTestId('check-in-submit').isDisabled()
+    if (!alreadyCheckedIn) {
+      await page.getByTestId('check-in-submit').click()
+      await expect(page.getByText('签到成功，奖励已入账。')).toBeVisible()
+      await expect(page.getByTestId('check-in-status')).toContainText('已签到')
+      await expect(page.getByTestId('check-in-submit')).toBeDisabled()
+    } else {
+      await expect(page.getByTestId('check-in-status')).toContainText('已签到')
+    }
+
+    await page.goto('/user/points-mall')
+    await expect(page).toHaveURL(/\/user\/points-mall/)
+    await expect(page.getByTestId('points-balance')).toBeVisible()
+    await expect(page.getByTestId(`points-product-${product.id}`)).toBeVisible()
+
+    page.once('dialog', async (dialog) => {
+      await dialog.accept()
+    })
+    await page.getByTestId(`points-product-${product.id}`).getByRole('button', { name: '立即兑换' }).click()
+    await expect(page.getByTestId('points-success')).toContainText(/兑换成功/)
+
+    await page.getByTestId('points-tab-exchanges').click()
+    await expect(page.getByText(productName)).toBeVisible()
   })
 
   test('binds a phone, updates password, and completes a successful admin import', async ({ page, context, request }) => {
@@ -496,7 +602,7 @@ test.describe.serial('real backend review flow', () => {
     await page.goto('/user/profile')
     await loginFromAuthDialog(page, 'demo.cn@example.com', 'Demo123456')
     await expect(page).toHaveURL(/\/user\/profile/)
-    await expect(page.getByRole('heading', { name: /资料、绑定、改密都得在这儿闭环/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '管理个人资料、账号绑定和登录密码。' })).toBeVisible()
 
     await page.getByLabel('绑定类型').selectOption('phone')
     await page.getByRole('textbox', { name: '手机号' }).fill(newPhone)
@@ -510,7 +616,7 @@ test.describe.serial('real backend review flow', () => {
 
     await page.getByPlaceholder('已有密码时填写').fill('Demo123456')
     await page.getByPlaceholder('设置新密码').fill(newPassword)
-    await page.getByPlaceholder('再输一遍新密码').fill(newPassword)
+    await page.getByPlaceholder('再次输入新密码').fill(newPassword)
     await page.getByRole('button', { name: '更新密码' }).click()
     await expect(page.getByText('密码已经更新。')).toBeVisible()
 
@@ -546,7 +652,7 @@ test.describe.serial('real backend review flow', () => {
     await page.goto('/user/privacy')
     await loginFromAuthDialog(page, '+447700900999', 'Demo123456')
     await expect(page).toHaveURL(/\/user\/privacy/)
-    await expect(page.getByRole('heading', { name: /你的数据能带走/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '管理数据导出、协议记录、设备和账号删除。' })).toBeVisible()
 
     await page.getByRole('button', { name: '创建导出任务' }).click()
     await expect(page.getByText('数据导出任务已创建')).toBeVisible()
@@ -630,13 +736,13 @@ test.describe.serial('real backend review flow', () => {
       await reviewerPage.getByLabel('密码').fill(password)
       await reviewerPage.getByRole('button', { name: '进入后台' }).click()
       await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
-      await expect(reviewerPage.getByLabel('区域')).toHaveValue('EU')
+      await expect(reviewerPage.getByLabel('Region')).toHaveValue('EU')
 
-      const reviewerMenu = reviewerPage.getByRole('navigation', { name: '后台菜单' })
-      await expect(reviewerMenu.getByRole('link', { name: '点评审核', exact: true })).toBeVisible()
-      await expect(reviewerMenu).not.toContainText('商户管理')
-      await expect(reviewerMenu).not.toContainText('管理员账号')
-      await expect(reviewerMenu).not.toContainText('角色权限')
+      const reviewerMenu = reviewerPage.getByRole('navigation', { name: 'Admin navigation' })
+      await expect(reviewerMenu.getByRole('link', { name: 'Review Audit', exact: true })).toBeVisible()
+      await expect(reviewerMenu).not.toContainText('Merchant Accounts')
+      await expect(reviewerMenu).not.toContainText('Admin Accounts')
+      await expect(reviewerMenu).not.toContainText('Roles & Permissions')
 
       await reviewerPage.goto(`${adminBaseURL}/system/admins`)
       await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
@@ -670,8 +776,8 @@ test.describe.serial('real backend review flow', () => {
         })
       }, retainedReviewerStorage)
       await retainedReviewerPage.goto(`${adminBaseURL}/dashboard`)
-      const retainedReviewerMenu = retainedReviewerPage.getByRole('navigation', { name: '后台菜单' })
-      await expect(retainedReviewerMenu.getByRole('link', { name: '点评审核', exact: true })).toBeVisible()
+      const retainedReviewerMenu = retainedReviewerPage.getByRole('navigation', { name: 'Admin navigation' })
+      await expect(retainedReviewerMenu.getByRole('link', { name: 'Review Audit', exact: true })).toBeVisible()
 
       await expectApiSuccess(
         await request.get(`${backendBaseURL}/api/admin/v1/audit/tasks`, {
@@ -706,11 +812,11 @@ test.describe.serial('real backend review flow', () => {
         failedRequests: reviewerDiagnostics.failedRequests.length,
         requests: reviewerDiagnostics.requests.length,
       }
-      await reviewerMenu.getByRole('link', { name: '点评审核', exact: true }).click()
+      await reviewerMenu.getByRole('link', { name: 'Review Audit', exact: true }).click()
       await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
-      const revokedReviewerMenu = reviewerPage.getByRole('navigation', { name: '后台菜单' })
-      await expect(revokedReviewerMenu).not.toContainText('点评审核')
-      await expect(reviewerPage.getByText('当前账号暂无可查看的控制台数据。')).toBeVisible()
+      const revokedReviewerMenu = reviewerPage.getByRole('navigation', { name: 'Admin navigation' })
+      await expect(revokedReviewerMenu).not.toContainText('Review Audit')
+      await expect(reviewerPage.getByText('This account does not have any dashboard data to view.')).toBeVisible()
       expectNoBrowserFailures(reviewerDiagnostics, reviewerBeforeNavigation)
       expect(
         reviewerDiagnostics.requests.slice(reviewerBeforeNavigation.requests)
@@ -724,9 +830,9 @@ test.describe.serial('real backend review flow', () => {
       }
       await retainedReviewerPage.reload()
       await expect(retainedReviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
-      const rehydratedReviewerMenu = retainedReviewerPage.getByRole('navigation', { name: '后台菜单' })
-      await expect(rehydratedReviewerMenu).not.toContainText('点评审核')
-      await expect(retainedReviewerPage.getByText('当前账号暂无可查看的控制台数据。')).toBeVisible()
+      const rehydratedReviewerMenu = retainedReviewerPage.getByRole('navigation', { name: 'Admin navigation' })
+      await expect(rehydratedReviewerMenu).not.toContainText('Review Audit')
+      await expect(retainedReviewerPage.getByText('This account does not have any dashboard data to view.')).toBeVisible()
       expectNoBrowserFailures(retainedReviewerDiagnostics, retainedReviewerBeforeReload)
 
       const revokedIdentity = await expectApiSuccess<{ permissions: string[] }>(
@@ -753,18 +859,18 @@ test.describe.serial('real backend review flow', () => {
 
       await reviewerPage.reload()
       await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
-      const restoredReviewerMenu = reviewerPage.getByRole('navigation', { name: '后台菜单' })
-      await expect(restoredReviewerMenu.getByRole('link', { name: '点评审核', exact: true })).toBeVisible()
+      const restoredReviewerMenu = reviewerPage.getByRole('navigation', { name: 'Admin navigation' })
+      await expect(restoredReviewerMenu.getByRole('link', { name: 'Review Audit', exact: true })).toBeVisible()
       const initialAuditTasksResponse = reviewerPage.waitForResponse((response) =>
         response.request().method() === 'GET'
         && response.status() === 200
         && response.url().includes('/api/admin/v1/audit/tasks'),
       )
-      await restoredReviewerMenu.getByRole('link', { name: '点评审核', exact: true }).click()
+      await restoredReviewerMenu.getByRole('link', { name: 'Review Audit', exact: true }).click()
       await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/audit/reviews$`))
       await initialAuditTasksResponse
-      await expect(reviewerPage.getByText('点评审核任务加载中...')).not.toBeVisible()
-      await expect(reviewerPage.getByRole('button', { name: '应用筛选', exact: true })).toBeVisible()
+      await expect(reviewerPage.getByText('Loading review audit tasks...')).not.toBeVisible()
+      await expect(reviewerPage.getByRole('button', { name: 'Apply filters', exact: true })).toBeVisible()
 
       await adminPage.goto(`${adminBaseURL}/system/admins`)
       const refreshedAccountRow = adminPage.locator('tr').filter({ hasText: account })
@@ -779,8 +885,8 @@ test.describe.serial('real backend review flow', () => {
         failedRequests: reviewerDiagnostics.failedRequests.length,
       }
       expectNoBrowserFailures(reviewerDiagnostics)
-      await reviewerPage.getByLabel('状态').selectOption('1')
-      await reviewerPage.getByRole('button', { name: '应用筛选', exact: true }).click()
+      await reviewerPage.getByLabel('Status').selectOption('1')
+      await reviewerPage.getByRole('button', { name: 'Apply filters', exact: true }).click()
       await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/login$`))
       expect(await reviewerPage.evaluate(() => localStorage.getItem('dzdp:admin-token'))).toBeNull()
       expectBrowserAuthInvalidation(reviewerDiagnostics, reviewerBeforeAccountRequest, '/api/admin/v1/audit/tasks')

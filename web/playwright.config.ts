@@ -14,7 +14,7 @@ const webDir = fileURLToPath(new URL('.', import.meta.url))
 const repoRoot = path.resolve(webDir, '..')
 const backendDir = path.join(repoRoot, 'backend')
 const backendBaseURL = `http://127.0.0.1:${backendPort}`
-const backendCommand = `${process.platform === 'win32' ? 'mvnw.cmd' : './mvnw'} -q -DskipTests spring-boot:run "-Dspring-boot.run.profiles=h2" "-Dspring-boot.run.arguments=--server.port=${backendPort} --management.health.redis.enabled=false"`
+const backendCommand = `${process.platform === 'win32' ? 'mvnw.cmd' : './mvnw'} -q -DskipTests spring-boot:run "-Dspring-boot.run.profiles=h2,local" "-Dspring-boot.run.arguments=--server.port=${backendPort} --management.health.redis.enabled=false"`
 const viteCliPath = './node_modules/vite/bin/vite.js'
 const realBackendEnv = {
   ...process.env,
