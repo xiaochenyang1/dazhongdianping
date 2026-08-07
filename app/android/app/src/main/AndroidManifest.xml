@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Android 13+ (API 33) drops notifications silently unless the user has
+         granted this runtime permission. Push degrades to in-app/WebSocket
+         notifications when it is denied. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="dazhongdianping_app"
         android:name="${applicationName}"

@@ -71,41 +71,51 @@ FIREBASE_ANDROID_API_KEY=your-android-api-key
 FIREBASE_IOS_API_KEY=your-ios-api-key
 ```
 
-## Step 5: Update build.gradle files
+## Step 5: Native build config (already wired — do not hand-edit)
 
-### Android (`app/build.gradle.kts` or `app/build.gradle`)
+Both platforms are already prepared in the repo. Do **not** add Firebase SDK
+dependencies by hand: the `firebase_core` / `firebase_messaging` pubspec entries
+make FlutterFire manage the Gradle and CocoaPods artifacts, and a manual
+`com.google.firebase:firebase-messaging` line will drift from the plugin version.
 
-```kotlin
-plugins {
-    id("com.google.gms.google-services") version "4.4.2" apply false
-}
+### Android (`app/android/`)
 
-android {
-    ...
-}
+- `settings.gradle.kts` declares `com.google.gms.google-services` (`apply false`).
+- `app/build.gradle.kts` applies it **conditionally**:
 
-dependencies {
-    ...
-    implementation("com.google.firebase:firebase-messaging:24.0.1")
-}
-```
+  ```kotlin
+  if (file("google-services.json").isFile) {
+      apply(plugin = "com.google.gms.google-services")
+  }
+  ```
 
-Then in `app/build.gradle` (module level):
+  So the build works with or without the config file present — dropping in
+  `google-services.json` is the only action needed.
+- `AndroidManifest.xml` declares `android.permission.POST_NOTIFICATIONS`.
+  Android 13+ (API 33) silently drops notifications without it. Note this is a
+  *runtime* permission: `firebase_messaging`'s `requestPermission()` triggers the
+  system prompt, and a denial still degrades to in-app/WebSocket notifications.
 
-```kotlin
-plugins {
-    id 'com.google.gms.google-services'
-}
-```
+### iOS (`app/ios/`)
 
-### iOS (`Runner.xcodeproj` or `Podfile`)
+- `Runner/Runner.entitlements` carries `aps-environment` (`development`) and is
+  wired into the Runner target's Debug, Release and Profile configs via
+  `CODE_SIGN_ENTITLEMENTS`. Without it APNs never returns a device token.
+  **Release builds must flip this to `production`** (or let Xcode-managed
+  signing inject it) or production APNs rejects the token.
+- `Runner/Info.plist` declares `UIBackgroundModes: remote-notification` so
+  background/silent pushes can wake the app.
+- After dropping `GoogleService-Info.plist` into `ios/Runner/`, add it to the
+  Runner target in Xcode (drag into the project, tick Runner) — an unreferenced
+  file on disk is not read at runtime. Then:
 
-Ensure Firebase is properly installed via CocoaPods:
+  ```bash
+  cd ios && pod install
+  ```
 
-```bash
-cd ios
-pod install
-```
+- Push requires the Push Notifications capability on the App ID in the Apple
+  Developer portal, and a real device: the iOS Simulator cannot register for
+  remote notifications.
 
 ## Step 6: Runtime init path (already wired)
 
@@ -127,11 +137,28 @@ You should **not** hand-edit a separate `initializeFirebase()` helper unless you
 
 ## Step 7: Verification
 
-1. Confirm `app/android/app/google-services.json` and `app/ios/Runner/GoogleService-Info.plist` exist (not placeholders).
-2. Confirm `app/lib/firebase_options.dart` no longer uses `YOUR_PROJECT_ID` placeholders (or rely on native-only fallback).
-3. Build: `flutter build apk` / `flutter build ios` with push flag enabled.
-4. Real device: grant notification permission; confirm token registers via device API and server push channel.
-5. Optional: Firebase Console → Cloud Messaging / token history.
+1. Confirm `app/android/app/google-services.json` and
+   `app/ios/Runner/GoogleService-Info.plist` exist (not placeholders), and that
+   the plist is added to the Runner target in Xcode.
+2. Confirm `app/lib/firebase_options.dart` no longer uses `YOUR_PROJECT_ID`
+   placeholders (or rely on the native-file fallback path).
+3. Check the bundle/application ID you registered in Firebase matches the build.
+   The iOS Runner target currently ships the Flutter default
+   `com.example.dazhongdianpingApp`; Android release builds override to a
+   production application ID. A mismatch is the most common cause of "no token"
+   with everything else configured correctly.
+4. Build with push enabled:
+   `flutter build apk --dart-define=FIREBASE_CONFIGURED=true` /
+   `flutter build ios --dart-define=FIREBASE_CONFIGURED=true`.
+5. Real device only (the iOS Simulator cannot register for remote
+   notifications): grant notification permission, then confirm the token
+   registers through the device API and that the server records the push
+   channel.
+6. Server side: set `APP_PUSH_ENABLED=true` plus the `APP_PUSH_FCM_*` /
+   `APP_PUSH_APNS_*` credentials. They default to empty and push stays off, so
+   the adapter never fires with half-configured credentials.
+7. Optional: Firebase Console → Cloud Messaging → send a test message to the
+   registered token.
 
 Without real console credentials, the app must still build and run with push disabled or degraded — that is the expected local default.
 

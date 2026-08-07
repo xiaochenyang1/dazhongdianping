@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- APNs environment. Keep "development" for local and TestFlight-internal
+	     builds; release pipelines must switch this to "production" (or strip it
+	     and let Xcode-managed signing inject the value) before App Store upload,
+	     otherwise the production APNs endpoint rejects the device token. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>
