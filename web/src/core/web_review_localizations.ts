@@ -28,6 +28,10 @@ export interface WebReviewStrings {
     reportRequired: string
     reportSent: string
     reportFailed: string
+    reportComment: string
+    collapseCommentReport: string
+    commentReportSent: string
+    commentReportFailed: string
     loading: string
     ownedEyebrow: string
     publicEyebrow: string
@@ -154,6 +158,10 @@ const zhCnStrings: WebReviewStrings = {
     reportRequired: '举报理由不能为空',
     reportSent: '举报已提交，后台会复核这条点评。',
     reportFailed: '举报提交失败',
+    reportComment: '举报评论',
+    collapseCommentReport: '收起评论举报',
+    commentReportSent: '评论举报已提交，后台会复核。',
+    commentReportFailed: '评论举报提交失败',
     loading: '点评详情加载中...',
     ownedEyebrow: '我的点评详情',
     publicEyebrow: '公开点评详情',
@@ -280,6 +288,10 @@ const enStrings: WebReviewStrings = {
     reportRequired: 'Enter a reason for the report',
     reportSent: 'Report submitted for moderation.',
     reportFailed: 'Could not submit the report',
+    reportComment: 'Report comment',
+    collapseCommentReport: 'Close comment report',
+    commentReportSent: 'Comment report submitted for moderation.',
+    commentReportFailed: 'Could not submit the comment report',
     loading: 'Loading review details...',
     ownedEyebrow: 'My review',
     publicEyebrow: 'Public review',
@@ -385,6 +397,9 @@ const enStrings: WebReviewStrings = {
     '评论发布失败': 'Could not publish the comment',
     '举报理由不能为空': 'Enter a reason for the report',
     '举报提交失败': 'Could not submit the report',
+    '评论不存在': 'Comment not found',
+    '你已经举报过这条评论了': 'You have already reported this comment',
+    '评论举报提交失败': 'Could not submit the comment report',
     '门店信息不完整，没法写点评。': 'Place information is missing, so this review cannot be created.',
     '点评编辑页加载失败': 'Could not load the review editor',
     '图片上传失败': 'Could not upload the image',

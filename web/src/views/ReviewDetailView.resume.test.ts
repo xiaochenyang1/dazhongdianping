@@ -8,6 +8,7 @@ const reviewMocks = vi.hoisted(() => ({
   fetchOwnedReviewDetail: vi.fn(),
   fetchReviewDetail: vi.fn(),
   listReviewComments: vi.fn(),
+  reportComment: vi.fn(),
   reportReview: vi.fn(),
   toggleReviewLike: vi.fn(),
 }))

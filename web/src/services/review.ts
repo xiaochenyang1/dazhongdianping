@@ -3,6 +3,7 @@ import type { PageResult } from '@/types/browse'
 import type {
   ReviewComment,
   ReviewCommentPayload,
+  ReviewCommentReportResult,
   ReviewDetail,
   ReviewLikeResult,
   ReviewReportPayload,
@@ -42,6 +43,13 @@ export function listReviewComments(reviewId: number, query?: { page?: number; pa
 
 export function reportReview(reviewId: number, payload: ReviewReportPayload) {
   return apiPost<ReviewReportResult>(`/api/c/v1/reviews/${reviewId}/report`, payload)
+}
+
+export function reportComment(reviewId: number, commentId: number, payload: ReviewReportPayload) {
+  return apiPost<ReviewCommentReportResult>(
+    `/api/c/v1/reviews/${reviewId}/comments/${commentId}/report`,
+    payload,
+  )
 }
 
 export function deleteReview(reviewId: number) {

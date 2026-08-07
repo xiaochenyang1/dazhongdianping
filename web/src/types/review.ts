@@ -68,6 +68,16 @@ export interface ReviewReportResult {
   createdAt: string
 }
 
+export interface ReviewCommentReportResult {
+  id: number
+  reviewId: number
+  commentId: number
+  reason: string
+  status: number
+  statusText: string
+  createdAt: string
+}
+
 export interface UserReviewSummary {
   id: number
   shopId: number

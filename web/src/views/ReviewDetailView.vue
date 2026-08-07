@@ -13,6 +13,7 @@ import {
   fetchOwnedReviewDetail,
   fetchReviewDetail,
   listReviewComments,
+  reportComment,
   reportReview,
   toggleReviewLike,
 } from '@/services/review'
@@ -57,6 +58,9 @@ const commentContent = ref('')
 const activeReplyTarget = ref<ReviewComment | null>(null)
 const reportReason = ref('')
 const reportPanelOpen = ref(false)
+const commentReportTargetId = ref<number | null>(null)
+const commentReportReason = ref('')
+const commentReportSubmitting = ref(false)
 const shareMessage = ref('')
 let reviewRequestId = 0
 let commentsRequestId = 0
@@ -196,6 +200,8 @@ async function loadReview() {
   resetInteractionFeedback()
   reportPanelOpen.value = false
   activeReplyTarget.value = null
+  commentReportTargetId.value = null
+  commentReportReason.value = ''
   if (Number.isNaN(targetReviewId)) {
     errorMessage.value = copy.value.detail.invalidId
     loading.value = false
@@ -327,10 +333,87 @@ function startReply(target: ReviewComment) {
     return
   }
   activeReplyTarget.value = target
+  closeCommentReport()
 }
 
 function clearReplyTarget() {
   activeReplyTarget.value = null
+}
+
+function openCommentReport(target: ReviewComment) {
+  resetInteractionFeedback()
+  if (!ensureSignedIn(() => openCommentReport(target))) {
+    return
+  }
+  if (commentReportTargetId.value === target.id) {
+    commentReportTargetId.value = null
+    commentReportReason.value = ''
+    return
+  }
+  commentReportTargetId.value = target.id
+  commentReportReason.value = ''
+  reportPanelOpen.value = false
+}
+
+function closeCommentReport() {
+  commentReportTargetId.value = null
+  commentReportReason.value = ''
+}
+
+function toggleReviewReportPanel() {
+  reportPanelOpen.value = !reportPanelOpen.value
+  if (reportPanelOpen.value) {
+    closeCommentReport()
+  }
+}
+
+async function submitCommentReport(
+  resumedReviewId?: unknown,
+  resumedCommentId?: unknown,
+  resumedReason?: unknown,
+) {
+  const targetReviewId = resolveInteractionReviewId(resumedReviewId)
+  const hasResumedReviewId = typeof resumedReviewId === 'number'
+  const targetCommentId =
+    typeof resumedCommentId === 'number' ? resumedCommentId : commentReportTargetId.value
+  if (
+    !targetReviewId
+    || !targetCommentId
+    || (!hasResumedReviewId && !interactionEnabled.value)
+  ) {
+    return
+  }
+
+  const reasonSource = typeof resumedReason === 'string' ? resumedReason : commentReportReason.value
+  const reason = reasonSource.trim()
+  if (!reason) {
+    interactionErrorMessage.value = copy.value.detail.reportRequired
+    return
+  }
+  if (!ensureSignedIn(() => submitCommentReport(targetReviewId, targetCommentId, reason))) {
+    return
+  }
+
+  commentReportSubmitting.value = true
+  resetInteractionFeedback()
+
+  try {
+    await reportComment(targetReviewId, targetCommentId, { reason })
+    if (!review.value || review.value.id !== targetReviewId) {
+      await loadReview()
+    }
+    commentReportReason.value = ''
+    commentReportTargetId.value = null
+    interactionMessage.value = copy.value.detail.commentReportSent
+  } catch (error) {
+    interactionErrorMessage.value = localizeWebReviewError(
+      copy.value,
+      error,
+      copy.value.detail.commentReportFailed,
+    )
+  } finally {
+    commentReportSubmitting.value = false
+  }
 }
 
 async function submitReport(resumedReviewId?: unknown, resumedReason?: unknown) {
@@ -508,7 +591,11 @@ watch(
         <button type="button" class="primary-button" :disabled="likeLoading" @click="handleToggleLike">
           {{ review.likedByCurrentUser ? copy.detail.unlike : copy.detail.like }} · {{ review.likeCount }}
         </button>
-        <button type="button" class="ghost-button" @click="reportPanelOpen = !reportPanelOpen">
+        <button
+          type="button"
+          class="ghost-button"
+          @click="toggleReviewReportPanel"
+        >
           {{ reportPanelOpen ? copy.detail.collapseReport : copy.detail.reportReview }}
         </button>
         <button v-if="!sessionState.accessToken" type="button" class="secondary-button" @click="promptLogin">
@@ -589,6 +676,38 @@ watch(
           <p>{{ item.content }}</p>
           <div class="comment-card__actions">
             <button type="button" class="ghost-button" @click="startReply(item)">{{ copy.detail.reply }}</button>
+            <button
+              v-if="!item.mine"
+              type="button"
+              class="ghost-button"
+              :data-testid="`comment-report-${item.id}`"
+              @click="openCommentReport(item)"
+            >
+              {{ commentReportTargetId === item.id ? copy.detail.collapseCommentReport : copy.detail.reportComment }}
+            </button>
+          </div>
+          <div v-if="commentReportTargetId === item.id" class="report-panel" :data-testid="`comment-report-panel-${item.id}`">
+            <label class="field field--full">
+              <span>{{ copy.detail.reportReason }}</span>
+              <textarea
+                v-model="commentReportReason"
+                maxlength="200"
+                :placeholder="copy.detail.reportPlaceholder"
+                :data-testid="`comment-report-reason-${item.id}`"
+              />
+            </label>
+            <div class="report-panel__actions">
+              <button type="button" class="secondary-button" @click="closeCommentReport">{{ copy.detail.cancel }}</button>
+              <button
+                type="button"
+                class="primary-button"
+                :data-testid="`comment-report-submit-${item.id}`"
+                :disabled="commentReportSubmitting"
+                @click="submitCommentReport"
+              >
+                {{ commentReportSubmitting ? copy.detail.submitting : copy.detail.submitReport }}
+              </button>
+            </div>
           </div>
           <div v-if="item.replies.length > 0" class="comment-replies">
             <article v-for="reply in item.replies" :key="reply.id" class="comment-card comment-card--reply">
@@ -607,6 +726,38 @@ watch(
               <p>{{ reply.content }}</p>
               <div class="comment-card__actions">
                 <button type="button" class="ghost-button" @click="startReply(reply)">{{ copy.detail.reply }}</button>
+                <button
+                  v-if="!reply.mine"
+                  type="button"
+                  class="ghost-button"
+                  :data-testid="`comment-report-${reply.id}`"
+                  @click="openCommentReport(reply)"
+                >
+                  {{ commentReportTargetId === reply.id ? copy.detail.collapseCommentReport : copy.detail.reportComment }}
+                </button>
+              </div>
+              <div v-if="commentReportTargetId === reply.id" class="report-panel" :data-testid="`comment-report-panel-${reply.id}`">
+                <label class="field field--full">
+                  <span>{{ copy.detail.reportReason }}</span>
+                  <textarea
+                    v-model="commentReportReason"
+                    maxlength="200"
+                    :placeholder="copy.detail.reportPlaceholder"
+                    :data-testid="`comment-report-reason-${reply.id}`"
+                  />
+                </label>
+                <div class="report-panel__actions">
+                  <button type="button" class="secondary-button" @click="closeCommentReport">{{ copy.detail.cancel }}</button>
+                  <button
+                    type="button"
+                    class="primary-button"
+                    :data-testid="`comment-report-submit-${reply.id}`"
+                    :disabled="commentReportSubmitting"
+                    @click="submitCommentReport"
+                  >
+                    {{ commentReportSubmitting ? copy.detail.submitting : copy.detail.submitReport }}
+                  </button>
+                </div>
               </div>
             </article>
           </div>

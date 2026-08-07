@@ -7,6 +7,7 @@ const reviewMocks = vi.hoisted(() => ({
   fetchOwnedReviewDetail: vi.fn(),
   fetchReviewDetail: vi.fn(),
   listReviewComments: vi.fn(),
+  reportComment: vi.fn(),
   reportReview: vi.fn(),
   toggleReviewLike: vi.fn(),
 }))
@@ -237,6 +238,111 @@ describe('ReviewDetailView', () => {
     expect(host.querySelector('[data-testid="review-hidden-banner"]')?.textContent).toContain(
       'merchant appeal was accepted',
     )
+    app.unmount()
+  })
+
+  it('reports a review comment and localizes duplicate-report errors in English', async () => {
+    sessionMocks.state.accessToken = 'token'
+    reviewMocks.fetchReviewDetail.mockResolvedValue({
+      id: 301,
+      shopId: 30001,
+      shopName: 'London Kitchen',
+      userId: 20,
+      userName: 'Reviewer',
+      content: 'Solid meal',
+      scoreOverall: 4.5,
+      scoreTaste: 4.5,
+      scoreEnv: 4,
+      scoreService: 4.5,
+      cost: 42,
+      currency: 'GBP',
+      likeCount: 0,
+      commentCount: 2,
+      likedByCurrentUser: false,
+      auditStatus: 1,
+      auditStatusText: 'Approved',
+      auditRemark: '',
+      status: 1,
+      statusText: 'Public',
+      tags: [],
+      images: [],
+      createdAt: '2026-07-10 12:00',
+      updatedAt: '2026-07-10 12:00',
+    })
+    reviewMocks.listReviewComments.mockResolvedValue({
+      list: [
+        {
+          id: 501,
+          reviewId: 301,
+          userId: 88,
+          userName: 'Commenter',
+          content: 'Looks spammy',
+          mine: false,
+          createdAt: '2026-07-11 09:00',
+          replies: [
+            {
+              id: 502,
+              reviewId: 301,
+              userId: 10,
+              userName: 'Me',
+              content: 'My own reply',
+              mine: true,
+              createdAt: '2026-07-11 09:05',
+              replies: [],
+            },
+          ],
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    })
+    reviewMocks.reportComment
+      .mockResolvedValueOnce({
+        id: 1,
+        reviewId: 301,
+        commentId: 501,
+        reason: 'Spam advertising',
+        status: 0,
+        statusText: 'Pending',
+        createdAt: '2026-07-12 10:00',
+      })
+      .mockRejectedValueOnce(new Error('你已经举报过这条评论了 [traceId: cmt-rpt-1]'))
+
+    const host = document.createElement('div')
+    const app = createApp(ReviewDetailView, { reviewId: 301 })
+    app.component('RouterLink', RouterLinkStub)
+    app.mount(host)
+    await flushView()
+
+    expect(host.querySelector('[data-testid="comment-report-501"]')).toBeTruthy()
+    expect(host.querySelector('[data-testid="comment-report-502"]')).toBeNull()
+
+    ;(host.querySelector('[data-testid="comment-report-501"]') as HTMLButtonElement).click()
+    await flushView()
+
+    const reasonInput = host.querySelector('[data-testid="comment-report-reason-501"]') as HTMLTextAreaElement
+    expect(reasonInput).toBeTruthy()
+    reasonInput.value = 'Spam advertising'
+    reasonInput.dispatchEvent(new Event('input'))
+    ;(host.querySelector('[data-testid="comment-report-submit-501"]') as HTMLButtonElement).click()
+    await flushView()
+
+    expect(reviewMocks.reportComment).toHaveBeenCalledWith(301, 501, { reason: 'Spam advertising' })
+    expect(host.textContent).toContain('Comment report submitted for moderation.')
+
+    ;(host.querySelector('[data-testid="comment-report-501"]') as HTMLButtonElement).click()
+    await flushView()
+    const secondReason = host.querySelector('[data-testid="comment-report-reason-501"]') as HTMLTextAreaElement
+    secondReason.value = 'Still spam'
+    secondReason.dispatchEvent(new Event('input'))
+    ;(host.querySelector('[data-testid="comment-report-submit-501"]') as HTMLButtonElement).click()
+    await flushView()
+
+    expect(host.textContent).toContain('You have already reported this comment')
+    expect(host.textContent).toContain('[traceId: cmt-rpt-1]')
+    expect(host.textContent).not.toContain('你已经举报过这条评论了')
     app.unmount()
   })
 
