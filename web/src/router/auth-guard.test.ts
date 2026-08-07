@@ -30,6 +30,24 @@ describe('auth guarded routes', () => {
     expect(state.redirectTo).toBe('/user/privacy')
   })
 
+  it('protects the daily check-in route for guests', async () => {
+    const { state } = useUserSession()
+
+    await router.push('/user/check-in').catch(() => undefined)
+
+    expect(state.authDialogOpen).toBe(true)
+    expect(state.redirectTo).toBe('/user/check-in')
+  })
+
+  it('protects the points mall route for guests', async () => {
+    const { state } = useUserSession()
+
+    await router.push('/user/points-mall').catch(() => undefined)
+
+    expect(state.authDialogOpen).toBe(true)
+    expect(state.redirectTo).toBe('/user/points-mall')
+  })
+
   it('stores pending guest action until login completion consumes it', async () => {
     const { state, openAuthDialog, consumePendingAuthAction } = useUserSession()
     let executed = false

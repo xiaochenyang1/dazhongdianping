@@ -6,26 +6,34 @@ import { useUserSession } from '@/composables/useUserSession'
 import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
 import { formatWebDateTime } from '@/core/web_localizations'
 import { localizeWebProfileError, profileStringsForRegion } from '@/core/web_profile_localizations'
+import { userStringsForRegion } from '@/core/web_user_localizations'
 import { getBrowserDeviceId } from '@/lib/device-id'
 import {
   applyCurrentUserExpertCertification,
   bindCurrentUserAccount,
   fetchCurrentUser,
+  fetchUserCheckInStatus,
   sendAuthCode,
   updateCurrentUserPassword,
   updateCurrentUserProfile,
 } from '@/services/auth'
+import type { UserCheckInStatus } from '@/types/auth'
 
 const { state, setCurrentUser } = useUserSession()
 const { state: appState } = useAppContext()
 const route = useRoute()
 const copy = computed(() => profileStringsForRegion(appState.region))
+const checkInCopy = computed(() => userStringsForRegion(appState.region).checkIn)
 const certificationCopy = computed(() => discoveryStringsForRegion(appState.region).shopCard)
 
 const loading = ref(false)
 const saving = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const checkIn = ref<UserCheckInStatus | null>(null)
+const checkInLoading = ref(false)
+const checkInError = ref('')
+let checkInRequestId = 0
 
 const bindSending = ref(false)
 const binding = ref(false)
@@ -45,6 +53,13 @@ const expertBanner = computed(() => {
   if (marker === 'approved') return copy.value.expertApprovedBanner
   if (marker === 'rejected') return copy.value.expertRejectedBanner
   return ''
+})
+const checkInStatusClass = computed(() => (
+  checkIn.value?.checkedInToday ? 'status-pill status-pill--good' : 'status-pill status-pill--warn'
+))
+const checkInLastText = computed(() => {
+  const value = checkIn.value?.lastCheckInAt?.trim()
+  return value ? formatWebDateTime(value, userStringsForRegion(appState.region).tag) : checkInCopy.value.never
 })
 
 const form = reactive({
@@ -125,6 +140,30 @@ async function bootstrap() {
     errorMessage.value = localizeWebProfileError(copy.value, error, copy.value.loadFailed)
   } finally {
     loading.value = false
+  }
+
+  void loadCheckInStatus()
+}
+
+async function loadCheckInStatus() {
+  const requestId = ++checkInRequestId
+  checkInLoading.value = true
+  checkInError.value = ''
+
+  try {
+    const status = await fetchUserCheckInStatus()
+    if (requestId === checkInRequestId) {
+      checkIn.value = status
+    }
+  } catch (error) {
+    if (requestId === checkInRequestId) {
+      checkIn.value = null
+      checkInError.value = localizeWebProfileError(copy.value, error, checkInCopy.value.loadFailed)
+    }
+  } finally {
+    if (requestId === checkInRequestId) {
+      checkInLoading.value = false
+    }
   }
 }
 
@@ -306,6 +345,10 @@ watch(
     passwordSuccessMessage.value = ''
     expertErrorMessage.value = ''
     expertSuccessMessage.value = ''
+    checkInRequestId += 1
+    checkIn.value = null
+    checkInLoading.value = false
+    checkInError.value = ''
     void bootstrap()
   },
   { immediate: true },
@@ -382,10 +425,53 @@ watch(
             </div>
           </div>
 
+          <article class="manage-card manage-card--nested">
+            <div class="manage-card__header">
+              <div>
+                <p class="eyebrow">{{ checkInCopy.eyebrow }}</p>
+                <h3>{{ checkInCopy.title }}</h3>
+              </div>
+              <span :class="checkInStatusClass">
+                {{ checkIn?.checkedInToday ? checkInCopy.checkedIn : checkInCopy.notCheckedIn }}
+              </span>
+            </div>
+
+            <p v-if="checkInError" class="feedback is-error">{{ checkInError }}</p>
+            <p v-else-if="checkInLoading" class="feedback">{{ checkInCopy.loading }}</p>
+            <template v-else-if="checkIn">
+              <div class="profile-grid">
+                <div class="hero-metric">
+                  <span>{{ checkInCopy.streak }}</span>
+                  <strong>{{ checkInCopy.streakValue(checkIn.streakDays) }}</strong>
+                </div>
+                <div class="hero-metric">
+                  <span>{{ checkInCopy.total }}</span>
+                  <strong>{{ checkInCopy.totalValue(checkIn.totalCount) }}</strong>
+                </div>
+                <div class="hero-metric">
+                  <span>{{ checkInCopy.lastCheckIn }}</span>
+                  <strong>{{ checkInLastText }}</strong>
+                </div>
+              </div>
+              <p class="support-copy">
+                {{ checkIn.checkedInToday ? checkInCopy.checkedHint : checkInCopy.availableHint }}
+              </p>
+            </template>
+
+            <div class="hero-actions">
+              <RouterLink to="/user/check-in" class="secondary-button">{{ copy.openCheckIn }}</RouterLink>
+              <button type="button" class="ghost-button" :disabled="checkInLoading" @click="loadCheckInStatus">
+                {{ checkInLoading ? checkInCopy.refreshing : checkInCopy.refresh }}
+              </button>
+            </div>
+          </article>
+
           <div class="hero-actions">
             <button type="submit" class="primary-button" :disabled="saving">
               {{ saving ? copy.saving : copy.saveProfile }}
             </button>
+            <RouterLink to="/user/check-in" class="secondary-button">{{ copy.dailyCheckIn }}</RouterLink>
+            <RouterLink to="/user/points-mall" class="secondary-button">{{ copy.pointsMall }}</RouterLink>
             <RouterLink to="/user/growth-records" class="secondary-button">{{ copy.growthHistory }}</RouterLink>
             <RouterLink to="/user/privacy" class="secondary-button">{{ copy.privacyCenter }}</RouterLink>
           </div>

@@ -6,6 +6,7 @@ const authMocks = vi.hoisted(() => ({
   applyCurrentUserExpertCertification: vi.fn(),
   bindCurrentUserAccount: vi.fn(),
   fetchCurrentUser: vi.fn(),
+  fetchUserCheckInStatus: vi.fn(),
   sendAuthCode: vi.fn(),
   updateCurrentUserPassword: vi.fn(),
   updateCurrentUserProfile: vi.fn(),
@@ -73,8 +74,14 @@ describe('ProfileView', () => {
       id: 9,
       nickname: '巴黎探店老炮',
       avatar: '',
+      email: 'reviewer@example.com',
+      phone: null,
       gender: 0,
       signature: '',
+      preferredRegion: 'CN',
+      level: 4,
+      points: 88,
+      growthValue: 320,
       hasPassword: true,
       expertCertification: {
         status: 2,
@@ -86,6 +93,14 @@ describe('ProfileView', () => {
         rejectReason: '',
       },
     })
+    authMocks.fetchUserCheckInStatus.mockResolvedValue({
+      checkedInToday: false,
+      streakDays: 3,
+      totalCount: 12,
+      todayGrowthReward: 2,
+      todayPointsReward: 1,
+      lastCheckInAt: '2026-08-05 09:30:00',
+    })
   })
 
   it('loads profile and shows expert audit result banner from notification query', async () => {
@@ -95,6 +110,8 @@ describe('ProfileView', () => {
     expect(authMocks.fetchCurrentUser).toHaveBeenCalled()
     expect(host.textContent).toContain('本地达人')
     expect(host.textContent).toContain('已通过')
+    expect(host.textContent).toContain('待签到')
+    expect(host.textContent).toContain('3 天')
     expect(host.querySelector('[data-testid="expert-audit-banner"]')?.textContent).toContain(
       '平台已通过你的本地达人认证',
     )

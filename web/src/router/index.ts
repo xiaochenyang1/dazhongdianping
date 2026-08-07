@@ -184,6 +184,26 @@ const router = createRouter({
       },
     },
     {
+      path: '/user/check-in',
+      name: 'user-check-in',
+      component: () => import('@/views/DailyCheckInView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: '每日签到',
+        description: '完成每日签到并查看连续签到、累计次数和奖励。',
+      },
+    },
+    {
+      path: '/user/points-mall',
+      name: 'user-points-mall',
+      component: () => import('@/views/PointsMallView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: '积分商城',
+        description: '浏览积分商品、发起兑换并查看我的兑换记录。',
+      },
+    },
+    {
       path: '/user/growth-records',
       name: 'user-growth-records',
       component: () => import('@/views/UserGrowthRecordsView.vue'),

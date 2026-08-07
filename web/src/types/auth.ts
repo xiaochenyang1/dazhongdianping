@@ -100,6 +100,15 @@ export interface UserGrowthRecord {
   createdAt: string
 }
 
+export interface UserCheckInStatus {
+  checkedInToday: boolean
+  streakDays: number
+  totalCount: number
+  todayGrowthReward: number
+  todayPointsReward: number
+  lastCheckInAt: string
+}
+
 export interface AuthSendCodeResponse {
   sent: boolean
   expireSeconds: number

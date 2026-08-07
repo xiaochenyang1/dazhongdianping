@@ -90,6 +90,7 @@ const zhCnStrings: WebStrings = {
     { to: '/user/coupons', label: '我的券', matchPrefix: '/user/coupons' },
     { to: '/user/reservations', label: '我的预订', matchPrefix: '/user/reservations' },
     { to: '/user/profile', label: '我的资料', matchPrefix: '/user/profile' },
+    { to: '/user/check-in', label: '每日签到', matchPrefix: '/user/check-in' },
     { to: '/user/growth-records', label: '成长值流水', matchPrefix: '/user/growth-records' },
   ],
   search: {
@@ -193,6 +194,7 @@ const zhCnStrings: WebStrings = {
     'user-reservation-detail': { title: '预订详情', description: '查看、取消或改期预订。' },
     'my-review-detail': { title: '我的点评详情', description: '查看点评详情、审核状态和驳回原因。' },
     'user-profile': { title: '我的资料', description: '查看和修改个人资料、绑定账号和登录密码。' },
+    'user-check-in': { title: '每日签到', description: '完成每日签到并查看连续天数、累计次数和奖励。' },
     'user-growth-records': { title: '成长值流水', description: '查看成长值和积分流水。' },
     'user-privacy': { title: '隐私中心', description: '导出个人数据并管理账号删除申请。' },
     'public-user-profile': { title: '用户主页', description: '查看公开用户资料和点评概览。' },
@@ -227,6 +229,7 @@ const enStrings: WebStrings = {
     { to: '/user/coupons', label: 'Vouchers', matchPrefix: '/user/coupons' },
     { to: '/user/reservations', label: 'Bookings', matchPrefix: '/user/reservations' },
     { to: '/user/profile', label: 'Profile', matchPrefix: '/user/profile' },
+    { to: '/user/check-in', label: 'Check-in', matchPrefix: '/user/check-in' },
     { to: '/user/growth-records', label: 'Rewards', matchPrefix: '/user/growth-records' },
   ],
   search: {
@@ -330,6 +333,7 @@ const enStrings: WebStrings = {
     'user-reservation-detail': { title: 'Booking details', description: 'View, cancel or reschedule a booking.' },
     'my-review-detail': { title: 'My review details', description: 'View your review, moderation status and feedback.' },
     'user-profile': { title: 'Profile', description: 'Manage your profile, linked accounts and password.' },
+    'user-check-in': { title: 'Daily check-in', description: 'Complete today\'s check-in and review your streak and rewards.' },
     'user-growth-records': { title: 'Rewards activity', description: 'View growth and points activity.' },
     'user-privacy': { title: 'Privacy centre', description: 'Export personal data and manage account deletion.' },
     'public-user-profile': { title: 'User profile', description: 'View a public profile and review summary.' },

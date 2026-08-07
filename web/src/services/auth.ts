@@ -7,6 +7,7 @@ import type {
   PublicUserProfile,
   SocialUserSummary,
   UserBanAppealStatus,
+  UserCheckInStatus,
   UserGrowthRecord,
   UserBindPayload,
   UserExpertCertificationApplyPayload,
@@ -75,6 +76,14 @@ export function fetchCurrentUserExpertCertification() {
 
 export function fetchUserGrowthRecords(query?: { page?: number; pageSize?: number }) {
   return apiGet<PageResult<UserGrowthRecord>>('/api/c/v1/user/growth/records', query)
+}
+
+export function fetchUserCheckInStatus() {
+  return apiGet<UserCheckInStatus>('/api/c/v1/user/check-in/status')
+}
+
+export function checkInCurrentUser() {
+  return apiPost<UserCheckInStatus>('/api/c/v1/user/check-in')
 }
 
 export function applyCurrentUserExpertCertification(payload: UserExpertCertificationApplyPayload) {
