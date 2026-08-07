@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/third_party_config.dart';
-import 'package:flutter/foundation.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:dazhongdianping_app/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 
 abstract interface class PushTokenService {
   /// Returns the push token for the current device, or null if not available.
@@ -43,6 +46,7 @@ class PushTokenServiceFactory {
 class _FirebasePushTokenService implements PushTokenService {
   static const String _channelName = 'Firebase';
   FirebaseMessaging? _messaging;
+  Future<bool>? _initFuture;
 
   @override
   Future<int> getPushChannel() async {
@@ -52,11 +56,42 @@ class _FirebasePushTokenService implements PushTokenService {
     return 1;
   }
 
+  /// Initializes Firebase once. Prefers [DefaultFirebaseOptions] (dart-define /
+  /// generated placeholders); falls back to platform-default options when the
+  /// native google-services / plist files are present. Any failure degrades to
+  /// "no push" so missing console config never crashes the app.
+  Future<bool> _ensureInitialized() {
+    return _initFuture ??= () async {
+      try {
+        if (Firebase.apps.isNotEmpty) {
+          return true;
+        }
+        try {
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+        } catch (optionsError) {
+          debugPrint(
+            '$_channelName DefaultFirebaseOptions init failed, '
+            'falling back to platform defaults: $optionsError',
+          );
+          if (Firebase.apps.isEmpty) {
+            await Firebase.initializeApp();
+          }
+        }
+        return Firebase.apps.isNotEmpty;
+      } catch (e) {
+        debugPrint('$_channelName init unavailable: $e');
+        return false;
+      }
+    }();
+  }
+
   @override
   Future<String?> getPushToken() async {
     try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
+      if (!await _ensureInitialized()) {
+        return null;
       }
       final messaging = _messaging ??= FirebaseMessaging.instance;
 
@@ -83,11 +118,16 @@ class _FirebasePushTokenService implements PushTokenService {
   /// Firebase only emits on this stream once the app is initialized, and it
   /// throws synchronously when the native config is missing — swallow that so
   /// a missing google-services.json degrades to "no push" instead of crashing
-  /// every listener.
+  /// every listener. Initialization is best-effort and async; if the app is
+  /// not yet ready the stream stays empty until the next token request path
+  /// finishes init (listeners re-subscribe after login device registration).
   @override
   Stream<String> get onTokenRefresh {
     try {
       if (Firebase.apps.isEmpty) {
+        // Kick off init without blocking stream construction; subscribers that
+        // attach only after getPushToken() will see a live refresh stream.
+        unawaited(_ensureInitialized());
         return const Stream<String>.empty();
       }
       final messaging = _messaging ??= FirebaseMessaging.instance;
