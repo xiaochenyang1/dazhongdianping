@@ -1,6 +1,6 @@
 # 大众点评(仿)项目骨架
 
-当前 M4 已闭环，M5 商户经营与通知、M6 Flutter 本地业务闭环均已落地。M7 已完成帖子（含转发/取消转发、评论盖楼、帖子正文/评论 `@提醒`）、本地达人认证、认证商户号、关注流、APP 私信、区域化官方圈子、话题广场/7 天热榜和积分商城：Flutter 可浏览、互动、关注话题并兑换积分商品，PC Web 只读，管理端可治理、合并、重算热榜和维护积分商品/兑换单；隐私中心已完成签到与积分兑换导出及注销清理。FCM/APNs 服务端适配器已落地，真实凭证、真机推送 smoke、真实支付 SDK、Google Maps 与目标环境凭证联调仍待验收。
+当前 M4 已闭环，M5 商户经营与通知、M6 Flutter 本地业务闭环均已落地。M7 已完成帖子（含转发/取消转发、评论盖楼、帖子正文/评论 `@提醒`）、本地达人认证、认证商户号、关注流、APP 私信、区域化官方圈子、话题广场/7 天热榜、每日签到与积分商城：Flutter 与 PC Web 均可浏览/兑换积分商品并完成每日签到，PC Web 另支持点评详情页的评论级举报；管理端可治理、合并、重算热榜和维护积分商品/兑换单；隐私中心已完成签到与积分兑换导出及注销清理。FCM/APNs 服务端适配器已落地，真实凭证、真机推送 smoke、真实支付 SDK、Google Maps 与目标环境凭证联调仍待验收。
 
 当前仓库已经按文档口径起好了前后端最小骨架，目录别再瞎长了，先按这个往下做。
 
@@ -20,7 +20,7 @@
 - `M1` 本地已完成：首页 / 列表 / 详情浏览，`CN / EU` 区域隔离，头部关键词搜索到商户列表(MySQL fallback,不是 ES 终态)，并已补公开搜索建议 / 热词 fallback 接口、登录用户搜索历史、历史清空入口和头部联想面板；管理端登录、门店 CRUD、种子导入、导入批次查询。
 - `M2` 已完成后端认证 + 点评/审核/互动最小闭环，`web` 已接登录弹层、游客拦截恢复、写点评 / 改点评、我的点评、点评详情互动区、我的资料 / 账号绑定 / 改密码、成长值流水页、公开用户主页：验证码发送、注册、验证码/密码登录、重置密码、`refresh`、`logout`、`/user/me`、`PUT /user/profile`、`POST /user/bind`、`PUT /user/password`、`GET /user/:id`、`GET /user/growth/records`、写点评 / 改点评 / 删点评 / 看点评详情 / 我的点评、点赞 / 评论 / 举报、本地图片上传、审核任务通过 / 驳回、门店评分聚合回写；游客在点赞 / 评论 / 举报时触发登录，登录后会自动续执行原动作。
 - `M3` 搜索、榜单、收藏与轻积分已落代码：`/api/c/v1/search/shops` 支持 MySQL/Elasticsearch provider、拼音/纠错/筛选/距离排序与索引重建/增量同步，CI 会启动 Elasticsearch 8 跑真实 smoke；榜单支持版本化发布/回滚，Web 已接榜单和门店收藏。
-- 成长规则与等级配置已数据库化：奖励值、每日上限和 `Lv1-Lv8` 阈值由管理端配置，发点评、点评获赞、带图点评、完成订单四类奖励均已接入并按业务 ID 幂等；`GET /api/c/v1/user/growth/records` 支持分页查看流水。
+- 成长规则与等级配置已数据库化：奖励值、每日上限和 `Lv1-Lv8` 阈值由管理端配置，发点评、点评获赞、带图点评、完成订单和每日签到均已接入并按业务 ID 幂等；Flutter 与 PC Web 均可查看签到状态、连续天数、累计次数并领取成长值/积分奖励，`GET /api/c/v1/user/growth/records` 支持分页查看流水。
 - 隐私中心已补当前可用闭环：后端支持概览、数据导出任务、认证 ZIP 下载、账号删除申请、冷静期撤销和到期匿名化；真实可导出 `account/reviews/orders/reservations/favorites/posts/browse_history/follows/messages/circles/topics/check_ins/points_exchanges`。积分兑换导出只回传已发放且仍可用的兑换码；注销会删除本人的签到记录、话题关注并按真实关系回填 `follower_count`，不会误删帖子话题关系或热榜快照。
 - `POST /api/c/v1/auth/send-code` 的验证码限流已经落地：按 `scene + account`、`deviceId`、`IP` 返回 `429 + Retry-After`；默认走本地内存，配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis sorted set 计数。
 - `Idempotency-Key` 重复提交保护已接入：写请求带同 key + 同请求体会复用首个响应，同 key + 不同请求体返回 `409`；默认走本地内存，配置 `APP_STATE_STORE_PROVIDER=redis` 后可把幂等响应缓存放到 Redis。

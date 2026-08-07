@@ -237,10 +237,10 @@
 
 | 功能域 | 状态 | 已完成证据 | 剩余工作 | 完成判定 |
 |---|---|---|---|---|
-| M1-M4 用户核心链路 | 已完成（本地口径） | 浏览（Flutter 足迹分页且加载/刷新失败可恢复）、搜索（Flutter 搜索历史保留分页元数据并可加载更多）、认证（Flutter 账户设置已接资料保存、账号绑定与密码更新）、点评、成长、榜单、收藏、交易和预订均有后端、Web 与自动化覆盖；支付成功会发 `order.paid`（回调幂等、PC/Flutter 可跳转订单详情）；预订创建会发 `reservation.created`（自动确认/待确认）；预订到店前 2 小时 / 30 分钟站内提醒已落地（`reservation.reminder` + 时间线 action_type=9）；商户确认/拒绝/到店/爽约会发 `reservation.status` 站内通知并联调 PC 预订详情横幅；券码到期前 3 天 / 1 天提醒与过期自动标记已落地（`coupon.reminder` / `coupon.expired` + `remind_status` 去重，PC Web 我的券页支持 status/code 定位）；券码详情 `GET /coupons/:code` 与 PC 二维码详情页已落地；商户核销成功会发 `coupon.verified` 并联调 PC 券码详情；退款审核结果通知 `order.refund.result` 与订单详情取消/退款闭环已落地；点评审核通过/驳回会发 `review.audit.result` 并联调 PC 我的点评详情横幅；商户点评申诉通过后会隐藏点评并通知作者 `review.hidden`；点评获赞/新评论会发 `review.like` / `review.comment`，评论盖楼回复会额外通知被回复者 `review.comment.reply`（被回复者即点评作者时不重复）；达人认证审核通过/驳回会发 `expert.certification.result` 并联调 PC 资料页横幅；帖子审核通过/驳回会发 `post.audit.result` 并联调 PC 帖子详情横幅与 Flutter 消息跳转；帖子评论盖楼回复会额外通知被回复者 `post.comment.reply`（被回复者即帖子作者时不重复） | 真实支付归第三方阶段 | 当前自动化、浏览器 E2E 和临时 MySQL 8 smoke 有通过记录；目标环境仍待验收 |
+| M1-M4 用户核心链路 | 已完成（本地口径） | 浏览（Flutter 足迹分页且加载/刷新失败可恢复）、搜索（Flutter 搜索历史保留分页元数据并可加载更多）、认证（Flutter 账户设置已接资料保存、账号绑定与密码更新）、点评、成长、榜单、收藏、交易和预订均有后端、Web 与自动化覆盖；每日签到已具备后端、Flutter 与 PC Web 状态/领取闭环，PC Web 会回显连续天数、累计次数、成长值/积分奖励，保护重复提交并刷新用户余额；积分商城 C 端列表/兑换/我的兑换已在 Flutter 与 PC Web（`/user/points-mall`）落地，点评详情支持评论级举报（PC/Flutter，管理端 `review_comment`）；支付成功会发 `order.paid`（回调幂等、PC/Flutter 可跳转订单详情）；预订创建会发 `reservation.created`（自动确认/待确认）；预订到店前 2 小时 / 30 分钟站内提醒已落地（`reservation.reminder` + 时间线 action_type=9）；商户确认/拒绝/到店/爽约会发 `reservation.status` 站内通知并联调 PC 预订详情横幅；券码到期前 3 天 / 1 天提醒与过期自动标记已落地（`coupon.reminder` / `coupon.expired` + `remind_status` 去重，PC Web 我的券页支持 status/code 定位）；券码详情 `GET /coupons/:code` 与 PC 二维码详情页已落地；商户核销成功会发 `coupon.verified` 并联调 PC 券码详情；退款审核结果通知 `order.refund.result` 与订单详情取消/退款闭环已落地；点评审核通过/驳回会发 `review.audit.result` 并联调 PC 我的点评详情横幅；商户点评申诉通过后会隐藏点评并通知作者 `review.hidden`；点评获赞/新评论会发 `review.like` / `review.comment`，评论盖楼回复会额外通知被回复者 `review.comment.reply`（被回复者即点评作者时不重复）；达人认证审核通过/驳回会发 `expert.certification.result` 并联调 PC 资料页横幅；帖子审核通过/驳回会发 `post.audit.result` 并联调 PC 帖子详情横幅与 Flutter 消息跳转；帖子评论盖楼回复会额外通知被回复者 `post.comment.reply`（被回复者即帖子作者时不重复） | 真实支付归第三方阶段 | 当前自动化、浏览器 E2E 和临时 MySQL 8 smoke 有通过记录；目标环境仍待验收 |
 | M5 商户经营后端 | 已完成 | 入驻、员工 RBAC、门店范围、预订、团购、订单退款、门店草稿、点评回复申诉已落地 | 无后端主流程缺口 | 后端权限、状态机、跨商户和跨区域测试通过 |
 | 商户端与管理端完整闭环 | 部分完成 | `merchant-web` 已有注册、登录、资质、看板（含待办与快捷入口）、门店草稿编辑/提交审核/驳回原因回显、员工、预订（确认/拒绝/到店/爽约）、预订时段配置、团购创建/编辑/上下架/驳回原因回显、退款、券码核销和点评页面；管理端已有数据库 RBAC、控制台经营/审核概览与快捷入口（门店/交易指标按城市或门店白名单过滤）、Banner、搜索热词、运营活动、分类/城市/商圈、订单退款查询/平台仲裁/对账补偿、商户资质/点评/申诉/帖子/门店草稿/团购审核、门店、榜单、成长、圈子和话题治理，审计日志、隐私任务查询，按区域及城市/门店范围隔离的商户账号查询/详情/停用恢复，员工筛选分页、角色/门店范围详情和单独停用恢复（主账号不进入员工接口；停用即时吊销对应登录态并写审计日志），以及单商户经营操作历史查询（操作人、动作、目标类型、关键词和分页），以及 C 端用户治理（查询/详情/封禁/解封，封禁即时吊销登录态、拦截密码与验证码登录并写审计日志）和用户封禁申诉闭环（免登录提交/查询申诉、`/audit/user-appeals` 审核页、通过自动解封、直接解封自动了结待审申诉、Web 登录弹层申诉入口）；内容举报聚合治理（`/audit/reports`，点评/帖子/私信举报列表与 dismiss/hide 处理） | 真实支付渠道原路退款未接 | 已完成的 B/Admin 页面、权限、区域/城市/门店范围、角色实时收权、账号停用 `401`、审计日志/隐私任务/订单退款查询与仲裁补偿、基础数据、用户治理和封禁申诉真实后端 E2E 通过；其余经营深度与第三方集成另行验收 |
-| PC Web 产品缺口 | 部分完成 | 首页、列表、详情、搜索、交易、预订、用户中心和社区只读页已落地；商户高级筛选、真实分页、点评排序/评分/带图筛选、分享、门店相似推荐、公开页客户端运行时 metadata、登录用户门店浏览足迹（每用户每区域最多 50 条）、C 端运营活动公开列表/详情与首页透出、消息中心页（列表/分页/全部已读），券码通知定位，以及按 `PRERENDER_REGION` 区域化的 7 个静态公开入口和可选真实 API 详情快照预渲染、构建清单、sitemap/robots 已接入 | 常驻 SSR 服务、CN/EU 独立域名与缓存策略、真实部署验收 | 组件测试、后端查询测试、CN/EU 预渲染/快照脚本测试和本地 H2 快照构建已有证据；目标环境自动化尚未验收 |
+| PC Web 产品缺口 | 部分完成 | 首页、列表、详情、搜索、交易、预订、用户中心和社区只读页已落地；每日签到 `/user/check-in`、积分商城 `/user/points-mall`（列表/兑换/我的兑换）、点评详情评论级举报已落地；商户高级筛选、真实分页、点评排序/评分/带图筛选、分享、门店相似推荐、公开页客户端运行时 metadata、登录用户门店浏览足迹（每用户每区域最多 50 条）、C 端运营活动公开列表/详情与首页透出、消息中心页（列表/分页/全部已读），券码通知定位，以及按 `PRERENDER_REGION` 区域化的 7 个静态公开入口和可选真实 API 详情快照预渲染、构建清单、sitemap/robots 已接入 | 常驻 SSR 服务、CN/EU 独立域名与缓存策略、真实部署验收；社区写操作/帖子评论举报仍故意只读 | 组件测试、后端查询测试、CN/EU 预渲染/快照脚本测试和本地 H2 快照构建已有证据；目标环境自动化尚未验收 |
 | 社区与消息尾项 | 部分完成 | 帖子、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、认证商户号、转发、关注流、私信、圈子、话题和通知聚合已落地；Flutter 通知中心支持分页、未读筛选及刷新失败保留数据；敏感词库管理 + 点评/帖子/评论/私信写入拦截已落地（`operations:sensitive_word:*`）；FCM/APNs 服务端适配器、重试和失效 token 停用已落地 | 真实移动推送凭证/真机 smoke、第三方机审 | 自动化覆盖已落地的社交关系、达人/认证商户审核与公开 badge、通知去重、`@提醒` 分发、隐私治理、敏感词拦截、推送契约和 Flutter 转发/互动链路；外部推送仍待验收 |
 | 移动推送适配器 | 部分完成（代码已落地） | `PushProvider` 统一契约；FCM HTTP v1 服务账号 JWT/OAuth2；APNs ES256 JWT；Flutter 登录登记、token 轮换回传、退出停用；Android 发布流水线按 secret 注入原生 Firebase 配置；通知事务提交后异步投递、临时错误退避重试、确定失效 token 条件清空；后端推送测试与 Flutter 设备生命周期测试通过 | 真实 FCM/APNs 凭证、Android/iOS 真机接收、前后台/杀进程和目标环境 smoke | 本地契约、服务层和客户端生命周期测试通过；无真实凭证时保持关闭，不把代码接入写成外部服务验收 |
 | Flutter 与真实第三方 | 部分完成 | Flutter 具备区域切换和应用级简体中文/繁体中文/英文委托；首页搜索、榜单活动、通知、用户中心、社区话题圈子、私信黑名单、交易预订点评认证、隐私账户达人成长、公开主页/收藏/足迹/门店详情点评/帖子详情编辑完整链路已迁移三语言，英文动态计数已覆盖单复数；未配置能力会诚实禁用；Android release 强制 production application ID 与独立 keystore，手工流水线可按环境/区域生成带 manifest 和 SHA-256 的签名 AAB | 点评翻译、Google Maps、Stripe/PayPal/支付宝/微信、真实 FCM/APNs smoke、邮件短信、内容审核与 Google Play 上传 | 多域三语言组件测试、Flutter 全量测试、未配置阻断验证和移动发布工作流契约通过；真实 sandbox、凭证、商店账号和供应商联调仍待验收 |
@@ -267,35 +267,45 @@
 ### 3.2 初始化与迁移 SQL 的作用
 
 - `sql/mysql/00_all_in_one.sql`: 已退役的安全阻断桩,执行时直接报错,不再串联破坏性建表脚本。
-- `sql/mysql/01_schema.sql`: 当前代码口径的建表脚本,已包含 `review_like`、`review_comment`、`review_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`。
-- `sql/mysql/02_seed_data.sql`: 浏览数据、公开点评、待审/驳回审核案例、点评图片、点赞/评论演示数据、C 端演示账号。
+- `sql/mysql/01_schema.sql`: 当前代码口径的建表脚本,已包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等现行表。
+- `sql/mysql/02_seed_data.sql`: 浏览数据、公开点评、待审/驳回审核案例、点评图片、点赞/评论演示数据、C 端演示账号、成长规则(含 `check_in`)。
 - `sql/mysql/03_admin_city_scope_migration.sql`: 既有数据库增加管理员城市/门店范围；只用于升级，不参与全新数据库初始化。
 - `sql/mysql/04_admin_import_batch_scope_migration.sql`: 既有数据库增加受限管理员本人导入批次查询索引；在 `03` 后执行一次。
+- `sql/mysql/05_comment_governance_migration.sql`: 既有库为 `review_comment`/`post_comment` 补 `audit_remark`，并创建 `review_comment_report` / `post_comment_report`。
+- `sql/mysql/06_daily_check_in_migration.sql`: 既有库创建 `user_check_in`。
+- `sql/mysql/07_points_mall_migration.sql`: 既有库创建 `points_product` / `points_exchange`，并补管理端 `operations:points:read|write` 权限种子(若脚本内含)。
+
+> 全新库只 `source` `01_schema.sql` + `02_seed_data.sql` 即可拿到上述表结构；`03`–`07` 仅用于升级旧库，按序执行一次。
 
 ### 3.3 导入后哪些表会直接有数据
 
-- 会直接有演示数据:`category`、`city`、`area`、`merchant`、`shop`、`shop_photo`、`dish`、`home_banner`、`home_feed`、`app_user`、`review`、`review_image`、`review_like`、`review_comment`、`audit_task`。
-- 会建表但默认留空:`search_history`、`verification_code`、`user_session`、`import_batch`、`review_report`、`review_merchant_reply`、`merchant_review_appeal`、`audit_log`、`growth_points_log`。
+- 会直接有演示数据:`category`、`city`、`area`、`merchant`、`shop`、`shop_photo`、`dish`、`home_banner`、`home_feed`、`app_user`、`review`、`review_image`、`review_like`、`review_comment`、`audit_task`、`growth_rule`(含 `check_in` 等)、`level_config`。
+- 会建表但默认留空:`search_history`、`verification_code`、`user_session`、`import_batch`、`review_report`、`review_comment_report`、`post_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`audit_log`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`。
 - 当前验证码限流和 `Idempotency-Key` 幂等缓存不依赖 MySQL 表,所以导库后别去找什么 `rate_limit` / `idempotency_record` 运行数据;这两块默认走本地内存,配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis。
 - 留空不是漏写 SQL,而是这些表本来就更适合运行时真实产生:
   - `search_history`: 登录用户实际搜索商户列表后写入；每个 `user_id + region` 最多保留 20 条，超额按最近使用裁剪。
   - `verification_code`、`user_session`: 登录 / 刷新 token 运行时写入。
   - `import_batch`: 你真导一次商户种子后才会有批次记录。
-  - `review_report`: 为了不把“第一次举报演示”直接堵死,默认不预置重复举报数据。
+  - `review_report` / `review_comment_report` / `post_comment_report`: 为了不把“第一次举报演示”直接堵死,默认不预置重复举报数据。
   - `audit_log`: 管理端真实操作后再产生日志才有意义。
-  - `growth_points_log`: 当前只有真实提交点评后才会产生成长值 / 积分流水。
+  - `growth_points_log`: 发点评、获赞、带图点评、完成订单、每日签到、积分兑换等真实行为后写入。
+  - `user_check_in`: 用户完成每日签到后写入。
+  - `points_product` / `points_exchange`: 运营创建商品、用户兑换后写入。
 - 文件上传目录也不会靠 SQL 预置。你导完库以后第一次上传图片,文件才会落到 `backend/local-storage/uploads`。
 
 ### 3.4 这次和点评互动直接相关的表
 
 - `review`: 点评主表,已包含 `like_count`、`comment_count` 聚合字段。
 - `review_like`: 点赞记录表。
-- `review_comment`: 评论记录表。
+- `review_comment`: 评论记录表(含治理字段 `audit_remark`)。
 - `review_report`: 举报记录表。
+- `review_comment_report`: 点评评论举报。
 - `audit_task`: 举报后补审时会生成点评待审任务。
 - `review_merchant_reply`: 商户对公开点评的当前商家回复。
 - `merchant_review_appeal`: 商户点评申诉草稿、待审、通过、驳回和失效状态。
-- `growth_points_log`: 当前发点评奖励会各写一条成长值 / 积分流水。
+- `growth_points_log`: 发点评 / 获赞 / 带图 / 订单完成 / 签到等奖励及积分兑换扣减流水。
+- `user_check_in`: 每日签到记录。
+- `points_product` / `points_exchange`: 积分商城商品与兑换单。
 
 ### 3.5 导入后可以直接演示什么
 
@@ -304,8 +314,12 @@
 - 点评详情页点赞 / 取消点赞
 - 点评详情页评论列表查看与评论发布
 - 点评详情页举报点评(登录后实际触发,会写 `review_report`)
+- 点评/帖子评论举报(登录后写 `review_comment_report` / `post_comment_report`，管理端聚合处理)
 - 写点评 / 编辑点评页本地图片上传
 - 提交点评后查看 `GET /api/c/v1/user/me` 的成长值 / 积分 / 等级变化,以及 `GET /api/c/v1/user/growth/records`
+- 每日签到:`GET/POST /api/c/v1/user/check-in`（Flutter + PC Web `/user/check-in`）
+- 积分商城:C 端商品列表/兑换/我的兑换（Flutter + PC Web `/user/points-mall`）；管理端商品 CRUD 与兑换发放/取消
+- PC Web 点评详情评论举报（非本人评论，登录后写 `review_comment_report`）
 - 登录后在头部直接查看 / 清空 / 单条删除当前区域搜索历史；Flutter 搜索页同样支持热词与搜索历史面板
 - 资料页进入“成长值流水”查看成长值 / 积分变动明细
 - 我的资料页绑定邮箱 / 手机号、修改密码
