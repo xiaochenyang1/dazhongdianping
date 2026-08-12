@@ -4,14 +4,19 @@ import com.stripe.StripeClient;
 import com.stripe.exception.ApiConnectionException;
 import com.stripe.exception.AuthenticationException;
 import com.stripe.exception.InvalidRequestException;
+import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
+import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
+import com.stripe.net.Webhook;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.tuowei.dazhongdianping.common.api.ServiceUnavailableException;
 import com.tuowei.dazhongdianping.module.trade.model.OrderRow;
 import com.tuowei.dazhongdianping.module.trade.model.PaymentRow;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
@@ -49,9 +54,41 @@ public class StripePaymentChannel implements PaymentChannel {
         }
     }
 
+    private static final String SUCCEEDED_EVENT = "payment_intent.succeeded";
+    private static final long TOLERANCE_SECONDS = 300L;
+
     @Override
     public PaymentNotifyResult verifyWebhook(HttpServletRequest rawRequest) {
-        throw new UnsupportedOperationException("verifyWebhook implemented in Task 5");
+        String payload;
+        try {
+            payload = new String(rawRequest.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new IllegalStateException("读取 Stripe 回调请求体失败", e);
+        }
+
+        String sigHeader = rawRequest.getHeader("Stripe-Signature");
+        Event event;
+        try {
+            event = Webhook.constructEvent(payload, sigHeader, endpointSecret, TOLERANCE_SECONDS);
+        } catch (SignatureVerificationException e) {
+            throw new IllegalArgumentException("Stripe 回调签名非法");
+        }
+
+        if (!SUCCEEDED_EVENT.equals(event.getType())) {
+            return new PaymentNotifyResult(null, null, null, false);
+        }
+
+        PaymentIntent intent = (PaymentIntent) event.getDataObjectDeserializer()
+                .getObject()
+                .orElseThrow(() -> new IllegalStateException("Stripe 回调事件缺少 PaymentIntent 对象"));
+
+        String orderNo = intent.getMetadata() == null ? null : intent.getMetadata().get("orderNo");
+        if (orderNo == null || orderNo.isBlank()) {
+            throw new IllegalArgumentException("Stripe 回调缺少 orderNo metadata");
+        }
+
+        BigDecimal amount = BigDecimal.valueOf(intent.getAmount()).movePointLeft(2).setScale(2);
+        return new PaymentNotifyResult(orderNo, intent.getId(), amount, true);
     }
 
     @Override
