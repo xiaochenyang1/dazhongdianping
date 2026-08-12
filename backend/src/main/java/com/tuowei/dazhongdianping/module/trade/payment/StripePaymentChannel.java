@@ -8,8 +8,10 @@ import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
 import com.stripe.net.Webhook;
 import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.RefundCreateParams;
 import com.tuowei.dazhongdianping.common.api.ServiceUnavailableException;
 import com.tuowei.dazhongdianping.module.trade.model.OrderRow;
 import com.tuowei.dazhongdianping.module.trade.model.PaymentRow;
@@ -20,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 @ConditionalOnBean(StripeClient.class)
@@ -94,6 +97,25 @@ public class StripePaymentChannel implements PaymentChannel {
     @Override
     public boolean supports(String region, String channel) {
         return CHANNEL.equals(channel);
+    }
+
+    @Override
+    public RefundResult refund(PaymentRow payment, BigDecimal amount, String reason) {
+        RefundCreateParams.Builder builder = RefundCreateParams.builder()
+                .setPaymentIntent(payment.getChannelTxn())
+                .setAmount(toMinorUnits(amount));
+        String trimmedReason = reason == null ? "" : reason.trim();
+        if (StringUtils.hasText(trimmedReason)) {
+            builder.putMetadata("reason", trimmedReason);
+        }
+        try {
+            Refund refund = stripeClient.refunds().create(builder.build());
+            BigDecimal refundedAmount = BigDecimal.valueOf(refund.getAmount()).movePointLeft(2).setScale(2);
+            boolean success = "succeeded".equalsIgnoreCase(refund.getStatus());
+            return new RefundResult(CHANNEL, refund.getId(), refundedAmount, success);
+        } catch (StripeException e) {
+            throw translate(e);
+        }
     }
 
     private long toMinorUnits(BigDecimal amount) {

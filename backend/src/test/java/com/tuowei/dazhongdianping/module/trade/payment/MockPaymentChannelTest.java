@@ -84,6 +84,33 @@ class MockPaymentChannelTest {
         assertThrows(IllegalArgumentException.class, () -> channel.verifyWebhook(request));
     }
 
+    @Test
+    void shouldReturnSuccessRefundEchoingOriginalChannel() {
+        PaymentRow payment = new PaymentRow();
+        payment.setChannel("stripe_mock");
+        payment.setChannelTxn("TX123456789012345678901234");
+        BigDecimal amount = new BigDecimal("88.00");
+
+        RefundResult result = channel.refund(payment, amount, "用户申请退款");
+
+        assertTrue(result.success());
+        assertEquals("stripe_mock", result.channel());
+        assertEquals(new BigDecimal("88.00"), result.amount());
+        assertTrue(result.refundTxn().startsWith("RF"));
+        assertEquals(26, result.refundTxn().length());
+    }
+
+    @Test
+    void shouldFallbackToAlipayMockWhenPaymentChannelMissing() {
+        PaymentRow payment = new PaymentRow();
+        payment.setChannelTxn("TX123456789012345678901234");
+
+        RefundResult result = channel.refund(payment, new BigDecimal("10.00"), "");
+
+        assertTrue(result.success());
+        assertEquals("alipay_mock", result.channel());
+    }
+
     private String signForTest(String orderNo, String txn, String status, BigDecimal amount) {
         try {
             String raw = orderNo + "|" + txn + "|" + status + "|" + amount.setScale(2).toPlainString() + "|test-secret-001";

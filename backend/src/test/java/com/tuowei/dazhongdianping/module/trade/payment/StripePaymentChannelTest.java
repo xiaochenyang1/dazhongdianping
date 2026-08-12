@@ -7,7 +7,9 @@ import static org.mockito.Mockito.*;
 import com.stripe.StripeClient;
 import com.stripe.exception.AuthenticationException;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
 import com.stripe.service.PaymentIntentService;
+import com.stripe.service.RefundService;
 import com.tuowei.dazhongdianping.common.api.ServiceUnavailableException;
 import com.tuowei.dazhongdianping.module.trade.model.OrderRow;
 import com.tuowei.dazhongdianping.module.trade.model.PaymentRow;
@@ -101,6 +103,44 @@ class StripePaymentChannelTest {
         PaymentNotifyResult result = channel.verifyWebhook(mockRequest(payload, sigHeader));
 
         assertFalse(result.success());
+    }
+
+    @Test
+    void shouldRefundPaymentIntentAndReturnSucceededReceipt() throws Exception {
+        RefundService refundService = mock(RefundService.class);
+        Refund stripeRefund = mock(Refund.class);
+        when(stripeRefund.getId()).thenReturn("re_test_123");
+        when(stripeRefund.getStatus()).thenReturn("succeeded");
+        when(stripeRefund.getAmount()).thenReturn(8800L);
+        when(stripeClient.refunds()).thenReturn(refundService);
+        when(refundService.create(any(com.stripe.param.RefundCreateParams.class)))
+            .thenReturn(stripeRefund);
+
+        PaymentRow payment = new PaymentRow();
+        payment.setChannel("stripe");
+        payment.setChannelTxn("pi_test_123");
+
+        RefundResult result = channel.refund(payment, new BigDecimal("88.00"), "行程有变");
+
+        assertTrue(result.success());
+        assertEquals("stripe", result.channel());
+        assertEquals("re_test_123", result.refundTxn());
+        assertEquals(new BigDecimal("88.00"), result.amount());
+    }
+
+    @Test
+    void shouldMapRefundFailureToServiceUnavailable() throws Exception {
+        RefundService refundService = mock(RefundService.class);
+        when(stripeClient.refunds()).thenReturn(refundService);
+        when(refundService.create(any(com.stripe.param.RefundCreateParams.class)))
+            .thenThrow(new AuthenticationException("bad key", null, null, 401));
+
+        PaymentRow payment = new PaymentRow();
+        payment.setChannel("stripe");
+        payment.setChannelTxn("pi_test_123");
+
+        assertThrows(ServiceUnavailableException.class,
+            () -> channel.refund(payment, new BigDecimal("88.00"), ""));
     }
 
     /** Build a valid Stripe-Signature header the same way Stripe does. */

@@ -2,6 +2,7 @@ package com.tuowei.dazhongdianping.module.merchant.trade.service;
 
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
+import com.tuowei.dazhongdianping.common.api.ServiceUnavailableException;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
@@ -13,10 +14,15 @@ import com.tuowei.dazhongdianping.module.merchant.trade.mapper.MerchantTradeMapp
 import com.tuowei.dazhongdianping.module.merchant.trade.model.request.MerchantDealSaveRequest;
 import com.tuowei.dazhongdianping.module.merchant.trade.model.request.MerchantRefundAuditRequest;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
+import com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper;
 import com.tuowei.dazhongdianping.module.trade.model.DealItemRow;
 import com.tuowei.dazhongdianping.module.trade.model.DealRow;
 import com.tuowei.dazhongdianping.module.trade.model.OrderRow;
+import com.tuowei.dazhongdianping.module.trade.model.PaymentRow;
 import com.tuowei.dazhongdianping.module.trade.model.RefundRow;
+import com.tuowei.dazhongdianping.module.trade.payment.PaymentChannel;
+import com.tuowei.dazhongdianping.module.trade.payment.PaymentChannelResolver;
+import com.tuowei.dazhongdianping.module.trade.payment.RefundResult;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -36,15 +42,21 @@ public class MerchantTradeService {
     private final AdminAuditMapper adminAuditMapper;
     private final MerchantAuthorizationService authorizationService;
     private final NotificationService notificationService;
+    private final TradeMapper tradeMapper;
+    private final PaymentChannelResolver channelResolver;
 
     public MerchantTradeService(MerchantTradeMapper mapper,
                                 AdminAuditMapper adminAuditMapper,
                                 MerchantAuthorizationService authorizationService,
-                                NotificationService notificationService) {
+                                NotificationService notificationService,
+                                TradeMapper tradeMapper,
+                                PaymentChannelResolver channelResolver) {
         this.mapper = mapper;
         this.adminAuditMapper = adminAuditMapper;
         this.authorizationService = authorizationService;
         this.notificationService = notificationService;
+        this.tradeMapper = tradeMapper;
+        this.channelResolver = channelResolver;
     }
 
     public PageResult<Map<String, Object>> deals(Long shopId,
@@ -213,6 +225,7 @@ public class MerchantTradeService {
             requireAffected(mapper.markOrderRefunded(orderId));
             mapper.markCouponsRefunded(orderId);
             requireAffected(mapper.restoreDealStock(order.getDealId(), order.getQuantity()));
+            issueChannelRefund(orderId, refund.getAmount(), reason);
             action = "refund_approve";
             approved = true;
         } else if ("reject".equals(decision)) {
@@ -246,6 +259,23 @@ public class MerchantTradeService {
                 ? RegionContext.getRegion().name()
                 : order.getRegion();
         notificationService.create(order.getUserId(), region, REFUND_RESULT_TYPE, title, content, linkUrl);
+    }
+
+    /**
+     * Issue the real channel refund for an approved refund audit. Fail-closed:
+     * any channel error propagates so the surrounding {@code @Transactional}
+     * approval rolls back, never leaving the DB approved-but-not-refunded.
+     */
+    private void issueChannelRefund(Long orderId, BigDecimal amount, String reason) {
+        PaymentRow payment = tradeMapper.selectPayment(orderId);
+        if (payment == null || payment.getChannel() == null || payment.getChannelTxn() == null) {
+            throw new ServiceUnavailableException("订单缺少可退款的支付记录");
+        }
+        PaymentChannel channel = channelResolver.resolveByChannel(payment.getChannel());
+        RefundResult refundResult = channel.refund(payment, amount, reason);
+        if (refundResult == null || !refundResult.success()) {
+            throw new ServiceUnavailableException("支付渠道退款未成功");
+        }
     }
 
     private void validate(MerchantDealSaveRequest request) {

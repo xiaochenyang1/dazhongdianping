@@ -63,6 +63,14 @@ public class MockPaymentChannel implements PaymentChannel {
         return channel != null && channel.endsWith("_mock");
     }
 
+    @Override
+    public RefundResult refund(PaymentRow payment, BigDecimal amount, String reason) {
+        String channel = payment.getChannel() == null ? "alipay_mock" : payment.getChannel();
+        String refundTxn = "RF" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
+        BigDecimal refundedAmount = amount == null ? BigDecimal.ZERO.setScale(2) : amount.setScale(2);
+        return new RefundResult(channel, refundTxn, refundedAmount, true);
+    }
+
     private String sign(String orderNo, String txn, String status, BigDecimal amount) {
         try {
             String raw = orderNo + "|" + txn + "|" + status + "|"
