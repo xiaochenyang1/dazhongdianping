@@ -1,6 +1,7 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
+import 'package:dazhongdianping_app/features/points/points_product_detail_screen.dart';
 import 'package:dazhongdianping_app/features/points/points_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -395,11 +396,28 @@ class _PointsMallScreenState extends State<PointsMallScreen>
     return Card(
       key: Key('points-product-${product.id}'),
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: InkWell(
+        onTap: () async {
+          final redeemed = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (ctx) => PointsProductDetailScreen(
+                repository: widget.repository,
+                productId: product.id,
+                points: _points,
+                onPointsSpent: widget.onPointsSpent,
+              ),
+            ),
+          );
+          if (redeemed == true && mounted) {
+            _reloadProducts();
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             if (product.coverImage.isNotEmpty) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
@@ -461,6 +479,7 @@ class _PointsMallScreenState extends State<PointsMallScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }

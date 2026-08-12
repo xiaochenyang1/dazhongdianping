@@ -130,7 +130,7 @@ export interface WebUserStrings {
   pointsMall: {
     loadFailed: string
     exchangeFailed: string
-    exchangeSuccess: string
+    exchangeSuccess: (name: string) => string
     exchangeSuccessWithCode: (code: string) => string
     eyebrow: string
     title: string
@@ -175,6 +175,19 @@ export interface WebUserStrings {
     pagination: (page: number, total: number) => string
     previous: string
     next: string
+    productDetail: string
+    exchangeNow: string
+    backToMall: string
+    viewDetail: string
+    yourBalance: string
+    pointsUnit: string
+    stockLabel: string
+    exchangeLimitLabel: string
+    fulfillTypeLabel: string
+    exchangeCount: string
+    productDescription: string
+    abundant: string
+    insufficientBalance: string
   }
   errorTranslations: Record<string, string>
 }
@@ -244,7 +257,7 @@ const zhCnStrings: WebUserStrings = {
   pointsMall: {
     loadFailed: '积分商城加载失败',
     exchangeFailed: '兑换失败',
-    exchangeSuccess: '兑换成功，可在「我的兑换」查看进度。',
+    exchangeSuccess: (name) => `兑换「${name}」成功，可在「我的兑换」查看进度。`,
     exchangeSuccessWithCode: (code) => `兑换成功，兑换码：${code}`,
     eyebrow: '积分商城',
     title: '用积分兑换优惠与福利。',
@@ -289,6 +302,19 @@ const zhCnStrings: WebUserStrings = {
     pagination: (page, total) => `第 ${page} 页，共 ${total} 条`,
     previous: '上一页',
     next: '下一页',
+    productDetail: '商品详情',
+    exchangeNow: '立即兑换',
+    backToMall: '返回商城',
+    viewDetail: '查看详情',
+    yourBalance: '您的余额',
+    pointsUnit: '积分',
+    stockLabel: '剩余库存',
+    exchangeLimitLabel: '兑换限制',
+    fulfillTypeLabel: '发放方式',
+    exchangeCount: '已兑换次数',
+    productDescription: '商品说明',
+    abundant: '充足',
+    insufficientBalance: '积分不足',
   },
   errorTranslations: {},
 }
@@ -342,7 +368,7 @@ const enStrings: WebUserStrings = {
   pointsMall: {
     loadFailed: 'Could not load the points mall',
     exchangeFailed: 'Could not complete the exchange',
-    exchangeSuccess: 'Exchange submitted. Track it under My exchanges.',
+    exchangeSuccess: (name) => `Redeemed "${name}". Track it under My exchanges.`,
     exchangeSuccessWithCode: (code) => `Exchange complete. Redeem code: ${code}`,
     eyebrow: 'Points mall',
     title: 'Redeem points for offers and perks.',
@@ -387,6 +413,19 @@ const enStrings: WebUserStrings = {
     pagination: (page, total) => `Page ${page} · ${total} total`,
     previous: 'Previous',
     next: 'Next',
+    productDetail: 'Product detail',
+    exchangeNow: 'Redeem now',
+    backToMall: 'Back to mall',
+    viewDetail: 'View details',
+    yourBalance: 'Your balance',
+    pointsUnit: 'points',
+    stockLabel: 'Stock',
+    exchangeLimitLabel: 'Redemption limit',
+    fulfillTypeLabel: 'Fulfillment',
+    exchangeCount: 'Redeemed',
+    productDescription: 'Description',
+    abundant: 'Abundant',
+    insufficientBalance: 'Insufficient balance',
   },
   errorTranslations: {
     '用户登录状态不存在': 'Your session has expired. Sign in again.',

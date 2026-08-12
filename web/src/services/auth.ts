@@ -70,10 +70,6 @@ export function fetchCurrentUser() {
   return apiGet<AuthCurrentUser>('/api/c/v1/user/me')
 }
 
-export function fetchCurrentUserExpertCertification() {
-  return apiGet<UserExpertCertificationStatus>('/api/c/v1/user/expert-certification')
-}
-
 export function fetchUserGrowthRecords(query?: { page?: number; pageSize?: number }) {
   return apiGet<PageResult<UserGrowthRecord>>('/api/c/v1/user/growth/records', query)
 }

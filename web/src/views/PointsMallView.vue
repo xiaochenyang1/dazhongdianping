@@ -143,7 +143,7 @@ async function submitExchange(product: PointsProduct) {
     const code = exchange.redeemCode?.trim()
     successMessage.value = code
       ? copy.value.exchangeSuccessWithCode(code)
-      : copy.value.exchangeSuccess
+      : copy.value.exchangeSuccess(product.name)
 
     await Promise.all([loadProducts(), refreshProfile()])
 
@@ -324,6 +324,12 @@ watch(
             <div class="manage-card__footer">
               <span>{{ exchangeDisabledReason(item) || copy.fulfillType(item.fulfillType, item.fulfillTypeText) }}</span>
               <div class="hero-actions">
+                <RouterLink
+                  :to="{ name: 'user-points-product-detail', params: { id: item.id } }"
+                  class="secondary-button"
+                >
+                  {{ copy.viewDetail }}
+                </RouterLink>
                 <button
                   type="button"
                   class="primary-button"

@@ -219,6 +219,19 @@ class AppLocalizations {
     'noCheckInYet': '还没有签到记录',
     'pointsMall': '积分商城',
     'pointsMallSubtitle': '用积分兑换权益',
+    'pointsMallProductDetail': '商品详情',
+    'pointsMallExchangeNow': '立即兑换',
+    'pointsMallYourBalance': '您的余额',
+    'pointsMallPointsUnit': '积分',
+    'pointsMallStock': '剩余库存',
+    'pointsMallExchangeLimit': '兑换限制',
+    'pointsMallExchangeCount': '已兑换次数',
+    'pointsMallProductDescription': '商品说明',
+    'pointsMallAbundant': '充足',
+    'pointsMallInsufficientBalance': '积分不足',
+    'pointsMallFulfillType': '发放方式',
+    'pointsMallLoadFailed': '加载失败',
+    'pointsMallConfirmExchange': '确认兑换',
     'pointsBalanceLabel': '当前积分 {points}',
     'pointsProductsTab': '积分商品',
     'pointsExchangesTab': '兑换记录',
@@ -1162,6 +1175,19 @@ class AppLocalizations {
     'noCheckInYet': '還沒有簽到紀錄',
     'pointsMall': '積分商城',
     'pointsMallSubtitle': '用積分兌換權益',
+    'pointsMallProductDetail': '商品詳情',
+    'pointsMallExchangeNow': '立即兌換',
+    'pointsMallYourBalance': '您的餘額',
+    'pointsMallPointsUnit': '積分',
+    'pointsMallStock': '剩餘庫存',
+    'pointsMallExchangeLimit': '兌換限制',
+    'pointsMallExchangeCount': '已兌換次數',
+    'pointsMallProductDescription': '商品說明',
+    'pointsMallAbundant': '充足',
+    'pointsMallInsufficientBalance': '積分不足',
+    'pointsMallFulfillType': '發放方式',
+    'pointsMallLoadFailed': '載入失敗',
+    'pointsMallConfirmExchange': '確認兌換',
     'pointsBalanceLabel': '目前積分 {points}',
     'pointsProductsTab': '積分商品',
     'pointsExchangesTab': '兌換紀錄',
@@ -2132,6 +2158,19 @@ class AppLocalizations {
     'noCheckInYet': 'No check-ins yet',
     'pointsMall': 'Points mall',
     'pointsMallSubtitle': 'Redeem your points for rewards',
+    'pointsMallProductDetail': 'Product detail',
+    'pointsMallExchangeNow': 'Redeem now',
+    'pointsMallYourBalance': 'Your balance',
+    'pointsMallPointsUnit': 'points',
+    'pointsMallStock': 'Stock',
+    'pointsMallExchangeLimit': 'Redemption limit',
+    'pointsMallExchangeCount': 'Times redeemed',
+    'pointsMallProductDescription': 'Description',
+    'pointsMallAbundant': 'Abundant',
+    'pointsMallInsufficientBalance': 'Insufficient balance',
+    'pointsMallFulfillType': 'Fulfillment type',
+    'pointsMallLoadFailed': 'Load failed',
+    'pointsMallConfirmExchange': 'Confirm redemption',
     'pointsBalanceLabel': '{points} points available',
     'pointsProductsTab': 'Products',
     'pointsExchangesTab': 'Redemptions',
@@ -3555,6 +3594,19 @@ class AppLocalizations {
 
   String get pointsMall => _text('pointsMall');
   String get pointsMallSubtitle => _text('pointsMallSubtitle');
+  String get pointsMallProductDetail => _text('pointsMallProductDetail');
+  String get pointsMallExchangeNow => _text('pointsMallExchangeNow');
+  String get pointsMallYourBalance => _text('pointsMallYourBalance');
+  String get pointsMallPointsUnit => _text('pointsMallPointsUnit');
+  String get pointsMallStock => _text('pointsMallStock');
+  String get pointsMallExchangeLimit => _text('pointsMallExchangeLimit');
+  String get pointsMallExchangeCount => _text('pointsMallExchangeCount');
+  String get pointsMallProductDescription => _text('pointsMallProductDescription');
+  String get pointsMallAbundant => _text('pointsMallAbundant');
+  String get pointsMallInsufficientBalance => _text('pointsMallInsufficientBalance');
+  String get pointsMallFulfillType => _text('pointsMallFulfillType');
+  String get pointsMallLoadFailed => _text('pointsMallLoadFailed');
+  String get pointsMallConfirmExchange => _text('pointsMallConfirmExchange');
   String pointsBalanceLabel(int points) {
     if (_isEnglish) {
       return '${_englishCount(points, 'point')} available';

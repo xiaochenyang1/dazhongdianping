@@ -175,7 +175,7 @@ describe('PointsMallView', () => {
     expect(pointsMocks.exchangePointsProduct).toHaveBeenCalledWith(11)
     expect(authMocks.fetchCurrentUser).toHaveBeenCalled()
     expect(sessionMocks.setCurrentUser).toHaveBeenCalledWith(expect.objectContaining({ points: 70 }))
-    expect(host.querySelector('[data-testid="points-success"]')?.textContent).toContain('兑换成功')
+    expect(host.querySelector('[data-testid="points-success"]')?.textContent).toContain('兑换「咖啡兑换券」成功')
     expect(host.querySelector('[data-testid="points-balance"]')?.textContent).toContain('70')
     app.unmount()
   })

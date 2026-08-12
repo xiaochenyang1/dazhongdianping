@@ -204,6 +204,17 @@ const router = createRouter({
       },
     },
     {
+      path: '/user/points-mall/products/:id',
+      name: 'user-points-product-detail',
+      component: () => import('@/views/PointsProductDetailView.vue'),
+      props: (route) => ({ productId: Number(route.params.id) }),
+      meta: {
+        requiresAuth: true,
+        title: '积分商品详情',
+        description: '查看积分商品详情、库存和兑换规则。',
+      },
+    },
+    {
       path: '/user/growth-records',
       name: 'user-growth-records',
       component: () => import('@/views/UserGrowthRecordsView.vue'),
