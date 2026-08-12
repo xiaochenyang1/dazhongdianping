@@ -230,4 +230,31 @@ void main() {
     expect(api.path, '/api/c/v1/orders/10/refund');
     expect(api.body, {'reason': '行程有变'});
   });
+
+  group('PaymentIntent.fromJson', () {
+    test('parses clientSecret when present', () {
+      final intent = PaymentIntent.fromJson(<String, dynamic>{
+        'channel': 'stripe',
+        'orderNo': 'OD12345',
+        'amount': 100.00,
+        'currency': 'EUR',
+        'clientSecret': 'pi_1_secret_abc',
+      });
+
+      expect(intent.clientSecret, 'pi_1_secret_abc');
+      expect(intent.needsCardConfirmation, isTrue);
+    });
+
+    test('falls back to empty string when clientSecret is absent', () {
+      final intent = PaymentIntent.fromJson(<String, dynamic>{
+        'channel': 'alipay_mock',
+        'orderNo': 'OD12346',
+        'amount': 50.00,
+        'currency': 'CNY',
+      });
+
+      expect(intent.clientSecret, '');
+      expect(intent.needsCardConfirmation, isFalse);
+    });
+  });
 }

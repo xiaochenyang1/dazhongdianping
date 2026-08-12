@@ -315,17 +315,22 @@ class PaymentIntent {
     required this.orderNo,
     required this.amount,
     required this.currency,
+    this.clientSecret = '',
   });
   final String channel;
   final String orderNo;
   final num amount;
   final String currency;
+  final String clientSecret;
+
+  bool get needsCardConfirmation => clientSecret.trim().isNotEmpty;
 
   factory PaymentIntent.fromJson(Map<String, dynamic> json) => PaymentIntent(
     channel: json['channel'] as String? ?? '',
     orderNo: json['orderNo'] as String? ?? '',
     amount: json['amount'] as num? ?? 0,
     currency: json['currency'] as String? ?? 'EUR',
+    clientSecret: (json['clientSecret'] as String?) ?? '',
   );
 }
 
