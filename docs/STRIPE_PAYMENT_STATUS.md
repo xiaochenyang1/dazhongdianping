@@ -3,6 +3,8 @@
 **更新时间**: 2026-08-12  
 **状态**: ✅ 代码实现已完成，可进行端到端测试
 
+> **口径说明（2026-08-12 复跑）**: 代码侧无缺口。唯一未完成项为计划文档 Task 14「End-to-End Verification with Stripe CLI」—— 该任务需真实 Stripe test 凭证（`sk_test_*` / `pk_test_*` / `whsec_*`），属外部凭证验收，非代码工作。Tasks 1–13 已全部完成并勾选。
+
 ## 概览
 
 Stripe test-mode 支付集成的代码实现已完成，所有单元测试通过。后端、Web 和 Flutter 客户端均已实现相关功能。
@@ -68,6 +70,8 @@ app:
 - Flutter 测试套件全通过 (569 tests)
 
 ## 剩余工作
+
+> **所有剩余项均依赖真实 Stripe test 凭证（`sk_test_*` / `pk_test_*` / `whsec_*`），属外部凭证验收，不涉及代码改动。** 凭证到位后按下方步骤执行，即可完成计划文档 Task 14。未提供凭证时，Tasks 1–13 的单元测试仍全绿，服务在 `app.payment.stripe.enabled=false` 下 fail-closed 正常启动。
 
 ### 1. 端到端测试 (最高优先级)
 **Web 端**

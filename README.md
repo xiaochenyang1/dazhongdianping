@@ -355,6 +355,7 @@ npm run build
 
 ## 已验证
 
+- `2026-08-12` 半成品收尾审计复跑：唯一真实半成品入口为 Flutter 首页地图按钮（按钮常显但点击只弹提示，背后无 `GoogleMap` 且 `google_maps_flutter` 未入 pubspec）。已按“未配置时隐藏按钮”收口：按钮现以 `thirdPartyConfig.googleMapsEnabled` 为渲染条件，仅当存在 Google Maps key 时才出现；首页聚焦测试覆盖未配置隐藏与已配置可见两条用例，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `571` 条通过。其余“未完成”项均为设计性延后且 fail-closed：验证码渠道（`VerificationCodeDispatchService` 无 provider→`PublicAuthService` 抛 503）、支付渠道（`PaymentChannelResolver` 无 channel→503）、Firebase（`YOUR_*` 占位 + `push_service.dart` NoOp 回退）。这些仅需真实外部凭证，非代码缺口。
 - `2026-08-04` 管理端商户治理补齐城市/门店范围：受限管理员只有覆盖商户全部有效门店时才能查看商户、员工和经营历史或执行停用恢复；部分覆盖、跨城市和无门店商户按不存在处理，区域全量管理员保持原有能力。后端商户治理 `9` 条聚焦测试通过。
 - `2026-08-04` 商户资质审核收紧数据范围：申请在通过前没有可信城市/门店归属，因此仅当前区域全城市管理员可查看营业执照、法人和门店照片并执行审核；城市/门店受限审核员返回空队列，直接审核按不存在处理。后端资质审核 `3` 条聚焦测试通过。
 - `2026-08-04` 单商户经营操作历史查询闭环完成：已有 `merchant_operation_log` 写入现在可通过区域隔离的管理端 API 和商户治理页面查询，支持操作人 ID、稳定动作码、目标类型、操作人/详情关键词和分页筛选；返回真实操作人、结构化目标和详情，CN/EU 页面翻译已知动作并保留未知动作原码。后端商户治理 `8` 条、管理端页面 `10` 条聚焦测试和生产构建通过。
