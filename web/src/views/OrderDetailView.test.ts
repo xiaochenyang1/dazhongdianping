@@ -247,13 +247,35 @@ describe('OrderDetailView', () => {
     app.unmount()
   })
 
-  it('confirms the card and reloads the order on success', async () => {
-    tradeMocks.fetchOrder.mockResolvedValue(unpaidOrder())
+  it('confirms the card and polls the order until it is paid', async () => {
+    const paidOrder = {
+      id: 88,
+      orderNo: 'OD123',
+      dealId: 40001,
+      dealTitle: '双人套餐',
+      shopId: 10001,
+      shopName: '测试火锅',
+      coverImage: '',
+      quantity: 1,
+      unitPrice: 88,
+      amount: 88,
+      currency: 'CNY',
+      payStatus: 1,
+      payStatusText: '已支付',
+      status: 1,
+      coupons: [],
+    }
+    tradeMocks.fetchOrder
+      .mockResolvedValueOnce(unpaidOrder())
+      .mockResolvedValueOnce(unpaidOrder())
+      .mockResolvedValueOnce(unpaidOrder())
+      .mockResolvedValueOnce(paidOrder)
     tradeMocks.payOrder.mockResolvedValue({
       paymentId: 1, channel: 'stripe', channelTxn: 'pi_1',
       clientSecret: 'pi_1_secret_abc', orderNo: 'OD123', amount: 88, currency: 'CNY',
     })
 
+    vi.useFakeTimers()
     const { app, host } = mount()
     await flush()
 
@@ -266,6 +288,45 @@ describe('OrderDetailView', () => {
     expect(stripeCheckoutMock.unmount).toHaveBeenCalled()
     expect(host.textContent).toContain('正在确认支付结果')
     expect(host.querySelector('[data-testid="stripe-card-element"]')).toBeNull()
+
+    // First tick: mount's initial load ate the 1st unpaid, poll iter 0 ate the
+    // 2nd — advancing past the 1500ms timer lets poll iter 1 eat the 3rd unpaid,
+    // so the order is still pending and the processing banner stays.
+    await vi.advanceTimersByTimeAsync(2000)
+    await flush()
+    expect(host.textContent).toContain('正在确认支付结果')
+
+    // Second tick: poll iter 2 finally eats the paid order → banner clears.
+    await vi.advanceTimersByTimeAsync(2000)
+    await flush()
+    expect(host.querySelector('[data-testid="order-success"]')).toBeNull()
+    expect(host.textContent).toContain('已支付')
+    vi.useRealTimers()
+    app.unmount()
+  })
+
+  it('falls back to a received banner when the order is not confirmed in time', async () => {
+    tradeMocks.fetchOrder.mockResolvedValue(unpaidOrder())
+    tradeMocks.payOrder.mockResolvedValue({
+      paymentId: 1, channel: 'stripe', channelTxn: 'pi_1',
+      clientSecret: 'pi_1_secret_abc', orderNo: 'OD123', amount: 88, currency: 'CNY',
+    })
+
+    vi.useFakeTimers()
+    const { app, host } = mount()
+    await flush()
+
+    host.querySelector<HTMLButtonElement>('[data-testid="order-pay"]')?.click()
+    await flush()
+    host.querySelector<HTMLButtonElement>('[data-testid="stripe-pay-confirm"]')?.click()
+    await flush()
+
+    await vi.advanceTimersByTimeAsync(20000)
+    await flush()
+
+    expect(host.textContent).toContain('支付已收到')
+    expect(host.querySelector('[data-testid="order-refresh"]')).not.toBeNull()
+    vi.useRealTimers()
     app.unmount()
   })
 })

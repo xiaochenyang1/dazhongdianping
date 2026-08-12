@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
 import { useStripeCheckout } from '@/composables/useStripeCheckout'
@@ -20,9 +20,16 @@ const loading = ref(false)
 const acting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const confirming = ref(false)
+const pollTimedOut = ref(false)
 const cardElement = ref<HTMLElement | null>(null)
 const stripeCheckout = useStripeCheckout(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '')
 const needsStripe = computed(() => Boolean(intent.value?.clientSecret))
+
+const POLL_INTERVAL_MS = 1500
+const POLL_MAX_TRIES = 12
+let pollRequestId = 0
+let pollTimer: ReturnType<typeof setTimeout> | null = null
 
 const canCancel = computed(() => order.value?.payStatus === 0 && order.value?.status === 1)
 const canRefund = computed(() => order.value?.payStatus === 1 && !order.value?.refund)
@@ -43,6 +50,46 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function stopPolling() {
+  pollRequestId += 1
+  if (pollTimer) {
+    clearTimeout(pollTimer)
+    pollTimer = null
+  }
+}
+
+async function pollOrderUntilPaid() {
+  const requestId = ++pollRequestId
+  confirming.value = true
+  pollTimedOut.value = false
+  successMessage.value = copy.value.orderDetail.stripeProcessing
+  for (let attempt = 0; attempt < POLL_MAX_TRIES; attempt += 1) {
+    try {
+      const next = await fetchOrder(props.orderId)
+      if (requestId !== pollRequestId) return
+      if (next?.payStatus === 1) {
+        order.value = next
+        intent.value = null
+        successMessage.value = ''
+        confirming.value = false
+        pollTimedOut.value = false
+        return
+      }
+      order.value = next
+    } catch {
+      // Transient fetch errors are retried by the next tick; keep the current
+      // success banner visible so the user knows payment was received.
+    }
+    await new Promise<void>((resolve) => {
+      pollTimer = setTimeout(resolve, POLL_INTERVAL_MS)
+    })
+    if (requestId !== pollRequestId) return
+  }
+  confirming.value = false
+  pollTimedOut.value = true
+  successMessage.value = copy.value.orderDetail.stripeReceived
 }
 
 async function pay() {
@@ -70,10 +117,9 @@ async function confirmCard() {
     errorMessage.value = stripeCheckout.error.value || copy.value.orderDetail.stripePaymentFailed
     return
   }
-  successMessage.value = copy.value.orderDetail.stripeProcessing
   stripeCheckout.unmount()
   intent.value = null
-  await load()
+  await pollOrderUntilPaid()
 }
 
 async function complete() {
@@ -124,12 +170,17 @@ async function refund() {
 watch(
   [() => props.orderId, () => state.region],
   () => {
+    stopPolling()
+    confirming.value = false
+    pollTimedOut.value = false
     intent.value = null
     successMessage.value = ''
     void load()
   },
   { immediate: true },
 )
+
+onBeforeUnmount(() => stopPolling())
 </script>
 
 <template>
@@ -147,9 +198,14 @@ watch(
     </div>
 
     <p v-if="refundBanner" class="feedback is-success" data-testid="refund-result-banner">{{ refundBanner }}</p>
-    <p v-if="successMessage" class="feedback is-success">{{ successMessage }}</p>
+    <p v-if="successMessage" class="feedback is-success" data-testid="order-success">{{ successMessage }}</p>
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
     <p v-if="loading" class="feedback">{{ copy.orderDetail.loading }}</p>
+    <div v-if="pollTimedOut" class="hero-actions">
+      <button class="secondary-button" type="button" :disabled="loading" data-testid="order-refresh" @click="load">
+        {{ copy.orderDetail.refreshOrder }}
+      </button>
+    </div>
 
     <template v-else-if="order">
       <div class="hero-actions">

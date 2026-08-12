@@ -430,6 +430,8 @@ class AppLocalizations {
     'defaultRefundReason': '行程有变',
     'paymentRequestCreated': '已创建 {channel} 支付请求，请在支付渠道完成付款',
     'paymentStartFailed': '支付发起失败：{error}',
+    'paymentConfirming': '正在确认支付结果...',
+    'paymentReceived': '支付已收到，订单确认中，请下拉刷新。',
     'relatedCoupons': '关联券码',
     'redeemable': '可核销',
     'notRedeemable': '不可核销',
@@ -1371,6 +1373,8 @@ class AppLocalizations {
     'defaultRefundReason': '行程有變',
     'paymentRequestCreated': '已建立 {channel} 支付請求，請在支付渠道完成付款',
     'paymentStartFailed': '支付發起失敗：{error}',
+    'paymentConfirming': '正在確認支付結果...',
+    'paymentReceived': '支付已收到，訂單確認中，請下拉刷新。',
     'relatedCoupons': '關聯券碼',
     'redeemable': '可核銷',
     'notRedeemable': '不可核銷',
@@ -2361,6 +2365,8 @@ class AppLocalizations {
     'paymentRequestCreated':
         'Created a {channel} payment request. Finish payment in the channel.',
     'paymentStartFailed': 'Could not start payment: {error}',
+    'paymentConfirming': 'Confirming your payment...',
+    'paymentReceived': 'Payment received. The order is being confirmed — pull to refresh shortly.',
     'relatedCoupons': 'Linked coupons',
     'redeemable': 'Redeemable',
     'notRedeemable': 'Not redeemable',
@@ -3906,6 +3912,8 @@ class AppLocalizations {
       _text('paymentRequestCreated').replaceFirst('{channel}', channel);
   String paymentStartFailed(Object error) =>
       _withError('paymentStartFailed', error);
+  String get paymentConfirming => _text('paymentConfirming');
+  String get paymentReceived => _text('paymentReceived');
   String get relatedCoupons => _text('relatedCoupons');
 
   String get redeemable => _text('redeemable');

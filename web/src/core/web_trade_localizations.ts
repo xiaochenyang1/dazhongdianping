@@ -91,6 +91,8 @@ export interface WebTradeStrings {
     stripePayment: string
     stripePaymentFailed: string
     stripeProcessing: string
+    stripeReceived: string
+    refreshOrder: string
     cancel: string
     requestRefund: string
     refundProgress: string
@@ -323,6 +325,8 @@ const zhCnStrings: WebTradeStrings = {
     stripePayment: '使用银行卡支付',
     stripePaymentFailed: '银行卡支付失败',
     stripeProcessing: '正在确认支付结果...',
+    stripeReceived: '支付已收到，订单确认中，请稍后刷新。',
+    refreshOrder: '刷新订单',
     cancel: '取消订单',
     requestRefund: '申请退款',
     refundProgress: '退款进度',
@@ -486,6 +490,8 @@ const enStrings: WebTradeStrings = {
     stripePayment: 'Pay by card',
     stripePaymentFailed: 'Card payment failed',
     stripeProcessing: 'Confirming your payment...',
+    stripeReceived: 'Payment received. The order is being confirmed — please refresh shortly.',
+    refreshOrder: 'Refresh order',
     cancel: 'Cancel order',
     requestRefund: 'Request refund',
     refundProgress: 'Refund progress',

@@ -180,8 +180,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           if (e.error.code == FailureCode.Canceled) return;
           rethrow;
         }
-        // Stripe 已授权;订单状态由 webhook 落库,这里只刷新。
-        await _load();
+        // Stripe 已授权;订单状态由 webhook 落库,轮询直到确认或超时。
+        await _pollOrderUntilPaid();
         return;
       }
       if (mounted) {
@@ -199,6 +199,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     } finally {
       if (mounted) setState(() => _acting = false);
     }
+  }
+
+  static const Duration _pollInterval = Duration(milliseconds: 1500);
+  static const int _pollMaxTries = 12;
+
+  Future<void> _pollOrderUntilPaid() async {
+    if (!mounted) return;
+    final strings = AppLocalizations.of(context);
+    _showMessage(strings.paymentConfirming);
+    for (var attempt = 0; attempt < _pollMaxTries; attempt += 1) {
+      try {
+        final order = await widget.repository.loadOrder(widget.orderId);
+        if (!mounted) return;
+        setState(() => _order = order);
+        if (order.payStatus == 1) {
+          // 订单已确认:清掉"确认中"提示,订单卡片本身已切到已支付态。
+          ScaffoldMessenger.of(context).clearSnackBars();
+          return;
+        }
+      } catch (_) {
+        // 瞬时网络错误:保持"正在确认"提示,下一轮继续重试。
+      }
+      await Future<void>.delayed(_pollInterval);
+      if (!mounted) return;
+    }
+    if (!mounted) return;
+    _showMessage(AppLocalizations.of(context).paymentReceived);
   }
 
   Future<bool> _runAction(

@@ -8,6 +8,7 @@ import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 
 class OrderDetailApi implements JsonApi {
@@ -16,12 +17,14 @@ class OrderDetailApi implements JsonApi {
     this.failFirstOrder = false,
     this.paid = false,
     this.currency = 'EUR',
+    this.clientSecret,
   });
 
   final bool failFirstCoupon;
   final bool failFirstOrder;
-  final bool paid;
+  bool paid;
   final String currency;
+  final String? clientSecret;
   int couponRequests = 0;
   Completer<void>? couponGate;
   String? path;
@@ -125,6 +128,7 @@ class OrderDetailApi implements JsonApi {
         'orderNo': 'OD-10',
         'amount': 29.9,
         'currency': 'EUR',
+        if (clientSecret != null) 'clientSecret': clientSecret,
       };
     }
     if (path.endsWith('/refund')) {
@@ -572,6 +576,78 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.paymentRequests, 1);
     expect(find.textContaining('已创建 stripe 支付请求'), findsOneWidget);
+  });
+
+  testWidgets('order detail polls the order until payment is confirmed', (
+    tester,
+  ) async {
+    // 模拟 flutter_stripe 的 MethodChannel:initialise/initPaymentSheet/
+    // presentPaymentSheet 都回空 Map → _parsePaymentSheetResult 视为成功。
+    // 注意:插件侧用的是 JSONMethodCodec,mock channel 必须匹配,否则
+    // 用 StandardMethodCodec 解码 JSON 字节会抛错,initPaymentSheet 失败。
+    const channel = MethodChannel(
+      'flutter.stripe/payments',
+      JSONMethodCodec(),
+    );
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      switch (call.method) {
+        case 'initialise':
+        case 'initPaymentSheet':
+        case 'presentPaymentSheet':
+          return <String, dynamic>{};
+        default:
+          return null;
+      }
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+    Stripe.publishableKey = 'pk_test_widget';
+
+    final api = OrderDetailApi(clientSecret: 'pi_1_secret_demo');
+    await tester.pumpWidget(
+      localizedApp(
+        home: OrderDetailScreen(
+          repository: TradeRepository(api),
+          orderId: 10,
+          thirdPartyConfig: const ThirdPartyConfig(
+            stripePublishableKey: 'pk_test_widget',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('order-pay-button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('order-pay-button')));
+    // 排空 createPayment → initPaymentSheet → presentPaymentSheet → 轮询首轮
+    // 的微任务链。零时长 pump 只drain微任务+跑帧,不推进假时钟,故轮询里
+    // 1500ms 的 Future.delayed 不会触发,循环停在 delay 上,"确认中"snackbar
+    // 保持可见。
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(Duration.zero);
+      if (find.textContaining('正在确认支付结果').evaluate().isNotEmpty) break;
+    }
+
+    expect(api.paymentRequests, 1);
+    // presentPaymentSheet 成功后进入轮询:首轮立即刷新订单,仍为待支付,
+    // 显示"正在确认支付结果"。
+    expect(find.textContaining('正在确认支付结果'), findsOneWidget);
+
+    // 模拟 webhook 落库:订单翻转成已支付。
+    api.paid = true;
+    // 跨过 1.5s 轮询间隔,触发第二轮 GET,命中 payStatus=1 → 清 snackbar。
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('已支付'), findsWidgets);
+    expect(find.textContaining('正在确认支付结果'), findsNothing);
   });
 
   testWidgets('order detail guards duplicate cancel dialogs', (tester) async {
