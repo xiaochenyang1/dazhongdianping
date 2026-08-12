@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
+import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/home_screen.dart';
@@ -407,7 +408,7 @@ void main() {
     expect(find.text('訂單'), findsOneWidget);
   });
 
-  testWidgets('English home explains unavailable maps in English', (
+  testWidgets('hides the map action when Google Maps is not configured', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -417,14 +418,34 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('home-map-action')));
-    await tester.pump();
-
+    expect(find.byKey(const Key('home-map-action')), findsNothing);
     expect(
       find.text(
         'Google Maps is not configured. City and list browsing remain available.',
       ),
-      findsOneWidget,
+      findsNothing,
     );
+  });
+
+  testWidgets('shows the map action when Google Maps is configured', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          repository: FakeBrowseRepository(),
+          localeTag: 'en',
+          thirdPartyConfig: const ThirdPartyConfig(
+            googleMapsApiKey: 'AIza-fake-test-key',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('home-map-action')));
+    await tester.pump();
+
+    expect(find.text('Google Maps is configured'), findsOneWidget);
   });
 }

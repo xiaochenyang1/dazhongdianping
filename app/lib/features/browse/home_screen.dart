@@ -198,22 +198,17 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.language),
             tooltip: strings.language,
           ),
-          IconButton(
-            key: const Key('home-map-action'),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    widget.thirdPartyConfig.googleMapsEnabled
-                        ? strings.mapsConfigured
-                        : strings.mapsUnavailable,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.map_outlined),
-            tooltip: strings.map,
-          ),
+          if (widget.thirdPartyConfig.googleMapsEnabled)
+            IconButton(
+              key: const Key('home-map-action'),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(strings.mapsConfigured)),
+                );
+              },
+              icon: const Icon(Icons.map_outlined),
+              tooltip: strings.map,
+            ),
           IconButton(
             key: const Key('home-notification-action'),
             onPressed: _openingNotifications ? null : _openNotifications,
