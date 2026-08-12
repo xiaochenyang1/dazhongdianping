@@ -66,6 +66,10 @@ public class ApplicationSafetyValidator implements InitializingBean {
             if (verificationCode.isMockEnabled() || verificationCode.isExposeMockCode()) {
                 throw new IllegalStateException("mock verification codes must be disabled in pre/prod");
             }
+            if (verificationCode.isDevConsoleEnabled()) {
+                throw new IllegalStateException(
+                        "APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED must be false in pre/prod");
+            }
         }
     }
 

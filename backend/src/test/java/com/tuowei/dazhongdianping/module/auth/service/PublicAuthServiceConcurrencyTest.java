@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.tuowei.dazhongdianping.common.verification.VerificationCodeDispatchService;
 import com.tuowei.dazhongdianping.config.VerificationCodeProperties;
 import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
@@ -97,6 +98,7 @@ class PublicAuthServiceConcurrencyTest {
                 userExpertCertificationService,
                 userAccessTokenService,
                 verificationCodeProperties,
+                new VerificationCodeDispatchService(List.of()),
                 2_592_000
         );
 

@@ -8,6 +8,9 @@ import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
+import com.tuowei.dazhongdianping.common.verification.VerificationCodeDispatchService;
+import com.tuowei.dazhongdianping.common.verification.VerificationCodeProvider;
+import com.tuowei.dazhongdianping.common.verification.VerificationCodeSendException;
 import com.tuowei.dazhongdianping.config.VerificationCodeProperties;
 import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCertificationService;
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
@@ -32,6 +35,7 @@ import com.tuowei.dazhongdianping.module.social.service.SocialService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.Locale;
@@ -54,6 +58,7 @@ public class PublicAuthService {
     private final SocialService socialService;
     private final UserExpertCertificationService userExpertCertificationService;
     private final VerificationCodeProperties verificationCodeProperties;
+    private final VerificationCodeDispatchService verificationCodeDispatchService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final long refreshTokenExpireSeconds;
 
@@ -64,6 +69,7 @@ public class PublicAuthService {
                              UserExpertCertificationService userExpertCertificationService,
                              UserAccessTokenService userAccessTokenService,
                              VerificationCodeProperties verificationCodeProperties,
+                             VerificationCodeDispatchService verificationCodeDispatchService,
                              @Value("${app.auth.refresh-token-expire-seconds}") long refreshTokenExpireSeconds) {
         this.authCommandMapper = authCommandMapper;
         this.sendCodeRateLimitService = sendCodeRateLimitService;
@@ -72,12 +78,15 @@ public class PublicAuthService {
         this.userExpertCertificationService = userExpertCertificationService;
         this.userAccessTokenService = userAccessTokenService;
         this.verificationCodeProperties = verificationCodeProperties;
+        this.verificationCodeDispatchService = verificationCodeDispatchService;
         this.refreshTokenExpireSeconds = refreshTokenExpireSeconds;
     }
 
     @Transactional
     public AuthSendCodeResponse sendCode(AuthSendCodeRequest request, String requestIp) {
-        if (!verificationCodeProperties.isMockEnabled()) {
+        VerificationCodeProvider provider = verificationCodeDispatchService.resolveConfiguredProvider();
+        boolean useMock = provider == null && verificationCodeProperties.isMockEnabled();
+        if (provider == null && !useMock) {
             throw new ServiceUnavailableException("验证码发送通道尚未配置");
         }
         String scene = normalizeScene(request.getScene());
@@ -86,12 +95,26 @@ public class PublicAuthService {
         String deviceId = StringUtils.hasText(request.getDeviceId()) ? request.getDeviceId().trim() : "";
         sendCodeRateLimitService.checkAndRecord(scene, targetType, account, deviceId, requestIp);
 
+        String code;
+        boolean exposeCode;
+        if (provider != null) {
+            code = generateSixDigitCode();
+            try {
+                provider.send(account, targetType, code, scene);
+            } catch (VerificationCodeSendException exception) {
+                throw new ServiceUnavailableException("验证码发送失败，请稍后再试");
+            }
+            exposeCode = false;
+        } else {
+            code = verificationCodeProperties.getMockCode().trim();
+            exposeCode = verificationCodeProperties.isExposeMockCode();
+        }
+
         VerificationCodeRow row = new VerificationCodeRow();
         row.setScene(scene);
         row.setTargetType(targetType);
         row.setTarget(account);
-        String mockCode = verificationCodeProperties.getMockCode().trim();
-        row.setCodeHash(sha256Hex(mockCode));
+        row.setCodeHash(sha256Hex(code));
         row.setDeviceId(deviceId);
         row.setRequestIp(StringUtils.hasText(requestIp) ? requestIp.trim() : "");
         row.setStatus(0);
@@ -102,7 +125,7 @@ public class PublicAuthService {
                 true,
                 CODE_EXPIRE_SECONDS,
                 NEXT_RETRY_SECONDS,
-                verificationCodeProperties.isExposeMockCode() ? mockCode : ""
+                exposeCode ? code : ""
         );
     }
 
@@ -386,7 +409,9 @@ public class PublicAuthService {
     }
 
     private VerificationCodeRow requireVerificationCode(String scene, int targetType, String target, String code) {
-        if (!verificationCodeProperties.isMockEnabled()) {
+        VerificationCodeProvider provider = verificationCodeDispatchService.resolveConfiguredProvider();
+        boolean useMock = provider == null && verificationCodeProperties.isMockEnabled();
+        if (provider == null && !useMock) {
             throw new ServiceUnavailableException("验证码校验通道尚未配置");
         }
         VerificationCodeRow row = authCommandMapper.selectLatestVerificationCode(scene, targetType, target);
@@ -542,5 +567,9 @@ public class PublicAuthService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 不可用", exception);
         }
+    }
+
+    private String generateSixDigitCode() {
+        return String.format("%06d", new SecureRandom().nextInt(1_000_000));
     }
 }

@@ -62,6 +62,7 @@ app:
       mock-enabled: true
       mock-code: "123456"
       expose-mock-code: true
+      dev-console-enabled: false
     send-code-rate-limit:
       account-short-window-seconds: 60
       account-short-window-max-requests: 1

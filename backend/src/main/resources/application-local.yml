@@ -9,3 +9,4 @@ app:
       mock-enabled: ${APP_AUTH_VERIFICATION_MOCK_ENABLED:true}
       mock-code: ${APP_AUTH_VERIFICATION_MOCK_CODE:123456}
       expose-mock-code: ${APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE:true}
+      dev-console-enabled: ${APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED:false}

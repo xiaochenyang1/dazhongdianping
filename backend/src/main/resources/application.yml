@@ -79,6 +79,7 @@ app:
       mock-enabled: ${APP_AUTH_VERIFICATION_MOCK_ENABLED:false}
       mock-code: ${APP_AUTH_VERIFICATION_MOCK_CODE:}
       expose-mock-code: ${APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE:false}
+      dev-console-enabled: ${APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED:false}
     send-code-rate-limit:
       account-short-window-seconds: 60
       account-short-window-max-requests: 1

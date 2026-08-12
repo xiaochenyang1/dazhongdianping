@@ -8,6 +8,7 @@ public class VerificationCodeProperties {
     private boolean mockEnabled;
     private String mockCode = "";
     private boolean exposeMockCode;
+    private boolean devConsoleEnabled;
 
     public boolean isMockEnabled() {
         return mockEnabled;
@@ -31,5 +32,13 @@ public class VerificationCodeProperties {
 
     public void setExposeMockCode(boolean exposeMockCode) {
         this.exposeMockCode = exposeMockCode;
+    }
+
+    public boolean isDevConsoleEnabled() {
+        return devConsoleEnabled;
+    }
+
+    public void setDevConsoleEnabled(boolean devConsoleEnabled) {
+        this.devConsoleEnabled = devConsoleEnabled;
     }
 }
