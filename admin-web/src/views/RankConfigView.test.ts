@@ -6,6 +6,7 @@ const adminMocks = vi.hoisted(() => ({
   listRankConfigs: vi.fn(),
   publishRankConfig: vi.fn(),
   rollbackRankConfig: vi.fn(),
+  updateRankConfig: vi.fn(),
 }))
 
 const sessionMock = vi.hoisted(() => ({
@@ -165,6 +166,72 @@ describe('RankConfigView', () => {
     expect(host.querySelector('[data-testid="rank-draft-form"]')).toBeNull()
     expect(host.querySelector('[data-testid="rank-publish-31"]')).toBeNull()
     expect(host.querySelector('[data-testid="rank-rollback-30"]')).toBeNull()
+    app.unmount()
+  })
+
+  it('edits an existing draft and saves it through updateRankConfig', async () => {
+    const { app, host } = mountView()
+    await flushView()
+
+    host.querySelector<HTMLButtonElement>('[data-testid="rank-edit-31"]')?.click()
+    await flushView()
+
+    expect(host.textContent).toContain('Editing draft v3')
+    expect(host.querySelector('[data-testid="rank-edit-cancel"]')).not.toBeNull()
+
+    const form = host.querySelector<HTMLFormElement>('[data-testid="rank-draft-form"]')
+    if (!form) throw new Error('missing rank draft form')
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flushView()
+
+    expect(adminMocks.updateRankConfig).toHaveBeenCalledWith(31, {
+      rankType: 1,
+      region: 'EU',
+      cityId: 101,
+      categoryId: 201,
+      calcCycle: 4,
+      weight: { score: 0.7, reviewCount: 0.2, hasDeal: 0.1 },
+      minReviewCount: 1,
+      minScore: 4,
+      manualIntervene: true,
+    })
+    expect(adminMocks.createRankConfig).not.toHaveBeenCalled()
+    expect(host.textContent).toContain('Draft updated')
+    expect(host.textContent).toContain('Create the next version')
+    expect(host.querySelector('[data-testid="rank-edit-cancel"]')).toBeNull()
+    app.unmount()
+  })
+
+  it('cancels editing and restores the create-draft form without saving', async () => {
+    const { app, host } = mountView()
+    await flushView()
+
+    host.querySelector<HTMLButtonElement>('[data-testid="rank-edit-31"]')?.click()
+    await flushView()
+    expect(host.textContent).toContain('Editing draft v3')
+
+    host.querySelector<HTMLButtonElement>('[data-testid="rank-edit-cancel"]')?.click()
+    await flushView()
+
+    expect(host.textContent).toContain('Create the next version')
+    expect(host.querySelector('[data-testid="rank-edit-cancel"]')).toBeNull()
+
+    const form = host.querySelector<HTMLFormElement>('[data-testid="rank-draft-form"]')
+    if (!form) throw new Error('missing rank draft form')
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flushView()
+
+    expect(adminMocks.updateRankConfig).not.toHaveBeenCalled()
+    expect(adminMocks.createRankConfig).toHaveBeenCalledTimes(1)
+    app.unmount()
+  })
+
+  it('hides draft edit controls from read-only users', async () => {
+    sessionMock.state.permissions = ['operations:rank:read']
+    const { app, host } = mountView()
+    await flushView()
+
+    expect(host.querySelector('[data-testid="rank-edit-31"]')).toBeNull()
     app.unmount()
   })
 })

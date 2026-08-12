@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
 import { adminStringsForRegion } from '@/core/admin_localizations'
-import { fetchGrowthConfig, updateGrowthRule, updateLevelConfig } from '@/services/admin'
+import { createGrowthRule, fetchGrowthConfig, updateGrowthRule, updateLevelConfig } from '@/services/admin'
 import type { GrowthRule, LevelConfig } from '@/types/admin'
 
 const { state } = useAdminSession()
@@ -12,6 +12,16 @@ const rules = ref<GrowthRule[]>([])
 const levels = ref<LevelConfig[]>([])
 const errorMessage = ref('')
 const successMessage = ref('')
+const creating = ref(false)
+
+const newRule = reactive({
+  action: '',
+  actionName: '',
+  growthValue: 0,
+  points: 0,
+  dailyLimit: 0,
+  enabled: true,
+})
 
 function messageOf(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
@@ -47,6 +57,41 @@ async function saveRule(rule: GrowthRule) {
     await load()
   } catch (cause) {
     errorMessage.value = messageOf(cause, strings.value.growthConfigs.ruleUpdateError)
+  }
+}
+
+async function createRule() {
+  if (!canWrite.value || creating.value) return
+  errorMessage.value = ''
+  successMessage.value = ''
+  const action = newRule.action.trim()
+  const actionName = newRule.actionName.trim()
+  if (!action || !actionName) {
+    errorMessage.value = strings.value.growthConfigs.ruleActionRequired
+    return
+  }
+  creating.value = true
+  try {
+    await createGrowthRule({
+      action,
+      actionName,
+      growthValue: newRule.growthValue,
+      points: newRule.points,
+      dailyLimit: newRule.dailyLimit,
+      enabled: newRule.enabled,
+    })
+    successMessage.value = strings.value.growthConfigs.ruleCreated(action)
+    newRule.action = ''
+    newRule.actionName = ''
+    newRule.growthValue = 0
+    newRule.points = 0
+    newRule.dailyLimit = 0
+    newRule.enabled = true
+    await load()
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, strings.value.growthConfigs.ruleCreateError)
+  } finally {
+    creating.value = false
   }
 }
 
@@ -101,6 +146,22 @@ watch(() => state.region, () => { void load() }, { immediate: true })
           </tbody>
         </table>
       </div>
+      <form v-if="canWrite" class="editor-form" data-testid="growth-rule-create-form" @submit.prevent="createRule">
+        <div class="section-headline">
+          <div><p class="eyebrow">{{ strings.growthConfigs.createEyebrow }}</p><h3>{{ strings.growthConfigs.createHeading }}</h3></div>
+        </div>
+        <div class="form-grid form-grid--two">
+          <label class="field"><span>{{ strings.growthConfigs.newRuleLabels.action }}</span><input v-model="newRule.action" name="new-rule-action" type="text" :placeholder="strings.growthConfigs.actionPlaceholder"></label>
+          <label class="field"><span>{{ strings.growthConfigs.newRuleLabels.actionName }}</span><input v-model="newRule.actionName" name="new-rule-action-name" type="text"></label>
+          <label class="field"><span>{{ strings.growthConfigs.newRuleLabels.growthValue }}</span><input v-model.number="newRule.growthValue" name="new-rule-growth-value" type="number" min="0"></label>
+          <label class="field"><span>{{ strings.growthConfigs.newRuleLabels.points }}</span><input v-model.number="newRule.points" name="new-rule-points" type="number" min="0"></label>
+          <label class="field"><span>{{ strings.growthConfigs.newRuleLabels.dailyLimit }}</span><input v-model.number="newRule.dailyLimit" name="new-rule-daily-limit" type="number" min="0"></label>
+          <label class="toggle-card"><input v-model="newRule.enabled" name="new-rule-enabled" type="checkbox"><span>{{ strings.growthConfigs.newRuleLabels.enabled }}</span></label>
+        </div>
+        <div class="form-actions">
+          <button class="primary-button" type="submit" :disabled="creating">{{ creating ? strings.growthConfigs.creating : strings.growthConfigs.createRule }}</button>
+        </div>
+      </form>
     </section>
 
     <section class="content-card">

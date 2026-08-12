@@ -1637,6 +1637,8 @@ export interface AdminStrings {
     weightSumError: string
     createSuccess: string
     createError: string
+    updateSuccess: string
+    updateError: string
     publishSuccess: (rankId: number, itemCount: number) => string
     publishError: string
     rollbackSuccess: (rankId: number) => string
@@ -1659,8 +1661,11 @@ export interface AdminStrings {
     statusText: (status: number, fallback?: string) => string
     publish: string
     rollback: string
+    edit: string
     editorEyebrow: string
     editorHeading: string
+    editingEyebrow: string
+    editingHeading: (version: number) => string
     labels: {
       rankType: string
       calcCycle: string
@@ -1685,21 +1690,40 @@ export interface AdminStrings {
     }
     saving: string
     saveDraft: string
+    updating: string
+    saveEdit: string
+    cancelEdit: string
     readOnly: string
   }
   growthConfigs: {
     loadError: string
     ruleUpdateError: string
+    ruleCreateError: string
+    ruleActionRequired: string
     levelUpdateError: string
     ruleUpdated: (action: string) => string
+    ruleCreated: (action: string) => string
     levelUpdated: (level: number) => string
     eyebrow: string
     heading: string
     description: string
     rulesEyebrow: string
     rulesHeading: string
+    createEyebrow: string
+    createHeading: string
     levelsEyebrow: string
     levelsHeading: string
+    newRuleLabels: {
+      action: string
+      actionName: string
+      growthValue: string
+      points: string
+      dailyLimit: string
+      enabled: string
+    }
+    actionPlaceholder: string
+    createRule: string
+    creating: string
     ruleHeaders: {
       action: string
       growthValue: string
@@ -4137,6 +4161,8 @@ const zhCnStrings: AdminStrings = {
     weightSumError: '三个权重之和必须等于 1。',
     createSuccess: '新规则草稿已创建，未发布前不会影响线上榜单。',
     createError: '规则创建失败',
+    updateSuccess: '草稿已更新，仍需发布才会影响线上榜单。',
+    updateError: '草稿更新失败',
     publishSuccess: (rankId, itemCount) => `发布成功：榜单 #${rankId}，共 ${itemCount} 家门店。`,
     publishError: '发布失败',
     rollbackSuccess: (rankId) => `已按历史规则生成新版本并发布，榜单 #${rankId}。`,
@@ -4169,8 +4195,11 @@ const zhCnStrings: AdminStrings = {
     },
     publish: '发布',
     rollback: '回滚到此规则',
+    edit: '编辑草稿',
     editorEyebrow: '新草稿',
     editorHeading: '创建下一版本',
+    editingEyebrow: '编辑草稿',
+    editingHeading: (version) => `修改草稿 v${version}`,
     labels: {
       rankType: '榜单类型',
       calcCycle: '计算周期',
@@ -4195,21 +4224,40 @@ const zhCnStrings: AdminStrings = {
     },
     saving: '创建中...',
     saveDraft: '保存草稿',
+    updating: '保存中...',
+    saveEdit: '保存修改',
+    cancelEdit: '取消编辑',
     readOnly: '当前账号仅可查看，无榜单配置权限。',
   },
   growthConfigs: {
     loadError: '配置加载失败',
     ruleUpdateError: '规则更新失败',
+    ruleCreateError: '规则新增失败',
+    ruleActionRequired: '行为码和行为名称都不能为空。',
     levelUpdateError: '等级更新失败',
     ruleUpdated: (action) => `${action} 已更新`,
+    ruleCreated: (action) => `${action} 已新增`,
     levelUpdated: (level) => `Lv${level} 已更新`,
     eyebrow: '成长体系',
     heading: '奖励权重和等级门槛都从数据库读取。',
     description: '改完只影响之后的行为，历史流水不回写，账不能越改越玄学。',
     rulesEyebrow: '行为奖励',
     rulesHeading: '成长值 / 积分 / 每日上限',
+    createEyebrow: '新增行为',
+    createHeading: '登记新的成长行为',
     levelsEyebrow: '等级阈值',
     levelsHeading: 'Lv1-Lv8 配置',
+    newRuleLabels: {
+      action: '行为码',
+      actionName: '行为名称',
+      growthValue: '成长值',
+      points: '积分',
+      dailyLimit: '每日上限',
+      enabled: '启用',
+    },
+    actionPlaceholder: '例如 check_in',
+    createRule: '新增规则',
+    creating: '新增中...',
     ruleHeaders: {
       action: '行为',
       growthValue: '成长值',
@@ -6529,6 +6577,8 @@ const enStrings: AdminStrings = {
     weightSumError: 'The three weight values must add up to 1.',
     createSuccess: 'New rule draft created. It will not affect the live ranking until published.',
     createError: 'Failed to create the rule draft.',
+    updateSuccess: 'Draft updated. It still needs publishing before the live ranking changes.',
+    updateError: 'Failed to update the rule draft.',
     publishSuccess: (rankId, itemCount) => `Published successfully: ranking #${rankId} with ${itemCount} shops.`,
     publishError: 'Failed to publish the ranking.',
     rollbackSuccess: (rankId) => `A new version was generated from the historical rule and published as ranking #${rankId}.`,
@@ -6561,8 +6611,11 @@ const enStrings: AdminStrings = {
     },
     publish: 'Publish',
     rollback: 'Rollback to this rule',
+    edit: 'Edit draft',
     editorEyebrow: 'New draft',
     editorHeading: 'Create the next version',
+    editingEyebrow: 'Edit draft',
+    editingHeading: (version) => `Editing draft v${version}`,
     labels: {
       rankType: 'Ranking type',
       calcCycle: 'Calculation cycle',
@@ -6587,21 +6640,40 @@ const enStrings: AdminStrings = {
     },
     saving: 'Creating...',
     saveDraft: 'Save draft',
+    updating: 'Saving...',
+    saveEdit: 'Save changes',
+    cancelEdit: 'Cancel editing',
     readOnly: 'This account can view ranking history but cannot edit ranking rules.',
   },
   growthConfigs: {
     loadError: 'Failed to load the growth configuration.',
     ruleUpdateError: 'Failed to update the growth rule.',
+    ruleCreateError: 'Failed to create the growth rule.',
+    ruleActionRequired: 'Both the action code and the action name are required.',
     levelUpdateError: 'Failed to update the level.',
     ruleUpdated: (action) => `${action} updated.`,
+    ruleCreated: (action) => `${action} created.`,
     levelUpdated: (level) => `Lv${level} updated.`,
     eyebrow: 'Growth program',
     heading: 'Reward weights and level thresholds come straight from the database.',
     description: 'Changes affect future actions only. Historical ledgers are not rewritten.',
     rulesEyebrow: 'Action rewards',
     rulesHeading: 'Growth, points, and daily caps',
+    createEyebrow: 'New action',
+    createHeading: 'Register a new growth action',
     levelsEyebrow: 'Level thresholds',
     levelsHeading: 'Lv1-Lv8 configuration',
+    newRuleLabels: {
+      action: 'Action code',
+      actionName: 'Action name',
+      growthValue: 'Growth',
+      points: 'Points',
+      dailyLimit: 'Daily limit',
+      enabled: 'Enabled',
+    },
+    actionPlaceholder: 'e.g. check_in',
+    createRule: 'Create rule',
+    creating: 'Creating...',
     ruleHeaders: {
       action: 'Action',
       growthValue: 'Growth',

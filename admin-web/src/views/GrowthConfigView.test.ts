@@ -2,6 +2,7 @@ import { createApp, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+  createGrowthRule: vi.fn(),
   fetchGrowthConfig: vi.fn(),
   updateGrowthRule: vi.fn(),
   updateLevelConfig: vi.fn(),
@@ -78,6 +79,7 @@ describe('GrowthConfigView', () => {
     sessionMock.state.region = 'CN'
     sessionMock.state.permissions = ['operations:growth:read', 'operations:growth:write']
     mocks.fetchGrowthConfig.mockImplementation(async () => growthConfig())
+    mocks.createGrowthRule.mockResolvedValue(growthConfig().rules[0])
     mocks.updateGrowthRule.mockResolvedValue(growthConfig().rules[0])
     mocks.updateLevelConfig.mockResolvedValue(growthConfig().levels[0])
   })
@@ -130,6 +132,7 @@ describe('GrowthConfigView', () => {
     expect([...host.querySelectorAll<HTMLInputElement>('input')].every((input) => input.disabled)).toBe(true)
     expect(host.querySelector('[data-testid^="save-growth-rule-"]')).toBeNull()
     expect(host.querySelector('[data-testid^="save-growth-level-"]')).toBeNull()
+    expect(host.querySelector('[data-testid="growth-rule-create-form"]')).toBeNull()
     expect(mocks.updateGrowthRule).not.toHaveBeenCalled()
     expect(mocks.updateLevelConfig).not.toHaveBeenCalled()
   })
@@ -154,5 +157,65 @@ describe('GrowthConfigView', () => {
     expect([...host.querySelectorAll<HTMLInputElement>('input')].every((input) => input.disabled)).toBe(true)
     expect(host.querySelector('[data-testid^="save-growth-rule-"]')).toBeNull()
     expect(host.querySelector('[data-testid^="save-growth-level-"]')).toBeNull()
+    expect(host.querySelector('[data-testid="growth-rule-create-form"]')).toBeNull()
+  })
+
+  it('creates a new growth rule through createGrowthRule and resets the form', async () => {
+    const { host } = mountView()
+    await flushView()
+
+    const form = host.querySelector<HTMLFormElement>('[data-testid="growth-rule-create-form"]')
+    if (!form) throw new Error('missing growth rule create form')
+
+    setInput(host, 'new-rule-action', 'check_in')
+    setInput(host, 'new-rule-action-name', '每日签到')
+    setInput(host, 'new-rule-growth-value', '5')
+    setInput(host, 'new-rule-points', '2')
+    setInput(host, 'new-rule-daily-limit', '1')
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flushView()
+
+    expect(mocks.createGrowthRule).toHaveBeenCalledWith({
+      action: 'check_in',
+      actionName: '每日签到',
+      growthValue: 5,
+      points: 2,
+      dailyLimit: 1,
+      enabled: true,
+    })
+    expect(mocks.fetchGrowthConfig).toHaveBeenCalledTimes(2)
+    expect(host.textContent).toContain('check_in 已新增')
+    expect(host.querySelector<HTMLInputElement>('[name="new-rule-action"]')?.value).toBe('')
+    expect(host.querySelector<HTMLInputElement>('[name="new-rule-action-name"]')?.value).toBe('')
+  })
+
+  it('rejects creating a rule without an action code or name', async () => {
+    const { host } = mountView()
+    await flushView()
+
+    const form = host.querySelector<HTMLFormElement>('[data-testid="growth-rule-create-form"]')
+    if (!form) throw new Error('missing growth rule create form')
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flushView()
+
+    expect(mocks.createGrowthRule).not.toHaveBeenCalled()
+    expect(host.textContent).toContain('行为码和行为名称都不能为空。')
+  })
+
+  it('blocks stale create form submits after write permission is revoked', async () => {
+    const { host } = mountView()
+    await flushView()
+
+    const form = host.querySelector<HTMLFormElement>('[data-testid="growth-rule-create-form"]')
+    if (!form) throw new Error('missing growth rule create form')
+    setInput(host, 'new-rule-action', 'share_post')
+    setInput(host, 'new-rule-action-name', '分享帖子')
+
+    sessionMock.state.permissions = ['operations:growth:read']
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flushView()
+
+    expect(mocks.createGrowthRule).not.toHaveBeenCalled()
+    expect(host.querySelector('[data-testid="growth-rule-create-form"]')).toBeNull()
   })
 })
