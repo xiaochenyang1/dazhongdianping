@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -15,6 +16,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import javax.imageio.ImageIO;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.beans.factory.ObjectProvider;
@@ -26,7 +28,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.core.ResponseInputStream;
 
 @Service
 public class PublicFileService {
@@ -130,6 +135,10 @@ public class PublicFileService {
             throw new NotFoundException("文件不存在");
         }
 
+        if (properties.getProvider() == FileStorageProperties.Provider.S3) {
+            return openFileFromS3(fileName);
+        }
+
         Path filePath = baseDir.resolve(fileName).normalize();
         ensureInsideBaseDir(filePath);
         if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
@@ -147,6 +156,34 @@ public class PublicFileService {
         } catch (IOException exception) {
             throw new IllegalStateException("读取文件失败", exception);
         }
+    }
+
+    private ResponseEntity<Resource> openFileFromS3(String fileName) {
+        if (s3Client == null) {
+            throw new NotFoundException("文件不存在");
+        }
+        FileStorageProperties.S3 s3 = properties.getS3();
+        if (!StringUtils.hasText(s3.getBucket())) {
+            throw new IllegalStateException("S3 bucket 未配置");
+        }
+
+        ResponseInputStream<software.amazon.awssdk.services.s3.model.GetObjectResponse> stream;
+        try {
+            stream = s3Client.getObject(GetObjectRequest.builder()
+                    .bucket(s3.getBucket())
+                    .key(fileName)
+                    .build());
+        } catch (S3Exception exception) {
+            // NoSuchKey 等找不到的对象统一对外为 404,避免泄露 bucket 细节。
+            throw new NotFoundException("文件不存在");
+        }
+
+        MediaType mediaType = resolveResponseMediaTypeByName(fileName);
+        Resource resource = new InputStreamResource(stream);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noCache())
+                .contentType(mediaType)
+                .body(resource);
     }
 
     private ImageFormat resolveImageFormat(MultipartFile file) {
@@ -215,14 +252,18 @@ public class PublicFileService {
         if (StringUtils.hasText(contentType)) {
             return MediaType.parseMediaType(contentType);
         }
-        String fileName = filePath.getFileName().toString().toLowerCase(Locale.ROOT);
-        if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+        return resolveResponseMediaTypeByName(filePath.getFileName().toString());
+    }
+
+    private MediaType resolveResponseMediaTypeByName(String fileName) {
+        String name = fileName.toLowerCase(Locale.ROOT);
+        if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
             return MediaType.IMAGE_JPEG;
         }
-        if (fileName.endsWith(".gif")) {
+        if (name.endsWith(".gif")) {
             return MediaType.IMAGE_GIF;
         }
-        if (fileName.endsWith(".png")) {
+        if (name.endsWith(".png")) {
             return MediaType.IMAGE_PNG;
         }
         return MediaType.APPLICATION_OCTET_STREAM;

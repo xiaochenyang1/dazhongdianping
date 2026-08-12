@@ -9,15 +9,21 @@ import static org.mockito.Mockito.when;
 import com.tuowei.dazhongdianping.config.FileStorageProperties;
 import com.tuowei.dazhongdianping.module.file.model.response.FileUploadResponse;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
@@ -47,6 +53,32 @@ class PublicFileServiceS3Test {
         assertThat(response.fileName()).endsWith(".png");
         assertThat(response.contentType()).isEqualTo(MediaType.IMAGE_PNG_VALUE);
         verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+    }
+
+    @Test
+    void shouldStreamFileFromS3WhenProviderIsS3() throws Exception {
+        FileStorageProperties properties = new FileStorageProperties();
+        properties.setProvider(FileStorageProperties.Provider.S3);
+        properties.getS3().setBucket("dzdp-test");
+
+        byte[] png = samplePngBytes();
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.getObject(any(GetObjectRequest.class)))
+                .thenReturn(new ResponseInputStream<>(
+                        GetObjectResponse.builder().contentType(MediaType.IMAGE_PNG_VALUE).build(),
+                        new ByteArrayInputStream(png)
+                ));
+
+        PublicFileService service = new PublicFileService(properties, providerOf(s3Client));
+
+        ResponseEntity<Resource> response = service.openFile("20260812-abcdef.png");
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.IMAGE_PNG);
+        Resource body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getContentAsByteArray()).isEqualTo(png);
+        verify(s3Client).getObject(any(GetObjectRequest.class));
     }
 
     private ObjectProvider<S3Client> providerOf(S3Client s3Client) {
