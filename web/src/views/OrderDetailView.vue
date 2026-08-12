@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
+import { useStripeCheckout } from '@/composables/useStripeCheckout'
 import { formatWebDateTime } from '@/core/web_localizations'
 import { localizeWebTradeError, tradeStringsForRegion } from '@/core/web_trade_localizations'
 import { cancelOrder, completeMockPayment, fetchOrder, payOrder, refundOrder } from '@/services/trade'
@@ -19,6 +20,9 @@ const loading = ref(false)
 const acting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const cardElement = ref<HTMLElement | null>(null)
+const stripeCheckout = useStripeCheckout(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '')
+const needsStripe = computed(() => Boolean(intent.value?.clientSecret))
 
 const canCancel = computed(() => order.value?.payStatus === 0 && order.value?.status === 1)
 const canRefund = computed(() => order.value?.payStatus === 1 && !order.value?.refund)
@@ -46,11 +50,30 @@ async function pay() {
   errorMessage.value = ''
   try {
     intent.value = await payOrder(props.orderId)
+    if (intent.value?.clientSecret) {
+      await nextTick()
+      if (cardElement.value) {
+        await stripeCheckout.mount(cardElement.value, intent.value.clientSecret)
+      }
+    }
   } catch (error) {
     errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.orderDetail.paymentFailed)
   } finally {
     acting.value = false
   }
+}
+
+async function confirmCard() {
+  errorMessage.value = ''
+  const ok = await stripeCheckout.confirm()
+  if (!ok) {
+    errorMessage.value = stripeCheckout.error.value || copy.value.orderDetail.stripePaymentFailed
+    return
+  }
+  successMessage.value = copy.value.orderDetail.stripeProcessing
+  stripeCheckout.unmount()
+  intent.value = null
+  await load()
 }
 
 async function complete() {
@@ -135,12 +158,25 @@ watch(
           class="primary-button"
           type="button"
           :disabled="acting"
+          data-testid="order-pay"
           @click="pay"
         >
           {{ copy.orderDetail.startPayment }}
         </button>
+        <div v-if="intent && needsStripe" class="stripe-card-block">
+          <div ref="cardElement" data-testid="stripe-card-element" class="stripe-card-element"></div>
+          <button
+            class="primary-button"
+            type="button"
+            data-testid="stripe-pay-confirm"
+            :disabled="!stripeCheckout.ready.value || stripeCheckout.processing.value"
+            @click="confirmCard"
+          >
+            {{ copy.orderDetail.stripePayment }}
+          </button>
+        </div>
         <button
-          v-if="intent"
+          v-if="intent && !needsStripe"
           class="primary-button"
           type="button"
           :disabled="acting"
