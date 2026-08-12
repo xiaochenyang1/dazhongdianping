@@ -5,6 +5,7 @@ import 'package:dazhongdianping_app/features/trade/trade_error_localizer.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({
@@ -166,6 +167,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     setState(() => _acting = true);
     try {
       final intent = await widget.repository.createPayment(widget.orderId);
+      if (intent.needsCardConfirmation) {
+        try {
+          await Stripe.instance.initPaymentSheet(
+            paymentSheetParameters: SetupPaymentSheetParameters(
+              paymentIntentClientSecret: intent.clientSecret,
+              merchantDisplayName: 'Dazhongdianping',
+            ),
+          );
+          await Stripe.instance.presentPaymentSheet();
+        } on StripeException catch (e) {
+          if (e.error.code == FailureCode.Canceled) return;
+          rethrow;
+        }
+        // Stripe 已授权;订单状态由 webhook 落库,这里只刷新。
+        await _load();
+        return;
+      }
       if (mounted) {
         _showMessage(
           AppLocalizations.of(context).paymentRequestCreated(intent.channel),
