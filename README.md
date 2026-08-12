@@ -32,7 +32,7 @@
 - PC Web 商户列表已接价格、评分、团购、营业状态筛选和服务端真实分页；门店点评列表支持最新/最热/评分排序、最低评分和带图/无图筛选；门店详情支持相似推荐、原生分享并带剪贴板降级；门店、公开点评、社区/圈子/话题公开页已接入客户端运行时 `canonical`、`robots`、Open Graph、Twitter Card 和 JSON-LD metadata。`npm run build` 现会额外为首页、商户、榜单、活动、社区、圈子和话题入口生成可抓取 HTML、JSON-LD、`prerender-manifest.json`，配置 `PUBLIC_SITE_URL` 时同时生成绝对 canonical、`sitemap.xml` 和 `robots.txt`；提供 `PRERENDER_API_BASE_URL` 时，`npm run build:prerender:data` 还会按 `X-Region` 抓取真实门店、点评、帖子、榜单、活动、圈子和话题详情快照。常驻 SSR 服务和目标环境自动接入仍待补齐。
 - M6 Flutter MVP 基线已落地：默认 EU、CN/EU 与语言切换、密码/验证码登录、安全会话、浏览/搜索/门店详情、团购下单、预订创建、用户中心、通知列表与 ACK、隐私导出/认证下载保存/删除申请/撤销；地图、真实支付和移动推送未配置时明确阻止冒充成功。
 - M7 帖子、本地达人认证、转发、关注、私信、官方圈子和话题链路已落地：用户可在资料页提交/重提本地达人申请，管理端 `/audit/expert-certifications` 可按区域审核；公开用户主页、点评和帖子作者只有在“已通过且有效”时才展示 `code=local_expert,label=本地达人`。话题按 CN/EU 隔离，Flutter 提供推荐/热榜/已关注三 Tab 与关注写操作，帖子支持转发/取消转发，PC Web 仅提供推荐/热榜/详情只读页面，管理端支持筛选、改名、推荐、置顶、屏蔽、不可逆合并和手动重算。
-- M4 团购交易已完成环境安全的模拟闭环：团购详情、有限库存原子扣减、下单、`alipay_mock`/`stripe_mock` 支付、SHA-256 回调验签与幂等、按数量发券、订单/券列表、取消和退款；真实支付 SDK 留在 M6 区域化阶段。
+- M4 团购交易已完成环境安全的模拟闭环：团购详情、有限库存原子扣减、下单、`alipay_mock`/`stripe_mock` 支付、SHA-256 回调验签与幂等、按数量发券、订单/券列表、取消和退款；EU 区 Stripe test mode 已打通（PaymentIntent → Web/Flutter Elements/PaymentSheet → webhook 验签 → 发券），CN 仍 `alipay_mock`，真实退款出账与生产 switchover 仍未做，生产凭证待补。
 - M4 预订已完成：时段容量、自动/人工确认、创建、列表、详情、取消、改期、商户履约动作和变更时间线均已接入，Web 已提供在线预订和“我的预订”。
 - 管理端种子导入失败时会生成真实本地错误明细文件，批次查询返回同一条 `errorFile` 路径。
 - 当前后端默认运行配置已指向 `MySQL`；可直接导入 MySQL 的脚本已补到 `sql/mysql/`，并带公开点评、点评图片、点赞/评论演示数据、审核演示数据、`user_expert_certification` 表与 `audit:expert_certification:*` 权限种子，以及可直接密码登录的 C 端演示账号。`H2` 仍保留为 `h2` profile 和测试环境使用。
@@ -229,7 +229,7 @@ cd backend
 - 未显式启用 `local` 时，`APP_RUNTIME_MODE` 默认为 `prod`。可选值为 `local`、`test`、`pre`、`prod`；`local` / `test` 运行模式必须同时激活同名 Spring profile，单独覆盖环境变量不能降级。激活 Spring `pre` / `prod` profile 时始终按严格模式校验。
 - 所有运行模式解析出的 JWT 与支付回调密钥都必须至少 32 字符。`local` profile 内置的仓库开发密钥只能用于本地；`pre` / `prod` 必须通过 `APP_AUTH_JWT_SECRET` 和 `APP_PAYMENT_NOTIFY_SECRET` 注入独立密钥，否则会在启动时失败。
 - `APP_PAYMENT_MOCK_ENABLED`、`APP_AUTH_VERIFICATION_MOCK_ENABLED` 和 `APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE` 默认均为 `false`，且在 `pre` / `prod` 中必须保持关闭。仅在显式本地开发时可启用；`APP_AUTH_VERIFICATION_MOCK_CODE` 必须是 6 位数字，验证码暴露开关只能与验证码 mock 同时启用。
-- 当前仓库尚未接入真实短信/邮件验证码 provider 或真实支付 provider。关闭对应 mock 后，发送/校验验证码、创建/回调/模拟完成支付等依赖 provider 的操作会返回 `503 Service Unavailable`，不会伪装成功。
+- 支付方面，Stripe test mode 已接入（后端 PaymentIntent + webhook 验签，Web/Flutter 端 Elements/PaymentSheet），生产凭证待补；短信/邮件验证码 provider 尚未接入（本轮只做了发送通道抽象与控制台 dev provider，真实 Aliyun SMS / SMTP 仍延后）。关闭对应 mock 后，发送/校验验证码、创建/回调/模拟完成支付等依赖 provider 的操作会返回 `503 Service Unavailable`，不会伪装成功。
 
 ## 前端
 
@@ -532,5 +532,5 @@ npm run build
 
 1. `scripts/ci/mysql-smoke.ps1` 已于 `2026-07-12` 用临时 `MySQL 8` 实例 (`127.0.0.1:13306`) 实跑通过；宿主机 `MySQL80` 那套现成 root 凭证仍然不可用，但这已经不是仓库侧阻塞。后面如果你非要复用宿主机服务，先把凭证收拾明白。
 2. 给目标环境的 `MySQL / Redis / S3` 和部署目标机补齐真实环境凭证、SSH secrets，并把现有发布 / 回滚流水线真正跑到目标环境上。
-3. 用真实 FCM/APNs 凭证完成设备注册、前后台接收、失效 token 和重试 smoke，再推进真实支付、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、认证商户号、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、关注流、私信、官方圈子和话题广场/热榜已经落地。
+3. 用真实 FCM/APNs 凭证完成设备注册、前后台接收、失效 token 和重试 smoke，再推进真实支付（Stripe test mode 代码已打通，待补生产凭证与真实退款出账）、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、认证商户号、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、关注流、私信、官方圈子和话题广场/热榜已经落地。
 4. PC Web 已支持按区域抓取真实公开数据快照；下一步把快照生成接入发布流水线并补真实域名/缓存策略，再评估是否需要常驻 SSR 服务。

@@ -53,7 +53,7 @@
 - Consumes: 现有 `OrderRow` / `PaymentRow` from `trade.model`
 - Produces: `PaymentChannel` 接口，2 DTO records，供 Task 2/3 实现
 
-- [ ] **Step 1: Write PaymentIntentResult record**
+- [x] **Step 1: Write PaymentIntentResult record**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.payment;
@@ -65,7 +65,7 @@ public record PaymentIntentResult(
 ) {}
 ```
 
-- [ ] **Step 2: Write PaymentNotifyResult record**
+- [x] **Step 2: Write PaymentNotifyResult record**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.payment;
@@ -80,7 +80,7 @@ public record PaymentNotifyResult(
 ) {}
 ```
 
-- [ ] **Step 3: Write PaymentChannel interface**
+- [x] **Step 3: Write PaymentChannel interface**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.payment;
@@ -96,12 +96,12 @@ public interface PaymentChannel {
 }
 ```
 
-- [ ] **Step 4: Verify compilation**
+- [x] **Step 4: Verify compilation**
 
 Run: `cd backend && ./mvnw clean compile`
 Expected: SUCCESS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/main/java/com/tuowei/dazhongdianping/module/trade/payment/
@@ -126,7 +126,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: `PaymentChannel` interface from Task 1, `TradeMapper` for `selectPaymentByTxn`
 - Produces: `MockPaymentChannel` 实现类，SHA-256 验签逻辑从 TradeService 迁入
 
-- [ ] **Step 1: Write failing test for createIntent**
+- [x] **Step 1: Write failing test for createIntent**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.payment;
@@ -177,12 +177,12 @@ class MockPaymentChannelTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && ./mvnw -q test -Dtest=MockPaymentChannelTest`
 Expected: FAIL with "MockPaymentChannel does not exist"
 
-- [ ] **Step 3: Write minimal MockPaymentChannel**
+- [x] **Step 3: Write minimal MockPaymentChannel**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.payment;
@@ -245,12 +245,12 @@ public class MockPaymentChannel implements PaymentChannel {
 }
 ```
 
-- [ ] **Step 4: Run test to verify createIntent passes**
+- [x] **Step 4: Run test to verify createIntent passes**
 
 Run: `cd backend && ./mvnw -q test -Dtest=MockPaymentChannelTest`
 Expected: 2 tests PASS
 
-- [ ] **Step 5: Write test for verifyWebhook**
+- [x] **Step 5: Write test for verifyWebhook**
 
 Add to `MockPaymentChannelTest.java`:
 
@@ -311,12 +311,12 @@ private HttpServletRequest mockRequest(String body) throws IOException {
 }
 ```
 
-- [ ] **Step 6: Run test to verify it fails**
+- [x] **Step 6: Run test to verify it fails**
 
 Run: `cd backend && ./mvnw -q test -Dtest=MockPaymentChannelTest`
 Expected: FAIL with "verifyWebhook not yet implemented"
 
-- [ ] **Step 7: Implement verifyWebhook**
+- [x] **Step 7: Implement verifyWebhook**
 
 Replace the `verifyWebhook` method in `MockPaymentChannel.java`:
 
@@ -362,12 +362,12 @@ public MockPaymentChannel(
 
 Step 1 的测试构造器同步改为 `new MockPaymentChannel(mapper, secret, new ObjectMapper())`。需要 import `com.fasterxml.jackson.databind.ObjectMapper` 和 `org.springframework.beans.factory.annotation.Value`。
 
-- [ ] **Step 8: Run tests to verify all pass**
+- [x] **Step 8: Run tests to verify all pass**
 
 Run: `cd backend && ./mvnw -q test -Dtest=MockPaymentChannelTest`
 Expected: 4 tests PASS
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add backend/src/main/java/com/tuowei/dazhongdianping/module/trade/payment/MockPaymentChannel.java backend/src/test/java/com/tuowei/dazhongdianping/module/trade/payment/MockPaymentChannelTest.java
@@ -392,7 +392,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: `StripeClient` Bean（仅当 `app.payment.stripe.enabled=true`），供 Task 4 注入
 
-- [ ] **Step 1: Add stripe-java dependency**
+- [x] **Step 1: Add stripe-java dependency**
 
 在 `backend/pom.xml` 的 `<dependencies>` 中加入：
 
@@ -404,12 +404,12 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 </dependency>
 ```
 
-- [ ] **Step 2: Verify dependency resolves**
+- [x] **Step 2: Verify dependency resolves**
 
 Run: `cd backend && ./mvnw -q dependency:resolve -Dsilent=true`
 Expected: SUCCESS，无 dependency resolution 报错
 
-- [ ] **Step 3: Add stripe config block to application.yml**
+- [x] **Step 3: Add stripe config block to application.yml**
 
 在 `application.yml` 的 `app.payment` 下新增（保持现有 `notify-secret` 与 `mock-enabled` 不动）：
 
@@ -422,7 +422,7 @@ app:
       endpoint-secret: ${APP_PAYMENT_STRIPE_ENDPOINT_SECRET:}
 ```
 
-- [ ] **Step 4: Write StripeConfig**
+- [x] **Step 4: Write StripeConfig**
 
 ```java
 package com.tuowei.dazhongdianping.config;
@@ -449,12 +449,12 @@ public class StripeConfig {
 }
 ```
 
-- [ ] **Step 5: Verify app still starts without Stripe credentials**
+- [x] **Step 5: Verify app still starts without Stripe credentials**
 
 Run: `cd backend && ./mvnw -q test -Dtest=TradeServiceFailClosedTest`
 Expected: PASS —— 证明不配 Stripe 凭证时上下文仍可装配
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/pom.xml backend/src/main/java/com/tuowei/dazhongdianping/config/StripeConfig.java backend/src/main/resources/application.yml
@@ -479,7 +479,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: `PaymentChannel` (Task 1), `StripeClient` (Task 3)
 - Produces: `StripePaymentChannel` with working `createIntent`; `verifyWebhook` lands in Task 5
 
-- [ ] **Step 1: Write failing test for createIntent**
+- [x] **Step 1: Write failing test for createIntent**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.payment;
@@ -549,12 +549,12 @@ class StripePaymentChannelTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && ./mvnw -q test -Dtest=StripePaymentChannelTest`
 Expected: FAIL with "StripePaymentChannel does not exist"
 
-- [ ] **Step 3: Implement StripePaymentChannel with createIntent**
+- [x] **Step 3: Implement StripePaymentChannel with createIntent**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.payment;
@@ -634,12 +634,12 @@ public class StripePaymentChannel implements PaymentChannel {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd backend && ./mvnw -q test -Dtest=StripePaymentChannelTest`
 Expected: 3 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/main/java/com/tuowei/dazhongdianping/module/trade/payment/StripePaymentChannel.java backend/src/test/java/com/tuowei/dazhongdianping/module/trade/payment/StripePaymentChannelTest.java
@@ -667,7 +667,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 **为什么这一步单独成任务：** Stripe 验签对的是**原始 body 字节**，不是解析后的字段。必须在任何 `@RequestBody` 解析之前读 `getInputStream()`，否则 servlet 输入流已被消费、签名必然失败。这是整个接入最容易出错的一环。
 
-- [ ] **Step 1: Write failing test for webhook signature verification**
+- [x] **Step 1: Write failing test for webhook signature verification**
 
 在 `StripePaymentChannelTest.java` 追加。用 Stripe 官方的 `Webhook.Signature` 算法自造合法签名头，避免依赖真实网络：
 
@@ -738,12 +738,12 @@ private HttpServletRequest mockRequest(String body, String sigHeader) throws jav
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && ./mvnw -q test -Dtest=StripePaymentChannelTest`
 Expected: FAIL with "verifyWebhook implemented in Task 5"
 
-- [ ] **Step 3: Implement verifyWebhook**
+- [x] **Step 3: Implement verifyWebhook**
 
 替换 `StripePaymentChannel.verifyWebhook`，并加入所需 import（`com.stripe.model.Event`、`com.stripe.net.Webhook`、`com.stripe.exception.SignatureVerificationException`、`java.io.IOException`、`java.nio.charset.StandardCharsets`、`java.util.Optional`）：
 
@@ -786,14 +786,14 @@ public PaymentNotifyResult verifyWebhook(HttpServletRequest rawRequest) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify all pass**
+- [x] **Step 4: Run tests to verify all pass**
 
 Run: `cd backend && ./mvnw -q test -Dtest=StripePaymentChannelTest`
 Expected: 6 tests PASS
 
 如果 `getDataObjectDeserializer().getObject()` 返回空 Optional，说明测试 payload 的 `api_version` 与 stripe-java 26.12.0 期望的版本不匹配。把 payload 里的 `api_version` 改为该库 `Stripe.API_VERSION` 常量的值即可。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/main/java/com/tuowei/dazhongdianping/module/trade/payment/StripePaymentChannel.java backend/src/test/java/com/tuowei/dazhongdianping/module/trade/payment/StripePaymentChannelTest.java
@@ -821,7 +821,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 `StripePaymentChannel` 是条件 Bean（`@ConditionalOnBean(StripeClient.class)`），所以 resolver 必须接受它**不存在**的情况 —— 用 `Optional<StripePaymentChannel>` 注入。
 
-- [ ] **Step 1: Write failing test covering the routing table**
+- [x] **Step 1: Write failing test covering the routing table**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.payment;
@@ -884,12 +884,12 @@ class PaymentChannelResolverTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && ./mvnw -q test -Dtest=PaymentChannelResolverTest`
 Expected: FAIL with "PaymentChannelResolver does not exist"
 
-- [ ] **Step 3: Implement PaymentChannelResolver**
+- [x] **Step 3: Implement PaymentChannelResolver**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.payment;
@@ -943,12 +943,12 @@ public class PaymentChannelResolver {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd backend && ./mvnw -q test -Dtest=PaymentChannelResolverTest`
 Expected: 6 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/main/java/com/tuowei/dazhongdianping/module/trade/payment/PaymentChannelResolver.java backend/src/test/java/com/tuowei/dazhongdianping/module/trade/payment/PaymentChannelResolverTest.java
@@ -975,7 +975,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 **注意：** `TradeService.java` 是单行压缩风格，修改时保持该风格。`pay()` 用 `Map.of()` 构造返回值，**`Map.of()` 遇 null 抛 NPE**，所以 mock 的 `clientSecret` 必须是 `""`。
 
-- [ ] **Step 1: Update TradeServiceFailClosedTest for the new constructor**
+- [x] **Step 1: Update TradeServiceFailClosedTest for the new constructor**
 
 `TradeService` 构造器将用 `PaymentChannelResolver` 替换 `mockEnabled`。先改测试：
 
@@ -1029,12 +1029,12 @@ class TradeServiceFailClosedTest {
 
 原 `shouldRejectPaymentCallbackWhenMockPaymentIsDisabled` 删除 —— 验签已移出 `TradeService`，webhook 的 fail-closed 由 `PaymentChannelResolverTest` 的 `shouldFailClosedWhenBothDisabled` 覆盖。
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && ./mvnw -q test -Dtest=TradeServiceFailClosedTest`
 Expected: FAIL —— 构造器签名不匹配（编译错误）
 
-- [ ] **Step 3: Update the TradeService constructor**
+- [x] **Step 3: Update the TradeService constructor**
 
 将第 5 行的字段与构造器改为（保持单行风格）：
 
@@ -1044,7 +1044,7 @@ Expected: FAIL —— 构造器签名不匹配（编译错误）
 
 加 import：`import com.tuowei.dazhongdianping.module.trade.payment.*;`
 
-- [ ] **Step 4: Rewrite pay() to use the resolver**
+- [x] **Step 4: Rewrite pay() to use the resolver**
 
 替换第 11 行：
 
@@ -1054,7 +1054,7 @@ Expected: FAIL —— 构造器签名不匹配（编译错误）
 
 **已知限制（本轮接受）：** 重复调用 `/pay` 时走 `p!=null` 分支，`clientSecret` 返回 `""`。前端在同一次支付会话内持有首次拿到的 `clientSecret`，刷新页面后需先 `cancel` 再重新下单。修复需要持久化 `clientSecret` 或按 `channelTxn` 回查 Stripe，留待退款出账那一轮一并处理。
 
-- [ ] **Step 5: Replace notify() with notifyInternal()**
+- [x] **Step 5: Replace notify() with notifyInternal()**
 
 替换第 12 行。签名与验签逻辑已移入渠道，此处只做金额比对、幂等、发券、通知：
 
@@ -1062,7 +1062,7 @@ Expected: FAIL —— 构造器签名不匹配（编译错误）
  @Transactional public Map<String,Object> notifyInternal(String channel,PaymentNotifyResult r){PaymentRow p=mapper.selectPaymentByTxn(channel,r.channelTxn());if(p==null||!p.getOrderNo().equals(r.orderNo()))throw new NotFoundException("支付流水不存在");OrderRow o=mapper.selectOrderByNo(r.orderNo());if(o==null||o.getAmount().compareTo(r.amount())!=0)throw new IllegalArgumentException("支付金额不一致");if(p.getStatus()==1)return Map.of("processed",false,"orderNo",o.getOrderNo());p.setRawResponse(r.toString());mapper.markPaymentSuccess(p);if(mapper.markOrderPaid(o.getId(),channel)==1){userGrowthService.rewardForCompletedOrder(o.getUserId(),o.getId());if(mapper.countOrderCoupons(o.getId())==0){DealRow d=mapper.selectDeal(o.getDealId(),o.getRegion());for(int i=0;i<o.getQuantity();i++){CouponRow c=new CouponRow();c.setOrderId(o.getId());c.setUserId(o.getUserId());c.setDealId(o.getDealId());c.setShopId(o.getShopId());c.setCode("CP"+UUID.randomUUID().toString().replace("-","").substring(0,20).toUpperCase());c.setExpireAt(d.getValidEnd());mapper.insertCoupon(c);}}notifyOrderPaid(o);}return Map.of("processed",true,"orderNo",o.getOrderNo());}
 ```
 
-- [ ] **Step 6: Rewrite completeMockPayment()**
+- [x] **Step 6: Rewrite completeMockPayment()**
 
 替换第 13 行。`channel.endsWith("_mock")` 守卫保留 —— Stripe 渠道名为 `stripe`，这条守卫自动挡住：
 
@@ -1070,16 +1070,16 @@ Expected: FAIL —— 构造器签名不匹配（编译错误）
  @Transactional public Map<String,Object> completeMockPayment(Long id){OrderRow o=requireOrder(id);channelResolver.resolve(o.getRegion());Map<String,Object> intent=pay(id);String channel=(String)intent.get("channel");if(!channel.endsWith("_mock"))throw new IllegalArgumentException("当前渠道不是模拟支付");String txn=(String)intent.get("channelTxn");notifyInternal(channel,new PaymentNotifyResult(o.getOrderNo(),txn,o.getAmount(),true));return orderMap(requireOrder(id),true);}
 ```
 
-- [ ] **Step 7: Delete the now-unused requirePaymentChannel()**
+- [x] **Step 7: Delete the now-unused requirePaymentChannel()**
 
 删除第 40 行的 `private void requirePaymentChannel(){...}`。渠道可用性判断已全部由 `channelResolver.resolve()` 承担。`sign()` 方法保留 —— `MockPaymentChannel` 有自己的副本，但 `TradeService` 其余测试仍可能引用，删除属独立清理，不在本轮范围。
 
-- [ ] **Step 8: Run the trade test suite**
+- [x] **Step 8: Run the trade test suite**
 
 Run: `cd backend && ./mvnw -q test -Dtest='Trade*,*PaymentChannel*'`
 Expected: 全部 PASS
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add backend/src/main/java/com/tuowei/dazhongdianping/module/trade/service/TradeService.java backend/src/test/java/com/tuowei/dazhongdianping/module/trade/service/TradeServiceFailClosedTest.java
@@ -1111,7 +1111,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 `/api/c/v1/pay/**` 不在 `WebMvcConfig.java:43-67` 的 `userAuthInterceptor` 路径列表内，Stripe 回调不会被登录拦截 —— 无需改 `WebMvcConfig`。
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```java
 package com.tuowei.dazhongdianping.module.trade.controller;
@@ -1172,12 +1172,12 @@ class TradeWebhookControllerTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && ./mvnw -q test -Dtest=TradeWebhookControllerTest`
 Expected: FAIL —— `TradeController` 构造器只有一个参数，`notifyStripe` 不存在
 
-- [ ] **Step 3: Add resolver to the controller and implement the endpoint**
+- [x] **Step 3: Add resolver to the controller and implement the endpoint**
 
 `TradeController.java` 第 4 行改为注入 resolver：
 
@@ -1193,7 +1193,7 @@ Expected: FAIL —— `TradeController` 构造器只有一个参数，`notifyStr
 
 加 import：`import com.tuowei.dazhongdianping.module.trade.payment.*;import jakarta.servlet.http.HttpServletRequest;`
 
-- [ ] **Step 4: Update the existing mock notify endpoint**
+- [x] **Step 4: Update the existing mock notify endpoint**
 
 原第 14 行 `notify(@PathVariable String channel,@Valid @RequestBody PaymentNotifyRequest request)` 调用的 `service.notify(...)` 已不存在。改为走渠道验签：
 
@@ -1203,17 +1203,17 @@ Expected: FAIL —— `TradeController` 构造器只有一个参数，`notifyStr
 
 `PaymentNotifyRequest` 仍被 `MockPaymentChannel` 用于反序列化，不要删除该 record。
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `cd backend && ./mvnw -q test -Dtest=TradeWebhookControllerTest`
 Expected: 2 tests PASS
 
-- [ ] **Step 6: Run the full backend suite for regressions**
+- [x] **Step 6: Run the full backend suite for regressions**
 
 Run: `cd backend && ./mvnw -q test`
 Expected: 全部 PASS。若 `TradeControllerTest` 因 `notify` 签名变化失败，按新签名（`HttpServletRequest` 携带 JSON body 与签名字段）更新其调用。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/src/main/java/com/tuowei/dazhongdianping/module/trade/controller/TradeController.java backend/src/test/java/com/tuowei/dazhongdianping/module/trade/controller/TradeWebhookControllerTest.java
@@ -1240,12 +1240,12 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: `PaymentIntent.clientSecret?: string`；新文案键 `stripePayment` / `stripePaymentFailed` / `stripeProcessing`，供 Task 10-11 使用
 
-- [ ] **Step 1: Install @stripe/stripe-js**
+- [x] **Step 1: Install @stripe/stripe-js**
 
 Run: `cd web && npm install --save-exact @stripe/stripe-js@1.54.2`
 Expected: 安装成功，`package.json` 出现该依赖
 
-- [ ] **Step 2: Add clientSecret to the PaymentIntent type**
+- [x] **Step 2: Add clientSecret to the PaymentIntent type**
 
 `web/src/types/trade.ts:44` 改为（保持单行风格）：
 
@@ -1253,7 +1253,7 @@ Expected: 安装成功，`package.json` 出现该依赖
 export interface PaymentIntent { paymentId:number;channel:string;channelTxn:string;clientSecret?:string;orderNo:string;amount:number;currency:string }
 ```
 
-- [ ] **Step 3: Add localization keys to the interface**
+- [x] **Step 3: Add localization keys to the interface**
 
 `web_trade_localizations.ts` 的 `orderDetail` 接口块（`completeMockPayment` 附近，约第 90 行）新增三个键：
 
@@ -1263,7 +1263,7 @@ export interface PaymentIntent { paymentId:number;channel:string;channelTxn:stri
     stripeProcessing: string
 ```
 
-- [ ] **Step 4: Add the CN copy**
+- [x] **Step 4: Add the CN copy**
 
 在 CN 文案对象里（`completeMockPayment` 附近，约第 319 行）新增：
 
@@ -1273,7 +1273,7 @@ export interface PaymentIntent { paymentId:number;channel:string;channelTxn:stri
     stripeProcessing: '正在确认支付结果…',
 ```
 
-- [ ] **Step 5: Add the EU copy**
+- [x] **Step 5: Add the EU copy**
 
 在 EU 文案对象里（`mockPaymentFailed` 附近，约第 463 行）新增：
 
@@ -1283,12 +1283,12 @@ export interface PaymentIntent { paymentId:number;channel:string;channelTxn:stri
     stripeProcessing: 'Confirming your payment…',
 ```
 
-- [ ] **Step 6: Verify typecheck passes**
+- [x] **Step 6: Verify typecheck passes**
 
 Run: `cd web && npx vue-tsc --noEmit`
 Expected: 无错误。若报缺键，说明两个区域的文案对象没同步补齐 —— 两处都要有。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add web/package.json web/package-lock.json web/src/types/trade.ts web/src/core/web_trade_localizations.ts
@@ -1314,7 +1314,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 Publishable key 从 `import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY` 读，不经后端。
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, expect, it, vi, beforeEach } from 'vitest'
@@ -1392,12 +1392,12 @@ describe('useStripeCheckout', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd web && npx vitest run --environment jsdom src/composables/useStripeCheckout.test.ts`
 Expected: FAIL —— 模块不存在
 
-- [ ] **Step 3: Implement the composable**
+- [x] **Step 3: Implement the composable**
 
 ```typescript
 import { ref } from 'vue'
@@ -1463,12 +1463,12 @@ export function useStripeCheckout(publishableKey: string) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd web && npx vitest run --environment jsdom src/composables/useStripeCheckout.test.ts`
 Expected: 5 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/composables/useStripeCheckout.ts web/src/composables/useStripeCheckout.test.ts
@@ -1493,7 +1493,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: `useStripeCheckout` (Task 10), `PaymentIntent.clientSecret` (Task 9)
 - Produces: 订单页两条支付路径 —— `clientSecret` 非空走 Stripe Elements，为空走现有 mock-complete
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 在 `OrderDetailView.test.ts` 追加。既有 mock 路径的测试必须保持通过 —— 这是回归防线：
 
@@ -1531,12 +1531,12 @@ it('keeps the mock-complete button when clientSecret is empty', async () => {
 
 `mountView()` 沿用该测试文件已有的挂载辅助函数；若尚不存在，复用文件中现有的 `mount(OrderDetailView, {...})` 写法。给 `pay` 按钮补 `data-testid="order-pay"`（现有模板尚无该属性）。
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd web && npx vitest run --environment jsdom src/views/OrderDetailView.test.ts`
 Expected: FAIL —— `stripe-card-element` 不存在
 
-- [ ] **Step 3: Wire the composable into the script block**
+- [x] **Step 3: Wire the composable into the script block**
 
 `OrderDetailView.vue` 的 `<script setup>` 增加：
 
@@ -1589,7 +1589,7 @@ async function confirmCard() {
 
 **为什么确认后调 `load()`：** Stripe 确认成功只代表卡已授权，订单状态由 webhook 落库。`load()` 拉一次最新状态；若 webhook 尚未到达，页面显示 `stripeProcessing`，随后由既有 WebSocket `order.paid` 通知刷新。
 
-- [ ] **Step 4: Add the template branch**
+- [x] **Step 4: Add the template branch**
 
 把现有 mock-complete 按钮（约第 142-151 行）改为条件渲染，并在其前面插入卡片容器：
 
@@ -1620,7 +1620,7 @@ async function confirmCard() {
 
 给 `pay` 按钮加 `data-testid="order-pay"`。
 
-- [ ] **Step 5: Add styles for the card element**
+- [x] **Step 5: Add styles for the card element**
 
 在该组件 `<style scoped>` 末尾追加，沿用现有卡片体系与 40px 命中区：
 
@@ -1635,17 +1635,17 @@ async function confirmCard() {
 }
 ```
 
-- [ ] **Step 6: Run tests to verify all pass**
+- [x] **Step 6: Run tests to verify all pass**
 
 Run: `cd web && npm test`
 Expected: 全部 PASS，包括既有 OrderDetailView 测试（mock 路径回归防线）
 
-- [ ] **Step 7: Typecheck**
+- [x] **Step 7: Typecheck**
 
 Run: `cd web && npx vue-tsc --noEmit`
 Expected: 无错误
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add web/src/views/OrderDetailView.vue web/src/views/OrderDetailView.test.ts
@@ -1672,7 +1672,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 `ThirdPartyConfig.stripePublishableKey` 与 `stripeEnabled` **已存在**（`app/lib/core/third_party_config.dart:8,21`），无需新建 —— 只需消费。
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -1710,12 +1710,12 @@ void main() {
 
 导入包名以 `app/pubspec.yaml` 的 `name:` 字段为准；若不是 `dazhongdianping_app`，按实际值替换。
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd app && flutter test test/features/trade/trade_repository_test.dart`
 Expected: FAIL —— `clientSecret` 与 `needsCardConfirmation` 不存在
 
-- [ ] **Step 3: Add the field and getter**
+- [x] **Step 3: Add the field and getter**
 
 `trade_repository.dart:312` 的 `PaymentIntent` 改为：
 
@@ -1743,12 +1743,12 @@ class PaymentIntent {
         clientSecret: (json['clientSecret'] as String?) ?? '',
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd app && flutter test test/features/trade/trade_repository_test.dart`
 Expected: 2 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/features/trade/trade_repository.dart app/test/features/trade/trade_repository_test.dart
@@ -1773,7 +1773,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: `PaymentIntent.needsCardConfirmation` (Task 12), `ThirdPartyConfig.stripePublishableKey`（已存在）
 - Produces: 真机可用的卡支付流程
 
-- [ ] **Step 1: Add flutter_stripe**
+- [x] **Step 1: Add flutter_stripe**
 
 `app/pubspec.yaml` 的 `dependencies` 下加入：
 
@@ -1784,14 +1784,14 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 Run: `cd app && flutter pub get`
 Expected: 解析成功
 
-- [ ] **Step 2: Verify the Android minSdk floor**
+- [x] **Step 2: Verify the Android minSdk floor**
 
 `flutter_stripe` 要求 `minSdkVersion` ≥ 21，且 Android 端必须使用 `FlutterFragmentActivity`（不是 `FlutterActivity`）。
 
 Run: `cd app && grep -rn "minSdk" android/app/build.gradle.kts && grep -n "class MainActivity" android/app/src/main/kotlin/**/MainActivity.kt`
 Expected: minSdk ≥ 21。若 `MainActivity` 继承 `FlutterActivity`，改为 `FlutterFragmentActivity` 并同步 import —— 否则 PaymentSheet 在 Android 上抛运行时异常。
 
-- [ ] **Step 3: Initialize the publishable key at startup**
+- [x] **Step 3: Initialize the publishable key at startup**
 
 `app/lib/main.dart` 在 `runApp` 之前，仅当 key 非空时初始化：
 
@@ -1808,7 +1808,7 @@ if (config.stripeEnabled) {
 
 `main()` 需为 `Future<void> main() async` 且先调 `WidgetsFlutterBinding.ensureInitialized()`。若 `main.dart` 已有 `ThirdPartyConfig` 实例，复用它而不是新建。
 
-- [ ] **Step 4: Branch the payment action**
+- [x] **Step 4: Branch the payment action**
 
 `order_detail_screen.dart` 的支付处理改为按 `needsCardConfirmation` 分支：
 
@@ -1844,12 +1844,12 @@ Future<void> _handlePay() async {
 
 **用户取消不是错误：** `presentPaymentSheet()` 在用户主动关闭支付面板时抛 `StripeException`，其 `error.code` 为 `FailureCode.Canceled`。在 `on StripeException` 分支里先判断该 code 并静默返回，不要显示错误提示。
 
-- [ ] **Step 5: Run analyze and tests**
+- [x] **Step 5: Run analyze and tests**
 
 Run: `cd app && flutter analyze && flutter test`
 Expected: analyze 零问题，测试全部 PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/pubspec.yaml app/lib/main.dart app/lib/features/trade/order_detail_screen.dart
