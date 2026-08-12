@@ -51,6 +51,10 @@ app:
   payment:
     notify-secret: ${APP_PAYMENT_NOTIFY_SECRET:}
     mock-enabled: ${APP_PAYMENT_MOCK_ENABLED:false}
+    stripe:
+      enabled: ${APP_PAYMENT_STRIPE_ENABLED:false}
+      secret-key: ${APP_PAYMENT_STRIPE_SECRET_KEY:}
+      endpoint-secret: ${APP_PAYMENT_STRIPE_ENDPOINT_SECRET:}
   search:
     provider: ${APP_SEARCH_PROVIDER:mysql}
     base-url: ${APP_SEARCH_BASE_URL:http://127.0.0.1:9200}
