@@ -88,6 +88,9 @@ export interface WebTradeStrings {
     loading: string
     startPayment: string
     completeMockPayment: (channel: string) => string
+    stripePayment: string
+    stripePaymentFailed: string
+    stripeProcessing: string
     cancel: string
     requestRefund: string
     refundProgress: string
@@ -317,6 +320,9 @@ const zhCnStrings: WebTradeStrings = {
     loading: '订单加载中...',
     startPayment: '发起支付',
     completeMockPayment: (channel) => `模拟 ${channel} 支付成功`,
+    stripePayment: '使用银行卡支付',
+    stripePaymentFailed: '银行卡支付失败',
+    stripeProcessing: '正在确认支付结果...',
     cancel: '取消订单',
     requestRefund: '申请退款',
     refundProgress: '退款进度',
@@ -477,6 +483,9 @@ const enStrings: WebTradeStrings = {
     loading: 'Loading order details...',
     startPayment: 'Start payment',
     completeMockPayment: (channel) => `Complete ${channel} test payment`,
+    stripePayment: 'Pay by card',
+    stripePaymentFailed: 'Card payment failed',
+    stripeProcessing: 'Confirming your payment...',
     cancel: 'Cancel order',
     requestRefund: 'Request refund',
     refundProgress: 'Refund progress',

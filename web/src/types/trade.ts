@@ -41,5 +41,5 @@ export interface TradeOrder {
   refund?: OrderRefund
   coupons?: Coupon[]
 }
-export interface PaymentIntent { paymentId:number;channel:string;channelTxn:string;orderNo:string;amount:number;currency:string }
+export interface PaymentIntent { paymentId:number;channel:string;channelTxn:string;clientSecret?:string;orderNo:string;amount:number;currency:string }
 export type OrderPage=PageResult<TradeOrder>;export type CouponPage=PageResult<Coupon>
