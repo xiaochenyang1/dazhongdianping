@@ -13,6 +13,7 @@ import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ShopDetailScreen extends StatefulWidget {
   const ShopDetailScreen({
@@ -171,14 +172,32 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   Future<void> _shareShop(ShopDetail shop) async {
     if (_sharing) return;
     setState(() => _sharing = true);
-    final shareUrl = 'https://local.life/shops/${shop.id}';
+    final strings = AppLocalizations.of(context);
+    final shareUrl = widget.thirdPartyConfig.shopShareUrl(shop.id);
     final shareText =
         '${shop.name} · ★ ${shop.score.toStringAsFixed(1)} · $shareUrl';
+    final box = context.findRenderObject() as RenderBox?;
+    final sharePositionOrigin = box == null
+        ? null
+        : box.localToGlobal(Offset.zero) & box.size;
     try {
+      await Share.share(
+        shareText,
+        subject: shop.name,
+        sharePositionOrigin: sharePositionOrigin,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.shareCopied)),
+      );
+    } catch (_) {
+      // No native share target on this platform (e.g. a desktop/headless
+      // environment without a registered handler): fall back to the clipboard
+      // so the user can still paste the link instead of losing the action.
       await Clipboard.setData(ClipboardData(text: shareText));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).shareCopied)),
+        SnackBar(content: Text(strings.shareCopied)),
       );
     } finally {
       if (mounted) setState(() => _sharing = false);

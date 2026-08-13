@@ -203,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
               key: const Key('home-map-action'),
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(strings.mapsConfigured)),
+                  SnackBar(content: Text(strings.mapsComingSoon)),
                 );
               },
               icon: const Icon(Icons.map_outlined),

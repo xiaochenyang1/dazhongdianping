@@ -1956,7 +1956,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Known Limitations (accepted this round)
 
 - **重复 `/pay` 不返回 `clientSecret`** —— 已有 payment 行时走 `p!=null` 分支返回 `""`。刷新页面后需先取消订单再重下。修复需持久化 `clientSecret` 或按 `channelTxn` 回查 Stripe。
-- **退款不出账** —— `refund()` 仍只写本地审核行。
+- ~~**退款不出账** —— `refund()` 仍只写本地审核行。~~ **已实现（提交 11da3b4）**：`StripePaymentChannel.refund` 调用 `stripeClient.refunds().create`，并经 `AdminTradeService.issueChannelRefund` 与 `MerchantTradeService.issueChannelRefund` 在 `@Transactional` 内 fail-closed 调用（渠道错误回滚审核，不留 approved-but-not-refunded）。test 模式下不出真实资金。本条原为本轮已知限制，事后已闭合。
 - **CN 区无真实支付** —— 支付宝需国内企业主体；Stripe live 不支持中国大陆主体，需境外主体。
 - **`TradeService.sign()` 与 `MockPaymentChannel.sign()` 重复** —— 独立清理项，不在本轮范围。
 

@@ -626,14 +626,23 @@ void main() {
     expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
   });
 
-  testWidgets('shop detail can copy share text', (tester) async {
+  testWidgets('shop detail shares via the native share sheet', (tester) async {
+    MethodCall? shared;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (_) async => null,
+      const MethodChannel('dev.fluttercommunity.plus/share'),
+      (call) async {
+        if (call.method == 'share') {
+          shared = call;
+          // A non-empty, non-"unavailable" result string maps to
+          // ShareResultStatus.success on the platform side.
+          return 'success';
+        }
+        return null;
+      },
     );
     addTearDown(
       () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
+        const MethodChannel('dev.fluttercommunity.plus/share'),
         null,
       ),
     );
@@ -647,25 +656,33 @@ void main() {
     expect(find.byKey(const Key('shop-share-button')), findsOneWidget);
     await tester.tap(find.byKey(const Key('shop-share-button')));
     await tester.pump(const Duration(milliseconds: 100));
+
+    expect(shared, isNotNull);
+    // The link is built from the configurable SHARE_BASE_URL placeholder and
+    // must point at the shop detail deep link rather than a dead hardcode.
+    final args = shared!.arguments as Map;
+    expect(args['text'], contains('https://local.life/shops/7'));
+    expect(args['subject'], 'Berlin Tea');
     expect(find.text('分享文案已复制'), findsOneWidget);
   });
 
   testWidgets('shop detail guards duplicate share copies', (tester) async {
     final gate = Completer<void>();
-    var clipboardWrites = 0;
+    var shareCalls = 0;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
+      const MethodChannel('dev.fluttercommunity.plus/share'),
       (call) async {
-        if (call.method == 'Clipboard.setData') {
-          clipboardWrites += 1;
+        if (call.method == 'share') {
+          shareCalls += 1;
           await gate.future;
+          return 'success';
         }
         return null;
       },
     );
     addTearDown(
       () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
+        const MethodChannel('dev.fluttercommunity.plus/share'),
         null,
       ),
     );
@@ -680,12 +697,12 @@ void main() {
     await tester.tap(share);
     await tester.tap(share);
     await tester.pump();
-    expect(clipboardWrites, 1);
+    expect(shareCalls, 1);
     expect(find.text('分享中...'), findsOneWidget);
 
     gate.complete();
     await tester.pumpAndSettle();
-    expect(clipboardWrites, 1);
+    expect(shareCalls, 1);
     expect(find.text('分享文案已复制'), findsOneWidget);
   });
 }

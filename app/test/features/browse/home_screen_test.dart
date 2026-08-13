@@ -446,6 +446,11 @@ void main() {
     await tester.tap(find.byKey(const Key('home-map-action')));
     await tester.pump();
 
-    expect(find.text('Google Maps is configured'), findsOneWidget);
+    // The map screen itself is not built yet; the action honestly tells the
+    // user the feature is coming soon rather than implying it is ready.
+    expect(
+      find.text('Map shop discovery is coming soon. Stay tuned.'),
+      findsOneWidget,
+    );
   });
 }

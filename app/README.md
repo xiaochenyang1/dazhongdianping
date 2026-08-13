@@ -11,6 +11,7 @@
 - 通知列表、未读消息 ACK 和首页登录保护入口。
 - 隐私中心：规则与任务历史、创建导出、认证 ZIP 下载并保存到设备、验证码/密码复核删除申请、冷静期撤销。
 - Google Maps、Stripe/PayPal、FCM/APNs 的配置边界和未配置保护；未配置时不会使用 mock 冒充真实接通。
+- 门店详情分享走系统原生分享面板（`share_plus`），分享链接的站点域名由 `SHARE_BASE_URL` dart-define 注入（默认占位 `https://local.life`，生产用真实域名覆盖），目标平台无原生分享目标时降级写入剪贴板。
 - Android 登录设备会在配置 Firebase 后登记 FCM token，iOS 登记 APNs token；token 轮换会同步回后端，退出时停用当前设备。
 - 推送代码路径：`lib/core/push_service.dart` 在 `FIREBASE_CONFIGURED=true`（`ThirdPartyConfig.pushEnabled`）时走 Firebase；初始化优先 `DefaultFirebaseOptions.currentPlatform`（`lib/firebase_options.dart`，可由 dart-define 注入 API Key），失败再回退平台默认 `Firebase.initializeApp()`（依赖真实 `google-services.json` / `GoogleService-Info.plist`）；任一步失败静默降级为无推送，不崩溃。完整配置步骤见仓库根目录 `docs/firebase-push-setup.md`。未放入原生配置文件前，本地默认保持推送关闭。
 

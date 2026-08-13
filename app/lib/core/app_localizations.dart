@@ -25,6 +25,7 @@ class AppLocalizations {
     'language': '切换语言',
     'map': '地图',
     'mapsConfigured': 'Google Maps 已配置',
+    'mapsComingSoon': '地图找店功能开发中，敬请期待。',
     'mapsUnavailable': 'Google Maps 未配置，仍可按城市和列表浏览。',
     'realPaymentUnavailable': '真实支付未配置，客户端不会伪造支付成功。',
     'pushUnavailable': 'FCM/APNs 未配置，通知仍可通过站内消息补偿。',
@@ -981,6 +982,7 @@ class AppLocalizations {
     'language': '切換語言',
     'map': '地圖',
     'mapsConfigured': 'Google Maps 已設定',
+    'mapsComingSoon': '地圖找店功能開發中，敬請期待。',
     'mapsUnavailable': 'Google Maps 尚未設定，仍可依城市和列表瀏覽。',
     'realPaymentUnavailable': '真實支付尚未設定，客戶端不會偽造支付成功。',
     'pushUnavailable': 'FCM/APNs 尚未設定，通知仍可透過站內訊息補償。',
@@ -1937,6 +1939,8 @@ class AppLocalizations {
     'language': 'Change language',
     'map': 'Map',
     'mapsConfigured': 'Google Maps is configured',
+    'mapsComingSoon':
+        'Map shop discovery is coming soon. Stay tuned.',
     'mapsUnavailable':
         'Google Maps is not configured. City and list browsing remain available.',
     'realPaymentUnavailable':
@@ -3087,6 +3091,7 @@ class AppLocalizations {
   String get language => _text('language');
   String get map => _text('map');
   String get mapsConfigured => _text('mapsConfigured');
+  String get mapsComingSoon => _text('mapsComingSoon');
   String get mapsUnavailable => _text('mapsUnavailable');
   String get realPaymentUnavailable => _text('realPaymentUnavailable');
   String get pushUnavailable => _text('pushUnavailable');
