@@ -256,6 +256,36 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              if (shop.coverUrl != null && shop.coverUrl!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    shop.coverUrl!,
+                    key: const Key('shop-cover-image'),
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stack) => Container(
+                      key: const Key('shop-cover-fallback'),
+                      height: 200,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      alignment: Alignment.center,
+                      child: Text(strings.shopCoverPlaceholder),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  key: const Key('shop-cover-fallback'),
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(strings.shopCoverPlaceholder),
+                ),
+              const SizedBox(height: 16),
               Text(
                 shop.name,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -282,6 +312,12 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               const SizedBox(height: 8),
               Text(
                 '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${formatMoney(shop.pricePerCapita, shop.currency, locale: strings.tag)}',
+              ),
+              const SizedBox(height: 8),
+              _ScoreBreakdownTile(
+                tasteScore: shop.tasteScore,
+                envScore: shop.envScore,
+                serviceScore: shop.serviceScore,
               ),
               const SizedBox(height: 24),
               _InfoTile(
@@ -310,6 +346,8 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     .toList(),
               ),
               const SizedBox(height: 24),
+              _RecommendedDishesSection(dishes: shop.recommendedDishes),
+              _ShopGallerySection(photos: shop.photos),
               if (widget.enableFavorite) ...[
                 FilledButton.tonalIcon(
                   onPressed: (_favoriteLoading || _favoriteSaving)
@@ -665,4 +703,142 @@ class _InfoTile extends StatelessWidget {
     title: Text(title),
     subtitle: Text(value.isEmpty ? '--' : value),
   );
+}
+
+class _ScoreBreakdownTile extends StatelessWidget {
+  const _ScoreBreakdownTile({
+    required this.tasteScore,
+    required this.envScore,
+    required this.serviceScore,
+  });
+  final double tasteScore;
+  final double envScore;
+  final double serviceScore;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return ListTile(
+      key: const Key('shop-score-breakdown'),
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.leaderboard_outlined),
+      title: Text(strings.scoreBreakdownTitle),
+      subtitle: Text(
+        strings.scoreBreakdownValue(
+          taste: '${strings.scoreTaste} ${tasteScore.toStringAsFixed(1)}',
+          env: '${strings.scoreEnv} ${envScore.toStringAsFixed(1)}',
+          service: '${strings.scoreService} ${serviceScore.toStringAsFixed(1)}',
+        ),
+      ),
+    );
+  }
+}
+
+class _RecommendedDishesSection extends StatelessWidget {
+  const _RecommendedDishesSection({required this.dishes});
+  final List<ShopDish> dishes;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    if (dishes.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Text(
+          strings.recommendedDishesMissing,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+    return Column(
+      key: const Key('shop-recommended-dishes'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          strings.recommendedDishesSection,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        ...dishes.map(
+          (dish) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const Icon(Icons.restaurant_menu),
+              title: Text(dish.name),
+              subtitle: dish.recommendReason == null ||
+                      dish.recommendReason!.isEmpty
+                  ? null
+                  : Text(strings.dishRecommendReason(dish.recommendReason!)),
+              trailing: Text(
+                formatMoney(
+                  dish.price,
+                  '',
+                  locale: strings.tag,
+                ),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+}
+
+class _ShopGallerySection extends StatelessWidget {
+  const _ShopGallerySection({required this.photos});
+  final List<ShopPhoto> photos;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    if (photos.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Text(
+          strings.shopGalleryMissing,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+    return Column(
+      key: const Key('shop-gallery'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          strings.shopGallerySection,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+          ),
+          itemCount: photos.length,
+          itemBuilder: (context, index) {
+            final photo = photos[index];
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                photo.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Container(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest,
+                  child: const Icon(Icons.broken_image_outlined),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
 }

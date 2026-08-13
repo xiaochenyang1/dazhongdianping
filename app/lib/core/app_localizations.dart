@@ -970,6 +970,15 @@ class AppLocalizations {
     'similarShopsSection': '相似门店',
     'retryReviews': '重试点评',
     'retryRecommendations': '重试推荐',
+    'shopCoverAlt': '门店封面',
+    'shopCoverPlaceholder': '暂无封面图',
+    'scoreBreakdownTitle': '评分明细',
+    'scoreBreakdownValue': '{taste} / {env} / {service}',
+    'recommendedDishesSection': '推荐菜',
+    'recommendedDishesMissing': '这家店暂时还没补推荐菜，先看基础信息和公开点评也够用。',
+    'dishRecommendReason': '推荐理由：{reason}',
+    'shopGallerySection': '门店相册',
+    'shopGalleryMissing': '门店相册还没补齐，先靠点评和基础信息判断也不至于两眼一抹黑。',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -1927,6 +1936,15 @@ class AppLocalizations {
     'similarShopsSection': '相似店家',
     'retryReviews': '重試評論',
     'retryRecommendations': '重試推薦',
+    'shopCoverAlt': '店家封面',
+    'shopCoverPlaceholder': '暫無封面圖',
+    'scoreBreakdownTitle': '評分明細',
+    'scoreBreakdownValue': '{taste} / {env} / {service}',
+    'recommendedDishesSection': '推薦菜',
+    'recommendedDishesMissing': '這家店暫時還沒補推薦菜，先看基礎資訊和公開評論也夠用。',
+    'dishRecommendReason': '推薦理由：{reason}',
+    'shopGallerySection': '店家相簿',
+    'shopGalleryMissing': '店家相簿還沒補齊，先靠評論和基礎資訊判斷也不至於兩眼一抹黑。',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -3008,6 +3026,17 @@ class AppLocalizations {
     'similarShopsSection': 'Similar places',
     'retryReviews': 'Retry reviews',
     'retryRecommendations': 'Retry recommendations',
+    'shopCoverAlt': 'Place cover image',
+    'shopCoverPlaceholder': 'No cover image yet',
+    'scoreBreakdownTitle': 'Rating breakdown',
+    'scoreBreakdownValue': '{taste} / {env} / {service}',
+    'recommendedDishesSection': 'Recommended dishes',
+    'recommendedDishesMissing':
+        'No recommended dishes have been added yet. Browse the details and public reviews instead.',
+    'dishRecommendReason': 'Recommended because: {reason}',
+    'shopGallerySection': 'Photo gallery',
+    'shopGalleryMissing':
+        'The photo gallery has not been filled in yet — reviews and basic info still help you judge.',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -5065,6 +5094,24 @@ class AppLocalizations {
 
   String get retryReviews => _text('retryReviews');
   String get retryRecommendations => _text('retryRecommendations');
+  String get shopCoverAlt => _text('shopCoverAlt');
+  String get shopCoverPlaceholder => _text('shopCoverPlaceholder');
+  String get scoreBreakdownTitle => _text('scoreBreakdownTitle');
+  String scoreBreakdownValue({
+    required String taste,
+    required String env,
+    required String service,
+  }) =>
+      _text('scoreBreakdownValue')
+          .replaceFirst('{taste}', taste)
+          .replaceFirst('{env}', env)
+          .replaceFirst('{service}', service);
+  String get recommendedDishesSection => _text('recommendedDishesSection');
+  String get recommendedDishesMissing => _text('recommendedDishesMissing');
+  String dishRecommendReason(String reason) =>
+      _text('dishRecommendReason').replaceFirst('{reason}', reason);
+  String get shopGallerySection => _text('shopGallerySection');
+  String get shopGalleryMissing => _text('shopGalleryMissing');
   String statusWithRedeemability(String status, bool usable) =>
       '$status · ${usable ? redeemable : notRedeemable}';
 }

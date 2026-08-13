@@ -280,6 +280,43 @@ class ShopBrowseHistoryPage {
   bool get hasMore => items.length < total;
 }
 
+class ShopPhoto {
+  const ShopPhoto({required this.id, required this.imageUrl});
+
+  final int id;
+  final String imageUrl;
+
+  factory ShopPhoto.fromJson(Map<String, dynamic> json) {
+    return ShopPhoto(
+      id: json['id'] as int,
+      imageUrl: json['imageUrl'] as String? ?? '',
+    );
+  }
+}
+
+class ShopDish {
+  const ShopDish({
+    required this.id,
+    required this.name,
+    required this.price,
+    this.recommendReason,
+  });
+
+  final int id;
+  final String name;
+  final num price;
+  final String? recommendReason;
+
+  factory ShopDish.fromJson(Map<String, dynamic> json) {
+    return ShopDish(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      price: json['price'] as num? ?? 0,
+      recommendReason: json['recommendReason'] as String?,
+    );
+  }
+}
+
 class ShopDetail {
   const ShopDetail({
     required this.id,
@@ -293,6 +330,12 @@ class ShopDetail {
     required this.businessHours,
     required this.summary,
     required this.tags,
+    this.coverUrl,
+    this.tasteScore = 0,
+    this.envScore = 0,
+    this.serviceScore = 0,
+    this.photos = const [],
+    this.recommendedDishes = const [],
     this.merchantCertificationCode,
     this.merchantCertificationLabel,
   });
@@ -308,6 +351,12 @@ class ShopDetail {
   final String businessHours;
   final String summary;
   final List<String> tags;
+  final String? coverUrl;
+  final double tasteScore;
+  final double envScore;
+  final double serviceScore;
+  final List<ShopPhoto> photos;
+  final List<ShopDish> recommendedDishes;
   final String? merchantCertificationCode;
   final String? merchantCertificationLabel;
 
@@ -327,6 +376,17 @@ class ShopDetail {
       tags: (json['tags'] as List<dynamic>? ?? const [])
           .map((item) => '$item')
           .toList(),
+      coverUrl: json['coverUrl'] as String?,
+      tasteScore: (json['tasteScore'] as num? ?? 0).toDouble(),
+      envScore: (json['envScore'] as num? ?? 0).toDouble(),
+      serviceScore: (json['serviceScore'] as num? ?? 0).toDouble(),
+      photos: (json['photos'] as List<dynamic>? ?? const [])
+          .map((item) => ShopPhoto.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      recommendedDishes:
+          (json['recommendedDishes'] as List<dynamic>? ?? const [])
+              .map((item) => ShopDish.fromJson(item as Map<String, dynamic>))
+              .toList(),
       merchantCertificationCode: certification.code,
       merchantCertificationLabel: certification.label,
     );
