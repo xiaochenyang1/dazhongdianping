@@ -170,6 +170,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'data/search-sync',
+          name: 'search-sync-management',
+          component: () => import('@/views/SearchSyncManagementView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'searchSyncManagement',
+            requiredPermission: 'data:search_index:read',
+          },
+        },
+        {
           path: 'operations/ranks',
           name: 'rank-config',
           component: () => import('@/views/RankConfigView.vue'),
@@ -207,6 +217,12 @@ const router = createRouter({
           name: 'system-merchants',
           component: () => import('@/views/MerchantManagementView.vue'),
           meta: { requiresAuth: true, titleKey: 'systemMerchants', requiredPermission: 'system:merchant:read' },
+        },
+        {
+          path: 'system/health',
+          name: 'system-health',
+          component: () => import('@/views/SystemHealthView.vue'),
+          meta: { requiresAuth: true, titleKey: 'systemHealth', requiredPermission: 'system:health:read' },
         },
         {
           path: 'system/audit-logs',

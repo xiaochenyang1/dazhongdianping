@@ -295,17 +295,29 @@ class RefundInfo {
     required this.status,
     required this.statusText,
     required this.auditReason,
+    this.channel = '',
+    this.channelRefundTxn = '',
+    this.channelStatus = '',
+    this.channelFailureReason = '',
   });
   final String reason;
   final int? status;
   final String statusText;
   final String auditReason;
+  final String channel;
+  final String channelRefundTxn;
+  final String channelStatus;
+  final String channelFailureReason;
 
   factory RefundInfo.fromJson(Map<String, dynamic> json) => RefundInfo(
     reason: json['reason'] as String? ?? '',
     status: (json['status'] as num?)?.toInt(),
     statusText: json['statusText'] as String? ?? '',
     auditReason: json['auditReason'] as String? ?? '',
+    channel: json['channel'] as String? ?? '',
+    channelRefundTxn: json['channelRefundTxn'] as String? ?? '',
+    channelStatus: json['channelStatus'] as String? ?? '',
+    channelFailureReason: json['channelFailureReason'] as String? ?? '',
   );
 }
 

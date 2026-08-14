@@ -19,6 +19,7 @@ export interface AdminStrings {
     shopManagement: string
     basicDataManagement: string
     dataOrders: string
+    searchSyncManagement: string
     auditReviews: string
     auditReviewAppeals: string
     auditPosts: string
@@ -44,6 +45,7 @@ export interface AdminStrings {
     systemRoles: string
     systemUsers: string
     systemMerchants: string
+    systemHealth: string
     systemAuditLogs: string
     systemPrivacyTasks: string
   }
@@ -116,6 +118,7 @@ export interface AdminStrings {
     heading: (region: Region) => string
     description: string
     loadError: string
+    partialLoadError: (count: number) => string
     loading: string
     noData: string
     headerActions: {
@@ -171,6 +174,37 @@ export interface AdminStrings {
       pendingRefunds: {
         label: string
         note: string
+      }
+    }
+    operations: {
+      eyebrow: string
+      heading: string
+      health: {
+        label: string
+        status: {
+          up: string
+          degraded: string
+          down: string
+          warning: string
+          disabled: string
+          loading: string
+          unavailable: string
+        }
+        summary: (issues: number, total: number) => string
+        loading: string
+        unavailable: string
+      }
+      searchSync: {
+        label: string
+        healthy: string
+        attention: string
+        disabled: string
+        loading: string
+        unavailable: string
+        summary: (pending: number, processing: number, retrying: number, stale: number) => string
+        disabledNote: string
+        loadingNote: string
+        unavailableNote: string
       }
     }
     recentShops: {
@@ -808,7 +842,49 @@ export interface AdminStrings {
     auditSubmitError: string
     reconcileError: string
     auditNotice: (orderNo: string, decision: 'approve' | 'reject') => string
-    reconcileNotice: (closedOrders: number, restoredStockOrders: number, failedPayments: number) => string
+    reconcileNotice: (closedOrders: number, restoredStockOrders: number, failedPayments: number, reconciledRefunds: number) => string
+    statements: {
+      heading: string
+      description: string
+      chooseFile: string
+      importAction: string
+      importing: string
+      completed: string
+      processing: string
+      importSuccess: (batchId: number) => string
+      importError: string
+      loadError: string
+      batchMeta: (total: number) => string
+      noBatches: string
+      viewDetails: string
+      closeDetails: string
+      detailHeading: (batchId: number) => string
+      detailMeta: (total: number) => string
+      noItems: string
+      filters: {
+        all: string
+        matched: string
+        discrepancy: string
+        unmatched: string
+        invalid: string
+        ignored: string
+      }
+      batchHeaders: {
+        file: string
+        result: string
+        time: string
+        actions: string
+      }
+      itemHeaders: {
+        line: string
+        channel: string
+        local: string
+        result: string
+      }
+      summary: (matched: number, discrepancy: number, unmatched: number, invalid: number, ignored: number) => string
+      localSummary: (bizType: string, bizId: number | null, orderNo: string) => string
+      amountSummary: (amount: number | null, currency: string) => string
+    }
     metaLoading: string
     metaSummary: (total: number) => string
     metaDescription: string
@@ -841,6 +917,8 @@ export interface AdminStrings {
       pending: string
       success: string
       rejected: string
+      processing: string
+      failed: string
     }
     applyFilters: string
     tableHeaders: {
@@ -2286,6 +2364,7 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/data/shops': 'shopManagement',
   '/data/meta': 'basicDataManagement',
   '/data/orders': 'dataOrders',
+  '/data/search-sync': 'searchSyncManagement',
   '/audit/reviews': 'auditReviews',
   '/audit/review-appeals': 'auditReviewAppeals',
   '/audit/posts': 'auditPosts',
@@ -2311,6 +2390,7 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/system/roles': 'systemRoles',
   '/system/users': 'systemUsers',
   '/system/merchants': 'systemMerchants',
+  '/system/health': 'systemHealth',
   '/system/audit-logs': 'systemAuditLogs',
   '/system/privacy-tasks': 'systemPrivacyTasks',
 }
@@ -2520,6 +2600,7 @@ const zhCnStrings: AdminStrings = {
     shopManagement: '商户管理',
     basicDataManagement: '基础数据',
     dataOrders: '订单退款',
+    searchSyncManagement: '搜索同步',
     auditReviews: '点评审核',
     auditReviewAppeals: '商户点评申诉',
     auditPosts: '帖子审核',
@@ -2545,6 +2626,7 @@ const zhCnStrings: AdminStrings = {
     systemRoles: '角色与权限',
     systemUsers: '用户管理',
     systemMerchants: '商户账号',
+    systemHealth: '系统健康',
     systemAuditLogs: '审计日志',
     systemPrivacyTasks: '隐私任务',
   },
@@ -2577,8 +2659,8 @@ const zhCnStrings: AdminStrings = {
     ribbonDatabaseRbac: '数据库 RBAC',
     ribbonLivePermissions: '实时权限核验',
     spotlightCredentialsLabel: '登录凭据',
-    spotlightCredentialsValue: 'admin / admin123456',
-    spotlightCredentialsDetail: '示例账号来自数据库种子；请使用已启用且已分配角色的管理员账号登录。',
+    spotlightCredentialsValue: '请向管理员索取',
+    spotlightCredentialsDetail: '生产环境不内置默认账号；请使用已启用且已分配角色的管理员账号登录。',
     spotlightRegionScopeLabel: '区域范围',
     spotlightRegionScopeValue: (region) => `${region} · ${zhCnStrings.common.regionLabel(region)}`,
     spotlightRegionScopeDetail: '登录响应会载入管理员资料、权限与区域范围，并按授权更新工作视角。',
@@ -2617,6 +2699,7 @@ const zhCnStrings: AdminStrings = {
     heading: (region) => `当前区域 ${region} 的经营与审核状态，一眼看明白。`,
     description: '汇总门店、导入、订单退款和待审任务，先保证运营能用。',
     loadError: '控制台数据加载失败',
+    partialLoadError: (count) => `${count} 个数据源暂时不可用，其余控制台数据已正常展示。`,
     loading: '控制台数据刷新中...',
     noData: '当前账号暂无可查看的控制台数据。',
     headerActions: {
@@ -2672,6 +2755,40 @@ const zhCnStrings: AdminStrings = {
       pendingRefunds: {
         label: '待处理退款',
         note: '进入订单退款页继续处理',
+      },
+    },
+    operations: {
+      eyebrow: '运维状态',
+      heading: '先看依赖和异步任务，再处理业务待办。',
+      health: {
+        label: '系统健康',
+        status: {
+          up: '正常',
+          degraded: '部分降级',
+          down: '不可用',
+          warning: '需关注',
+          disabled: '未启用',
+          loading: '检查中',
+          unavailable: '读取失败',
+        },
+        summary: (issues, total) => issues > 0
+          ? `${total} 个组件中有 ${issues} 个需要关注`
+          : `${total} 个组件均无异常`,
+        loading: '正在检查核心依赖与第三方能力配置。',
+        unavailable: '健康检查暂时无法读取，点击进入系统健康页重试。',
+      },
+      searchSync: {
+        label: '搜索索引同步',
+        healthy: '运行正常',
+        attention: '存在异常',
+        disabled: '未启用',
+        loading: '加载中',
+        unavailable: '读取失败',
+        summary: (pending, processing, retrying, stale) =>
+          `待处理 ${pending} / 处理中 ${processing} / 重试 ${retrying} / 超时 ${stale}`,
+        disabledNote: '当前搜索提供方不需要 Elasticsearch 增量同步。',
+        loadingNote: '正在读取搜索同步任务队列。',
+        unavailableNote: '同步队列暂时无法读取，点击进入搜索同步页重试。',
       },
     },
     recentShops: {
@@ -3321,8 +3438,51 @@ const zhCnStrings: AdminStrings = {
     auditSubmitError: '退款仲裁提交失败',
     reconcileError: '对账补偿执行失败',
     auditNotice: (orderNo, decision) => `订单 ${orderNo} 退款已${decision === 'approve' ? '通过' : '驳回'}`,
-    reconcileNotice: (closedOrders, restoredStockOrders, failedPayments) =>
-      `对账补偿完成：关闭超时未支付订单 ${closedOrders} 笔，恢复库存 ${restoredStockOrders} 笔，标记失败支付流水 ${failedPayments} 笔`,
+    reconcileNotice: (closedOrders, restoredStockOrders, failedPayments, reconciledRefunds) =>
+      `对账补偿完成：关闭超时未支付订单 ${closedOrders} 笔，恢复库存 ${restoredStockOrders} 笔，标记失败支付流水 ${failedPayments} 笔，更新退款状态 ${reconciledRefunds} 笔`,
+    statements: {
+      heading: '渠道账单核对',
+      description: '上传 Stripe CSV，逐行匹配本地支付与退款流水；只生成差异结果，不自动改业务状态。',
+      chooseFile: '选择 Stripe CSV',
+      importAction: '导入并核对',
+      importing: '正在导入...',
+      completed: '已完成',
+      processing: '处理中',
+      importSuccess: (batchId) => `渠道账单批次 #${batchId} 已完成核对`,
+      importError: '渠道账单导入失败',
+      loadError: '渠道账单批次加载失败',
+      batchMeta: (total) => `共 ${total} 个导入批次`,
+      noBatches: '还没有导入渠道账单。',
+      viewDetails: '查看明细',
+      closeDetails: '收起明细',
+      detailHeading: (batchId) => `批次 #${batchId} 核对明细`,
+      detailMeta: (total) => `共 ${total} 行`,
+      noItems: '当前筛选下没有账单行。',
+      filters: {
+        all: '全部结果',
+        matched: '已匹配',
+        discrepancy: '存在差异',
+        unmatched: '本地缺失',
+        invalid: '无效行',
+        ignored: '已忽略',
+      },
+      batchHeaders: {
+        file: '文件 / 渠道',
+        result: '核对结果',
+        time: '导入时间',
+        actions: '操作',
+      },
+      itemHeaders: {
+        line: '行 / 类型',
+        channel: '渠道记录',
+        local: '本地记录',
+        result: '核对结果',
+      },
+      summary: (matched, discrepancy, unmatched, invalid, ignored) =>
+        `匹配 ${matched} · 差异 ${discrepancy} · 缺失 ${unmatched} · 无效 ${invalid} · 忽略 ${ignored}`,
+      localSummary: (bizType, bizId, orderNo) => bizId ? `${bizType} #${bizId} · ${orderNo || '--'}` : '未匹配本地记录',
+      amountSummary: (amount, currency) => amount === null ? '--' : `${amount} ${currency || ''}`.trim(),
+    },
     metaLoading: '加载中...',
     metaSummary: (total) => `共 ${total} 条订单`,
     metaDescription: '支持按商户、门店、用户、支付/退款状态、订单号和日期范围筛选。',
@@ -3355,6 +3515,8 @@ const zhCnStrings: AdminStrings = {
       pending: '申请中',
       success: '退款成功',
       rejected: '已驳回',
+      processing: '退款处理中',
+      failed: '退款失败',
     },
     applyFilters: '应用筛选',
     tableHeaders: {
@@ -3385,6 +3547,8 @@ const zhCnStrings: AdminStrings = {
     refundStatusText: (status, fallback) => {
       if (status === 1) return '退款成功'
       if (status === 2) return '已驳回'
+      if (status === 3) return '退款处理中'
+      if (status === 4) return '退款失败'
       if (status === 0) return '申请中'
       return fallback || `状态 ${status}`
     },
@@ -4920,6 +5084,7 @@ const enStrings: AdminStrings = {
     shopManagement: 'Shop Management',
     basicDataManagement: 'Basic Data',
     dataOrders: 'Orders & Refunds',
+    searchSyncManagement: 'Search Sync',
     auditReviews: 'Review Audit',
     auditReviewAppeals: 'Merchant Review Appeals',
     auditPosts: 'Post Audit',
@@ -4945,6 +5110,7 @@ const enStrings: AdminStrings = {
     systemRoles: 'Roles & Permissions',
     systemUsers: 'User Management',
     systemMerchants: 'Merchant Accounts',
+    systemHealth: 'System Health',
     systemAuditLogs: 'Audit Logs',
     systemPrivacyTasks: 'Privacy Tasks',
   },
@@ -4977,8 +5143,8 @@ const enStrings: AdminStrings = {
     ribbonDatabaseRbac: 'Database-backed RBAC',
     ribbonLivePermissions: 'Live permission checks',
     spotlightCredentialsLabel: 'Credentials',
-    spotlightCredentialsValue: 'admin / admin123456',
-    spotlightCredentialsDetail: 'The sample account comes from seed data. Use an enabled admin account with assigned roles to sign in.',
+    spotlightCredentialsValue: 'Contact your administrator',
+    spotlightCredentialsDetail: 'No default credentials are bundled in production. Use an enabled admin account with assigned roles to sign in.',
     spotlightRegionScopeLabel: 'Regional scope',
     spotlightRegionScopeValue: (region) => `${region} · ${enStrings.common.regionLabel(region)}`,
     spotlightRegionScopeDetail: 'The login response loads the admin profile, permissions, and regional scope, then updates the working perspective according to authorization.',
@@ -5017,6 +5183,7 @@ const enStrings: AdminStrings = {
     heading: (region) => `See the operating and audit state for region ${region} at a glance.`,
     description: 'This page summarizes shops, imports, order refunds, and pending audits so operations can actually move.',
     loadError: 'Failed to load dashboard data.',
+    partialLoadError: (count) => `${count} data source${count === 1 ? ' is' : 's are'} temporarily unavailable. The remaining dashboard data is still shown.`,
     loading: 'Refreshing dashboard data...',
     noData: 'This account does not have any dashboard data to view.',
     headerActions: {
@@ -5072,6 +5239,40 @@ const enStrings: AdminStrings = {
       pendingRefunds: {
         label: 'Pending refunds',
         note: 'Continue handling refunds in the orders view',
+      },
+    },
+    operations: {
+      eyebrow: 'Operational status',
+      heading: 'Check dependencies and background work before handling business queues.',
+      health: {
+        label: 'System health',
+        status: {
+          up: 'Healthy',
+          degraded: 'Degraded',
+          down: 'Unavailable',
+          warning: 'Needs attention',
+          disabled: 'Disabled',
+          loading: 'Checking',
+          unavailable: 'Load failed',
+        },
+        summary: (issues, total) => issues > 0
+          ? `${issues} of ${total} components need attention`
+          : `All ${total} components are healthy or intentionally disabled`,
+        loading: 'Checking core dependencies and third-party configuration.',
+        unavailable: 'Health checks could not be loaded. Open System Health to retry.',
+      },
+      searchSync: {
+        label: 'Search index sync',
+        healthy: 'Running normally',
+        attention: 'Needs attention',
+        disabled: 'Disabled',
+        loading: 'Loading',
+        unavailable: 'Load failed',
+        summary: (pending, processing, retrying, stale) =>
+          `Pending ${pending} / Processing ${processing} / Retrying ${retrying} / Stale ${stale}`,
+        disabledNote: 'The active search provider does not require Elasticsearch incremental sync.',
+        loadingNote: 'Loading the search synchronization queue.',
+        unavailableNote: 'The sync queue could not be loaded. Open Search Sync to retry.',
       },
     },
     recentShops: {
@@ -5732,8 +5933,51 @@ const enStrings: AdminStrings = {
     auditSubmitError: 'Failed to submit refund arbitration.',
     reconcileError: 'Failed to run reconciliation.',
     auditNotice: (orderNo, decision) => `Refund for order ${orderNo} was ${decision === 'approve' ? 'approved' : 'rejected'}.`,
-    reconcileNotice: (closedOrders, restoredStockOrders, failedPayments) =>
-      `Reconciliation finished: closed ${closedOrders} overdue unpaid orders, restored stock for ${restoredStockOrders} orders, and marked ${failedPayments} payment flows as failed.`,
+    reconcileNotice: (closedOrders, restoredStockOrders, failedPayments, reconciledRefunds) =>
+      `Reconciliation finished: closed ${closedOrders} overdue unpaid orders, restored stock for ${restoredStockOrders} orders, marked ${failedPayments} payment flows as failed, and updated ${reconciledRefunds} refund states.`,
+    statements: {
+      heading: 'Channel statement reconciliation',
+      description: 'Upload a Stripe CSV and match each row against local payments and refunds. Imports report differences without mutating business state.',
+      chooseFile: 'Choose Stripe CSV',
+      importAction: 'Import and reconcile',
+      importing: 'Importing...',
+      completed: 'Completed',
+      processing: 'Processing',
+      importSuccess: (batchId) => `Statement batch #${batchId} was reconciled.`,
+      importError: 'Failed to import the channel statement.',
+      loadError: 'Failed to load statement batches.',
+      batchMeta: (total) => `${total} import batches`,
+      noBatches: 'No channel statements have been imported.',
+      viewDetails: 'View details',
+      closeDetails: 'Hide details',
+      detailHeading: (batchId) => `Batch #${batchId} details`,
+      detailMeta: (total) => `${total} rows`,
+      noItems: 'No statement rows match this filter.',
+      filters: {
+        all: 'All results',
+        matched: 'Matched',
+        discrepancy: 'Discrepancy',
+        unmatched: 'Missing locally',
+        invalid: 'Invalid',
+        ignored: 'Ignored',
+      },
+      batchHeaders: {
+        file: 'File / Channel',
+        result: 'Result',
+        time: 'Imported at',
+        actions: 'Actions',
+      },
+      itemHeaders: {
+        line: 'Line / Type',
+        channel: 'Channel record',
+        local: 'Local record',
+        result: 'Result',
+      },
+      summary: (matched, discrepancy, unmatched, invalid, ignored) =>
+        `Matched ${matched} · Differences ${discrepancy} · Missing ${unmatched} · Invalid ${invalid} · Ignored ${ignored}`,
+      localSummary: (bizType, bizId, orderNo) => bizId ? `${bizType} #${bizId} · ${orderNo || '--'}` : 'No local match',
+      amountSummary: (amount, currency) => amount === null ? '--' : `${amount} ${currency || ''}`.trim(),
+    },
     metaLoading: 'Loading...',
     metaSummary: (total) => `${total} orders`,
     metaDescription: 'Filter by merchant, shop, user, payment or refund status, order number, and date range.',
@@ -5766,6 +6010,8 @@ const enStrings: AdminStrings = {
       pending: 'Pending',
       success: 'Refunded',
       rejected: 'Rejected',
+      processing: 'Processing',
+      failed: 'Failed',
     },
     applyFilters: 'Apply filters',
     tableHeaders: {
@@ -5796,6 +6042,8 @@ const enStrings: AdminStrings = {
     refundStatusText: (status, fallback) => {
       if (status === 1) return 'Refunded'
       if (status === 2) return 'Rejected'
+      if (status === 3) return 'Processing'
+      if (status === 4) return 'Failed'
       if (status === 0) return 'Pending'
       return fallback || `Status ${status}`
     },

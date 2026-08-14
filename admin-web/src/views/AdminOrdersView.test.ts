@@ -5,6 +5,9 @@ const mocks = vi.hoisted(() => ({
   listAdminOrders: vi.fn(),
   auditAdminOrderRefund: vi.fn(),
   reconcileAdminOrders: vi.fn(),
+  importAdminChannelStatement: vi.fn(),
+  listAdminChannelStatements: vi.fn(),
+  listAdminChannelStatementItems: vi.fn(),
 }))
 
 vi.mock('@/services/admin', () => mocks)
@@ -94,6 +97,42 @@ const orders = [
   },
 ]
 
+const statementBatch = {
+  id: 7101,
+  channel: 'stripe',
+  fileName: 'stripe-2026-07.csv',
+  fileSha256: 'sha256-test',
+  totalRows: 2,
+  matchedRows: 1,
+  discrepancyRows: 1,
+  unmatchedRows: 0,
+  invalidRows: 0,
+  ignoredRows: 0,
+  status: 1,
+  statusText: '已完成',
+  createdAt: '2026-07-22 10:00:00',
+}
+
+const statementItem = {
+  id: 7201,
+  lineNo: 2,
+  transactionType: 'refund',
+  channelTransactionId: 're_123',
+  amount: 88,
+  currency: 'EUR',
+  channelStatus: 'succeeded',
+  occurredAt: '2026-07-22 09:59:00',
+  orderNo: 'ADMIN-ORDER-002',
+  localBizType: 'refund',
+  localBizId: 9502,
+  localAmount: 88,
+  localCurrency: 'EUR',
+  localStatus: 1,
+  reconcileStatus: 'matched',
+  reconcileStatusText: '已匹配',
+  discrepancyReason: '',
+}
+
 async function flush() {
   await Promise.resolve()
   await Promise.resolve()
@@ -131,6 +170,21 @@ describe('AdminOrdersView', () => {
   beforeEach(() => {
     Object.values(mocks).forEach((mock) => mock.mockReset())
     mocks.listAdminOrders.mockResolvedValue({ list: orders, total: 2, page: 1, pageSize: 20, hasMore: false })
+    mocks.listAdminChannelStatements.mockResolvedValue({
+      list: [statementBatch],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      hasMore: false,
+    })
+    mocks.listAdminChannelStatementItems.mockResolvedValue({
+      list: [statementItem],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      hasMore: false,
+    })
+    mocks.importAdminChannelStatement.mockResolvedValue(statementBatch)
   })
 
   it('loads orders and applies filters', async () => {
@@ -225,6 +279,7 @@ describe('AdminOrdersView', () => {
       closedOrders: 2,
       restoredStockOrders: 2,
       failedPayments: 1,
+      reconciledRefunds: 3,
     })
     const { app, host } = mount()
     await flush()
@@ -235,7 +290,58 @@ describe('AdminOrdersView', () => {
     expect(mocks.reconcileAdminOrders).toHaveBeenCalledTimes(1)
     expect(host.textContent).toContain('closed 2 overdue unpaid orders')
     expect(host.textContent).toContain('marked 1 payment flows as failed')
+    expect(host.textContent).toContain('updated 3 refund states')
     expect(mocks.listAdminOrders).toHaveBeenCalledTimes(2)
+    app.unmount()
+  })
+
+  it('loads statement batches and expands a batch into reconciliation details', async () => {
+    const { app, host } = mount()
+    await flush()
+
+    expect(mocks.listAdminChannelStatements).toHaveBeenCalledWith({ page: 1, pageSize: 10 })
+    expect(host.textContent).toContain('stripe-2026-07.csv')
+    expect(host.textContent).toContain('Matched 1')
+
+    click(host, 'View details')
+    await flush()
+
+    expect(mocks.listAdminChannelStatementItems).toHaveBeenCalledWith(7101, {
+      reconcileStatus: undefined,
+      page: 1,
+      pageSize: 50,
+    })
+    expect(host.textContent).toContain('Batch #7101 details')
+    expect(host.textContent).toContain('re_123')
+    app.unmount()
+  })
+
+  it('imports a Stripe CSV, refreshes batches, and opens the imported details', async () => {
+    const { app, host } = mount()
+    await flush()
+
+    const file = new File(['id,amount\nre_123,88'], 'stripe-import.csv', {
+      type: 'text/csv',
+    })
+    const fileInput = host.querySelector<HTMLInputElement>('input[type="file"]')
+    if (!fileInput) throw new Error('missing statement file input')
+    Object.defineProperty(fileInput, 'files', { value: [file] })
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }))
+    await nextTick()
+
+    const upload = host.querySelector<HTMLFormElement>('form.statement-upload')
+    if (!upload) throw new Error('missing statement upload form')
+    upload.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flush()
+
+    expect(mocks.importAdminChannelStatement).toHaveBeenCalledWith(file)
+    expect(mocks.listAdminChannelStatements).toHaveBeenCalledTimes(2)
+    expect(mocks.listAdminChannelStatementItems).toHaveBeenLastCalledWith(7101, {
+      reconcileStatus: undefined,
+      page: 1,
+      pageSize: 50,
+    })
+    await vi.waitFor(() => expect(host.textContent).toContain('re_123'))
     app.unmount()
   })
 })

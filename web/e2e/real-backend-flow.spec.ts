@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer'
 import { expect, test, type APIRequestContext, type APIResponse, type Page } from '@playwright/test'
 
-const adminPort = Number(process.env.PLAYWRIGHT_ADMIN_PORT ?? 16174)
+const adminPort = Number(process.env.PLAYWRIGHT_ADMIN_PORT ?? 15174)
 const adminBaseURL = `http://127.0.0.1:${adminPort}`
 const backendPort = Number(process.env.PLAYWRIGHT_BACKEND_PORT ?? 18080)
 const backendBaseURL = `http://127.0.0.1:${backendPort}`
@@ -210,6 +210,133 @@ async function createApprovedPublicReview(request: APIRequestContext, content: s
 }
 
 test.describe.serial('real backend review flow', () => {
+  test('shows safe system health and disables search sync mutations for the MySQL provider', async ({ browser }) => {
+    const adminContext = await browser.newContext()
+    const adminPage = await adminContext.newPage()
+    const diagnostics = collectBrowserErrors(adminPage)
+
+    try {
+      await adminPage.goto(`${adminBaseURL}/login`)
+      await adminPage.getByLabel('账号').fill('admin')
+      await adminPage.getByLabel('密码').fill('admin123456')
+      await adminPage.getByRole('button', { name: '进入后台' }).click()
+      await expect(adminPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
+
+      const healthResponsePromise = adminPage.waitForResponse((response) =>
+        response.request().method() === 'GET'
+        && response.status() === 200
+        && response.url().includes('/api/admin/v1/system/health'),
+      )
+      await adminPage.goto(`${adminBaseURL}/system/health`)
+      const healthResponse = await healthResponsePromise
+      const health = await expectApiSuccess<{
+        status: string
+        checkedAt: string
+        uptimeSeconds: number
+        runtimeMode: string
+        applicationVersion: string
+        activeProfiles: string[]
+        components: Array<{
+          key: string
+          status: string
+          checkType: string
+          critical: boolean
+          latencyMillis: number
+          detail: string
+        }>
+      }>(healthResponse)
+
+      expect(Object.keys(health).sort()).toEqual([
+        'activeProfiles',
+        'applicationVersion',
+        'checkedAt',
+        'components',
+        'runtimeMode',
+        'status',
+        'uptimeSeconds',
+      ])
+      expect(health.status).toBe('degraded')
+      expect(health.runtimeMode).toBe('local')
+      expect(health.activeProfiles).toEqual(['h2', 'local'])
+      expect(health.components).toHaveLength(7)
+      expect(health.components.map((component) => component.key)).toEqual([
+        'database',
+        'stateStore',
+        'search',
+        'fileStorage',
+        'payment',
+        'verificationCode',
+        'push',
+      ])
+      for (const component of health.components) {
+        expect(Object.keys(component).sort()).toEqual([
+          'checkType',
+          'critical',
+          'detail',
+          'key',
+          'latencyMillis',
+          'status',
+        ])
+      }
+      const serializedHealth = JSON.stringify(health).toLowerCase()
+      for (const sensitiveMarker of ['jdbc:', 'password', 'secret', 'token']) {
+        expect(serializedHealth).not.toContain(sensitiveMarker)
+      }
+
+      const healthMain = adminPage.getByRole('main')
+      await expect(healthMain.getByRole('heading', { name: '系统健康' })).toBeVisible()
+      await expect(healthMain.locator('.system-health-table tbody tr')).toHaveCount(7)
+      await expect(healthMain.getByText('MySQL 数据库')).toBeVisible()
+      await expect(healthMain.getByText('当前由 MySQL 提供搜索，Elasticsearch 未启用')).toBeVisible()
+      await expect(healthMain).not.toContainText('jdbc:h2:')
+      await expect(healthMain).not.toContainText('admin123456')
+      await expect(healthMain).not.toContainText('Demo123456')
+
+      const overviewResponsePromise = adminPage.waitForResponse((response) =>
+        response.request().method() === 'GET'
+        && response.status() === 200
+        && response.url().includes('/api/admin/v1/search/sync-tasks/overview'),
+      )
+      const tasksResponsePromise = adminPage.waitForResponse((response) =>
+        response.request().method() === 'GET'
+        && response.status() === 200
+        && /\/api\/admin\/v1\/search\/sync-tasks(?:\?|$)/.test(response.url()),
+      )
+      await adminPage.goto(`${adminBaseURL}/data/search-sync`)
+      const [overviewResponse, tasksResponse] = await Promise.all([
+        overviewResponsePromise,
+        tasksResponsePromise,
+      ])
+      const overview = await expectApiSuccess<{
+        provider: string
+        enabled: boolean
+        indexName: string
+        total: number
+      }>(overviewResponse)
+      const tasks = await expectApiSuccess<{ list: unknown[]; total: number }>(tasksResponse)
+
+      expect(overview.provider).toBe('mysql')
+      expect(overview.enabled).toBe(false)
+      expect(overview.indexName).toBe('dzdp_shop_v1')
+      expect(overview.total).toBe(0)
+      expect(tasks.list).toEqual([])
+      expect(tasks.total).toBe(0)
+      const searchMain = adminPage.getByRole('main')
+      await expect(searchMain.getByRole('heading', { name: '搜索索引同步' })).toBeVisible()
+      await expect(searchMain.getByRole('heading', { name: 'mysql', exact: true })).toBeVisible()
+      await expect(searchMain.getByText('增量同步已暂停', { exact: true })).toBeVisible()
+      await expect(searchMain.getByText('当前 APP_SEARCH_PROVIDER 不是 elasticsearch，任务不会被投递。')).toBeVisible()
+      await expect(searchMain.getByText('当前筛选条件下没有同步任务。')).toBeVisible()
+      await expect(searchMain.getByRole('button', { name: '重试异常任务' })).toBeDisabled()
+      await expect(searchMain.getByRole('button', { name: '全量重建索引' })).toBeDisabled()
+      await expect(searchMain.getByRole('button', { name: '立即重试' })).toHaveCount(0)
+
+      expectNoBrowserFailures(diagnostics)
+    } finally {
+      await adminContext.close()
+    }
+  })
+
   test('governs EU categories cities and areas against the real backend', async ({ request }) => {
     const suffix = Date.now().toString()
     const categoryName = `E2E 分类 ${suffix}`

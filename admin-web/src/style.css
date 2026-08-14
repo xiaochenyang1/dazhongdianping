@@ -545,6 +545,42 @@ img {
   color: var(--text-muted);
 }
 
+.sync-provider-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sync-error-cell {
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}
+
+.system-health-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.system-health-summary .stat-card {
+  min-height: 132px;
+  align-content: space-between;
+}
+
+.system-health-summary .status-pill {
+  width: fit-content;
+}
+
+.system-health-time {
+  font-size: 1.05rem !important;
+  line-height: 1.35 !important;
+}
+
+.system-health-detail {
+  max-width: 380px;
+  overflow-wrap: anywhere;
+}
+
 .toolbar-grid {
   display: grid;
   gap: 0.9rem;
@@ -952,6 +988,38 @@ img {
   padding: 0 0.9rem;
 }
 
+.statement-card {
+  margin-top: 1.25rem;
+}
+
+.statement-upload {
+  align-items: center;
+}
+
+.statement-file-button {
+  position: relative;
+  max-width: min(360px, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statement-file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.statement-feedback {
+  margin: 1rem 1.2rem 0;
+}
+
+.statement-details {
+  border-top: 1px solid var(--border);
+}
+
 .dialog-backdrop {
   position: fixed;
   inset: 0;
@@ -1133,6 +1201,10 @@ img {
   .two-column-layout {
     grid-template-columns: 1fr;
   }
+
+  .system-health-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 980px) {
@@ -1209,6 +1281,16 @@ img {
   .data-table td:nth-child(4),
   .data-table th:nth-child(5),
   .data-table td:nth-child(5) {
+    display: none;
+  }
+
+  .system-health-table th:nth-child(2),
+  .system-health-table td:nth-child(2) {
+    display: table-cell;
+  }
+
+  .system-health-table th:nth-child(3),
+  .system-health-table td:nth-child(3) {
     display: none;
   }
 

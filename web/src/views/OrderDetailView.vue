@@ -36,7 +36,16 @@ const canRefund = computed(() => order.value?.payStatus === 1 && !order.value?.r
 const refundBanner = computed(() => {
   const marker = String(route.query.refund || '')
   if (marker === 'approved') return copy.value.orderDetail.refundApproved
+  if (marker === 'succeeded') return copy.value.orderDetail.refundApproved
+  if (marker === 'pending') return copy.value.orderDetail.refundProcessing
+  if (marker === 'failed') return copy.value.orderDetail.refundChannelFailed
   if (marker === 'rejected') return copy.value.orderDetail.refundRejected
+  return ''
+})
+const refundBannerClass = computed(() => {
+  const marker = String(route.query.refund || '')
+  if (marker === 'failed' || marker === 'rejected') return 'is-error'
+  if (marker === 'approved' || marker === 'succeeded') return 'is-success'
   return ''
 })
 
@@ -197,7 +206,7 @@ onBeforeUnmount(() => stopPolling())
       <RouterLink class="secondary-button" to="/user/orders">{{ copy.orderDetail.back }}</RouterLink>
     </div>
 
-    <p v-if="refundBanner" class="feedback is-success" data-testid="refund-result-banner">{{ refundBanner }}</p>
+    <p v-if="refundBanner" class="feedback" :class="refundBannerClass" data-testid="refund-result-banner">{{ refundBanner }}</p>
     <p v-if="successMessage" class="feedback is-success" data-testid="order-success">{{ successMessage }}</p>
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
     <p v-if="loading" class="feedback">{{ copy.orderDetail.loading }}</p>
@@ -270,7 +279,13 @@ onBeforeUnmount(() => stopPolling())
           · {{ copy.orderDetail.amount }} {{ formatMoney(order.refund.amount, order.currency) }}
         </p>
         <p>{{ copy.orderDetail.reason }}: {{ order.refund.reason || copy.common.notAvailable }}</p>
+        <p v-if="order.refund.channelRefundTxn">
+          {{ order.refund.channel || copy.common.notAvailable }} / {{ order.refund.channelRefundTxn }}
+        </p>
         <p v-if="order.refund.auditReason">{{ copy.orderDetail.auditNote }}: {{ order.refund.auditReason }}</p>
+        <p v-if="order.refund.channelFailureReason" class="feedback is-error">
+          {{ order.refund.channelFailureReason }}
+        </p>
         <p class="muted">
           {{ copy.orderDetail.requestedAt }}
           {{ order.refund.createdAt ? formatWebDateTime(order.refund.createdAt, copy.tag) : copy.common.notAvailable }}

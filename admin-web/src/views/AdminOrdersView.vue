@@ -2,8 +2,20 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
 import { adminStringsForRegion } from '@/core/admin_localizations'
-import { auditAdminOrderRefund, listAdminOrders, reconcileAdminOrders } from '@/services/admin'
-import type { AdminOrder, PageResult } from '@/types/admin'
+import {
+  auditAdminOrderRefund,
+  importAdminChannelStatement,
+  listAdminChannelStatementItems,
+  listAdminChannelStatements,
+  listAdminOrders,
+  reconcileAdminOrders,
+} from '@/services/admin'
+import type {
+  AdminChannelStatementBatch,
+  AdminChannelStatementItem,
+  AdminOrder,
+  PageResult,
+} from '@/types/admin'
 
 const { state, hasPermission } = useAdminSession()
 const strings = computed(() => adminStringsForRegion(state.region))
@@ -18,6 +30,19 @@ const auditSubmitting = ref(false)
 const auditError = ref('')
 const auditNotice = ref('')
 const reconcileSubmitting = ref(false)
+const statementFile = ref<File | null>(null)
+const statementImporting = ref(false)
+const statementError = ref('')
+const statementNotice = ref('')
+const statementLoading = ref(false)
+const statementPageState = ref<PageResult<AdminChannelStatementBatch> | null>(null)
+const statementPage = ref(1)
+const selectedStatementBatchId = ref<number | null>(null)
+const statementItemLoading = ref(false)
+const statementItemError = ref('')
+const statementItemPageState = ref<PageResult<AdminChannelStatementItem> | null>(null)
+const statementItemPage = ref(1)
+const statementItemStatus = ref('')
 const filters = reactive({
   merchantId: '',
   shopId: '',
@@ -37,6 +62,15 @@ function normalizeNumber(value: string) {
   }
   const parsed = Number(normalized)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+function normalizeStatus(value: string) {
+  const normalized = value.trim()
+  if (!normalized) {
+    return undefined
+  }
+  const parsed = Number(normalized)
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined
 }
 
 function normalizeText(value: string) {
@@ -71,6 +105,21 @@ function refundSummary(item: AdminOrder) {
   )
 }
 
+function statementBatchStatusText(batch: AdminChannelStatementBatch) {
+  return batch.status === 1
+    ? strings.value.adminOrders.statements.completed
+    : strings.value.adminOrders.statements.processing
+}
+
+function statementItemStatusText(item: AdminChannelStatementItem) {
+  const labels = strings.value.adminOrders.statements.filters
+  if (item.reconcileStatus === 'matched') return labels.matched
+  if (item.reconcileStatus === 'discrepancy') return labels.discrepancy
+  if (item.reconcileStatus === 'unmatched') return labels.unmatched
+  if (item.reconcileStatus === 'ignored') return labels.ignored
+  return labels.invalid
+}
+
 async function load() {
   loading.value = true
   errorMessage.value = ''
@@ -79,8 +128,8 @@ async function load() {
       merchantId: normalizeNumber(filters.merchantId),
       shopId: normalizeNumber(filters.shopId),
       userId: normalizeNumber(filters.userId),
-      payStatus: normalizeNumber(filters.payStatus),
-      refundStatus: normalizeNumber(filters.refundStatus),
+      payStatus: normalizeStatus(filters.payStatus),
+      refundStatus: normalizeStatus(filters.refundStatus),
       orderNo: normalizeText(filters.orderNo),
       dateFrom: normalizeDate(filters.dateFrom),
       dateTo: normalizeDate(filters.dateTo),
@@ -154,6 +203,7 @@ async function runReconcile() {
       result.closedOrders,
       result.restoredStockOrders,
       result.failedPayments,
+      result.reconciledRefunds,
     )
     await load()
   } catch (error) {
@@ -163,8 +213,93 @@ async function runReconcile() {
   }
 }
 
+function selectStatementFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  statementFile.value = input.files?.[0] ?? null
+  statementError.value = ''
+}
+
+async function loadStatements() {
+  statementLoading.value = true
+  statementError.value = ''
+  try {
+    statementPageState.value = await listAdminChannelStatements({ page: statementPage.value, pageSize: 10 })
+  } catch (error) {
+    statementError.value = error instanceof Error ? error.message : strings.value.adminOrders.statements.loadError
+  } finally {
+    statementLoading.value = false
+  }
+}
+
+async function importStatement() {
+  if (!statementFile.value) {
+    statementError.value = strings.value.adminOrders.statements.chooseFile
+    return
+  }
+  statementImporting.value = true
+  statementError.value = ''
+  statementNotice.value = ''
+  try {
+    const batch = await importAdminChannelStatement(statementFile.value)
+    statementNotice.value = strings.value.adminOrders.statements.importSuccess(batch.id)
+    statementFile.value = null
+    statementPage.value = 1
+    await loadStatements()
+    await openStatementBatch(batch.id)
+  } catch (error) {
+    statementError.value = error instanceof Error ? error.message : strings.value.adminOrders.statements.importError
+  } finally {
+    statementImporting.value = false
+  }
+}
+
+async function goStatementPage(nextPage: number) {
+  statementPage.value = Math.max(1, nextPage)
+  await loadStatements()
+}
+
+async function openStatementBatch(batchId: number) {
+  if (selectedStatementBatchId.value === batchId) {
+    selectedStatementBatchId.value = null
+    statementItemPageState.value = null
+    return
+  }
+  selectedStatementBatchId.value = batchId
+  statementItemPage.value = 1
+  statementItemStatus.value = ''
+  await loadStatementItems()
+}
+
+async function loadStatementItems() {
+  if (selectedStatementBatchId.value === null) return
+  statementItemLoading.value = true
+  statementItemError.value = ''
+  try {
+    statementItemPageState.value = await listAdminChannelStatementItems(selectedStatementBatchId.value, {
+      reconcileStatus: statementItemStatus.value || undefined,
+      page: statementItemPage.value,
+      pageSize: 50,
+    })
+  } catch (error) {
+    statementItemError.value = error instanceof Error ? error.message : strings.value.adminOrders.statements.loadError
+  } finally {
+    statementItemLoading.value = false
+  }
+}
+
+async function applyStatementItemFilter() {
+  statementItemPage.value = 1
+  await loadStatementItems()
+}
+
+async function goStatementItemPage(nextPage: number) {
+  statementItemPage.value = Math.max(1, nextPage)
+  await loadStatementItems()
+}
+
 onMounted(() => {
   void load()
+  void loadStatements()
 })
 </script>
 
@@ -237,6 +372,8 @@ onMounted(() => {
             <option value="0">{{ strings.adminOrders.refundStatusOptions.pending }}</option>
             <option value="1">{{ strings.adminOrders.refundStatusOptions.success }}</option>
             <option value="2">{{ strings.adminOrders.refundStatusOptions.rejected }}</option>
+            <option value="3">{{ strings.adminOrders.refundStatusOptions.processing }}</option>
+            <option value="4">{{ strings.adminOrders.refundStatusOptions.failed }}</option>
           </select>
         </label>
         <label class="field">
@@ -311,7 +448,11 @@ onMounted(() => {
                   {{ item.refundId ? refundStatusText(item) : strings.adminOrders.noRefund }}
                 </span>
                 <p class="inline-note">{{ refundSummary(item) }}</p>
+                <p class="code-box" v-if="item.refundChannelRefundTxn">
+                  {{ item.refundChannel || strings.adminOrders.paymentChannelFallback }} / {{ item.refundChannelRefundTxn }}
+                </p>
                 <p class="inline-note" v-if="item.refundAuditReason">{{ strings.adminOrders.auditRemarkLabel(item.refundAuditReason) }}</p>
+                <p class="feedback is-error" v-if="item.refundChannelFailureReason">{{ item.refundChannelFailureReason }}</p>
               </td>
               <td v-if="canAuditRefund">
                 <template v-if="item.refundId && item.refundStatus === 0">
@@ -358,6 +499,148 @@ onMounted(() => {
           {{ strings.adminOrders.nextPage }}
         </button>
       </div>
+    </article>
+
+    <article class="content-card system-table-card statement-card">
+      <div class="system-table-card__meta">
+        <div>
+          <strong>{{ strings.adminOrders.statements.heading }}</strong>
+          <p class="inline-note">{{ strings.adminOrders.statements.description }}</p>
+        </div>
+        <form v-if="canAuditRefund" class="toolbar-actions statement-upload" @submit.prevent="importStatement">
+          <label class="ghost-button statement-file-button">
+            {{ statementFile?.name || strings.adminOrders.statements.chooseFile }}
+            <input type="file" accept=".csv,text/csv" :disabled="statementImporting" @change="selectStatementFile" />
+          </label>
+          <button type="submit" class="primary-button" :disabled="statementImporting || !statementFile">
+            {{ statementImporting ? strings.adminOrders.statements.importing : strings.adminOrders.statements.importAction }}
+          </button>
+        </form>
+      </div>
+
+      <p v-if="statementError" class="feedback is-error statement-feedback">{{ statementError }}</p>
+      <p v-if="statementNotice" class="feedback is-success statement-feedback">{{ statementNotice }}</p>
+
+      <div class="system-table-card__meta">
+        <span>{{ statementLoading ? strings.common.loading : strings.adminOrders.statements.batchMeta(statementPageState?.total ?? 0) }}</span>
+      </div>
+      <div class="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ strings.adminOrders.statements.batchHeaders.file }}</th>
+              <th>{{ strings.adminOrders.statements.batchHeaders.result }}</th>
+              <th>{{ strings.adminOrders.statements.batchHeaders.time }}</th>
+              <th>{{ strings.adminOrders.statements.batchHeaders.actions }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="statementLoading">
+              <td colspan="4">{{ strings.common.loading }}</td>
+            </tr>
+            <tr v-else-if="!(statementPageState?.list.length)">
+              <td colspan="4">{{ strings.adminOrders.statements.noBatches }}</td>
+            </tr>
+            <tr v-for="batch in statementPageState?.list ?? []" :key="batch.id">
+              <td>
+                <strong>{{ batch.fileName }}</strong>
+                <p class="code-box">{{ batch.channel }} / #{{ batch.id }}</p>
+              </td>
+              <td>
+                <span class="status-pill" :class="batch.discrepancyRows || batch.unmatchedRows || batch.invalidRows ? 'status-pill--warn' : 'status-pill--good'">
+                  {{ statementBatchStatusText(batch) }}
+                </span>
+                <p class="inline-note">
+                  {{ strings.adminOrders.statements.summary(batch.matchedRows, batch.discrepancyRows, batch.unmatchedRows, batch.invalidRows, batch.ignoredRows) }}
+                </p>
+              </td>
+              <td class="numeric-cell">{{ batch.createdAt }}</td>
+              <td>
+                <button type="button" class="ghost-button" @click="openStatementBatch(batch.id)">
+                  {{ selectedStatementBatchId === batch.id ? strings.adminOrders.statements.closeDetails : strings.adminOrders.statements.viewDetails }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <button type="button" class="ghost-button system-pager-button" :disabled="statementPage <= 1" @click="goStatementPage(statementPage - 1)">
+          {{ strings.adminOrders.previousPage }}
+        </button>
+        <span class="numeric-cell">{{ strings.adminOrders.page(statementPage) }}</span>
+        <button type="button" class="ghost-button system-pager-button" :disabled="!statementPageState?.hasMore" @click="goStatementPage(statementPage + 1)">
+          {{ strings.adminOrders.nextPage }}
+        </button>
+      </div>
+
+      <section v-if="selectedStatementBatchId !== null" class="statement-details">
+        <div class="system-table-card__meta">
+          <strong>{{ strings.adminOrders.statements.detailHeading(selectedStatementBatchId) }}</strong>
+          <div class="toolbar-actions">
+            <select v-model="statementItemStatus" @change="applyStatementItemFilter">
+              <option value="">{{ strings.adminOrders.statements.filters.all }}</option>
+              <option value="matched">{{ strings.adminOrders.statements.filters.matched }}</option>
+              <option value="discrepancy">{{ strings.adminOrders.statements.filters.discrepancy }}</option>
+              <option value="unmatched">{{ strings.adminOrders.statements.filters.unmatched }}</option>
+              <option value="invalid">{{ strings.adminOrders.statements.filters.invalid }}</option>
+              <option value="ignored">{{ strings.adminOrders.statements.filters.ignored }}</option>
+            </select>
+            <span>{{ strings.adminOrders.statements.detailMeta(statementItemPageState?.total ?? 0) }}</span>
+          </div>
+        </div>
+        <p v-if="statementItemError" class="feedback is-error statement-feedback">{{ statementItemError }}</p>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ strings.adminOrders.statements.itemHeaders.line }}</th>
+                <th>{{ strings.adminOrders.statements.itemHeaders.channel }}</th>
+                <th>{{ strings.adminOrders.statements.itemHeaders.local }}</th>
+                <th>{{ strings.adminOrders.statements.itemHeaders.result }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="statementItemLoading">
+                <td colspan="4">{{ strings.common.loading }}</td>
+              </tr>
+              <tr v-else-if="!(statementItemPageState?.list.length)">
+                <td colspan="4">{{ strings.adminOrders.statements.noItems }}</td>
+              </tr>
+              <tr v-for="item in statementItemPageState?.list ?? []" :key="item.id">
+                <td>
+                  <strong>#{{ item.lineNo }}</strong>
+                  <p class="inline-note">{{ item.transactionType || '--' }}</p>
+                </td>
+                <td>
+                  <p class="code-box">{{ item.channelTransactionId || '--' }}</p>
+                  <p class="inline-note">{{ strings.adminOrders.statements.amountSummary(item.amount, item.currency) }} · {{ item.channelStatus || '--' }}</p>
+                  <p class="inline-note" v-if="item.occurredAt">{{ item.occurredAt }}</p>
+                </td>
+                <td>
+                  <strong>{{ strings.adminOrders.statements.localSummary(item.localBizType, item.localBizId, item.orderNo) }}</strong>
+                  <p class="inline-note">{{ strings.adminOrders.statements.amountSummary(item.localAmount, item.localCurrency) }}</p>
+                </td>
+                <td>
+                  <span class="status-pill" :class="item.reconcileStatus === 'matched' ? 'status-pill--good' : item.reconcileStatus === 'ignored' ? 'status-pill--muted' : 'status-pill--warn'">
+                    {{ statementItemStatusText(item) }}
+                  </span>
+                  <p v-if="item.discrepancyReason" class="inline-note">{{ item.discrepancyReason }}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <button type="button" class="ghost-button system-pager-button" :disabled="statementItemPage <= 1" @click="goStatementItemPage(statementItemPage - 1)">
+            {{ strings.adminOrders.previousPage }}
+          </button>
+          <span class="numeric-cell">{{ strings.adminOrders.page(statementItemPage) }}</span>
+          <button type="button" class="ghost-button system-pager-button" :disabled="!statementItemPageState?.hasMore" @click="goStatementItemPage(statementItemPage + 1)">
+            {{ strings.adminOrders.nextPage }}
+          </button>
+        </div>
+      </section>
     </article>
   </section>
 </template>
