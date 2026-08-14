@@ -1,6 +1,6 @@
 # 当前已完成功能与 SQL 导入说明
 
-> 最后更新:2026-08-04
+> 最后更新:2026-08-14
 > M7 补充：已完成帖子与转发、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、关注流、私信、官方圈子、区域化话题广场、7 天热榜、三端页面、管理端治理和话题隐私治理。
 > 适用范围:当前仓库真实已落地的 `M1` 至 `M7` 本地闭环；FCM/APNs 服务端适配器已落地，但真实凭证、真机 smoke、真实欧洲支付、Google Maps 和目标环境凭证联调仍未完成
 
@@ -9,8 +9,8 @@
 ### 1.1 M1 浏览与管理端最小闭环
 
 - C 端公开浏览已完成:首页 Banner/feed、商户列表、商户详情、城市/分类/商圈筛选、`CN / EU` 区域隔离。
-- 头部关键词搜索已接到 `GET /api/c/v1/search/shops`:默认 provider 为 MySQL；配置 `APP_SEARCH_PROVIDER=elasticsearch` 后启用 ES 分词、拼音、纠错、组合筛选和距离排序。MySQL→ES 的重建、增量同步及真实 Elasticsearch 8 smoke 已落地。`GET /api/c/v1/search/suggest`、`GET /api/c/v1/search/hot`、登录用户搜索历史面板/清空和切区重拉也已接通。
-- 管理端最小闭环已完成:管理员登录、门店 CRUD、种子导入、导入批次查询。
+- 头部关键词搜索已接到 `GET /api/c/v1/search/shops`:默认 provider 为 MySQL；配置 `APP_SEARCH_PROVIDER=elasticsearch` 后启用 ES 分词、拼音、纠错、组合筛选和距离排序。MySQL→ES 支持管理端全量重建与事务 outbox 增量同步：任务按门店合并并带版本防竞态，失败指数退避，处理中任务超时恢复；门店、点评聚合、分类/城市/商圈名称或状态变化均会触发同步。管理端 `/data/search-sync` 已补区域/城市/门店范围内的任务概览、分页筛选、错误查看、单条/批量重试和全量重建，人工操作写审计日志。`GET /api/c/v1/search/suggest`、`GET /api/c/v1/search/hot`、登录用户搜索历史面板/清空和切区重拉也已接通。
+- 管理端最小闭环已完成:管理员登录、门店 CRUD、种子导入、导入批次查询、搜索同步运维和系统健康监控。`/system/health` 对数据库、Redis、Elasticsearch、文件存储执行只读实时检查，对支付、验证码、推送只检查配置完整性，不返回连接串或凭证；公共 `/actuator/health` 仅返回整体状态。控制台会按权限并发读取业务概览、最近门店/批次、系统健康和搜索同步状态；单个数据源失败时只显示局部失败提示，不清空其他成功结果。
 - `B` 端最小只读工作台已建立:当前提供 `GET /api/b/v1/health`、`GET /api/b/v1/account/me`、`GET /api/b/v1/roles`、`GET /api/b/v1/shops`;一期商户账号绑定单区域,`X-Region` 必须与商户经营区域一致,错区请求直接 `401`;完整入驻、员工、团购、预订等商户工作台能力仍不在 M1/M2。
 - 对应后端接口已完成:
   - `GET /api/c/v1/categories`
@@ -27,6 +27,12 @@
   - `GET/POST/PUT/DELETE /api/admin/v1/shops`
   - `POST /api/admin/v1/import/shops`
   - `GET /api/admin/v1/import/batches`
+  - `GET /api/admin/v1/search/sync-tasks/overview`
+  - `GET /api/admin/v1/search/sync-tasks`
+  - `POST /api/admin/v1/search/sync-tasks/{shopId}/retry`
+  - `POST /api/admin/v1/search/sync-tasks/retry-failed`
+  - `POST /api/admin/v1/search/reindex`
+  - `GET /api/admin/v1/system/health`
 
 ### 1.2 M2 认证、用户中心、点评互动审核最小闭环
 
@@ -37,13 +43,15 @@
 - 本地达人认证已完成:资料页支持提交和驳回后重提，状态口径为 `0未申请 1待审核 2已通过 3已驳回`；管理端达人认证审核复用统一审核中心 `audit_task.biz_type=7`，公开用户主页、点评和帖子作者只有“已通过且有效”时才展示 `code=local_expert,label=本地达人`。
 - 前端页面已完成:
   - `web`: 登录弹层、头部搜索历史面板 / 清空、`CN / EU` 区域切换、我的资料(含达人申请 / 绑定账号 / 改密码)、我的点评、成长值流水、公开用户主页、独立门店点评列表、点评详情、点评详情互动区、写点评 / 编辑点评、本地图片上传、商户详情页点评预览点赞/评论数、门店相似推荐，以及公开页客户端运行时 SEO `canonical` / `robots` / Open Graph / Twitter Card / JSON-LD；构建已按 `PRERENDER_REGION` 为 7 个静态公开入口生成 CN/EU 对应语言的可抓取 HTML、制品清单，并可在配置公开域名时生成 sitemap/robots；提供公开后端时，`build:prerender:data` 可按区域生成门店、点评、帖子、榜单、活动、圈子和话题详情快照，系统标签、计数、日期和回退文案与区域一致，常驻 SSR 与目标环境自动接入仍未完成
-  - `admin-web`: 管理员登录、控制台概览、门店管理、基础数据 `/data/meta`、订单退款 `/data/orders`、点评审核 `/audit/reviews`、达人认证 `/audit/expert-certifications`、商户点评申诉 `/audit/review-appeals`、帖子审核 `/audit/posts`、审计日志 `/system/audit-logs`、隐私任务 `/system/privacy-tasks`、种子导入和 `CN / EU` 区域切换
+  - `admin-web`: 管理员登录、带局部失败降级和运维状态入口的控制台概览、门店管理、基础数据 `/data/meta`、订单退款 `/data/orders`、搜索同步 `/data/search-sync`、系统健康 `/system/health`、点评审核 `/audit/reviews`、达人认证 `/audit/expert-certifications`、商户点评申诉 `/audit/review-appeals`、帖子审核 `/audit/posts`、审计日志 `/system/audit-logs`、隐私任务 `/system/privacy-tasks`、种子导入和 `CN / EU` 区域切换
 - 管理端种子导入失败明细已完成真实本地文件输出:`errorFile` 指向 `local-storage/import-errors/*.json`。
 
 ### 1.3 认证安全补充能力
 
 - `POST /auth/send-code` 验证码限流已完成:按 `scene + account`、`deviceId`、`IP` 三层返回 `429 + Retry-After`。
 - 当前默认走本地内存版,只覆盖 `send-code` 接口;配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis,不用改当前数据库导入脚本。
+- 验证码发送 provider 已按目标类型和号码前缀隔离：邮箱使用标准 SMTP，默认 `+86` 手机号使用阿里云 SMS，其他国际号码可使用 Twilio REST；未配置匹配通道时返回 503，不会误用另一种类型或号码范围。真实发信域名、短信号码/签名/模板、送达回执和供应商凭证仍待目标环境验收。
+- Stripe 收款和原路退款均使用稳定幂等键：PaymentIntent 按订单号，Refund 按退款申请 ID；渠道退款回执、异步状态和失败原因已持久化并在用户、商户和管理端展示。`refund.created/refund.updated/refund.failed` Webhook 与定时主动查询会补偿 pending 退款，只有最终成功后才更新订单、券和库存。管理端已支持 CSV 渠道账单差异核对。已有库依次执行 `sql/mysql/09_refund_channel_receipt_migration.sql`、`sql/mysql/10_refund_async_status_migration.sql`、`sql/mysql/11_channel_statement_reconciliation_migration.sql`。
 - `Idempotency-Key` 重复提交保护已完成:写请求带同 key + 同请求体会复用首个响应,同 key + 不同请求体返回 `409`;默认本地内存,配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis,`web` 通用写请求会自动带 key。
 
 ### 1.4 隐私中心当前闭环
@@ -76,7 +84,7 @@
 ### 1.5 M4 团购交易与预订闭环
 
 - 团购交易已完成：门店团购列表/详情、下单、有限库存原子扣减、未支付取消恢复库存、模拟支付、SHA-256 回调验签与幂等、按购买数量发券、订单/券列表、退款申请和已核销券退款拦截；退款不再由用户请求同步完成，而是进入商户审核。
-- 区域支付默认通道已隔离：`CN=alipay_mock`、`EU=stripe`;EU 区 Stripe test mode 已打通（PaymentIntent → Web/Flutter Elements/PaymentSheet → webhook 验签 → 发券），真实退款出账与生产 switchover 仍未做，凭证待补。
+- 区域支付默认通道已隔离：`CN=alipay_mock`、`EU=stripe`;EU 区 Stripe test mode 已打通（PaymentIntent → Web/Flutter Elements/PaymentSheet → webhook 验签 → 发券），商户/平台退款审批已接 Stripe Refund、稳定幂等键与渠道回执持久化；真实凭证、退款到账 smoke 与生产 switchover 待验收。
 - 预订已完成：时段容量、自动/人工确认、创建、列表、详情、取消截止时间、改期重新确认、容量释放和变更时间线。
 - 商户履约后端已完成：确认、拒绝、到店、爽约、券码核销；SQL 同时约束商户归属、区域、当前状态和券有效期，避免串店操作。
 - Web 已完成团购详情、订单、券、在线预订、我的预订和预订详情页面；独立 `merchant-web` 已补齐注册、登录、资质提交/状态分流、概览、门店、员工、预订、团购、订单退款、点评回复/申诉页面。
@@ -109,7 +117,7 @@
 - Flutter 已完成 EU/CN 区域与简繁英语言切换、认证会话恢复、邮箱/手机号注册登录、密码重置、封禁账号免登录申诉与进度查询、资料/账号绑定/改密码和设备生命周期登记；通知中心支持未读筛选、下拉/空状态刷新、失败重试和历史通知分页加载，隐私中心支持导出任务历史分页。
 - 通知点击按通知 ID 独立防重复处理；已读确认完成前重复点击不会重复请求或触发多次页面跳转。
 - 通知历史分页与“全部已读”互斥执行，避免旧页面快照覆盖新页或把已读状态回滚。
-- 浏览侧已完成首页、搜索（热词 + 登录用户搜索历史面板 + 输入联想 + 门店结果历史分页，支持清空/单条删除）、门店详情（含门店收藏/取消收藏、公开点评预览与相似门店推荐）、独立门店点评列表（排序、评分和带图筛选，筛选请求防乱序覆盖，后续页按点评 ID 去重）、城市榜单列表/详情、运营活动列表/详情、团购下单与在线预订；未配置 Google Maps、真实支付渠道时明确展示不可用原因，不把占位能力写成已接通。自 `2026-08-12` 起首页地图入口进一步收口：Google Maps 未配置时直接隐藏按钮，不再展示“点击即弹提示”的半成品入口；验证码/支付渠道未配置时后端 fail-closed 返回 503，Firebase 占位走 NoOp 回退，均不伪装成功。自 `2026-08-13` 起 Flutter 门店详情与后端 `ShopDetailResponse` / Web `ShopDetailView.vue` 对齐 §3.3：补齐封面图（`coverUrl`，缺失时占位容器而非空 `Image.network`）、口味/环境/服务三维评分明细、推荐菜（含推荐理由与价格）、门店相册（三宫格 `GridView`，图片加载失败回退占位图），三语言文案全覆盖。
+- 浏览侧已完成首页、搜索（热词 + 登录用户搜索历史面板 + 输入联想 + 门店结果历史分页，支持清空/单条删除）、门店详情（含门店收藏/取消收藏、公开点评预览与相似门店推荐）、独立门店点评列表（排序、评分和带图筛选，筛选请求防乱序覆盖，后续页按点评 ID 去重）、城市榜单列表/详情、运营活动列表/详情、团购下单与在线预订；未配置 Google Maps、真实支付渠道时明确展示不可用原因，不把占位能力写成已接通。自 `2026-08-12` 起首页地图入口进一步收口：Google Maps 未配置时直接隐藏按钮，不再展示“点击即弹提示”的半成品入口；自 `2026-08-13` 起继续补成可用地图闭环：公开门店列表/详情返回坐标，Android/iOS 在 Dart 与原生层均完成 Key 注入后展示可拖动、缩放、点击标记并与门店选择联动的交互地图，Web 或原生注入未完成时降级 Static Maps，详情页可打开 Google Maps 到店导航；交互地图还支持用户点击后申请前台定位权限、显示当前位置和聚焦镜头，并调用后端距离排序、展示米/公里距离；地图拖动或缩放停止后会按可见边界刷新门店，快速连续移动只应用最后一次请求，空结果或失败时保留已有标记。拒绝或服务关闭时保留列表浏览且不申请后台定位。真实 key/真机定位 smoke 仍待验收。验证码/支付渠道未配置时后端 fail-closed 返回 503，Firebase 占位走 NoOp 回退，均不伪装成功。同日起 Flutter 门店详情与后端 `ShopDetailResponse` / Web `ShopDetailView.vue` 对齐 §3.3：补齐封面图（`coverUrl`，缺失时占位容器而非空 `Image.network`）、口味/环境/服务三维评分明细、推荐菜（含推荐理由与价格）、门店相册（三宫格 `GridView`，图片加载失败回退占位图），三语言文案全覆盖。
 - 首页在 `CN / EU` 区域或浏览仓储变化时会自动重新加载推荐门店，避免区域标题更新后继续展示旧区域列表。
 - 独立门店点评列表首次加载失败可重试，重试保留当前排序和筛选条件。
 - 点评侧已完成新建、本人详情回填编辑、四维评分、消费金额、标签、系统相册选图、评论区历史分页与楼中楼回复，以及带鉴权/区域/语言/幂等键的 multipart 图片上传。
@@ -205,7 +213,7 @@
 | 功能 | 当前状态 | 已标注文档 | 对应 SQL / 说明 | 导入后可直接演示 |
 |---|---|---|---|---|
 | `M1` C 端浏览链路 | 已完成 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `category/city/area/merchant/shop/shop_photo/dish/home_banner/home_feed`；`02_seed_data.sql` 预置城市、分类、门店、Banner、Feed | 首页、列表、详情、城市/分类/商圈筛选、`CN/EU` 区域切换 |
-| 头部关键词搜索 / 联想 / 热词 / 搜索历史 | 已完成 MySQL 默认 + Elasticsearch 可切换链路 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `/search/shops` 支持 MySQL/ES provider；ES 已覆盖分词、拼音、纠错、筛选、距离排序、索引重建/增量同步与真实 smoke；热词优先读 `hot_keyword`，空表/全停用时回退当前 MySQL 统计；联想/历史仍复用当前 MySQL 数据；`search_history` 每用户每区域最多 20 条，写入后按最近使用裁剪；支持整区清空与单条删除 | 首页头部输入“火”展示联想并进入结果页；公开端热词默认展示运营配置，删空后回退统计结果；登录用户可查看/清空当前区域历史，也可删除单条，超额旧词自动淘汰；ES smoke 验证拼音、纠错与距离排序 |
+| 头部关键词搜索 / 联想 / 热词 / 搜索历史 | 已完成 MySQL 默认 + Elasticsearch 可切换链路 | `README.md`、`docs/README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `/search/shops` 支持 MySQL/ES provider；ES 已覆盖分词、拼音、纠错、筛选、距离排序、管理端全量重建与事务 outbox 增量同步；`shop_search_sync_task` 按门店合并任务、版本防竞态、失败退避和超时恢复；热词优先读 `hot_keyword`，空表/全停用时回退当前 MySQL 统计；联想/历史仍复用当前 MySQL 数据 | 首页头部输入“火”展示联想并进入结果页；登录用户可管理当前区域历史；首次启用 ES 先执行管理端全量重建，之后业务变更自动增量同步 |
 | 管理端门店管理 / 种子导入 | 已完成 | `README.md`、`docs/README.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `01_schema.sql` 建 `merchant/shop/import_batch`；`02_seed_data.sql` 预置门店与商户演示数据；`import_batch` 导入后默认留空；区域全量管理员查看当前区域全部批次，城市/门店受限管理员只查看本人批次，既有库用 `04_admin_import_batch_scope_migration.sql` 补查询索引 | 管理员登录后看门店列表、编辑门店、导入种子数据 |
 | 管理端分类 / 城市 / 商圈治理 | 已完成（本地口径） | `README.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/权限矩阵.md`、`docs/测试清单与验收用例.md` | `category/city/area` 使用自增 ID、`status`、区域唯一约束和读取索引；`02_seed_data.sql` 预置 `data:geo:read/write` 并授予 `data_operator` | `/data/meta` 三页签 CRUD/启停/删除；C 端隐藏停用项；写入、审核和榜单发布窗口重新校验启用引用 |
 | `B` 端最小只读工作台 | 已完成最小骨架 | `README.md`、`docs/README.md`、`docs/M1-M2实施计划与验收清单.md`、`docs/接口设计.md`、`docs/测试清单与验收用例.md` | 复用 `merchant/shop` 与现有浏览查询;一期商户账号绑定单区域,`X-Region` 与经营区域不一致直接 `401`;暂不新增 B 端员工 / 角色表 | `GET /api/b/v1/health`、`GET /api/b/v1/account/me`、`GET /api/b/v1/roles`、`GET /api/b/v1/shops` |
@@ -239,11 +247,11 @@
 |---|---|---|---|---|
 | M1-M4 用户核心链路 | 已完成（本地口径） | 浏览（Flutter 足迹分页且加载/刷新失败可恢复）、搜索（Flutter 搜索历史保留分页元数据并可加载更多）、认证（Flutter 账户设置已接资料保存、账号绑定与密码更新）、点评、成长、榜单、收藏、交易和预订均有后端、Web 与自动化覆盖；每日签到已具备后端、Flutter 与 PC Web 状态/领取闭环，PC Web 会回显连续天数、累计次数、成长值/积分奖励，保护重复提交并刷新用户余额；积分商城 C 端列表/兑换/我的兑换/商品详情已在 Flutter 与 PC Web（`/user/points-mall`）落地，点评详情支持评论级举报（PC/Flutter，管理端 `review_comment`）；支付成功会发 `order.paid`（回调幂等、PC/Flutter 可跳转订单详情）；预订创建会发 `reservation.created`（自动确认/待确认）；预订到店前 2 小时 / 30 分钟站内提醒已落地（`reservation.reminder` + 时间线 action_type=9）；商户确认/拒绝/到店/爽约会发 `reservation.status` 站内通知并联调 PC 预订详情横幅；券码到期前 3 天 / 1 天提醒与过期自动标记已落地（`coupon.reminder` / `coupon.expired` + `remind_status` 去重，PC Web 我的券页支持 status/code 定位）；券码详情 `GET /coupons/:code` 与 PC 二维码详情页已落地；商户核销成功会发 `coupon.verified` 并联调 PC 券码详情；退款审核结果通知 `order.refund.result` 与订单详情取消/退款闭环已落地；点评审核通过/驳回会发 `review.audit.result` 并联调 PC 我的点评详情横幅；商户点评申诉通过后会隐藏点评并通知作者 `review.hidden`；点评获赞/新评论会发 `review.like` / `review.comment`，评论盖楼回复会额外通知被回复者 `review.comment.reply`（被回复者即点评作者时不重复）；达人认证审核通过/驳回会发 `expert.certification.result` 并联调 PC 资料页横幅；帖子审核通过/驳回会发 `post.audit.result` 并联调 PC 帖子详情横幅与 Flutter 消息跳转；帖子评论盖楼回复会额外通知被回复者 `post.comment.reply`（被回复者即帖子作者时不重复） | 真实支付归第三方阶段 | 当前自动化、浏览器 E2E 和临时 MySQL 8 smoke 有通过记录；目标环境仍待验收 |
 | M5 商户经营后端 | 已完成 | 入驻、员工 RBAC、门店范围、预订、团购、订单退款、门店草稿、点评回复申诉已落地 | 无后端主流程缺口 | 后端权限、状态机、跨商户和跨区域测试通过 |
-| 商户端与管理端完整闭环 | 部分完成 | `merchant-web` 已有注册、登录、资质、看板（含待办与快捷入口）、门店草稿编辑/提交审核/驳回原因回显、员工、预订（确认/拒绝/到店/爽约）、预订时段配置、团购创建/编辑/上下架/驳回原因回显、退款、券码核销和点评页面；管理端已有数据库 RBAC、控制台经营/审核概览与快捷入口（门店/交易指标按城市或门店白名单过滤）、Banner、搜索热词、运营活动、分类/城市/商圈、订单退款查询/平台仲裁/对账补偿、商户资质/点评/申诉/帖子/门店草稿/团购审核、门店、榜单、成长、圈子和话题治理，审计日志、隐私任务查询，按区域及城市/门店范围隔离的商户账号查询/详情/停用恢复，员工筛选分页、角色/门店范围详情和单独停用恢复（主账号不进入员工接口；停用即时吊销对应登录态并写审计日志），以及单商户经营操作历史查询（操作人、动作、目标类型、关键词和分页），以及 C 端用户治理（查询/详情/封禁/解封，封禁即时吊销登录态、拦截密码与验证码登录并写审计日志）和用户封禁申诉闭环（免登录提交/查询申诉、`/audit/user-appeals` 审核页、通过自动解封、直接解封自动了结待审申诉、Web 登录弹层申诉入口）；内容举报聚合治理（`/audit/reports`，点评/帖子/私信举报列表与 dismiss/hide 处理） | 真实支付渠道原路退款未接 | 已完成的 B/Admin 页面、权限、区域/城市/门店范围、角色实时收权、账号停用 `401`、审计日志/隐私任务/订单退款查询与仲裁补偿、基础数据、用户治理和封禁申诉真实后端 E2E 通过；其余经营深度与第三方集成另行验收 |
+| 商户端与管理端完整闭环 | 部分完成 | `merchant-web` 已有注册、登录、资质、看板（含待办与快捷入口）、门店草稿编辑/提交审核/驳回原因回显、员工、预订（确认/拒绝/到店/爽约）、预订时段配置、团购创建/编辑/上下架/驳回原因回显、退款、券码核销和点评页面；管理端已有数据库 RBAC、控制台经营/审核概览与快捷入口（门店/交易指标按城市或门店白名单过滤），并按权限展示系统健康和搜索同步运维状态，单个控制台数据源失败可局部降级；另有 Banner、搜索热词、运营活动、分类/城市/商圈、订单退款查询/平台仲裁/对账补偿/Stripe CSV 账单差异核对、商户资质/点评/申诉/帖子/门店草稿/团购审核、门店、榜单、成长、圈子和话题治理，审计日志、隐私任务查询，按区域及城市/门店范围隔离的商户账号治理、员工治理和单商户经营操作历史，以及 C 端用户治理与封禁申诉闭环；Stripe 原路退款、稳定幂等键、退款渠道回执和异步补偿已落地 | 真实凭证下的退款到账与真实账单 smoke | 已完成的 B/Admin 页面、权限、区域/城市/门店范围、角色实时收权、账号停用 `401`、审计日志/隐私任务/订单退款查询与仲裁补偿、基础数据、用户治理和封禁申诉真实后端 E2E 通过；其余经营深度与第三方集成另行验收 |
 | PC Web 产品缺口 | 部分完成 | 首页、列表、详情、搜索、交易、预订、用户中心和社区只读页已落地；每日签到 `/user/check-in`、积分商城 `/user/points-mall`（列表/兑换/我的兑换/商品详情）、点评详情评论级举报已落地；商户高级筛选、真实分页、点评排序/评分/带图筛选、分享、门店相似推荐、公开页客户端运行时 metadata、登录用户门店浏览足迹（每用户每区域最多 50 条）、C 端运营活动公开列表/详情与首页透出、消息中心页（列表/分页/全部已读），券码通知定位，以及按 `PRERENDER_REGION` 区域化的 7 个静态公开入口和可选真实 API 详情快照预渲染、构建清单、sitemap/robots 已接入 | 常驻 SSR 服务、CN/EU 独立域名与缓存策略、真实部署验收；社区写操作/帖子评论举报仍故意只读 | 组件测试、后端查询测试、CN/EU 预渲染/快照脚本测试和本地 H2 快照构建已有证据；目标环境自动化尚未验收 |
 | 社区与消息尾项 | 部分完成 | 帖子、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、认证商户号、转发、关注流、私信、圈子、话题和通知聚合已落地；Flutter 通知中心支持分页、未读筛选及刷新失败保留数据；敏感词库管理 + 点评/帖子/评论/私信写入拦截已落地（`operations:sensitive_word:*`）；FCM/APNs 服务端适配器、重试和失效 token 停用已落地 | 真实移动推送凭证/真机 smoke、第三方机审 | 自动化覆盖已落地的社交关系、达人/认证商户审核与公开 badge、通知去重、`@提醒` 分发、隐私治理、敏感词拦截、推送契约和 Flutter 转发/互动链路；外部推送仍待验收 |
 | 移动推送适配器 | 部分完成（代码已落地） | `PushProvider` 统一契约；FCM HTTP v1 服务账号 JWT/OAuth2；APNs ES256 JWT；Flutter 登录登记、token 轮换回传、退出停用；Android 发布流水线按 secret 注入原生 Firebase 配置；通知事务提交后异步投递、临时错误退避重试、确定失效 token 条件清空；后端推送测试与 Flutter 设备生命周期测试通过 | 真实 FCM/APNs 凭证、Android/iOS 真机接收、前后台/杀进程和目标环境 smoke | 本地契约、服务层和客户端生命周期测试通过；无真实凭证时保持关闭，不把代码接入写成外部服务验收 |
-| Flutter 与真实第三方 | 部分完成 | Flutter 具备区域切换和应用级简体中文/繁体中文/英文委托；首页搜索、榜单活动、通知、用户中心、社区话题圈子、私信黑名单、交易预订点评认证、隐私账户达人成长、公开主页/收藏/足迹/门店详情点评/帖子详情编辑完整链路已迁移三语言，英文动态计数已覆盖单复数；未配置能力会诚实禁用；Android release 强制 production application ID 与独立 keystore，手工流水线可按环境/区域生成带 manifest 和 SHA-256 的签名 AAB | 点评翻译、Google Maps、Stripe/PayPal/支付宝/微信、真实 FCM/APNs smoke、邮件短信、内容审核与 Google Play 上传 | 多域三语言组件测试、Flutter 全量测试、未配置阻断验证和移动发布工作流契约通过；真实 sandbox、凭证、商店账号和供应商联调仍待验收 |
+| Flutter 与真实第三方 | 部分完成 | Flutter 具备区域切换和应用级简体中文/繁体中文/英文委托；首页搜索、榜单活动、通知、用户中心、社区话题圈子、私信黑名单、交易预订点评认证、隐私账户达人成长、公开主页/收藏/足迹/门店详情点评/帖子详情编辑完整链路已迁移三语言，英文动态计数已覆盖单复数；Google Maps 已补 Android/iOS 交互地图、门店标记与选择联动、用户主动前台定位、当前位置显示和镜头聚焦、附近门店距离展示与就近排序、地图视野边界动态加载与请求防乱序、Web/未完成原生注入时 Static Maps 降级、坐标筛选、门店详情跳转和外部到店导航；Stripe PaymentSheet 与后端 PaymentIntent/Refund 已落地；未配置能力会诚实禁用；Android release 强制 production application ID 与独立 keystore，手工流水线可按环境/区域生成带 manifest 和 SHA-256 的签名 AAB | 点评翻译、真实地图 key/真机定位 smoke、Stripe 真实凭证/退款到账 smoke、PayPal/支付宝/微信、真实 FCM/APNs smoke、邮件短信、内容审核与 Google Play 上传 | 多域三语言组件测试、Flutter 全量测试、未配置阻断验证和移动发布工作流契约通过；真实 sandbox、凭证、商店账号和供应商联调仍待验收 |
 | 目标环境与上线执行 | 外部待验收 | MySQL、Redis、S3、ES、发布回滚脚本及 CI workflow 已存在；服务器 release bundle、部署和回滚均覆盖 C 端 Web、管理端与商户端 | 真实云资源、域名证书、CDN、SSH、预算、联系人和供应商账号 | 仅脚本和 workflow 已准备；目标环境发布/回滚演练尚未执行 |
 
 ## 3. SQL 怎么导
@@ -274,16 +282,24 @@
 - `sql/mysql/05_comment_governance_migration.sql`: 既有库为 `review_comment`/`post_comment` 补 `audit_remark`，并创建 `review_comment_report` / `post_comment_report`。
 - `sql/mysql/06_daily_check_in_migration.sql`: 既有库创建 `user_check_in`。
 - `sql/mysql/07_points_mall_migration.sql`: 既有库创建 `points_product` / `points_exchange`，并补管理端 `operations:points:read|write` 权限种子(若脚本内含)。
+- `sql/mysql/08_payment_client_secret_migration.sql`: 既有库为支付流水补 `client_secret`，使 Stripe 支付页面刷新后可以复用原 PaymentIntent；在 `07` 后执行一次。
+- `sql/mysql/09_refund_channel_receipt_migration.sql`: 既有库为退款申请补渠道与渠道退款单号。
+- `sql/mysql/10_refund_async_status_migration.sql`: 既有库补退款渠道状态、失败原因与处理中索引。
+- `sql/mysql/11_channel_statement_reconciliation_migration.sql`: 既有库创建 Stripe 渠道账单导入批次与明细表；只用于核对，不自动修改业务状态。
+- `sql/mysql/12_shop_search_sync_outbox_migration.sql`: 既有库创建门店搜索索引事务 outbox；首次启用 ES 仍先执行一次管理端全量重建，后续变更自动增量同步。
+- `sql/mysql/13_search_sync_operations_migration.sql`: 既有库补 `data:search_index:read` 权限，并默认授予超级管理员与数据管理员，用于进入搜索同步监控页。
+- `sql/mysql/14_admin_system_health_permission_migration.sql`: 既有库补 `system:health:read` 权限，默认仅授予超级管理员；健康状态跨区域展示，不受城市/门店范围影响。
 
-> 全新库只 `source` `01_schema.sql` + `02_seed_data.sql` 即可拿到上述表结构；`03`–`07` 仅用于升级旧库，按序执行一次。
+> 全新库只 `source` `01_schema.sql` + `02_seed_data.sql` 即可拿到上述表结构与权限；`03`–`14` 仅用于升级旧库，按序执行一次。
 
 ### 3.3 导入后哪些表会直接有数据
 
 - 会直接有演示数据:`category`、`city`、`area`、`merchant`、`shop`、`shop_photo`、`dish`、`home_banner`、`home_feed`、`app_user`、`review`、`review_image`、`review_like`、`review_comment`、`audit_task`、`growth_rule`(含 `check_in` 等)、`level_config`。
-- 会建表但默认留空:`search_history`、`verification_code`、`user_session`、`import_batch`、`review_report`、`review_comment_report`、`post_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`audit_log`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`。
+- 会建表但默认留空:`search_history`、`shop_search_sync_task`、`verification_code`、`user_session`、`import_batch`、`channel_statement_batch`、`channel_statement_item`、`review_report`、`review_comment_report`、`post_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`audit_log`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`。
 - 当前验证码限流和 `Idempotency-Key` 幂等缓存不依赖 MySQL 表,所以导库后别去找什么 `rate_limit` / `idempotency_record` 运行数据;这两块默认走本地内存,配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis。
 - 留空不是漏写 SQL,而是这些表本来就更适合运行时真实产生:
   - `search_history`: 登录用户实际搜索商户列表后写入；每个 `user_id + region` 最多保留 20 条，超额按最近使用裁剪。
+  - `shop_search_sync_task`: Elasticsearch 模式下业务变更运行时写入并自动投递，成功后删除；失败任务保留重试状态和最近错误，可在管理端 `/data/search-sync` 查看并人工重试。
   - `verification_code`、`user_session`: 登录 / 刷新 token 运行时写入。
   - `import_batch`: 你真导一次商户种子后才会有批次记录。
   - `review_report` / `review_comment_report` / `post_comment_report`: 为了不把“第一次举报演示”直接堵死,默认不预置重复举报数据。

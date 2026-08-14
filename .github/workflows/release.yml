@@ -17,7 +17,7 @@ on:
       region:
         description: Deployment region
         required: true
-        default: CN
+        default: EU
         type: choice
         options:
           - CN
@@ -35,12 +35,12 @@ jobs:
       github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     concurrency:
-      group: release-test-CN
+      group: release-test-EU
       cancel-in-progress: false
     environment: test
     env:
       DEPLOY_ENVIRONMENT: test
-      DEPLOY_REGION: CN
+      DEPLOY_REGION: EU
       DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
       DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
       DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
@@ -50,9 +50,15 @@ jobs:
       DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
       DEPLOY_MERCHANT_SERVICE: ${{ vars.DEPLOY_MERCHANT_SERVICE }}
       DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
+      DEPLOY_DB_DEFAULTS_FILE: ${{ vars.DEPLOY_DB_DEFAULTS_FILE }}
+      DEPLOY_DB_MIGRATION_MODE: ${{ vars.DEPLOY_DB_MIGRATION_MODE }}
+      DEPLOY_DB_BASELINE_VERSION: ${{ vars.DEPLOY_DB_BASELINE_VERSION }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_WS_BASE_URL: ${{ vars.VITE_WS_BASE_URL }}
+      VITE_STRIPE_PUBLISHABLE_KEY: ${{ vars.VITE_STRIPE_PUBLISHABLE_KEY }}
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
-      PRERENDER_REGION: CN
+      PRERENDER_REGION: EU
       APP_RELEASE_VERSION: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Check test deployment configuration
@@ -62,7 +68,7 @@ jobs:
           DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          if [[ -n "$DEPLOY_SSH_HOST" && -n "$DEPLOY_SSH_USER" && -n "$DEPLOY_REMOTE_ROOT" && -n "$DEPLOY_SSH_PRIVATE_KEY" && -n "$DEPLOY_KNOWN_HOSTS" ]]; then
+          if [[ -n "$DEPLOY_SSH_HOST" && -n "$DEPLOY_SSH_USER" && -n "$DEPLOY_REMOTE_ROOT" && -n "$DEPLOY_DB_DEFAULTS_FILE" && -n "$VITE_API_BASE_URL" && -n "$VITE_WS_BASE_URL" && -n "$VITE_STRIPE_PUBLISHABLE_KEY" && -n "$PUBLIC_SITE_URL" && -n "$PRERENDER_API_BASE_URL" && -n "$DEPLOY_SSH_PRIVATE_KEY" && -n "$DEPLOY_KNOWN_HOSTS" ]]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
@@ -150,6 +156,12 @@ jobs:
       DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
       DEPLOY_MERCHANT_SERVICE: ${{ vars.DEPLOY_MERCHANT_SERVICE }}
       DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
+      DEPLOY_DB_DEFAULTS_FILE: ${{ vars.DEPLOY_DB_DEFAULTS_FILE }}
+      DEPLOY_DB_MIGRATION_MODE: ${{ vars.DEPLOY_DB_MIGRATION_MODE }}
+      DEPLOY_DB_BASELINE_VERSION: ${{ vars.DEPLOY_DB_BASELINE_VERSION }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_WS_BASE_URL: ${{ vars.VITE_WS_BASE_URL }}
+      VITE_STRIPE_PUBLISHABLE_KEY: ${{ vars.VITE_STRIPE_PUBLISHABLE_KEY }}
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
       PRERENDER_REGION: ${{ inputs.region }}
@@ -226,6 +238,12 @@ jobs:
       DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
       DEPLOY_MERCHANT_SERVICE: ${{ vars.DEPLOY_MERCHANT_SERVICE }}
       DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
+      DEPLOY_DB_DEFAULTS_FILE: ${{ vars.DEPLOY_DB_DEFAULTS_FILE }}
+      DEPLOY_DB_MIGRATION_MODE: ${{ vars.DEPLOY_DB_MIGRATION_MODE }}
+      DEPLOY_DB_BASELINE_VERSION: ${{ vars.DEPLOY_DB_BASELINE_VERSION }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_WS_BASE_URL: ${{ vars.VITE_WS_BASE_URL }}
+      VITE_STRIPE_PUBLISHABLE_KEY: ${{ vars.VITE_STRIPE_PUBLISHABLE_KEY }}
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
       PRERENDER_REGION: ${{ inputs.region }}

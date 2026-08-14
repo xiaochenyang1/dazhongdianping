@@ -14,7 +14,7 @@ on:
       region:
         description: Rollback region
         required: true
-        default: CN
+        default: EU
         type: choice
         options:
           - CN

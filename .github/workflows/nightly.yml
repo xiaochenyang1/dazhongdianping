@@ -36,7 +36,7 @@ jobs:
         env:
           MINIO_ROOT_USER: minioadmin
           MINIO_ROOT_PASSWORD: minioadmin
-          MINIO_DEFAULT_BUCKETS: dzdp-smoke
+          MINIO_DEFAULT_BUCKETS: "dzdp-smoke:download"
         ports:
           - 9000:9000
         options: >-
@@ -94,6 +94,7 @@ jobs:
           cache-dependency-path: |
             web/package-lock.json
             admin-web/package-lock.json
+            merchant-web/package-lock.json
 
       - name: Install MySQL client
         run: |
@@ -104,6 +105,7 @@ jobs:
         run: |
           npm ci --prefix web
           npm ci --prefix admin-web
+          npm ci --prefix merchant-web
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium

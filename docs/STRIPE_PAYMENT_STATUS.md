@@ -1,9 +1,9 @@
 # Stripe 真实支付实现状态
 
-**更新时间**: 2026-08-12  
+**更新时间**: 2026-08-14
 **状态**: ✅ 代码实现已完成，可进行端到端测试
 
-> **口径说明（2026-08-12 复跑）**: 代码侧无缺口。唯一未完成项为计划文档 Task 14「End-to-End Verification with Stripe CLI」—— 该任务需真实 Stripe test 凭证（`sk_test_*` / `pk_test_*` / `whsec_*`），属外部凭证验收，非代码工作。Tasks 1–13 已全部完成并勾选。
+> **口径说明（2026-08-14 复跑）**: 代码侧无缺口。唯一未完成项为计划文档 Task 14「End-to-End Verification with Stripe CLI」—— 该任务需真实 Stripe test 凭证（`sk_test_*` / `pk_test_*` / `whsec_*`），属外部凭证验收，非代码工作。Tasks 1–13 已全部完成并勾选。
 
 ## 概览
 
@@ -16,6 +16,7 @@ Stripe test-mode 支付集成的代码实现已完成，所有单元测试通过
 - `PaymentChannel` 接口及 DTOs (`PaymentIntentResult`, `PaymentNotifyResult`)
 - `MockPaymentChannel` - 迁移现有 mock 逻辑
 - `StripePaymentChannel` - Stripe PaymentIntent 创建 + webhook 验签
+- Stripe PaymentIntent / Refund 使用基于订单/退款 ID 的稳定幂等键；退款成功后持久化 Stripe `refund id`，本地事务重试不会重复创建退款，并可在用户、商户和管理端查看渠道回执。
 - `PaymentChannelResolver` - 按 region + config 路由渠道
 - `StripeConfig` - 条件装配的 `StripeClient` Bean
 - `TradeService` - 集成 resolver，支持 `clientSecret`
@@ -25,11 +26,11 @@ Stripe test-mode 支付集成的代码实现已完成，所有单元测试通过
 - `stripe-java` 26.12.0 已添加到 `pom.xml`
 
 ✅ **测试覆盖**
-- `MockPaymentChannelTest` - 4 tests ✓
-- `StripePaymentChannelTest` - 6 tests ✓
+- `MockPaymentChannelTest` - 6 tests ✓
+- `StripePaymentChannelTest` - 8 tests ✓
 - `PaymentChannelResolverTest` - 6 tests ✓
-- 所有 payment 相关测试通过 (16/16)
-- 全后端测试套件通过 (435 tests)
+- 所有 payment 相关测试通过 (20/20)
+- 全后端测试套件通过（当前基线 488 tests）
 
 ✅ **配置**
 ```yaml
@@ -53,7 +54,7 @@ app:
 - `@stripe/stripe-js` 1.54.2 已添加
 
 ✅ **测试覆盖**
-- `OrderDetailView.test.ts` - 5 tests ✓
+- `OrderDetailView.test.ts` - 6 tests ✓
   - 包含 clientSecret 存在/不存在场景
   - Stripe card form 显示逻辑
   - Mock payment fallback
@@ -67,11 +68,11 @@ app:
 - `flutter_stripe` ^11.4.0 已添加
 
 ✅ **测试状态**
-- Flutter 测试套件全通过 (569 tests)
+- Flutter 测试套件全通过 (580 tests)
 
 ## 剩余工作
 
-> **所有剩余项均依赖真实 Stripe test 凭证（`sk_test_*` / `pk_test_*` / `whsec_*`），属外部凭证验收，不涉及代码改动。** 凭证到位后按下方步骤执行，即可完成计划文档 Task 14。未提供凭证时，Tasks 1–13 的单元测试仍全绿，服务在 `app.payment.stripe.enabled=false` 下 fail-closed 正常启动。
+> **所有剩余项均依赖真实 Stripe test 凭证（`sk_test_*` / `pk_test_*` / `whsec_*`），属外部凭证验收，不涉及代码改动。** 代码已补支付流水 `client_secret` 持久化、PaymentIntent/Refund 幂等键和退款渠道回执持久化；刷新订单可复用原 PaymentIntent，退款重试会复用同一 Stripe 退款。凭证到位后按下方步骤执行，即可完成计划文档 Task 14。未提供凭证时，服务在 `app.payment.stripe.enabled=false` 下 fail-closed 正常启动。
 
 ### 1. 端到端测试 (最高优先级)
 **Web 端**
@@ -94,14 +95,14 @@ stripe login
 # 转发 webhook 到本地
 stripe listen --forward-to http://localhost:8080/api/c/v1/pay/notify/stripe
 
-# 获取 webhook signing secret (ws_test_xxx)
+# 获取 webhook signing secret (whsec_xxx)
 # 配置到 APP_PAYMENT_STRIPE_ENDPOINT_SECRET
 ```
 
 ### 3. 文档完善
-- [ ] 添加 `.env.example` 示例配置
-- [ ] 更新 README - Stripe test mode 配置步骤
-- [ ] 在 `/docs` 中添加 Stripe 集成指南
+- [x] 在 `deploy/eu-pre.env.example` 提供预发环境变量模板
+- [x] 在 `docs/EU预发发布基线.md` 固定 Stripe test mode、Webhook 和验收入口
+- [ ] 获取真实凭证后补充目标环境的执行记录
 
 ### 4. 计划文档同步
 - [ ] 更新 `docs/superpowers/plans/2026-08-07-real-stripe-payment.md` 的 checkbox 状态

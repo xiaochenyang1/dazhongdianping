@@ -52,6 +52,9 @@ jobs:
       DZDP_ANDROID_STORE_PASSWORD: ${{ secrets.DZDP_ANDROID_STORE_PASSWORD }}
       DZDP_ANDROID_KEY_PASSWORD: ${{ secrets.DZDP_ANDROID_KEY_PASSWORD }}
       DZDP_FIREBASE_ANDROID_CONFIG_BASE64: ${{ secrets.DZDP_FIREBASE_ANDROID_CONFIG_BASE64 }}
+      GOOGLE_MAPS_API_KEY: ${{ secrets.DZDP_GOOGLE_MAPS_API_KEY }}
+      STRIPE_PUBLISHABLE_KEY: ${{ vars.VITE_STRIPE_PUBLISHABLE_KEY }}
+      SHARE_BASE_URL: ${{ vars.PUBLIC_SITE_URL }}
       RELEASE_ENVIRONMENT: ${{ inputs.environment }}
       RELEASE_REGION: ${{ inputs.region }}
       RELEASE_BUILD_NAME: ${{ inputs.build_name }}
@@ -69,6 +72,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: "3.44.8"
           cache: true
 
       - name: Validate Android release configuration
@@ -82,6 +86,8 @@ jobs:
             DZDP_ANDROID_KEY_ALIAS
             DZDP_ANDROID_STORE_PASSWORD
             DZDP_ANDROID_KEY_PASSWORD
+            STRIPE_PUBLISHABLE_KEY
+            SHARE_BASE_URL
           )
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
@@ -95,6 +101,18 @@ jobs:
           fi
           if [[ ! "$DZDP_APP_API_BASE_URL" =~ ^https://[^[:space:]]+$ ]]; then
             echo "::error::DZDP_APP_API_BASE_URL must be an absolute HTTPS URL."
+            exit 1
+          fi
+          expected_stripe_prefix="pk_test_"
+          if [[ "$RELEASE_ENVIRONMENT" == "prod" ]]; then
+            expected_stripe_prefix="pk_live_"
+          fi
+          if [[ "$STRIPE_PUBLISHABLE_KEY" != "$expected_stripe_prefix"* ]]; then
+            echo "::error::VITE_STRIPE_PUBLISHABLE_KEY must match the selected release environment."
+            exit 1
+          fi
+          if [[ ! "$SHARE_BASE_URL" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "::error::PUBLIC_SITE_URL must be an absolute HTTPS URL for app share links."
             exit 1
           fi
           if [[ ! "$RELEASE_BUILD_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
@@ -135,6 +153,16 @@ jobs:
             echo "FIREBASE_CONFIGURED=false" >> "$GITHUB_ENV"
           fi
 
+      - name: Prepare optional Google Maps configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${GOOGLE_MAPS_API_KEY:-}" ]]; then
+            echo "GOOGLE_MAPS_NATIVE_CONFIGURED=true" >> "$GITHUB_ENV"
+          else
+            echo "GOOGLE_MAPS_NATIVE_CONFIGURED=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Verify Flutter app
         working-directory: app
         run: |
@@ -151,6 +179,10 @@ jobs:
           --dart-define "API_BASE_URL=$DZDP_APP_API_BASE_URL"
           --dart-define "APP_REGION=$RELEASE_REGION"
           --dart-define "FIREBASE_CONFIGURED=$FIREBASE_CONFIGURED"
+          --dart-define "GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY"
+          --dart-define "GOOGLE_MAPS_NATIVE_CONFIGURED=$GOOGLE_MAPS_NATIVE_CONFIGURED"
+          --dart-define "STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY"
+          --dart-define "SHARE_BASE_URL=$SHARE_BASE_URL"
 
       - name: Package Android release artifact
         id: package
@@ -184,6 +216,8 @@ jobs:
             --arg buildNumber "$RELEASE_BUILD_NUMBER" \
             --arg applicationId "$DZDP_ANDROID_APPLICATION_ID" \
             --arg apiBaseUrl "$DZDP_APP_API_BASE_URL" \
+            --arg shareBaseUrl "$SHARE_BASE_URL" \
+            --argjson stripeConfigured true \
             --arg commitSha "$GITHUB_SHA" \
             --arg builtAtUtc "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
             --arg artifact "$artifact_name" \
@@ -194,6 +228,8 @@ jobs:
               buildNumber: $buildNumber,
               applicationId: $applicationId,
               apiBaseUrl: $apiBaseUrl,
+              shareBaseUrl: $shareBaseUrl,
+              stripeConfigured: $stripeConfigured,
               commitSha: $commitSha,
               builtAtUtc: $builtAtUtc,
               artifact: $artifact

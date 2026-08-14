@@ -31,3 +31,8 @@ backend/local-storage/
 
 # Logs
 *.log
+
+# Deployment credentials
+deploy/*.env
+deploy/*.cnf
+!deploy/*.cnf.example

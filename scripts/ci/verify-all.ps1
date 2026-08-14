@@ -42,8 +42,8 @@ function Invoke-CiContractTests {
     foreach ($script in $contractScripts) {
         Write-Output "[verify-all] contract: $($script.Name)"
         & $script.FullName
-        if ($LASTEXITCODE -ne 0) {
-            throw "$($script.FullName) exited with code $LASTEXITCODE"
+        if (-not $?) {
+            throw "$($script.FullName) failed"
         }
     }
 }
