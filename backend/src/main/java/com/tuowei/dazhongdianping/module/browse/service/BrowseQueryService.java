@@ -148,6 +148,8 @@ public class BrowseQueryService {
                 row.getPricePerCapita(),
                 row.getCurrency(),
                 row.getAddress(),
+                row.getLatitude(),
+                row.getLongitude(),
                 row.getPhone(),
                 row.getBusinessHours(),
                 row.getSummary(),
@@ -364,7 +366,7 @@ public class BrowseQueryService {
         return rows.stream()
                 .map(row -> toShopListItemResponse(
                         row,
-                        distanceSource == null ? null : distanceMeters(distanceSource, row),
+                        distanceSource == null ? row.getDistanceMeters() : distanceMeters(distanceSource, row),
                         badges.get(row.getMerchantId())
                 ))
                 .toList();
@@ -411,6 +413,8 @@ public class BrowseQueryService {
                 row.getPricePerCapita(),
                 row.getCurrency(),
                 row.getAddress(),
+                row.getLatitude(),
+                row.getLongitude(),
                 row.getAreaName(),
                 row.getCityName(),
                 row.getHasDeal(),

@@ -84,14 +84,14 @@ public class PublicAuthService {
 
     @Transactional
     public AuthSendCodeResponse sendCode(AuthSendCodeRequest request, String requestIp) {
-        VerificationCodeProvider provider = verificationCodeDispatchService.resolveConfiguredProvider();
+        String scene = normalizeScene(request.getScene());
+        int targetType = normalizeTargetType(request.getType());
+        String account = normalizeAccount(request.getAccount(), targetType);
+        VerificationCodeProvider provider = verificationCodeDispatchService.resolveConfiguredProvider(account, targetType);
         boolean useMock = provider == null && verificationCodeProperties.isMockEnabled();
         if (provider == null && !useMock) {
             throw new ServiceUnavailableException("验证码发送通道尚未配置");
         }
-        String scene = normalizeScene(request.getScene());
-        int targetType = normalizeTargetType(request.getType());
-        String account = normalizeAccount(request.getAccount(), targetType);
         String deviceId = StringUtils.hasText(request.getDeviceId()) ? request.getDeviceId().trim() : "";
         sendCodeRateLimitService.checkAndRecord(scene, targetType, account, deviceId, requestIp);
 
@@ -409,7 +409,7 @@ public class PublicAuthService {
     }
 
     private VerificationCodeRow requireVerificationCode(String scene, int targetType, String target, String code) {
-        VerificationCodeProvider provider = verificationCodeDispatchService.resolveConfiguredProvider();
+        VerificationCodeProvider provider = verificationCodeDispatchService.resolveConfiguredProvider(target, targetType);
         boolean useMock = provider == null && verificationCodeProperties.isMockEnabled();
         if (provider == null && !useMock) {
             throw new ServiceUnavailableException("验证码校验通道尚未配置");

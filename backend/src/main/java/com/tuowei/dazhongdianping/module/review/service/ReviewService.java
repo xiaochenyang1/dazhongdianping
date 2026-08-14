@@ -39,6 +39,7 @@ import com.tuowei.dazhongdianping.module.review.model.response.UserReviewSummary
 import com.tuowei.dazhongdianping.module.review.model.response.MerchantReplyResponse;
 import com.tuowei.dazhongdianping.module.merchant.review.model.ReviewMerchantReplyRow;
 import com.tuowei.dazhongdianping.module.merchant.review.mapper.MerchantReviewMapper;
+import com.tuowei.dazhongdianping.module.search.event.ShopSearchIndexChangedEvent;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -48,6 +49,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -68,6 +70,7 @@ public class ReviewService {
     private final MerchantReviewMapper merchantReviewMapper;
     private final NotificationService notificationService;
     private final UserExpertCertificationService userExpertCertificationService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     private final SensitiveWordFilterService sensitiveWordFilterService;
 
@@ -78,7 +81,8 @@ public class ReviewService {
                          MerchantReviewMapper merchantReviewMapper,
                          NotificationService notificationService,
                          UserExpertCertificationService userExpertCertificationService,
-                         SensitiveWordFilterService sensitiveWordFilterService) {
+                         SensitiveWordFilterService sensitiveWordFilterService,
+                         ApplicationEventPublisher applicationEventPublisher) {
         this.reviewMapper = reviewMapper;
         this.authCommandMapper = authCommandMapper;
         this.adminAuditMapper = adminAuditMapper;
@@ -87,6 +91,7 @@ public class ReviewService {
         this.notificationService = notificationService;
         this.userExpertCertificationService = userExpertCertificationService;
         this.sensitiveWordFilterService = sensitiveWordFilterService;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Transactional
@@ -425,6 +430,7 @@ public class ReviewService {
                     BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP),
                     0
             );
+            applicationEventPublisher.publishEvent(new ShopSearchIndexChangedEvent(shopId));
             return;
         }
 
@@ -434,6 +440,7 @@ public class ReviewService {
         BigDecimal service = average(rows, ReviewRow::getScoreService);
 
         reviewMapper.updateShopReviewAggregate(shopId, overall, taste, env, service, rows.size());
+        applicationEventPublisher.publishEvent(new ShopSearchIndexChangedEvent(shopId));
     }
 
     public void invalidateMerchantAppealsForReview(Long reviewId, String remark) {

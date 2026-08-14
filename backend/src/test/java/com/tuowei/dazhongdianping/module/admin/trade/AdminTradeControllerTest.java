@@ -131,7 +131,7 @@ class AdminTradeControllerTest {
         org.assertj.core.api.Assertions.assertThat(soldCount).isEqualTo(11);
         org.assertj.core.api.Assertions.assertThat(auditLogs).isEqualTo(1);
         Integer refundNotifications = jdbc.queryForObject(
-                "SELECT COUNT(1) FROM user_notification WHERE user_id=9002 AND type='order.refund.result' AND title='退款已通过'",
+                "SELECT COUNT(1) FROM user_notification WHERE user_id=9002 AND type='order.refund.result' AND title='退款已到账'",
                 Integer.class);
         org.assertj.core.api.Assertions.assertThat(refundNotifications).isEqualTo(1);
     }
@@ -244,7 +244,8 @@ class AdminTradeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.closedOrders").value(1))
                 .andExpect(jsonPath("$.data.restoredStockOrders").value(1))
-                .andExpect(jsonPath("$.data.failedPayments").value(1));
+                .andExpect(jsonPath("$.data.failedPayments").value(1))
+                .andExpect(jsonPath("$.data.reconciledRefunds").value(0));
 
         Integer orderStatus = jdbc.queryForObject("SELECT status FROM `order` WHERE id = 9303", Integer.class);
         Integer paymentStatus = jdbc.queryForObject("SELECT status FROM payment WHERE id = 9403", Integer.class);

@@ -34,8 +34,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Fail-closed contract for the merchant refund audit: when the channel refund
- * cannot be issued (resolver unavailable, channel throws, or channel returns a
- * non-success receipt) the approval MUST propagate {@link ServiceUnavailableException}
+ * cannot be issued (resolver unavailable, channel throws, or channel returns an
+ * incomplete receipt) the approval MUST propagate {@link ServiceUnavailableException}
  * so the surrounding {@code @Transactional} rolls back, never leaving the DB in an
  * approved-but-not-refunded state. Mirrors {@code TradeServiceFailClosedTest}.
  */
@@ -74,6 +74,8 @@ class MerchantTradeServiceRefundFailClosedTest {
         when(mapper.selectOrder(anyLong(), anyLong(), anyString())).thenReturn(order);
 
         RefundRow refund = new RefundRow();
+        refund.setId(8801L);
+        refund.setOrderId(ORDER_ID);
         refund.setStatus(0);
         refund.setAmount(new BigDecimal("88.00"));
         when(mapper.selectRefund(ORDER_ID)).thenReturn(refund);
@@ -86,6 +88,8 @@ class MerchantTradeServiceRefundFailClosedTest {
         payment.setChannel("alipay_mock");
         payment.setChannelTxn("TX-MERCHANT-001");
         when(tradeMapper.selectPayment(ORDER_ID)).thenReturn(payment);
+        when(tradeMapper.recordRefundChannelResult(anyLong(), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(1);
     }
 
     @AfterEach
@@ -103,18 +107,19 @@ class MerchantTradeServiceRefundFailClosedTest {
                 service.auditRefund(ORDER_ID,
                         new MerchantRefundAuditRequest("approve", "用户申请退款")));
 
-        // approval reached the channel-refund step (stock restored) but never
-        // wrote the operation log → surrounding @Transactional rolls back the approve.
-        verify(mapper).restoreDealStock(anyLong(), anyInt());
+        // Channel resolution happens before any local refund/order/stock transition.
+        verify(channelResolver).resolveByChannel("alipay_mock");
+        verify(mapper, never()).approveRefund(anyLong(), anyLong(), anyString());
+        verify(mapper, never()).restoreDealStock(anyLong(), anyInt());
         verify(mapper, never()).insertOperationLog(
                 anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString());
     }
 
     @Test
-    void shouldFailClosedWhenChannelRefundReturnsNonSuccess() {
+    void shouldFailClosedWhenChannelRefundReturnsIncompleteReceipt() {
         PaymentChannel channel = mock(PaymentChannel.class);
-        when(channel.refund(any(), any(), anyString())).thenReturn(
-                new RefundResult("alipay_mock", "RF1", new BigDecimal("88.00"), false));
+        when(channel.refund(any(), any(), anyString(), anyString())).thenReturn(
+                new RefundResult("alipay_mock", "", new BigDecimal("88.00"), false));
         when(channelResolver.resolveByChannel(anyString())).thenReturn(channel);
 
         assertThrows(ServiceUnavailableException.class, () ->

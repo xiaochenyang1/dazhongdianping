@@ -56,6 +56,8 @@ class PublicBrowseControllerTest {
         mockMvc.perform(get("/api/c/v1/shops/10001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("渝里火锅徐汇店"))
+                .andExpect(jsonPath("$.data.latitude").value(31.1952))
+                .andExpect(jsonPath("$.data.longitude").value(121.4365))
                 .andExpect(jsonPath("$.data.photos.length()").value(2))
                 .andExpect(jsonPath("$.data.recommendedDishes.length()").value(2));
     }
@@ -111,6 +113,9 @@ class PublicBrowseControllerTest {
         mockMvc.perform(get("/api/c/v1/shops"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.list[0].currency").value("CNY"));
+        mockMvc.perform(get("/api/c/v1/shops"))
+                .andExpect(jsonPath("$.data.list[0].latitude").value(31.1952))
+                .andExpect(jsonPath("$.data.list[0].longitude").value(121.4365));
 
         mockMvc.perform(get("/api/c/v1/shops/10001"))
                 .andExpect(status().isOk())

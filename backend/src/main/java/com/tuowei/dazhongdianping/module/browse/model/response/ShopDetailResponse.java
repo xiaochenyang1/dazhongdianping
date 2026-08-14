@@ -16,6 +16,8 @@ public record ShopDetailResponse(
         BigDecimal pricePerCapita,
         String currency,
         String address,
+        Double latitude,
+        Double longitude,
         String phone,
         String businessHours,
         String summary,

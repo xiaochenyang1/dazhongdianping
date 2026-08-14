@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.search.mapper.SearchIndexSyncMapper">
+
+    <insert id="enqueueShopSync">
+        INSERT INTO shop_search_sync_task(
+            shop_id,version,status,attempt_count,next_retry_at,locked_at,last_error,created_at,updated_at
+        ) VALUES(
+            #{shopId},1,0,0,CURRENT_TIMESTAMP,NULL,'',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+        )
+        ON DUPLICATE KEY UPDATE
+            version=version+1,
+            status=0,
+            attempt_count=0,
+            next_retry_at=CURRENT_TIMESTAMP,
+            locked_at=NULL,
+            last_error='',
+            updated_at=CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="selectDueShopSyncTasks"
+            resultType="com.tuowei.dazhongdianping.module.search.model.ShopSearchSyncTaskRow">
+        SELECT shop_id,version,status,attempt_count,next_retry_at,locked_at,last_error
+        FROM shop_search_sync_task
+        WHERE (status=0 AND next_retry_at&lt;=#{now})
+           OR (status=1 AND (locked_at IS NULL OR locked_at&lt;=#{staleBefore}))
+        ORDER BY
+            CASE WHEN status=0 THEN next_retry_at ELSE locked_at END ASC,
+            shop_id ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="claimShopSyncTask">
+        UPDATE shop_search_sync_task
+        SET status=1,
+            locked_at=#{now},
+            updated_at=CURRENT_TIMESTAMP
+        WHERE shop_id=#{shopId}
+          AND version=#{version}
+          AND (
+              (status=0 AND next_retry_at&lt;=#{now})
+              OR (status=1 AND (locked_at IS NULL OR locked_at&lt;=#{staleBefore}))
+          )
+    </update>
+
+    <delete id="completeShopSyncTask">
+        DELETE FROM shop_search_sync_task
+        WHERE shop_id=#{shopId} AND version=#{version} AND status=1
+    </delete>
+
+    <update id="rescheduleShopSyncTask">
+        UPDATE shop_search_sync_task
+        SET status=0,
+            attempt_count=attempt_count+1,
+            next_retry_at=#{nextRetryAt},
+            locked_at=NULL,
+            last_error=#{lastError},
+            updated_at=CURRENT_TIMESTAMP
+        WHERE shop_id=#{shopId} AND version=#{version} AND status=1
+    </update>
+
+    <sql id="adminShopScope">
+        <if test="allCities == false">
+            AND (
+            <if test="cityIds != null and !cityIds.isEmpty()">
+                s.city_id IN
+                <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">
+                    #{cityId}
+                </foreach>
+            </if>
+            <if test="cityIds != null and !cityIds.isEmpty() and shopIds != null and !shopIds.isEmpty()">
+                OR
+            </if>
+            <if test="shopIds != null and !shopIds.isEmpty()">
+                s.id IN
+                <foreach collection="shopIds" item="scopeShopId" open="(" separator="," close=")">
+                    #{scopeShopId}
+                </foreach>
+            </if>
+            <if test="(cityIds == null or cityIds.isEmpty()) and (shopIds == null or shopIds.isEmpty())">
+                1=0
+            </if>
+            )
+        </if>
+    </sql>
+
+    <sql id="adminTaskFilters">
+        WHERE s.region=#{region}
+        <include refid="adminShopScope"/>
+        <if test="query.keyword != null and query.keyword != ''">
+            AND (
+                LOWER(s.name) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+                OR LOWER(CONCAT('', t.shop_id)) LIKE CONCAT('%', LOWER(#{query.keyword}), '%')
+            )
+        </if>
+        <choose>
+            <when test='query.state == "pending"'>
+                AND t.status=0 AND t.attempt_count=0
+            </when>
+            <when test='query.state == "processing"'>
+                AND t.status=1 AND t.locked_at IS NOT NULL AND t.locked_at&gt;#{staleBefore}
+            </when>
+            <when test='query.state == "retrying"'>
+                AND t.status=0 AND t.attempt_count&gt;0
+            </when>
+            <when test='query.state == "stale"'>
+                AND t.status=1 AND (t.locked_at IS NULL OR t.locked_at&lt;=#{staleBefore})
+            </when>
+        </choose>
+    </sql>
+
+    <select id="selectAdminSyncOverview"
+            resultType="com.tuowei.dazhongdianping.module.search.model.ShopSearchSyncOverviewRow">
+        SELECT COUNT(1) AS total_count,
+               COALESCE(SUM(CASE WHEN t.status=0 THEN 1 ELSE 0 END),0) AS pending_count,
+               COALESCE(SUM(CASE WHEN t.status=1 THEN 1 ELSE 0 END),0) AS processing_count,
+               COALESCE(SUM(CASE WHEN t.status=0 AND t.attempt_count&gt;0 THEN 1 ELSE 0 END),0) AS retrying_count,
+               COALESCE(SUM(CASE
+                   WHEN t.status=1 AND (t.locked_at IS NULL OR t.locked_at&lt;=#{staleBefore}) THEN 1
+                   ELSE 0 END),0) AS stale_count,
+               COALESCE(SUM(CASE
+                   WHEN t.status=0 AND t.next_retry_at&lt;=#{now} THEN 1
+                   WHEN t.status=1 AND (t.locked_at IS NULL OR t.locked_at&lt;=#{staleBefore}) THEN 1
+                   ELSE 0 END),0) AS ready_count
+        FROM shop_search_sync_task t
+        INNER JOIN shop s ON s.id=t.shop_id
+        WHERE s.region=#{region}
+        <include refid="adminShopScope"/>
+    </select>
+
+    <select id="countAdminShopSyncTasks" resultType="long">
+        SELECT COUNT(1)
+        FROM shop_search_sync_task t
+        INNER JOIN shop s ON s.id=t.shop_id
+        <include refid="adminTaskFilters"/>
+    </select>
+
+    <select id="selectAdminShopSyncTasks"
+            resultType="com.tuowei.dazhongdianping.module.search.model.ShopSearchSyncTaskRow">
+        SELECT t.shop_id,
+               s.name AS shop_name,
+               s.region,
+               c.name AS city_name,
+               t.version,
+               t.status,
+               t.attempt_count,
+               t.next_retry_at,
+               t.locked_at,
+               t.last_error,
+               t.created_at,
+               t.updated_at
+        FROM shop_search_sync_task t
+        INNER JOIN shop s ON s.id=t.shop_id
+        LEFT JOIN city c ON c.id=s.city_id
+        <include refid="adminTaskFilters"/>
+        ORDER BY
+            CASE
+                WHEN t.status=1 AND (t.locked_at IS NULL OR t.locked_at&lt;=#{staleBefore}) THEN 0
+                WHEN t.status=0 AND t.attempt_count&gt;0 THEN 1
+                WHEN t.status=0 THEN 2
+                ELSE 3
+            END ASC,
+            t.updated_at DESC,
+            t.shop_id ASC
+        LIMIT #{query.pageSize} OFFSET #{query.offset}
+    </select>
+
+    <update id="retryAdminShopSyncTask">
+        UPDATE shop_search_sync_task t
+        SET status=0,
+            next_retry_at=CURRENT_TIMESTAMP,
+            locked_at=NULL,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE t.shop_id=#{shopId}
+          AND EXISTS (
+              SELECT 1
+              FROM shop s
+              WHERE s.id=t.shop_id
+                AND s.region=#{region}
+                <include refid="adminShopScope"/>
+          )
+    </update>
+
+    <update id="retryAdminFailedShopSyncTasks">
+        UPDATE shop_search_sync_task t
+        SET status=0,
+            next_retry_at=CURRENT_TIMESTAMP,
+            locked_at=NULL,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE (
+            (t.status=0 AND t.attempt_count&gt;0)
+            OR (t.status=1 AND (t.locked_at IS NULL OR t.locked_at&lt;=#{staleBefore}))
+        )
+          AND EXISTS (
+              SELECT 1
+              FROM shop s
+              WHERE s.id=t.shop_id
+                AND s.region=#{region}
+                <include refid="adminShopScope"/>
+          )
+    </update>
+</mapper>

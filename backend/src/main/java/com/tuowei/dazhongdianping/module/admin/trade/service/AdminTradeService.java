@@ -23,6 +23,7 @@ import com.tuowei.dazhongdianping.module.trade.model.RefundRow;
 import com.tuowei.dazhongdianping.module.trade.model.TradeReconcileResult;
 import com.tuowei.dazhongdianping.module.trade.payment.PaymentChannel;
 import com.tuowei.dazhongdianping.module.trade.payment.PaymentChannelResolver;
+import com.tuowei.dazhongdianping.module.trade.payment.RefundChannelState;
 import com.tuowei.dazhongdianping.module.trade.payment.RefundResult;
 import com.tuowei.dazhongdianping.module.trade.service.TradeCompensationService;
 import java.math.BigDecimal;
@@ -104,19 +105,35 @@ public class AdminTradeService {
         String reason = request.reason().trim();
         AdminSession admin = currentAdmin();
         String action;
-        boolean approved;
+        String notificationState;
+        String notificationReason = reason;
         if ("approve".equals(decision)) {
-            requireAffected(mapper.approveRefund(orderId, admin.adminId(), reason));
-            requireAffected(mapper.markOrderRefunded(orderId));
-            mapper.markCouponsRefunded(orderId);
-            requireAffected(mapper.restoreDealStock(order.getDealId(), order.getQuantity()));
-            issueChannelRefund(orderId, refund.getAmount(), reason);
-            action = "refund_approve";
-            approved = true;
+            RefundResult channelResult = issueChannelRefund(refund, reason);
+            recordChannelResult(refund, channelResult);
+            if (channelResult.state() == RefundChannelState.SUCCEEDED) {
+                requireAffected(mapper.approveRefund(orderId, admin.adminId(), reason));
+                requireAffected(mapper.markOrderRefunded(orderId));
+                mapper.markCouponsRefunded(orderId);
+                requireAffected(mapper.restoreDealStock(order.getDealId(), order.getQuantity()));
+                action = "refund_approve";
+                notificationState = "succeeded";
+            } else if (channelResult.state() == RefundChannelState.PENDING) {
+                requireAffected(mapper.markRefundProcessing(orderId, admin.adminId(), reason));
+                action = "refund_processing";
+                notificationState = "pending";
+            } else {
+                String channelFailureReason = safeChannelFailureReason(channelResult.failureReason());
+                requireAffected(mapper.markRefundProcessing(orderId, admin.adminId(), reason));
+                requireAffected(tradeMapper.updateRefundChannelState(
+                        refund.getId(), 4, "failed", channelFailureReason));
+                action = "refund_failed";
+                notificationState = "failed";
+                notificationReason = channelFailureReason;
+            }
         } else if ("reject".equals(decision)) {
             requireAffected(mapper.rejectRefund(orderId, admin.adminId(), reason));
             action = "refund_reject";
-            approved = false;
+            notificationState = "rejected";
         } else {
             throw new IllegalArgumentException("退款审核决定只允许 approve 或 reject");
         }
@@ -127,40 +144,77 @@ public class AdminTradeService {
                 reason,
                 StringUtils.hasText(requestIp) ? requestIp.trim() : ""
         );
-        notifyRefundResult(order, approved, reason);
+        notifyRefundResult(order, notificationState, notificationReason);
         return toResponse(mapper.selectOrderById(
                 region, orderId, scope.allCities(), scope.cityIds(), scope.shopIds()));
     }
 
     /**
-     * Issue the real channel refund for an approved refund audit. Fail-closed:
-     * any channel error propagates so the surrounding {@code @Transactional}
-     * approval rolls back, never leaving the DB approved-but-not-refunded.
+     * Issue the channel refund before committing the local audit transition.
+     * Transport/indeterminate errors remain fail-closed; explicit pending or
+     * failed channel results are persisted as local states 3/4.
      */
-    private void issueChannelRefund(Long orderId, BigDecimal amount, String reason) {
-        PaymentRow payment = tradeMapper.selectPayment(orderId);
+    private RefundResult issueChannelRefund(RefundRow refund, String reason) {
+        PaymentRow payment = tradeMapper.selectPayment(refund.getOrderId());
         if (payment == null || payment.getChannel() == null || payment.getChannelTxn() == null) {
             throw new ServiceUnavailableException("订单缺少可退款的支付记录");
         }
         PaymentChannel channel = channelResolver.resolveByChannel(payment.getChannel());
-        RefundResult refundResult = channel.refund(payment, amount, reason);
-        if (refundResult == null || !refundResult.success()) {
-            throw new ServiceUnavailableException("支付渠道退款未成功");
+        RefundResult refundResult = channel.refund(
+                payment,
+                refund.getAmount(),
+                reason,
+                "order-refund-" + refund.getId()
+        );
+        if (refundResult == null || refundResult.state() == null
+                || refundResult.channel() == null || refundResult.channel().isBlank()
+                || refundResult.refundTxn() == null || refundResult.refundTxn().isBlank()
+                || refundResult.amount() == null
+                || refund.getAmount().compareTo(refundResult.amount()) != 0) {
+            throw new ServiceUnavailableException("支付渠道退款结果不完整");
+        }
+        return refundResult;
+    }
+
+    private void recordChannelResult(RefundRow refund, RefundResult refundResult) {
+        if (tradeMapper.recordRefundChannelResult(
+                refund.getId(), refundResult.channel(), refundResult.refundTxn(),
+                refundResult.state().name().toLowerCase(Locale.ROOT),
+                safeChannelFailureReason(refundResult.failureReason())) != 1) {
+            throw new ServiceUnavailableException("支付渠道退款结果保存失败");
         }
     }
 
-    private void notifyRefundResult(AdminOrderRow order, boolean approved, String reason) {
+    private String safeChannelFailureReason(String reason) {
+        if (reason == null) {
+            return "";
+        }
+        return reason.length() <= 255 ? reason : reason.substring(0, 255);
+    }
+
+    private void notifyRefundResult(AdminOrderRow order, String state, String reason) {
         if (order.getUserId() == null) {
             return;
         }
         String dealTitle = StringUtils.hasText(order.getDealTitle()) ? order.getDealTitle() : "团购订单";
         String orderNo = StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo() : String.valueOf(order.getId());
-        String title = approved ? "退款已通过" : "退款已驳回";
+        String title = switch (state) {
+            case "succeeded" -> "退款已到账";
+            case "pending" -> "退款处理中";
+            case "failed" -> "退款失败";
+            default -> "退款已驳回";
+        };
+        String actionText = switch (state) {
+            case "succeeded" -> "已完成退款";
+            case "pending" -> "已同意退款，渠道正在处理";
+            case "failed" -> "退款渠道处理失败";
+            default -> "已驳回退款";
+        };
         String content = dealTitle
                 + " · 订单 " + orderNo
-                + " · 平台" + (approved ? "已同意退款" : "已驳回退款")
+                + " · 平台" + actionText
                 + (StringUtils.hasText(reason) ? "：" + reason : "");
-        String linkUrl = "/user/orders/" + order.getId() + "?refund=" + (approved ? "approved" : "rejected");
+        String linkUrl = "/user/orders/" + order.getId() + "?refund=" + state;
         notificationService.create(
                 order.getUserId(),
                 RegionContext.getRegion().name(),
@@ -185,13 +239,15 @@ public class AdminTradeService {
                 "orders",
                 "closedOrders=" + result.closedOrders()
                         + ",restoredStockOrders=" + result.restoredStockOrders()
-                        + ",failedPayments=" + result.failedPayments(),
+                        + ",failedPayments=" + result.failedPayments()
+                        + ",reconciledRefunds=" + result.reconciledRefunds(),
                 StringUtils.hasText(requestIp) ? requestIp.trim() : ""
         );
         return new AdminTradeReconcileResponse(
                 result.closedOrders(),
                 result.restoredStockOrders(),
-                result.failedPayments()
+                result.failedPayments(),
+                result.reconciledRefunds()
         );
     }
 
@@ -248,6 +304,10 @@ public class AdminTradeService {
                 safeText(row.getRefundReason()),
                 row.getRefundStatus(),
                 refundStatusText(row.getRefundStatus()),
+                safeText(row.getRefundChannel()),
+                safeText(row.getRefundChannelRefundTxn()),
+                safeText(row.getRefundChannelStatus()),
+                safeText(row.getRefundChannelFailureReason()),
                 safeText(row.getRefundAuditReason()),
                 formatDateTime(row.getRefundAuditedAt()),
                 formatDateTime(row.getRefundCreatedAt())
@@ -303,6 +363,8 @@ public class AdminTradeService {
         return switch (status) {
             case 1 -> "退款成功";
             case 2 -> "已驳回";
+            case 3 -> "退款处理中";
+            case 4 -> "退款失败";
             default -> "申请中";
         };
     }

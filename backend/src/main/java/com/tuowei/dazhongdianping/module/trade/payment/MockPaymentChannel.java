@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper;
 import com.tuowei.dazhongdianping.module.trade.model.OrderRow;
 import com.tuowei.dazhongdianping.module.trade.model.PaymentRow;
+import com.tuowei.dazhongdianping.module.trade.model.RefundRow;
 import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -64,11 +65,37 @@ public class MockPaymentChannel implements PaymentChannel {
     }
 
     @Override
-    public RefundResult refund(PaymentRow payment, BigDecimal amount, String reason) {
+    public RefundResult refund(
+            PaymentRow payment,
+            BigDecimal amount,
+            String reason,
+            String idempotencyKey) {
         String channel = payment.getChannel() == null ? "alipay_mock" : payment.getChannel();
         String refundTxn = "RF" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
         BigDecimal refundedAmount = amount == null ? BigDecimal.ZERO.setScale(2) : amount.setScale(2);
-        return new RefundResult(channel, refundTxn, refundedAmount, true);
+        return new RefundResult(
+                channel,
+                refundTxn,
+                refundedAmount,
+                RefundChannelState.SUCCEEDED,
+                ""
+        );
+    }
+
+    @Override
+    public RefundResult queryRefund(String refundTxn) {
+        if (refundTxn == null || refundTxn.isBlank()) {
+            throw new IllegalArgumentException("退款单号不能为空");
+        }
+        RefundRow refund = mapper.selectRefundByChannelTxn("alipay_mock", refundTxn);
+        if (refund == null) {
+            refund = mapper.selectRefundByChannelTxn("stripe_mock", refundTxn);
+        }
+        if (refund == null) {
+            throw new IllegalArgumentException("模拟退款单不存在");
+        }
+        return new RefundResult(
+                refund.getChannel(), refundTxn, refund.getAmount(), RefundChannelState.SUCCEEDED, "");
     }
 
     private String sign(String orderNo, String txn, String status, BigDecimal amount) {

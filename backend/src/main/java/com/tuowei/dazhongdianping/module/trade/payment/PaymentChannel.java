@@ -8,18 +8,36 @@ import java.math.BigDecimal;
 public interface PaymentChannel {
     PaymentIntentResult createIntent(OrderRow order, PaymentRow payment);
     PaymentNotifyResult verifyWebhook(HttpServletRequest rawRequest);
+
+    default ChannelWebhookResult verifyWebhookEvent(HttpServletRequest rawRequest) {
+        PaymentNotifyResult result = verifyWebhook(rawRequest);
+        return result == null || !result.success()
+                ? ChannelWebhookResult.ignored()
+                : ChannelWebhookResult.paymentSucceeded(
+                        result.orderNo(), result.channelTxn(), result.amount());
+    }
     boolean supports(String region, String channel);
 
     /**
      * Issue a refund for {@code amount} against the original {@code payment}.
      * <p>Implementations MUST fail-closed: any channel error propagates so the
-     * caller's {@code @Transactional} audit approval rolls back, never leaving
-     * the DB in an approved-but-not-refunded state.
+     * caller can persist a succeeded, pending or failed channel state. Transport
+     * errors and indeterminate responses still propagate so the audit remains
+     * fail-closed.
      *
      * @param payment the original captured payment (carries {@code channel} + {@code channelTxn})
      * @param amount  refund amount in major units (same currency/scale as the payment)
      * @param reason  human-readable refund reason, may be blank
      * @return channel refund receipt (channel, channel refund txn id, amount, success)
      */
-    RefundResult refund(PaymentRow payment, BigDecimal amount, String reason);
+    RefundResult refund(
+            PaymentRow payment,
+            BigDecimal amount,
+            String reason,
+            String idempotencyKey
+    );
+
+    default RefundResult queryRefund(String refundTxn) {
+        throw new UnsupportedOperationException("当前支付渠道不支持主动查询退款");
+    }
 }

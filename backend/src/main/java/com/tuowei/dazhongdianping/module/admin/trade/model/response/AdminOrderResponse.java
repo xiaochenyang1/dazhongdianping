@@ -35,6 +35,10 @@ public record AdminOrderResponse(
         String refundReason,
         Integer refundStatus,
         String refundStatusText,
+        String refundChannel,
+        String refundChannelRefundTxn,
+        String refundChannelStatus,
+        String refundChannelFailureReason,
         String refundAuditReason,
         String refundAuditedAt,
         String refundCreatedAt

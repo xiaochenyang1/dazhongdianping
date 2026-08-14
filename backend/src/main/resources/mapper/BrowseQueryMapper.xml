@@ -154,6 +154,23 @@
         <if test="openNow != null">
             AND s.open_now = #{openNow}
         </if>
+        <if test="sort == 'distance'">
+            AND s.latitude IS NOT NULL
+            AND s.longitude IS NOT NULL
+        </if>
+        <if test="north != null and south != null and east != null and west != null">
+            AND s.latitude IS NOT NULL
+            AND s.longitude IS NOT NULL
+            AND s.latitude BETWEEN #{south} AND #{north}
+            <choose>
+                <when test="west &lt;= east">
+                    AND s.longitude BETWEEN #{west} AND #{east}
+                </when>
+                <otherwise>
+                    AND (s.longitude <![CDATA[>=]]> #{west} OR s.longitude <![CDATA[<=]]> #{east})
+                </otherwise>
+            </choose>
+        </if>
     </sql>
 
     <sql id="activeShopGeoJoins">
@@ -184,6 +201,20 @@
                s.price_per_capita,
                s.currency,
                s.address,
+               s.latitude,
+               s.longitude,
+               <choose>
+                   <when test="lat != null and lng != null">
+                       2 * 6371000 * ASIN(LEAST(1, SQRT(
+                           POWER(SIN(RADIANS(s.latitude - #{lat}) / 2), 2)
+                           + COS(RADIANS(#{lat})) * COS(RADIANS(s.latitude))
+                           * POWER(SIN(RADIANS(s.longitude - #{lng}) / 2), 2)
+                       ))) AS distance_meters,
+                   </when>
+                   <otherwise>
+                       NULL AS distance_meters,
+                   </otherwise>
+               </choose>
                a.name AS area_name,
                c.name AS city_name,
                cat.name AS category_name,
@@ -201,7 +232,7 @@
                 ORDER BY s.has_deal DESC, s.score DESC, s.id DESC
             </when>
             <when test="sort == 'distance'">
-                ORDER BY a.sort_no ASC, s.id ASC
+                ORDER BY distance_meters ASC, s.id ASC
             </when>
             <otherwise>
                 ORDER BY s.has_deal DESC, s.score DESC, s.id DESC

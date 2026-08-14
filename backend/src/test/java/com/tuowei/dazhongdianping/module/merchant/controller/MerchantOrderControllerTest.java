@@ -80,7 +80,7 @@ class MerchantOrderControllerTest {
                 Integer.class,
                 "%/user/orders/" + order.orderId() + "%"
         ));
-        assertEquals("退款已通过", jdbc.queryForObject(
+        assertEquals("退款已到账", jdbc.queryForObject(
                 "SELECT title FROM user_notification WHERE type='order.refund.result' AND link_url LIKE ? ORDER BY id DESC LIMIT 1",
                 String.class,
                 "%/user/orders/" + order.orderId() + "%"

@@ -54,6 +54,8 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (16, 'data:shop:import', '导入门店数据', 'data', 2, 1),
     (17, 'data:import_batch:read', '查看导入批次', 'data', 1, 1),
     (18, 'data:search_index:write', '重建搜索索引', 'data', 2, 1),
+    (60, 'data:search_index:read', '查看搜索同步任务', 'data', 1, 1),
+    (61, 'system:health:read', '查看系统健康状态', 'system', 1, 1),
     (19, 'operations:rank:read', '查看榜单规则', 'operations', 1, 1),
     (20, 'operations:rank:write', '维护榜单规则', 'operations', 2, 1),
     (21, 'operations:growth:read', '查看成长规则', 'operations', 1, 1),
@@ -105,7 +107,7 @@ INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59),
     (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57),
-    (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49);
+    (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49), (5, 60);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
     (1001, 'merchant_cn_hotpot@example.com', '沪上渝里餐饮', '王磊', '13800000001', 'CN', 1, 1, FALSE),

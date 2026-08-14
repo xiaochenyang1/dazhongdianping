@@ -17,6 +17,9 @@ public interface VerificationCodeProvider {
 
     boolean isConfigured();
 
+    /** @return 是否支持指定目标:targetType 1=email,2=phone。 */
+    boolean supports(String target, int targetType);
+
     /**
      * 发送验证码。
      *

@@ -12,6 +12,7 @@ public class ShopListRow {
     private Long areaId;
     private Double latitude;
     private Double longitude;
+    private Double distanceMeters;
     private String name;
     private String coverUrl;
     private BigDecimal score;

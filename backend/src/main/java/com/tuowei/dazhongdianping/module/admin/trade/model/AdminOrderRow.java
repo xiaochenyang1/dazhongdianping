@@ -34,6 +34,10 @@ public class AdminOrderRow {
     private BigDecimal refundAmount;
     private String refundReason;
     private Integer refundStatus;
+    private String refundChannel;
+    private String refundChannelRefundTxn;
+    private String refundChannelStatus;
+    private String refundChannelFailureReason;
     private String refundAuditReason;
     private LocalDateTime refundAuditedAt;
     private LocalDateTime refundCreatedAt;

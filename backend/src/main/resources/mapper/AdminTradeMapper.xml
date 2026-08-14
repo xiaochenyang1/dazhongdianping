@@ -101,6 +101,10 @@
                r.amount AS refund_amount,
                r.reason AS refund_reason,
                r.status AS refund_status,
+               r.channel AS refund_channel,
+               r.channel_refund_txn AS refund_channel_refund_txn,
+               r.channel_status AS refund_channel_status,
+               r.channel_failure_reason AS refund_channel_failure_reason,
                r.audit_reason AS refund_audit_reason,
                r.audited_at AS refund_audited_at,
                r.created_at AS refund_created_at
@@ -126,7 +130,9 @@
     </select>
 
     <select id="selectRefundByOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">
-        SELECT id, order_id, coupon_id, amount, reason, status, audit_by, audit_reason, audited_at, created_at
+        SELECT id, order_id, coupon_id, amount, reason, status, audit_by, audit_reason,
+               channel, channel_refund_txn, channel_status, channel_failure_reason,
+               audited_at, created_at
         FROM refund
         WHERE order_id = #{orderId}
     </select>
@@ -134,6 +140,13 @@
     <update id="approveRefund">
         UPDATE refund
         SET status = 1, audit_by = #{adminId}, audit_reason = #{reason},
+            audited_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = #{orderId} AND status = 0
+    </update>
+
+    <update id="markRefundProcessing">
+        UPDATE refund
+        SET status = 3, audit_by = #{adminId}, audit_reason = #{reason},
             audited_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
         WHERE order_id = #{orderId} AND status = 0
     </update>
@@ -162,4 +175,122 @@
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{dealId}
     </update>
+
+    <select id="selectStatementBatchByHash" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.ChannelStatementBatchRow">
+        SELECT id,admin_id,region,channel,file_name,file_sha256,total_rows,matched_rows,discrepancy_rows,
+               unmatched_rows,invalid_rows,ignored_rows,status,created_at,updated_at
+        FROM channel_statement_batch
+        WHERE region=#{region} AND channel=#{channel} AND file_sha256=#{fileSha256}
+        LIMIT 1
+    </select>
+
+    <insert id="insertStatementBatch" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO channel_statement_batch(
+            admin_id,region,channel,file_name,file_sha256,total_rows,matched_rows,discrepancy_rows,
+            unmatched_rows,invalid_rows,ignored_rows,status
+        ) VALUES (
+            #{adminId},#{region},#{channel},#{fileName},#{fileSha256},#{totalRows},#{matchedRows},#{discrepancyRows},
+            #{unmatchedRows},#{invalidRows},#{ignoredRows},#{status}
+        )
+    </insert>
+
+    <update id="updateStatementBatchSummary">
+        UPDATE channel_statement_batch
+        SET total_rows=#{totalRows},matched_rows=#{matchedRows},discrepancy_rows=#{discrepancyRows},
+            unmatched_rows=#{unmatchedRows},invalid_rows=#{invalidRows},ignored_rows=#{ignoredRows},
+            status=#{status},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id}
+    </update>
+
+    <insert id="insertStatementItem">
+        INSERT INTO channel_statement_item(
+            batch_id,line_no,transaction_type,channel_transaction_id,amount,currency,channel_status,
+            occurred_at,order_no,local_biz_type,local_biz_id,local_amount,local_currency,local_status,
+            reconcile_status,discrepancy_reason,raw_data
+        ) VALUES (
+            #{batchId},#{lineNo},#{transactionType},#{channelTransactionId},#{amount},#{currency},#{channelStatus},
+            #{occurredAt},#{orderNo},#{localBizType},#{localBizId},#{localAmount},#{localCurrency},#{localStatus},
+            #{reconcileStatus},#{discrepancyReason},#{rawData}
+        )
+    </insert>
+
+    <select id="selectStatementMatch" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.ChannelStatementMatchRow">
+        SELECT 'payment' AS biz_type,p.id AS biz_id,p.order_id,o.order_no,p.amount,p.currency,p.status,
+               p.channel_txn AS channel_transaction_id
+        FROM payment p
+        JOIN `order` o ON o.id=p.order_id
+        WHERE o.region=#{region} AND p.channel=#{channel} AND p.channel_txn=#{channelTransactionId}
+        UNION ALL
+        SELECT 'refund' AS biz_type,r.id AS biz_id,r.order_id,o.order_no,r.amount,o.currency,r.status,
+               r.channel_refund_txn AS channel_transaction_id
+        FROM refund r
+        JOIN `order` o ON o.id=r.order_id
+        WHERE o.region=#{region} AND r.channel=#{channel} AND r.channel_refund_txn=#{channelTransactionId}
+        LIMIT 1
+    </select>
+
+    <select id="selectStatementMatchByOrderNo" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.ChannelStatementMatchRow">
+        <choose>
+            <when test="bizType == 'refund'">
+                SELECT 'refund' AS biz_type,r.id AS biz_id,r.order_id,o.order_no,r.amount,o.currency,r.status,
+                       r.channel_refund_txn AS channel_transaction_id
+                FROM refund r
+                JOIN `order` o ON o.id=r.order_id
+                WHERE o.region=#{region} AND r.channel=#{channel} AND o.order_no=#{orderNo}
+                ORDER BY r.id DESC
+                LIMIT 1
+            </when>
+            <otherwise>
+                SELECT 'payment' AS biz_type,p.id AS biz_id,p.order_id,o.order_no,p.amount,p.currency,p.status,
+                       p.channel_txn AS channel_transaction_id
+                FROM payment p
+                JOIN `order` o ON o.id=p.order_id
+                WHERE o.region=#{region} AND p.channel=#{channel} AND o.order_no=#{orderNo}
+                ORDER BY p.id DESC
+                LIMIT 1
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="countStatementBatches" resultType="long">
+        SELECT COUNT(1) FROM channel_statement_batch WHERE region=#{region}
+    </select>
+
+    <select id="selectStatementBatches" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.ChannelStatementBatchRow">
+        SELECT id,admin_id,region,channel,file_name,file_sha256,total_rows,matched_rows,discrepancy_rows,
+               unmatched_rows,invalid_rows,ignored_rows,status,created_at,updated_at
+        FROM channel_statement_batch
+        WHERE region=#{region}
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectStatementBatchById" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.ChannelStatementBatchRow">
+        SELECT id,admin_id,region,channel,file_name,file_sha256,total_rows,matched_rows,discrepancy_rows,
+               unmatched_rows,invalid_rows,ignored_rows,status,created_at,updated_at
+        FROM channel_statement_batch
+        WHERE id=#{batchId} AND region=#{region}
+    </select>
+
+    <select id="countStatementItems" resultType="long">
+        SELECT COUNT(1)
+        FROM channel_statement_item
+        WHERE batch_id=#{batchId}
+        <if test="reconcileStatus != null and reconcileStatus != ''">
+            AND reconcile_status=#{reconcileStatus}
+        </if>
+    </select>
+
+    <select id="selectStatementItems" resultType="com.tuowei.dazhongdianping.module.admin.trade.model.ChannelStatementItemRow">
+        SELECT id,batch_id,line_no,transaction_type,channel_transaction_id,amount,currency,channel_status,
+               occurred_at,order_no,local_biz_type,local_biz_id,local_amount,local_currency,local_status,
+               reconcile_status,discrepancy_reason,created_at
+        FROM channel_statement_item
+        WHERE batch_id=#{batchId}
+        <if test="reconcileStatus != null and reconcileStatus != ''">
+            AND reconcile_status=#{reconcileStatus}
+        </if>
+        ORDER BY line_no,id
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
 </mapper>

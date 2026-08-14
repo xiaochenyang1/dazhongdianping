@@ -1,0 +1,45 @@
+-- Stripe 渠道账单导入与差异核对。只保存核对结果，不自动修改支付、退款或订单状态。
+CREATE TABLE `channel_statement_batch` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `admin_id` BIGINT UNSIGNED NOT NULL,
+  `region` VARCHAR(8) NOT NULL,
+  `channel` VARCHAR(32) NOT NULL,
+  `file_name` VARCHAR(255) NOT NULL,
+  `file_sha256` CHAR(64) NOT NULL,
+  `total_rows` INT UNSIGNED NOT NULL DEFAULT 0,
+  `matched_rows` INT UNSIGNED NOT NULL DEFAULT 0,
+  `discrepancy_rows` INT UNSIGNED NOT NULL DEFAULT 0,
+  `unmatched_rows` INT UNSIGNED NOT NULL DEFAULT 0,
+  `invalid_rows` INT UNSIGNED NOT NULL DEFAULT 0,
+  `ignored_rows` INT UNSIGNED NOT NULL DEFAULT 0,
+  `status` TINYINT NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_channel_statement_file` (`region`,`channel`,`file_sha256`),
+  KEY `idx_channel_statement_batch_region` (`region`,`created_at`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `channel_statement_item` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `batch_id` BIGINT UNSIGNED NOT NULL,
+  `line_no` INT UNSIGNED NOT NULL,
+  `transaction_type` VARCHAR(32) NOT NULL DEFAULT '',
+  `channel_transaction_id` VARCHAR(128) NOT NULL DEFAULT '',
+  `amount` DECIMAL(12,2) DEFAULT NULL,
+  `currency` CHAR(3) NOT NULL DEFAULT '',
+  `channel_status` VARCHAR(32) NOT NULL DEFAULT '',
+  `occurred_at` VARCHAR(64) NOT NULL DEFAULT '',
+  `order_no` VARCHAR(32) NOT NULL DEFAULT '',
+  `local_biz_type` VARCHAR(16) NOT NULL DEFAULT '',
+  `local_biz_id` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `local_amount` DECIMAL(12,2) DEFAULT NULL,
+  `local_currency` CHAR(3) NOT NULL DEFAULT '',
+  `local_status` TINYINT DEFAULT NULL,
+  `reconcile_status` VARCHAR(16) NOT NULL,
+  `discrepancy_reason` VARCHAR(255) NOT NULL DEFAULT '',
+  `raw_data` JSON DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_channel_statement_item_batch` (`batch_id`,`reconcile_status`,`line_no`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

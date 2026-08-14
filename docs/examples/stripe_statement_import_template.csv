@@ -1,0 +1,3 @@
+type,payment_intent_id,refund_id,amount,currency,status,created_utc,order_no
+payment,pi_example_payment,,12.50,EUR,succeeded,2026-08-13 09:00:00,OD_EXAMPLE_PAYMENT
+refund,,re_example_refund,-12.50,EUR,succeeded,2026-08-13 10:00:00,OD_EXAMPLE_PAYMENT
