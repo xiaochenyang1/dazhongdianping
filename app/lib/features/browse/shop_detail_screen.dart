@@ -14,6 +14,12 @@ import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+typedef ShopNavigationLauncher = Future<bool> Function(Uri uri);
+
+Future<bool> _launchShopNavigation(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
 
 class ShopDetailScreen extends StatefulWidget {
   const ShopDetailScreen({
@@ -26,6 +32,7 @@ class ShopDetailScreen extends StatefulWidget {
     this.thirdPartyConfig = const ThirdPartyConfig(),
     this.enableFavorite = true,
     this.canInteractReviews = false,
+    this.navigationLauncher,
   });
   final BrowseRepository repository;
   final int shopId;
@@ -35,6 +42,7 @@ class ShopDetailScreen extends StatefulWidget {
   final ThirdPartyConfig thirdPartyConfig;
   final bool enableFavorite;
   final bool canInteractReviews;
+  final ShopNavigationLauncher? navigationLauncher;
 
   @override
   State<ShopDetailScreen> createState() => _ShopDetailScreenState();
@@ -51,6 +59,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   bool _reloadingDetail = false;
   bool _reloadingReviewPreviews = false;
   bool _reloadingSimilar = false;
+  bool _openingNavigation = false;
 
   @override
   void initState() {
@@ -187,20 +196,48 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
         sharePositionOrigin: sharePositionOrigin,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.shareCopied)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.shareCopied)));
     } catch (_) {
       // No native share target on this platform (e.g. a desktop/headless
       // environment without a registered handler): fall back to the clipboard
       // so the user can still paste the link instead of losing the action.
       await Clipboard.setData(ClipboardData(text: shareText));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.shareCopied)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.shareCopied)));
     } finally {
       if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  Future<void> _openNavigation(ShopDetail shop) async {
+    if (_openingNavigation) return;
+    setState(() => _openingNavigation = true);
+    final strings = AppLocalizations.of(context);
+    final uri = widget.thirdPartyConfig.googleMapsDirectionsUri(
+      address: shop.address,
+      latitude: shop.latitude,
+      longitude: shop.longitude,
+    );
+    try {
+      final launched =
+          await (widget.navigationLauncher ?? _launchShopNavigation)(uri);
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(strings.navigationOpenFailed)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(strings.navigationOpenFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _openingNavigation = false);
     }
   }
 
@@ -268,7 +305,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     errorBuilder: (context, error, stack) => Container(
                       key: const Key('shop-cover-fallback'),
                       height: 200,
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       alignment: Alignment.center,
                       child: Text(strings.shopCoverPlaceholder),
                     ),
@@ -279,7 +318,9 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   key: const Key('shop-cover-fallback'),
                   height: 200,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
@@ -325,6 +366,25 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 title: strings.address,
                 value: shop.address,
               ),
+              if (widget.thirdPartyConfig.googleMapsEnabled &&
+                  (shop.latitude != null ||
+                      shop.address.trim().isNotEmpty)) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('shop-navigation-button'),
+                    onPressed: _openingNavigation
+                        ? null
+                        : () => _openNavigation(shop),
+                    icon: const Icon(Icons.directions_outlined),
+                    label: Text(
+                      _openingNavigation
+                          ? strings.openingNavigation
+                          : strings.navigateToShop,
+                    ),
+                  ),
+                ),
+              ],
               _InfoTile(
                 icon: Icons.schedule_outlined,
                 title: strings.openingHours,
@@ -765,16 +825,12 @@ class _RecommendedDishesSection extends StatelessWidget {
             child: ListTile(
               leading: const Icon(Icons.restaurant_menu),
               title: Text(dish.name),
-              subtitle: dish.recommendReason == null ||
-                      dish.recommendReason!.isEmpty
+              subtitle:
+                  dish.recommendReason == null || dish.recommendReason!.isEmpty
                   ? null
                   : Text(strings.dishRecommendReason(dish.recommendReason!)),
               trailing: Text(
-                formatMoney(
-                  dish.price,
-                  '',
-                  locale: strings.tag,
-                ),
+                formatMoney(dish.price, '', locale: strings.tag),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -828,9 +884,7 @@ class _ShopGallerySection extends StatelessWidget {
                 photo.imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stack) => Container(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: const Icon(Icons.broken_image_outlined),
                 ),
               ),

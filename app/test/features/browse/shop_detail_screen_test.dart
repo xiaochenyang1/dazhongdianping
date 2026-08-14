@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -102,8 +103,11 @@ class DetailFakeRepository extends BrowseRepository {
       businessHours: '09:00-21:00',
       summary: 'Tea and snacks',
       tags: ['Chinese-friendly'],
-      coverUrl:
-          withCover ? 'https://cdn.example.com/berlin-tea-cover.jpg' : null,
+      latitude: 52.5219,
+      longitude: 13.4132,
+      coverUrl: withCover
+          ? 'https://cdn.example.com/berlin-tea-cover.jpg'
+          : null,
       tasteScore: 4.6,
       envScore: 4.4,
       serviceScore: 4.5,
@@ -549,74 +553,78 @@ void main() {
     expect(find.text('Berlin Tea'), findsOneWidget);
   });
 
-  testWidgets('shop detail renders cover image, score breakdown, dishes and gallery', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ShopDetailScreen(
-          repository: DetailFakeRepository(
-            withCover: true,
-            withDishes: true,
-            withPhotos: true,
+  testWidgets(
+    'shop detail renders cover image, score breakdown, dishes and gallery',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ShopDetailScreen(
+            repository: DetailFakeRepository(
+              withCover: true,
+              withDishes: true,
+              withPhotos: true,
+            ),
+            shopId: 7,
           ),
-          shopId: 7,
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    // Cover image from the fake repository.
-    expect(find.byKey(const Key('shop-cover-image')), findsOneWidget);
-    // Score breakdown renders the three sub-scores.
-    expect(find.byKey(const Key('shop-score-breakdown')), findsOneWidget);
-    expect(find.textContaining('口味 4.6'), findsOneWidget);
-    expect(find.textContaining('环境 4.4'), findsOneWidget);
-    expect(find.textContaining('服务 4.5'), findsOneWidget);
-    // Recommended dishes + gallery live below the fold; scroll them into view.
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('shop-recommended-dishes')),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.byKey(const Key('shop-recommended-dishes')), findsOneWidget);
-    expect(find.text('Jasmine Cake'), findsOneWidget);
-    expect(find.textContaining('Pairs with the house blend'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('shop-gallery')),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.byKey(const Key('shop-gallery')), findsOneWidget);
-  });
+      );
+      await tester.pumpAndSettle();
+      // Cover image from the fake repository.
+      expect(find.byKey(const Key('shop-cover-image')), findsOneWidget);
+      // Score breakdown renders the three sub-scores.
+      expect(find.byKey(const Key('shop-score-breakdown')), findsOneWidget);
+      expect(find.textContaining('口味 4.6'), findsOneWidget);
+      expect(find.textContaining('环境 4.4'), findsOneWidget);
+      expect(find.textContaining('服务 4.5'), findsOneWidget);
+      // Recommended dishes + gallery live below the fold; scroll them into view.
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('shop-recommended-dishes')),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.byKey(const Key('shop-recommended-dishes')), findsOneWidget);
+      expect(find.text('Jasmine Cake'), findsOneWidget);
+      expect(find.textContaining('Pairs with the house blend'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('shop-gallery')),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.byKey(const Key('shop-gallery')), findsOneWidget);
+    },
+  );
 
-  testWidgets('shop detail degrades gracefully when cover, dishes and photos are absent', (tester) async {
-    final repo = DetailFakeRepository(
-      withCover: false,
-      withDishes: false,
-      withPhotos: false,
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ShopDetailScreen(repository: repo, shopId: 7),
-      ),
-    );
-    await tester.pumpAndSettle();
-    // No cover URL → placeholder container, never an empty Image.network.
-    expect(find.byKey(const Key('shop-cover-fallback')), findsOneWidget);
-    expect(find.byKey(const Key('shop-cover-image')), findsNothing);
-    // Empty dishes / gallery render their missing-state copy below the fold;
-    // scroll each into view before asserting.
-    await tester.scrollUntilVisible(
-      find.textContaining('推荐菜'),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.scrollUntilVisible(
-      find.textContaining('门店相册'),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.textContaining('推荐菜'), findsOneWidget);
-    expect(find.textContaining('门店相册'), findsOneWidget);
-  });
+  testWidgets(
+    'shop detail degrades gracefully when cover, dishes and photos are absent',
+    (tester) async {
+      final repo = DetailFakeRepository(
+        withCover: false,
+        withDishes: false,
+        withPhotos: false,
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: ShopDetailScreen(repository: repo, shopId: 7)),
+      );
+      await tester.pumpAndSettle();
+      // No cover URL → placeholder container, never an empty Image.network.
+      expect(find.byKey(const Key('shop-cover-fallback')), findsOneWidget);
+      expect(find.byKey(const Key('shop-cover-image')), findsNothing);
+      // Empty dishes / gallery render their missing-state copy below the fold;
+      // scroll each into view before asserting.
+      await tester.scrollUntilVisible(
+        find.textContaining('推荐菜'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.scrollUntilVisible(
+        find.textContaining('门店相册'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('推荐菜'), findsOneWidget);
+      expect(find.textContaining('门店相册'), findsOneWidget);
+    },
+  );
 
   testWidgets('shop detail opens the review editor for signed-in users', (
     tester,
@@ -801,6 +809,55 @@ void main() {
     expect(args['text'], contains('https://local.life/shops/7'));
     expect(args['subject'], 'Berlin Tea');
     expect(find.text('分享文案已复制'), findsOneWidget);
+  });
+
+  testWidgets('shop detail opens Google Maps directions with coordinates', (
+    tester,
+  ) async {
+    Uri? openedUri;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(
+          repository: DetailFakeRepository(),
+          shopId: 7,
+          thirdPartyConfig: const ThirdPartyConfig(
+            googleMapsApiKey: 'AIza-fake-test-key',
+          ),
+          navigationLauncher: (uri) async {
+            openedUri = uri;
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('shop-navigation-button')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('shop-navigation-button')));
+    await tester.pumpAndSettle();
+
+    expect(openedUri, isNotNull);
+    expect(openedUri!.host, 'www.google.com');
+    expect(openedUri!.path, '/maps/dir/');
+    expect(openedUri!.queryParameters['destination'], '52.5219,13.4132');
+    expect(openedUri!.queryParameters['travelmode'], 'driving');
+  });
+
+  testWidgets('shop detail hides navigation without Google Maps config', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(repository: DetailFakeRepository(), shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('shop-navigation-button')), findsNothing);
   });
 
   testWidgets('shop detail guards duplicate share copies', (tester) async {

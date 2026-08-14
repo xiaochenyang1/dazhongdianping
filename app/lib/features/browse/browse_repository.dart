@@ -20,6 +20,10 @@ class ShopSummary {
     required this.score,
     required this.currency,
     required this.pricePerCapita,
+    this.address = '',
+    this.latitude,
+    this.longitude,
+    this.distanceMeters,
     this.merchantCertificationCode,
     this.merchantCertificationLabel,
   });
@@ -29,6 +33,10 @@ class ShopSummary {
   final double score;
   final String currency;
   final num pricePerCapita;
+  final String address;
+  final double? latitude;
+  final double? longitude;
+  final double? distanceMeters;
   final String? merchantCertificationCode;
   final String? merchantCertificationLabel;
 
@@ -41,6 +49,10 @@ class ShopSummary {
       score: (json['score'] as num? ?? 0).toDouble(),
       currency: json['currency'] as String? ?? 'EUR',
       pricePerCapita: json['pricePerCapita'] as num? ?? 0,
+      address: json['address'] as String? ?? '',
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
       merchantCertificationCode: certification.code,
       merchantCertificationLabel: certification.label,
     );
@@ -330,6 +342,8 @@ class ShopDetail {
     required this.businessHours,
     required this.summary,
     required this.tags,
+    this.latitude,
+    this.longitude,
     this.coverUrl,
     this.tasteScore = 0,
     this.envScore = 0,
@@ -351,6 +365,8 @@ class ShopDetail {
   final String businessHours;
   final String summary;
   final List<String> tags;
+  final double? latitude;
+  final double? longitude;
   final String? coverUrl;
   final double tasteScore;
   final double envScore;
@@ -376,6 +392,8 @@ class ShopDetail {
       tags: (json['tags'] as List<dynamic>? ?? const [])
           .map((item) => '$item')
           .toList(),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       coverUrl: json['coverUrl'] as String?,
       tasteScore: (json['tasteScore'] as num? ?? 0).toDouble(),
       envScore: (json['envScore'] as num? ?? 0).toDouble(),
@@ -395,6 +413,21 @@ class ShopDetail {
 
 abstract class BrowseRepository {
   Future<List<ShopSummary>> loadFeaturedShops();
+  Future<List<ShopSummary>> loadMapShops() => loadFeaturedShops();
+  Future<List<ShopSummary>> loadNearbyMapShops({
+    required double latitude,
+    required double longitude,
+  }) => loadMapShops();
+  Future<List<ShopSummary>> loadMapShopsInBounds({
+    required double north,
+    required double south,
+    required double east,
+    required double west,
+    double? latitude,
+    double? longitude,
+  }) => latitude == null || longitude == null
+      ? loadMapShops()
+      : loadNearbyMapShops(latitude: latitude, longitude: longitude);
   Future<List<ShopSummary>> searchShops(String keyword) =>
       throw UnimplementedError();
   Future<ShopSearchPage> searchShopPage(
@@ -490,6 +523,60 @@ class ApiBrowseRepository implements BrowseRepository {
       '/api/c/v1/shops',
       query: const {'page': 1, 'pageSize': 12},
     );
+    final list = result['list'] as List<dynamic>? ?? const [];
+    return list.cast<Map<String, dynamic>>().map(ShopSummary.fromJson).toList();
+  }
+
+  @override
+  Future<List<ShopSummary>> loadMapShops() async {
+    final result = await client.getJson(
+      '/api/c/v1/shops',
+      query: const {'page': 1, 'pageSize': 50},
+    );
+    final list = result['list'] as List<dynamic>? ?? const [];
+    return list.cast<Map<String, dynamic>>().map(ShopSummary.fromJson).toList();
+  }
+
+  @override
+  Future<List<ShopSummary>> loadNearbyMapShops({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final result = await client.getJson(
+      '/api/c/v1/shops',
+      query: {
+        'sort': 'distance',
+        'lat': latitude,
+        'lng': longitude,
+        'page': 1,
+        'pageSize': 50,
+      },
+    );
+    final list = result['list'] as List<dynamic>? ?? const [];
+    return list.cast<Map<String, dynamic>>().map(ShopSummary.fromJson).toList();
+  }
+
+  @override
+  Future<List<ShopSummary>> loadMapShopsInBounds({
+    required double north,
+    required double south,
+    required double east,
+    required double west,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final query = <String, Object>{
+      'north': north,
+      'south': south,
+      'east': east,
+      'west': west,
+      'page': 1,
+      'pageSize': 50,
+    };
+    if (latitude != null && longitude != null) {
+      query.addAll({'sort': 'distance', 'lat': latitude, 'lng': longitude});
+    }
+    final result = await client.getJson('/api/c/v1/shops', query: query);
     final list = result['list'] as List<dynamic>? ?? const [];
     return list.cast<Map<String, dynamic>>().map(ShopSummary.fromJson).toList();
   }

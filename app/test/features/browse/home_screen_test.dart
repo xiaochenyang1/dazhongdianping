@@ -22,6 +22,9 @@ class FakeBrowseRepository extends BrowseRepository {
       score: 4.8,
       currency: 'GBP',
       pricePerCapita: 35,
+      address: '10 Gerrard Street, London',
+      latitude: 51.5117,
+      longitude: -0.1318,
     ),
   ];
 }
@@ -444,13 +447,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('home-map-action')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    // The map screen itself is not built yet; the action honestly tells the
-    // user the feature is coming soon rather than implying it is ready.
-    expect(
-      find.text('Map shop discovery is coming soon. Stay tuned.'),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('shop-google-map')), findsOneWidget);
+    expect(find.byKey(const Key('shop-map-selected-card')), findsOneWidget);
+    expect(find.text('London Hotpot'), findsWidgets);
   });
 }
