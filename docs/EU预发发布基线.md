@@ -57,4 +57,4 @@ set +a
 - GitHub 当前只有一个未配置 variables/secrets 的 `test` Environment；`pre`、`prod` 尚未创建。`mobile-release` 尚无运行记录，最近一次自动 `deploy-test` 也因配置检查未通过而跳过。
 - Google Maps 仍是明确延期项，不影响本轮 EU 列表浏览验收。
 
-对应的代码级支付状态见 [`STRIPE_PAYMENT_STATUS.md`](STRIPE_PAYMENT_STATUS.md)，完整功能矩阵见 [`当前已完成功能与SQL导入说明.md`](当前已完成功能与SQL导入说明.md) §2.2。
+对应的代码级支付状态见 [`STRIPE_PAYMENT_STATUS.md`](STRIPE_PAYMENT_STATUS.md)，真实环境填值清单见 [`EU预发环境配置清单.md`](EU预发环境配置清单.md)，完整功能矩阵见 [`当前已完成功能与SQL导入说明.md`](当前已完成功能与SQL导入说明.md) §2.2。
