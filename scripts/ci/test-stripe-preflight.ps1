@@ -9,6 +9,21 @@ if (-not (Test-Path -LiteralPath $envTemplatePath)) { throw 'EU pre-release envi
 
 $script = Get-Content -Raw -LiteralPath $scriptPath
 $template = Get-Content -Raw -LiteralPath $envTemplatePath
+$bash = (Get-Command bash -ErrorAction Stop).Source
+$previousTemplatePath = $env:DZDP_EU_ENV_TEMPLATE
+try {
+    $env:DZDP_EU_ENV_TEMPLATE = $envTemplatePath
+    & $bash -c 'set -a; source "$DZDP_EU_ENV_TEMPLATE"; set +a' 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'EU environment template must be sourceable by bash' }
+}
+finally {
+    if ($null -eq $previousTemplatePath) {
+        Remove-Item -LiteralPath 'Env:DZDP_EU_ENV_TEMPLATE' -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:DZDP_EU_ENV_TEMPLATE = $previousTemplatePath
+    }
+}
 foreach ($name in @(
     'APP_RUNTIME_MODE',
     'APP_AUTH_VERIFICATION_MOCK_ENABLED',
@@ -125,8 +140,6 @@ $contractEnvironment = [ordered]@{
     VITE_STRIPE_PUBLISHABLE_KEY = 'pk_' + 'test_contract'
 }
 $previousEnvironment = @{}
-$bash = (Get-Command bash -ErrorAction Stop).Source
-
 function Invoke-PreflightContract {
     & $bash $scriptPath 2>&1 | Out-Null
     return $LASTEXITCODE
