@@ -238,7 +238,7 @@ cd backend
 - Twilio 短信：启用 `APP_AUTH_VERIFICATION_TWILIO_ENABLED=true`，配置 `APP_AUTH_VERIFICATION_TWILIO_ACCOUNT_SID`、`APP_AUTH_VERIFICATION_TWILIO_AUTH_TOKEN`，并在 `APP_AUTH_VERIFICATION_TWILIO_FROM` 或 `APP_AUTH_VERIFICATION_TWILIO_MESSAGING_SERVICE_SID` 中至少提供一个发送方。手机号应使用供应商支持的国际格式。
 - 阿里云短信：启用 `APP_AUTH_VERIFICATION_ALIYUN_ENABLED=true`，配置 `APP_AUTH_VERIFICATION_ALIYUN_ACCESS_KEY_ID`、`APP_AUTH_VERIFICATION_ALIYUN_ACCESS_KEY_SECRET`、`APP_AUTH_VERIFICATION_ALIYUN_SIGN_NAME`、`APP_AUTH_VERIFICATION_ALIYUN_TEMPLATE_CODE`。模板参数固定为 `{"code":"验证码"}`；默认路由 `+86`，可通过 `APP_AUTH_VERIFICATION_ALIYUN_ROUTE_PREFIXES` 调整。
 - 短信路由：`APP_AUTH_VERIFICATION_TWILIO_ROUTE_PREFIXES` 默认 `*`，`APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES` 默认 `+86`，排除规则优先于允许规则；因此阿里云未配置时 `+86` 也会返回 503，不会降级到 Twilio。确需改变范围时可显式调整允许/排除前缀。
-- 两类 provider 都未配置时继续 fail-closed；`APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED` 只允许本地开发，`pre/prod` 会拒绝启动。
+- 两类 provider 都未配置时继续 fail-closed；`APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED` 只允许本地开发，`pre/prod` 会拒绝启动。EU 预发模板进一步把运行身份固定为 `pre`，显式关闭验证码 mock/回显/控制台通道，并要求 SMTP + STARTTLS 与覆盖国际号码的 Twilio 配置通过 `scripts/ci/stripe-preflight.sh` 门禁。
 
 ## 前端
 
@@ -552,4 +552,4 @@ npm run build
 1. `scripts/ci/mysql-smoke.ps1` 已于 `2026-07-12` 用临时 `MySQL 8` 实例 (`127.0.0.1:13306`) 实跑通过；宿主机 `MySQL80` 那套现成 root 凭证仍然不可用，但这已经不是仓库侧阻塞。后面如果你非要复用宿主机服务，先把凭证收拾明白。
 2. 给目标环境的 `MySQL / Redis / S3` 和部署目标机补齐真实环境凭证、SSH secrets，并把现有发布 / 回滚流水线真正跑到目标环境上。
 3. 用真实 FCM/APNs 凭证完成设备注册、前后台接收、失效 token 和重试 smoke，再推进真实支付（Stripe PaymentIntent/Refund 与 CSV 账单核对代码已打通，待补生产凭证、退款到账和真实账单 smoke）、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、认证商户号、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、关注流、私信、官方圈子和话题广场/热榜已经落地。
-4. PC Web 已支持按区域抓取真实公开数据快照；下一步把快照生成接入发布流水线并补真实域名/缓存策略，再评估是否需要常驻 SSR 服务。
+4. PC Web 真实公开数据快照已由 `package-release.ps1` 在配置 `PUBLIC_SITE_URL` / `PRERENDER_API_BASE_URL` 时自动接入发布包；下一步补真实域名/CDN 缓存与线上抓取验收，再按流量需求评估常驻 SSR。

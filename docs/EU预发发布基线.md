@@ -2,7 +2,7 @@
 
 更新时间：2026-08-14
 
-当前基线提交：`b5fbc9d`（`feat/flutter-share-native-sheet`）
+当前基线分支：`feat/eu-pre-release-hardening`。发布时必须使用通过 CI 的不可变提交 SHA 或标签，不在文档内维护会自我过期的“当前 HEAD”。
 
 ## 首发范围
 
@@ -37,20 +37,22 @@ set +a
 ./scripts/ci/stripe-preflight.sh --check-cli
 ```
 
-预发必须满足：Stripe test mode 开启、mock 支付关闭、Redis 状态存储、HTTPS S3 endpoint/public URL、明确的 Elasticsearch endpoint/index 且关闭 fallback、EU SEO 构建、HTTPS Web/API 地址和 WSS 通知地址。预检脚本会执行这些格式和模式检查，但不会输出密钥内容。
+预发必须满足：运行身份为严格 `pre`、Stripe test mode 开启、mock 支付关闭、验证码 mock/回显/控制台通道关闭、SMTP 邮件与 Twilio 国际短信均可配置、Redis 状态存储、HTTPS S3 endpoint/public URL、明确的 Elasticsearch endpoint/index 且关闭 fallback、EU SEO 构建、HTTPS Web/API 地址和 WSS 通知地址。SMTP 必须启用认证、STARTTLS 和健康检查；Twilio 必须覆盖国际号码并排除默认交给阿里云的 `+86`。阿里云在 EU 首发门禁中为可选 CN 通道，启用时才校验其 AccessKey、签名、模板和 `+86` 路由。预检脚本会执行这些格式和模式检查，但不会输出密钥内容。
 
 ## 通过条件
 
 1. 后端、三个 Web 前端和 Flutter 全量测试/构建通过。
 2. MySQL、Redis、S3、Elasticsearch smoke 通过。
-3. Stripe CLI 能把 `payment_intent.succeeded` 转发到后端，Webhook 验签通过并发券。
-4. 非法 Stripe 签名返回 `400`；EU Stripe 订单不能通过 `mock-complete` 绕过支付。
-5. EU/CN 区域隔离、订单幂等、退款失败回滚均通过。
-6. 发布包、SHA-256、部署 smoke 和回滚演练至少在 `test`/`pre` 环境各执行一次。
+3. SMTP 测试邮箱和至少一个欧洲手机号能真实收到验证码；无匹配通道时继续返回 `503`，不跨类型或跨号码范围回退。
+4. Stripe CLI 能把 `payment_intent.succeeded` 转发到后端，Webhook 验签通过并发券。
+5. 非法 Stripe 签名返回 `400`；EU Stripe 订单不能通过 `mock-complete` 绕过支付。
+6. EU/CN 区域隔离、订单幂等、退款失败回滚均通过。
+7. 发布包、SHA-256、部署 smoke 和回滚演练至少在 `test`/`pre` 环境各执行一次。
 
 ## 当前阻塞
 
 - 当前开发机没有 Stripe CLI 和真实 `sk_test_`、`pk_test_`、`whsec_` 凭证，真实支付验收无法在本地完成。
+- 没有可验收的 SMTP 发信域名/账号和 Twilio Account/Messaging Service，邮件与欧洲短信送达 smoke 无法在本地完成。
 - 没有目标机 SSH、数据库、Redis、S3、Elasticsearch 和域名配置，预发部署无法执行。
 - GitHub 当前只有一个未配置 variables/secrets 的 `test` Environment；`pre`、`prod` 尚未创建。`mobile-release` 尚无运行记录，最近一次自动 `deploy-test` 也因配置检查未通过而跳过。
 - Google Maps 仍是明确延期项，不影响本轮 EU 列表浏览验收。
