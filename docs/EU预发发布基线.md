@@ -1,6 +1,6 @@
 # EU 首发与预发发布基线
 
-更新时间：2026-08-14
+更新时间：2026-08-16
 
 当前基线分支：`feat/eu-pre-release-hardening`。发布时必须使用通过 CI 的不可变提交 SHA 或标签，不在文档内维护会自我过期的“当前 HEAD”。
 
@@ -54,7 +54,7 @@ set +a
 - 当前开发机没有 Stripe CLI 和真实 `sk_test_`、`pk_test_`、`whsec_` 凭证，真实支付验收无法在本地完成。
 - 没有可验收的 SMTP 发信域名/账号和 Twilio Account/Messaging Service，邮件与欧洲短信送达 smoke 无法在本地完成。
 - 没有目标机 SSH、数据库、Redis、S3、Elasticsearch 和域名配置，预发部署无法执行。
-- GitHub 当前只有一个未配置 variables/secrets 的 `test` Environment；`pre`、`prod` 尚未创建。`mobile-release` 尚无运行记录，最近一次自动 `deploy-test` 也因配置检查未通过而跳过。
+- GitHub 当前已有 `test` 和 `pre` Environment；`pre` 已写入 SSH 端口、四个服务名和数据库迁移模式等非敏感固定值，但目标机地址、发布目录、数据库 defaults 路径、Web/SEO URL 与 SSH secrets 仍未配置，`prod` 尚未创建。`mobile-release` 尚无运行记录，自动 `deploy-test` 在环境未配置完整时会按门禁跳过。
 - Google Maps 仍是明确延期项，不影响本轮 EU 列表浏览验收。
 
 对应的代码级支付状态见 [`STRIPE_PAYMENT_STATUS.md`](STRIPE_PAYMENT_STATUS.md)，真实环境填值清单见 [`EU预发环境配置清单.md`](EU预发环境配置清单.md)，完整功能矩阵见 [`当前已完成功能与SQL导入说明.md`](当前已完成功能与SQL导入说明.md) §2.2。

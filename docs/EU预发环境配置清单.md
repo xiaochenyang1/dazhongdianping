@@ -1,6 +1,6 @@
 # EU 预发环境配置清单
 
-更新时间：2026-08-15
+更新时间：2026-08-16
 
 当前候选基线以最新 `eu-pre-rc-*` tag 或通过 CI 的不可变提交 SHA 为准，不在本文内维护会过期的固定 SHA。
 
@@ -55,7 +55,7 @@ set +a
 
 ## 3. GitHub `pre` Environment
 
-当前远程仓库只存在 `test` Environment；正式预发前需要创建 `pre` Environment。
+当前远程仓库已创建 `pre` Environment，并已写入以下无需外部资源即可确定的固定变量：`DEPLOY_SSH_PORT=22`、四个默认服务名和 `DEPLOY_DB_MIGRATION_MODE=apply`。正式预发前仍需补齐下表中依赖目标环境的变量和 secrets。
 
 Variables：
 
@@ -103,4 +103,4 @@ Secrets：
 - 没有真实 Stripe test 凭证与 Stripe CLI 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
-- GitHub `pre`/`prod` Environment 尚未创建或配置。
+- GitHub `pre` Environment 已创建但尚未补齐目标机、数据库、Web/SEO 变量和 SSH secrets；`prod` Environment 尚未创建。
