@@ -29,8 +29,12 @@ Stripe test-mode 支付集成的代码实现已完成，所有单元测试通过
 - `MockPaymentChannelTest` - 6 tests ✓
 - `StripePaymentChannelTest` - 8 tests ✓
 - `PaymentChannelResolverTest` - 6 tests ✓
-- 所有 payment 相关测试通过 (20/20)
-- 全后端测试套件通过（当前基线 488 tests）
+- `TradeStripeIntegrationTest` - 3 tests ✓
+  - 覆盖签名通过后的 EU 订单支付成功、重复 webhook 幂等
+  - 覆盖非法 `Stripe-Signature` 返回 `400`
+  - 覆盖 `pay/mock-complete` 不能绕过真实 Stripe 订单
+- 所有 payment 相关测试通过 (23/23)
+- 全后端测试套件通过（当前基线 496 tests）
 
 ✅ **配置**
 ```yaml
