@@ -100,7 +100,7 @@ Secrets：
 
 ## 5. 当前阻塞
 
-- 没有真实 Stripe test 凭证与 Stripe CLI 验收结果。
+- Stripe CLI 1.50.1 已安装，但没有真实 Stripe test 凭证与 Stripe CLI 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
 - GitHub `pre` Environment 已创建但尚未补齐目标机、数据库、Web/SEO 变量和 SSH secrets；`prod` Environment 尚未创建。

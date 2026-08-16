@@ -51,7 +51,7 @@ set +a
 
 ## 当前阻塞
 
-- 当前开发机没有 Stripe CLI 和真实 `sk_test_`、`pk_test_`、`whsec_` 凭证，真实支付验收无法在本地完成。
+- 当前开发机已安装 Stripe CLI 1.50.1，但没有真实 `sk_test_`、`pk_test_`、`whsec_` 凭证和登录态，真实支付验收无法在本地完成。
 - 没有可验收的 SMTP 发信域名/账号和 Twilio Account/Messaging Service，邮件与欧洲短信送达 smoke 无法在本地完成。
 - 没有目标机 SSH、数据库、Redis、S3、Elasticsearch 和域名配置，预发部署无法执行。
 - GitHub 当前已有 `test` 和 `pre` Environment；`pre` 已写入 SSH 端口、四个服务名和数据库迁移模式等非敏感固定值，但目标机地址、发布目录、数据库 defaults 路径、Web/SEO URL 与 SSH secrets 仍未配置，`prod` 尚未创建。`mobile-release` 尚无运行记录，自动 `deploy-test` 在环境未配置完整时会按门禁跳过。
