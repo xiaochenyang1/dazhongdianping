@@ -1,6 +1,7 @@
 package com.tuowei.dazhongdianping;
 
 import com.tuowei.dazhongdianping.config.FileStorageProperties;
+import com.tuowei.dazhongdianping.config.CorsProperties;
 import com.tuowei.dazhongdianping.config.InfrastructureProperties;
 import com.tuowei.dazhongdianping.config.PrivacyProperties;
 import com.tuowei.dazhongdianping.config.PushProperties;
@@ -23,7 +24,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         VerificationCodeProperties.class,
         PrivacyProperties.class,
         SearchProperties.class,
-        PushProperties.class
+        PushProperties.class,
+        CorsProperties.class
 })
 public class DazhongDianpingBackendApplication {
 

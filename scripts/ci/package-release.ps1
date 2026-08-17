@@ -247,6 +247,7 @@ try {
     }
     $manifestPath = Join-Path $stagingDir "release-manifest.json"
     $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+    Set-Content -LiteralPath (Join-Path $stagingDir "release-version.txt") -Value $Version -Encoding ascii
 
     if (Test-Path -LiteralPath $bundlePath) {
         Remove-Item -LiteralPath $bundlePath -Force

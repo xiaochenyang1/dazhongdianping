@@ -1,5 +1,8 @@
 name: rollback
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:
@@ -43,16 +46,30 @@ jobs:
       DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
       DEPLOY_MERCHANT_SERVICE: ${{ vars.DEPLOY_MERCHANT_SERVICE }}
       DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
+      DEPLOY_RELEASE_RETENTION_COUNT: ${{ vars.DEPLOY_RELEASE_RETENTION_COUNT }}
       TARGET_VERSION: ${{ inputs.target_version }}
     steps:
+      - name: Check rollback configuration
+        shell: bash
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [[ -z "$DEPLOY_SSH_HOST" || -z "$DEPLOY_SSH_USER" || -z "$DEPLOY_REMOTE_ROOT" || -z "$DEPLOY_SMOKE_URLS" || -z "$DEPLOY_SSH_PRIVATE_KEY" || -z "$DEPLOY_KNOWN_HOSTS" ]]; then
+            echo "::error::The rollback environment is incomplete."
+            exit 1
+          fi
       - uses: actions/checkout@v5
       - name: Prepare SSH
         shell: bash
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
       - name: Roll back release
         shell: pwsh
         run: ./scripts/ci/rollback-release.ps1 -TargetVersion $env:TARGET_VERSION

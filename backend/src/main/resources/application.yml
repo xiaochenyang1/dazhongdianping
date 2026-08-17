@@ -96,6 +96,9 @@ app:
     password: ${APP_MERCHANT_PASSWORD:merchant123456}
     merchant-id: ${APP_MERCHANT_ID:2001}
     access-token-expire-seconds: ${APP_MERCHANT_ACCESS_TOKEN_EXPIRE_SECONDS:7200}
+  web:
+    cors:
+      allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
   auth:
     jwt-secret: ${APP_AUTH_JWT_SECRET:}
     access-token-expire-seconds: 7200

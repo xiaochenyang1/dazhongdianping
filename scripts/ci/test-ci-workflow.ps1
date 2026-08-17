@@ -18,6 +18,10 @@ Assert-True (Test-Path -LiteralPath $workflowPath) ".github/workflows/ci.yml mus
 
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 
+Assert-True ($workflow -match '(?ms)push:\s*branches:\s*- main\s*tags:\s*- "eu-pre-rc-\*"') "workflow must limit push verification to main and release-candidate tags"
+Assert-True ($workflow -match '(?ms)pull_request:\s*branches:\s*- main') "workflow must verify pull requests targeting main"
+Assert-True ($workflow -match '(?ms)concurrency:\s*group:\s*ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\s*cancel-in-progress:\s*true') "workflow must cancel superseded CI runs per branch or pull request"
+
 Assert-True ($workflow -match "verify-all\.ps1") "workflow must run scripts/ci/verify-all.ps1"
 Assert-True ($workflow -match "IncludeMysqlSmoke") "workflow must include the MySQL smoke gate"
 Assert-True ($workflow -match "IncludeStorageSmoke") "workflow must include the storage smoke gate"

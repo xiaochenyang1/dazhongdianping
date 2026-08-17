@@ -68,6 +68,7 @@ foreach ($name in @(
     'APP_SEARCH_FALLBACK_ON_ERROR',
     'APP_S3_PUBLIC_BASE_URL',
     'APP_PUSH_ENABLED',
+    'APP_CORS_ALLOWED_ORIGIN_PATTERNS',
     'VITE_WS_BASE_URL',
     'PRERENDER_REGION'
 )) {
@@ -132,6 +133,7 @@ $contractEnvironment = [ordered]@{
     APP_SEARCH_INDEX_NAME = 'dzdp_shop_eu_contract'
     APP_SEARCH_FALLBACK_ON_ERROR = 'false'
     APP_PUSH_ENABLED = 'false'
+    APP_CORS_ALLOWED_ORIGIN_PATTERNS = 'https://eu.example.com,https://admin.eu.example.com,https://merchant.eu.example.com'
     PUBLIC_SITE_URL = 'https://eu.example.com'
     PRERENDER_API_BASE_URL = 'https://api.eu.example.com'
     PRERENDER_REGION = 'EU'
@@ -201,6 +203,14 @@ try {
     $env:VITE_WS_BASE_URL = 'ws://api.eu.example.com/ws'
     if ((Invoke-PreflightContract) -eq 0) { throw 'non-WSS VITE_WS_BASE_URL must fail preflight' }
     $env:VITE_WS_BASE_URL = $contractEnvironment.VITE_WS_BASE_URL
+
+    $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = 'http://localhost:5173'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'local CORS origin must fail the EU pre-release gate' }
+    $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = $contractEnvironment.APP_CORS_ALLOWED_ORIGIN_PATTERNS
+
+    $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = 'https://eu.example.com/api'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'CORS origin with a path must fail preflight' }
+    $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = $contractEnvironment.APP_CORS_ALLOWED_ORIGIN_PATTERNS
 
     $env:APP_PUSH_ENABLED = 'true'
     if ((Invoke-PreflightContract) -eq 0) { throw 'unverified mobile push must fail the EU launch gate' }

@@ -16,15 +16,18 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final AdminAuthInterceptor adminAuthInterceptor;
     private final UserAuthInterceptor userAuthInterceptor;
     private final MerchantAuthInterceptor merchantAuthInterceptor;
+    private final CorsProperties corsProperties;
 
     public WebMvcConfig(RegionInterceptor regionInterceptor,
                         AdminAuthInterceptor adminAuthInterceptor,
                         UserAuthInterceptor userAuthInterceptor,
-                        MerchantAuthInterceptor merchantAuthInterceptor) {
+                        MerchantAuthInterceptor merchantAuthInterceptor,
+                        CorsProperties corsProperties) {
         this.regionInterceptor = regionInterceptor;
         this.adminAuthInterceptor = adminAuthInterceptor;
         this.userAuthInterceptor = userAuthInterceptor;
         this.merchantAuthInterceptor = merchantAuthInterceptor;
+        this.corsProperties = corsProperties;
     }
 
     @Override
@@ -70,7 +73,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*")
+                .allowedOriginPatterns(corsProperties.getAllowedOriginPatterns().toArray(String[]::new))
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("X-Trace-Id", "X-Region", "Retry-After");

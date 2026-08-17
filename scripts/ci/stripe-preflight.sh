@@ -110,6 +110,46 @@ secret_length_check() {
   fi
 }
 
+cors_origins_check() {
+  local value="${1-}"
+  check APP_CORS_ALLOWED_ORIGIN_PATTERNS "$value"
+  is_present "$value" || return
+
+  local compact="${value//[[:space:]]/}"
+  if [[ "$compact" == ,* || "$compact" == *, || "$compact" == *,,* ]]; then
+    printf '[invalid] APP_CORS_ALLOWED_ORIGIN_PATTERNS must be a comma-separated list of origins\n' >&2
+    failures=$((failures + 1))
+    return
+  fi
+
+  local item authority host port
+  local items=()
+  IFS=',' read -r -a items <<< "$value"
+  for item in "${items[@]}"; do
+    item="${item#"${item%%[![:space:]]*}"}"
+    item="${item%"${item##*[![:space:]]}"}"
+    if [[ "$item" == *'*'* || ! "$item" =~ ^https://[^/?#@:[:space:]]+(:[0-9]+)?$ ]]; then
+      printf '[invalid] APP_CORS_ALLOWED_ORIGIN_PATTERNS entries must be explicit HTTPS origins without paths or userinfo\n' >&2
+      failures=$((failures + 1))
+      continue
+    fi
+
+    authority="${item#https://}"
+    host="${authority%%:*}"
+    if [[ "$host" =~ ^[Ll][Oo][Cc][Aa][Ll][Hh][Oo][Ss][Tt]$ || "$host" == "127.0.0.1" ]]; then
+      printf '[invalid] APP_CORS_ALLOWED_ORIGIN_PATTERNS cannot target localhost\n' >&2
+      failures=$((failures + 1))
+    fi
+    if [[ "$authority" == *:* ]]; then
+      port="${authority##*:}"
+      if ((10#$port < 1 || 10#$port > 65535)); then
+        printf '[invalid] APP_CORS_ALLOWED_ORIGIN_PATTERNS ports must be between 1 and 65535\n' >&2
+        failures=$((failures + 1))
+      fi
+    fi
+  done
+}
+
 csv_contains() {
   local csv="${1-}"
   local expected="$2"
@@ -211,6 +251,7 @@ check APP_REDIS_HOST "${APP_REDIS_HOST-}"
 check APP_REDIS_PASSWORD "${APP_REDIS_PASSWORD-}"
 secret_length_check APP_AUTH_JWT_SECRET "${APP_AUTH_JWT_SECRET-}"
 secret_length_check APP_PAYMENT_NOTIFY_SECRET "${APP_PAYMENT_NOTIFY_SECRET-}"
+cors_origins_check "${APP_CORS_ALLOWED_ORIGIN_PATTERNS-}"
 check APP_MAIL_HOST "${APP_MAIL_HOST-}"
 port_check APP_MAIL_PORT "${APP_MAIL_PORT-}"
 check APP_MAIL_USERNAME "${APP_MAIL_USERNAME-}"

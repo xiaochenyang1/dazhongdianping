@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.config;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
@@ -23,6 +24,7 @@ public class ApplicationSafetyValidator implements InitializingBean {
     private final VerificationCodeProperties verificationCode;
     private final boolean strictSpringProfile;
     private final boolean matchingDevelopmentSpringProfile;
+    private final CorsProperties corsProperties;
 
     public ApplicationSafetyValidator(
             Environment environment,
@@ -30,12 +32,14 @@ public class ApplicationSafetyValidator implements InitializingBean {
             @Value("${app.auth.jwt-secret:}") String jwtSecret,
             @Value("${app.payment.notify-secret:}") String paymentNotifySecret,
             @Value("${app.payment.mock-enabled:false}") boolean paymentMockEnabled,
-            VerificationCodeProperties verificationCode) {
+            VerificationCodeProperties verificationCode,
+            CorsProperties corsProperties) {
         this.runtimeMode = runtimeMode == null ? "" : runtimeMode.trim().toLowerCase(Locale.ROOT);
         this.jwtSecret = jwtSecret == null ? "" : jwtSecret.trim();
         this.paymentNotifySecret = paymentNotifySecret == null ? "" : paymentNotifySecret.trim();
         this.paymentMockEnabled = paymentMockEnabled;
         this.verificationCode = verificationCode;
+        this.corsProperties = corsProperties;
         this.strictSpringProfile = Arrays.stream(environment.getActiveProfiles())
                 .map(profile -> profile.toLowerCase(Locale.ROOT))
                 .anyMatch(profile -> "pre".equals(profile) || "prod".equals(profile));
@@ -71,6 +75,8 @@ public class ApplicationSafetyValidator implements InitializingBean {
                         "APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED must be false in pre/prod");
             }
         }
+
+        validateCorsOrigins();
     }
 
     private void validateVerificationCode() {
@@ -98,6 +104,49 @@ public class ApplicationSafetyValidator implements InitializingBean {
 
     private boolean isStrictMode() {
         return strictSpringProfile || "pre".equals(runtimeMode) || "prod".equals(runtimeMode);
+    }
+
+    private void validateCorsOrigins() {
+        if (corsProperties.getAllowedOriginPatterns() == null
+                || corsProperties.getAllowedOriginPatterns().isEmpty()) {
+            throw new IllegalStateException("APP_CORS_ALLOWED_ORIGIN_PATTERNS must contain at least one origin");
+        }
+        for (String origin : corsProperties.getAllowedOriginPatterns()) {
+            if (!StringUtils.hasText(origin) || origin.matches(".*\\s+.*") || "*".equals(origin)) {
+                throw new IllegalStateException("APP_CORS_ALLOWED_ORIGIN_PATTERNS contains an invalid origin");
+            }
+            if (isStrictMode()) {
+                validateStrictCorsOrigin(origin);
+            }
+        }
+    }
+
+    private void validateStrictCorsOrigin(String origin) {
+        try {
+            URI uri = URI.create(origin);
+            String host = uri.getHost();
+            boolean invalid = !"https".equalsIgnoreCase(uri.getScheme())
+                    || !StringUtils.hasText(host)
+                    || uri.getUserInfo() != null
+                    || StringUtils.hasText(uri.getPath())
+                    || uri.getQuery() != null
+                    || uri.getFragment() != null
+                    || uri.getPort() == 0
+                    || uri.getPort() > 65535
+                    || origin.contains("*")
+                    || "localhost".equalsIgnoreCase(host)
+                    || "127.0.0.1".equals(host)
+                    || "::1".equals(host)
+                    || "[::1]".equals(host);
+            if (invalid) {
+                throw new IllegalStateException(
+                        "pre/prod CORS origins must be explicit HTTPS origins without paths or local hosts");
+            }
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException(
+                    "pre/prod CORS origins must be explicit HTTPS origins without paths or local hosts",
+                    exception);
+        }
     }
 
     private boolean isDevelopmentMode() {

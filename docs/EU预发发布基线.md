@@ -44,7 +44,7 @@ set +a
 ./scripts/ci/stripe-preflight.sh --check-cli
 ```
 
-预发必须满足：运行身份为严格 `pre`、Stripe test mode 开启、mock 支付关闭、验证码 mock/回显/控制台通道关闭、SMTP 邮件与 Twilio 国际短信均可配置、Redis 状态存储、HTTPS S3 endpoint/public URL、明确的 Elasticsearch endpoint/index 且关闭 fallback、EU SEO 构建、HTTPS Web/API 地址和 WSS 通知地址。SMTP 必须启用认证、STARTTLS 和健康检查；Twilio 必须覆盖国际号码并排除默认交给阿里云的 `+86`。阿里云在 EU 首发门禁中为可选 CN 通道，启用时才校验其 AccessKey、签名、模板和 `+86` 路由。预检脚本会执行这些格式和模式检查，但不会输出密钥内容。
+预发必须满足：运行身份为严格 `pre`、Stripe test mode 开启、mock 支付关闭、验证码 mock/回显/控制台通道关闭、SMTP 邮件与 Twilio 国际短信均可配置、Redis 状态存储、HTTPS S3 endpoint/public URL、明确的 Elasticsearch endpoint/index 且关闭 fallback、EU SEO 构建、HTTPS Web/API 地址和 WSS 通知地址。`APP_CORS_ALLOWED_ORIGIN_PATTERNS` 必须逐项列出真实 HTTPS Web origin，不允许通配符、本机地址、userinfo 或路径。SMTP 必须启用认证、STARTTLS 和健康检查；Twilio 必须覆盖国际号码并排除默认交给阿里云的 `+86`。阿里云在 EU 首发门禁中为可选 CN 通道，启用时才校验其 AccessKey、签名、模板和 `+86` 路由。预检脚本会执行这些格式和模式检查，但不会输出密钥内容。
 
 ## 通过条件
 
@@ -54,7 +54,7 @@ set +a
 4. Stripe CLI 能把 `payment_intent.succeeded` 转发到后端，Webhook 验签通过并发券。
 5. 非法 Stripe 签名返回 `400`；EU Stripe 订单不能通过 `mock-complete` 绕过支付。
 6. EU/CN 区域隔离、订单幂等、退款失败回滚均通过。
-7. 发布包、SHA-256、部署 smoke 和回滚演练至少在 `test`/`pre` 环境各执行一次。
+7. 发布包、SHA-256、部署 smoke 和回滚演练至少在 `test`/`pre` 环境各执行一次；每个部署 smoke URL 必须是无 userinfo 的绝对 HTTPS URL 并返回 `2xx`，失败会重试并触发自动回滚，回滚后再次验证同一组 URL。远端默认保留当前、previous 和 5 个旧版本，smoke 成功后才清理更旧目录与已上传 ZIP。
 
 ## 当前阻塞
 

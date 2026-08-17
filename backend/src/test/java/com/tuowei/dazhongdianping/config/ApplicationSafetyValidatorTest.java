@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 
@@ -58,7 +59,8 @@ class ApplicationSafetyValidatorTest {
                 STRONG_JWT_SECRET,
                 STRONG_PAYMENT_SECRET,
                 false,
-                verificationCode(false, "", false)
+                verificationCode(false, "", false),
+                new CorsProperties()
         );
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, validator::afterPropertiesSet);
@@ -118,7 +120,8 @@ class ApplicationSafetyValidatorTest {
                 STRONG_JWT_SECRET,
                 STRONG_PAYMENT_SECRET,
                 true,
-                verificationCode(true, "123456", true)
+                verificationCode(true, "123456", true),
+                new CorsProperties()
         );
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, validator::afterPropertiesSet);
@@ -142,6 +145,73 @@ class ApplicationSafetyValidatorTest {
     }
 
     @Test
+    void shouldRejectLocalCorsOriginsInStrictMode() {
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> validator(
+                        "pre",
+                        STRONG_JWT_SECRET,
+                        STRONG_PAYMENT_SECRET,
+                        false,
+                        verificationCode(false, "", false),
+                        new CorsProperties()
+                ).afterPropertiesSet()
+        );
+
+        assertEquals(
+                "pre/prod CORS origins must be explicit HTTPS origins without paths or local hosts",
+                exception.getMessage());
+    }
+
+    @Test
+    void shouldAllowExplicitHttpsCorsOriginsInStrictMode() {
+        CorsProperties cors = new CorsProperties();
+        cors.setAllowedOriginPatterns(List.of(
+                "https://eu.example.com",
+                "https://admin.eu.example.com",
+                "https://merchant.eu.example.com"
+        ));
+
+        assertDoesNotThrow(() -> validator(
+                "pre",
+                STRONG_JWT_SECRET,
+                STRONG_PAYMENT_SECRET,
+                false,
+                verificationCode(false, "", false),
+                cors
+        ).afterPropertiesSet());
+    }
+
+    @Test
+    void shouldRejectUnsafeCorsOriginFormsInStrictMode() {
+        for (String origin : List.of(
+                "https://*.example.com",
+                "https://user@example.com",
+                "https://eu.example.com/api",
+                "https://eu.example.com?source=test"
+        )) {
+            CorsProperties cors = new CorsProperties();
+            cors.setAllowedOriginPatterns(List.of(origin));
+
+            IllegalStateException exception = assertThrows(
+                    IllegalStateException.class,
+                    () -> validator(
+                            "pre",
+                            STRONG_JWT_SECRET,
+                            STRONG_PAYMENT_SECRET,
+                            false,
+                            verificationCode(false, "", false),
+                            cors
+                    ).afterPropertiesSet()
+            );
+
+            assertEquals(
+                    "pre/prod CORS origins must be explicit HTTPS origins without paths or local hosts",
+                    exception.getMessage());
+        }
+    }
+
+    @Test
     void shouldRejectMockCodeExposureWhenMockModeIsDisabled() {
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
@@ -162,6 +232,16 @@ class ApplicationSafetyValidatorTest {
                                                    String paymentSecret,
                                                    boolean paymentMockEnabled,
                                                    VerificationCodeProperties verificationCode) {
+        return validator(runtimeMode, jwtSecret, paymentSecret, paymentMockEnabled, verificationCode,
+                new CorsProperties());
+    }
+
+    private ApplicationSafetyValidator validator(String runtimeMode,
+                                                   String jwtSecret,
+                                                   String paymentSecret,
+                                                   boolean paymentMockEnabled,
+                                                   VerificationCodeProperties verificationCode,
+                                                   CorsProperties corsProperties) {
         MockEnvironment environment = new MockEnvironment();
         if ("local".equals(runtimeMode) || "test".equals(runtimeMode)) {
             environment.setActiveProfiles(runtimeMode);
@@ -172,7 +252,8 @@ class ApplicationSafetyValidatorTest {
                 jwtSecret,
                 paymentSecret,
                 paymentMockEnabled,
-                verificationCode
+                verificationCode,
+                corsProperties
         );
     }
 
