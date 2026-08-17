@@ -552,4 +552,4 @@ npm run build
 1. `scripts/ci/mysql-smoke.ps1` 已于 `2026-07-12` 用临时 `MySQL 8` 实例 (`127.0.0.1:13306`) 实跑通过；宿主机 `MySQL80` 那套现成 root 凭证仍然不可用，但这已经不是仓库侧阻塞。后面如果你非要复用宿主机服务，先把凭证收拾明白。
 2. 给目标环境的 `MySQL / Redis / S3` 和部署目标机补齐真实环境凭证、SSH secrets，并把现有发布 / 回滚流水线真正跑到目标环境上。
 3. 用真实 FCM/APNs 凭证完成设备注册、前后台接收、失效 token 和重试 smoke，再推进真实支付（Stripe PaymentIntent/Refund 与 CSV 账单核对代码已打通，待补生产凭证、退款到账和真实账单 smoke）、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、认证商户号、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、关注流、私信、官方圈子和话题广场/热榜已经落地。
-4. PC Web 真实公开数据快照已由 `package-release.ps1` 在配置 `PUBLIC_SITE_URL` / `PRERENDER_API_BASE_URL` 时自动接入发布包；下一步补真实域名/CDN 缓存与线上抓取验收，再按流量需求评估常驻 SSR。
+4. PC Web 真实公开数据快照已由 `package-release.ps1` 在配置 `PUBLIC_SITE_URL` / `PRERENDER_API_BASE_URL` 时自动接入发布包；需要同包构建 CN/EU 时使用 `PRERENDER_REGIONS=CN,EU` 和每区独立 URL，产物会隔离到 `web/seo-snapshots/<region>`。下一步仍是补真实域名/CDN 缓存与线上抓取验收，再按流量需求评估常驻 SSR。
