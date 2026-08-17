@@ -21,7 +21,11 @@ $viteStripePublishableKey = $env:VITE_STRIPE_PUBLISHABLE_KEY
 $publicSiteUrl = $env:PUBLIC_SITE_URL
 $prerenderApiBaseUrl = $env:PRERENDER_API_BASE_URL
 $prerenderRegion = if ($env:PRERENDER_REGION) { $env:PRERENDER_REGION } else { "EU" }
+$prerenderRegionsRaw = $env:PRERENDER_REGIONS
 $originalPrerenderRegion = $env:PRERENDER_REGION
+$originalPrerenderRegions = $env:PRERENDER_REGIONS
+$originalPublicSiteUrl = $env:PUBLIC_SITE_URL
+$originalPrerenderApiBaseUrl = $env:PRERENDER_API_BASE_URL
 $runningOnWindows = [System.Environment]::OSVersion.Platform -eq "Win32NT"
 $mvnw = Join-Path $backendDir $(if ($runningOnWindows) { "mvnw.cmd" } else { "mvnw" })
 
@@ -131,6 +135,50 @@ function Assert-HttpsBuildUrl {
     }
 }
 
+function Get-PrerenderRegions {
+    $raw = if ([string]::IsNullOrWhiteSpace($prerenderRegionsRaw)) {
+        $prerenderRegion
+    }
+    else {
+        $prerenderRegionsRaw
+    }
+    $regions = @($raw -split '[,\s]+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        ForEach-Object { $_.Trim().ToUpperInvariant() } | Select-Object -Unique)
+    if ($regions.Count -eq 0) {
+        throw "PRERENDER_REGIONS must contain at least one region"
+    }
+    foreach ($region in $regions) {
+        if ($region -notin @("CN", "EU")) {
+            throw "PRERENDER_REGIONS only supports CN or EU, found: $region"
+        }
+    }
+    return $regions
+}
+
+function Get-PrerenderConfiguration {
+    param(
+        [string]$Region,
+        [int]$RegionCount
+    )
+
+    $regionSiteUrl = [System.Environment]::GetEnvironmentVariable("PUBLIC_SITE_URL_$Region")
+    $regionApiBaseUrl = [System.Environment]::GetEnvironmentVariable("PRERENDER_API_BASE_URL_$Region")
+    if ($RegionCount -eq 1) {
+        if ([string]::IsNullOrWhiteSpace($regionSiteUrl)) { $regionSiteUrl = $publicSiteUrl }
+        if ([string]::IsNullOrWhiteSpace($regionApiBaseUrl)) { $regionApiBaseUrl = $prerenderApiBaseUrl }
+    }
+    [pscustomobject]@{
+        Region = $Region
+        SiteUrl = $regionSiteUrl
+        ApiBaseUrl = $regionApiBaseUrl
+    }
+}
+
+$prerenderRegions = @(Get-PrerenderRegions)
+$prerenderConfigurations = @($prerenderRegions | ForEach-Object {
+    Get-PrerenderConfiguration -Region $_ -RegionCount $prerenderRegions.Count
+})
+
 function Assert-ReleaseFrontendConfiguration {
     if ([string]::IsNullOrWhiteSpace($deployEnvironment)) {
         return
@@ -140,8 +188,10 @@ function Assert-ReleaseFrontendConfiguration {
     }
 
     Assert-HttpsBuildUrl -Name "VITE_API_BASE_URL" -Value $viteApiBaseUrl
-    Assert-HttpsBuildUrl -Name "PUBLIC_SITE_URL" -Value $publicSiteUrl
-    Assert-HttpsBuildUrl -Name "PRERENDER_API_BASE_URL" -Value $prerenderApiBaseUrl
+    foreach ($configuration in $prerenderConfigurations) {
+        Assert-HttpsBuildUrl -Name "PUBLIC_SITE_URL_$($configuration.Region)" -Value $configuration.SiteUrl
+        Assert-HttpsBuildUrl -Name "PRERENDER_API_BASE_URL_$($configuration.Region)" -Value $configuration.ApiBaseUrl
+    }
     if ([string]::IsNullOrWhiteSpace($viteWebSocketBaseUrl) -or
         $viteWebSocketBaseUrl -notmatch '^wss://[^\s]+$') {
         throw "VITE_WS_BASE_URL must be an absolute WSS URL for a deployment build"
@@ -161,7 +211,7 @@ if ($DryRun) {
     Write-Output "3. Build web dist with npm run build under web."
     Write-Output "4. Build admin-web dist with npm run build under admin-web."
     Write-Output "5. Build merchant-web dist with npm run build under merchant-web."
-    Write-Output "6. If PUBLIC_SITE_URL and PRERENDER_API_BASE_URL are configured, build real SEO snapshots for PRERENDER_REGION=$prerenderRegion."
+    Write-Output "6. If PUBLIC_SITE_URL and PRERENDER_API_BASE_URL (or their per-region forms) are configured, build isolated real SEO snapshots for PRERENDER_REGIONS=$($prerenderRegions -join ',')."
     Write-Output "7. Verify and package only sql/mysql/03+ incremental migrations with their source-controlled SHA-256 manifest and MySQL runner."
     Write-Output "8. Assemble backend jar + web dist + admin-web dist + merchant-web dist + database migrations into a release bundle under $OutputDir."
     Write-Output "9. Write a release manifest for version $Version."
@@ -178,15 +228,38 @@ $checksumPath = "$bundlePath.sha256"
 try {
     New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
     $migrationEntries = @(Get-VerifiedMigrationEntries)
-    # Keep all Web builds and optional snapshots on the same release region.
-    $env:PRERENDER_REGION = $prerenderRegion
+    $baseRegion = $prerenderRegions[0]
+    $baseConfiguration = $prerenderConfigurations | Where-Object { $_.Region -eq $baseRegion } | Select-Object -First 1
+    # Build the serving dist for the first region, then retain each additional
+    # region under web/seo-snapshots/<region> so they cannot overwrite one another.
+    $env:PRERENDER_REGION = $baseRegion
+    $env:PUBLIC_SITE_URL = $baseConfiguration.SiteUrl
+    $env:PRERENDER_API_BASE_URL = $baseConfiguration.ApiBaseUrl
 
     Invoke-Native -FilePath $mvnw -Arguments @("-q", "package") -WorkingDirectory $backendDir
     Invoke-Native -FilePath "npm" -Arguments @("run", "build") -WorkingDirectory $webDir
-    $seoSnapshotEnabled = -not [string]::IsNullOrWhiteSpace($publicSiteUrl) -and
-        -not [string]::IsNullOrWhiteSpace($prerenderApiBaseUrl)
-    if ($seoSnapshotEnabled) {
+    $baseWebDistDir = Join-Path $stagingDir "__base-web-dist"
+    Copy-Item -LiteralPath (Join-Path $webDir "dist") -Destination $baseWebDistDir -Recurse
+    $seoSnapshotEntries = @()
+    foreach ($configuration in $prerenderConfigurations) {
+        $seoSnapshotEnabled = -not [string]::IsNullOrWhiteSpace($configuration.SiteUrl) -and
+            -not [string]::IsNullOrWhiteSpace($configuration.ApiBaseUrl)
+        if (-not $seoSnapshotEnabled) {
+            continue
+        }
+        $env:PRERENDER_REGION = $configuration.Region
+        $env:PUBLIC_SITE_URL = $configuration.SiteUrl
+        $env:PRERENDER_API_BASE_URL = $configuration.ApiBaseUrl
         Invoke-Native -FilePath "npm" -Arguments @("run", "build:prerender:data") -WorkingDirectory $webDir
+        $snapshotDir = Join-Path $stagingDir ("__seo-" + $configuration.Region)
+        Copy-Item -LiteralPath (Join-Path $webDir "dist") -Destination $snapshotDir -Recurse
+        $seoSnapshotEntries += [pscustomobject]@{
+            region = $configuration.Region
+            siteUrl = $configuration.SiteUrl
+            apiBaseUrl = $configuration.ApiBaseUrl
+            directory = "web/seo-snapshots/$($configuration.Region)"
+            generatedAtUtc = [System.DateTimeOffset]::UtcNow.ToString("o")
+        }
     }
     Invoke-Native -FilePath "npm" -Arguments @("run", "build") -WorkingDirectory $adminDir
     Invoke-Native -FilePath "npm" -Arguments @("run", "build") -WorkingDirectory $merchantDir
@@ -208,7 +281,14 @@ try {
     New-Item -ItemType Directory -Path $backendOutputDir, $webOutputDir, $adminOutputDir, $merchantOutputDir, $migrationOutputDir -Force | Out-Null
 
     Copy-Item -LiteralPath $backendJar.FullName -Destination (Join-Path $backendOutputDir $backendJar.Name)
-    Copy-Item -LiteralPath (Join-Path $webDir "dist") -Destination $webOutputDir -Recurse
+    Copy-Item -LiteralPath $baseWebDistDir -Destination $webOutputDir -Recurse
+    if ($seoSnapshotEntries.Count -gt 0) {
+        $seoOutputDir = Join-Path $webOutputDir "seo-snapshots"
+        New-Item -ItemType Directory -Path $seoOutputDir -Force | Out-Null
+        foreach ($entry in $seoSnapshotEntries) {
+            Copy-Item -LiteralPath (Join-Path $stagingDir ("__seo-" + $entry.region)) -Destination (Join-Path $seoOutputDir $entry.region) -Recurse
+        }
+    }
     Copy-Item -LiteralPath (Join-Path $adminDir "dist") -Destination $adminOutputDir -Recurse
     Copy-Item -LiteralPath (Join-Path $merchantDir "dist") -Destination $merchantOutputDir -Recurse
     foreach ($entry in $migrationEntries) {
@@ -237,13 +317,7 @@ try {
             webSocketBaseUrl = if ($viteWebSocketBaseUrl) { $viteWebSocketBaseUrl } else { "" }
             stripeConfigured = -not [string]::IsNullOrWhiteSpace($viteStripePublishableKey)
         }
-        seoSnapshot = [ordered]@{
-            enabled = $seoSnapshotEnabled
-            siteUrl = if ($seoSnapshotEnabled) { $publicSiteUrl } else { "" }
-            apiBaseUrl = if ($seoSnapshotEnabled) { $prerenderApiBaseUrl } else { "" }
-            region = if ($seoSnapshotEnabled) { $prerenderRegion } else { "" }
-            generatedAtUtc = if ($seoSnapshotEnabled) { [System.DateTimeOffset]::UtcNow.ToString("o") } else { "" }
-        }
+        seoSnapshots = @($seoSnapshotEntries)
     }
     $manifestPath = Join-Path $stagingDir "release-manifest.json"
     $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
@@ -265,6 +339,9 @@ try {
 }
 finally {
     $env:PRERENDER_REGION = $originalPrerenderRegion
+    $env:PRERENDER_REGIONS = $originalPrerenderRegions
+    $env:PUBLIC_SITE_URL = $originalPublicSiteUrl
+    $env:PRERENDER_API_BASE_URL = $originalPrerenderApiBaseUrl
     if (Test-Path -LiteralPath $stagingDir) {
         Remove-Item -LiteralPath $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
     }

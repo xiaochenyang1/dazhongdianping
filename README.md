@@ -291,7 +291,7 @@ $env:PRERENDER_REGION = "EU"
 npm run build
 ```
 
-`PRERENDER_REGION` 默认为 `CN`；设置为 `EU` 时，7 个静态入口会使用英文标题、摘要、品牌和文档语言生成，不会把 CN 入口文案发布到 EU 制品。
+`PRERENDER_REGION` 默认为 `CN`；设置为 `EU` 时，7 个静态入口会使用英文标题、摘要、品牌和文档语言生成，不会把 CN 入口文案发布到 EU 制品。发布脚本也支持 `PRERENDER_REGIONS=CN,EU`：为每个区域提供带后缀的 `PUBLIC_SITE_URL_<REGION>` 和 `PRERENDER_API_BASE_URL_<REGION>` 后，会把两套真实详情快照分别写入 `web/seo-snapshots/CN` 与 `web/seo-snapshots/EU`，并在 release manifest 记录目录和区域。
 
 动态公开详情可通过 `PRERENDER_ROUTE_MANIFEST` 指向额外 JSON 路由快照；未提供真实数据快照时不会生成虚假的详情页。
 

@@ -63,6 +63,11 @@ jobs:
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
       PRERENDER_REGION: EU
+      PRERENDER_REGIONS: ${{ vars.PRERENDER_REGIONS }}
+      PUBLIC_SITE_URL_CN: ${{ vars.PUBLIC_SITE_URL_CN }}
+      PRERENDER_API_BASE_URL_CN: ${{ vars.PRERENDER_API_BASE_URL_CN }}
+      PUBLIC_SITE_URL_EU: ${{ vars.PUBLIC_SITE_URL_EU }}
+      PRERENDER_API_BASE_URL_EU: ${{ vars.PRERENDER_API_BASE_URL_EU }}
       APP_RELEASE_VERSION: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Check test deployment configuration
@@ -173,6 +178,11 @@ jobs:
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
       PRERENDER_REGION: ${{ inputs.region }}
+      PRERENDER_REGIONS: ${{ vars.PRERENDER_REGIONS }}
+      PUBLIC_SITE_URL_CN: ${{ vars.PUBLIC_SITE_URL_CN }}
+      PRERENDER_API_BASE_URL_CN: ${{ vars.PRERENDER_API_BASE_URL_CN }}
+      PUBLIC_SITE_URL_EU: ${{ vars.PUBLIC_SITE_URL_EU }}
+      PRERENDER_API_BASE_URL_EU: ${{ vars.PRERENDER_API_BASE_URL_EU }}
       APP_RELEASE_VERSION: ${{ inputs.release_version }}
     steps:
       - name: Check pre deployment configuration
@@ -269,6 +279,11 @@ jobs:
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
       PRERENDER_REGION: ${{ inputs.region }}
+      PRERENDER_REGIONS: ${{ vars.PRERENDER_REGIONS }}
+      PUBLIC_SITE_URL_CN: ${{ vars.PUBLIC_SITE_URL_CN }}
+      PRERENDER_API_BASE_URL_CN: ${{ vars.PRERENDER_API_BASE_URL_CN }}
+      PUBLIC_SITE_URL_EU: ${{ vars.PUBLIC_SITE_URL_EU }}
+      PRERENDER_API_BASE_URL_EU: ${{ vars.PRERENDER_API_BASE_URL_EU }}
       APP_RELEASE_VERSION: ${{ inputs.release_version }}
     steps:
       - name: Check prod deployment configuration
