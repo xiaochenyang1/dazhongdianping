@@ -317,6 +317,13 @@ try {
             webSocketBaseUrl = if ($viteWebSocketBaseUrl) { $viteWebSocketBaseUrl } else { "" }
             stripeConfigured = -not [string]::IsNullOrWhiteSpace($viteStripePublishableKey)
         }
+        seoSnapshot = [ordered]@{
+            enabled = $seoSnapshotEntries.Count -gt 0
+            siteUrl = if ($seoSnapshotEntries.Count -gt 0) { $seoSnapshotEntries[0].siteUrl } else { "" }
+            apiBaseUrl = if ($seoSnapshotEntries.Count -gt 0) { $seoSnapshotEntries[0].apiBaseUrl } else { "" }
+            region = if ($seoSnapshotEntries.Count -gt 0) { $seoSnapshotEntries[0].region } else { "" }
+            generatedAtUtc = if ($seoSnapshotEntries.Count -gt 0) { $seoSnapshotEntries[0].generatedAtUtc } else { "" }
+        }
         seoSnapshots = @($seoSnapshotEntries)
     }
     $manifestPath = Join-Path $stagingDir "release-manifest.json"

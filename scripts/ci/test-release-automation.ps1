@@ -100,6 +100,7 @@ Assert-True ($packageScript -match 'Assert-ReleaseFrontendConfiguration') "deplo
 Assert-True ($packageScript -match 'pk_live_') "prod packaging must require a live Stripe publishable key"
 Assert-True ($packageScript -match 'pk_test_') "test and pre packaging must require a test Stripe publishable key"
 Assert-True ($packageScript -match 'webRuntime') "release manifest must record non-secret Web runtime metadata"
+Assert-True ($packageScript -match 'seoSnapshot =') "release manifest must preserve the legacy SEO snapshot summary"
 Assert-True ($packageScript -match 'seoSnapshots') "release manifest must record isolated SEO snapshot directories"
 Assert-True ($packageScript -match 'PUBLIC_SITE_URL_\$Region') "multi-region SEO packaging must resolve per-region public site URLs"
 Assert-True ($packageScript -match 'PRERENDER_API_BASE_URL_\$Region') "multi-region SEO packaging must resolve per-region API URLs"
