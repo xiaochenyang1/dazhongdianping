@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -22,6 +23,13 @@ class DetailFakeRepository extends BrowseRepository {
     this.reviewsError,
     this.detailCurrency = 'EUR',
     this.detailPricePerCapita = 12,
+    // Rich media (cover/dishes/photos) is opt-in: the default fake keeps the
+    // compact layout the pre-existing assertions were written against, mirroring
+    // how deal_detail/points_mall tests pass empty image URLs. Tests that
+    // exercise the new parity sections pass `true` here.
+    this.withCover = false,
+    this.withDishes = false,
+    this.withPhotos = false,
     this.similar = const [
       ShopSummary(
         id: 8,
@@ -53,6 +61,9 @@ class DetailFakeRepository extends BrowseRepository {
   final bool failFirstReviews;
   final String detailCurrency;
   final num detailPricePerCapita;
+  final bool withCover;
+  final bool withDishes;
+  final bool withPhotos;
   Object? detailError;
   Object? favoriteError;
   Object? similarError;
@@ -92,6 +103,30 @@ class DetailFakeRepository extends BrowseRepository {
       businessHours: '09:00-21:00',
       summary: 'Tea and snacks',
       tags: ['Chinese-friendly'],
+      latitude: 52.5219,
+      longitude: 13.4132,
+      coverUrl: withCover
+          ? 'https://cdn.example.com/berlin-tea-cover.jpg'
+          : null,
+      tasteScore: 4.6,
+      envScore: 4.4,
+      serviceScore: 4.5,
+      photos: withPhotos
+          ? const [
+              ShopPhoto(id: 1, imageUrl: 'https://cdn.example.com/tea-1.jpg'),
+              ShopPhoto(id: 2, imageUrl: 'https://cdn.example.com/tea-2.jpg'),
+            ]
+          : const [],
+      recommendedDishes: withDishes
+          ? const [
+              ShopDish(
+                id: 11,
+                name: 'Jasmine Cake',
+                price: 6.5,
+                recommendReason: 'Pairs with the house blend',
+              ),
+            ]
+          : const [],
     );
   }
 
@@ -448,6 +483,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    // The favorite button sits below the score-breakdown tile; bring it on
+    // screen before tapping.
+    await tester.scrollUntilVisible(
+      find.text('Save place'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Save place'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Save place'));
     await tester.pumpAndSettle();
@@ -494,6 +538,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    // The cover placeholder + score-breakdown tile push the contact row below
+    // the 800×600 test viewport; scroll it into view before asserting.
+    await tester.scrollUntilVisible(
+      find.text('联系电话'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('地址'), findsOneWidget);
     expect(find.text('营业时间'), findsOneWidget);
     expect(find.text('联系电话'), findsOneWidget);
@@ -501,6 +552,79 @@ void main() {
     expect(find.text('09:00-21:00'), findsOneWidget);
     expect(find.text('Berlin Tea'), findsOneWidget);
   });
+
+  testWidgets(
+    'shop detail renders cover image, score breakdown, dishes and gallery',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ShopDetailScreen(
+            repository: DetailFakeRepository(
+              withCover: true,
+              withDishes: true,
+              withPhotos: true,
+            ),
+            shopId: 7,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Cover image from the fake repository.
+      expect(find.byKey(const Key('shop-cover-image')), findsOneWidget);
+      // Score breakdown renders the three sub-scores.
+      expect(find.byKey(const Key('shop-score-breakdown')), findsOneWidget);
+      expect(find.textContaining('口味 4.6'), findsOneWidget);
+      expect(find.textContaining('环境 4.4'), findsOneWidget);
+      expect(find.textContaining('服务 4.5'), findsOneWidget);
+      // Recommended dishes + gallery live below the fold; scroll them into view.
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('shop-recommended-dishes')),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.byKey(const Key('shop-recommended-dishes')), findsOneWidget);
+      expect(find.text('Jasmine Cake'), findsOneWidget);
+      expect(find.textContaining('Pairs with the house blend'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('shop-gallery')),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.byKey(const Key('shop-gallery')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'shop detail degrades gracefully when cover, dishes and photos are absent',
+    (tester) async {
+      final repo = DetailFakeRepository(
+        withCover: false,
+        withDishes: false,
+        withPhotos: false,
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: ShopDetailScreen(repository: repo, shopId: 7)),
+      );
+      await tester.pumpAndSettle();
+      // No cover URL → placeholder container, never an empty Image.network.
+      expect(find.byKey(const Key('shop-cover-fallback')), findsOneWidget);
+      expect(find.byKey(const Key('shop-cover-image')), findsNothing);
+      // Empty dishes / gallery render their missing-state copy below the fold;
+      // scroll each into view before asserting.
+      await tester.scrollUntilVisible(
+        find.textContaining('推荐菜'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.scrollUntilVisible(
+        find.textContaining('门店相册'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('推荐菜'), findsOneWidget);
+      expect(find.textContaining('门店相册'), findsOneWidget);
+    },
+  );
 
   testWidgets('shop detail opens the review editor for signed-in users', (
     tester,
@@ -536,6 +660,16 @@ void main() {
       MaterialApp(home: ShopDetailScreen(repository: repository, shopId: 7)),
     );
     await tester.pumpAndSettle();
+    // The favorite button is below the score-breakdown tile; scroll it on
+    // screen before tapping. ensureVisible centers it so the tap's hit-test
+    // lands on the button rather than the viewport edge.
+    await tester.scrollUntilVisible(
+      find.text('收藏门店'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('收藏门店'));
+    await tester.pumpAndSettle();
 
     expect(find.text('收藏门店'), findsOneWidget);
     await tester.tap(find.text('收藏门店'));
@@ -544,6 +678,8 @@ void main() {
     expect(repository.favoriteCalls, contains('favorite:7'));
     expect(find.text('取消收藏'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('取消收藏'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('取消收藏'));
     await tester.pumpAndSettle();
 
@@ -626,46 +762,23 @@ void main() {
     expect(find.text('茶底干净，服务也稳。'), findsOneWidget);
   });
 
-  testWidgets('shop detail can copy share text', (tester) async {
+  testWidgets('shop detail shares via the native share sheet', (tester) async {
+    MethodCall? shared;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (_) async => null,
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        null,
-      ),
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ShopDetailScreen(repository: DetailFakeRepository(), shopId: 7),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('shop-share-button')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('shop-share-button')));
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('分享文案已复制'), findsOneWidget);
-  });
-
-  testWidgets('shop detail guards duplicate share copies', (tester) async {
-    final gate = Completer<void>();
-    var clipboardWrites = 0;
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
+      const MethodChannel('dev.fluttercommunity.plus/share'),
       (call) async {
-        if (call.method == 'Clipboard.setData') {
-          clipboardWrites += 1;
-          await gate.future;
+        if (call.method == 'share') {
+          shared = call;
+          // A non-empty, non-"unavailable" result string maps to
+          // ShareResultStatus.success on the platform side.
+          return 'success';
         }
         return null;
       },
     );
     addTearDown(
       () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
+        const MethodChannel('dev.fluttercommunity.plus/share'),
         null,
       ),
     );
@@ -676,16 +789,122 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // The share button is below the dishes/gallery sections; bring it on
+    // screen before tapping.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('shop-share-button')),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.byKey(const Key('shop-share-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('shop-share-button')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('shop-share-button')));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(shared, isNotNull);
+    // The link is built from the configurable SHARE_BASE_URL placeholder and
+    // must point at the shop detail deep link rather than a dead hardcode.
+    final args = shared!.arguments as Map;
+    expect(args['text'], contains('https://local.life/shops/7'));
+    expect(args['subject'], 'Berlin Tea');
+    expect(find.text('分享文案已复制'), findsOneWidget);
+  });
+
+  testWidgets('shop detail opens Google Maps directions with coordinates', (
+    tester,
+  ) async {
+    Uri? openedUri;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(
+          repository: DetailFakeRepository(),
+          shopId: 7,
+          thirdPartyConfig: const ThirdPartyConfig(
+            googleMapsApiKey: 'AIza-fake-test-key',
+          ),
+          navigationLauncher: (uri) async {
+            openedUri = uri;
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('shop-navigation-button')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('shop-navigation-button')));
+    await tester.pumpAndSettle();
+
+    expect(openedUri, isNotNull);
+    expect(openedUri!.host, 'www.google.com');
+    expect(openedUri!.path, '/maps/dir/');
+    expect(openedUri!.queryParameters['destination'], '52.5219,13.4132');
+    expect(openedUri!.queryParameters['travelmode'], 'driving');
+  });
+
+  testWidgets('shop detail hides navigation without Google Maps config', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(repository: DetailFakeRepository(), shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('shop-navigation-button')), findsNothing);
+  });
+
+  testWidgets('shop detail guards duplicate share copies', (tester) async {
+    final gate = Completer<void>();
+    var shareCalls = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('dev.fluttercommunity.plus/share'),
+      (call) async {
+        if (call.method == 'share') {
+          shareCalls += 1;
+          await gate.future;
+          return 'success';
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/share'),
+        null,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShopDetailScreen(repository: DetailFakeRepository(), shopId: 7),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Bring the share button on screen before the double-tap.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('shop-share-button')),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.byKey(const Key('shop-share-button')));
+    await tester.pumpAndSettle();
     final share = find.byKey(const Key('shop-share-button'));
     await tester.tap(share);
     await tester.tap(share);
     await tester.pump();
-    expect(clipboardWrites, 1);
+    expect(shareCalls, 1);
     expect(find.text('分享中...'), findsOneWidget);
 
     gate.complete();
     await tester.pumpAndSettle();
-    expect(clipboardWrites, 1);
+    expect(shareCalls, 1);
     expect(find.text('分享文案已复制'), findsOneWidget);
   });
 }

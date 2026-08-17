@@ -12,8 +12,8 @@ const { state, setSession, setRegion } = useAdminSession()
 const strings = computed(() => adminStringsForRegion(state.region))
 
 const form = reactive({
-  account: 'admin',
-  password: 'admin123456',
+  account: '',
+  password: '',
 })
 
 const loading = ref(false)

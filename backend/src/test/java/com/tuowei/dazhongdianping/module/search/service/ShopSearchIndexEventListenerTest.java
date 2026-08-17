@@ -9,12 +9,12 @@ import org.junit.jupiter.api.Test;
 class ShopSearchIndexEventListenerTest {
 
     @Test
-    void shouldSyncChangedShopAfterTransactionCommit() {
-        ShopSearchIndexService indexService = mock(ShopSearchIndexService.class);
-        ShopSearchIndexEventListener listener = new ShopSearchIndexEventListener(indexService);
+    void shouldEnqueueChangedShopBeforeTransactionCommit() {
+        ShopSearchSyncOutboxService syncOutboxService = mock(ShopSearchSyncOutboxService.class);
+        ShopSearchIndexEventListener listener = new ShopSearchIndexEventListener(syncOutboxService);
 
         listener.onShopChanged(new ShopSearchIndexChangedEvent(10001L));
 
-        verify(indexService).syncShop(10001L);
+        verify(syncOutboxService).enqueue(10001L);
     }
 }

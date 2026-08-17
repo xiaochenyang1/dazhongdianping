@@ -12,6 +12,8 @@ spring:
       port: ${APP_REDIS_PORT:6379}
       password: ${APP_REDIS_PASSWORD:}
       database: ${APP_REDIS_DATABASE:0}
+      connect-timeout: ${APP_REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${APP_REDIS_TIMEOUT:2s}
   sql:
     init:
       mode: never
@@ -21,6 +23,20 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 20MB
+  mail:
+    host: ${APP_MAIL_HOST:}
+    port: ${APP_MAIL_PORT:587}
+    username: ${APP_MAIL_USERNAME:}
+    password: ${APP_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${APP_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${APP_MAIL_STARTTLS_ENABLED:true}
+          connectiontimeout: ${APP_MAIL_CONNECTION_TIMEOUT_MILLIS:5000}
+          timeout: ${APP_MAIL_TIMEOUT_MILLIS:5000}
+          writetimeout: ${APP_MAIL_WRITE_TIMEOUT_MILLIS:5000}
 
 server:
   port: 8080
@@ -32,8 +48,11 @@ management:
         include: health,info
   endpoint:
     health:
-      show-details: always
+      show-details: never
+      show-components: never
   health:
+    mail:
+      enabled: ${APP_MAIL_HEALTH_ENABLED:${APP_AUTH_VERIFICATION_MAIL_ENABLED:false}}
     redis:
       enabled: ${APP_REDIS_HEALTH_ENABLED:false}
 
@@ -60,6 +79,12 @@ app:
     base-url: ${APP_SEARCH_BASE_URL:http://127.0.0.1:9200}
     index-name: ${APP_SEARCH_INDEX_NAME:dzdp_shop_v1}
     fallback-on-error: ${APP_SEARCH_FALLBACK_ON_ERROR:true}
+    sync-batch-size: ${APP_SEARCH_SYNC_BATCH_SIZE:50}
+    sync-fixed-delay-ms: ${APP_SEARCH_SYNC_FIXED_DELAY_MS:5000}
+    sync-initial-delay-ms: ${APP_SEARCH_SYNC_INITIAL_DELAY_MS:10000}
+    sync-lock-timeout-seconds: ${APP_SEARCH_SYNC_LOCK_TIMEOUT_SECONDS:300}
+    sync-retry-base-seconds: ${APP_SEARCH_SYNC_RETRY_BASE_SECONDS:15}
+    sync-retry-max-seconds: ${APP_SEARCH_SYNC_RETRY_MAX_SECONDS:1800}
   infrastructure:
     state-store:
       provider: ${APP_STATE_STORE_PROVIDER:local}
@@ -80,6 +105,30 @@ app:
       mock-code: ${APP_AUTH_VERIFICATION_MOCK_CODE:}
       expose-mock-code: ${APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE:false}
       dev-console-enabled: ${APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED:false}
+      mail:
+        enabled: ${APP_AUTH_VERIFICATION_MAIL_ENABLED:false}
+        host: ${APP_MAIL_HOST:}
+        from: ${APP_AUTH_VERIFICATION_MAIL_FROM:}
+        subject: ${APP_AUTH_VERIFICATION_MAIL_SUBJECT:Your verification code}
+        brand-name: ${APP_AUTH_VERIFICATION_BRAND_NAME:Dazhongdianping}
+      twilio:
+        enabled: ${APP_AUTH_VERIFICATION_TWILIO_ENABLED:false}
+        account-sid: ${APP_AUTH_VERIFICATION_TWILIO_ACCOUNT_SID:}
+        auth-token: ${APP_AUTH_VERIFICATION_TWILIO_AUTH_TOKEN:}
+        from: ${APP_AUTH_VERIFICATION_TWILIO_FROM:}
+        messaging-service-sid: ${APP_AUTH_VERIFICATION_TWILIO_MESSAGING_SERVICE_SID:}
+        api-base-url: ${APP_AUTH_VERIFICATION_TWILIO_API_BASE_URL:https://api.twilio.com}
+        route-prefixes: ${APP_AUTH_VERIFICATION_TWILIO_ROUTE_PREFIXES:*}
+        excluded-route-prefixes: ${APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES:+86}
+      aliyun:
+        enabled: ${APP_AUTH_VERIFICATION_ALIYUN_ENABLED:false}
+        access-key-id: ${APP_AUTH_VERIFICATION_ALIYUN_ACCESS_KEY_ID:}
+        access-key-secret: ${APP_AUTH_VERIFICATION_ALIYUN_ACCESS_KEY_SECRET:}
+        sign-name: ${APP_AUTH_VERIFICATION_ALIYUN_SIGN_NAME:}
+        template-code: ${APP_AUTH_VERIFICATION_ALIYUN_TEMPLATE_CODE:}
+        endpoint: ${APP_AUTH_VERIFICATION_ALIYUN_ENDPOINT:https://dysmsapi.aliyuncs.com}
+        region-id: ${APP_AUTH_VERIFICATION_ALIYUN_REGION_ID:cn-hangzhou}
+        route-prefixes: ${APP_AUTH_VERIFICATION_ALIYUN_ROUTE_PREFIXES:+86}
     send-code-rate-limit:
       account-short-window-seconds: 60
       account-short-window-max-requests: 1

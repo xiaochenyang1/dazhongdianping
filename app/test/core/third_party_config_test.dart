@@ -23,4 +23,49 @@ void main() {
       'FCM/APNs is not configured. Notifications can still fall back to in-app messages.',
     );
   });
+
+  test(
+    'builds Google Maps static and directions URLs from shop coordinates',
+    () {
+      const config = ThirdPartyConfig(googleMapsApiKey: 'AIza-test');
+
+      final mapUri = config.googleMapsStaticUri(const [
+        (latitude: 48.857, longitude: 2.356),
+        (latitude: 51.5117, longitude: -0.1318),
+      ]);
+      final directionsUri = config.googleMapsDirectionsUri(
+        address: '12 Rue du Temple, Paris',
+        latitude: 48.857,
+        longitude: 2.356,
+      );
+
+      expect(mapUri.host, 'maps.googleapis.com');
+      expect(mapUri.queryParameters['key'], 'AIza-test');
+      expect(mapUri.queryParameters['markers'], contains('48.857,2.356'));
+      expect(directionsUri.host, 'www.google.com');
+      expect(directionsUri.queryParameters['destination'], '48.857,2.356');
+    },
+  );
+
+  test('enables interactive maps only after native configuration', () {
+    expect(
+      const ThirdPartyConfig(
+        googleMapsApiKey: 'AIza-test',
+      ).googleMapsInteractiveEnabled,
+      isFalse,
+    );
+    expect(
+      const ThirdPartyConfig(
+        googleMapsApiKey: 'AIza-test',
+        googleMapsNativeConfigured: true,
+      ).googleMapsInteractiveEnabled,
+      isTrue,
+    );
+    expect(
+      const ThirdPartyConfig(
+        googleMapsNativeConfigured: true,
+      ).googleMapsInteractiveEnabled,
+      isFalse,
+    );
+  });
 }

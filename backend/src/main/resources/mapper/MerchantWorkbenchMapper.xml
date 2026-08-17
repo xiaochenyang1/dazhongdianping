@@ -71,7 +71,10 @@
                s.cover_url,
                s.score,
                s.price_per_capita,
+               s.currency,
                s.address,
+               s.latitude,
+               s.longitude,
                a.name AS area_name,
                c.name AS city_name,
                cat.name AS category_name,
@@ -91,7 +94,13 @@
                 ORDER BY s.has_deal DESC, s.score DESC, s.id DESC
             </when>
             <when test="query.sort == 'distance'">
-                ORDER BY a.sort_no ASC, s.id ASC
+                ORDER BY
+                    2 * 6371000 * ASIN(LEAST(1, SQRT(
+                        POWER(SIN(RADIANS(s.latitude - #{query.lat}) / 2), 2)
+                        + COS(RADIANS(#{query.lat})) * COS(RADIANS(s.latitude))
+                        * POWER(SIN(RADIANS(s.longitude - #{query.lng}) / 2), 2)
+                    ))) ASC,
+                    s.id ASC
             </when>
             <otherwise>
                 ORDER BY s.has_deal DESC, s.score DESC, s.id DESC

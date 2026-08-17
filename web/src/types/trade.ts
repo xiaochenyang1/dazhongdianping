@@ -19,6 +19,10 @@ export interface OrderRefund {
   reason: string
   status: number
   statusText: string
+  channel?: string
+  channelRefundTxn?: string
+  channelStatus?: string
+  channelFailureReason?: string
   auditReason?: string
   auditedAt?: string
   createdAt?: string

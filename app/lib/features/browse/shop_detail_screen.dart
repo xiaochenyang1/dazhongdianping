@@ -13,6 +13,13 @@ import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+typedef ShopNavigationLauncher = Future<bool> Function(Uri uri);
+
+Future<bool> _launchShopNavigation(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
 
 class ShopDetailScreen extends StatefulWidget {
   const ShopDetailScreen({
@@ -25,6 +32,7 @@ class ShopDetailScreen extends StatefulWidget {
     this.thirdPartyConfig = const ThirdPartyConfig(),
     this.enableFavorite = true,
     this.canInteractReviews = false,
+    this.navigationLauncher,
   });
   final BrowseRepository repository;
   final int shopId;
@@ -34,6 +42,7 @@ class ShopDetailScreen extends StatefulWidget {
   final ThirdPartyConfig thirdPartyConfig;
   final bool enableFavorite;
   final bool canInteractReviews;
+  final ShopNavigationLauncher? navigationLauncher;
 
   @override
   State<ShopDetailScreen> createState() => _ShopDetailScreenState();
@@ -50,6 +59,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   bool _reloadingDetail = false;
   bool _reloadingReviewPreviews = false;
   bool _reloadingSimilar = false;
+  bool _openingNavigation = false;
 
   @override
   void initState() {
@@ -171,17 +181,63 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   Future<void> _shareShop(ShopDetail shop) async {
     if (_sharing) return;
     setState(() => _sharing = true);
-    final shareUrl = 'https://local.life/shops/${shop.id}';
+    final strings = AppLocalizations.of(context);
+    final shareUrl = widget.thirdPartyConfig.shopShareUrl(shop.id);
     final shareText =
         '${shop.name} · ★ ${shop.score.toStringAsFixed(1)} · $shareUrl';
+    final box = context.findRenderObject() as RenderBox?;
+    final sharePositionOrigin = box == null
+        ? null
+        : box.localToGlobal(Offset.zero) & box.size;
     try {
+      await Share.share(
+        shareText,
+        subject: shop.name,
+        sharePositionOrigin: sharePositionOrigin,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.shareCopied)));
+    } catch (_) {
+      // No native share target on this platform (e.g. a desktop/headless
+      // environment without a registered handler): fall back to the clipboard
+      // so the user can still paste the link instead of losing the action.
       await Clipboard.setData(ClipboardData(text: shareText));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).shareCopied)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.shareCopied)));
     } finally {
       if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  Future<void> _openNavigation(ShopDetail shop) async {
+    if (_openingNavigation) return;
+    setState(() => _openingNavigation = true);
+    final strings = AppLocalizations.of(context);
+    final uri = widget.thirdPartyConfig.googleMapsDirectionsUri(
+      address: shop.address,
+      latitude: shop.latitude,
+      longitude: shop.longitude,
+    );
+    try {
+      final launched =
+          await (widget.navigationLauncher ?? _launchShopNavigation)(uri);
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(strings.navigationOpenFailed)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(strings.navigationOpenFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _openingNavigation = false);
     }
   }
 
@@ -237,6 +293,40 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              if (shop.coverUrl != null && shop.coverUrl!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    shop.coverUrl!,
+                    key: const Key('shop-cover-image'),
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stack) => Container(
+                      key: const Key('shop-cover-fallback'),
+                      height: 200,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      alignment: Alignment.center,
+                      child: Text(strings.shopCoverPlaceholder),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  key: const Key('shop-cover-fallback'),
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(strings.shopCoverPlaceholder),
+                ),
+              const SizedBox(height: 16),
               Text(
                 shop.name,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -264,12 +354,37 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               Text(
                 '${shop.category} · ★ ${shop.score.toStringAsFixed(1)} · ${formatMoney(shop.pricePerCapita, shop.currency, locale: strings.tag)}',
               ),
+              const SizedBox(height: 8),
+              _ScoreBreakdownTile(
+                tasteScore: shop.tasteScore,
+                envScore: shop.envScore,
+                serviceScore: shop.serviceScore,
+              ),
               const SizedBox(height: 24),
               _InfoTile(
                 icon: Icons.location_on_outlined,
                 title: strings.address,
                 value: shop.address,
               ),
+              if (widget.thirdPartyConfig.googleMapsEnabled &&
+                  (shop.latitude != null ||
+                      shop.address.trim().isNotEmpty)) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('shop-navigation-button'),
+                    onPressed: _openingNavigation
+                        ? null
+                        : () => _openNavigation(shop),
+                    icon: const Icon(Icons.directions_outlined),
+                    label: Text(
+                      _openingNavigation
+                          ? strings.openingNavigation
+                          : strings.navigateToShop,
+                    ),
+                  ),
+                ),
+              ],
               _InfoTile(
                 icon: Icons.schedule_outlined,
                 title: strings.openingHours,
@@ -291,6 +406,8 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     .toList(),
               ),
               const SizedBox(height: 24),
+              _RecommendedDishesSection(dishes: shop.recommendedDishes),
+              _ShopGallerySection(photos: shop.photos),
               if (widget.enableFavorite) ...[
                 FilledButton.tonalIcon(
                   onPressed: (_favoriteLoading || _favoriteSaving)
@@ -646,4 +763,136 @@ class _InfoTile extends StatelessWidget {
     title: Text(title),
     subtitle: Text(value.isEmpty ? '--' : value),
   );
+}
+
+class _ScoreBreakdownTile extends StatelessWidget {
+  const _ScoreBreakdownTile({
+    required this.tasteScore,
+    required this.envScore,
+    required this.serviceScore,
+  });
+  final double tasteScore;
+  final double envScore;
+  final double serviceScore;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return ListTile(
+      key: const Key('shop-score-breakdown'),
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.leaderboard_outlined),
+      title: Text(strings.scoreBreakdownTitle),
+      subtitle: Text(
+        strings.scoreBreakdownValue(
+          taste: '${strings.scoreTaste} ${tasteScore.toStringAsFixed(1)}',
+          env: '${strings.scoreEnv} ${envScore.toStringAsFixed(1)}',
+          service: '${strings.scoreService} ${serviceScore.toStringAsFixed(1)}',
+        ),
+      ),
+    );
+  }
+}
+
+class _RecommendedDishesSection extends StatelessWidget {
+  const _RecommendedDishesSection({required this.dishes});
+  final List<ShopDish> dishes;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    if (dishes.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Text(
+          strings.recommendedDishesMissing,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+    return Column(
+      key: const Key('shop-recommended-dishes'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          strings.recommendedDishesSection,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        ...dishes.map(
+          (dish) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const Icon(Icons.restaurant_menu),
+              title: Text(dish.name),
+              subtitle:
+                  dish.recommendReason == null || dish.recommendReason!.isEmpty
+                  ? null
+                  : Text(strings.dishRecommendReason(dish.recommendReason!)),
+              trailing: Text(
+                formatMoney(dish.price, '', locale: strings.tag),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+}
+
+class _ShopGallerySection extends StatelessWidget {
+  const _ShopGallerySection({required this.photos});
+  final List<ShopPhoto> photos;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    if (photos.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Text(
+          strings.shopGalleryMissing,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+    return Column(
+      key: const Key('shop-gallery'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          strings.shopGallerySection,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+          ),
+          itemCount: photos.length,
+          itemBuilder: (context, index) {
+            final photo = photos[index];
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                photo.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Container(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: const Icon(Icons.broken_image_outlined),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
 }

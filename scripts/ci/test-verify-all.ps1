@@ -16,6 +16,12 @@ function Assert-True {
 
 Assert-True (Test-Path -LiteralPath $scriptPath) "scripts/ci/verify-all.ps1 must exist"
 
+$script = Get-Content -LiteralPath $scriptPath -Raw
+$contractRunnerMatch = [regex]::Match($script, '(?ms)^function Invoke-CiContractTests\s*\{.*?^\}')
+Assert-True $contractRunnerMatch.Success "verify-all must define the contract test runner"
+Assert-True ($contractRunnerMatch.Value -match 'if \(-not \$\?\)') "contract runner must use the PowerShell script invocation status"
+Assert-True ($contractRunnerMatch.Value -notmatch 'LASTEXITCODE') "contract runner must not reuse native exit codes left by successful PowerShell tests"
+
 $dryRunOutput = & $scriptPath -DryRun
 $dryRunText = $dryRunOutput -join "`n"
 

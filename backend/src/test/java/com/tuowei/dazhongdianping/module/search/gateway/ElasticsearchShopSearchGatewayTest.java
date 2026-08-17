@@ -117,6 +117,7 @@ class ElasticsearchShopSearchGatewayTest {
                                   "pricePerCapita": 128.0,
                                   "currency": "CNY",
                                   "address": "徐汇区示例路 88 号",
+                                  "location": {"lat": 31.1952, "lon": 121.4365},
                                   "areaName": "徐家汇",
                                   "cityName": "上海",
                                   "hasDeal": true,
@@ -136,8 +137,97 @@ class ElasticsearchShopSearchGatewayTest {
             assertThat(item.id()).isEqualTo(10001L);
             assertThat(item.name()).isEqualTo("渝里火锅徐汇店");
             assertThat(item.currency()).isEqualTo("CNY");
+            assertThat(item.latitude()).isEqualTo(31.1952);
+            assertThat(item.longitude()).isEqualTo(121.4365);
         });
         server.verify();
+    }
+
+    @Test
+    void shouldCreateMissingIndexWithProductionMappingAndReturnEmptyPage() {
+        GatewayFixture fixture = gatewayFixture();
+        ShopSearchQuery query = new ShopSearchQuery();
+        query.setPage(2);
+        query.setPageSize(20);
+
+        fixture.server().expect(requestTo("http://elasticsearch.test/shop_index/_search"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {
+                                  "error": {
+                                    "root_cause": [{"type": "index_not_found_exception"}],
+                                    "type": "index_not_found_exception"
+                                  },
+                                  "status": 404
+                                }
+                                """));
+        fixture.server().expect(requestTo("http://elasticsearch.test/shop_index"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("geo_point")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("edge_ngram")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("pinyin_prefix_analyzer")))
+                .andRespond(withSuccess("{\"acknowledged\":true}", MediaType.APPLICATION_JSON));
+
+        PageResult<ShopListItemResponse> result = fixture.gateway().search(Region.CN, query);
+
+        assertThat(result.list()).isEmpty();
+        assertThat(result.total()).isZero();
+        assertThat(result.page()).isEqualTo(2);
+        assertThat(result.pageSize()).isEqualTo(20);
+        assertThat(result.hasMore()).isFalse();
+        fixture.server().verify();
+    }
+
+    @Test
+    void shouldAcceptIndexCreatedConcurrentlyByAnotherInstance() {
+        GatewayFixture fixture = gatewayFixture();
+        fixture.server().expect(requestTo("http://elasticsearch.test/shop_index/_search"))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {
+                                  "error": {"type": "index_not_found_exception"},
+                                  "status": 404
+                                }
+                                """));
+        fixture.server().expect(requestTo("http://elasticsearch.test/shop_index"))
+                .andExpect(method(HttpMethod.PUT))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {
+                                  "error": {"type": "resource_already_exists_exception"},
+                                  "status": 400
+                                }
+                                """));
+
+        PageResult<ShopListItemResponse> result = fixture.gateway().search(Region.EU, new ShopSearchQuery());
+
+        assertThat(result.list()).isEmpty();
+        assertThat(result.total()).isZero();
+        fixture.server().verify();
+    }
+
+    @Test
+    void shouldNotMaskUnrelatedSearchFailureAsMissingIndex() {
+        GatewayFixture fixture = gatewayFixture();
+        fixture.server().expect(requestTo("http://elasticsearch.test/shop_index/_search"))
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {
+                                  "error": {"type": "master_not_discovered_exception"},
+                                  "status": 503
+                                }
+                                """));
+
+        assertThatThrownBy(() -> fixture.gateway().search(Region.CN, new ShopSearchQuery()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Elasticsearch 商户搜索失败")
+                .hasCauseInstanceOf(org.springframework.web.client.HttpServerErrorException.class);
+        fixture.server().verify();
     }
 
     @Test

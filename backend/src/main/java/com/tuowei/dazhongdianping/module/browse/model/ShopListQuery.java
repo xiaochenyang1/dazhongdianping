@@ -21,6 +21,12 @@ public class ShopListQuery {
     private Boolean hasDeal;
     private Boolean openNow;
     private String sort = "smart";
+    private Double lat;
+    private Double lng;
+    private Double north;
+    private Double south;
+    private Double east;
+    private Double west;
 
     @Min(value = 1, message = "page 最小为 1")
     private Integer page = 1;
@@ -38,6 +44,9 @@ public class ShopListQuery {
             sort = "smart";
         }
         sort = sort.toLowerCase(Locale.ROOT);
+        if (!java.util.Set.of("smart", "distance", "score", "popular").contains(sort)) {
+            throw new IllegalArgumentException("sort 只支持 smart/distance/score/popular");
+        }
         if (page == null || page < 1) {
             page = 1;
         }
@@ -51,6 +60,40 @@ public class ShopListQuery {
             keyword = null;
         } else {
             keyword = keyword.trim();
+        }
+        validateCoordinates();
+    }
+
+    private void validateCoordinates() {
+        if ("distance".equals(sort) && (lat == null || lng == null)) {
+            throw new IllegalArgumentException("距离排序必须提供 lat 和 lng");
+        }
+        if (lat != null && (!Double.isFinite(lat) || lat < -90 || lat > 90)) {
+            throw new IllegalArgumentException("lat 必须在 -90 到 90 之间");
+        }
+        if (lng != null && (!Double.isFinite(lng) || lng < -180 || lng > 180)) {
+            throw new IllegalArgumentException("lng 必须在 -180 到 180 之间");
+        }
+        int boundsCount = (north == null ? 0 : 1)
+                + (south == null ? 0 : 1)
+                + (east == null ? 0 : 1)
+                + (west == null ? 0 : 1);
+        if (boundsCount != 0 && boundsCount != 4) {
+            throw new IllegalArgumentException("地图边界必须同时提供 north、south、east 和 west");
+        }
+        if (boundsCount == 0) {
+            return;
+        }
+        if (!Double.isFinite(north) || north < -90 || north > 90
+                || !Double.isFinite(south) || south < -90 || south > 90) {
+            throw new IllegalArgumentException("north 和 south 必须在 -90 到 90 之间");
+        }
+        if (!Double.isFinite(east) || east < -180 || east > 180
+                || !Double.isFinite(west) || west < -180 || west > 180) {
+            throw new IllegalArgumentException("east 和 west 必须在 -180 到 180 之间");
+        }
+        if (north < south) {
+            throw new IllegalArgumentException("north 不能小于 south");
         }
     }
 }

@@ -30,6 +30,8 @@ public class MysqlShopSearchGateway implements ShopSearchGateway {
         fallbackQuery.setHasDeal(query.getHasDeal());
         fallbackQuery.setOpenNow(query.getOpenNow());
         fallbackQuery.setSort(query.getSort());
+        fallbackQuery.setLat(query.getLat());
+        fallbackQuery.setLng(query.getLng());
         fallbackQuery.setPage(query.getPage());
         fallbackQuery.setPageSize(query.getPageSize());
         return browseQueryService.listShops(region, fallbackQuery);

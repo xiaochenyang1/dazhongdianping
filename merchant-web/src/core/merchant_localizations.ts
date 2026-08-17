@@ -175,6 +175,8 @@ export interface MerchantStrings {
       pending: string
       success: string
       rejected: string
+      processing: string
+      failed: string
     }
     summary: string
     headers: {
@@ -773,6 +775,8 @@ const zhCnStrings: MerchantStrings = {
       pending: '申请中',
       success: '退款成功',
       rejected: '已驳回',
+      processing: '退款处理中',
+      failed: '退款失败',
     },
     summary: '默认看“申请中”的退款；可切换查看历史审核结果。',
     headers: {
@@ -1410,6 +1414,8 @@ const enStrings: MerchantStrings = {
       pending: 'Pending',
       success: 'Refunded',
       rejected: 'Rejected',
+      processing: 'Processing',
+      failed: 'Failed',
     },
     summary: 'Pending refund requests are shown by default. Switch filters to review earlier decisions.',
     headers: {

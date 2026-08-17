@@ -1,5 +1,5 @@
 package com.tuowei.dazhongdianping.module.trade.service;
-import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping.common.region.RegionContext;import com.tuowei.dazhongdianping.common.user.*;import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;import com.tuowei.dazhongdianping.module.notification.service.NotificationService;import com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper;import com.tuowei.dazhongdianping.module.trade.model.*;import com.tuowei.dazhongdianping.module.trade.model.request.*;import com.tuowei.dazhongdianping.module.trade.payment.*;import java.math.*;import java.nio.charset.StandardCharsets;import java.security.MessageDigest;import java.time.*;import java.util.*;import org.springframework.beans.factory.annotation.Value;import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Transactional;
+import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping.common.region.RegionContext;import com.tuowei.dazhongdianping.common.user.*;import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;import com.tuowei.dazhongdianping.module.notification.service.NotificationService;import com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper;import com.tuowei.dazhongdianping.module.trade.model.*;import com.tuowei.dazhongdianping.module.trade.model.request.*;import com.tuowei.dazhongdianping.module.trade.payment.*;import java.math.*;import java.nio.charset.StandardCharsets;import java.security.MessageDigest;import java.time.*;import java.util.*;import org.springframework.beans.factory.annotation.Value;import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Propagation;import org.springframework.transaction.annotation.Transactional;
 @Service public class TradeService {
  private static final String ORDER_PAID_TYPE = "order.paid";
  private final TradeMapper mapper;private final UserGrowthService userGrowthService;private final CouponLifecycleService couponLifecycleService;private final NotificationService notificationService;private final String secret;private final PaymentChannelResolver channelResolver;public TradeService(TradeMapper mapper,UserGrowthService userGrowthService,CouponLifecycleService couponLifecycleService,NotificationService notificationService,@Value("${app.payment.notify-secret}")String secret,PaymentChannelResolver channelResolver){this.mapper=mapper;this.userGrowthService=userGrowthService;this.couponLifecycleService=couponLifecycleService;this.notificationService=notificationService;this.secret=secret;this.channelResolver=channelResolver;}
@@ -8,8 +8,62 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
  @Transactional public Map<String,Object> createOrder(OrderCreateRequest req){UserSession u=user();DealRow d=requireDeal(req.dealId());if(d.getValidEnd()!=null&&d.getValidEnd().isBefore(LocalDate.now()))throw new IllegalArgumentException("团购已过期");if(mapper.decrementDealStock(d.getId(),req.quantity())==0)throw new IllegalArgumentException("团购库存不足");OrderRow o=new OrderRow();o.setOrderNo("OD"+System.currentTimeMillis()+String.format("%04d",new Random().nextInt(10000)));o.setUserId(u.userId());o.setDealId(d.getId());o.setShopId(d.getShopId());o.setRegion(d.getRegion());o.setQuantity(req.quantity());o.setUnitPrice(d.getPrice());o.setAmount(d.getPrice().multiply(BigDecimal.valueOf(req.quantity())).setScale(2));o.setCurrency(d.getCurrency());o.setExpireAt(LocalDateTime.now().plusMinutes(30));mapper.insertOrder(o);return orderMap(requireOrder(o.getId()),false);}
  public PageResult<Map<String,Object>> orders(Integer payStatus,Integer page,Integer pageSize){int p=page==null?1:Math.max(1,page),s=pageSize==null?12:Math.min(50,Math.max(1,pageSize));UserSession u=user();long total=mapper.countUserOrders(u.userId(),region(),payStatus);List<Map<String,Object>> list=mapper.selectUserOrders(u.userId(),region(),payStatus,s,(p-1)*s).stream().map(o->orderMap(o,false)).toList();return new PageResult<>(list,total,p,s,(p-1)*s+list.size()<total);}
  public Map<String,Object> order(Long id){return orderMap(requireOrder(id),true);}
- @Transactional public Map<String,Object> pay(Long id){OrderRow o=requireOrder(id);PaymentChannel ch=channelResolver.resolve(o.getRegion());if(o.getStatus()!=1||o.getPayStatus()!=0)throw new IllegalArgumentException("订单当前不可支付");PaymentRow p=mapper.selectPayment(id);String clientSecret="";if(p==null){p=new PaymentRow();p.setOrderId(id);p.setOrderNo(o.getOrderNo());PaymentIntentResult intent=ch.createIntent(o,p);p.setChannel(intent.channel());p.setChannelTxn(intent.channelTxn());p.setAmount(o.getAmount());p.setCurrency(o.getCurrency());mapper.insertPayment(p);clientSecret=intent.clientSecret()==null?"":intent.clientSecret();}return Map.of("paymentId",p.getId(),"channel",p.getChannel(),"channelTxn",p.getChannelTxn(),"clientSecret",clientSecret,"orderNo",o.getOrderNo(),"amount",o.getAmount(),"currency",o.getCurrency());}
+ @Transactional public Map<String,Object> pay(Long id){OrderRow o=requireOrder(id);PaymentChannel ch=channelResolver.resolve(o.getRegion());if(o.getStatus()!=1||o.getPayStatus()!=0)throw new IllegalArgumentException("订单当前不可支付");PaymentRow p=mapper.selectPayment(id);if(p==null){p=new PaymentRow();p.setOrderId(id);p.setOrderNo(o.getOrderNo());PaymentIntentResult intent=ch.createIntent(o,p);p.setChannel(intent.channel());p.setChannelTxn(intent.channelTxn());p.setClientSecret(intent.clientSecret()==null?"":intent.clientSecret());p.setAmount(o.getAmount());p.setCurrency(o.getCurrency());mapper.insertPayment(p);}return Map.of("paymentId",p.getId(),"channel",p.getChannel(),"channelTxn",p.getChannelTxn(),"clientSecret",p.getClientSecret()==null?"":p.getClientSecret(),"orderNo",o.getOrderNo(),"amount",o.getAmount(),"currency",o.getCurrency());}
  @Transactional public Map<String,Object> notifyInternal(String channel,PaymentNotifyResult r){PaymentRow p=mapper.selectPaymentByTxn(channel,r.channelTxn());if(p==null||!p.getOrderNo().equals(r.orderNo()))throw new NotFoundException("支付流水不存在");OrderRow o=mapper.selectOrderByNo(r.orderNo());if(o==null||o.getAmount().compareTo(r.amount())!=0)throw new IllegalArgumentException("支付金额不一致");if(p.getStatus()==1)return Map.of("processed",false,"orderNo",o.getOrderNo());p.setRawResponse(r.toString());mapper.markPaymentSuccess(p);if(mapper.markOrderPaid(o.getId(),channel)==1){userGrowthService.rewardForCompletedOrder(o.getUserId(),o.getId());if(mapper.countOrderCoupons(o.getId())==0){DealRow d=mapper.selectDeal(o.getDealId(),o.getRegion());for(int i=0;i<o.getQuantity();i++){CouponRow c=new CouponRow();c.setOrderId(o.getId());c.setUserId(o.getUserId());c.setDealId(o.getDealId());c.setShopId(o.getShopId());c.setCode("CP"+UUID.randomUUID().toString().replace("-","").substring(0,20).toUpperCase());c.setExpireAt(d.getValidEnd());mapper.insertCoupon(c);}}notifyOrderPaid(o);}return Map.of("processed",true,"orderNo",o.getOrderNo());}
+ @Transactional public Map<String,Object> handleChannelWebhook(String channel,ChannelWebhookResult result){
+  if(result==null||result.eventType()==ChannelWebhookResult.EventType.IGNORED)return Map.of("processed",false);
+  if(result.eventType()==ChannelWebhookResult.EventType.PAYMENT_SUCCEEDED){
+   return notifyInternal(channel,new PaymentNotifyResult(result.orderNo(),result.channelTxn(),result.amount(),true));
+  }
+  if(result.refundState()==null||result.refundTxn()==null||result.refundTxn().isBlank())return Map.of("processed",false);
+  RefundRow refund=mapper.selectRefundByChannelTxn(channel,result.refundTxn());
+  if(refund==null)throw new ServiceUnavailableException("退款回执尚未落库，请稍后重试");
+  if(result.amount()==null||refund.getAmount()==null||refund.getAmount().compareTo(result.amount())!=0)throw new IllegalArgumentException("退款金额不一致");
+  return applyRefundChannelState(refund, result.refundState(), result.failureReason());
+ }
+
+ @Transactional(propagation=Propagation.REQUIRES_NEW) public Map<String,Object> applyRefundChannelState(RefundRow refund,RefundChannelState state,String failureReason){
+  if(refund==null||state==null)return Map.of("processed",false);
+  int current=refund.getStatus()==null?0:refund.getStatus();
+  if(state==RefundChannelState.PENDING){
+   if(current==1||current==2||current==4)return Map.of("processed",false,"refundId",refund.getId(),"status",current);
+   int changed=mapper.updateRefundChannelState(refund.getId(),3,"pending",safeFailureReason(failureReason));
+   return Map.of("processed",changed==1,"refundId",refund.getId(),"status",3);
+  }
+  if(state==RefundChannelState.FAILED){
+   if(current==1||current==2||current==4)return Map.of("processed",false,"refundId",refund.getId(),"status",current);
+   int changed=mapper.updateRefundChannelState(refund.getId(),4,"failed",safeFailureReason(failureReason));
+   if(changed==1){
+    OrderRow order=mapper.selectOrderById(refund.getOrderId());
+    if(order!=null)notifyRefundChannelResult(order,"failed",safeFailureReason(failureReason));
+   }
+   return Map.of("processed",changed==1,"refundId",refund.getId(),"status",4);
+  }
+  if(current==1)return Map.of("processed",false,"refundId",refund.getId(),"status",1);
+  if(current==2||current==4)return Map.of("processed",false,"refundId",refund.getId(),"status",current);
+  int changed=mapper.updateRefundChannelState(refund.getId(),1,"succeeded","");
+  if(changed==1){
+   OrderRow order=mapper.selectOrderById(refund.getOrderId());
+   if(order==null)throw new NotFoundException("退款对应订单不存在");
+   if(mapper.markOrderRefunded(order.getId())!=1)throw new IllegalStateException("订单退款状态更新失败");
+   mapper.markCouponsRefunded(order.getId());
+   if(mapper.restoreDealStock(order.getDealId(),order.getQuantity())!=1)throw new IllegalStateException("退款库存恢复失败");
+   notifyRefundChannelResult(order,"succeeded","");
+  }
+  return Map.of("processed",changed==1,"refundId",refund.getId(),"status",1);
+ }
+
+ private String safeFailureReason(String reason){return reason==null?"":reason.length()>255?reason.substring(0,255):reason;}
+
+ private void notifyRefundChannelResult(OrderRow order,String state,String reason){
+  if(order==null||order.getUserId()==null)return;
+  String title=switch(state){case "succeeded"->"退款已到账";case "failed"->"退款失败";default->"退款处理中";};
+  String content=(order.getDealTitle()==null||order.getDealTitle().isBlank()?"团购订单":order.getDealTitle())
+          +" · 订单 "+order.getOrderNo()+" · "+title+(reason==null||reason.isBlank()?"":"："+reason);
+  String link="/user/orders/"+order.getId()+"?refund="+state;
+  String refundRegion=order.getRegion()==null||order.getRegion().isBlank()?RegionContext.getRegion().name():order.getRegion();
+  notificationService.create(order.getUserId(),refundRegion,"order.refund.result",title,content,link);
+ }
  @Transactional public Map<String,Object> completeMockPayment(Long id){OrderRow o=requireOrder(id);channelResolver.resolve(o.getRegion());Map<String,Object> intent=pay(id);String channel=(String)intent.get("channel");if(!channel.endsWith("_mock"))throw new IllegalArgumentException("当前渠道不是模拟支付");String txn=(String)intent.get("channelTxn");notifyInternal(channel,new PaymentNotifyResult(o.getOrderNo(),txn,o.getAmount(),true));return orderMap(requireOrder(id),true);}
  @Transactional public Map<String,Object> cancel(Long id){OrderRow o=requireOrder(id);if(mapper.closeOrder(id,o.getUserId())==0)throw new IllegalArgumentException("订单当前不可取消");mapper.restoreDealStock(o.getDealId(),o.getQuantity());return orderMap(requireOrder(id),false);}
  @Transactional public Map<String,Object> refund(Long id,RefundRequest req){OrderRow o=requireOrder(id);if(o.getPayStatus()!=1||o.getStatus()!=1)throw new IllegalArgumentException("订单当前不可退款");if(mapper.countUsedCoupons(id)>0)throw new IllegalArgumentException("存在已核销券，不能整单退款");if(mapper.selectRefundByOrder(id)!=null)throw new IllegalArgumentException("订单已有退款申请");mapper.insertRefund(id,o.getAmount(),req.reason().trim());return orderMap(requireOrder(id),true);}
@@ -19,7 +73,7 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
  private DealRow requireDeal(Long id){DealRow d=mapper.selectDeal(id,region());if(d==null)throw new NotFoundException("团购不存在");return d;}private OrderRow requireOrder(Long id){UserSession u=user();OrderRow o=mapper.selectUserOrder(id,u.userId(),region());if(o==null)throw new NotFoundException("订单不存在");return o;}private UserSession user(){UserSession u=UserSessionContext.get();if(u==null)throw new UnauthorizedException("用户登录状态不存在");return u;}private String region(){return RegionContext.getRegion().name();}
  private Map<String,Object> dealSummary(DealRow d){Map<String,Object>m=new LinkedHashMap<>();m.put("id",d.getId());m.put("shopId",d.getShopId());m.put("shopName",d.getShopName());m.put("title",d.getTitle());m.put("coverImage",d.getCoverImage());m.put("price",d.getPrice());m.put("originalPrice",d.getOriginalPrice());m.put("currency",d.getCurrency());m.put("stock",d.getStock());m.put("soldCount",d.getSoldCount());return m;}
  private Map<String,Object> orderMap(OrderRow o,boolean includeCoupons){Map<String,Object>m=new LinkedHashMap<>();m.put("id",o.getId());m.put("orderNo",o.getOrderNo());m.put("dealId",o.getDealId());m.put("dealTitle",o.getDealTitle());m.put("shopId",o.getShopId());m.put("shopName",o.getShopName());m.put("coverImage",o.getCoverImage());m.put("quantity",o.getQuantity());m.put("unitPrice",o.getUnitPrice());m.put("amount",o.getAmount());m.put("currency",o.getCurrency());m.put("payStatus",o.getPayStatus());m.put("payStatusText",switch(o.getPayStatus()){case 1->"已支付";case 2->"已退款";case 3->"部分退款";default->"待支付";});m.put("status",o.getStatus());RefundRow refund=mapper.selectRefundByOrder(o.getId());if(refund!=null)m.put("refund",refundMap(refund));if(includeCoupons)m.put("coupons",mapper.selectOrderCoupons(o.getId(),o.getUserId()).stream().map(this::couponMap).toList());return m;}
- private Map<String,Object> refundMap(RefundRow r){Map<String,Object>m=new LinkedHashMap<>();m.put("id",r.getId());m.put("amount",r.getAmount());m.put("reason",r.getReason());m.put("status",r.getStatus());m.put("statusText",switch(r.getStatus()){case 1->"退款成功";case 2->"已驳回";default->"申请中";});m.put("auditReason",r.getAuditReason());m.put("auditedAt",r.getAuditedAt());m.put("createdAt",r.getCreatedAt());return m;}
+ private Map<String,Object> refundMap(RefundRow r){Map<String,Object>m=new LinkedHashMap<>();m.put("id",r.getId());m.put("amount",r.getAmount());m.put("reason",r.getReason());m.put("status",r.getStatus());m.put("statusText",switch(r.getStatus()){case 1->"退款成功";case 2->"已驳回";case 3->"退款处理中";case 4->"退款失败";default->"申请中";});m.put("channel",r.getChannel()==null?"":r.getChannel());m.put("channelRefundTxn",r.getChannelRefundTxn()==null?"":r.getChannelRefundTxn());m.put("channelStatus",r.getChannelStatus()==null?"":r.getChannelStatus());m.put("channelFailureReason",r.getChannelFailureReason()==null?"":r.getChannelFailureReason());m.put("auditReason",r.getAuditReason());m.put("auditedAt",r.getAuditedAt());m.put("createdAt",r.getCreatedAt());return m;}
  private Map<String,Object> couponMap(CouponRow c){Map<String,Object>m=new LinkedHashMap<>();m.put("id",c.getId());m.put("orderId",c.getOrderId());m.put("code",c.getCode());m.put("status",c.getStatus());m.put("statusText",switch(c.getStatus()){case 2->"已使用";case 3->"已过期";case 4->"已退款";default->"待使用";});m.put("dealId",c.getDealId());m.put("dealTitle",c.getDealTitle());m.put("shopId",c.getShopId());m.put("shopName",c.getShopName());m.put("coverImage",c.getCoverImage());m.put("expireAt",c.getExpireAt());return m;}
  private Map<String,Object> couponDetailMap(CouponRow c){
   Map<String,Object> m=new LinkedHashMap<>(couponMap(c));

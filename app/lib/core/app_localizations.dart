@@ -26,6 +26,25 @@ class AppLocalizations {
     'map': '地图',
     'mapsConfigured': 'Google Maps 已配置',
     'mapsUnavailable': 'Google Maps 未配置，仍可按城市和列表浏览。',
+    'mapPlacesLoadFailed': '地图门店加载失败：{error}',
+    'noMapPlaces': '当前区域暂无带坐标的门店',
+    'locateMe': '定位到我的位置',
+    'locating': '正在定位...',
+    'locationServiceDisabled': '设备定位服务未开启，开启后才能显示当前位置。',
+    'locationPermissionDenied': '未获得定位权限，你仍可按城市和门店列表浏览。',
+    'locationPermissionPermanentlyDenied': '定位权限已被禁用，请在应用设置中允许使用位置。',
+    'locationFailed': '暂时无法获取当前位置，请稍后重试。',
+    'openLocationSettings': '定位设置',
+    'openAppSettings': '应用设置',
+    'distanceFromYouMeters': '距你 {distance} 米',
+    'distanceFromYouKilometers': '距你 {distance} 公里',
+    'updatingMapArea': '正在更新此区域...',
+    'noShopsInMapArea': '当前地图范围暂无门店，可继续移动地图查看。',
+    'mapAreaLoadFailed': '当前地图范围加载失败，原有门店已保留。',
+    'viewShopDetails': '查看门店详情',
+    'navigateToShop': '到店导航',
+    'openingNavigation': '正在打开导航...',
+    'navigationOpenFailed': '无法打开 Google Maps，请检查设备地图服务。',
     'realPaymentUnavailable': '真实支付未配置，客户端不会伪造支付成功。',
     'pushUnavailable': 'FCM/APNs 未配置，通知仍可通过站内消息补偿。',
     'notifications': '消息通知',
@@ -422,6 +441,7 @@ class AppLocalizations {
     'orderShopMeta': '{shop} · 订单 {orderNo}',
     'startPayment': '发起支付',
     'refundLabel': '退款：{status}',
+    'refundChannelReceipt': '退款渠道：{channel} · 退款单号：{transaction}',
     'couponCopied': '券码已复制',
     'couponDetail': '券详情',
     'couponDetailLoadFailed': '券码详情加载失败：{error}',
@@ -440,6 +460,8 @@ class AppLocalizations {
     'refundStatusPending': '待审核',
     'refundStatusApproved': '退款成功',
     'refundStatusRejected': '已驳回',
+    'refundStatusProcessing': '退款处理中',
+    'refundStatusFailed': '退款失败',
     'defaultRefundReason': '行程有变',
     'paymentRequestCreated': '已创建 {channel} 支付请求，请在支付渠道完成付款',
     'paymentStartFailed': '支付发起失败：{error}',
@@ -969,6 +991,15 @@ class AppLocalizations {
     'similarShopsSection': '相似门店',
     'retryReviews': '重试点评',
     'retryRecommendations': '重试推荐',
+    'shopCoverAlt': '门店封面',
+    'shopCoverPlaceholder': '暂无封面图',
+    'scoreBreakdownTitle': '评分明细',
+    'scoreBreakdownValue': '{taste} / {env} / {service}',
+    'recommendedDishesSection': '推荐菜',
+    'recommendedDishesMissing': '这家店暂时还没补推荐菜，先看基础信息和公开点评也够用。',
+    'dishRecommendReason': '推荐理由：{reason}',
+    'shopGallerySection': '门店相册',
+    'shopGalleryMissing': '门店相册还没补齐，先靠点评和基础信息判断也不至于两眼一抹黑。',
   };
   static const _traditional = {
     'homeTitle': '在地生活',
@@ -982,6 +1013,25 @@ class AppLocalizations {
     'map': '地圖',
     'mapsConfigured': 'Google Maps 已設定',
     'mapsUnavailable': 'Google Maps 尚未設定，仍可依城市和列表瀏覽。',
+    'mapPlacesLoadFailed': '地圖店家載入失敗：{error}',
+    'noMapPlaces': '目前區域暫無帶座標的店家',
+    'locateMe': '定位到我的位置',
+    'locating': '正在定位...',
+    'locationServiceDisabled': '裝置定位服務未開啟，開啟後才能顯示目前位置。',
+    'locationPermissionDenied': '未取得定位權限，你仍可依城市和店家列表瀏覽。',
+    'locationPermissionPermanentlyDenied': '定位權限已停用，請在 App 設定中允許使用位置。',
+    'locationFailed': '暫時無法取得目前位置，請稍後再試。',
+    'openLocationSettings': '定位設定',
+    'openAppSettings': 'App 設定',
+    'distanceFromYouMeters': '距你 {distance} 公尺',
+    'distanceFromYouKilometers': '距你 {distance} 公里',
+    'updatingMapArea': '正在更新此區域...',
+    'noShopsInMapArea': '目前地圖範圍暫無店家，可繼續移動地圖查看。',
+    'mapAreaLoadFailed': '目前地圖範圍載入失敗，原有店家已保留。',
+    'viewShopDetails': '查看店家詳情',
+    'navigateToShop': '到店導航',
+    'openingNavigation': '正在開啟導航...',
+    'navigationOpenFailed': '無法開啟 Google Maps，請檢查裝置地圖服務。',
     'realPaymentUnavailable': '真實支付尚未設定，客戶端不會偽造支付成功。',
     'pushUnavailable': 'FCM/APNs 尚未設定，通知仍可透過站內訊息補償。',
     'notifications': '訊息通知',
@@ -1378,6 +1428,7 @@ class AppLocalizations {
     'orderShopMeta': '{shop} · 訂單 {orderNo}',
     'startPayment': '發起支付',
     'refundLabel': '退款：{status}',
+    'refundChannelReceipt': '退款渠道：{channel} · 退款單號：{transaction}',
     'couponCopied': '券碼已複製',
     'couponDetail': '券詳情',
     'couponDetailLoadFailed': '券碼詳情載入失敗：{error}',
@@ -1396,6 +1447,8 @@ class AppLocalizations {
     'refundStatusPending': '待審核',
     'refundStatusApproved': '退款成功',
     'refundStatusRejected': '已駁回',
+    'refundStatusProcessing': '退款處理中',
+    'refundStatusFailed': '退款失敗',
     'defaultRefundReason': '行程有變',
     'paymentRequestCreated': '已建立 {channel} 支付請求，請在支付渠道完成付款',
     'paymentStartFailed': '支付發起失敗：{error}',
@@ -1925,6 +1978,15 @@ class AppLocalizations {
     'similarShopsSection': '相似店家',
     'retryReviews': '重試評論',
     'retryRecommendations': '重試推薦',
+    'shopCoverAlt': '店家封面',
+    'shopCoverPlaceholder': '暫無封面圖',
+    'scoreBreakdownTitle': '評分明細',
+    'scoreBreakdownValue': '{taste} / {env} / {service}',
+    'recommendedDishesSection': '推薦菜',
+    'recommendedDishesMissing': '這家店暫時還沒補推薦菜，先看基礎資訊和公開評論也夠用。',
+    'dishRecommendReason': '推薦理由：{reason}',
+    'shopGallerySection': '店家相簿',
+    'shopGalleryMissing': '店家相簿還沒補齊，先靠評論和基礎資訊判斷也不至於兩眼一抹黑。',
   };
   static const _english = {
     'homeTitle': 'Local life',
@@ -1939,6 +2001,33 @@ class AppLocalizations {
     'mapsConfigured': 'Google Maps is configured',
     'mapsUnavailable':
         'Google Maps is not configured. City and list browsing remain available.',
+    'mapPlacesLoadFailed': 'Could not load map places: {error}',
+    'noMapPlaces':
+        'No places with map coordinates are available in this region.',
+    'locateMe': 'Show my location',
+    'locating': 'Locating...',
+    'locationServiceDisabled':
+        'Device location is turned off. Enable it to show your current position.',
+    'locationPermissionDenied':
+        'Location access was not granted. You can still browse by city and place list.',
+    'locationPermissionPermanentlyDenied':
+        'Location access is disabled. Allow it in the app settings.',
+    'locationFailed':
+        'Your current location could not be retrieved. Please try again.',
+    'openLocationSettings': 'Location settings',
+    'openAppSettings': 'App settings',
+    'distanceFromYouMeters': '{distance} m away',
+    'distanceFromYouKilometers': '{distance} km away',
+    'updatingMapArea': 'Updating this map area...',
+    'noShopsInMapArea':
+        'No places are in this map area. Move the map to keep exploring.',
+    'mapAreaLoadFailed':
+        'This map area could not be loaded. Existing places were kept.',
+    'viewShopDetails': 'View place details',
+    'navigateToShop': 'Get directions',
+    'openingNavigation': 'Opening directions...',
+    'navigationOpenFailed':
+        'Could not open Google Maps. Check the device map service.',
     'realPaymentUnavailable':
         'Real payment is not configured. The client will not fake a successful payment.',
     'pushUnavailable':
@@ -2382,6 +2471,8 @@ class AppLocalizations {
     'orderShopMeta': '{shop} · order {orderNo}',
     'startPayment': 'Pay now',
     'refundLabel': 'Refund: {status}',
+    'refundChannelReceipt':
+        'Refund channel: {channel} · Refund ID: {transaction}',
     'couponCopied': 'Coupon code copied',
     'couponDetail': 'Coupon details',
     'couponDetailLoadFailed': 'Could not load coupon details: {error}',
@@ -2400,12 +2491,15 @@ class AppLocalizations {
     'refundStatusPending': 'Pending review',
     'refundStatusApproved': 'Refunded',
     'refundStatusRejected': 'Rejected',
+    'refundStatusProcessing': 'Refund processing',
+    'refundStatusFailed': 'Refund failed',
     'defaultRefundReason': 'Plans changed',
     'paymentRequestCreated':
         'Created a {channel} payment request. Finish payment in the channel.',
     'paymentStartFailed': 'Could not start payment: {error}',
     'paymentConfirming': 'Confirming your payment...',
-    'paymentReceived': 'Payment received. The order is being confirmed — pull to refresh shortly.',
+    'paymentReceived':
+        'Payment received. The order is being confirmed — pull to refresh shortly.',
     'relatedCoupons': 'Linked coupons',
     'redeemable': 'Redeemable',
     'notRedeemable': 'Not redeemable',
@@ -3004,6 +3098,17 @@ class AppLocalizations {
     'similarShopsSection': 'Similar places',
     'retryReviews': 'Retry reviews',
     'retryRecommendations': 'Retry recommendations',
+    'shopCoverAlt': 'Place cover image',
+    'shopCoverPlaceholder': 'No cover image yet',
+    'scoreBreakdownTitle': 'Rating breakdown',
+    'scoreBreakdownValue': '{taste} / {env} / {service}',
+    'recommendedDishesSection': 'Recommended dishes',
+    'recommendedDishesMissing':
+        'No recommended dishes have been added yet. Browse the details and public reviews instead.',
+    'dishRecommendReason': 'Recommended because: {reason}',
+    'shopGallerySection': 'Photo gallery',
+    'shopGalleryMissing':
+        'The photo gallery has not been filled in yet — reviews and basic info still help you judge.',
   };
 
   factory AppLocalizations.forTag(String tag) {
@@ -3088,6 +3193,40 @@ class AppLocalizations {
   String get map => _text('map');
   String get mapsConfigured => _text('mapsConfigured');
   String get mapsUnavailable => _text('mapsUnavailable');
+  String mapPlacesLoadFailed(Object error) =>
+      _withError('mapPlacesLoadFailed', error);
+  String get noMapPlaces => _text('noMapPlaces');
+  String get locateMe => _text('locateMe');
+  String get locating => _text('locating');
+  String get locationServiceDisabled => _text('locationServiceDisabled');
+  String get locationPermissionDenied => _text('locationPermissionDenied');
+  String get locationPermissionPermanentlyDenied =>
+      _text('locationPermissionPermanentlyDenied');
+  String get locationFailed => _text('locationFailed');
+  String get openLocationSettings => _text('openLocationSettings');
+  String get openAppSettings => _text('openAppSettings');
+  String get updatingMapArea => _text('updatingMapArea');
+  String get noShopsInMapArea => _text('noShopsInMapArea');
+  String get mapAreaLoadFailed => _text('mapAreaLoadFailed');
+  String distanceFromYou(double meters) {
+    if (meters < 1000) {
+      return _text(
+        'distanceFromYouMeters',
+      ).replaceFirst('{distance}', '${meters.round()}');
+    }
+    final kilometers = meters / 1000;
+    final formatted = kilometers < 10
+        ? kilometers.toStringAsFixed(1)
+        : kilometers.round().toString();
+    return _text(
+      'distanceFromYouKilometers',
+    ).replaceFirst('{distance}', formatted);
+  }
+
+  String get viewShopDetails => _text('viewShopDetails');
+  String get navigateToShop => _text('navigateToShop');
+  String get openingNavigation => _text('openingNavigation');
+  String get navigationOpenFailed => _text('navigationOpenFailed');
   String get realPaymentUnavailable => _text('realPaymentUnavailable');
   String get pushUnavailable => _text('pushUnavailable');
   String get notifications => _text('notifications');
@@ -3601,9 +3740,11 @@ class AppLocalizations {
   String get pointsMallStock => _text('pointsMallStock');
   String get pointsMallExchangeLimit => _text('pointsMallExchangeLimit');
   String get pointsMallExchangeCount => _text('pointsMallExchangeCount');
-  String get pointsMallProductDescription => _text('pointsMallProductDescription');
+  String get pointsMallProductDescription =>
+      _text('pointsMallProductDescription');
   String get pointsMallAbundant => _text('pointsMallAbundant');
-  String get pointsMallInsufficientBalance => _text('pointsMallInsufficientBalance');
+  String get pointsMallInsufficientBalance =>
+      _text('pointsMallInsufficientBalance');
   String get pointsMallFulfillType => _text('pointsMallFulfillType');
   String get pointsMallLoadFailed => _text('pointsMallLoadFailed');
   String get pointsMallConfirmExchange => _text('pointsMallConfirmExchange');
@@ -3936,6 +4077,10 @@ class AppLocalizations {
   String get startPayment => _text('startPayment');
   String refundLabel(String status) =>
       _text('refundLabel').replaceFirst('{status}', status);
+  String refundChannelReceipt(String channel, String transaction) =>
+      _text('refundChannelReceipt')
+          .replaceFirst('{channel}', channel)
+          .replaceFirst('{transaction}', transaction);
   String get couponCopied => _text('couponCopied');
   String get couponDetail => _text('couponDetail');
   String couponDetailLoadFailed(Object error) =>
@@ -3959,6 +4104,8 @@ class AppLocalizations {
   String get refundStatusPending => _text('refundStatusPending');
   String get refundStatusApproved => _text('refundStatusApproved');
   String get refundStatusRejected => _text('refundStatusRejected');
+  String get refundStatusProcessing => _text('refundStatusProcessing');
+  String get refundStatusFailed => _text('refundStatusFailed');
   String get defaultRefundReason => _text('defaultRefundReason');
   String paymentRequestCreated(String channel) =>
       _text('paymentRequestCreated').replaceFirst('{channel}', channel);
@@ -4726,6 +4873,8 @@ class AppLocalizations {
         0 => refundStatusPending,
         1 => refundStatusApproved,
         2 => refundStatusRejected,
+        3 => refundStatusProcessing,
+        4 => refundStatusFailed,
         _ => fallback != null && fallback.isNotEmpty ? fallback : unknownStatus,
       };
     }
@@ -4738,6 +4887,8 @@ class AppLocalizations {
       'Refund requested' => refundStatusPending,
       '退款成功' || 'Refunded' || 'Refund successful' => refundStatusApproved,
       '已驳回' || '已駁回' || 'Rejected' => refundStatusRejected,
+      '退款处理中' || '退款處理中' || 'Refund processing' => refundStatusProcessing,
+      '退款失败' || '退款失敗' || 'Refund failed' => refundStatusFailed,
       final value when value != null && value.isNotEmpty => value,
       _ => unknownStatus,
     };
@@ -5060,6 +5211,23 @@ class AppLocalizations {
 
   String get retryReviews => _text('retryReviews');
   String get retryRecommendations => _text('retryRecommendations');
+  String get shopCoverAlt => _text('shopCoverAlt');
+  String get shopCoverPlaceholder => _text('shopCoverPlaceholder');
+  String get scoreBreakdownTitle => _text('scoreBreakdownTitle');
+  String scoreBreakdownValue({
+    required String taste,
+    required String env,
+    required String service,
+  }) => _text('scoreBreakdownValue')
+      .replaceFirst('{taste}', taste)
+      .replaceFirst('{env}', env)
+      .replaceFirst('{service}', service);
+  String get recommendedDishesSection => _text('recommendedDishesSection');
+  String get recommendedDishesMissing => _text('recommendedDishesMissing');
+  String dishRecommendReason(String reason) =>
+      _text('dishRecommendReason').replaceFirst('{reason}', reason);
+  String get shopGallerySection => _text('shopGallerySection');
+  String get shopGalleryMissing => _text('shopGalleryMissing');
   String statusWithRedeemability(String status, bool usable) =>
       '$status · ${usable ? redeemable : notRedeemable}';
 }

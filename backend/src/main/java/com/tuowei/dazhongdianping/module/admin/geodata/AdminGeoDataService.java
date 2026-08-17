@@ -75,6 +75,7 @@ public class AdminGeoDataService {
         if (runWithConflict(() -> mapper.updateCategory(row), "当前父分类下已存在同名分类") != 1) {
             throw new NotFoundException("分类不存在");
         }
+        publishShopSearchIndexChanges(mapper.selectShopIdsByCategory(currentRegion, id));
         return toCategoryResponse(requireCategory(id, currentRegion));
     }
 
@@ -148,6 +149,7 @@ public class AdminGeoDataService {
         if (runWithConflict(() -> mapper.updateCity(row), "当前区域已存在相同城市编码或名称") != 1) {
             throw new NotFoundException("城市不存在");
         }
+        publishShopSearchIndexChanges(mapper.selectShopIdsByCity(currentRegion, id));
         return toCityResponse(requireCity(id, currentRegion));
     }
 
@@ -215,6 +217,7 @@ public class AdminGeoDataService {
         if (runWithConflict(() -> mapper.updateArea(row), "当前城市已存在同名商圈") != 1) {
             throw new NotFoundException("商圈不存在");
         }
+        publishShopSearchIndexChanges(mapper.selectShopIdsByArea(currentRegion, id));
         return toAreaResponse(requireArea(id, currentRegion));
     }
 

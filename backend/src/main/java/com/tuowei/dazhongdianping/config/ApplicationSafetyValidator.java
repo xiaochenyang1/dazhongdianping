@@ -82,6 +82,18 @@ public class ApplicationSafetyValidator implements InitializingBean {
                 || !verificationCode.getMockCode().trim().matches("\\d{6}"))) {
             throw new IllegalStateException("APP_AUTH_VERIFICATION_MOCK_CODE must contain exactly six digits");
         }
+        if (verificationCode.getMail().isEnabled() && !verificationCode.getMail().isConfigured()) {
+            throw new IllegalStateException(
+                    "enabled verification mail requires APP_MAIL_HOST, APP_AUTH_VERIFICATION_MAIL_FROM and subject");
+        }
+        if (verificationCode.getTwilio().isEnabled() && !verificationCode.getTwilio().isConfigured()) {
+            throw new IllegalStateException(
+                    "enabled Twilio verification requires account SID, auth token, and sender configuration");
+        }
+        if (verificationCode.getAliyun().isEnabled() && !verificationCode.getAliyun().isConfigured()) {
+            throw new IllegalStateException(
+                    "enabled Aliyun SMS verification requires access key, sign name, template code, and route prefixes");
+        }
     }
 
     private boolean isStrictMode() {

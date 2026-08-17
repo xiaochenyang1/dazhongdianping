@@ -3,6 +3,7 @@ import 'package:dazhongdianping_app/features/activity/activity_repository.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/search_screen.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
+import 'package:dazhongdianping_app/features/browse/shop_map_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_feed_screen.dart';
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
@@ -198,22 +199,24 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.language),
             tooltip: strings.language,
           ),
-          IconButton(
-            key: const Key('home-map-action'),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    widget.thirdPartyConfig.googleMapsEnabled
-                        ? strings.mapsConfigured
-                        : strings.mapsUnavailable,
+          if (widget.thirdPartyConfig.googleMapsEnabled)
+            IconButton(
+              key: const Key('home-map-action'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ShopMapScreen(
+                    repository: widget.repository,
+                    thirdPartyConfig: widget.thirdPartyConfig,
+                    tradeRepository: widget.tradeRepository,
+                    reservationRepository: widget.reservationRepository,
+                    reviewRepository: widget.reviewRepository,
+                    canInteractReviews: widget.canInteractReviews,
                   ),
                 ),
-              );
-            },
-            icon: const Icon(Icons.map_outlined),
-            tooltip: strings.map,
-          ),
+              ),
+              icon: const Icon(Icons.map_outlined),
+              tooltip: strings.map,
+            ),
           IconButton(
             key: const Key('home-notification-action'),
             onPressed: _openingNotifications ? null : _openNotifications,

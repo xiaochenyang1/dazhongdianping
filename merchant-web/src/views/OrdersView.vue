@@ -24,6 +24,8 @@ const refundStatusOptions = computed(() => [
   { value: '0', label: strings.value.orders.refundStatusOptions.pending },
   { value: '1', label: strings.value.orders.refundStatusOptions.success },
   { value: '2', label: strings.value.orders.refundStatusOptions.rejected },
+  { value: '3', label: strings.value.orders.refundStatusOptions.processing },
+  { value: '4', label: strings.value.orders.refundStatusOptions.failed },
 ])
 
 async function load() {
@@ -108,7 +110,15 @@ onMounted(load)
             <td>{{ item.shopName }}</td>
             <td>{{ item.amount }} {{ item.currency }}</td>
             <td>{{ item.payStatusText }}</td>
-            <td>{{ item.refund?.statusText ?? strings.orders.noRefund }}</td>
+            <td>
+              {{ item.refund?.statusText ?? strings.orders.noRefund }}
+              <p v-if="item.refund?.channelRefundTxn" class="code-box">
+                {{ item.refund.channel || '-' }} / {{ item.refund.channelRefundTxn }}
+              </p>
+              <p v-if="item.refund?.channelFailureReason" class="error">
+                {{ item.refund.channelFailureReason }}
+              </p>
+            </td>
             <td>
               <div v-if="canAuditRefund && item.refund?.status === 0" class="refund-audit" :data-testid="`refund-actions-${item.id}`">
                 <input

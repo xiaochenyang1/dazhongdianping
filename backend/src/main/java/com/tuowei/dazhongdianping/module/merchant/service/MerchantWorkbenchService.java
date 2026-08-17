@@ -103,6 +103,8 @@ public class MerchantWorkbenchService {
                 row.getPricePerCapita(),
                 row.getCurrency(),
                 row.getAddress(),
+                row.getLatitude(),
+                row.getLongitude(),
                 row.getAreaName(),
                 row.getCityName(),
                 row.getHasDeal(),

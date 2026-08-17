@@ -13,6 +13,8 @@ public record ShopListItemResponse(
         BigDecimal pricePerCapita,
         String currency,
         String address,
+        Double latitude,
+        Double longitude,
         String areaName,
         String cityName,
         Boolean hasDeal,
@@ -28,13 +30,15 @@ public record ShopListItemResponse(
                                 BigDecimal pricePerCapita,
                                 String currency,
                                 String address,
+                                Double latitude,
+                                Double longitude,
                                 String areaName,
                                 String cityName,
                                 Boolean hasDeal,
                                 Boolean openNow,
                                 List<String> tags,
                                 Double distanceMeters) {
-        this(id, null, name, coverUrl, score, pricePerCapita, currency, address, areaName, cityName, hasDeal, openNow, tags, distanceMeters, null);
+        this(id, null, name, coverUrl, score, pricePerCapita, currency, address, latitude, longitude, areaName, cityName, hasDeal, openNow, tags, distanceMeters, null);
     }
 
     public ShopListItemResponse(Long id,
@@ -44,12 +48,14 @@ public record ShopListItemResponse(
                                 BigDecimal pricePerCapita,
                                 String currency,
                                 String address,
+                                Double latitude,
+                                Double longitude,
                                 String areaName,
                                 String cityName,
                                 Boolean hasDeal,
                                 Boolean openNow,
                                 List<String> tags) {
-        this(id, null, name, coverUrl, score, pricePerCapita, currency, address, areaName, cityName, hasDeal, openNow, tags, null, null);
+        this(id, null, name, coverUrl, score, pricePerCapita, currency, address, latitude, longitude, areaName, cityName, hasDeal, openNow, tags, null, null);
     }
 
     public ShopListItemResponse(Long id,
@@ -58,12 +64,14 @@ public record ShopListItemResponse(
                                 BigDecimal score,
                                 BigDecimal pricePerCapita,
                                 String address,
+                                Double latitude,
+                                Double longitude,
                                 String areaName,
                                 String cityName,
                                 Boolean hasDeal,
                                 Boolean openNow,
                                 List<String> tags) {
-        this(id, null, name, coverUrl, score, pricePerCapita, null, address, areaName, cityName, hasDeal, openNow, tags, null, null);
+        this(id, null, name, coverUrl, score, pricePerCapita, null, address, latitude, longitude, areaName, cityName, hasDeal, openNow, tags, null, null);
     }
 
     public ShopListItemResponse withMerchantCertification(Long merchantId,
@@ -77,6 +85,8 @@ public record ShopListItemResponse(
                 pricePerCapita,
                 currency,
                 address,
+                latitude,
+                longitude,
                 areaName,
                 cityName,
                 hasDeal,

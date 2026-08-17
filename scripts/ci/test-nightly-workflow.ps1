@@ -31,6 +31,9 @@ Assert-True ($workflow -match "mysql:8") "nightly workflow must provision MySQL 
 Assert-True ($workflow -match "redis:7") "nightly workflow must provision Redis 7"
 Assert-True ($workflow -match "minio") "nightly workflow must provision a MinIO-compatible S3 service"
 Assert-True ($workflow -match "MINIO_DEFAULT_BUCKETS") "nightly workflow must pre-create the MinIO smoke bucket"
+Assert-True ($workflow -match 'MINIO_DEFAULT_BUCKETS:\s*["'']?dzdp-smoke:download["'']?') "nightly workflow must allow anonymous downloads from the MinIO smoke bucket"
 Assert-True ($workflow -match "elasticsearch:8") "nightly workflow must provision Elasticsearch 8"
+Assert-True ($workflow -match "merchant-web/package-lock\.json") "nightly workflow must cache merchant-web dependencies"
+Assert-True ($workflow -match "npm ci --prefix merchant-web") "nightly workflow must install merchant-web dependencies"
 
 Write-Output "nightly workflow contract passed"

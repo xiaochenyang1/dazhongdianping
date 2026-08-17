@@ -9,6 +9,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.Refund;
+import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
@@ -50,7 +51,10 @@ public class StripePaymentChannel implements PaymentChannel {
                 .setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.AUTOMATIC)
                 .build();
         try {
-            PaymentIntent intent = stripeClient.paymentIntents().create(params);
+            RequestOptions requestOptions = RequestOptions.builder()
+                    .setIdempotencyKey("payment-intent-" + order.getOrderNo())
+                    .build();
+            PaymentIntent intent = stripeClient.paymentIntents().create(params, requestOptions);
             return new PaymentIntentResult(CHANNEL, intent.getId(), intent.getClientSecret());
         } catch (StripeException e) {
             throw translate(e);
@@ -58,10 +62,15 @@ public class StripePaymentChannel implements PaymentChannel {
     }
 
     private static final String SUCCEEDED_EVENT = "payment_intent.succeeded";
+    private static final java.util.Set<String> REFUND_EVENTS = java.util.Set.of(
+            "refund.created",
+            "refund.updated",
+            "refund.failed"
+    );
     private static final long TOLERANCE_SECONDS = 300L;
 
     @Override
-    public PaymentNotifyResult verifyWebhook(HttpServletRequest rawRequest) {
+    public ChannelWebhookResult verifyWebhookEvent(HttpServletRequest rawRequest) {
         String payload;
         try {
             payload = new String(rawRequest.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -77,8 +86,21 @@ public class StripePaymentChannel implements PaymentChannel {
             throw new IllegalArgumentException("Stripe 回调签名非法");
         }
 
+        if (REFUND_EVENTS.contains(event.getType())) {
+            Refund refund = (Refund) event.getDataObjectDeserializer()
+                    .getObject()
+                    .orElseThrow(() -> new IllegalStateException("Stripe 回调事件缺少 Refund 对象"));
+            BigDecimal amount = BigDecimal.valueOf(refund.getAmount()).movePointLeft(2).setScale(2);
+            return ChannelWebhookResult.refundUpdated(
+                    refund.getId(),
+                    amount,
+                    refundState(refund.getStatus()),
+                    refund.getFailureReason()
+            );
+        }
+
         if (!SUCCEEDED_EVENT.equals(event.getType())) {
-            return new PaymentNotifyResult(null, null, null, false);
+            return ChannelWebhookResult.ignored();
         }
 
         PaymentIntent intent = (PaymentIntent) event.getDataObjectDeserializer()
@@ -91,7 +113,17 @@ public class StripePaymentChannel implements PaymentChannel {
         }
 
         BigDecimal amount = BigDecimal.valueOf(intent.getAmount()).movePointLeft(2).setScale(2);
-        return new PaymentNotifyResult(orderNo, intent.getId(), amount, true);
+        return ChannelWebhookResult.paymentSucceeded(orderNo, intent.getId(), amount);
+    }
+
+    @Override
+    public PaymentNotifyResult verifyWebhook(HttpServletRequest rawRequest) {
+        ChannelWebhookResult result = verifyWebhookEvent(rawRequest);
+        if (result.eventType() != ChannelWebhookResult.EventType.PAYMENT_SUCCEEDED) {
+            return new PaymentNotifyResult(null, null, null, false);
+        }
+        return new PaymentNotifyResult(
+                result.orderNo(), result.channelTxn(), result.amount(), true);
     }
 
     @Override
@@ -100,7 +132,11 @@ public class StripePaymentChannel implements PaymentChannel {
     }
 
     @Override
-    public RefundResult refund(PaymentRow payment, BigDecimal amount, String reason) {
+    public RefundResult refund(
+            PaymentRow payment,
+            BigDecimal amount,
+            String reason,
+            String idempotencyKey) {
         RefundCreateParams.Builder builder = RefundCreateParams.builder()
                 .setPaymentIntent(payment.getChannelTxn())
                 .setAmount(toMinorUnits(amount));
@@ -109,13 +145,54 @@ public class StripePaymentChannel implements PaymentChannel {
             builder.putMetadata("reason", trimmedReason);
         }
         try {
-            Refund refund = stripeClient.refunds().create(builder.build());
+            if (!StringUtils.hasText(idempotencyKey)) {
+                throw new IllegalArgumentException("退款幂等键不能为空");
+            }
+            RequestOptions requestOptions = RequestOptions.builder()
+                    .setIdempotencyKey(idempotencyKey.trim())
+                    .build();
+            Refund refund = stripeClient.refunds().create(builder.build(), requestOptions);
             BigDecimal refundedAmount = BigDecimal.valueOf(refund.getAmount()).movePointLeft(2).setScale(2);
-            boolean success = "succeeded".equalsIgnoreCase(refund.getStatus());
-            return new RefundResult(CHANNEL, refund.getId(), refundedAmount, success);
+            return new RefundResult(
+                    CHANNEL,
+                    refund.getId(),
+                    refundedAmount,
+                    refundState(refund.getStatus()),
+                    refund.getFailureReason()
+            );
         } catch (StripeException e) {
             throw translate(e);
         }
+    }
+
+    @Override
+    public RefundResult queryRefund(String refundTxn) {
+        if (!StringUtils.hasText(refundTxn)) {
+            throw new IllegalArgumentException("退款单号不能为空");
+        }
+        try {
+            Refund refund = stripeClient.refunds().retrieve(refundTxn.trim());
+            BigDecimal refundedAmount = BigDecimal.valueOf(refund.getAmount()).movePointLeft(2).setScale(2);
+            return new RefundResult(
+                    CHANNEL,
+                    refund.getId(),
+                    refundedAmount,
+                    refundState(refund.getStatus()),
+                    refund.getFailureReason()
+            );
+        } catch (StripeException e) {
+            throw translate(e);
+        }
+    }
+
+    private RefundChannelState refundState(String status) {
+        if ("succeeded".equalsIgnoreCase(status)) {
+            return RefundChannelState.SUCCEEDED;
+        }
+        if ("failed".equalsIgnoreCase(status) || "canceled".equalsIgnoreCase(status)) {
+            return RefundChannelState.FAILED;
+        }
+        return RefundChannelState.PENDING;
     }
 
     private long toMinorUnits(BigDecimal amount) {

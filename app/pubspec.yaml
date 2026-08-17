@@ -42,10 +42,22 @@ dependencies:
   flutter_stripe: ^11.4.0
   firebase_messaging: ^16.4.3
   firebase_core: ^4.12.1
+  share_plus: ^10.1.4
+  # Location is requested only after the user taps the map locate button.
+  geolocator: 13.0.4
+  # Keep this below 2.15 so Maps does not raise the app's existing SDK floor.
+  google_maps_flutter: 2.14.0
 
   # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+
+dependency_overrides:
+  # google_maps_flutter 2.14 permits newer platform implementations whose
+  # current SDK floors are higher than this app's declared toolchain floor.
+  google_maps_flutter_android: 2.16.1
+  google_maps_flutter_ios: 2.15.4
+  google_maps_flutter_platform_interface: 2.14.0
+  google_maps_flutter_web: 0.5.14+3
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +75,11 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  config:
+    # file_saver, flutter_secure_storage and google_maps_flutter_ios still use
+    # CocoaPods. Pin this per project so developer machines do not silently
+    # choose different iOS dependency managers from their global Flutter config.
+    enable-swift-package-manager: false
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

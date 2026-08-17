@@ -183,8 +183,27 @@ describe('OrderDetailView', () => {
     const { app, host } = mount()
     await flush()
 
-    expect(host.textContent).toContain('退款已通过，订单状态已更新。')
+    const banner = host.querySelector('[data-testid="refund-result-banner"]')
+    expect(banner?.textContent).toContain('退款已通过，订单状态已更新。')
+    expect(banner?.classList.contains('is-success')).toBe(true)
     expect(host.textContent).toContain('符合规则')
+    app.unmount()
+  })
+
+  it.each([
+    ['pending', false],
+    ['failed', true],
+    ['rejected', true],
+  ])('uses the correct notification tone for %s refunds', async (marker, isError) => {
+    routeState.query = { refund: marker }
+
+    const { app, host } = mount()
+    await flush()
+
+    const banner = host.querySelector('[data-testid="refund-result-banner"]')
+    expect(banner).not.toBeNull()
+    expect(banner?.classList.contains('is-error')).toBe(isError)
+    expect(banner?.classList.contains('is-success')).toBe(false)
     app.unmount()
   })
 

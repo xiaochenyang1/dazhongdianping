@@ -15,6 +15,10 @@ public class RefundRow {
     private Integer status;
     private Long auditBy;
     private String auditReason;
+    private String channel;
+    private String channelRefundTxn;
+    private String channelStatus;
+    private String channelFailureReason;
     private LocalDateTime auditedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

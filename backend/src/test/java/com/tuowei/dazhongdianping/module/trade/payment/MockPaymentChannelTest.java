@@ -91,7 +91,8 @@ class MockPaymentChannelTest {
         payment.setChannelTxn("TX123456789012345678901234");
         BigDecimal amount = new BigDecimal("88.00");
 
-        RefundResult result = channel.refund(payment, amount, "用户申请退款");
+        RefundResult result = channel.refund(
+                payment, amount, "用户申请退款", "order-refund-123");
 
         assertTrue(result.success());
         assertEquals("stripe_mock", result.channel());
@@ -105,7 +106,8 @@ class MockPaymentChannelTest {
         PaymentRow payment = new PaymentRow();
         payment.setChannelTxn("TX123456789012345678901234");
 
-        RefundResult result = channel.refund(payment, new BigDecimal("10.00"), "");
+        RefundResult result = channel.refund(
+                payment, new BigDecimal("10.00"), "", "order-refund-124");
 
         assertTrue(result.success());
         assertEquals("alipay_mock", result.channel());

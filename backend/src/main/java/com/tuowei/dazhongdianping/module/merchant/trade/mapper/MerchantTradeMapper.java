@@ -86,6 +86,10 @@ public interface MerchantTradeMapper {
                       @Param("operatorId") Long operatorId,
                       @Param("reason") String reason);
 
+    int markRefundProcessing(@Param("orderId") Long orderId,
+                             @Param("operatorId") Long operatorId,
+                             @Param("reason") String reason);
+
     int rejectRefund(@Param("orderId") Long orderId,
                      @Param("operatorId") Long operatorId,
                      @Param("reason") String reason);

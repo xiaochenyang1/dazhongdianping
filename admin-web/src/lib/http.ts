@@ -76,12 +76,16 @@ async function request<T>(config: AxiosRequestConfig) {
   }
 }
 
-export function apiGet<T>(url: string, params?: object) {
-  return request<T>({ url, method: 'GET', params })
+export function apiGet<T>(url: string, params?: object, timeout?: number) {
+  return request<T>({ url, method: 'GET', params, timeout })
 }
 
-export function apiPost<T>(url: string, data?: object) {
-  return request<T>({ url, method: 'POST', data })
+export function apiPost<T>(url: string, data?: object, timeout?: number) {
+  return request<T>({ url, method: 'POST', data, timeout })
+}
+
+export function apiPostForm<T>(url: string, data: FormData, timeout = 60_000) {
+  return request<T>({ url, method: 'POST', data, timeout })
 }
 
 export function apiPut<T>(url: string, data?: object) {

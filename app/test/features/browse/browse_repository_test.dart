@@ -24,6 +24,8 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
         'currency': 'EUR',
         'pricePerCapita': 22,
         'address': 'Rue de Lyon',
+        'latitude': 48.8499,
+        'longitude': 2.3708,
         'phone': '+331000000',
         'businessHours': '10:00-22:00',
         'summary': 'Hand-pulled noodles',
@@ -163,6 +165,9 @@ class FakeJsonApi implements JsonApi, JsonDeleteApi {
           'score': 4.7,
           'currency': 'EUR',
           'pricePerCapita': 22,
+          'address': 'Rue de Lyon',
+          'latitude': 48.8499,
+          'longitude': 2.3708,
           'merchantCertification': {
             'code': 'verified_merchant',
             'label': '认证商户',
@@ -208,8 +213,26 @@ void main() {
     final detail = await repository.loadShopDetail(99);
     expect(api.path, '/api/c/v1/shops/99');
     expect(detail.address, 'Rue de Lyon');
+    expect(detail.latitude, 48.8499);
+    expect(detail.longitude, 2.3708);
     expect(detail.merchantCertificationCode, 'verified_merchant');
   });
+
+  test(
+    'loads map shops with coordinates from the public list endpoint',
+    () async {
+      final api = FakeJsonApi();
+      final repository = ApiBrowseRepository(api);
+
+      final shops = await repository.loadMapShops();
+
+      expect(api.path, '/api/c/v1/shops');
+      expect(api.query, {'page': 1, 'pageSize': 50});
+      expect(shops.single.address, 'Rue de Lyon');
+      expect(shops.single.latitude, 48.8499);
+      expect(shops.single.longitude, 2.3708);
+    },
+  );
 
   test(
     'loads hot words and search history, and supports delete paths',

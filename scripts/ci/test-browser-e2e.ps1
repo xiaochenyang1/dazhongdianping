@@ -60,6 +60,9 @@ Assert-True ($realBackendSpec -match "PLAYWRIGHT_REAL_BACKEND") "real backend sp
 Assert-True ($realBackendSpec -match "提交点评") "real backend spec must cover review submission"
 Assert-True ($realBackendSpec -match "通过点评") "real backend spec must cover admin review approval"
 Assert-True ($realBackendSpec -match "渝里火锅徐汇店") "real backend spec must use H2 seed shop data"
+Assert-True ($realBackendSpec -match "system/health") "real backend spec must cover admin system health"
+Assert-True ($realBackendSpec -match "data/search-sync") "real backend spec must cover admin search sync operations"
+Assert-True ($realBackendSpec -match "overview\.enabled\)\.toBe\(false\)") "real backend spec must verify MySQL disables search sync mutations"
 
 $dryRunOutput = & $scriptPath -DryRun
 $dryRunText = $dryRunOutput -join "`n"

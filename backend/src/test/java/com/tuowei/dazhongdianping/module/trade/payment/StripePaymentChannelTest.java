@@ -39,7 +39,9 @@ class StripePaymentChannelTest {
         when(stripeIntent.getId()).thenReturn("pi_test_123");
         when(stripeIntent.getClientSecret()).thenReturn("pi_test_123_secret_abc");
         when(stripeClient.paymentIntents()).thenReturn(intentService);
-        when(intentService.create(any(com.stripe.param.PaymentIntentCreateParams.class)))
+        when(intentService.create(
+                any(com.stripe.param.PaymentIntentCreateParams.class),
+                any(com.stripe.net.RequestOptions.class)))
             .thenReturn(stripeIntent);
 
         PaymentIntentResult result = channel.createIntent(order(), new PaymentRow());
@@ -52,7 +54,9 @@ class StripePaymentChannelTest {
     @Test
     void shouldMapAuthenticationExceptionToServiceUnavailable() throws Exception {
         when(stripeClient.paymentIntents()).thenReturn(intentService);
-        when(intentService.create(any(com.stripe.param.PaymentIntentCreateParams.class)))
+        when(intentService.create(
+                any(com.stripe.param.PaymentIntentCreateParams.class),
+                any(com.stripe.net.RequestOptions.class)))
             .thenThrow(new AuthenticationException("bad key", null, null, 401));
 
         assertThrows(ServiceUnavailableException.class,
@@ -113,14 +117,17 @@ class StripePaymentChannelTest {
         when(stripeRefund.getStatus()).thenReturn("succeeded");
         when(stripeRefund.getAmount()).thenReturn(8800L);
         when(stripeClient.refunds()).thenReturn(refundService);
-        when(refundService.create(any(com.stripe.param.RefundCreateParams.class)))
+        when(refundService.create(
+                any(com.stripe.param.RefundCreateParams.class),
+                any(com.stripe.net.RequestOptions.class)))
             .thenReturn(stripeRefund);
 
         PaymentRow payment = new PaymentRow();
         payment.setChannel("stripe");
         payment.setChannelTxn("pi_test_123");
 
-        RefundResult result = channel.refund(payment, new BigDecimal("88.00"), "行程有变");
+        RefundResult result = channel.refund(
+                payment, new BigDecimal("88.00"), "行程有变", "order-refund-123");
 
         assertTrue(result.success());
         assertEquals("stripe", result.channel());
@@ -132,7 +139,9 @@ class StripePaymentChannelTest {
     void shouldMapRefundFailureToServiceUnavailable() throws Exception {
         RefundService refundService = mock(RefundService.class);
         when(stripeClient.refunds()).thenReturn(refundService);
-        when(refundService.create(any(com.stripe.param.RefundCreateParams.class)))
+        when(refundService.create(
+                any(com.stripe.param.RefundCreateParams.class),
+                any(com.stripe.net.RequestOptions.class)))
             .thenThrow(new AuthenticationException("bad key", null, null, 401));
 
         PaymentRow payment = new PaymentRow();
@@ -140,7 +149,8 @@ class StripePaymentChannelTest {
         payment.setChannelTxn("pi_test_123");
 
         assertThrows(ServiceUnavailableException.class,
-            () -> channel.refund(payment, new BigDecimal("88.00"), ""));
+            () -> channel.refund(
+                    payment, new BigDecimal("88.00"), "", "order-refund-123"));
     }
 
     /** Build a valid Stripe-Signature header the same way Stripe does. */

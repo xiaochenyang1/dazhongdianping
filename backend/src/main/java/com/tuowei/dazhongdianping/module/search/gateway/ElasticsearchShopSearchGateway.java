@@ -16,13 +16,19 @@ import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component("elasticsearchShopSearchGateway")
 public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSearchIndexGateway {
 
+    private static final String INDEX_NOT_FOUND_ERROR = "index_not_found_exception";
+    private static final String INDEX_ALREADY_EXISTS_ERROR = "resource_already_exists_exception";
+
     private final SearchProperties searchProperties;
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
+    private final Object indexInitializationMonitor = new Object();
+    private volatile boolean indexKnownPresent;
 
     public ElasticsearchShopSearchGateway(SearchProperties searchProperties,
                                            ObjectMapper objectMapper,
@@ -36,46 +42,51 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
     public PageResult<ShopListItemResponse> search(Region region, ShopSearchQuery query) {
         query.normalize();
         try {
-            String responseBody = restClient.post()
-                    .uri("/{index}/_search", searchProperties.getIndexName())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(buildSearchBody(region, query))
-                    .retrieve()
-                    .body(String.class);
-            return mapSearchResponse(responseBody, query);
+            PageResult<ShopListItemResponse> result = executeSearch(region, query);
+            indexKnownPresent = true;
+            return result;
         } catch (RuntimeException exception) {
+            if (isElasticsearchError(exception, 404, INDEX_NOT_FOUND_ERROR)) {
+                indexKnownPresent = false;
+                try {
+                    ensureIndexExists();
+                    return emptyPage(query);
+                } catch (RuntimeException initializationException) {
+                    throw new IllegalStateException("Elasticsearch 商户搜索失败", initializationException);
+                }
+            }
             throw new IllegalStateException("Elasticsearch 商户搜索失败", exception);
         }
     }
 
     @Override
     public void rebuildIndex(List<ShopSearchDocument> documents) {
-        try {
-            restClient.delete()
-                    .uri("/{index}", searchProperties.getIndexName())
-                    .exchange((request, response) -> null);
-            restClient.put()
-                    .uri("/{index}", searchProperties.getIndexName())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(indexDefinition())
-                    .retrieve()
-                    .toBodilessEntity();
-            if (!documents.isEmpty()) {
-                String response = restClient.post()
-                        .uri(uriBuilder -> uriBuilder
-                                .path("/_bulk")
-                                .queryParam("refresh", "wait_for")
-                                .build())
-                        .contentType(MediaType.parseMediaType("application/x-ndjson"))
-                        .body(bulkBody(documents))
-                        .retrieve()
-                        .body(String.class);
-                if (objectMapper.readTree(response == null ? "{}" : response).path("errors").asBoolean(false)) {
-                    throw new IllegalStateException("Elasticsearch 批量索引包含失败项");
+        synchronized (indexInitializationMonitor) {
+            try {
+                restClient.delete()
+                        .uri("/{index}", searchProperties.getIndexName())
+                        .exchange((request, response) -> null);
+                indexKnownPresent = false;
+                createIndex();
+                indexKnownPresent = true;
+                if (!documents.isEmpty()) {
+                    String response = restClient.post()
+                            .uri(uriBuilder -> uriBuilder
+                                    .path("/_bulk")
+                                    .queryParam("refresh", "wait_for")
+                                    .build())
+                            .contentType(MediaType.parseMediaType("application/x-ndjson"))
+                            .body(bulkBody(documents))
+                            .retrieve()
+                            .body(String.class);
+                    if (objectMapper.readTree(response == null ? "{}" : response).path("errors").asBoolean(false)) {
+                        throw new IllegalStateException("Elasticsearch 批量索引包含失败项");
+                    }
                 }
+            } catch (Exception exception) {
+                indexKnownPresent = false;
+                throw new IllegalStateException("重建 Elasticsearch 商户索引失败", exception);
             }
-        } catch (Exception exception) {
-            throw new IllegalStateException("重建 Elasticsearch 商户索引失败", exception);
         }
     }
 
@@ -105,6 +116,75 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
         } catch (RuntimeException exception) {
             throw new IllegalStateException("删除 Elasticsearch 商户索引失败", exception);
         }
+    }
+
+    private PageResult<ShopListItemResponse> executeSearch(Region region, ShopSearchQuery query) {
+        String responseBody = restClient.post()
+                .uri("/{index}/_search", searchProperties.getIndexName())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(buildSearchBody(region, query))
+                .retrieve()
+                .body(String.class);
+        return mapSearchResponse(responseBody, query);
+    }
+
+    private void ensureIndexExists() {
+        synchronized (indexInitializationMonitor) {
+            if (indexKnownPresent) {
+                return;
+            }
+            try {
+                createIndex();
+            } catch (RuntimeException exception) {
+                if (!isElasticsearchError(exception, 400, INDEX_ALREADY_EXISTS_ERROR)) {
+                    throw exception;
+                }
+            }
+            indexKnownPresent = true;
+        }
+    }
+
+    private void createIndex() {
+        restClient.put()
+                .uri("/{index}", searchProperties.getIndexName())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(indexDefinition())
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    private boolean isElasticsearchError(Throwable exception, int statusCode, String errorType) {
+        Throwable candidate = exception;
+        while (candidate != null) {
+            if (candidate instanceof RestClientResponseException responseException
+                    && responseException.getStatusCode().value() == statusCode
+                    && responseContainsErrorType(responseException.getResponseBodyAsString(), errorType)) {
+                return true;
+            }
+            candidate = candidate.getCause();
+        }
+        return false;
+    }
+
+    private boolean responseContainsErrorType(String responseBody, String errorType) {
+        try {
+            JsonNode error = objectMapper.readTree(responseBody == null ? "{}" : responseBody).path("error");
+            if (errorType.equals(error.path("type").asText())) {
+                return true;
+            }
+            for (JsonNode rootCause : error.path("root_cause")) {
+                if (errorType.equals(rootCause.path("type").asText())) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private PageResult<ShopListItemResponse> emptyPage(ShopSearchQuery query) {
+        return new PageResult<>(List.of(), 0, query.getPage(), query.getPageSize(), false);
     }
 
     private Map<String, Object> indexDefinition() {
@@ -303,6 +383,9 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
                 if ("distance".equals(query.getSort()) && hit.path("sort").isArray() && !hit.path("sort").isEmpty()) {
                     distanceMeters = hit.path("sort").get(0).asDouble();
                 }
+                JsonNode location = source.path("location");
+                Double latitude = location.path("lat").isNumber() ? location.path("lat").asDouble() : null;
+                Double longitude = location.path("lon").isNumber() ? location.path("lon").asDouble() : null;
                 items.add(new ShopListItemResponse(
                         source.path("id").asLong(),
                         text(source, "name"),
@@ -311,6 +394,8 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
                         decimal(source, "pricePerCapita"),
                         text(source, "currency"),
                         text(source, "address"),
+                        latitude,
+                        longitude,
                         text(source, "areaName"),
                         text(source, "cityName"),
                         source.path("hasDeal").asBoolean(false),

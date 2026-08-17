@@ -1,0 +1,15 @@
+# MySQL client defaults file used only by the remote migration runner.
+# Install a real copy outside the release directory, replace every CHANGE_ME,
+# and chmod it to 0400 or 0600. Never commit the real file or pass its contents
+# through CI logs.
+
+[client]
+protocol=tcp
+host=CHANGE_ME
+port=3306
+user=CHANGE_ME
+password=CHANGE_ME
+database=CHANGE_ME
+# Prefer certificate verification when the target MySQL service provides it.
+# ssl-mode=VERIFY_IDENTITY
+# ssl-ca=/etc/ssl/certs/mysql-ca.pem

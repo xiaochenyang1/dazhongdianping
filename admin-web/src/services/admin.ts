@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/http'
+import { apiDelete, apiGet, apiPost, apiPostForm, apiPut } from '@/lib/http'
 import type {
   AdminAuditTask,
   AdminAuditLog,
@@ -7,6 +7,8 @@ import type {
   AdminOrder,
   AdminRefundAuditPayload,
   AdminTradeReconcileResult,
+  AdminChannelStatementBatch,
+  AdminChannelStatementItem,
   AdminAppUser,
   AdminAppUserDetail,
   AdminBanner,
@@ -31,6 +33,11 @@ import type {
   AdminImportBatch,
   AdminImportPayload,
   AdminImportResult,
+  AdminSearchSyncActionResult,
+  AdminSearchSyncOverview,
+  AdminSearchSyncState,
+  AdminSearchSyncTask,
+  AdminSystemHealth,
   AdminIdentity,
   AdminLoginResponse,
   AdminMenuItem,
@@ -74,6 +81,13 @@ export interface AdminShopQuery {
 export interface AdminImportBatchQuery {
   region?: Region
   status?: number
+  page?: number
+  pageSize?: number
+}
+
+export interface AdminSearchSyncTaskQuery {
+  keyword?: string
+  state?: AdminSearchSyncState
   page?: number
   pageSize?: number
 }
@@ -237,6 +251,30 @@ export function listImportBatches(query: AdminImportBatchQuery) {
   return apiGet<PageResult<AdminImportBatch>>('/api/admin/v1/import/batches', query)
 }
 
+export function getAdminSearchSyncOverview() {
+  return apiGet<AdminSearchSyncOverview>('/api/admin/v1/search/sync-tasks/overview')
+}
+
+export function listAdminSearchSyncTasks(query: AdminSearchSyncTaskQuery) {
+  return apiGet<PageResult<AdminSearchSyncTask>>('/api/admin/v1/search/sync-tasks', query)
+}
+
+export function retryAdminSearchSyncTask(shopId: number) {
+  return apiPost<AdminSearchSyncActionResult>(`/api/admin/v1/search/sync-tasks/${shopId}/retry`)
+}
+
+export function retryFailedAdminSearchSyncTasks() {
+  return apiPost<AdminSearchSyncActionResult>('/api/admin/v1/search/sync-tasks/retry-failed')
+}
+
+export function rebuildAdminSearchIndex() {
+  return apiPost<{ indexed: number }>('/api/admin/v1/search/reindex', undefined, 120_000)
+}
+
+export function getAdminSystemHealth() {
+  return apiGet<AdminSystemHealth>('/api/admin/v1/system/health', undefined, 15_000)
+}
+
 export function listAuditTasks(query: AdminAuditTaskQuery) {
   return apiGet<PageResult<AdminAuditTask>>('/api/admin/v1/audit/tasks', query)
 }
@@ -271,6 +309,27 @@ export function auditAdminOrderRefund(orderId: number, payload: AdminRefundAudit
 
 export function reconcileAdminOrders() {
   return apiPost<AdminTradeReconcileResult>('/api/admin/v1/orders/reconcile')
+}
+
+export function importAdminChannelStatement(file: File, channel = 'stripe') {
+  const data = new FormData()
+  data.append('channel', channel)
+  data.append('file', file)
+  return apiPostForm<AdminChannelStatementBatch>('/api/admin/v1/orders/statements/import', data)
+}
+
+export function listAdminChannelStatements(params: { page?: number; pageSize?: number } = {}) {
+  return apiGet<PageResult<AdminChannelStatementBatch>>('/api/admin/v1/orders/statements', params)
+}
+
+export function listAdminChannelStatementItems(
+  batchId: number,
+  params: { reconcileStatus?: string; page?: number; pageSize?: number } = {},
+) {
+  return apiGet<PageResult<AdminChannelStatementItem>>(
+    `/api/admin/v1/orders/statements/${batchId}/items`,
+    params,
+  )
 }
 
 export function listAdminAppUsers(query: AdminAppUserQuery) {

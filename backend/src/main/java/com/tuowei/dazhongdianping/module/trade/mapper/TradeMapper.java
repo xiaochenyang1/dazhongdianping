@@ -34,6 +34,8 @@ public interface TradeMapper {
 
     OrderRow selectOrderByNo(@Param("orderNo") String orderNo);
 
+    OrderRow selectOrderById(@Param("orderId") Long orderId);
+
     List<OrderRow> selectUserOrders(
             @Param("userId") Long userId,
             @Param("region") String region,
@@ -111,6 +113,11 @@ public interface TradeMapper {
 
     RefundRow selectRefundByOrder(@Param("orderId") Long orderId);
 
+    RefundRow selectRefundByChannelTxn(
+            @Param("channel") String channel,
+            @Param("channelRefundTxn") String channelRefundTxn
+    );
+
     void insertRefund(
             @Param("orderId") Long orderId,
             @Param("amount") BigDecimal amount,
@@ -118,6 +125,23 @@ public interface TradeMapper {
     );
 
     int markOrderRefunded(@Param("orderId") Long orderId);
+
+    int recordRefundChannelResult(
+            @Param("refundId") Long refundId,
+            @Param("channel") String channel,
+            @Param("channelRefundTxn") String channelRefundTxn,
+            @Param("channelStatus") String channelStatus,
+            @Param("channelFailureReason") String channelFailureReason
+    );
+
+    int updateRefundChannelState(
+            @Param("refundId") Long refundId,
+            @Param("status") Integer status,
+            @Param("channelStatus") String channelStatus,
+            @Param("channelFailureReason") String channelFailureReason
+    );
+
+    List<RefundRow> selectProcessingRefunds(@Param("limit") Integer limit);
 
     int markCouponsRefunded(@Param("orderId") Long orderId);
 

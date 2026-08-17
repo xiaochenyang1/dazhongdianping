@@ -35,6 +35,11 @@ public class ConsoleVerificationCodeProvider implements VerificationCodeProvider
     }
 
     @Override
+    public boolean supports(String target, int targetType) {
+        return targetType == 1 || targetType == 2;
+    }
+
+    @Override
     public void send(String target, int targetType, String code, String scene) {
         if (!isConfigured()) {
             throw new VerificationCodeSendException("控制台验证码通道未启用");

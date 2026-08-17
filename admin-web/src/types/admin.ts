@@ -164,6 +164,10 @@ export interface AdminOrder {
   refundReason: string
   refundStatus: number | null
   refundStatusText: string
+  refundChannel: string
+  refundChannelRefundTxn: string
+  refundChannelStatus?: string
+  refundChannelFailureReason?: string
   refundAuditReason: string
   refundAuditedAt: string
   refundCreatedAt: string
@@ -178,6 +182,43 @@ export interface AdminTradeReconcileResult {
   closedOrders: number
   restoredStockOrders: number
   failedPayments: number
+  reconciledRefunds: number
+}
+
+export interface AdminChannelStatementBatch {
+  id: number
+  channel: string
+  fileName: string
+  fileSha256: string
+  totalRows: number
+  matchedRows: number
+  discrepancyRows: number
+  unmatchedRows: number
+  invalidRows: number
+  ignoredRows: number
+  status: number
+  statusText: string
+  createdAt: string
+}
+
+export interface AdminChannelStatementItem {
+  id: number
+  lineNo: number
+  transactionType: string
+  channelTransactionId: string
+  amount: number | null
+  currency: string
+  channelStatus: string
+  occurredAt: string
+  orderNo: string
+  localBizType: string
+  localBizId: number | null
+  localAmount: number | null
+  localCurrency: string
+  localStatus: number | null
+  reconcileStatus: 'matched' | 'discrepancy' | 'unmatched' | 'invalid' | 'ignored' | string
+  reconcileStatusText: string
+  discrepancyReason: string
 }
 
 export interface AdminAppUser {
@@ -558,6 +599,62 @@ export interface AdminImportBatch {
   statusText: string
   errorFile: string
   createdAt: string
+}
+
+export type AdminSearchSyncState = 'pending' | 'processing' | 'retrying' | 'stale'
+
+export interface AdminSearchSyncOverview {
+  region: Region
+  provider: 'mysql' | 'elasticsearch' | string
+  indexName: string
+  enabled: boolean
+  total: number
+  pending: number
+  processing: number
+  retrying: number
+  stale: number
+  ready: number
+}
+
+export interface AdminSearchSyncTask {
+  shopId: number
+  shopName: string
+  region: Region
+  cityName: string
+  version: number
+  state: AdminSearchSyncState
+  stateText: string
+  attemptCount: number
+  nextRetryAt: string | null
+  lockedAt: string | null
+  lastError: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminSearchSyncActionResult {
+  retried: number
+}
+
+export type AdminSystemHealthStatus = 'up' | 'degraded' | 'down' | 'warning' | 'disabled'
+
+export interface AdminSystemHealthComponent {
+  key: string
+  status: AdminSystemHealthStatus
+  checkType: 'connectivity' | 'configuration' | 'filesystem' | 'provider' | string
+  critical: boolean
+  latencyMillis: number
+  detail: string
+}
+
+export interface AdminSystemHealth {
+  status: AdminSystemHealthStatus
+  checkedAt: string
+  uptimeSeconds: number
+  runtimeMode: string
+  applicationVersion: string
+  activeProfiles: string[]
+  components: AdminSystemHealthComponent[]
 }
 
 export interface AdminAuditTask {

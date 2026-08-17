@@ -27,7 +27,8 @@ public class AdminMenuService {
                         leaf("data.shops", "商户管理", "/data/shops", "data:shop:read"),
                         leaf("data.import", "种子导入", "/data/import", "data:shop:import"),
                         leaf("data.meta", "基础数据", "/data/meta", "data:geo:read"),
-                        leaf("data.orders", "订单退款", "/data/orders", "data:order:read")
+                        leaf("data.orders", "订单退款", "/data/orders", "data:order:read"),
+                        leaf("data.search_sync", "搜索同步", "/data/search-sync", "data:search_index:read")
                 )),
                 group("operations", "运营配置", "/operations", List.of(
                         leaf("operations.ranks", "榜单规则", "/operations/ranks", "operations:rank:read"),
@@ -46,6 +47,7 @@ public class AdminMenuService {
                         leaf("system.roles", "角色权限", "/system/roles", "system:role:read"),
                         leaf("system.users", "用户管理", "/system/users", "system:user:read"),
                         leaf("system.merchants", "商户账号", "/system/merchants", "system:merchant:read"),
+                        leaf("system.health", "系统健康", "/system/health", "system:health:read"),
                         leaf("system.audit_logs", "审计日志", "/system/audit-logs", "system:audit_log:read"),
                         leaf("system.privacy_tasks", "隐私任务", "/system/privacy-tasks", "system:privacy_task:read")
                 ))

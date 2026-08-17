@@ -81,6 +81,10 @@ export interface MerchantOrderRefund {
   reason?: string
   status: number
   statusText: string
+  channel?: string
+  channelRefundTxn?: string
+  channelStatus?: string
+  channelFailureReason?: string
 }
 export interface MerchantOrder {
   id: number

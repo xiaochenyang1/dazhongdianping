@@ -392,9 +392,32 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         if (order.refund != null) ...[
           const SizedBox(height: 14),
           Card(
-            child: ListTile(
-              title: Text(strings.refundLabel(refundStatusText!)),
-              subtitle: Text(order.refund!.reason),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    strings.refundLabel(refundStatusText!),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(order.refund!.reason),
+                  if (order.refund!.channelFailureReason.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(order.refund!.channelFailureReason),
+                  ],
+                  if (order.refund!.channelRefundTxn.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      strings.refundChannelReceipt(
+                        order.refund!.channel,
+                        order.refund!.channelRefundTxn,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ],

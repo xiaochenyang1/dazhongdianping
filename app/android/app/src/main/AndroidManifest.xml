@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Foreground-only location powers the explicit "locate me" action on
+         the interactive map. The app does not request background location. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <!-- Android 13+ (API 33) drops notifications silently unless the user has
          granted this runtime permission. Push degrades to in-app/WebSocket
          notifications when it is denied. -->
@@ -7,6 +12,12 @@
         android:label="dazhongdianping_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Kept empty unless GOOGLE_MAPS_API_KEY is injected through Gradle.
+             Dart separately gates the map UI, so an unconfigured build remains
+             list-only instead of attempting to initialize the Maps SDK. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${googleMapsApiKey}" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

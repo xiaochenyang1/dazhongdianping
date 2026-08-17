@@ -1,6 +1,6 @@
 # 大众点评(仿)项目骨架
 
-当前 M4 已闭环，M5 商户经营与通知、M6 Flutter 本地业务闭环均已落地。M7 已完成帖子（含转发/取消转发、评论盖楼、帖子正文/评论 `@提醒`）、本地达人认证、认证商户号、关注流、APP 私信、区域化官方圈子、话题广场/7 天热榜、每日签到与积分商城：Flutter 与 PC Web 均可浏览/兑换积分商品并完成每日签到，PC Web 另支持点评详情页的评论级举报；管理端可治理、合并、重算热榜和维护积分商品/兑换单；隐私中心已完成签到与积分兑换导出及注销清理。FCM/APNs 服务端适配器已落地，真实凭证、真机推送 smoke、真实支付 SDK、Google Maps 与目标环境凭证联调仍待验收。
+当前 M4 已闭环，M5 商户经营与通知、M6 Flutter 本地业务闭环均已落地。M7 已完成帖子（含转发/取消转发、评论盖楼、帖子正文/评论 `@提醒`）、本地达人认证、认证商户号、关注流、APP 私信、区域化官方圈子、话题广场/7 天热榜、每日签到与积分商城：Flutter 与 PC Web 均可浏览/兑换积分商品并完成每日签到，PC Web 另支持点评详情页的评论级举报；管理端可治理、合并、重算热榜和维护积分商品/兑换单；隐私中心已完成签到与积分兑换导出及注销清理。FCM/APNs 服务端适配器与 Google Maps 交互地图代码均已落地，真实凭证、地图/推送真机 smoke、真实支付 SDK 与目标环境联调仍待验收。
 
 当前仓库已经按文档口径起好了前后端最小骨架，目录别再瞎长了，先按这个往下做。
 
@@ -9,7 +9,7 @@
 - `docs/`: 需求、架构、接口、库表、实施、上线、值班等文档。
 - `backend/`: `Java 17 + Spring Boot + MyBatis` 后端骨架。
 - `web/`: `Vue 3 + TypeScript + Vite` PC Web 骨架。
-- `admin-web/`: `Vue 3 + TypeScript + Vite` 管理端运营后台，覆盖门店、Banner、搜索热词、分类/城市/商圈基础数据、审核（含门店草稿与团购）、达人认证、榜单、成长、圈子和话题治理，以及审计日志、隐私任务、订单退款查询/平台仲裁/对账补偿和 C 端用户治理（查询/封禁/解封/封禁申诉审核）。
+- `admin-web/`: `Vue 3 + TypeScript + Vite` 管理端运营后台，覆盖门店、Banner、搜索热词、分类/城市/商圈基础数据、审核（含门店草稿与团购）、达人认证、榜单、成长、圈子和话题治理，以及搜索同步、系统健康、审计日志、隐私任务、订单退款查询/平台仲裁/对账补偿和 C 端用户治理（查询/封禁/解封/封禁申诉审核）。
 - `merchant-web/`: 独立商户工作台，覆盖注册、登录、资质、概览、门店草稿编辑/提交审核、员工、预订、团购创建/编辑/上下架、订单退款、券码核销、点评回复与申诉。
 - `app/`: Flutter 欧洲版工程，已覆盖浏览、搜索、登录、封禁申诉、点评、团购、预订、社区帖子、话题广场、用户中心、通知与 GDPR 隐私中心闭环。
 
@@ -19,7 +19,8 @@
 
 - `M1` 本地已完成：首页 / 列表 / 详情浏览，`CN / EU` 区域隔离，头部关键词搜索到商户列表(MySQL fallback,不是 ES 终态)，并已补公开搜索建议 / 热词 fallback 接口、登录用户搜索历史、历史清空入口和头部联想面板；管理端登录、门店 CRUD、种子导入、导入批次查询。
 - `M2` 已完成后端认证 + 点评/审核/互动最小闭环，`web` 已接登录弹层、游客拦截恢复、写点评 / 改点评、我的点评、点评详情互动区、我的资料 / 账号绑定 / 改密码、成长值流水页、公开用户主页：验证码发送、注册、验证码/密码登录、重置密码、`refresh`、`logout`、`/user/me`、`PUT /user/profile`、`POST /user/bind`、`PUT /user/password`、`GET /user/:id`、`GET /user/growth/records`、写点评 / 改点评 / 删点评 / 看点评详情 / 我的点评、点赞 / 评论 / 举报、本地图片上传、审核任务通过 / 驳回、门店评分聚合回写；游客在点赞 / 评论 / 举报时触发登录，登录后会自动续执行原动作。
-- `M3` 搜索、榜单、收藏与轻积分已落代码：`/api/c/v1/search/shops` 支持 MySQL/Elasticsearch provider、拼音/纠错/筛选/距离排序与索引重建/增量同步，CI 会启动 Elasticsearch 8 跑真实 smoke；榜单支持版本化发布/回滚，Web 已接榜单和门店收藏。
+- `M3` 搜索、榜单、收藏与轻积分已落代码：`/api/c/v1/search/shops` 支持 MySQL/Elasticsearch provider、拼音/纠错/筛选/距离排序、管理端索引重建与事务 outbox 增量同步（失败退避、超时恢复、门店版本防竞态）；管理端 `/data/search-sync` 可按区域及数据范围查看积压、错误和超时任务，并支持单条/批量重试与全量重建，操作写审计日志。CI 会启动 Elasticsearch 8 跑真实 smoke；榜单支持版本化发布/回滚，Web 已接榜单和门店收藏。
+- 管理端 `/system/health` 已提供数据库、Redis、Elasticsearch、文件存储的只读实时检查，以及支付、验证码、推送配置完整性检查；结果不返回连接串或密钥。公开 `/actuator/health` 仅保留整体状态，不再暴露组件详情。
 - 成长规则与等级配置已数据库化：奖励值、每日上限和 `Lv1-Lv8` 阈值由管理端配置，发点评、点评获赞、带图点评、完成订单和每日签到均已接入并按业务 ID 幂等；Flutter 与 PC Web 均可查看签到状态、连续天数、累计次数并领取成长值/积分奖励，`GET /api/c/v1/user/growth/records` 支持分页查看流水。
 - 隐私中心已补当前可用闭环：后端支持概览、数据导出任务、认证 ZIP 下载、账号删除申请、冷静期撤销和到期匿名化；真实可导出 `account/reviews/orders/reservations/favorites/posts/browse_history/follows/messages/circles/topics/check_ins/points_exchanges`。积分兑换导出只回传已发放且仍可用的兑换码；注销会删除本人的签到记录、话题关注并按真实关系回填 `follower_count`，不会误删帖子话题关系或热榜快照。
 - `POST /api/c/v1/auth/send-code` 的验证码限流已经落地：按 `scene + account`、`deviceId`、`IP` 返回 `429 + Retry-After`；默认走本地内存，配置 `APP_STATE_STORE_PROVIDER=redis` 后可切 Redis sorted set 计数。
@@ -27,17 +28,17 @@
 - `/api/b/v1` 已从单配置账号升级为数据库账号：支持商户注册、资质提交/查询、运营审核、主账号/员工登录、数据库角色权限、指定门店范围、员工列表/创建/编辑/启停；停用 `merchant_operator` 后其旧 B 端 token 会失效。M5b1 已补预订分页/详情/改期、真实经营看板和门店范围校验；M5b2 已补团购列表/创建/编辑/审核后上下架、门店订单分页筛选和退款通过/驳回；M5b3 已补新建/修改门店完整草稿、相册/菜单快照、提交审核、通过整体应用、驳回重提和线上版本冲突保护；M5b4 已补点评列表、商家回复、点评申诉草稿/保存/提交和 `biz_type=6` 管理端申诉审核。
 - M5 商户端已补齐当前 M5a 页面闭环：`merchant-web` 覆盖注册、登录、资质状态/提交/驳回重提、概览、门店、员工角色与门店范围、预订、团购、订单退款、点评回复/申诉；管理端新增商户资质审核和商户点评申诉专页；C 端新增通知列表、未读数、WebSocket ticket、实时推送与断线 REST 补偿。
 - 移动推送服务端与 Flutter token 生命周期已落地：通知事务提交后异步投递，Android 使用 FCM HTTP v1，iOS 使用 APNs；客户端登录登记 token、轮换回传、退出停用，Android 发布流水线可从 Environment secret 临时注入 Firebase 配置。默认 `APP_PUSH_ENABLED=false`，真实凭证和真机 smoke 仍待验收。
-- 管理端数据库 RBAC 基础已完成：管理员、角色、权限点、管理员-角色、角色-权限和管理员区域范围均已落库；`/auth/me` 返回实时身份、权限与 `CN/EU` 范围，菜单、路由和 API 按权限过滤。角色停用后旧 token 仍可访问 `auth/me`，但权限会在下一次请求重新计算并被收回，固定受限 API 返回 `403`，动态审核列表可返回 `200` 空结果；管理员账号停用后旧 token 才会在下一次请求返回 `401`，前端清理 `localStorage` 并回到登录页。`admin-web` 已提供管理员账号、角色权限、Banner、搜索热词、审计日志、隐私任务和订单退款查询/平台仲裁/对账补偿页面。
+- 管理端数据库 RBAC 基础已完成：管理员、角色、权限点、管理员-角色、角色-权限和管理员区域范围均已落库；`/auth/me` 返回实时身份、权限与 `CN/EU` 范围，菜单、路由和 API 按权限过滤。角色停用后旧 token 仍可访问 `auth/me`，但权限会在下一次请求重新计算并被收回，固定受限 API 返回 `403`，动态审核列表可返回 `200` 空结果；管理员账号停用后旧 token 才会在下一次请求返回 `401`，前端清理 `localStorage` 并回到登录页。`admin-web` 已提供管理员账号、角色权限、Banner、搜索热词、审计日志、隐私任务和订单退款查询/平台仲裁/对账补偿/Stripe CSV 账单核对页面。
 - 管理端分类、城市和商圈治理已完成：`data:geo:read/write` 同时约束菜单、`/data/meta` 路由和管理 API，支持当前区域内 CRUD、排序、启停与受保护删除。公开元数据只展示启用项，显式使用停用 ID 的门店筛选返回空结果；历史门店详情仍保留原名称。管理端门店、导入、商户门店草稿/审核落库和榜单发布都会重新校验引用数据仍处于启用状态。
 - PC Web 商户列表已接价格、评分、团购、营业状态筛选和服务端真实分页；门店点评列表支持最新/最热/评分排序、最低评分和带图/无图筛选；门店详情支持相似推荐、原生分享并带剪贴板降级；门店、公开点评、社区/圈子/话题公开页已接入客户端运行时 `canonical`、`robots`、Open Graph、Twitter Card 和 JSON-LD metadata。`npm run build` 现会额外为首页、商户、榜单、活动、社区、圈子和话题入口生成可抓取 HTML、JSON-LD、`prerender-manifest.json`，配置 `PUBLIC_SITE_URL` 时同时生成绝对 canonical、`sitemap.xml` 和 `robots.txt`；提供 `PRERENDER_API_BASE_URL` 时，`npm run build:prerender:data` 还会按 `X-Region` 抓取真实门店、点评、帖子、榜单、活动、圈子和话题详情快照。常驻 SSR 服务和目标环境自动接入仍待补齐。
-- M6 Flutter MVP 基线已落地：默认 EU、CN/EU 与语言切换、密码/验证码登录、安全会话、浏览/搜索/门店详情、团购下单、预订创建、用户中心、通知列表与 ACK、隐私导出/认证下载保存/删除申请/撤销；地图、真实支付和移动推送未配置时明确阻止冒充成功。
+- M6 Flutter MVP 基线已落地：默认 EU、CN/EU 与语言切换、密码/验证码登录、安全会话、浏览/搜索/门店详情、团购下单、预订创建、用户中心、通知列表与 ACK、隐私导出/认证下载保存/删除申请/撤销；Google Maps 已补 Android/iOS 交互地图、用户主动前台定位、附近门店距离展示与就近排序、地图视野动态加载、Web Static Maps 降级与外部到店导航，未配置地图、真实支付和移动推送时明确阻止冒充成功；真实地图凭证和真机定位 smoke 仍待验收。
 - M7 帖子、本地达人认证、转发、关注、私信、官方圈子和话题链路已落地：用户可在资料页提交/重提本地达人申请，管理端 `/audit/expert-certifications` 可按区域审核；公开用户主页、点评和帖子作者只有在“已通过且有效”时才展示 `code=local_expert,label=本地达人`。话题按 CN/EU 隔离，Flutter 提供推荐/热榜/已关注三 Tab 与关注写操作，帖子支持转发/取消转发，PC Web 仅提供推荐/热榜/详情只读页面，管理端支持筛选、改名、推荐、置顶、屏蔽、不可逆合并和手动重算。
-- M4 团购交易已完成环境安全的模拟闭环：团购详情、有限库存原子扣减、下单、`alipay_mock`/`stripe_mock` 支付、SHA-256 回调验签与幂等、按数量发券、订单/券列表、取消和退款；EU 区 Stripe test mode 已打通（PaymentIntent → Web/Flutter Elements/PaymentSheet → webhook 验签 → 发券），CN 仍 `alipay_mock`，真实退款出账与生产 switchover 仍未做，生产凭证待补。
+- M4 团购交易已完成环境安全的模拟闭环：团购详情、有限库存原子扣减、下单、`alipay_mock`/`stripe_mock` 支付、SHA-256 回调验签与幂等、按数量发券、订单/券列表、取消和退款；EU 区 Stripe test mode 已打通（PaymentIntent → Web/Flutter Elements/PaymentSheet → webhook 验签 → 发券），商户/平台退款审批已接 Stripe Refund、稳定幂等键、异步 Webhook 状态与主动查单补偿，CN 仍 `alipay_mock`；真实凭证、退款到账 smoke 与生产 switchover 待验收。
 - M4 预订已完成：时段容量、自动/人工确认、创建、列表、详情、取消、改期、商户履约动作和变更时间线均已接入，Web 已提供在线预订和“我的预订”。
 - 管理端种子导入失败时会生成真实本地错误明细文件，批次查询返回同一条 `errorFile` 路径。
 - 当前后端默认运行配置已指向 `MySQL`；可直接导入 MySQL 的脚本已补到 `sql/mysql/`，并带公开点评、点评图片、点赞/评论演示数据、审核演示数据、`user_expert_certification` 表与 `audit:expert_certification:*` 权限种子，以及可直接密码登录的 C 端演示账号。`H2` 仍保留为 `h2` profile 和测试环境使用。
 - 文件上传默认仍可本地落盘，也已接入 S3 兼容对象存储上传入口：配置 `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_*` 后，`POST /api/c/v1/files/upload` 会上传到对象存储并返回公开 URL。
-- `CI/CD` 已补本地复用脚本和 GitHub Actions:`scripts/ci/verify-all.ps1` 负责后端测试、Web/管理端/商户端测试与构建，以及可选 Flutter、MySQL、S3 兼容对象存储、Elasticsearch、浏览器冒烟 / E2E；`ci.yml` 当前同时起 MySQL 8、Redis 7、MinIO、Elasticsearch 8 服务,执行 `-IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeElasticsearchSmoke`;`.github/workflows/nightly.yml` 已补定时夜跑和手工触发,会追加 `-IncludeBrowserE2E`;`.github/workflows/release.yml` 已补测试环境自动部署和 `pre/prod` 手工发版入口,`.github/workflows/rollback.yml` 已补手工回滚入口,配套 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已落库，发布包和部署 / 回滚服务均覆盖 `web`、`admin-web`、`merchant-web`。
+- `CI/CD` 已补本地复用脚本和 GitHub Actions:`scripts/ci/verify-all.ps1` 负责后端测试、Web/管理端/商户端测试与构建，以及可选 Flutter、MySQL、S3 兼容对象存储、Elasticsearch、浏览器冒烟 / E2E；`ci.yml` 当前同时起 MySQL 8、Redis 7、MinIO、Elasticsearch 8 服务,执行 `-IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeElasticsearchSmoke`，并用独立 MySQL 8.4 job 验证 `03-14` 真实增量迁移；`.github/workflows/nightly.yml` 已补定时夜跑和手工触发,会追加 `-IncludeBrowserE2E`;`.github/workflows/release.yml` 已补测试环境自动部署和 `pre/prod` 手工发版入口,`.github/workflows/rollback.yml` 已补手工回滚入口,配套 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已落库，发布包和部署 / 回滚服务均覆盖 `web`、`admin-web`、`merchant-web`。
 
 完整的“已完成 / 部分完成 / 外部待验收”证据请看 `docs/当前已完成功能与SQL导入说明.md` 的“全局功能完成矩阵”；根 README 只保留启动入口和阶段摘要，不再重复维护第二套完成判断。
 
@@ -220,7 +221,7 @@ cd backend
 默认端口:
 
 - `http://localhost:8080`
-- 健康检查: `http://localhost:8080/actuator/health`
+- 公共健康检查摘要: `http://localhost:8080/actuator/health`；完整组件状态需登录管理端访问 `/system/health`。
 - H2 控制台: 使用 `h2` profile 时可访问 `http://localhost:8080/h2-console`
 
 说明:
@@ -229,7 +230,15 @@ cd backend
 - 未显式启用 `local` 时，`APP_RUNTIME_MODE` 默认为 `prod`。可选值为 `local`、`test`、`pre`、`prod`；`local` / `test` 运行模式必须同时激活同名 Spring profile，单独覆盖环境变量不能降级。激活 Spring `pre` / `prod` profile 时始终按严格模式校验。
 - 所有运行模式解析出的 JWT 与支付回调密钥都必须至少 32 字符。`local` profile 内置的仓库开发密钥只能用于本地；`pre` / `prod` 必须通过 `APP_AUTH_JWT_SECRET` 和 `APP_PAYMENT_NOTIFY_SECRET` 注入独立密钥，否则会在启动时失败。
 - `APP_PAYMENT_MOCK_ENABLED`、`APP_AUTH_VERIFICATION_MOCK_ENABLED` 和 `APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE` 默认均为 `false`，且在 `pre` / `prod` 中必须保持关闭。仅在显式本地开发时可启用；`APP_AUTH_VERIFICATION_MOCK_CODE` 必须是 6 位数字，验证码暴露开关只能与验证码 mock 同时启用。
-- 支付方面，Stripe test mode 已接入（后端 PaymentIntent + webhook 验签，Web/Flutter 端 Elements/PaymentSheet），生产凭证待补；短信/邮件验证码 provider 尚未接入（本轮只做了发送通道抽象与控制台 dev provider，真实 Aliyun SMS / SMTP 仍延后）。关闭对应 mock 后，发送/校验验证码、创建/回调/模拟完成支付等依赖 provider 的操作会返回 `503 Service Unavailable`，不会伪装成功。
+- 支付方面，Stripe test mode 已接入（后端 PaymentIntent、Refund、webhook 验签与幂等，Web/Flutter 端 Elements/PaymentSheet），生产凭证和退款到账 smoke 待补；验证码发送已按目标和号码前缀路由并接入标准 SMTP 邮件、阿里云 SMS 与 Twilio SMS provider，邮箱不会误走短信通道、手机号也不会误走邮件通道。默认 `+86` 匹配阿里云并被 Twilio 排除，其他号码匹配 Twilio；前缀可配置。未配置匹配 provider 时该目标发送/校验返回 `503 Service Unavailable`，不会跨类型或跨号码范围回退、也不会伪装成功。
+
+验证码真实通道配置：
+
+- SMTP 邮件：启用 `APP_AUTH_VERIFICATION_MAIL_ENABLED=true`，配置 `APP_MAIL_HOST`、`APP_MAIL_PORT`、`APP_MAIL_USERNAME`、`APP_MAIL_PASSWORD`、`APP_AUTH_VERIFICATION_MAIL_FROM`；可用 `APP_MAIL_SMTP_AUTH`、`APP_MAIL_STARTTLS_ENABLED` 和连接/读写超时变量调整 SMTP 行为。
+- Twilio 短信：启用 `APP_AUTH_VERIFICATION_TWILIO_ENABLED=true`，配置 `APP_AUTH_VERIFICATION_TWILIO_ACCOUNT_SID`、`APP_AUTH_VERIFICATION_TWILIO_AUTH_TOKEN`，并在 `APP_AUTH_VERIFICATION_TWILIO_FROM` 或 `APP_AUTH_VERIFICATION_TWILIO_MESSAGING_SERVICE_SID` 中至少提供一个发送方。手机号应使用供应商支持的国际格式。
+- 阿里云短信：启用 `APP_AUTH_VERIFICATION_ALIYUN_ENABLED=true`，配置 `APP_AUTH_VERIFICATION_ALIYUN_ACCESS_KEY_ID`、`APP_AUTH_VERIFICATION_ALIYUN_ACCESS_KEY_SECRET`、`APP_AUTH_VERIFICATION_ALIYUN_SIGN_NAME`、`APP_AUTH_VERIFICATION_ALIYUN_TEMPLATE_CODE`。模板参数固定为 `{"code":"验证码"}`；默认路由 `+86`，可通过 `APP_AUTH_VERIFICATION_ALIYUN_ROUTE_PREFIXES` 调整。
+- 短信路由：`APP_AUTH_VERIFICATION_TWILIO_ROUTE_PREFIXES` 默认 `*`，`APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES` 默认 `+86`，排除规则优先于允许规则；因此阿里云未配置时 `+86` 也会返回 503，不会降级到 Twilio。确需改变范围时可显式调整允许/排除前缀。
+- 两类 provider 都未配置时继续 fail-closed；`APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED` 只允许本地开发，`pre/prod` 会拒绝启动。EU 预发模板进一步把运行身份固定为 `pre`，显式关闭验证码 mock/回显/控制台通道，并要求 SMTP + STARTTLS 与覆盖国际号码的 Twilio 配置通过 `scripts/ci/stripe-preflight.sh` 门禁。
 
 ## 前端
 
@@ -355,6 +364,13 @@ npm run build
 
 ## 已验证
 
+- `2026-08-14` 管理端运维可见性继续收口：新增受 `system:health:read` 保护的 `/system/health` 页面，对 MySQL、Redis、Elasticsearch、文件存储执行脱敏只读检查，并核验支付、验证码和推送配置；公共 `/actuator/health` 已收紧为只返回整体摘要。控制台现在按权限并发展示系统健康与搜索同步状态，任一数据源失败不会再拖垮整页，其余成功数据会继续呈现并给出局部失败提示。本轮按要求未运行测试或构建，仅完成 Vue/TypeScript 静态语法、引用一致性和 `git diff --check` 检查。
+- `2026-08-13` 验证码真实发送 provider 代码收口：发送调度改为按目标类型和手机号前缀路由，新增标准 SMTP 邮件、阿里云 SMS 与 Twilio SMS provider、SMTP 超时/STARTTLS、短信发送方/签名/模板/路由配置和启用时的必填校验；默认 `+86` 只匹配阿里云并被 Twilio 排除，其他国际号码可走 Twilio，未配置匹配通道时返回 503。后端跳过测试的 Maven 编译通过；真实邮箱域名、短信账号/签名/模板、送达率与回执仍属于外部验收。
+- `2026-08-13` Stripe 收款/退款可恢复性收口：PaymentIntent 使用订单号稳定幂等键，Refund 使用退款申请 ID 稳定幂等键；渠道退款回执、处理中/失败状态与失败原因已持久化，退款 Webhook 和每分钟主动查单可完成补偿，只有渠道最终成功后才更新订单、券和库存。新增 `09_refund_channel_receipt_migration.sql`、`10_refund_async_status_migration.sql`；真实 Stripe test mode 仍待外部凭证验收。
+- `2026-08-13` Stripe 渠道账单核对落地：区域全量管理员可在 `/data/orders` 上传最多 5MB/5000 行的 CSV，文件 SHA-256 防重复导入，逐行按 PaymentIntent/Refund 交易号匹配本地流水并汇总已匹配、金额/币种/状态差异、本地缺失、无效和忽略结果；导入只保存核对所需标准字段，不保存整行潜在敏感数据，也不会自动修改订单/支付/退款状态。新增 `11_channel_statement_reconciliation_migration.sql` 和 `docs/examples/stripe_statement_import_template.csv`。
+- `2026-08-13` Flutter 地图用户定位与视野加载闭环落地：Android/iOS 交互地图新增主动定位按钮，仅在点击后检查定位服务并申请前台权限；授权成功后显示系统当前位置、聚焦镜头、调用后端距离排序并展示米/公里距离；地图拖动或缩放停止后按 `north/south/east/west` 可见边界动态刷新门店，空结果或失败时保留已有标记。拒绝、永久拒绝、服务关闭和获取失败均有简中/繁中/英文安全提示及对应设置入口，不申请后台定位，Web/Static Maps 保持无实时定位降级。真实凭证与真机定位 smoke 仍属于外部验收。
+- `2026-08-13` Flutter 地图继续生产化：公开门店列表/详情返回 `latitude/longitude`；Android/iOS 在 Dart 与原生层均完成 Key 注入后使用 `google_maps_flutter` 交互地图，支持拖动、缩放、点击门店标记和门店选择联动；Web 或原生配置未完成时降级 Static Maps，详情仍可外部导航。真实 API key、用户定位和真机 smoke 仍单列为外部验收。
+- `2026-08-12` 半成品收尾审计复跑：唯一真实半成品入口为 Flutter 首页地图按钮（按钮常显但点击只弹提示，背后无 `GoogleMap` 且 `google_maps_flutter` 未入 pubspec）。已按“未配置时隐藏按钮”收口：按钮现以 `thirdPartyConfig.googleMapsEnabled` 为渲染条件，仅当存在 Google Maps key 时才出现；首页聚焦测试覆盖未配置隐藏与已配置可见两条用例，`flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `571` 条通过。其余“未完成”项均为设计性延后且 fail-closed：验证码渠道（`VerificationCodeDispatchService` 无 provider→`PublicAuthService` 抛 503）、支付渠道（`PaymentChannelResolver` 无 channel→503）、Firebase（`YOUR_*` 占位 + `push_service.dart` NoOp 回退）。这些仅需真实外部凭证，非代码缺口。
 - `2026-08-04` 管理端商户治理补齐城市/门店范围：受限管理员只有覆盖商户全部有效门店时才能查看商户、员工和经营历史或执行停用恢复；部分覆盖、跨城市和无门店商户按不存在处理，区域全量管理员保持原有能力。后端商户治理 `9` 条聚焦测试通过。
 - `2026-08-04` 商户资质审核收紧数据范围：申请在通过前没有可信城市/门店归属，因此仅当前区域全城市管理员可查看营业执照、法人和门店照片并执行审核；城市/门店受限审核员返回空队列，直接审核按不存在处理。后端资质审核 `3` 条聚焦测试通过。
 - `2026-08-04` 单商户经营操作历史查询闭环完成：已有 `merchant_operation_log` 写入现在可通过区域隔离的管理端 API 和商户治理页面查询，支持操作人 ID、稳定动作码、目标类型、操作人/详情关键词和分页筛选；返回真实操作人、结构化目标和详情，CN/EU 页面翻译已知动作并保留未知动作原码。后端商户治理 `8` 条、管理端页面 `10` 条聚焦测试和生产构建通过。
@@ -498,6 +514,9 @@ npm run build
 - `sql/mysql/02_seed_data.sql`: 当前浏览链路、公开点评、点评图片、点赞/评论演示数据、审核演示数据和 C 端演示账号初始化脚本。
 - `sql/mysql/03_admin_city_scope_migration.sql`: 已有数据库的非破坏性城市权限迁移；为区域授权补 `all_cities` 并新增 `admin_city_scope`，原授权默认继续覆盖区域内全部城市。
 - `sql/mysql/04_admin_import_batch_scope_migration.sql`: 已有数据库的非破坏性导入批次索引迁移；执行 `03` 后再执行一次，为受限管理员的本人批次查询补组合索引。
+- `sql/mysql/12_shop_search_sync_outbox_migration.sql`: 已有数据库创建门店搜索索引事务 outbox。
+- `sql/mysql/13_search_sync_operations_migration.sql`: 已有数据库补搜索同步任务查看权限，并授权给超级管理员和数据管理员。
+- `sql/mysql/14_admin_system_health_permission_migration.sql`: 已有数据库补系统健康查看权限，默认仅授予超级管理员。
 
 如果你要看“哪个功能已经做完了、标在哪些文档、对应哪套 SQL”，直接看 `docs/当前已完成功能与SQL导入说明.md`，那份已经整理成对照表了。
 
@@ -532,5 +551,5 @@ npm run build
 
 1. `scripts/ci/mysql-smoke.ps1` 已于 `2026-07-12` 用临时 `MySQL 8` 实例 (`127.0.0.1:13306`) 实跑通过；宿主机 `MySQL80` 那套现成 root 凭证仍然不可用，但这已经不是仓库侧阻塞。后面如果你非要复用宿主机服务，先把凭证收拾明白。
 2. 给目标环境的 `MySQL / Redis / S3` 和部署目标机补齐真实环境凭证、SSH secrets，并把现有发布 / 回滚流水线真正跑到目标环境上。
-3. 用真实 FCM/APNs 凭证完成设备注册、前后台接收、失效 token 和重试 smoke，再推进真实支付（Stripe test mode 代码已打通，待补生产凭证与真实退款出账）、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、认证商户号、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、关注流、私信、官方圈子和话题广场/热榜已经落地。
-4. PC Web 已支持按区域抓取真实公开数据快照；下一步把快照生成接入发布流水线并补真实域名/缓存策略，再评估是否需要常驻 SSR 服务。
+3. 用真实 FCM/APNs 凭证完成设备注册、前后台接收、失效 token 和重试 smoke，再推进真实支付（Stripe PaymentIntent/Refund 与 CSV 账单核对代码已打通，待补生产凭证、退款到账和真实账单 smoke）、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、认证商户号、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、关注流、私信、官方圈子和话题广场/热榜已经落地。
+4. PC Web 真实公开数据快照已由 `package-release.ps1` 在配置 `PUBLIC_SITE_URL` / `PRERENDER_API_BASE_URL` 时自动接入发布包；下一步补真实域名/CDN 缓存与线上抓取验收，再按流量需求评估常驻 SSR。

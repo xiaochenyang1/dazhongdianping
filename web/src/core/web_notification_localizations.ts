@@ -149,7 +149,13 @@ export function notificationDisplayTitle(strings: WebNotificationStrings, item: 
     case 'post.audit.result': return queryValue(item.linkUrl, 'audit') === 'rejected' ? 'Post rejected' : 'Post approved'
     case 'topic.update': return 'New post in a followed topic'
     case 'order.paid': return 'Payment successful'
-    case 'order.refund.result': return queryValue(item.linkUrl, 'refund') === 'rejected' ? 'Refund rejected' : 'Refund approved'
+    case 'order.refund.result': {
+      const refund = queryValue(item.linkUrl, 'refund')
+      if (refund === 'rejected') return 'Refund rejected'
+      if (refund === 'pending') return 'Refund processing'
+      if (refund === 'failed') return 'Refund failed'
+      return 'Refund completed'
+    }
     case 'reservation.created': return queryValue(item.linkUrl, 'status') === 'pending' ? 'Booking submitted' : 'Booking confirmed'
     case 'reservation.reminder': return queryValue(item.linkUrl, 'remind') === '30' ? 'Booking starts in 30 minutes' : 'Booking reminder'
     case 'reservation.status': {
@@ -188,9 +194,13 @@ export function notificationDisplayContent(strings: WebNotificationStrings, item
       : 'Your post passed moderation and is now public.'
     case 'topic.update': return 'A topic you follow has a new post.'
     case 'order.paid': return 'Payment completed and your vouchers are ready.'
-    case 'order.refund.result': return queryValue(item.linkUrl, 'refund') === 'rejected'
-      ? 'Your refund request was rejected. Open the order for details.'
-      : 'Your refund request was approved.'
+    case 'order.refund.result': {
+      const refund = queryValue(item.linkUrl, 'refund')
+      if (refund === 'rejected') return 'Your refund request was rejected. Open the order for details.'
+      if (refund === 'pending') return 'Your refund is being processed by the payment channel.'
+      if (refund === 'failed') return 'The payment channel could not complete your refund.'
+      return 'Your refund has been completed.'
+    }
     case 'reservation.created': return queryValue(item.linkUrl, 'status') === 'pending'
       ? 'Your booking was submitted and is awaiting confirmation.'
       : 'Your booking was created and confirmed.'

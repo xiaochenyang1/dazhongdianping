@@ -442,13 +442,62 @@ function Invoke-MultipartUpload {
     }
 }
 
+function Get-ByteArraySha256 {
+    param([byte[]]$Bytes)
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = $sha256.ComputeHash($Bytes)
+        return ([System.BitConverter]::ToString($hash)).Replace("-", "").ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
+function Assert-DownloadedContentMatches {
+    param(
+        [string]$Url,
+        [byte[]]$ExpectedBytes,
+        [string]$Scenario
+    )
+
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    $response = $null
+    try {
+        $client.Timeout = [System.TimeSpan]::FromSeconds(30)
+        $response = $client.GetAsync($Url).GetAwaiter().GetResult()
+        if (-not $response.IsSuccessStatusCode) {
+            throw "$Scenario failed with status $([int]$response.StatusCode) for $Url"
+        }
+
+        $downloadedBytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+        $expectedHash = Get-ByteArraySha256 -Bytes $ExpectedBytes
+        $downloadedHash = Get-ByteArraySha256 -Bytes $downloadedBytes
+        if ($downloadedBytes.Length -ne $ExpectedBytes.Length -or $downloadedHash -ne $expectedHash) {
+            throw "$Scenario content mismatch for $Url (expected bytes/hash: $($ExpectedBytes.Length)/$expectedHash; actual: $($downloadedBytes.Length)/$downloadedHash)"
+        }
+
+        Write-Step "$Scenario returned the uploaded content ($downloadedHash)"
+    }
+    finally {
+        if ($null -ne $response) {
+            $response.Dispose()
+        }
+        $client.Dispose()
+        $handler.Dispose()
+    }
+}
+
 if ($DryRun) {
     Write-Output "Plan:"
     Write-Output "1. Package and start the H2 backend directly with Java on $baseUrl."
     Write-Output "2. Configure APP_FILE_STORAGE_PROVIDER=s3 against an S3-compatible endpoint."
     Write-Output "3. Sign in with login/password using the H2 demo user demo.cn@example.com."
     Write-Output "4. Upload a PNG through POST /api/c/v1/files/upload."
-    Write-Output "5. Assert the response file URL points at the configured S3-compatible endpoint and stop the backend."
+    Write-Output "5. Download HTTP(S) public URLs directly, or non-HTTP objects through the backend S3 reader, and compare the content SHA-256."
+    Write-Output "6. Stop the backend and verify its port is released."
     exit 0
 }
 
@@ -546,6 +595,33 @@ try {
 
     if (-not $upload.data.url.StartsWith($expectedUrlPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "upload endpoint returned unexpected URL $($upload.data.url)"
+    }
+
+    $expectedBytes = [System.IO.File]::ReadAllBytes($sampleFilePath)
+    $uploadUri = $null
+    $isAbsoluteUri = [System.Uri]::TryCreate(
+        [string]$upload.data.url,
+        [System.UriKind]::Absolute,
+        [ref]$uploadUri
+    )
+    $isHttpUrl = $isAbsoluteUri -and $uploadUri.Scheme -in @("http", "https")
+    if ($isHttpUrl) {
+        Write-Step "downloading the returned public URL"
+        Assert-DownloadedContentMatches `
+            -Url $uploadUri.AbsoluteUri `
+            -ExpectedBytes $expectedBytes `
+            -Scenario "public object download"
+    }
+    else {
+        if ([string]::IsNullOrWhiteSpace([string]$upload.data.fileName)) {
+            throw "non-HTTP upload response did not return a fileName for backend read verification"
+        }
+        $encodedFileName = [System.Uri]::EscapeDataString([string]$upload.data.fileName)
+        Write-Step "verifying the non-HTTP object through the backend S3 reader"
+        Assert-DownloadedContentMatches `
+            -Url "$baseUrl/api/c/v1/files/$encodedFileName" `
+            -ExpectedBytes $expectedBytes `
+            -Scenario "backend S3 object download"
     }
 
     $succeeded = $true

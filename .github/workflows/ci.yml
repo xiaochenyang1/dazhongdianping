@@ -34,7 +34,7 @@ jobs:
         env:
           MINIO_ROOT_USER: minioadmin
           MINIO_ROOT_PASSWORD: minioadmin
-          MINIO_DEFAULT_BUCKETS: dzdp-smoke
+          MINIO_DEFAULT_BUCKETS: "dzdp-smoke:download"
         ports:
           - 9000:9000
         options: >-
@@ -97,6 +97,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: "3.44.8"
           cache: true
 
       - name: Install MySQL client
@@ -120,3 +121,25 @@ jobs:
       - name: Verify all
         shell: pwsh
         run: ./scripts/ci/verify-all.ps1 -IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeElasticsearchSmoke -IncludeFlutter
+
+  database-migration-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      MYSQL_MIGRATION_TEST_IMAGE: mysql:8.4
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+
+      - name: Make migration scripts executable
+        run: chmod +x scripts/ci/mysql-migrate.sh scripts/ci/test-mysql-migration-integration.sh
+
+      - name: Verify MySQL migrations against a clean database
+        run: ./scripts/ci/test-mysql-migration-integration.sh

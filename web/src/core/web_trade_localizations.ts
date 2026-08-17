@@ -76,6 +76,8 @@ export interface WebTradeStrings {
     refundFailed: string
     refundApproved: string
     refundRejected: string
+    refundProcessing: string
+    refundChannelFailed: string
     mockPaymentSuccess: string
     cancelConfirm: string
     cancelSuccess: string
@@ -214,7 +216,7 @@ const zhStatuses = createStatusLabels({
   pay: { 0: '待支付', 1: '已支付', 2: '已退款', 3: '部分退款' },
   coupon: { 1: '待使用', 2: '已使用', 3: '已过期', 4: '已退款' },
   reservation: { 0: '待确认', 1: '已确认', 2: '已到店', 3: '用户取消', 4: '商户拒绝', 5: '爽约' },
-  refund: { 0: '申请中', 1: '退款成功', 2: '已驳回' },
+  refund: { 0: '申请中', 1: '退款成功', 2: '已驳回', 3: '退款处理中', 4: '退款失败' },
   confirmMode: { 1: '自动确认', 2: '人工确认' },
   timelineAction: { 1: '创建预订', 2: '商户确认', 3: '商户拒绝', 4: '用户取消', 5: '用户改期', 6: '商户改期', 7: '确认到店', 8: '标记爽约', 9: '到店提醒' },
   operator: { 1: '用户', 2: '商户', 3: '系统' },
@@ -224,7 +226,7 @@ const enStatuses = createStatusLabels({
   pay: { 0: 'Pending payment', 1: 'Paid', 2: 'Refunded', 3: 'Partially refunded' },
   coupon: { 1: 'Available', 2: 'Used', 3: 'Expired', 4: 'Refunded' },
   reservation: { 0: 'Pending confirmation', 1: 'Confirmed', 2: 'Arrived', 3: 'Cancelled by customer', 4: 'Rejected by the place', 5: 'No-show' },
-  refund: { 0: 'Pending', 1: 'Refunded', 2: 'Rejected' },
+  refund: { 0: 'Pending', 1: 'Refunded', 2: 'Rejected', 3: 'Processing', 4: 'Failed' },
   confirmMode: { 1: 'Instant confirmation', 2: 'Manual confirmation' },
   timelineAction: { 1: 'Booking created', 2: 'Confirmed by place', 3: 'Rejected by place', 4: 'Cancelled by customer', 5: 'Rescheduled by customer', 6: 'Rescheduled by place', 7: 'Arrival confirmed', 8: 'Marked as no-show', 9: 'Arrival reminder' },
   operator: { 1: 'Customer', 2: 'Place', 3: 'System' },
@@ -310,6 +312,8 @@ const zhCnStrings: WebTradeStrings = {
     refundFailed: '退款申请失败',
     refundApproved: '退款已通过，订单状态已更新。',
     refundRejected: '退款已驳回，可查看审核说明。',
+    refundProcessing: '退款申请已通过，支付渠道正在处理。',
+    refundChannelFailed: '支付渠道退款失败，请查看详情或联系支持。',
     mockPaymentSuccess: '模拟支付成功，券码已生成。',
     cancelConfirm: '确认取消这张未支付订单？',
     cancelSuccess: '订单已取消。',
@@ -475,6 +479,8 @@ const enStrings: WebTradeStrings = {
     refundFailed: 'Could not request a refund',
     refundApproved: 'Your refund was approved and the order was updated.',
     refundRejected: 'Your refund was rejected. See the review note for details.',
+    refundProcessing: 'Your refund was approved and is being processed.',
+    refundChannelFailed: 'The payment channel could not complete the refund.',
     mockPaymentSuccess: 'Test payment completed. Your vouchers are ready.',
     cancelConfirm: 'Cancel this unpaid order?',
     cancelSuccess: 'Order cancelled.',

@@ -3,8 +3,21 @@ import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAdminSession } from '@/composables/useAdminSession'
 import { adminStringsForRegion } from '@/core/admin_localizations'
-import { getAdminDashboardOverview, listImportBatches, listShops } from '@/services/admin'
-import type { AdminDashboardOverview, AdminImportBatch, AdminShopSummary } from '@/types/admin'
+import {
+  getAdminDashboardOverview,
+  getAdminSearchSyncOverview,
+  getAdminSystemHealth,
+  listImportBatches,
+  listShops,
+} from '@/services/admin'
+import type {
+  AdminDashboardOverview,
+  AdminImportBatch,
+  AdminSearchSyncOverview,
+  AdminShopSummary,
+  AdminSystemHealth,
+  AdminSystemHealthStatus,
+} from '@/types/admin'
 
 const { state } = useAdminSession()
 const strings = computed(() => adminStringsForRegion(state.region))
@@ -14,6 +27,8 @@ const errorMessage = ref('')
 const recentShops = ref<AdminShopSummary[]>([])
 const recentBatches = ref<AdminImportBatch[]>([])
 const overview = ref<AdminDashboardOverview | null>(null)
+const systemHealth = ref<AdminSystemHealth | null>(null)
+const searchSyncOverview = ref<AdminSearchSyncOverview | null>(null)
 let snapshotRequestId = 0
 
 const canReadDashboard = computed(() => state.permissions.includes('dashboard:read'))
@@ -26,6 +41,8 @@ const canReadDeals = computed(() => state.permissions.includes('audit:deal:read'
 const canReadShopChanges = computed(() => state.permissions.includes('audit:shop_change:read'))
 const canReadReviews = computed(() => state.permissions.includes('audit:review:read'))
 const canReadPosts = computed(() => state.permissions.includes('audit:post:read'))
+const canReadSystemHealth = computed(() => state.permissions.includes('system:health:read'))
+const canReadSearchSync = computed(() => state.permissions.includes('data:search_index:read'))
 
 function pendingCountFor(bizType: number) {
   return overview.value?.pendingAuditBreakdown.find((item) => item.bizType === bizType)?.count
@@ -173,17 +190,82 @@ const clickableAuditBreakdown = computed(() => {
     .filter((item) => Boolean(item.to))
 })
 
+const operationalLinks = computed(() => {
+  const items = [] as Array<{
+    to: string
+    label: string
+    status: string
+    note: string
+    tone: 'good' | 'warn' | 'muted'
+  }>
+
+  if (canReadSystemHealth.value) {
+    const health = systemHealth.value
+    const status = health?.status
+    const pending = loading.value && !health
+    const issueCount = health?.components.filter(
+      (component) => component.status !== 'up' && component.status !== 'disabled',
+    ).length ?? 0
+    const statusLabels = strings.value.dashboard.operations.health.status
+    items.push({
+      to: '/system/health',
+      label: strings.value.dashboard.operations.health.label,
+      status: status ? statusLabels[status] : pending ? statusLabels.loading : statusLabels.unavailable,
+      note: health
+        ? strings.value.dashboard.operations.health.summary(issueCount, health.components.length)
+        : pending
+          ? strings.value.dashboard.operations.health.loading
+          : strings.value.dashboard.operations.health.unavailable,
+      tone: status === 'up' ? 'good' : status ? 'warn' : 'muted',
+    })
+  }
+
+  if (canReadSearchSync.value) {
+    const sync = searchSyncOverview.value
+    const pending = loading.value && !sync
+    const issueCount = (sync?.retrying ?? 0) + (sync?.stale ?? 0)
+    const syncCopy = strings.value.dashboard.operations.searchSync
+    items.push({
+      to: '/data/search-sync',
+      label: syncCopy.label,
+      status: !sync
+        ? pending ? syncCopy.loading : syncCopy.unavailable
+        : !sync.enabled
+          ? syncCopy.disabled
+          : issueCount > 0
+            ? syncCopy.attention
+            : syncCopy.healthy,
+      note: !sync
+        ? pending ? syncCopy.loadingNote : syncCopy.unavailableNote
+        : !sync.enabled
+          ? syncCopy.disabledNote
+          : syncCopy.summary(sync.pending, sync.processing, sync.retrying, sync.stale),
+      tone: !sync || !sync.enabled ? 'muted' : issueCount > 0 ? 'warn' : 'good',
+    })
+  }
+
+  return items
+})
+
+function isHealthStatus(value: string): value is AdminSystemHealthStatus {
+  return ['up', 'degraded', 'down', 'warning', 'disabled'].includes(value)
+}
+
 async function loadSnapshot() {
   const requestId = ++snapshotRequestId
   const loadShops = canReadShops.value
   const loadBatches = canReadImportBatches.value
   const loadOverview = canReadDashboard.value
+  const loadHealth = canReadSystemHealth.value
+  const loadSearchSync = canReadSearchSync.value
   const region = state.region
-  if (!loadShops && !loadBatches && !loadOverview) {
+  if (!loadShops && !loadBatches && !loadOverview && !loadHealth && !loadSearchSync) {
     if (requestId === snapshotRequestId) {
       recentShops.value = []
       recentBatches.value = []
       overview.value = null
+      systemHealth.value = null
+      searchSyncOverview.value = null
       errorMessage.value = ''
       loading.value = false
     }
@@ -193,35 +275,59 @@ async function loadSnapshot() {
   if (requestId === snapshotRequestId) {
     loading.value = true
     errorMessage.value = ''
+    recentShops.value = []
+    recentBatches.value = []
+    overview.value = null
+    systemHealth.value = null
+    searchSyncOverview.value = null
+  }
+
+  const failures: unknown[] = []
+  const tasks: Promise<void>[] = []
+
+  function track<T>(promise: Promise<T>, apply: (value: T) => void) {
+    tasks.push(
+      promise.then((value) => {
+        if (requestId === snapshotRequestId) apply(value)
+      }).catch((error) => {
+        failures.push(error)
+      }),
+    )
+  }
+
+  if (loadShops) {
+    track(listShops({ region, page: 1, pageSize: 5 }), (page) => {
+      recentShops.value = page.list
+    })
+  }
+  if (loadBatches) {
+    track(listImportBatches({ region, page: 1, pageSize: 5 }), (page) => {
+      recentBatches.value = page.list
+    })
+  }
+  if (loadOverview) {
+    track(getAdminDashboardOverview(), (value) => {
+      overview.value = value
+    })
+  }
+  if (loadHealth) {
+    track(getAdminSystemHealth(), (value) => {
+      systemHealth.value = {
+        ...value,
+        status: isHealthStatus(value.status) ? value.status : 'warning',
+      }
+    })
+  }
+  if (loadSearchSync) {
+    track(getAdminSearchSyncOverview(), (value) => {
+      searchSyncOverview.value = value
+    })
   }
 
   try {
-    const [shopsPage, batchesPage, overviewData] = await Promise.all([
-      loadShops
-        ? listShops({
-            region,
-            page: 1,
-            pageSize: 5,
-          })
-        : Promise.resolve(undefined),
-      loadBatches
-        ? listImportBatches({
-            region,
-            page: 1,
-            pageSize: 5,
-          })
-        : Promise.resolve(undefined),
-      loadOverview ? getAdminDashboardOverview() : Promise.resolve(undefined),
-    ])
-
-    if (requestId === snapshotRequestId) {
-      recentShops.value = shopsPage?.list ?? []
-      recentBatches.value = batchesPage?.list ?? []
-      overview.value = overviewData ?? null
-    }
-  } catch (error) {
-    if (requestId === snapshotRequestId) {
-      errorMessage.value = error instanceof Error ? error.message : strings.value.dashboard.loadError
+    await Promise.all(tasks)
+    if (requestId === snapshotRequestId && failures.length > 0) {
+      errorMessage.value = strings.value.dashboard.partialLoadError(failures.length)
     }
   } finally {
     if (requestId === snapshotRequestId) {
@@ -258,7 +364,17 @@ watch(
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="feedback">{{ strings.dashboard.loading }}</p>
 
-    <p v-if="metrics.length === 0" class="feedback">{{ strings.dashboard.noData }}</p>
+    <p
+      v-if="!loading
+        && metrics.length === 0
+        && quickLinks.length === 0
+        && operationalLinks.length === 0
+        && !canReadShops
+        && !canReadImportBatches"
+      class="feedback"
+    >
+      {{ strings.dashboard.noData }}
+    </p>
 
     <div v-if="metrics.length > 0" class="stat-grid">
       <article v-for="metric in metrics" :key="metric.label" class="stat-card">
@@ -284,8 +400,34 @@ watch(
           data-testid="dashboard-quick-link"
         >
           <p>{{ link.label }}</p>
-          <strong>{{ link.value ?? 0 }}</strong>
+          <strong>{{ link.value ?? '--' }}</strong>
           <span>{{ link.note }}</span>
+        </RouterLink>
+      </div>
+    </section>
+
+    <section v-if="operationalLinks.length" class="content-card" style="margin-top: 18px">
+      <div class="section-headline">
+        <div>
+          <p class="eyebrow">{{ strings.dashboard.operations.eyebrow }}</p>
+          <h2>{{ strings.dashboard.operations.heading }}</h2>
+        </div>
+      </div>
+      <div class="stack-list">
+        <RouterLink
+          v-for="item in operationalLinks"
+          :key="item.to"
+          :to="item.to"
+          class="stack-list__item"
+          data-testid="dashboard-operational-link"
+        >
+          <div>
+            <strong>{{ item.label }}</strong>
+            <p>{{ item.note }}</p>
+          </div>
+          <div class="stack-list__meta">
+            <span class="status-pill" :class="`status-pill--${item.tone}`">{{ item.status }}</span>
+          </div>
         </RouterLink>
       </div>
     </section>

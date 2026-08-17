@@ -141,7 +141,8 @@
     </select>
 
     <select id="selectRefund" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">
-        SELECT id,order_id,coupon_id,amount,reason,status,audit_by,audit_reason,audited_at,created_at,updated_at
+        SELECT id,order_id,coupon_id,amount,reason,status,audit_by,audit_reason,channel,channel_refund_txn,
+               channel_status,channel_failure_reason,audited_at,created_at,updated_at
         FROM refund
         WHERE order_id=#{orderId}
         ORDER BY id DESC
@@ -151,6 +152,13 @@
     <update id="approveRefund">
         UPDATE refund
         SET status=1,audit_by=#{operatorId},audit_reason=#{reason},audited_at=CURRENT_TIMESTAMP,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE order_id=#{orderId} AND status=0
+    </update>
+
+    <update id="markRefundProcessing">
+        UPDATE refund
+        SET status=3,audit_by=#{operatorId},audit_reason=#{reason},audited_at=CURRENT_TIMESTAMP,
             updated_at=CURRENT_TIMESTAMP
         WHERE order_id=#{orderId} AND status=0
     </update>
