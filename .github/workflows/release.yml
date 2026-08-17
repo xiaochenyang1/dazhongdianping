@@ -77,7 +77,20 @@ jobs:
           DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          if [[ -n "$DEPLOY_SSH_HOST" && -n "$DEPLOY_SSH_USER" && -n "$DEPLOY_REMOTE_ROOT" && -n "$DEPLOY_SMOKE_URLS" && -n "$DEPLOY_DB_DEFAULTS_FILE" && -n "$VITE_API_BASE_URL" && -n "$VITE_WS_BASE_URL" && -n "$VITE_STRIPE_PUBLISHABLE_KEY" && -n "$PUBLIC_SITE_URL" && -n "$PRERENDER_API_BASE_URL" && -n "$DEPLOY_SSH_PRIVATE_KEY" && -n "$DEPLOY_KNOWN_HOSTS" ]]; then
+          seo_configured=true
+          if [[ -n "$PRERENDER_REGIONS" ]]; then
+            IFS=', ' read -ra seo_regions <<< "$PRERENDER_REGIONS"
+            for seo_region in "${seo_regions[@]}"; do
+              case "${seo_region^^}" in
+                CN) [[ -n "$PUBLIC_SITE_URL_CN" && -n "$PRERENDER_API_BASE_URL_CN" ]] || seo_configured=false ;;
+                EU) [[ -n "$PUBLIC_SITE_URL_EU" && -n "$PRERENDER_API_BASE_URL_EU" ]] || seo_configured=false ;;
+                *) seo_configured=false ;;
+              esac
+            done
+          else
+            [[ -n "$PUBLIC_SITE_URL" && -n "$PRERENDER_API_BASE_URL" ]] || seo_configured=false
+          fi
+          if [[ -n "$DEPLOY_SSH_HOST" && -n "$DEPLOY_SSH_USER" && -n "$DEPLOY_REMOTE_ROOT" && -n "$DEPLOY_SMOKE_URLS" && -n "$DEPLOY_DB_DEFAULTS_FILE" && -n "$VITE_API_BASE_URL" && -n "$VITE_WS_BASE_URL" && -n "$VITE_STRIPE_PUBLISHABLE_KEY" && "$seo_configured" == true && -n "$DEPLOY_SSH_PRIVATE_KEY" && -n "$DEPLOY_KNOWN_HOSTS" ]]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
@@ -191,7 +204,20 @@ jobs:
           DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          if [[ -z "$DEPLOY_SSH_HOST" || -z "$DEPLOY_SSH_USER" || -z "$DEPLOY_REMOTE_ROOT" || -z "$DEPLOY_SMOKE_URLS" || -z "$DEPLOY_DB_DEFAULTS_FILE" || -z "$VITE_API_BASE_URL" || -z "$VITE_WS_BASE_URL" || -z "$VITE_STRIPE_PUBLISHABLE_KEY" || -z "$PUBLIC_SITE_URL" || -z "$PRERENDER_API_BASE_URL" || -z "$DEPLOY_SSH_PRIVATE_KEY" || -z "$DEPLOY_KNOWN_HOSTS" ]]; then
+          seo_configured=true
+          if [[ -n "$PRERENDER_REGIONS" ]]; then
+            IFS=', ' read -ra seo_regions <<< "$PRERENDER_REGIONS"
+            for seo_region in "${seo_regions[@]}"; do
+              case "${seo_region^^}" in
+                CN) [[ -n "$PUBLIC_SITE_URL_CN" && -n "$PRERENDER_API_BASE_URL_CN" ]] || seo_configured=false ;;
+                EU) [[ -n "$PUBLIC_SITE_URL_EU" && -n "$PRERENDER_API_BASE_URL_EU" ]] || seo_configured=false ;;
+                *) seo_configured=false ;;
+              esac
+            done
+          else
+            [[ -n "$PUBLIC_SITE_URL" && -n "$PRERENDER_API_BASE_URL" ]] || seo_configured=false
+          fi
+          if [[ -z "$DEPLOY_SSH_HOST" || -z "$DEPLOY_SSH_USER" || -z "$DEPLOY_REMOTE_ROOT" || -z "$DEPLOY_SMOKE_URLS" || -z "$DEPLOY_DB_DEFAULTS_FILE" || -z "$VITE_API_BASE_URL" || -z "$VITE_WS_BASE_URL" || -z "$VITE_STRIPE_PUBLISHABLE_KEY" || "$seo_configured" != true || -z "$DEPLOY_SSH_PRIVATE_KEY" || -z "$DEPLOY_KNOWN_HOSTS" ]]; then
             echo "::error::The pre deployment environment is incomplete."
             exit 1
           fi
@@ -292,7 +318,20 @@ jobs:
           DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          if [[ -z "$DEPLOY_SSH_HOST" || -z "$DEPLOY_SSH_USER" || -z "$DEPLOY_REMOTE_ROOT" || -z "$DEPLOY_SMOKE_URLS" || -z "$DEPLOY_DB_DEFAULTS_FILE" || -z "$VITE_API_BASE_URL" || -z "$VITE_WS_BASE_URL" || -z "$VITE_STRIPE_PUBLISHABLE_KEY" || -z "$PUBLIC_SITE_URL" || -z "$PRERENDER_API_BASE_URL" || -z "$DEPLOY_SSH_PRIVATE_KEY" || -z "$DEPLOY_KNOWN_HOSTS" ]]; then
+          seo_configured=true
+          if [[ -n "$PRERENDER_REGIONS" ]]; then
+            IFS=', ' read -ra seo_regions <<< "$PRERENDER_REGIONS"
+            for seo_region in "${seo_regions[@]}"; do
+              case "${seo_region^^}" in
+                CN) [[ -n "$PUBLIC_SITE_URL_CN" && -n "$PRERENDER_API_BASE_URL_CN" ]] || seo_configured=false ;;
+                EU) [[ -n "$PUBLIC_SITE_URL_EU" && -n "$PRERENDER_API_BASE_URL_EU" ]] || seo_configured=false ;;
+                *) seo_configured=false ;;
+              esac
+            done
+          else
+            [[ -n "$PUBLIC_SITE_URL" && -n "$PRERENDER_API_BASE_URL" ]] || seo_configured=false
+          fi
+          if [[ -z "$DEPLOY_SSH_HOST" || -z "$DEPLOY_SSH_USER" || -z "$DEPLOY_REMOTE_ROOT" || -z "$DEPLOY_SMOKE_URLS" || -z "$DEPLOY_DB_DEFAULTS_FILE" || -z "$VITE_API_BASE_URL" || -z "$VITE_WS_BASE_URL" || -z "$VITE_STRIPE_PUBLISHABLE_KEY" || "$seo_configured" != true || -z "$DEPLOY_SSH_PRIVATE_KEY" || -z "$DEPLOY_KNOWN_HOSTS" ]]; then
             echo "::error::The prod deployment environment is incomplete."
             exit 1
           fi
