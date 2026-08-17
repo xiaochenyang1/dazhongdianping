@@ -228,7 +228,7 @@ $checksumPath = "$bundlePath.sha256"
 try {
     New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
     $migrationEntries = @(Get-VerifiedMigrationEntries)
-    $baseRegion = $prerenderRegions[0]
+    $baseRegion = if ($prerenderRegion -in $prerenderRegions) { $prerenderRegion } else { $prerenderRegions[0] }
     $baseConfiguration = $prerenderConfigurations | Where-Object { $_.Region -eq $baseRegion } | Select-Object -First 1
     # Build the serving dist for the first region, then retain each additional
     # region under web/seo-snapshots/<region> so they cannot overwrite one another.
