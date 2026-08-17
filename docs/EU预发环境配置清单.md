@@ -1,6 +1,6 @@
 # EU 预发环境配置清单
 
-更新时间：2026-08-16
+更新时间：2026-08-17
 
 当前候选基线以最新 `eu-pre-rc-*` tag 或通过 CI 的不可变提交 SHA 为准，不在本文内维护会过期的固定 SHA。
 
@@ -104,3 +104,10 @@ Secrets：
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
 - GitHub `pre` Environment 已创建但尚未补齐目标机、数据库、Web/SEO 变量和 SSH secrets；`prod` Environment 尚未创建。
+
+## 6. 已完成的仓库侧准备
+
+- `eu-pre-rc-20260816-3` 已发布；标签 CI 的全量验证和 MySQL 迁移集成作业通过。
+- PR #1 已合入 `main`；合并提交的主干 CI 全部通过。
+- 已执行一次不注入伪造域名或支付配置的完整本地打包，ZIP、旁车 SHA-256、release manifest、后端 JAR、三个 Web `dist`、迁移 runner、迁移清单和 `03-14` 共 12 个迁移文件均已核验。
+- 自动 `release` 已验证配置缺失时只完成门禁检查，打包、上传和部署均跳过。此项不替代真实 `test`/`pre` 发布、smoke 或回滚演练。

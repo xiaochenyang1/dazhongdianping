@@ -1,8 +1,8 @@
 # EU 首发与预发发布基线
 
-更新时间：2026-08-16
+更新时间：2026-08-17
 
-当前基线分支：`feat/eu-pre-release-hardening`。发布时必须使用通过 CI 的不可变提交 SHA 或标签，不在文档内维护会自我过期的“当前 HEAD”。
+预发布加固已通过 PR #1 合入 `main`。后续发布仍必须使用通过 CI 的不可变提交 SHA 或最新 `eu-pre-rc-*` 标签，不把可移动分支名当作发布版本。
 
 ## 首发范围
 
@@ -20,6 +20,13 @@ CN 保留为代码兼容区域，但不作为本轮真实支付验收目标；CN
 - Google Maps：列表、原生交互地图和定位代码已落地，但真实受限 Key 与真机 smoke 仍延期，不作为 EU 预发通过条件。
 - FCM/APNs：服务端和客户端适配器已完成，但没有真实凭证和真机 smoke 前不宣称上线。
 - 常驻 SSR、独立域名/CDN 缓存和正式商店发布：留到预发基础链路稳定后执行。
+
+## 已完成的发布证据
+
+- `eu-pre-rc-20260816-3` 已发布并指向提交 `ca683d14a8661ab05fb0d6ede51dcae98a63b29f`；标签 CI 运行 `31983461176` 的全量验证和 MySQL 迁移集成作业均通过。
+- PR #1 已以 merge commit `71ee8f8e6215a04c4af5fba5d1b3b0688aa2a83c` 合入 `main`；主干 CI 运行 `31984095560` 的全量验证和 MySQL 迁移集成作业均通过。
+- 已使用 PowerShell 7.6.5 执行一次完整本地发布打包。`eu-pre-rc-20260816-3` ZIP 包含后端 JAR、三个 Web `dist`、`03-14` 数据库迁移、迁移清单、迁移 runner 和 release manifest；ZIP 完整性、旁车 SHA-256 以及 12 个迁移文件的包内校验均通过。本地制品 SHA-256 为 `e6d04bd84116c7d6f6e848e207e55fb067b5ea7d22dab3967805ad6d2010c3e8`。
+- 合并后自动 `release` 运行 `31984736249` 成功完成配置门禁。由于 `test` 目标环境未配置完整，checkout、打包、上传、SSH 和部署步骤全部按设计跳过；该结果只证明 fail-closed 门禁有效，不算测试环境部署通过。
 
 ## 预发配置
 
@@ -54,7 +61,7 @@ set +a
 - 当前开发机已安装 Stripe CLI 1.50.1，但没有真实 `sk_test_`、`pk_test_`、`whsec_` 凭证和登录态，真实支付验收无法在本地完成。
 - 没有可验收的 SMTP 发信域名/账号和 Twilio Account/Messaging Service，邮件与欧洲短信送达 smoke 无法在本地完成。
 - 没有目标机 SSH、数据库、Redis、S3、Elasticsearch 和域名配置，预发部署无法执行。
-- GitHub 当前已有 `test` 和 `pre` Environment；`pre` 已写入 SSH 端口、四个服务名和数据库迁移模式等非敏感固定值，但目标机地址、发布目录、数据库 defaults 路径、Web/SEO URL 与 SSH secrets 仍未配置，`prod` 尚未创建。`mobile-release` 尚无运行记录，自动 `deploy-test` 在环境未配置完整时会按门禁跳过。
+- GitHub 当前已有 `test` 和 `pre` Environment；`pre` 已写入 SSH 端口、四个服务名和数据库迁移模式等非敏感固定值，但目标机地址、发布目录、数据库 defaults 路径、Web/SEO URL 与 SSH secrets 仍未配置，`prod` 尚未创建。`mobile-release` 尚无运行记录；合并后的自动 `deploy-test` 已实际验证会在环境未配置完整时按门禁跳过。
 - Google Maps 仍是明确延期项，不影响本轮 EU 列表浏览验收。
 
 对应的代码级支付状态见 [`STRIPE_PAYMENT_STATUS.md`](STRIPE_PAYMENT_STATUS.md)，真实环境填值清单见 [`EU预发环境配置清单.md`](EU预发环境配置清单.md)，完整功能矩阵见 [`当前已完成功能与SQL导入说明.md`](当前已完成功能与SQL导入说明.md) §2.2。
