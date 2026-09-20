@@ -119,6 +119,7 @@
 - 通知历史分页与“全部已读”互斥执行，避免旧页面快照覆盖新页或把已读状态回滚。
 - 浏览侧已完成首页、搜索（热词 + 登录用户搜索历史面板 + 输入联想 + 门店结果历史分页，支持清空/单条删除）、门店详情（含门店收藏/取消收藏、公开点评预览与相似门店推荐）、独立门店点评列表（排序、评分和带图筛选，筛选请求防乱序覆盖，后续页按点评 ID 去重）、城市榜单列表/详情、运营活动列表/详情、团购下单与在线预订；未配置 Google Maps、真实支付渠道时明确展示不可用原因，不把占位能力写成已接通。自 `2026-08-12` 起首页地图入口进一步收口：Google Maps 未配置时直接隐藏按钮，不再展示“点击即弹提示”的半成品入口；自 `2026-08-13` 起继续补成可用地图闭环：公开门店列表/详情返回坐标，Android/iOS 在 Dart 与原生层均完成 Key 注入后展示可拖动、缩放、点击标记并与门店选择联动的交互地图，Web 或原生注入未完成时降级 Static Maps，详情页可打开 Google Maps 到店导航；交互地图还支持用户点击后申请前台定位权限、显示当前位置和聚焦镜头，并调用后端距离排序、展示米/公里距离；地图拖动或缩放停止后会按可见边界刷新门店，快速连续移动只应用最后一次请求，空结果或失败时保留已有标记。拒绝或服务关闭时保留列表浏览且不申请后台定位。真实 key/真机定位 smoke 仍待验收。验证码/支付渠道未配置时后端 fail-closed 返回 503，Firebase 占位走 NoOp 回退，均不伪装成功。同日起 Flutter 门店详情与后端 `ShopDetailResponse` / Web `ShopDetailView.vue` 对齐 §3.3：补齐封面图（`coverUrl`，缺失时占位容器而非空 `Image.network`）、口味/环境/服务三维评分明细、推荐菜（含推荐理由与价格）、门店相册（三宫格 `GridView`，图片加载失败回退占位图），三语言文案全覆盖。
 - 首页在 `CN / EU` 区域或浏览仓储变化时会自动重新加载推荐门店，避免区域标题更新后继续展示旧区域列表。
+- 【`2026-09-20` 新增】个性化推荐引擎（recommendation）全栈落地：后端 `module/recommendation` 基于用户行为埋点（浏览/收藏/下单/搜索，写入 `user_behavior_event`）聚合品类偏好，配合店铺质量、热度（`shop_view_daily`）与就近距离做可解释加权打分（打分策略 SPI 位于 `common/recommendation`，权重按区域存 `recommendation_weight`，运营可在 Admin 后台调整）。C 端 `GET /api/c/v1/recommendations/feed`（匿名可用，登录后个性化）与 `POST /api/c/v1/recommendations/behaviors`（需登录）；Web 首页与 Flutter 首页新增“猜你喜欢”分区；admin-web `/operations/recommendation` 权重配置页（`operations:recommendation:read/write`，已挂后端菜单）。仍为规则打分，非 ML；后端 507、web 217、admin-web 157、Flutter 582 测试全绿。
 - 独立门店点评列表首次加载失败可重试，重试保留当前排序和筛选条件。
 - 点评侧已完成新建、本人详情回填编辑、四维评分、消费金额、标签、系统相册选图、评论区历史分页与楼中楼回复，以及带鉴权/区域/语言/幂等键的 multipart 图片上传。
 - 点评编辑器会明确反馈选图、上传和保存失败，失败后保留表单并恢复操作按钮；异步入口会拦截重复上传和重复提交。
@@ -378,7 +379,7 @@
 - `2026-07-28` Flutter 城市榜单与运营活动三语言迁移完成：列表/详情标题、空态、错误/重试、刷新失败提示、门店/资源计数、榜首文案、外部链接打开失败提示和榜单金额随 `zh-CN`、`zh-TW`、`en` 切换；字典/榜单活动聚焦测试与 `flutter analyze` 零问题，`flutter test --concurrency=1` 全量 `406` 条通过。
 - `2026-07-28` Flutter 首页三语言迁移完成：区域标题、首页副标题、快捷入口、地图状态、错误/空态、底部导航和门店金额随 `zh-CN`、`zh-TW`、`en` 切换；首页/搜索/字典聚焦测试 `29` 条通过，`flutter analyze` 零问题，`flutter test` 全量 `405` 条通过。
 - `2026-07-28` Flutter 搜索与发现三语言迁移完成：应用级委托覆盖 `zh-CN`、`zh-TW` 和 `en`，搜索页标题、提示、联想、错误/空态、分页、热词、历史操作和金额随当前语言切换；`flutter analyze` 零问题，`flutter test` 全量 `403` 条通过。
-- `2026-07-25` `web` 运行 SEO 静态/快照脚本测试 `5` 条、全量测试 `117` 条通过；带本地 H2 后端、`PRERENDER_REGION=CN` 和 `PUBLIC_SITE_URL` 的 `npm run build:prerender:data` 实测生成 15 个路由（7 个静态入口 + 8 个真实详情快照），并生成 `prerender-manifest.json`、`sitemap.xml`、`robots.txt`。该结果不证明常驻 SSR、CN/EU 自动发布、真实域名缓存或目标环境部署已完成。
+- `2026-07-25` `web` 运行 SEO 静态/快照脚本测试 `5` 条、全量测试 `117` 条通过；带本地 H2 后端、`PRERENDER_REGION=CN` 和 `PUBLIC_SITE_URL` 的 `npm run build:prerender:data` 实测生成 15 个路由（7 个静态入口 + 8 个真实详情快照），并生成 `prerender-manifest.json`、`sitemap.xml`、`robots.txt`。后续已由发布脚本补齐 `PRERENDER_REGIONS=CN,EU` 的按区构建、快照隔离和 release manifest 记录；该结果仍不证明常驻 SSR、真实域名缓存或目标环境部署已完成。
 - `2026-07-21` 本轮按功能包执行聚焦验证：`web` 的浏览/SEO 相关 `vitest` 用例 `9` 个文件、`38` 条测试通过并完成构建；`merchant-web` 的布局、订单、预订和点评经营用例 `5` 个文件、`14` 条测试通过并完成构建。
 - `backend` 已执行 `PublicBrowseControllerTest`、`UserPrivacyControllerTest`、`CommunityControllerTest`、`NotificationControllerTest` 和 `AdminAuditServiceTest` 聚焦测试；其中帖子正文/评论 `@提醒` 覆盖了审核通过后发通知、评论即时通知、同文去重以及跳过自己/不存在/重名用户。`app` 已执行社区、圈子、话题、首页和消息相关 `flutter test`；`scripts/ci/test-browser-e2e.ps1` 契约通过。
 - Flutter 通知中心以页面版本隔离迟到的刷新/翻页响应，并基于最新页面合并并发单条已读和全部已读结果，避免旧快照恢复未读状态。

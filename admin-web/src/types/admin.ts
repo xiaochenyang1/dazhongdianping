@@ -940,3 +940,5 @@ export interface GrowthRule { id: number; action: string; actionName: string; gr
 export interface LevelConfig { level: number; minGrowth: number; levelName: string; icon: string; privilegeJson: string; enabled: boolean; updatedAt: string }
 export interface GrowthConfig { rules: GrowthRule[]; levels: LevelConfig[] }
 export interface GrowthRulePayload { action: string; actionName: string; growthValue: number; points: number; dailyLimit: number; enabled: boolean }
+export interface RecommendationWeight { region: string; affinityWeight: number; qualityWeight: number; popularityWeight: number; distanceWeight: number }
+export interface RecommendationWeightPayload { affinityWeight: number; qualityWeight: number; popularityWeight: number; distanceWeight: number }

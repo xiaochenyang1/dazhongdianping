@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.recommendation.mapper.RecommendationMapper">
+
+    <insert id="insertBehaviorEvent">
+        INSERT INTO user_behavior_event(user_id, region, event_type, shop_id, category_id, keyword, weight)
+        VALUES(#{userId}, #{region}, #{eventType}, #{shopId}, #{categoryId}, #{keyword}, #{weight})
+    </insert>
+
+    <select id="selectShopCategory" resultType="long">
+        SELECT category_id
+        FROM shop
+        WHERE id = #{shopId}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </select>
+
+    <select id="selectCategoryAffinity" resultType="com.tuowei.dazhongdianping.module.recommendation.model.CategoryAffinityRow">
+        SELECT category_id AS categoryId,
+               SUM(weight) AS affinity
+        FROM user_behavior_event
+        WHERE user_id = #{userId}
+          AND region = #{region}
+          AND category_id IS NOT NULL
+        GROUP BY category_id
+        ORDER BY affinity DESC, category_id ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectCandidateShops" resultType="com.tuowei.dazhongdianping.module.recommendation.model.CandidateShopRow">
+        SELECT s.id,
+               s.merchant_id,
+               s.category_id,
+               s.name,
+               s.cover_url,
+               s.score,
+               s.price_per_capita,
+               s.currency,
+               s.address,
+               s.latitude,
+               s.longitude,
+               a.name AS area_name,
+               c.name AS city_name,
+               s.has_deal,
+               s.open_now,
+               s.tags,
+               COALESCE(v.view_count, 0) AS view_count
+        FROM shop s
+        JOIN area a ON a.id = s.area_id AND a.region = s.region AND a.status = 1
+        JOIN city c ON c.id = s.city_id AND c.region = s.region AND c.status = 1
+        JOIN category cat ON cat.id = s.category_id AND cat.region = s.region AND cat.status = 1
+        LEFT JOIN (
+            SELECT shop_id, SUM(view_count) AS view_count
+            FROM shop_view_daily
+            GROUP BY shop_id
+        ) v ON v.shop_id = s.id
+        WHERE s.region = #{region}
+          AND s.status = 1
+          AND s.is_deleted = FALSE
+        <if test="cityId != null">
+          AND s.city_id = #{cityId}
+        </if>
+        <if test="excludeShopId != null">
+          AND s.id != #{excludeShopId}
+        </if>
+        <if test="categoryIds != null and categoryIds.size() > 0">
+          AND s.category_id IN
+          <foreach collection="categoryIds" item="cid" open="(" separator="," close=")">#{cid}</foreach>
+        </if>
+        ORDER BY COALESCE(v.view_count, 0) DESC, s.score DESC, s.id ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectWeight" resultType="com.tuowei.dazhongdianping.module.recommendation.model.RecommendationWeightRow">
+        SELECT id, region, affinity_weight, quality_weight, popularity_weight, distance_weight, updated_at
+        FROM recommendation_weight
+        WHERE region = #{region}
+          AND is_deleted = FALSE
+    </select>
+
+    <update id="updateWeight">
+        UPDATE recommendation_weight
+        SET affinity_weight = #{affinityWeight},
+            quality_weight = #{qualityWeight},
+            popularity_weight = #{popularityWeight},
+            distance_weight = #{distanceWeight},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE region = #{region}
+          AND is_deleted = FALSE
+    </update>
+
+    <insert id="insertWeight" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO recommendation_weight(region, affinity_weight, quality_weight, popularity_weight, distance_weight)
+        VALUES(#{region}, #{affinityWeight}, #{qualityWeight}, #{popularityWeight}, #{distanceWeight})
+    </insert>
+
+</mapper>

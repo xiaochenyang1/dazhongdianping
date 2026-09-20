@@ -18,6 +18,8 @@ class AppLocalizations {
     'homeTitle': '本地生活',
     'searchHint': '搜索餐厅、超市和生活服务',
     'featured': '附近推荐',
+    'recommendedForYou': '猜你喜欢',
+    'recommendationsEmpty': '暂时还没有足够的偏好数据，多逛逛就有啦。',
     'profile': '我的',
     'homeSubtitle': '发现附近更适合华人的好去处',
     'europe': '欧洲',
@@ -1005,6 +1007,8 @@ class AppLocalizations {
     'homeTitle': '在地生活',
     'searchHint': '搜尋餐廳、超市和生活服務',
     'featured': '附近推薦',
+    'recommendedForYou': '猜你喜歡',
+    'recommendationsEmpty': '暫時還沒有足夠的偏好資料，多逛逛就有囉。',
     'profile': '我的',
     'homeSubtitle': '探索附近更適合華人的好去處',
     'europe': '歐洲',
@@ -1992,6 +1996,8 @@ class AppLocalizations {
     'homeTitle': 'Local life',
     'searchHint': 'Search restaurants, supermarkets and services',
     'featured': 'Featured near you',
+    'recommendedForYou': 'Recommended for you',
+    'recommendationsEmpty': 'Not enough preference data yet — browse a bit more and it will fill in.',
     'profile': 'Me',
     'homeSubtitle': 'Chinese-friendly places nearby',
     'europe': 'Europe',
@@ -3185,6 +3191,8 @@ class AppLocalizations {
   String get homeTitle => _text('homeTitle');
   String get searchHint => _text('searchHint');
   String get featured => _text('featured');
+  String get recommendedForYou => _text('recommendedForYou');
+  String get recommendationsEmpty => _text('recommendationsEmpty');
   String get profile => _text('profile');
   String get homeSubtitle => _text('homeSubtitle');
   String get europe => _text('europe');

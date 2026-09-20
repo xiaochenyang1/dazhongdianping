@@ -41,6 +41,7 @@ export interface AdminStrings {
     activityManagement: string
     pointsProductManagement: string
     pointsExchangeManagement: string
+    recommendationWeight: string
     systemAdmins: string
     systemRoles: string
     systemUsers: string
@@ -1773,6 +1774,19 @@ export interface AdminStrings {
     cancelEdit: string
     readOnly: string
   }
+  recommendationWeight: {
+    title: string
+    description: string
+    affinity: string
+    quality: string
+    popularity: string
+    distance: string
+    save: string
+    saved: string
+    saveError: string
+    loadError: string
+    readOnly: string
+  }
   growthConfigs: {
     loadError: string
     ruleUpdateError: string
@@ -2386,6 +2400,7 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/operations/activities': 'activityManagement',
   '/operations/points-products': 'pointsProductManagement',
   '/operations/points-exchanges': 'pointsExchangeManagement',
+  '/operations/recommendation': 'recommendationWeight',
   '/system/admins': 'systemAdmins',
   '/system/roles': 'systemRoles',
   '/system/users': 'systemUsers',
@@ -2622,6 +2637,7 @@ const zhCnStrings: AdminStrings = {
     activityManagement: '运营活动',
     pointsProductManagement: '积分商品',
     pointsExchangeManagement: '积分兑换',
+    recommendationWeight: '推荐权重',
     systemAdmins: '管理员账号',
     systemRoles: '角色与权限',
     systemUsers: '用户管理',
@@ -4393,6 +4409,19 @@ const zhCnStrings: AdminStrings = {
     cancelEdit: '取消编辑',
     readOnly: '当前账号仅可查看，无榜单配置权限。',
   },
+  recommendationWeight: {
+    title: '推荐权重',
+    description: '调整本区域"猜你喜欢"信息流中口味偏好、店铺质量、热度与距离的加权占比。',
+    affinity: '口味偏好权重',
+    quality: '店铺质量权重',
+    popularity: '热度权重',
+    distance: '就近权重',
+    save: '保存权重',
+    saved: '推荐权重已保存。',
+    saveError: '推荐权重保存失败。',
+    loadError: '推荐权重加载失败。',
+    readOnly: '你只有推荐权重的只读权限。',
+  },
   growthConfigs: {
     loadError: '配置加载失败',
     ruleUpdateError: '规则更新失败',
@@ -5106,6 +5135,7 @@ const enStrings: AdminStrings = {
     activityManagement: 'Operation Activities',
     pointsProductManagement: 'Points Products',
     pointsExchangeManagement: 'Points Redemptions',
+    recommendationWeight: 'Recommendation Weights',
     systemAdmins: 'Admin Accounts',
     systemRoles: 'Roles & Permissions',
     systemUsers: 'User Management',
@@ -6892,6 +6922,19 @@ const enStrings: AdminStrings = {
     saveEdit: 'Save changes',
     cancelEdit: 'Cancel editing',
     readOnly: 'This account can view ranking history but cannot edit ranking rules.',
+  },
+  recommendationWeight: {
+    title: 'Recommendation Weights',
+    description: 'Tune how the "Recommended for you" feed balances taste affinity, quality, popularity and distance for this region.',
+    affinity: 'Taste affinity weight',
+    quality: 'Shop quality weight',
+    popularity: 'Popularity weight',
+    distance: 'Proximity weight',
+    save: 'Save weights',
+    saved: 'Recommendation weights saved.',
+    saveError: 'Failed to save recommendation weights.',
+    loadError: 'Failed to load recommendation weights.',
+    readOnly: 'You have read-only access to recommendation weights.',
   },
   growthConfigs: {
     loadError: 'Failed to load the growth configuration.',

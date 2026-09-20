@@ -8,8 +8,9 @@ import {
 } from '@/core/web_discovery_localizations'
 import { fetchActivities } from '@/services/activity'
 import { fetchCategories, fetchCities, fetchHomeBanners, fetchHomeFeed } from '@/services/browse'
+import { fetchRecommendationFeed } from '@/services/recommendation'
 import type { ActivitySummary } from '@/types/activity'
-import type { Banner, CategoryNode, City, HomeFeedItem } from '@/types/browse'
+import type { Banner, CategoryNode, City, HomeFeedItem, ShopListItem } from '@/types/browse'
 
 const { state, setCityId } = useAppContext()
 
@@ -20,6 +21,7 @@ const cities = ref<City[]>([])
 const banners = ref<Banner[]>([])
 const feed = ref<HomeFeedItem[]>([])
 const activities = ref<ActivitySummary[]>([])
+const recommendations = ref<ShopListItem[]>([])
 
 const copy = computed(() => discoveryStringsForRegion(state.region))
 const activeCity = computed(() => cities.value.find((item) => item.id === state.cityId))
@@ -56,10 +58,11 @@ async function loadHomeContent() {
     return
   }
   try {
-    ;[banners.value, feed.value, activities.value] = await Promise.all([
+    ;[banners.value, feed.value, activities.value, recommendations.value] = await Promise.all([
       fetchHomeBanners(state.cityId),
       fetchHomeFeed(state.cityId, 6),
       fetchActivities({ cityId: state.cityId, limit: 4 }),
+      fetchRecommendationFeed({ cityId: state.cityId, limit: 6 }),
     ])
   } catch (error) {
     errorMessage.value = localizeWebDiscoveryError(copy.value, error, copy.value.home.contentLoadFailed)
@@ -161,6 +164,31 @@ watch(
             <span class="status-pill is-deal">{{ copy.home.activityType(item.type, item.typeText) }}</span>
           </div>
           <p>{{ item.cityName }} · {{ copy.home.activityChannel(item.channel, item.channelText) }} · {{ copy.home.resourceCount(item.itemCount) }}</p>
+        </div>
+      </RouterLink>
+    </div>
+  </section>
+
+  <section class="content-section">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">{{ copy.home.recommendEyebrow }}</p>
+        <h2>{{ copy.home.recommendTitle }}</h2>
+      </div>
+      <RouterLink to="/shops" class="text-link">{{ copy.home.viewMorePlaces }}</RouterLink>
+    </div>
+    <p v-if="recommendations.length === 0" class="feedback">{{ copy.home.recommendEmpty }}</p>
+    <div v-else class="feed-grid" data-testid="recommendation-grid">
+      <RouterLink
+        v-for="shop in recommendations"
+        :key="shop.id"
+        :to="`/shops/${shop.id}`"
+        class="feed-card"
+      >
+        <img :src="shop.coverUrl" :alt="shop.name" class="feed-card__image" />
+        <div class="feed-card__body">
+          <h3>{{ shop.name }}</h3>
+          <p>{{ shop.areaName }} · {{ shop.score }}</p>
         </div>
       </RouterLink>
     </div>

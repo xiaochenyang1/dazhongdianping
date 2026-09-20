@@ -1206,3 +1206,40 @@ CREATE INDEX IF NOT EXISTS idx_points_exchange_user ON points_exchange(user_id, 
 CREATE INDEX IF NOT EXISTS idx_points_exchange_product ON points_exchange(product_id, created_at, id);
 CREATE INDEX IF NOT EXISTS idx_points_exchange_region_status ON points_exchange(region, status, id);
 CREATE UNIQUE INDEX IF NOT EXISTS uk_points_exchange_redeem_code ON points_exchange(redeem_code);
+
+-- ============================================================
+-- 个性化推荐（recommendation）
+-- ============================================================
+-- 用户行为埋点：推荐召回与打分的原始信号（浏览/收藏/下单/搜索）
+CREATE TABLE IF NOT EXISTS user_behavior_event (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    -- 1=浏览店铺 2=收藏 3=下单 4=搜索关键词
+    event_type TINYINT NOT NULL,
+    shop_id BIGINT NULL,
+    category_id BIGINT NULL,
+    keyword VARCHAR(64) NULL,
+    -- 行为权重（如下单>收藏>浏览），用于聚合口味偏好
+    weight INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_behavior_user ON user_behavior_event(user_id, region, created_at, id);
+CREATE INDEX IF NOT EXISTS idx_behavior_user_category ON user_behavior_event(user_id, region, category_id);
+
+-- 推荐打分权重配置（可由运营在 Admin 后台调整，按区域隔离）
+CREATE TABLE IF NOT EXISTS recommendation_weight (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    -- 口味/品类偏好匹配权重
+    affinity_weight DECIMAL(5,2) NOT NULL DEFAULT 40.00,
+    -- 店铺评分权重
+    quality_weight DECIMAL(5,2) NOT NULL DEFAULT 25.00,
+    -- 热度（浏览量）权重
+    popularity_weight DECIMAL(5,2) NOT NULL DEFAULT 20.00,
+    -- 距离就近权重
+    distance_weight DECIMAL(5,2) NOT NULL DEFAULT 15.00,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT uk_recommendation_weight_region UNIQUE(region)
+);

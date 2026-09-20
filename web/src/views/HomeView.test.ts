@@ -12,8 +12,13 @@ const activityMocks = vi.hoisted(() => ({
   fetchActivities: vi.fn(),
 }))
 
+const recommendationMocks = vi.hoisted(() => ({
+  fetchRecommendationFeed: vi.fn(),
+}))
+
 vi.mock('@/services/browse', () => browseMocks)
 vi.mock('@/services/activity', () => activityMocks)
+vi.mock('@/services/recommendation', () => recommendationMocks)
 vi.mock('vue-router', () => ({
   RouterLink: { props: ['to'], template: '<a><slot /></a>' },
 }))
@@ -33,6 +38,7 @@ describe('HomeView', () => {
   beforeEach(() => {
     Object.values(browseMocks).forEach((mock) => mock.mockReset())
     activityMocks.fetchActivities.mockReset()
+    recommendationMocks.fetchRecommendationFeed.mockReset()
     localStorage.clear()
     useAppContext().setRegion('EU')
     useAppContext().setCityId(101)
@@ -73,6 +79,21 @@ describe('HomeView', () => {
       endAt: '2026-08-31 23:59:59',
       itemCount: 1,
     }])
+    recommendationMocks.fetchRecommendationFeed.mockResolvedValue([{
+      id: 30001,
+      name: 'Recommended bistro',
+      coverUrl: '/rec.jpg',
+      score: 4.8,
+      pricePerCapita: 42,
+      currency: 'EUR',
+      address: '1 Rue de Test',
+      areaName: 'Le Marais',
+      cityName: 'Paris',
+      hasDeal: true,
+      openNow: true,
+      tags: ['brunch'],
+      distanceMeters: null,
+    }])
   })
 
   it('renders the complete discovery shell in English for EU', async () => {
@@ -86,6 +107,8 @@ describe('HomeView', () => {
     expect(host.textContent).toContain('Seasonal campaign')
     expect(host.textContent).toContain('Paris · Activities · 1 item')
     expect(host.textContent).toContain('View more places')
+    expect(host.textContent).toContain('Recommended for you')
+    expect(host.textContent).toContain('Recommended bistro')
     expect(host.textContent).not.toMatch(/[一-龥]/)
 
     app.unmount()

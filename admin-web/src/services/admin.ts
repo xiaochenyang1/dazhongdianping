@@ -62,6 +62,8 @@ import type {
   GrowthRule,
   GrowthRulePayload,
   LevelConfig,
+  RecommendationWeight,
+  RecommendationWeightPayload,
   AdminMerchantApplication,
   AdminMerchant,
   AdminMerchantOperator,
@@ -589,3 +591,6 @@ export function fetchGrowthConfig() { return apiGet<GrowthConfig>('/api/admin/v1
 export function createGrowthRule(payload: GrowthRulePayload) { return apiPost<GrowthRule>('/api/admin/v1/growth/rules', payload) }
 export function updateGrowthRule(id: number, payload: GrowthRulePayload) { return apiPut<GrowthRule>(`/api/admin/v1/growth/rules/${id}`, payload) }
 export function updateLevelConfig(level: number, payload: Omit<LevelConfig, 'level' | 'updatedAt'>) { return apiPut<LevelConfig>(`/api/admin/v1/growth/rules/levels/${level}`, payload) }
+
+export function fetchRecommendationWeight() { return apiGet<RecommendationWeight>('/api/admin/v1/recommendation/weight') }
+export function updateRecommendationWeight(payload: RecommendationWeightPayload) { return apiPut<RecommendationWeight>('/api/admin/v1/recommendation/weight', payload) }

@@ -40,7 +40,8 @@ public class AdminMenuService {
                         leaf("operations.sensitive_words", "敏感词库", "/operations/sensitive-words", "operations:sensitive_word:read"),
                         leaf("operations.activities", "运营活动", "/operations/activities", "operations:activity:read"),
                         leaf("operations.points_products", "积分商品", "/operations/points-products", "operations:points:read"),
-                        leaf("operations.points_exchanges", "积分兑换单", "/operations/points-exchanges", "operations:points:read")
+                        leaf("operations.points_exchanges", "积分兑换单", "/operations/points-exchanges", "operations:points:read"),
+                        leaf("operations.recommendation", "推荐权重", "/operations/recommendation", "operations:recommendation:read")
                 )),
                 group("system", "系统管理", "/system", List.of(
                         leaf("system.admins", "管理员账号", "/system/admins", "system:admin:read"),
