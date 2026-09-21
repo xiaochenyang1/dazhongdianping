@@ -195,6 +195,7 @@ const router = createRouter({
         { path: 'operations/points-products', name: 'points-product-management', component: () => import('@/views/PointsProductManagementView.vue'), meta: { requiresAuth: true, titleKey: 'pointsProductManagement', requiredPermission: 'operations:points:read' } },
         { path: 'operations/points-exchanges', name: 'points-exchange-management', component: () => import('@/views/PointsExchangeManagementView.vue'), meta: { requiresAuth: true, titleKey: 'pointsExchangeManagement', requiredPermission: 'operations:points:read' } },
         { path: 'operations/recommendation', name: 'recommendation-weight', component: () => import('@/views/RecommendationWeightView.vue'), meta: { requiresAuth: true, titleKey: 'recommendationWeight', requiredPermission: 'operations:recommendation:read' } },
+        { path: 'audit/risk', name: 'risk-control', component: () => import('@/views/RiskControlView.vue'), meta: { requiresAuth: true, titleKey: 'riskControl', requiredPermission: 'risk:event:read' } },
         {
           path: 'system/admins',
           name: 'system-admins',

@@ -567,6 +567,7 @@ class AppLocalizations {
     'reviewErrorUserUnavailable': '你的账号当前不可用',
     'reviewErrorShopUnavailable': '这个门店当前不可点评',
     'reviewErrorShopImmutable': '点评所属门店不可修改',
+    'reviewErrorRiskBlocked': '该点评触发了风控规则，暂时无法提交。如有疑问请联系客服。',
     'auditRemarkLabel': '审核备注：{remark}',
     'merchantReplyLabel': '商家回复：{reply}',
     'anonymousUser': '匿名用户',
@@ -1556,6 +1557,7 @@ class AppLocalizations {
     'reviewErrorUserUnavailable': '你的帳號目前不可用',
     'reviewErrorShopUnavailable': '這個商家目前不可評論',
     'reviewErrorShopImmutable': '評論所屬商家不可修改',
+    'reviewErrorRiskBlocked': '此評論觸發了風控規則，暫時無法提交。如有疑問請聯絡客服。',
     'auditRemarkLabel': '審核備註：{remark}',
     'merchantReplyLabel': '商家回覆：{reply}',
     'anonymousUser': '匿名使用者',
@@ -2613,6 +2615,7 @@ class AppLocalizations {
     'reviewErrorUserUnavailable': 'Your account is currently unavailable.',
     'reviewErrorShopUnavailable': 'This place is unavailable for reviews.',
     'reviewErrorShopImmutable': 'The place for this review cannot be changed.',
+    'reviewErrorRiskBlocked': 'This review triggered a risk-control rule and cannot be submitted right now. Please contact support if you believe this is a mistake.',
     'auditRemarkLabel': 'Audit note: {remark}',
     'merchantReplyLabel': 'Merchant reply: {reply}',
     'anonymousUser': 'Anonymous user',
@@ -4294,6 +4297,7 @@ class AppLocalizations {
   String get reviewErrorUserUnavailable => _text('reviewErrorUserUnavailable');
   String get reviewErrorShopUnavailable => _text('reviewErrorShopUnavailable');
   String get reviewErrorShopImmutable => _text('reviewErrorShopImmutable');
+  String get reviewErrorRiskBlocked => _text('reviewErrorRiskBlocked');
   String auditRemarkLabel(String remark) =>
       _text('auditRemarkLabel').replaceFirst('{remark}', remark);
   String merchantReplyLabel(String reply) =>

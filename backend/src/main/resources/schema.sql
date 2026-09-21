@@ -1243,3 +1243,79 @@ CREATE TABLE IF NOT EXISTS recommendation_weight (
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT uk_recommendation_weight_region UNIQUE(region)
 );
+
+-- ============================================================
+-- 反刷单 / 反虚假点评风控引擎（riskcontrol）
+-- ============================================================
+-- 风控规则配置：由运营在 Admin 后台增删改，按区域隔离
+CREATE TABLE IF NOT EXISTS risk_rule (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    -- 规则唯一编码，对应 common/riskcontrol 下 RiskRule 实现的 code()
+    rule_code VARCHAR(64) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    -- 适用场景：review_create=发点评 trade_order=下单 auth_register=注册
+    scene VARCHAR(32) NOT NULL,
+    -- 命中动作：1=放行记录 2=转人审 3=拦截
+    action TINYINT NOT NULL DEFAULT 2,
+    -- 阈值（各规则语义不同：频率=次数、相似度=百分比），JSON 兜底更复杂参数
+    threshold INT NOT NULL DEFAULT 0,
+    -- 触发累计的时间窗口（秒），0 表示不限窗口
+    window_seconds INT NOT NULL DEFAULT 0,
+    -- 命中风险分（累加到事件总分，用于综合评级）
+    risk_score INT NOT NULL DEFAULT 0,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    remark VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT uk_risk_rule_region_code UNIQUE(region, rule_code)
+);
+CREATE INDEX IF NOT EXISTS idx_risk_rule_scene ON risk_rule(region, scene, enabled);
+
+-- 风控事件：每次命中规则落一条，供 Admin 看板与人工处置
+CREATE TABLE IF NOT EXISTS risk_event (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    scene VARCHAR(32) NOT NULL,
+    -- 触发主体
+    user_id BIGINT NULL,
+    device_fingerprint VARCHAR(128) NULL,
+    ip VARCHAR(64) NULL,
+    -- 关联业务对象（如点评 id、订单 id），命中时可能尚未生成则为 NULL
+    biz_id BIGINT NULL,
+    -- 综合风险分与最终决策：1=放行 2=转人审 3=拦截
+    risk_score INT NOT NULL DEFAULT 0,
+    decision TINYINT NOT NULL DEFAULT 1,
+    -- 命中的规则编码列表（逗号分隔）与可读原因
+    hit_rules VARCHAR(512) NOT NULL DEFAULT '',
+    reason VARCHAR(512) NOT NULL DEFAULT '',
+    -- 处置状态：0=待处置 1=已确认(判定风险) 2=已忽略(误报放行)
+    dispose_status TINYINT NOT NULL DEFAULT 0,
+    dispose_remark VARCHAR(255) NOT NULL DEFAULT '',
+    disposed_by BIGINT NULL,
+    disposed_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_risk_event_region ON risk_event(region, created_at, id);
+CREATE INDEX IF NOT EXISTS idx_risk_event_dispose ON risk_event(region, dispose_status, id);
+CREATE INDEX IF NOT EXISTS idx_risk_event_user ON risk_event(region, user_id, scene, created_at);
+
+-- 设备指纹画像：累计设备维度的行为量，供频率/异常规则读取
+CREATE TABLE IF NOT EXISTS device_fingerprint (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    fingerprint VARCHAR(128) NOT NULL,
+    -- 该设备累计关联的独立用户数（多账号共享设备是刷单强信号）
+    user_count INT NOT NULL DEFAULT 0,
+    -- 该设备累计触发风控事件次数
+    risk_hit_count INT NOT NULL DEFAULT 0,
+    -- 是否被拉黑：拉黑后该设备所有场景直接拦截
+    blocked BOOLEAN NOT NULL DEFAULT FALSE,
+    last_user_id BIGINT NULL,
+    first_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_device_fingerprint UNIQUE(region, fingerprint)
+);
+CREATE INDEX IF NOT EXISTS idx_device_fingerprint_blocked ON device_fingerprint(region, blocked);

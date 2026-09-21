@@ -80,6 +80,7 @@ class ApiClient
     required this.tokenProvider,
     RegionProvider? regionProvider,
     LanguageProvider? languageProvider,
+    this.deviceProvider,
     http.Client? transport,
   }) : regionProvider = regionProvider ?? (() => config.region),
        languageProvider = languageProvider ?? (() => config.languageTag),
@@ -89,6 +90,8 @@ class ApiClient
   final TokenProvider tokenProvider;
   final RegionProvider regionProvider;
   final LanguageProvider languageProvider;
+  /// 可选设备指纹提供者，用于风控头 X-Device-Id。默认 null（不注入平台依赖）。
+  final String? Function()? deviceProvider;
   final http.Client transport;
 
   AppLocalizations get _strings => AppLocalizations.forTag(languageProvider());
@@ -177,10 +180,12 @@ class ApiClient
 
   Future<Map<String, String>> _headers({bool write = false}) async {
     final token = await tokenProvider();
+    final device = deviceProvider?.call();
     return {
       'Accept': 'application/json',
       'Accept-Language': languageProvider(),
       'X-Region': regionProvider().code,
+      if (device != null && device.isNotEmpty) 'X-Device-Id': device,
       if (write) 'Content-Type': 'application/json',
       if (write)
         'Idempotency-Key': 'app-${DateTime.now().microsecondsSinceEpoch}',

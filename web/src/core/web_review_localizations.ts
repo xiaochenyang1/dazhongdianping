@@ -99,6 +99,7 @@ export interface WebReviewStrings {
     uploadedImages: (count: number) => string
     uploadFailed: string
     submitFailed: string
+    riskBlocked: string
     loading: string
     ratingsEyebrow: string
     ratingsTitle: string
@@ -229,6 +230,7 @@ const zhCnStrings: WebReviewStrings = {
     uploadedImages: (count) => `已上传 ${count} 张图片。`,
     uploadFailed: '图片上传失败',
     submitFailed: '点评提交失败',
+    riskBlocked: '该点评触发了风控规则，暂时无法提交。如有疑问请联系客服。',
     loading: '点评表单加载中...',
     ratingsEyebrow: '评分与正文',
     ratingsTitle: '把关键体验填完整，审核和聚合才有意义。',
@@ -359,6 +361,7 @@ const enStrings: WebReviewStrings = {
     uploadedImages: (count) => `${count} ${count === 1 ? 'image' : 'images'} uploaded.`,
     uploadFailed: 'Could not upload the image',
     submitFailed: 'Could not submit the review',
+    riskBlocked: 'This review triggered a risk-control rule and cannot be submitted right now. Please contact support if you believe this is a mistake.',
     loading: 'Loading review form...',
     ratingsEyebrow: 'Ratings and review',
     ratingsTitle: 'Add enough detail to help other visitors make a decision.',
@@ -415,6 +418,9 @@ export function reviewStringsForRegion(region: Region) {
 
 export function localizeWebReviewError(strings: WebReviewStrings, error: unknown, fallback: string) {
   if (!(error instanceof Error)) return fallback
+  // 风控拦截：无论区域都用统一友好文案（后端消息含动态命中原因，不适合直接展示）
+  const messageKey = (error as { messageKey?: string }).messageKey
+  if (messageKey === 'riskcontrol.review_blocked') return strings.editor.riskBlocked
   if (strings.tag === 'zh-CN') return error.message || fallback
   const traceMatch = error.message.match(/\s*(\[traceId:\s*[^\]]+\])\s*$/)
   const trace = traceMatch?.[1]

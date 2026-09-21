@@ -64,6 +64,10 @@ import type {
   LevelConfig,
   RecommendationWeight,
   RecommendationWeightPayload,
+  RiskEvent,
+  RiskEventDisposePayload,
+  RiskRule,
+  RiskRuleUpdatePayload,
   AdminMerchantApplication,
   AdminMerchant,
   AdminMerchantOperator,
@@ -594,3 +598,14 @@ export function updateLevelConfig(level: number, payload: Omit<LevelConfig, 'lev
 
 export function fetchRecommendationWeight() { return apiGet<RecommendationWeight>('/api/admin/v1/recommendation/weight') }
 export function updateRecommendationWeight(payload: RecommendationWeightPayload) { return apiPut<RecommendationWeight>('/api/admin/v1/recommendation/weight', payload) }
+
+export function fetchRiskEvents(params: { scene?: string; decision?: number; disposeStatus?: number; page?: number; pageSize?: number }) {
+  return apiGet<PageResult<RiskEvent>>('/api/admin/v1/risk/events', params)
+}
+export function disposeRiskEvent(id: number, payload: RiskEventDisposePayload) {
+  return apiPost<RiskEvent>(`/api/admin/v1/risk/events/${id}/dispose`, payload)
+}
+export function fetchRiskRules() { return apiGet<RiskRule[]>('/api/admin/v1/risk/rules') }
+export function updateRiskRule(id: number, payload: RiskRuleUpdatePayload) {
+  return apiPut<RiskRule>(`/api/admin/v1/risk/rules/${id}`, payload)
+}

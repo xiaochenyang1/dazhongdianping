@@ -42,6 +42,7 @@ export interface AdminStrings {
     pointsProductManagement: string
     pointsExchangeManagement: string
     recommendationWeight: string
+    riskControl: string
     systemAdmins: string
     systemRoles: string
     systemUsers: string
@@ -1787,6 +1788,53 @@ export interface AdminStrings {
     loadError: string
     readOnly: string
   }
+  riskControl: {
+    title: string
+    description: string
+    tabEvents: string
+    tabRules: string
+    filterScene: string
+    filterDecision: string
+    filterDispose: string
+    all: string
+    sceneReviewCreate: string
+    sceneTradeOrder: string
+    sceneAuthRegister: string
+    decisionPass: string
+    decisionReview: string
+    decisionBlock: string
+    disposePending: string
+    disposeConfirmed: string
+    disposeIgnored: string
+    colTime: string
+    colScene: string
+    colUser: string
+    colDevice: string
+    colScore: string
+    colDecision: string
+    colHitRules: string
+    colReason: string
+    colStatus: string
+    colActions: string
+    confirmRisk: string
+    ignoreEvent: string
+    disposeRemarkPlaceholder: string
+    empty: string
+    ruleName: string
+    ruleCode: string
+    ruleAction: string
+    ruleThreshold: string
+    ruleWindow: string
+    ruleScore: string
+    ruleEnabled: string
+    ruleRemark: string
+    saveRule: string
+    ruleSaved: string
+    eventDisposed: string
+    saveError: string
+    loadError: string
+    readOnly: string
+  }
   growthConfigs: {
     loadError: string
     ruleUpdateError: string
@@ -2401,6 +2449,7 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/operations/points-products': 'pointsProductManagement',
   '/operations/points-exchanges': 'pointsExchangeManagement',
   '/operations/recommendation': 'recommendationWeight',
+  '/audit/risk': 'riskControl',
   '/system/admins': 'systemAdmins',
   '/system/roles': 'systemRoles',
   '/system/users': 'systemUsers',
@@ -2638,6 +2687,7 @@ const zhCnStrings: AdminStrings = {
     pointsProductManagement: '积分商品',
     pointsExchangeManagement: '积分兑换',
     recommendationWeight: '推荐权重',
+    riskControl: '风控中心',
     systemAdmins: '管理员账号',
     systemRoles: '角色与权限',
     systemUsers: '用户管理',
@@ -4422,6 +4472,53 @@ const zhCnStrings: AdminStrings = {
     loadError: '推荐权重加载失败。',
     readOnly: '你只有推荐权重的只读权限。',
   },
+  riskControl: {
+    title: '风控中心',
+    description: '查看反刷单/反虚假点评命中事件，处置误报，并调整本区域风控规则阈值。',
+    tabEvents: '风控事件',
+    tabRules: '规则管理',
+    filterScene: '场景',
+    filterDecision: '决策',
+    filterDispose: '处置状态',
+    all: '全部',
+    sceneReviewCreate: '发点评',
+    sceneTradeOrder: '下单',
+    sceneAuthRegister: '注册',
+    decisionPass: '放行',
+    decisionReview: '转人审',
+    decisionBlock: '拦截',
+    disposePending: '待处置',
+    disposeConfirmed: '已确认风险',
+    disposeIgnored: '已忽略(误报)',
+    colTime: '时间',
+    colScene: '场景',
+    colUser: '用户',
+    colDevice: '设备指纹',
+    colScore: '风险分',
+    colDecision: '决策',
+    colHitRules: '命中规则',
+    colReason: '原因',
+    colStatus: '处置状态',
+    colActions: '操作',
+    confirmRisk: '确认风险',
+    ignoreEvent: '忽略',
+    disposeRemarkPlaceholder: '处置备注（可选）',
+    empty: '暂无风控事件。',
+    ruleName: '规则名称',
+    ruleCode: '编码',
+    ruleAction: '命中动作',
+    ruleThreshold: '阈值',
+    ruleWindow: '窗口(秒)',
+    ruleScore: '风险分',
+    ruleEnabled: '启用',
+    ruleRemark: '备注',
+    saveRule: '保存',
+    ruleSaved: '规则已保存。',
+    eventDisposed: '事件已处置。',
+    saveError: '保存失败。',
+    loadError: '加载失败。',
+    readOnly: '你只有风控中心的只读权限。',
+  },
   growthConfigs: {
     loadError: '配置加载失败',
     ruleUpdateError: '规则更新失败',
@@ -5136,6 +5233,7 @@ const enStrings: AdminStrings = {
     pointsProductManagement: 'Points Products',
     pointsExchangeManagement: 'Points Redemptions',
     recommendationWeight: 'Recommendation Weights',
+    riskControl: 'Risk Control',
     systemAdmins: 'Admin Accounts',
     systemRoles: 'Roles & Permissions',
     systemUsers: 'User Management',
@@ -6935,6 +7033,53 @@ const enStrings: AdminStrings = {
     saveError: 'Failed to save recommendation weights.',
     loadError: 'Failed to load recommendation weights.',
     readOnly: 'You have read-only access to recommendation weights.',
+  },
+  riskControl: {
+    title: 'Risk Control',
+    description: 'Review anti-fraud / fake-review hits, dispose false positives, and tune risk rule thresholds for this region.',
+    tabEvents: 'Risk events',
+    tabRules: 'Rules',
+    filterScene: 'Scene',
+    filterDecision: 'Decision',
+    filterDispose: 'Disposal',
+    all: 'All',
+    sceneReviewCreate: 'Review',
+    sceneTradeOrder: 'Order',
+    sceneAuthRegister: 'Register',
+    decisionPass: 'Pass',
+    decisionReview: 'Manual audit',
+    decisionBlock: 'Block',
+    disposePending: 'Pending',
+    disposeConfirmed: 'Confirmed risk',
+    disposeIgnored: 'Ignored (false positive)',
+    colTime: 'Time',
+    colScene: 'Scene',
+    colUser: 'User',
+    colDevice: 'Device',
+    colScore: 'Score',
+    colDecision: 'Decision',
+    colHitRules: 'Hit rules',
+    colReason: 'Reason',
+    colStatus: 'Disposal',
+    colActions: 'Actions',
+    confirmRisk: 'Confirm risk',
+    ignoreEvent: 'Ignore',
+    disposeRemarkPlaceholder: 'Disposal note (optional)',
+    empty: 'No risk events yet.',
+    ruleName: 'Rule',
+    ruleCode: 'Code',
+    ruleAction: 'Action',
+    ruleThreshold: 'Threshold',
+    ruleWindow: 'Window (s)',
+    ruleScore: 'Risk score',
+    ruleEnabled: 'Enabled',
+    ruleRemark: 'Remark',
+    saveRule: 'Save',
+    ruleSaved: 'Rule saved.',
+    eventDisposed: 'Event disposed.',
+    saveError: 'Save failed.',
+    loadError: 'Load failed.',
+    readOnly: 'You have read-only access to risk control.',
   },
   growthConfigs: {
     loadError: 'Failed to load the growth configuration.',

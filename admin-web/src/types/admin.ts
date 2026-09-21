@@ -942,3 +942,37 @@ export interface GrowthConfig { rules: GrowthRule[]; levels: LevelConfig[] }
 export interface GrowthRulePayload { action: string; actionName: string; growthValue: number; points: number; dailyLimit: number; enabled: boolean }
 export interface RecommendationWeight { region: string; affinityWeight: number; qualityWeight: number; popularityWeight: number; distanceWeight: number }
 export interface RecommendationWeightPayload { affinityWeight: number; qualityWeight: number; popularityWeight: number; distanceWeight: number }
+
+export interface RiskEvent {
+  id: number
+  region: string
+  scene: string
+  userId: number | null
+  deviceFingerprint: string | null
+  ip: string | null
+  bizId: number | null
+  riskScore: number
+  decision: number
+  hitRules: string
+  reason: string
+  disposeStatus: number
+  disposeRemark: string
+  disposedBy: number | null
+  disposedAt: string | null
+  createdAt: string | null
+}
+export interface RiskEventDisposePayload { disposeStatus: number; disposeRemark?: string }
+export interface RiskRule {
+  id: number
+  region: string
+  ruleCode: string
+  name: string
+  scene: string
+  action: number
+  threshold: number
+  windowSeconds: number
+  riskScore: number
+  enabled: boolean
+  remark: string
+}
+export interface RiskRuleUpdatePayload { action: number; threshold: number; windowSeconds: number; riskScore: number; enabled: boolean; remark: string }

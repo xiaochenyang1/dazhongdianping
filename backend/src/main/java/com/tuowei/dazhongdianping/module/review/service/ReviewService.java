@@ -15,6 +15,7 @@ import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;
 import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
+import com.tuowei.dazhongdianping.module.riskcontrol.service.ReviewRiskGuard;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentListQuery;
 import com.tuowei.dazhongdianping.module.review.model.ReviewCommentReportRow;
@@ -73,6 +74,7 @@ public class ReviewService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     private final SensitiveWordFilterService sensitiveWordFilterService;
+    private final ReviewRiskGuard reviewRiskGuard;
 
     public ReviewService(ReviewMapper reviewMapper,
                          AuthCommandMapper authCommandMapper,
@@ -82,6 +84,7 @@ public class ReviewService {
                          NotificationService notificationService,
                          UserExpertCertificationService userExpertCertificationService,
                          SensitiveWordFilterService sensitiveWordFilterService,
+                         ReviewRiskGuard reviewRiskGuard,
                          ApplicationEventPublisher applicationEventPublisher) {
         this.reviewMapper = reviewMapper;
         this.authCommandMapper = authCommandMapper;
@@ -91,6 +94,7 @@ public class ReviewService {
         this.notificationService = notificationService;
         this.userExpertCertificationService = userExpertCertificationService;
         this.sensitiveWordFilterService = sensitiveWordFilterService;
+        this.reviewRiskGuard = reviewRiskGuard;
         this.applicationEventPublisher = applicationEventPublisher;
     }
 
@@ -99,6 +103,9 @@ public class ReviewService {
         AppUserRow currentUser = currentUserRow();
         ensureShopExists(currentRegion().name(), request.getShopId());
         sensitiveWordFilterService.assertClean(currentRegion().name(), request.getContent());
+        // 反刷单/反虚假点评风控：BLOCK 直接抛异常拦截，REVIEW 强制转人审
+        boolean riskForcesReview = reviewRiskGuard.guardReviewCreation(
+                currentRegion().name(), currentUser.getId(), request.getContent());
 
         ReviewRow row = new ReviewRow();
         row.setUserId(currentUser.getId());
@@ -121,7 +128,8 @@ public class ReviewService {
         reviewMapper.insertReview(row);
 
         boolean hasReviewImages = replaceReviewImages(row.getId(), request.getImages());
-        createAuditTask(row.getId(), row.getRegion(), 0, "");
+        createAuditTask(row.getId(), row.getRegion(), 0,
+                riskForcesReview ? "风控命中：优先人工复核" : "");
         userGrowthService.rewardForCreatedReview(currentUser.getId(), row.getId());
         if (hasReviewImages) {
             userGrowthService.rewardForReviewImage(currentUser.getId(), row.getId());
