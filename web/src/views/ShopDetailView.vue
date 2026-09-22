@@ -8,6 +8,9 @@ import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
 import { formatWebDateTime } from '@/core/web_localizations'
 import { localizeWebShopError, shopStringsForRegion } from '@/core/web_shop_localizations'
 import { complaintStringsForRegion } from '@/core/web_complaint_localizations'
+import { consultStringsForRegion } from '@/core/web_consult_localizations'
+import { startConsult } from '@/services/consult'
+import { useRouter } from 'vue-router'
 import { formatMoney } from '@/lib/currency'
 import { fetchShopDetail, fetchSimilarShops, fetchShopReviews } from '@/services/browse'
 import { addFavorite, fetchFavorites, removeFavorite } from '@/services/favorite'
@@ -35,6 +38,24 @@ const shopId = computed(() => Number(route.params.id))
 const copy = computed(() => shopStringsForRegion(state.region))
 const certificationCopy = computed(() => discoveryStringsForRegion(state.region).shopCard)
 const complaintCopy = computed(() => complaintStringsForRegion(state.region))
+const consultCopy = computed(() => consultStringsForRegion(state.region))
+const router = useRouter()
+const consulting = ref(false)
+
+async function consultMerchant() {
+  if (!shop.value) return
+  if (!sessionState.accessToken) {
+    openAuthDialog({ mode: 'password', redirectTo: `/shops/${shop.value.id}` })
+    return
+  }
+  consulting.value = true
+  try {
+    const session = await startConsult(shop.value.id)
+    router.push(`/user/consult/${session.id}`)
+  } catch {
+    consulting.value = false
+  }
+}
 
 useSeoMeta(() => {
   const canonicalPath = `/shops/${shopId.value}`
@@ -219,6 +240,7 @@ watch(
           <button type="button" class="secondary-button" data-testid="share-shop" @click="shareShop">{{ copy.detail.share }}</button>
           <RouterLink :to="`/shops/${shop.id}/reserve`" class="secondary-button">{{ copy.detail.booking }}</RouterLink>
           <RouterLink :to="{ path: '/complaints/new', query: { shopId: shop.id } }" class="secondary-button">{{ complaintCopy.list.newComplaint }}</RouterLink>
+          <button type="button" class="secondary-button" :disabled="consulting" data-testid="consult-merchant" @click="consultMerchant">{{ consultCopy.entry }}</button>
         </div>
         <p v-if="shareMessage" class="feedback" role="status">{{ shareMessage }}</p>
       </div>

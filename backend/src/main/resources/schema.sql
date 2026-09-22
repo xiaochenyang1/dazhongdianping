@@ -1466,3 +1466,37 @@ CREATE TABLE IF NOT EXISTS ad_click_log (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_ad_click_campaign ON ad_click_log(campaign_id, id);
+
+-- ============================================================
+-- 商户↔消费者在线咨询（consult）
+-- ============================================================
+-- 咨询会话：每个用户-门店一条，冗余最近消息与双方未读数
+CREATE TABLE IF NOT EXISTS consult_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    user_id BIGINT NOT NULL,
+    shop_id BIGINT NOT NULL,
+    merchant_id BIGINT NOT NULL,
+    last_message VARCHAR(500) NOT NULL DEFAULT '',
+    last_message_at TIMESTAMP NULL,
+    user_unread INT NOT NULL DEFAULT 0,
+    merchant_unread INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_consult_user_shop UNIQUE(user_id, shop_id)
+);
+CREATE INDEX IF NOT EXISTS idx_consult_user ON consult_session(user_id, region, updated_at);
+CREATE INDEX IF NOT EXISTS idx_consult_merchant ON consult_session(merchant_id, region, updated_at);
+
+-- 咨询消息
+CREATE TABLE IF NOT EXISTS consult_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    session_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    -- 发送方：1=用户 2=商家
+    sender_type TINYINT NOT NULL,
+    sender_id BIGINT NOT NULL,
+    content VARCHAR(1000) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_consult_message_session ON consult_message(session_id, id);

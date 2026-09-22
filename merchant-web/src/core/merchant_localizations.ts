@@ -29,6 +29,7 @@ export interface MerchantStrings {
     staffs: string
     complaints: string
     ads: string
+    consult: string
   }
   shell: {
     workbenchEyebrow: string
@@ -314,6 +315,21 @@ export interface MerchantStrings {
     saved: string
     empty: string
     unlimited: string
+    readOnly: string
+  }
+  consult: {
+    summary: string
+    loadError: string
+    sendError: string
+    sendRequired: string
+    sessionsEmpty: string
+    messagesEmpty: string
+    selectHint: string
+    unreadBadge: (count: number) => string
+    you: string
+    customer: string
+    inputPlaceholder: string
+    send: string
     readOnly: string
   }
   reservationSlots: {
@@ -696,6 +712,7 @@ const zhCnStrings: MerchantStrings = {
     staffs: '员工管理',
     complaints: '投诉纠纷',
     ads: '广告推广',
+    consult: '在线咨询',
   },
   shell: {
     workbenchEyebrow: '商户工作台',
@@ -1019,6 +1036,21 @@ const zhCnStrings: MerchantStrings = {
     empty: '暂无广告投放。',
     unlimited: '不限',
     readOnly: '你没有广告管理权限。',
+  },
+  consult: {
+    summary: '接待消费者的在线咨询，及时回复常见问题。',
+    loadError: '咨询加载失败',
+    sendError: '发送失败',
+    sendRequired: '请输入回复内容',
+    sessionsEmpty: '暂无咨询会话。',
+    messagesEmpty: '暂无消息。',
+    selectHint: '选择左侧会话查看聊天记录。',
+    unreadBadge: (count) => `${count} 条未读`,
+    you: '商家',
+    customer: '顾客',
+    inputPlaceholder: '输入回复...',
+    send: '发送',
+    readOnly: '你没有客服回复权限。',
   },
   reservationSlots: {
     filters: {
@@ -1426,6 +1458,7 @@ const enStrings: MerchantStrings = {
     staffs: 'Staff Management',
     complaints: 'Complaints',
     ads: 'Ad Promotion',
+    consult: 'Live Chat',
   },
   shell: {
     workbenchEyebrow: 'Merchant Console',
@@ -1749,6 +1782,21 @@ const enStrings: MerchantStrings = {
     empty: 'No ad campaigns yet.',
     unlimited: 'Unlimited',
     readOnly: 'You do not have ad management permission.',
+  },
+  consult: {
+    summary: 'Handle live consumer chats and reply to common questions promptly.',
+    loadError: 'Failed to load chats',
+    sendError: 'Failed to send',
+    sendRequired: 'Please enter a reply',
+    sessionsEmpty: 'No chat sessions yet.',
+    messagesEmpty: 'No messages yet.',
+    selectHint: 'Select a session on the left to view the chat.',
+    unreadBadge: (count) => `${count} unread`,
+    you: 'Merchant',
+    customer: 'Customer',
+    inputPlaceholder: 'Type a reply...',
+    send: 'Send',
+    readOnly: 'You do not have chat reply permission.',
   },
   reservationSlots: {
     filters: {
