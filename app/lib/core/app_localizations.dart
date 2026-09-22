@@ -15,6 +15,29 @@ class AppLocalizations {
   ];
 
   static const _simplified = {
+    'myComplaintsTitle': '我的投诉',
+    'complaintsEmpty': '你还没有发起过投诉。',
+    'complaintsLoadFailed': '投诉加载失败：{error}',
+    'complaintDetailTitle': '投诉详情',
+    'complaintCreateTitle': '发起投诉',
+    'complaintTypeLabel': '投诉类型',
+    'complaintTitleLabel': '标题',
+    'complaintTitleHint': '一句话概括问题',
+    'complaintContentLabel': '详细描述',
+    'complaintContentHint': '请描述具体情况、时间与诉求',
+    'complaintSubmit': '提交投诉',
+    'complaintSubmitting': '提交中...',
+    'complaintSubmitFailed': '提交失败：{error}',
+    'complaintSubmitSuccess': '投诉已提交',
+    'complaintMerchantReply': '商家申辩',
+    'complaintResolution': '仲裁结论',
+    'complaintNoReply': '商家暂未申辩',
+    'complaintLogs': '处理日志',
+    'complaintTypeQuality': '商品/服务质量',
+    'complaintTypeFalseAd': '虚假宣传',
+    'complaintTypeRefund': '退款纠纷',
+    'complaintTypeService': '服务态度',
+    'complaintTypeOther': '其他',
     'couponCenterTitle': '领券中心',
     'couponCenterEmpty': '当前暂无可领取的优惠券。',
     'couponCenterLoadFailed': '领券中心加载失败：{error}',
@@ -1021,6 +1044,29 @@ class AppLocalizations {
     'shopGalleryMissing': '门店相册还没补齐，先靠点评和基础信息判断也不至于两眼一抹黑。',
   };
   static const _traditional = {
+    'myComplaintsTitle': '我的投訴',
+    'complaintsEmpty': '你還沒有發起過投訴。',
+    'complaintsLoadFailed': '投訴載入失敗：{error}',
+    'complaintDetailTitle': '投訴詳情',
+    'complaintCreateTitle': '發起投訴',
+    'complaintTypeLabel': '投訴類型',
+    'complaintTitleLabel': '標題',
+    'complaintTitleHint': '一句話概括問題',
+    'complaintContentLabel': '詳細描述',
+    'complaintContentHint': '請描述具體情況、時間與訴求',
+    'complaintSubmit': '提交投訴',
+    'complaintSubmitting': '提交中...',
+    'complaintSubmitFailed': '提交失敗：{error}',
+    'complaintSubmitSuccess': '投訴已提交',
+    'complaintMerchantReply': '商家申辯',
+    'complaintResolution': '仲裁結論',
+    'complaintNoReply': '商家暫未申辯',
+    'complaintLogs': '處理日誌',
+    'complaintTypeQuality': '商品/服務品質',
+    'complaintTypeFalseAd': '虛假宣傳',
+    'complaintTypeRefund': '退款糾紛',
+    'complaintTypeService': '服務態度',
+    'complaintTypeOther': '其他',
     'couponCenterTitle': '領券中心',
     'couponCenterEmpty': '目前暫無可領取的優惠券。',
     'couponCenterLoadFailed': '領券中心載入失敗：{error}',
@@ -2027,6 +2073,29 @@ class AppLocalizations {
     'shopGalleryMissing': '店家相簿還沒補齊，先靠評論和基礎資訊判斷也不至於兩眼一抹黑。',
   };
   static const _english = {
+    'myComplaintsTitle': 'My Complaints',
+    'complaintsEmpty': 'You have not filed any complaints yet.',
+    'complaintsLoadFailed': 'Failed to load complaints: {error}',
+    'complaintDetailTitle': 'Complaint detail',
+    'complaintCreateTitle': 'File a complaint',
+    'complaintTypeLabel': 'Type',
+    'complaintTitleLabel': 'Title',
+    'complaintTitleHint': 'Summarise the issue in one line',
+    'complaintContentLabel': 'Details',
+    'complaintContentHint': 'Describe what happened, when, and what you want',
+    'complaintSubmit': 'Submit complaint',
+    'complaintSubmitting': 'Submitting...',
+    'complaintSubmitFailed': 'Failed to submit: {error}',
+    'complaintSubmitSuccess': 'Complaint submitted',
+    'complaintMerchantReply': 'Merchant rebuttal',
+    'complaintResolution': 'Ruling',
+    'complaintNoReply': 'No merchant rebuttal yet',
+    'complaintLogs': 'Processing log',
+    'complaintTypeQuality': 'Product/service quality',
+    'complaintTypeFalseAd': 'False advertising',
+    'complaintTypeRefund': 'Refund dispute',
+    'complaintTypeService': 'Service attitude',
+    'complaintTypeOther': 'Other',
     'couponCenterTitle': 'Coupon Center',
     'couponCenterEmpty': 'No coupons available to claim right now.',
     'couponCenterLoadFailed': 'Failed to load the coupon center: {error}',
@@ -3260,6 +3329,29 @@ class AppLocalizations {
   String get marketingCouponStatusUnused => _text('marketingCouponStatusUnused');
   String get marketingCouponStatusUsed => _text('marketingCouponStatusUsed');
   String get marketingCouponStatusExpired => _text('marketingCouponStatusExpired');
+  String get myComplaintsTitle => _text('myComplaintsTitle');
+  String get complaintsEmpty => _text('complaintsEmpty');
+  String complaintsLoadFailed(Object error) => _withError('complaintsLoadFailed', error);
+  String get complaintDetailTitle => _text('complaintDetailTitle');
+  String get complaintCreateTitle => _text('complaintCreateTitle');
+  String get complaintTypeLabel => _text('complaintTypeLabel');
+  String get complaintTitleLabel => _text('complaintTitleLabel');
+  String get complaintTitleHint => _text('complaintTitleHint');
+  String get complaintContentLabel => _text('complaintContentLabel');
+  String get complaintContentHint => _text('complaintContentHint');
+  String get complaintSubmit => _text('complaintSubmit');
+  String get complaintSubmitting => _text('complaintSubmitting');
+  String complaintSubmitFailed(Object error) => _withError('complaintSubmitFailed', error);
+  String get complaintSubmitSuccess => _text('complaintSubmitSuccess');
+  String get complaintMerchantReply => _text('complaintMerchantReply');
+  String get complaintResolution => _text('complaintResolution');
+  String get complaintNoReply => _text('complaintNoReply');
+  String get complaintLogs => _text('complaintLogs');
+  String get complaintTypeQuality => _text('complaintTypeQuality');
+  String get complaintTypeFalseAd => _text('complaintTypeFalseAd');
+  String get complaintTypeRefund => _text('complaintTypeRefund');
+  String get complaintTypeService => _text('complaintTypeService');
+  String get complaintTypeOther => _text('complaintTypeOther');
   String get profile => _text('profile');
   String get homeSubtitle => _text('homeSubtitle');
   String get europe => _text('europe');

@@ -24,6 +24,7 @@ const router = createRouter({
         { path: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { requiresAuth: true, titleKey: 'orders' } },
         { path: 'coupons', component: () => import('@/views/CouponsView.vue'), meta: { requiresAuth: true, titleKey: 'coupons' } },
         { path: 'reviews', component: () => import('@/views/ReviewsView.vue'), meta: { requiresAuth: true, titleKey: 'reviews' } },
+        { path: 'complaints', component: () => import('@/views/ComplaintsView.vue'), meta: { requiresAuth: true, titleKey: 'complaints' } },
         { path: 'verified', component: () => import('@/views/VerifiedCertificationView.vue'), meta: { requiresAuth: true, titleKey: 'verified' } },
         { path: 'staffs', component: () => import('@/views/StaffsView.vue'), meta: { requiresAuth: true, titleKey: 'staffs' } },
       ],

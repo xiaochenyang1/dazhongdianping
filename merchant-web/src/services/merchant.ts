@@ -344,6 +344,41 @@ export function verifyCoupon(code: string) {
   const normalized = code.trim()
   return apiPost<MerchantCoupon>(`/api/b/v1/coupons/${encodeURIComponent(normalized)}/verify`)
 }
+export interface MerchantComplaintLog {
+  id: number
+  actorType: number
+  actorTypeText: string
+  action: number
+  actionText: string
+  remark: string
+  createdAt?: string
+}
+export interface MerchantComplaint {
+  id: number
+  ticketNo: string
+  userId: number
+  userNickname: string
+  shopId: number
+  shopName: string
+  orderId: number
+  type: number
+  typeText: string
+  title: string
+  content: string
+  status: number
+  statusText: string
+  merchantReply: string
+  merchantRepliedAt?: string
+  resolution: string
+  resolvedAt?: string
+  createdAt?: string
+  updatedAt?: string
+  logs?: MerchantComplaintLog[]
+}
+export function fetchComplaints(params?: object) { return apiGet<PageResult<MerchantComplaint>>('/api/b/v1/complaints', params) }
+export function fetchComplaint(id: number) { return apiGet<MerchantComplaint>(`/api/b/v1/complaints/${id}`) }
+export function replyComplaint(id: number, reply: string) { return apiPost<MerchantComplaint>(`/api/b/v1/complaints/${id}/reply`, { reply }) }
+
 export function fetchReviews(params?: object) { return apiGet<PageResult<MerchantReview>>('/api/b/v1/reviews', params) }
 export function saveReply(id: number, content: string) { return apiPut<Record<string, unknown>>(`/api/b/v1/reviews/${id}/reply`, { content }) }
 export function createAppealDraft(id: number) { return apiPost<Record<string, unknown>>(`/api/b/v1/reviews/${id}/appeal-drafts`) }
