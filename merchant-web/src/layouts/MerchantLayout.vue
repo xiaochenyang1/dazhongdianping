@@ -28,6 +28,7 @@ const baseLinks = computed(() => [
   { path: '/orders', label: strings.value.routeTitles.orders, permission: 'order:view' },
   { path: '/coupons', label: strings.value.routeTitles.coupons, permission: 'coupon:verify' },
   { path: '/reviews', label: strings.value.routeTitles.reviews, permission: 'shop:view' },
+  { path: '/complaints', label: strings.value.routeTitles.complaints, permission: 'complaint:view' },
   { path: '/verified', label: strings.value.routeTitles.verified, permission: 'merchant:verify' },
   { path: '/staffs', label: strings.value.routeTitles.staffs, permission: 'staff:manage' },
 ])

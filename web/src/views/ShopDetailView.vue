@@ -7,6 +7,7 @@ import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useS
 import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
 import { formatWebDateTime } from '@/core/web_localizations'
 import { localizeWebShopError, shopStringsForRegion } from '@/core/web_shop_localizations'
+import { complaintStringsForRegion } from '@/core/web_complaint_localizations'
 import { formatMoney } from '@/lib/currency'
 import { fetchShopDetail, fetchSimilarShops, fetchShopReviews } from '@/services/browse'
 import { addFavorite, fetchFavorites, removeFavorite } from '@/services/favorite'
@@ -33,6 +34,7 @@ let detailRequestId = 0
 const shopId = computed(() => Number(route.params.id))
 const copy = computed(() => shopStringsForRegion(state.region))
 const certificationCopy = computed(() => discoveryStringsForRegion(state.region).shopCard)
+const complaintCopy = computed(() => complaintStringsForRegion(state.region))
 
 useSeoMeta(() => {
   const canonicalPath = `/shops/${shopId.value}`
@@ -216,6 +218,7 @@ watch(
           </button>
           <button type="button" class="secondary-button" data-testid="share-shop" @click="shareShop">{{ copy.detail.share }}</button>
           <RouterLink :to="`/shops/${shop.id}/reserve`" class="secondary-button">{{ copy.detail.booking }}</RouterLink>
+          <RouterLink :to="{ path: '/complaints/new', query: { shopId: shop.id } }" class="secondary-button">{{ complaintCopy.list.newComplaint }}</RouterLink>
         </div>
         <p v-if="shareMessage" class="feedback" role="status">{{ shareMessage }}</p>
       </div>
