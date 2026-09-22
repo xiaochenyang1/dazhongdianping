@@ -12,6 +12,7 @@ import 'package:dazhongdianping_app/features/rank/rank_list_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/recommendation/recommendation_repository.dart';
 import 'package:dazhongdianping_app/features/adpromo/ad_repository.dart';
+import 'package:dazhongdianping_app/features/qa/qa_repository.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
@@ -49,6 +50,7 @@ class HomeScreen extends StatefulWidget {
     this.recommendationRepository,
     this.notificationRepository,
     this.adRepository,
+    this.qaRepository,
     this.onCommunityLoginRequired,
   });
   final BrowseRepository repository;
@@ -75,6 +77,7 @@ class HomeScreen extends StatefulWidget {
   final RecommendationRepository? recommendationRepository;
   final NotificationRepository? notificationRepository;
   final AdRepository? adRepository;
+  final QaRepository? qaRepository;
   final ValueChanged<BuildContext>? onCommunityLoginRequired;
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -289,6 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     canInteractReviews: widget.canInteractReviews,
                     thirdPartyConfig: widget.thirdPartyConfig,
                     adRepository: widget.adRepository,
+                    qaRepository: widget.qaRepository,
                   ),
                 ),
               ),
@@ -419,6 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       canInteractReviews:
                                           widget.canInteractReviews,
                                       thirdPartyConfig: widget.thirdPartyConfig,
+                                      qaRepository: widget.qaRepository,
                                     ),
                                   ),
                                 ),
@@ -517,6 +522,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     canInteractReviews:
                                         widget.canInteractReviews,
                                     thirdPartyConfig: widget.thirdPartyConfig,
+                                    qaRepository: widget.qaRepository,
                                   ),
                                 ),
                               ),
