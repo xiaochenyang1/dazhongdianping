@@ -196,6 +196,7 @@ const router = createRouter({
         { path: 'operations/points-exchanges', name: 'points-exchange-management', component: () => import('@/views/PointsExchangeManagementView.vue'), meta: { requiresAuth: true, titleKey: 'pointsExchangeManagement', requiredPermission: 'operations:points:read' } },
         { path: 'operations/recommendation', name: 'recommendation-weight', component: () => import('@/views/RecommendationWeightView.vue'), meta: { requiresAuth: true, titleKey: 'recommendationWeight', requiredPermission: 'operations:recommendation:read' } },
         { path: 'operations/marketing', name: 'marketing-coupons', component: () => import('@/views/MarketingCouponsView.vue'), meta: { requiresAuth: true, titleKey: 'marketingCoupons', requiredPermission: 'operations:marketing:read' } },
+        { path: 'operations/ads', name: 'ad-review', component: () => import('@/views/AdReviewView.vue'), meta: { requiresAuth: true, titleKey: 'adReview', requiredPermission: 'operations:ad:read' } },
         { path: 'audit/risk', name: 'risk-control', component: () => import('@/views/RiskControlView.vue'), meta: { requiresAuth: true, titleKey: 'riskControl', requiredPermission: 'risk:event:read' } },
         { path: 'audit/complaints', name: 'complaint-arbitration', component: () => import('@/views/ComplaintArbitrationView.vue'), meta: { requiresAuth: true, titleKey: 'complaints', requiredPermission: 'audit:complaint:read' } },
         {

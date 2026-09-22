@@ -1421,3 +1421,48 @@ CREATE TABLE IF NOT EXISTS complaint_log (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_complaint_log_ticket ON complaint_log(ticket_id, id);
+
+-- ============================================================
+-- 商户付费推广 / 广告竞价（adpromo）：固定坑位 + CPC 计费
+-- ============================================================
+-- 广告投放计划：商家为某门店创建，平台审核，按 CPC 出价竞排固定广告位
+CREATE TABLE IF NOT EXISTS ad_campaign (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    merchant_id BIGINT NOT NULL,
+    shop_id BIGINT NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    -- 广告位类型：1=搜索结果 2=首页/列表
+    slot_type TINYINT NOT NULL DEFAULT 1,
+    -- 搜索关键词定向（slot_type=1 生效，空=不限）
+    keyword VARCHAR(64) NOT NULL DEFAULT '',
+    -- 单次点击出价（CPC）与日预算（daily_budget=0 表示不限预算）
+    bid_cpc DECIMAL(10,2) NOT NULL DEFAULT 0,
+    daily_budget DECIMAL(10,2) NOT NULL DEFAULT 0,
+    -- 当日已花费与花费日期（跨天清零）+ 累计花费
+    spent_today DECIMAL(10,2) NOT NULL DEFAULT 0,
+    spend_date DATE,
+    total_spent DECIMAL(10,2) NOT NULL DEFAULT 0,
+    -- 投放状态：0=已下线 1=投放中 2=已暂停
+    status TINYINT NOT NULL DEFAULT 1,
+    -- 审核状态：1=待审核 2=已通过 3=已驳回
+    audit_status TINYINT NOT NULL DEFAULT 1,
+    reject_reason VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_ad_campaign_serve ON ad_campaign(region, slot_type, audit_status, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_ad_campaign_merchant ON ad_campaign(merchant_id, region, id);
+
+-- 广告点击计费日志
+CREATE TABLE IF NOT EXISTS ad_click_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    campaign_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    shop_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL DEFAULT 0,
+    cost DECIMAL(10,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_ad_click_campaign ON ad_click_log(campaign_id, id);

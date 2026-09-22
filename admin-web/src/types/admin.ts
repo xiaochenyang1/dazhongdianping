@@ -1012,6 +1012,31 @@ export interface ComplaintDisposePayload {
   resolution: string
 }
 
+export interface AdCampaign {
+  id: number
+  shopId: number
+  shopName: string
+  name: string
+  slotType: number
+  slotTypeText: string
+  keyword: string
+  bidCpc: number
+  dailyBudget: number
+  spentToday: number
+  totalSpent: number
+  status: number
+  statusText: string
+  auditStatus: number
+  auditStatusText: string
+  rejectReason: string
+  createdAt: string | null
+  updatedAt: string | null
+}
+export interface AdAuditPayload {
+  approved: boolean
+  rejectReason?: string
+}
+
 export interface RiskEvent {
   id: number
   region: string

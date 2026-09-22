@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.adpromo.mapper.AdMapper">
+
+    <select id="selectShopMerchantId" resultType="java.lang.Long">
+        SELECT merchant_id FROM shop WHERE id=#{shopId} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <insert id="insertCampaign" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ad_campaign(region,merchant_id,shop_id,name,slot_type,keyword,bid_cpc,daily_budget,status,audit_status)
+        VALUES(#{region},#{merchantId},#{shopId},#{name},#{slotType},#{keyword},#{bidCpc},#{dailyBudget},1,1)
+    </insert>
+
+    <update id="updateCampaign">
+        UPDATE ad_campaign
+        SET name=#{name},slot_type=#{slotType},keyword=#{keyword},bid_cpc=#{bidCpc},daily_budget=#{dailyBudget},
+            audit_status=1,reject_reason='',updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND merchant_id=#{merchantId} AND is_deleted=FALSE
+    </update>
+
+    <sql id="cols">
+        c.id,c.region,c.merchant_id,c.shop_id,c.name,c.slot_type,c.keyword,c.bid_cpc,c.daily_budget,
+        c.spent_today,c.spend_date,c.total_spent,c.status,c.audit_status,c.reject_reason,c.created_at,c.updated_at,
+        s.name AS shop_name,s.cover_url,s.score
+    </sql>
+
+    <select id="selectCampaign" resultType="com.tuowei.dazhongdianping.module.adpromo.model.AdCampaignRow">
+        SELECT <include refid="cols"/>
+        FROM ad_campaign c LEFT JOIN shop s ON s.id=c.shop_id
+        WHERE c.id=#{id} AND c.region=#{region} AND c.is_deleted=FALSE
+    </select>
+
+    <select id="selectMerchantCampaign" resultType="com.tuowei.dazhongdianping.module.adpromo.model.AdCampaignRow">
+        SELECT <include refid="cols"/>
+        FROM ad_campaign c LEFT JOIN shop s ON s.id=c.shop_id
+        WHERE c.id=#{id} AND c.merchant_id=#{merchantId} AND c.region=#{region} AND c.is_deleted=FALSE
+    </select>
+
+    <select id="selectMerchantCampaigns" resultType="com.tuowei.dazhongdianping.module.adpromo.model.AdCampaignRow">
+        SELECT <include refid="cols"/>
+        FROM ad_campaign c LEFT JOIN shop s ON s.id=c.shop_id
+        WHERE c.merchant_id=#{merchantId} AND c.region=#{region} AND c.is_deleted=FALSE
+        ORDER BY c.id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countMerchantCampaigns" resultType="long">
+        SELECT COUNT(*) FROM ad_campaign c
+        WHERE c.merchant_id=#{merchantId} AND c.region=#{region} AND c.is_deleted=FALSE
+    </select>
+
+    <select id="selectAdminCampaigns" resultType="com.tuowei.dazhongdianping.module.adpromo.model.AdCampaignRow">
+        SELECT <include refid="cols"/>
+        FROM ad_campaign c LEFT JOIN shop s ON s.id=c.shop_id
+        WHERE c.region=#{region} AND c.is_deleted=FALSE
+        <if test="auditStatus != null">AND c.audit_status=#{auditStatus}</if>
+        ORDER BY c.id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAdminCampaigns" resultType="long">
+        SELECT COUNT(*) FROM ad_campaign c
+        WHERE c.region=#{region} AND c.is_deleted=FALSE
+        <if test="auditStatus != null">AND c.audit_status=#{auditStatus}</if>
+    </select>
+
+    <update id="updateStatus">
+        UPDATE ad_campaign SET status=#{status},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND merchant_id=#{merchantId} AND is_deleted=FALSE
+    </update>
+
+    <update id="updateAudit">
+        UPDATE ad_campaign
+        SET audit_status=#{auditStatus},reject_reason=#{rejectReason},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND audit_status=1 AND is_deleted=FALSE
+    </update>
+
+    <select id="selectServing" resultType="com.tuowei.dazhongdianping.module.adpromo.model.AdCampaignRow">
+        SELECT <include refid="cols"/>
+        FROM ad_campaign c JOIN shop s ON s.id=c.shop_id
+        WHERE c.region=#{region} AND c.slot_type=#{slotType}
+          AND c.audit_status=2 AND c.status=1 AND c.is_deleted=FALSE
+          AND s.status=1 AND s.is_deleted=FALSE
+          AND (c.daily_budget=0 OR c.spend_date IS NULL OR c.spend_date&lt;&gt;CURRENT_DATE OR c.spent_today&lt;c.daily_budget)
+          <if test="keyword != null and keyword != ''">AND (c.keyword='' OR c.keyword=#{keyword})</if>
+        ORDER BY c.bid_cpc DESC, c.id
+        LIMIT #{limit}
+    </select>
+
+    <update id="chargeClick">
+        UPDATE ad_campaign
+        SET spent_today = (CASE WHEN spend_date = CURRENT_DATE THEN spent_today ELSE 0 END) + bid_cpc,
+            total_spent = total_spent + bid_cpc,
+            spend_date = CURRENT_DATE,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND audit_status=2 AND status=1 AND is_deleted=FALSE
+          AND (daily_budget=0
+               OR (CASE WHEN spend_date = CURRENT_DATE THEN spent_today ELSE 0 END) + bid_cpc &lt;= daily_budget)
+    </update>
+
+    <insert id="insertClickLog">
+        INSERT INTO ad_click_log(campaign_id,region,shop_id,user_id,cost)
+        VALUES(#{campaignId},#{region},#{shopId},#{userId},#{cost})
+    </insert>
+
+</mapper>

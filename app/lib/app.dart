@@ -23,6 +23,7 @@ import 'package:dazhongdianping_app/features/message/conversation_list_screen.da
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/recommendation/recommendation_repository.dart';
+import 'package:dazhongdianping_app/features/adpromo/ad_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_detail_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/user/expert_certification_screen.dart';
@@ -135,6 +136,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
             rankRepository: RankRepository(apiClient),
             activityRepository: ActivityRepository(apiClient),
             recommendationRepository: RecommendationRepository(apiClient),
+            adRepository: AdRepository(apiClient),
             notificationRepository: authController.currentUser == null
                 ? null
                 : NotificationRepository(apiClient),
