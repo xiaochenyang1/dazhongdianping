@@ -68,6 +68,8 @@ import type {
   CouponTemplatePayload,
   ComplaintTicket,
   ComplaintDisposePayload,
+  AdCampaign,
+  AdAuditPayload,
   RiskEvent,
   RiskEventDisposePayload,
   RiskRule,
@@ -621,6 +623,13 @@ export function fetchComplaint(id: number) {
 }
 export function disposeComplaint(id: number, payload: ComplaintDisposePayload) {
   return apiPost<ComplaintTicket>(`/api/admin/v1/complaints/${id}/dispose`, payload)
+}
+
+export function fetchAdCampaigns(params: { auditStatus?: number; page?: number; pageSize?: number }) {
+  return apiGet<PageResult<AdCampaign>>('/api/admin/v1/ads', params)
+}
+export function auditAdCampaign(id: number, payload: AdAuditPayload) {
+  return apiPost<AdCampaign>(`/api/admin/v1/ads/${id}/audit`, payload)
 }
 
 export function fetchRiskEvents(params: { scene?: string; decision?: number; disposeStatus?: number; page?: number; pageSize?: number }) {

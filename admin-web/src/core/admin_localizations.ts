@@ -45,6 +45,7 @@ export interface AdminStrings {
     marketingCoupons: string
     riskControl: string
     complaints: string
+    adReview: string
     systemAdmins: string
     systemRoles: string
     systemUsers: string
@@ -1829,6 +1830,40 @@ export interface AdminStrings {
     close: string
     readOnly: string
   }
+  adReview: {
+    title: string
+    description: string
+    filterAudit: string
+    all: string
+    auditPending: string
+    auditApproved: string
+    auditRejected: string
+    colName: string
+    colShop: string
+    colSlot: string
+    colKeyword: string
+    colBid: string
+    colBudget: string
+    colSpent: string
+    colStatus: string
+    colAudit: string
+    colActions: string
+    slotSearch: string
+    slotList: string
+    statusServing: string
+    statusPaused: string
+    statusOffline: string
+    unlimited: string
+    approve: string
+    reject: string
+    rejectPlaceholder: string
+    approved: string
+    rejected: string
+    auditError: string
+    loadError: string
+    empty: string
+    readOnly: string
+  }
   riskControl: {
     title: string
     description: string
@@ -2533,6 +2568,7 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/operations/points-exchanges': 'pointsExchangeManagement',
   '/operations/recommendation': 'recommendationWeight',
   '/operations/marketing': 'marketingCoupons',
+  '/operations/ads': 'adReview',
   '/audit/risk': 'riskControl',
   '/audit/complaints': 'complaints',
   '/system/admins': 'systemAdmins',
@@ -2775,6 +2811,7 @@ const zhCnStrings: AdminStrings = {
     marketingCoupons: '营销券',
     riskControl: '风控中心',
     complaints: '投诉纠纷',
+    adReview: '广告投放',
     systemAdmins: '管理员账号',
     systemRoles: '角色与权限',
     systemUsers: '用户管理',
@@ -4640,6 +4677,40 @@ const zhCnStrings: AdminStrings = {
     close: '关闭',
     readOnly: '你只有投诉纠纷的只读权限。',
   },
+  adReview: {
+    title: '广告投放审核',
+    description: '审核商家提交的搜索/列表广告投放，通过后进入固定广告位按点击计费。',
+    filterAudit: '审核状态',
+    all: '全部',
+    auditPending: '待审核',
+    auditApproved: '已通过',
+    auditRejected: '已驳回',
+    colName: '投放名称',
+    colShop: '门店',
+    colSlot: '广告位',
+    colKeyword: '关键词',
+    colBid: '点击出价',
+    colBudget: '日预算',
+    colSpent: '累计花费',
+    colStatus: '投放状态',
+    colAudit: '审核',
+    colActions: '操作',
+    slotSearch: '搜索结果',
+    slotList: '首页/列表',
+    statusServing: '投放中',
+    statusPaused: '已暂停',
+    statusOffline: '已下线',
+    unlimited: '不限',
+    approve: '通过',
+    reject: '驳回',
+    rejectPlaceholder: '填写驳回原因',
+    approved: '广告已通过。',
+    rejected: '广告已驳回。',
+    auditError: '审核操作失败。',
+    loadError: '广告投放加载失败。',
+    empty: '当前区域暂无广告投放。',
+    readOnly: '你只有广告投放的只读权限。',
+  },
   riskControl: {
     title: '风控中心',
     description: '查看反刷单/反虚假点评命中事件，处置误报，并调整本区域风控规则阈值。',
@@ -5404,6 +5475,7 @@ const enStrings: AdminStrings = {
     marketingCoupons: 'Marketing Coupons',
     riskControl: 'Risk Control',
     complaints: 'Complaints',
+    adReview: 'Ad Campaigns',
     systemAdmins: 'Admin Accounts',
     systemRoles: 'Roles & Permissions',
     systemUsers: 'User Management',
@@ -7284,6 +7356,40 @@ const enStrings: AdminStrings = {
     disposeError: 'Failed to dispose the complaint.',
     close: 'Close',
     readOnly: 'You have read-only access to complaints.',
+  },
+  adReview: {
+    title: 'Ad Campaign Review',
+    description: 'Review merchant search/list ad campaigns; approved ones serve in fixed ad slots billed per click.',
+    filterAudit: 'Review status',
+    all: 'All',
+    auditPending: 'Pending',
+    auditApproved: 'Approved',
+    auditRejected: 'Rejected',
+    colName: 'Campaign',
+    colShop: 'Shop',
+    colSlot: 'Slot',
+    colKeyword: 'Keyword',
+    colBid: 'CPC bid',
+    colBudget: 'Daily budget',
+    colSpent: 'Total spent',
+    colStatus: 'Status',
+    colAudit: 'Review',
+    colActions: 'Actions',
+    slotSearch: 'Search results',
+    slotList: 'Home/list',
+    statusServing: 'Serving',
+    statusPaused: 'Paused',
+    statusOffline: 'Offline',
+    unlimited: 'Unlimited',
+    approve: 'Approve',
+    reject: 'Reject',
+    rejectPlaceholder: 'Enter the rejection reason',
+    approved: 'Campaign approved.',
+    rejected: 'Campaign rejected.',
+    auditError: 'Review action failed.',
+    loadError: 'Failed to load ad campaigns.',
+    empty: 'No ad campaigns in this region yet.',
+    readOnly: 'You have read-only access to ad campaigns.',
   },
   riskControl: {
     title: 'Risk Control',

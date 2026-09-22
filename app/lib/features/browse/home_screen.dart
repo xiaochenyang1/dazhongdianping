@@ -11,6 +11,7 @@ import 'package:dazhongdianping_app/features/notification/notification_repositor
 import 'package:dazhongdianping_app/features/rank/rank_list_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
 import 'package:dazhongdianping_app/features/recommendation/recommendation_repository.dart';
+import 'package:dazhongdianping_app/features/adpromo/ad_repository.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
@@ -47,6 +48,7 @@ class HomeScreen extends StatefulWidget {
     this.activityRepository,
     this.recommendationRepository,
     this.notificationRepository,
+    this.adRepository,
     this.onCommunityLoginRequired,
   });
   final BrowseRepository repository;
@@ -72,6 +74,7 @@ class HomeScreen extends StatefulWidget {
   final ActivityRepository? activityRepository;
   final RecommendationRepository? recommendationRepository;
   final NotificationRepository? notificationRepository;
+  final AdRepository? adRepository;
   final ValueChanged<BuildContext>? onCommunityLoginRequired;
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -285,6 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     reviewRepository: widget.reviewRepository,
                     canInteractReviews: widget.canInteractReviews,
                     thirdPartyConfig: widget.thirdPartyConfig,
+                    adRepository: widget.adRepository,
                   ),
                 ),
               ),

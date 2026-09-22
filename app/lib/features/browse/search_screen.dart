@@ -3,6 +3,7 @@ import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/browse/browse_error_localizer.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
+import 'package:dazhongdianping_app/features/adpromo/ad_repository.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -19,6 +20,7 @@ class SearchScreen extends StatefulWidget {
     this.reviewRepository,
     this.canInteractReviews = false,
     this.thirdPartyConfig = const ThirdPartyConfig(),
+    this.adRepository,
   });
   final BrowseRepository repository;
   final String initialKeyword;
@@ -27,6 +29,7 @@ class SearchScreen extends StatefulWidget {
   final ReviewRepository? reviewRepository;
   final bool canInteractReviews;
   final ThirdPartyConfig thirdPartyConfig;
+  final AdRepository? adRepository;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -35,6 +38,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   late final TextEditingController _controller;
   Future<ShopSearchPage>? _results;
+  List<AdSlot> _adSlots = const [];
   String _searchedKeyword = '';
   bool _loadingMore = false;
   bool _retryingSearch = false;
@@ -163,9 +167,11 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _searchedKeyword = keyword;
       _results = future;
+      _adSlots = const [];
       _suggestions = const [];
       _loadingMore = false;
     });
+    _loadAdSlots(keyword, requestId);
     // Refresh history after a successful search so the new keyword appears.
     try {
       await future;
@@ -198,6 +204,60 @@ class _SearchScreenState extends State<SearchScreen> {
     } finally {
       if (mounted) setState(() => _retryingSearch = false);
     }
+  }
+
+  Future<void> _loadAdSlots(String keyword, int requestId) async {
+    final ads = widget.adRepository;
+    if (ads == null) return;
+    try {
+      final slots = await ads.loadAdSlots(slotType: 1, keyword: keyword, limit: 3);
+      if (!mounted || requestId != _searchRequestId) return;
+      setState(() => _adSlots = slots);
+    } catch (_) {
+      // 广告为增益内容，加载失败静默忽略。
+    }
+  }
+
+  void _openAdShop(AdSlot slot) {
+    widget.adRepository?.reportClick(slot.campaignId).catchError((_) {});
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ShopDetailScreen(
+          repository: widget.repository,
+          shopId: slot.shopId,
+          tradeRepository: widget.tradeRepository,
+          reservationRepository: widget.reservationRepository,
+          reviewRepository: widget.reviewRepository,
+          canInteractReviews: widget.canInteractReviews,
+          thirdPartyConfig: widget.thirdPartyConfig,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdStrip(AppLocalizations strings) {
+    if (_adSlots.isEmpty) return const SizedBox.shrink();
+    return Column(
+      key: const Key('search-ad-slots'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: _adSlots
+          .map((slot) => ListTile(
+                key: Key('ad-slot-${slot.campaignId}'),
+                leading: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(strings.adLabel, style: Theme.of(context).textTheme.labelSmall),
+                ),
+                title: Text(slot.shopName),
+                subtitle: Text('★ ${slot.score.toStringAsFixed(1)}'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _openAdShop(slot),
+              ))
+          .toList(),
+    );
   }
 
   void _showDiscovery() {
@@ -474,7 +534,12 @@ class _SearchScreenState extends State<SearchScreen> {
             Expanded(
               child: _results == null
                   ? _buildDiscoveryPanel()
-                  : FutureBuilder<ShopSearchPage>(
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildAdStrip(strings),
+                        Expanded(
+                          child: FutureBuilder<ShopSearchPage>(
                       future: _results,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState != ConnectionState.done) {
@@ -581,6 +646,9 @@ class _SearchScreenState extends State<SearchScreen> {
                           },
                         );
                       },
+                          ),
+                        ),
+                      ],
                     ),
             ),
           ],
