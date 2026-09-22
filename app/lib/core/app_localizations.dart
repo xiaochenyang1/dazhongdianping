@@ -15,6 +15,22 @@ class AppLocalizations {
   ];
 
   static const _simplified = {
+    'couponCenterTitle': '领券中心',
+    'couponCenterEmpty': '当前暂无可领取的优惠券。',
+    'couponCenterLoadFailed': '领券中心加载失败：{error}',
+    'couponClaim': '领取',
+    'couponClaimed': '已领取',
+    'couponSoldOut': '已领完',
+    'couponClaimSuccess': '领取成功，可在我的营销券查看。',
+    'couponClaimFailed': '领取失败：{error}',
+    'myMarketingCouponsTitle': '我的营销券',
+    'marketingCouponsEmpty': '你还没有领取任何营销券。',
+    'myMarketingCouponsLoadFailed': '营销券加载失败：{error}',
+    'couponTypeThreshold': '满减券',
+    'couponTypeNewcomer': '新客立减',
+    'marketingCouponStatusUnused': '未使用',
+    'marketingCouponStatusUsed': '已使用',
+    'marketingCouponStatusExpired': '已过期',
     'homeTitle': '本地生活',
     'searchHint': '搜索餐厅、超市和生活服务',
     'featured': '附近推荐',
@@ -1005,6 +1021,22 @@ class AppLocalizations {
     'shopGalleryMissing': '门店相册还没补齐，先靠点评和基础信息判断也不至于两眼一抹黑。',
   };
   static const _traditional = {
+    'couponCenterTitle': '領券中心',
+    'couponCenterEmpty': '目前暫無可領取的優惠券。',
+    'couponCenterLoadFailed': '領券中心載入失敗：{error}',
+    'couponClaim': '領取',
+    'couponClaimed': '已領取',
+    'couponSoldOut': '已領完',
+    'couponClaimSuccess': '領取成功，可在我的行銷券查看。',
+    'couponClaimFailed': '領取失敗：{error}',
+    'myMarketingCouponsTitle': '我的行銷券',
+    'marketingCouponsEmpty': '你還沒有領取任何行銷券。',
+    'myMarketingCouponsLoadFailed': '行銷券載入失敗：{error}',
+    'couponTypeThreshold': '滿減券',
+    'couponTypeNewcomer': '新客立減',
+    'marketingCouponStatusUnused': '未使用',
+    'marketingCouponStatusUsed': '已使用',
+    'marketingCouponStatusExpired': '已過期',
     'homeTitle': '在地生活',
     'searchHint': '搜尋餐廳、超市和生活服務',
     'featured': '附近推薦',
@@ -1995,6 +2027,22 @@ class AppLocalizations {
     'shopGalleryMissing': '店家相簿還沒補齊，先靠評論和基礎資訊判斷也不至於兩眼一抹黑。',
   };
   static const _english = {
+    'couponCenterTitle': 'Coupon Center',
+    'couponCenterEmpty': 'No coupons available to claim right now.',
+    'couponCenterLoadFailed': 'Failed to load the coupon center: {error}',
+    'couponClaim': 'Claim',
+    'couponClaimed': 'Claimed',
+    'couponSoldOut': 'Sold out',
+    'couponClaimSuccess': 'Claimed. Find it under My Coupons.',
+    'couponClaimFailed': 'Failed to claim: {error}',
+    'myMarketingCouponsTitle': 'My Coupons',
+    'marketingCouponsEmpty': 'You have not claimed any coupons yet.',
+    'myMarketingCouponsLoadFailed': 'Failed to load coupons: {error}',
+    'couponTypeThreshold': 'Spend & save',
+    'couponTypeNewcomer': 'New customer',
+    'marketingCouponStatusUnused': 'Unused',
+    'marketingCouponStatusUsed': 'Used',
+    'marketingCouponStatusExpired': 'Expired',
     'homeTitle': 'Local life',
     'searchHint': 'Search restaurants, supermarkets and services',
     'featured': 'Featured near you',
@@ -3196,6 +3244,22 @@ class AppLocalizations {
   String get featured => _text('featured');
   String get recommendedForYou => _text('recommendedForYou');
   String get recommendationsEmpty => _text('recommendationsEmpty');
+  String get couponCenterTitle => _text('couponCenterTitle');
+  String get couponCenterEmpty => _text('couponCenterEmpty');
+  String couponCenterLoadFailed(Object error) => _withError('couponCenterLoadFailed', error);
+  String get couponClaim => _text('couponClaim');
+  String get couponClaimed => _text('couponClaimed');
+  String get couponSoldOut => _text('couponSoldOut');
+  String get couponClaimSuccess => _text('couponClaimSuccess');
+  String couponClaimFailed(Object error) => _withError('couponClaimFailed', error);
+  String get myMarketingCouponsTitle => _text('myMarketingCouponsTitle');
+  String get marketingCouponsEmpty => _text('marketingCouponsEmpty');
+  String myMarketingCouponsLoadFailed(Object error) => _withError('myMarketingCouponsLoadFailed', error);
+  String get couponTypeThreshold => _text('couponTypeThreshold');
+  String get couponTypeNewcomer => _text('couponTypeNewcomer');
+  String get marketingCouponStatusUnused => _text('marketingCouponStatusUnused');
+  String get marketingCouponStatusUsed => _text('marketingCouponStatusUsed');
+  String get marketingCouponStatusExpired => _text('marketingCouponStatusExpired');
   String get profile => _text('profile');
   String get homeSubtitle => _text('homeSubtitle');
   String get europe => _text('europe');

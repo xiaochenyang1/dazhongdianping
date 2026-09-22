@@ -37,6 +37,8 @@ export interface TradeOrder {
   coverImage: string
   quantity: number
   unitPrice: number
+  originalAmount?: number
+  discountAmount?: number
   amount: number
   currency: string
   payStatus: number

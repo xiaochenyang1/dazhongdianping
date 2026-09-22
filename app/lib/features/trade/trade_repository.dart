@@ -362,11 +362,16 @@ class TradeRepository {
   Future<TradeOrder> createOrder({
     required int dealId,
     required int quantity,
+    int? userCouponId,
   }) async {
     return TradeOrder.fromJson(
       await api.postJson(
         '/api/c/v1/orders',
-        body: {'dealId': dealId, 'quantity': quantity},
+        body: {
+          'dealId': dealId,
+          'quantity': quantity,
+          if (userCouponId != null) 'userCouponId': userCouponId,
+        },
       ),
     );
   }

@@ -7,6 +7,7 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
  @PostMapping("/orders") public ApiResponse<Map<String,Object>> create(@Valid @RequestBody OrderCreateRequest request){return ApiResponse.success(service.createOrder(request));}
  @GetMapping("/orders") public ApiResponse<PageResult<Map<String,Object>>> orders(@RequestParam(required=false)Integer payStatus,@RequestParam(defaultValue="1")Integer page,@RequestParam(defaultValue="12")Integer pageSize){return ApiResponse.success(service.orders(payStatus,page,pageSize));}
  @GetMapping("/orders/{id}") public ApiResponse<Map<String,Object>> order(@PathVariable Long id){return ApiResponse.success(service.order(id));}
+ @GetMapping("/deals/{dealId}/usable-coupons") public ApiResponse<List<?>> usableCoupons(@PathVariable Long dealId,@RequestParam(defaultValue="1")Integer quantity){return ApiResponse.success(service.usableCoupons(dealId,quantity));}
  @PostMapping("/orders/{id}/pay") public ApiResponse<Map<String,Object>> pay(@PathVariable Long id){return ApiResponse.success(service.pay(id));}
  @PostMapping("/orders/{id}/pay/mock-complete") public ApiResponse<Map<String,Object>> completeMock(@PathVariable Long id){return ApiResponse.success(service.completeMockPayment(id));}
  @PostMapping("/orders/{id}/cancel") public ApiResponse<Map<String,Object>> cancel(@PathVariable Long id){return ApiResponse.success(service.cancel(id));}
