@@ -16,6 +16,23 @@ class AppLocalizations {
 
   static const _simplified = {
     'adLabel': '广告',
+    'waitlistEntry': '排队取号',
+    'myWaitlistTitle': '我的排队',
+    'waitlistEmpty': '当前没有进行中的排队。',
+    'waitlistLoadFailed': '排队加载失败：{error}',
+    'waitlistJoinTitle': '排队取号',
+    'waitlistTableType': '桌型',
+    'waitlistTableSmall': '小桌(1-2人)',
+    'waitlistTableMedium': '中桌(3-4人)',
+    'waitlistTableLarge': '大桌(5人以上)',
+    'waitlistPartySize': '就餐人数',
+    'waitlistJoin': '取号',
+    'waitlistJoinFailed': '取号失败：{error}',
+    'waitlistJoinSuccess': '取号成功',
+    'waitlistCancel': '取消排队',
+    'waitlistCancelFailed': '取消失败：{error}',
+    'waitlistAhead': '前面还有 {count} 桌',
+    'waitlistNo': '号码',
     'qaSectionTitle': '问大家',
     'qaEmpty': '还没有人提问，来问第一个问题吧。',
     'qaLoadFailed': '问答加载失败：{error}',
@@ -1068,6 +1085,23 @@ class AppLocalizations {
   };
   static const _traditional = {
     'adLabel': '廣告',
+    'waitlistEntry': '排隊取號',
+    'myWaitlistTitle': '我的排隊',
+    'waitlistEmpty': '目前沒有進行中的排隊。',
+    'waitlistLoadFailed': '排隊載入失敗：{error}',
+    'waitlistJoinTitle': '排隊取號',
+    'waitlistTableType': '桌型',
+    'waitlistTableSmall': '小桌(1-2人)',
+    'waitlistTableMedium': '中桌(3-4人)',
+    'waitlistTableLarge': '大桌(5人以上)',
+    'waitlistPartySize': '用餐人數',
+    'waitlistJoin': '取號',
+    'waitlistJoinFailed': '取號失敗：{error}',
+    'waitlistJoinSuccess': '取號成功',
+    'waitlistCancel': '取消排隊',
+    'waitlistCancelFailed': '取消失敗：{error}',
+    'waitlistAhead': '前面還有 {count} 桌',
+    'waitlistNo': '號碼',
     'qaSectionTitle': '問大家',
     'qaEmpty': '還沒有人提問，來問第一個問題吧。',
     'qaLoadFailed': '問答載入失敗：{error}',
@@ -2120,6 +2154,23 @@ class AppLocalizations {
   };
   static const _english = {
     'adLabel': 'Ad',
+    'waitlistEntry': 'Join the queue',
+    'myWaitlistTitle': 'My Queue',
+    'waitlistEmpty': 'No active queue right now.',
+    'waitlistLoadFailed': 'Failed to load the queue: {error}',
+    'waitlistJoinTitle': 'Join the queue',
+    'waitlistTableType': 'Table',
+    'waitlistTableSmall': 'Small (1-2)',
+    'waitlistTableMedium': 'Medium (3-4)',
+    'waitlistTableLarge': 'Large (5+)',
+    'waitlistPartySize': 'Party size',
+    'waitlistJoin': 'Get a number',
+    'waitlistJoinFailed': 'Failed to join: {error}',
+    'waitlistJoinSuccess': 'Joined the queue',
+    'waitlistCancel': 'Leave queue',
+    'waitlistCancelFailed': 'Failed to cancel: {error}',
+    'waitlistAhead': '{count} parties ahead',
+    'waitlistNo': 'No.',
     'qaSectionTitle': 'Ask the community',
     'qaEmpty': 'No questions yet — be the first to ask.',
     'qaLoadFailed': 'Failed to load Q&A: {error}',
@@ -3399,6 +3450,23 @@ class AppLocalizations {
   String get marketingCouponStatusUsed => _text('marketingCouponStatusUsed');
   String get marketingCouponStatusExpired => _text('marketingCouponStatusExpired');
   String get adLabel => _text('adLabel');
+  String get waitlistEntry => _text('waitlistEntry');
+  String get myWaitlistTitle => _text('myWaitlistTitle');
+  String get waitlistEmpty => _text('waitlistEmpty');
+  String waitlistLoadFailed(Object error) => _withError('waitlistLoadFailed', error);
+  String get waitlistJoinTitle => _text('waitlistJoinTitle');
+  String get waitlistTableType => _text('waitlistTableType');
+  String get waitlistTableSmall => _text('waitlistTableSmall');
+  String get waitlistTableMedium => _text('waitlistTableMedium');
+  String get waitlistTableLarge => _text('waitlistTableLarge');
+  String get waitlistPartySize => _text('waitlistPartySize');
+  String get waitlistJoin => _text('waitlistJoin');
+  String waitlistJoinFailed(Object error) => _withError('waitlistJoinFailed', error);
+  String get waitlistJoinSuccess => _text('waitlistJoinSuccess');
+  String get waitlistCancel => _text('waitlistCancel');
+  String waitlistCancelFailed(Object error) => _withError('waitlistCancelFailed', error);
+  String waitlistAhead(int count) => _withCount('waitlistAhead', count);
+  String get waitlistNo => _text('waitlistNo');
   String get qaSectionTitle => _text('qaSectionTitle');
   String get qaEmpty => _text('qaEmpty');
   String qaLoadFailed(Object error) => _withError('qaLoadFailed', error);
