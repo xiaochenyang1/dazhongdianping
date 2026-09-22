@@ -30,6 +30,7 @@ export interface MerchantStrings {
     complaints: string
     ads: string
     consult: string
+    waitlist: string
   }
   shell: {
     workbenchEyebrow: string
@@ -330,6 +331,29 @@ export interface MerchantStrings {
     customer: string
     inputPlaceholder: string
     send: string
+    readOnly: string
+  }
+  waitlist: {
+    summary: string
+    loadError: string
+    actionError: string
+    shopLabel: string
+    empty: string
+    headers: {
+      queueNo: string
+      customer: string
+      tableType: string
+      partySize: string
+      status: string
+      ahead: string
+      actions: string
+    }
+    tableTypeText: (type: number, fallback?: string) => string
+    statusText: (status: number, fallback?: string) => string
+    aheadText: (count: number) => string
+    call: string
+    seat: string
+    pass: string
     readOnly: string
   }
   reservationSlots: {
@@ -713,6 +737,7 @@ const zhCnStrings: MerchantStrings = {
     complaints: '投诉纠纷',
     ads: '广告推广',
     consult: '在线咨询',
+    waitlist: '排队叫号',
   },
   shell: {
     workbenchEyebrow: '商户工作台',
@@ -1051,6 +1076,41 @@ const zhCnStrings: MerchantStrings = {
     inputPlaceholder: '输入回复...',
     send: '发送',
     readOnly: '你没有客服回复权限。',
+  },
+  waitlist: {
+    summary: '实时叫号台：按桌型顺序叫号、入座或过号。',
+    loadError: '队列加载失败',
+    actionError: '操作失败',
+    shopLabel: '门店',
+    empty: '当前没有排队。',
+    headers: {
+      queueNo: '号码',
+      customer: '顾客',
+      tableType: '桌型',
+      partySize: '人数',
+      status: '状态',
+      ahead: '前面',
+      actions: '操作',
+    },
+    tableTypeText: (type, fallback) => {
+      if (type === 2) return '中桌'
+      if (type === 3) return '大桌'
+      if (type === 1) return '小桌'
+      return fallback || `桌型 ${type}`
+    },
+    statusText: (status, fallback) => {
+      if (status === 2) return '已叫号'
+      if (status === 3) return '已入座'
+      if (status === 4) return '已过号'
+      if (status === 5) return '已取消'
+      if (status === 1) return '排队中'
+      return fallback || `状态 ${status}`
+    },
+    aheadText: (count) => `${count} 桌`,
+    call: '叫号',
+    seat: '入座',
+    pass: '过号',
+    readOnly: '你没有叫号管理权限。',
   },
   reservationSlots: {
     filters: {
@@ -1459,6 +1519,7 @@ const enStrings: MerchantStrings = {
     complaints: 'Complaints',
     ads: 'Ad Promotion',
     consult: 'Live Chat',
+    waitlist: 'Waitlist',
   },
   shell: {
     workbenchEyebrow: 'Merchant Console',
@@ -1797,6 +1858,41 @@ const enStrings: MerchantStrings = {
     inputPlaceholder: 'Type a reply...',
     send: 'Send',
     readOnly: 'You do not have chat reply permission.',
+  },
+  waitlist: {
+    summary: 'Live queue board: call, seat or pass parties in order by table type.',
+    loadError: 'Failed to load the queue',
+    actionError: 'Action failed',
+    shopLabel: 'Shop',
+    empty: 'No one is waiting right now.',
+    headers: {
+      queueNo: 'No.',
+      customer: 'Customer',
+      tableType: 'Table',
+      partySize: 'Party',
+      status: 'Status',
+      ahead: 'Ahead',
+      actions: 'Actions',
+    },
+    tableTypeText: (type, fallback) => {
+      if (type === 2) return 'Medium'
+      if (type === 3) return 'Large'
+      if (type === 1) return 'Small'
+      return fallback || `Type ${type}`
+    },
+    statusText: (status, fallback) => {
+      if (status === 2) return 'Called'
+      if (status === 3) return 'Seated'
+      if (status === 4) return 'Passed'
+      if (status === 5) return 'Cancelled'
+      if (status === 1) return 'Waiting'
+      return fallback || `Status ${status}`
+    },
+    aheadText: (count) => `${count} parties`,
+    call: 'Call',
+    seat: 'Seat',
+    pass: 'Pass',
+    readOnly: 'You do not have queue management permission.',
   },
   reservationSlots: {
     filters: {

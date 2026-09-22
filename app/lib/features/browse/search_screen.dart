@@ -5,6 +5,7 @@ import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
 import 'package:dazhongdianping_app/features/adpromo/ad_repository.dart';
 import 'package:dazhongdianping_app/features/qa/qa_repository.dart';
+import 'package:dazhongdianping_app/features/waitlist/waitlist_repository.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
 import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -23,6 +24,7 @@ class SearchScreen extends StatefulWidget {
     this.thirdPartyConfig = const ThirdPartyConfig(),
     this.adRepository,
     this.qaRepository,
+    this.waitlistRepository,
   });
   final BrowseRepository repository;
   final String initialKeyword;
@@ -33,6 +35,7 @@ class SearchScreen extends StatefulWidget {
   final ThirdPartyConfig thirdPartyConfig;
   final AdRepository? adRepository;
   final QaRepository? qaRepository;
+  final WaitlistRepository? waitlistRepository;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -234,6 +237,7 @@ class _SearchScreenState extends State<SearchScreen> {
           canInteractReviews: widget.canInteractReviews,
           thirdPartyConfig: widget.thirdPartyConfig,
           qaRepository: widget.qaRepository,
+          waitlistRepository: widget.waitlistRepository,
         ),
       ),
     );
@@ -521,6 +525,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                           widget.canInteractReviews,
                                       thirdPartyConfig: widget.thirdPartyConfig,
                                       qaRepository: widget.qaRepository,
+                                      waitlistRepository: widget.waitlistRepository,
                                     ),
                                   ),
                                 );
@@ -645,6 +650,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                         widget.canInteractReviews,
                                     thirdPartyConfig: widget.thirdPartyConfig,
                                     qaRepository: widget.qaRepository,
+                                    waitlistRepository: widget.waitlistRepository,
                                   ),
                                 ),
                               ),

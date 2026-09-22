@@ -10,6 +10,7 @@ import { formatWebDateTime } from '@/core/web_localizations'
 import { localizeWebShopError, shopStringsForRegion } from '@/core/web_shop_localizations'
 import { complaintStringsForRegion } from '@/core/web_complaint_localizations'
 import { consultStringsForRegion } from '@/core/web_consult_localizations'
+import { waitlistStringsForRegion } from '@/core/web_waitlist_localizations'
 import { startConsult } from '@/services/consult'
 import { useRouter } from 'vue-router'
 import { formatMoney } from '@/lib/currency'
@@ -40,6 +41,7 @@ const copy = computed(() => shopStringsForRegion(state.region))
 const certificationCopy = computed(() => discoveryStringsForRegion(state.region).shopCard)
 const complaintCopy = computed(() => complaintStringsForRegion(state.region))
 const consultCopy = computed(() => consultStringsForRegion(state.region))
+const waitlistCopy = computed(() => waitlistStringsForRegion(state.region))
 const router = useRouter()
 const consulting = ref(false)
 
@@ -242,6 +244,7 @@ watch(
           <RouterLink :to="`/shops/${shop.id}/reserve`" class="secondary-button">{{ copy.detail.booking }}</RouterLink>
           <RouterLink :to="{ path: '/complaints/new', query: { shopId: shop.id } }" class="secondary-button">{{ complaintCopy.list.newComplaint }}</RouterLink>
           <button type="button" class="secondary-button" :disabled="consulting" data-testid="consult-merchant" @click="consultMerchant">{{ consultCopy.entry }}</button>
+          <RouterLink :to="{ path: '/waitlist/join', query: { shopId: shop.id } }" class="secondary-button" data-testid="waitlist-join">{{ waitlistCopy.entry }}</RouterLink>
         </div>
         <p v-if="shareMessage" class="feedback" role="status">{{ shareMessage }}</p>
       </div>

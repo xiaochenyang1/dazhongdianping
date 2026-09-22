@@ -135,10 +135,10 @@ INSERT INTO merchant_application (
     (20002, 2002, 'https://cdn.example.com/licenses/merchant-2002.png', 'Noah', '["https://cdn.example.com/shops/2002/front.jpg"]', 1, '', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO merchant_role (id, code, name, permissions, status) VALUES
-    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,merchant:verify,complaint:view,complaint:reply,ad:view,ad:manage,consult:view,consult:reply', 1),
-    (11, 'store_manager', '店长', 'shop:view,shop:edit,deal:edit,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,complaint:view,complaint:reply,ad:view,ad:manage,consult:view,consult:reply', 1),
-    (12, 'coupon_operator', '核销员', 'coupon:verify,shop:view,reservation:view,reservation:arrive', 1),
-    (13, 'service_operator', '客服运营', 'shop:view,order:view,review:reply,review:appeal,reservation:view,reservation:confirm,complaint:view,complaint:reply,consult:view,consult:reply', 1);
+    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,merchant:verify,complaint:view,complaint:reply,ad:view,ad:manage,consult:view,consult:reply,waitlist:view,waitlist:manage', 1),
+    (11, 'store_manager', '店长', 'shop:view,shop:edit,deal:edit,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,complaint:view,complaint:reply,ad:view,ad:manage,consult:view,consult:reply,waitlist:view,waitlist:manage', 1),
+    (12, 'coupon_operator', '核销员', 'coupon:verify,shop:view,reservation:view,reservation:arrive,waitlist:view,waitlist:manage', 1),
+    (13, 'service_operator', '客服运营', 'shop:view,order:view,review:reply,review:appeal,reservation:view,reservation:confirm,complaint:view,complaint:reply,consult:view,consult:reply,waitlist:view,waitlist:manage', 1);
 
 INSERT INTO merchant_operator (id, merchant_id, account, password_hash, name, phone, email, operator_type, shop_scope_type, status, is_deleted) VALUES
     (11001, 1001, 'merchant_cn_hotpot@example.com', '$2a$10$7fHXsIct1JQL5H/MOEC.Z.G8N2zSOYBStbTgbSQI0D6tzes3SP6X6', '王磊', '13800000001', 'merchant_cn_hotpot@example.com', 1, 1, 1, FALSE),

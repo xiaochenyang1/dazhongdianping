@@ -27,6 +27,7 @@ const router = createRouter({
         { path: 'complaints', component: () => import('@/views/ComplaintsView.vue'), meta: { requiresAuth: true, titleKey: 'complaints' } },
         { path: 'ads', component: () => import('@/views/AdsView.vue'), meta: { requiresAuth: true, titleKey: 'ads' } },
         { path: 'consult', component: () => import('@/views/ConsultView.vue'), meta: { requiresAuth: true, titleKey: 'consult' } },
+        { path: 'waitlist', component: () => import('@/views/WaitlistView.vue'), meta: { requiresAuth: true, titleKey: 'waitlist' } },
         { path: 'verified', component: () => import('@/views/VerifiedCertificationView.vue'), meta: { requiresAuth: true, titleKey: 'verified' } },
         { path: 'staffs', component: () => import('@/views/StaffsView.vue'), meta: { requiresAuth: true, titleKey: 'staffs' } },
       ],

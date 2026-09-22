@@ -1526,3 +1526,27 @@ CREATE TABLE IF NOT EXISTS shop_answer (
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS idx_shop_answer_question ON shop_answer(question_id, is_deleted, id);
+
+-- ============================================================
+-- 排队 / 取号 / 候位（waitlist）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS waitlist_entry (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    shop_id BIGINT NOT NULL,
+    merchant_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    -- 桌型：1=小桌(1-2) 2=中桌(3-4) 3=大桌(5+)
+    table_type TINYINT NOT NULL DEFAULT 1,
+    party_size INT NOT NULL DEFAULT 1,
+    -- 当日该门店该桌型的顺序号
+    queue_no INT NOT NULL DEFAULT 0,
+    -- 状态：1=排队中 2=已叫号 3=已入座 4=已过号 5=已取消
+    status TINYINT NOT NULL DEFAULT 1,
+    called_at TIMESTAMP NULL,
+    seated_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_waitlist_shop ON waitlist_entry(shop_id, table_type, status, id);
+CREATE INDEX IF NOT EXISTS idx_waitlist_user ON waitlist_entry(user_id, region, status, id);

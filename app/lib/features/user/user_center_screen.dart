@@ -10,6 +10,8 @@ import 'package:dazhongdianping_app/features/complaint/complaint_repository.dart
 import 'package:dazhongdianping_app/features/complaint/complaints_screen.dart';
 import 'package:dazhongdianping_app/features/consult/consult_repository.dart';
 import 'package:dazhongdianping_app/features/consult/consult_sessions_screen.dart';
+import 'package:dazhongdianping_app/features/waitlist/waitlist_repository.dart';
+import 'package:dazhongdianping_app/features/waitlist/my_waitlist_screen.dart';
 import 'package:dazhongdianping_app/features/marketing/coupon_center_screen.dart';
 import 'package:dazhongdianping_app/features/marketing/marketing_repository.dart';
 import 'package:dazhongdianping_app/features/marketing/my_marketing_coupons_screen.dart';
@@ -327,6 +329,19 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                   MaterialPageRoute(
                     builder: (_) => ConsultSessionsScreen(
                       repository: ConsultRepository(widget.repository.api),
+                    ),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-waitlist'),
+                leading: const Icon(Icons.timer_outlined),
+                title: Text(strings.myWaitlistTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MyWaitlistScreen(
+                      repository: WaitlistRepository(widget.repository.api),
                     ),
                   ),
                 ),
