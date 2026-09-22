@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ShopCard from '@/components/ShopCard.vue'
+import QaSection from '@/components/QaSection.vue'
 import { useAppContext } from '@/composables/useAppContext'
 import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
 import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
@@ -343,6 +344,10 @@ watch(
         </RouterLink>
       </div>
       <p v-else class="feedback">{{ copy.detail.noReviews }}</p>
+    </section>
+
+    <section v-if="shop" class="content-section" data-testid="qa-section">
+      <QaSection :shop-id="shop.id" />
     </section>
 
     <section v-if="similarShops.length > 0" class="content-section" data-testid="similar-shops">

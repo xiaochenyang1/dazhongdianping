@@ -16,6 +16,18 @@ class AppLocalizations {
 
   static const _simplified = {
     'adLabel': '广告',
+    'qaSectionTitle': '问大家',
+    'qaEmpty': '还没有人提问，来问第一个问题吧。',
+    'qaLoadFailed': '问答加载失败：{error}',
+    'qaAskHint': '想问点什么？例如营业时间、停车、是否需要预约',
+    'qaAsk': '提问',
+    'qaAskFailed': '提问失败：{error}',
+    'qaAnswerCount': '{count} 个回答',
+    'qaViewAnswers': '查看回答',
+    'qaNoAnswers': '还没有回答，来回答一下吧。',
+    'qaAnswerHint': '写下你的回答',
+    'qaAnswer': '回答',
+    'qaAnswerFailed': '回答失败：{error}',
     'consultEntry': '咨询商家',
     'myConsultTitle': '在线咨询',
     'consultSessionsEmpty': '还没有咨询会话，去商户页发起咨询吧。',
@@ -1056,6 +1068,18 @@ class AppLocalizations {
   };
   static const _traditional = {
     'adLabel': '廣告',
+    'qaSectionTitle': '問大家',
+    'qaEmpty': '還沒有人提問，來問第一個問題吧。',
+    'qaLoadFailed': '問答載入失敗：{error}',
+    'qaAskHint': '想問點什麼？例如營業時間、停車、是否需要預約',
+    'qaAsk': '提問',
+    'qaAskFailed': '提問失敗：{error}',
+    'qaAnswerCount': '{count} 個回答',
+    'qaViewAnswers': '查看回答',
+    'qaNoAnswers': '還沒有回答，來回答一下吧。',
+    'qaAnswerHint': '寫下你的回答',
+    'qaAnswer': '回答',
+    'qaAnswerFailed': '回答失敗：{error}',
     'consultEntry': '諮詢商家',
     'myConsultTitle': '線上諮詢',
     'consultSessionsEmpty': '還沒有諮詢會話，去商戶頁發起諮詢吧。',
@@ -2096,6 +2120,18 @@ class AppLocalizations {
   };
   static const _english = {
     'adLabel': 'Ad',
+    'qaSectionTitle': 'Ask the community',
+    'qaEmpty': 'No questions yet — be the first to ask.',
+    'qaLoadFailed': 'Failed to load Q&A: {error}',
+    'qaAskHint': 'Ask anything — hours, parking, reservations…',
+    'qaAsk': 'Ask',
+    'qaAskFailed': 'Failed to post the question: {error}',
+    'qaAnswerCount': '{count} answers',
+    'qaViewAnswers': 'View answers',
+    'qaNoAnswers': 'No answers yet — share what you know.',
+    'qaAnswerHint': 'Write your answer',
+    'qaAnswer': 'Answer',
+    'qaAnswerFailed': 'Failed to post the answer: {error}',
     'consultEntry': 'Chat with merchant',
     'myConsultTitle': 'Live Chat',
     'consultSessionsEmpty': 'No chats yet — start one from a shop page.',
@@ -3363,6 +3399,18 @@ class AppLocalizations {
   String get marketingCouponStatusUsed => _text('marketingCouponStatusUsed');
   String get marketingCouponStatusExpired => _text('marketingCouponStatusExpired');
   String get adLabel => _text('adLabel');
+  String get qaSectionTitle => _text('qaSectionTitle');
+  String get qaEmpty => _text('qaEmpty');
+  String qaLoadFailed(Object error) => _withError('qaLoadFailed', error);
+  String get qaAskHint => _text('qaAskHint');
+  String get qaAsk => _text('qaAsk');
+  String qaAskFailed(Object error) => _withError('qaAskFailed', error);
+  String qaAnswerCount(int count) => _withCount('qaAnswerCount', count);
+  String get qaViewAnswers => _text('qaViewAnswers');
+  String get qaNoAnswers => _text('qaNoAnswers');
+  String get qaAnswerHint => _text('qaAnswerHint');
+  String get qaAnswer => _text('qaAnswer');
+  String qaAnswerFailed(Object error) => _withError('qaAnswerFailed', error);
   String get consultEntry => _text('consultEntry');
   String get myConsultTitle => _text('myConsultTitle');
   String get consultSessionsEmpty => _text('consultSessionsEmpty');
