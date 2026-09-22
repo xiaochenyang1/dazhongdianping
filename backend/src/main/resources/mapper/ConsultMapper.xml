@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.consult.mapper.ConsultMapper">
+
+    <select id="selectShopMerchantId" resultType="java.lang.Long">
+        SELECT merchant_id FROM shop WHERE id=#{shopId} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <sql id="sessionCols">
+        c.id,c.region,c.user_id,c.shop_id,c.merchant_id,c.last_message,c.last_message_at,
+        c.user_unread,c.merchant_unread,c.created_at,c.updated_at,
+        s.name AS shop_name,u.nickname AS user_nickname
+    </sql>
+
+    <insert id="insertSession" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO consult_session(region,user_id,shop_id,merchant_id)
+        VALUES(#{region},#{userId},#{shopId},#{merchantId})
+    </insert>
+
+    <select id="selectSessionByUserShop" resultType="com.tuowei.dazhongdianping.module.consult.model.ConsultSessionRow">
+        SELECT <include refid="sessionCols"/>
+        FROM consult_session c
+        LEFT JOIN shop s ON s.id=c.shop_id
+        LEFT JOIN app_user u ON u.id=c.user_id
+        WHERE c.user_id=#{userId} AND c.shop_id=#{shopId} AND c.region=#{region}
+    </select>
+
+    <select id="selectUserSession" resultType="com.tuowei.dazhongdianping.module.consult.model.ConsultSessionRow">
+        SELECT <include refid="sessionCols"/>
+        FROM consult_session c
+        LEFT JOIN shop s ON s.id=c.shop_id
+        LEFT JOIN app_user u ON u.id=c.user_id
+        WHERE c.id=#{id} AND c.user_id=#{userId} AND c.region=#{region}
+    </select>
+
+    <select id="selectMerchantSession" resultType="com.tuowei.dazhongdianping.module.consult.model.ConsultSessionRow">
+        SELECT <include refid="sessionCols"/>
+        FROM consult_session c
+        LEFT JOIN shop s ON s.id=c.shop_id
+        LEFT JOIN app_user u ON u.id=c.user_id
+        WHERE c.id=#{id} AND c.merchant_id=#{merchantId} AND c.region=#{region}
+    </select>
+
+    <select id="selectUserSessions" resultType="com.tuowei.dazhongdianping.module.consult.model.ConsultSessionRow">
+        SELECT <include refid="sessionCols"/>
+        FROM consult_session c
+        LEFT JOIN shop s ON s.id=c.shop_id
+        LEFT JOIN app_user u ON u.id=c.user_id
+        WHERE c.user_id=#{userId} AND c.region=#{region}
+        ORDER BY c.updated_at DESC, c.id DESC
+    </select>
+
+    <select id="selectMerchantSessions" resultType="com.tuowei.dazhongdianping.module.consult.model.ConsultSessionRow">
+        SELECT <include refid="sessionCols"/>
+        FROM consult_session c
+        LEFT JOIN shop s ON s.id=c.shop_id
+        LEFT JOIN app_user u ON u.id=c.user_id
+        WHERE c.merchant_id=#{merchantId} AND c.region=#{region}
+        ORDER BY c.updated_at DESC, c.id DESC
+    </select>
+
+    <insert id="insertMessage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO consult_message(session_id,region,sender_type,sender_id,content)
+        VALUES(#{sessionId},#{region},#{senderType},#{senderId},#{content})
+    </insert>
+
+    <select id="selectMessages" resultType="com.tuowei.dazhongdianping.module.consult.model.ConsultMessageRow">
+        SELECT id,session_id,region,sender_type,sender_id,content,created_at
+        FROM consult_message WHERE session_id=#{sessionId} ORDER BY id
+    </select>
+
+    <update id="updateSessionOnMessage">
+        UPDATE consult_session
+        SET last_message=#{content},last_message_at=#{now},
+            user_unread=user_unread+#{userDelta},merchant_unread=merchant_unread+#{merchantDelta},
+            updated_at=#{now}
+        WHERE id=#{id}
+    </update>
+
+    <update id="markUserRead">
+        UPDATE consult_session SET user_unread=0 WHERE id=#{id}
+    </update>
+
+    <update id="markMerchantRead">
+        UPDATE consult_session SET merchant_unread=0 WHERE id=#{id}
+    </update>
+
+</mapper>

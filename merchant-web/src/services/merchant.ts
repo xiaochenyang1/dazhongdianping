@@ -403,6 +403,33 @@ export interface MerchantAdPayload {
   bidCpc: number
   dailyBudget: number
 }
+export interface ConsultSession {
+  id: number
+  shopId: number
+  shopName: string
+  userId: number
+  userNickname: string
+  lastMessage: string
+  lastMessageAt?: string
+  unread: number
+  updatedAt?: string
+}
+export interface ConsultMessage {
+  id: number
+  sessionId: number
+  senderType: number
+  senderId: number
+  content: string
+  createdAt?: string
+}
+export interface ConsultThread {
+  session: ConsultSession
+  messages: ConsultMessage[]
+}
+export function fetchConsultSessions() { return apiGet<ConsultSession[]>('/api/b/v1/consult/sessions') }
+export function fetchConsultMessages(id: number) { return apiGet<ConsultThread>(`/api/b/v1/consult/sessions/${id}/messages`) }
+export function sendConsultMessage(id: number, content: string) { return apiPost<ConsultMessage>(`/api/b/v1/consult/sessions/${id}/messages`, { content }) }
+
 export function fetchAds(params?: object) { return apiGet<PageResult<MerchantAdCampaign>>('/api/b/v1/ads', params) }
 export function createAd(payload: MerchantAdPayload) { return apiPost<MerchantAdCampaign>('/api/b/v1/ads', payload) }
 export function updateAd(id: number, payload: MerchantAdPayload) { return apiPut<MerchantAdCampaign>(`/api/b/v1/ads/${id}`, payload) }
