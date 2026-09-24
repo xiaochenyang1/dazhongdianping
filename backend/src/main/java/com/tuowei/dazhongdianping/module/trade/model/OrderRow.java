@@ -15,6 +15,9 @@ public class OrderRow {
     private String region;
     private Integer quantity;
     private BigDecimal unitPrice;
+    private BigDecimal originalAmount;
+    private BigDecimal discountAmount;
+    private Long userCouponId;
     private BigDecimal amount;
     private String currency;
     private String payMethod;

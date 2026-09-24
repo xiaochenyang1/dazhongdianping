@@ -877,7 +877,7 @@ CREATE TABLE IF NOT EXISTS level_config (
 
 CREATE TABLE IF NOT EXISTS deal (id BIGINT AUTO_INCREMENT PRIMARY KEY, shop_id BIGINT NOT NULL, merchant_id BIGINT NOT NULL, region VARCHAR(8) NOT NULL, type TINYINT NOT NULL DEFAULT 1, title VARCHAR(128) NOT NULL, cover_image VARCHAR(255) NOT NULL DEFAULT '', price DECIMAL(10,2) NOT NULL, original_price DECIMAL(10,2) NOT NULL, currency CHAR(3) NOT NULL, stock INT NOT NULL DEFAULT 0, sold_count INT NOT NULL DEFAULT 0, valid_start DATE, valid_end DATE, rules VARCHAR(2000) NOT NULL DEFAULT '', audit_status TINYINT NOT NULL DEFAULT 1, reject_reason VARCHAR(255) NOT NULL DEFAULT '', status TINYINT NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, is_deleted BOOLEAN NOT NULL DEFAULT FALSE);
 CREATE TABLE IF NOT EXISTS deal_item (id BIGINT AUTO_INCREMENT PRIMARY KEY, deal_id BIGINT NOT NULL, name VARCHAR(128) NOT NULL, quantity INT NOT NULL DEFAULT 1, price DECIMAL(10,2) NOT NULL DEFAULT 0, sort INT NOT NULL DEFAULT 0);
-CREATE TABLE IF NOT EXISTS `order` (id BIGINT AUTO_INCREMENT PRIMARY KEY, order_no VARCHAR(32) NOT NULL UNIQUE, user_id BIGINT NOT NULL, deal_id BIGINT NOT NULL, shop_id BIGINT NOT NULL, region VARCHAR(8) NOT NULL, quantity INT NOT NULL, unit_price DECIMAL(10,2) NOT NULL, amount DECIMAL(10,2) NOT NULL, currency CHAR(3) NOT NULL, pay_method VARCHAR(16) NOT NULL DEFAULT '', pay_status TINYINT NOT NULL DEFAULT 0, status TINYINT NOT NULL DEFAULT 1, paid_at TIMESTAMP NULL, expire_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS `order` (id BIGINT AUTO_INCREMENT PRIMARY KEY, order_no VARCHAR(32) NOT NULL UNIQUE, user_id BIGINT NOT NULL, deal_id BIGINT NOT NULL, shop_id BIGINT NOT NULL, region VARCHAR(8) NOT NULL, quantity INT NOT NULL, unit_price DECIMAL(10,2) NOT NULL, original_amount DECIMAL(10,2) NOT NULL DEFAULT 0, discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0, user_coupon_id BIGINT NULL, amount DECIMAL(10,2) NOT NULL, currency CHAR(3) NOT NULL, pay_method VARCHAR(16) NOT NULL DEFAULT '', pay_status TINYINT NOT NULL DEFAULT 0, status TINYINT NOT NULL DEFAULT 1, paid_at TIMESTAMP NULL, expire_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS payment (id BIGINT AUTO_INCREMENT PRIMARY KEY, order_id BIGINT NOT NULL, order_no VARCHAR(32) NOT NULL, channel VARCHAR(16) NOT NULL, channel_txn VARCHAR(64) NOT NULL DEFAULT '', client_secret VARCHAR(255) NOT NULL DEFAULT '', amount DECIMAL(10,2) NOT NULL, currency CHAR(3) NOT NULL, status TINYINT NOT NULL DEFAULT 0, raw_response VARCHAR(4000), created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT uk_payment_channel_txn UNIQUE(channel,channel_txn));
 CREATE TABLE IF NOT EXISTS coupon (id BIGINT AUTO_INCREMENT PRIMARY KEY, order_id BIGINT NOT NULL, user_id BIGINT NOT NULL, deal_id BIGINT NOT NULL, shop_id BIGINT NOT NULL, code VARCHAR(32) NOT NULL UNIQUE, status TINYINT NOT NULL DEFAULT 1, verify_at TIMESTAMP NULL, verify_by BIGINT NOT NULL DEFAULT 0, expire_at DATE, remind_status TINYINT NOT NULL DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE INDEX IF NOT EXISTS idx_coupon_expire_status ON coupon(status, expire_at, id);
@@ -1319,3 +1319,60 @@ CREATE TABLE IF NOT EXISTS device_fingerprint (
     CONSTRAINT uk_device_fingerprint UNIQUE(region, fingerprint)
 );
 CREATE INDEX IF NOT EXISTS idx_device_fingerprint_blocked ON device_fingerprint(region, blocked);
+
+-- ============================================================
+-- 商户营销工具（marketing）：优惠券模板 + 领券中心 + 用户券
+-- ============================================================
+-- 优惠券模板：平台/运营配置的可领取券（满减券、新客立减），按区域隔离
+CREATE TABLE IF NOT EXISTS marketing_coupon_template (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    name VARCHAR(128) NOT NULL,
+    -- 券类型：1=满减券（满 threshold 减 discount）2=新客立减（无门槛，限新用户首领）
+    type TINYINT NOT NULL DEFAULT 1,
+    -- 满减门槛（type=1 生效，最低消费金额）；type=2 忽略
+    threshold_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    -- 抵扣金额
+    discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    currency CHAR(3) NOT NULL DEFAULT 'CNY',
+    -- 限定商户（0 = 全平台通用）
+    shop_id BIGINT NOT NULL DEFAULT 0,
+    -- 发放总量与已领取量（total_quantity=0 表示不限量）
+    total_quantity INT NOT NULL DEFAULT 0,
+    claimed_quantity INT NOT NULL DEFAULT 0,
+    -- 每人限领张数
+    per_user_limit INT NOT NULL DEFAULT 1,
+    -- 领取后有效天数（领取时计算 user_coupon.expire_at）
+    valid_days INT NOT NULL DEFAULT 7,
+    -- 领券中心可见时间窗
+    claim_start TIMESTAMP NULL,
+    claim_end TIMESTAMP NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_coupon_template_region ON marketing_coupon_template(region, status, is_deleted);
+
+-- 用户已领取的营销券
+CREATE TABLE IF NOT EXISTS user_coupon (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    template_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    -- 冗余模板关键字段，避免核销时模板被改动影响历史券
+    type TINYINT NOT NULL DEFAULT 1,
+    threshold_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    currency CHAR(3) NOT NULL DEFAULT 'CNY',
+    shop_id BIGINT NOT NULL DEFAULT 0,
+    -- 状态：1=未使用 2=已使用 3=已过期
+    status TINYINT NOT NULL DEFAULT 1,
+    -- 使用后关联的订单
+    used_order_id BIGINT NULL,
+    used_at TIMESTAMP NULL,
+    expire_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_user_coupon_owner ON user_coupon(user_id, region, status, id);
+CREATE INDEX IF NOT EXISTS idx_user_coupon_template ON user_coupon(user_id, template_id);

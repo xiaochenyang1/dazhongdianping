@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.marketing.mapper.MarketingMapper">
+
+    <sql id="tplCols">id,region,name,type,threshold_amount,discount_amount,currency,shop_id,total_quantity,claimed_quantity,per_user_limit,valid_days,claim_start,claim_end,status,created_at,updated_at,is_deleted</sql>
+
+    <select id="selectTemplates" resultType="com.tuowei.dazhongdianping.module.marketing.model.CouponTemplateRow">
+        SELECT <include refid="tplCols"/> FROM marketing_coupon_template
+        WHERE region=#{region} AND is_deleted=FALSE
+        <if test="status != null"> AND status=#{status}</if>
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countTemplates" resultType="long">
+        SELECT COUNT(*) FROM marketing_coupon_template
+        WHERE region=#{region} AND is_deleted=FALSE
+        <if test="status != null"> AND status=#{status}</if>
+    </select>
+
+    <select id="selectClaimableTemplates" resultType="com.tuowei.dazhongdianping.module.marketing.model.CouponTemplateRow">
+        SELECT <include refid="tplCols"/> FROM marketing_coupon_template
+        WHERE region=#{region} AND is_deleted=FALSE AND status=1
+          AND (claim_start IS NULL OR claim_start &lt;= #{now})
+          AND (claim_end IS NULL OR claim_end &gt;= #{now})
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectTemplate" resultType="com.tuowei.dazhongdianping.module.marketing.model.CouponTemplateRow">
+        SELECT <include refid="tplCols"/> FROM marketing_coupon_template
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <insert id="insertTemplate" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO marketing_coupon_template
+        (region,name,type,threshold_amount,discount_amount,currency,shop_id,total_quantity,claimed_quantity,per_user_limit,valid_days,claim_start,claim_end,status)
+        VALUES
+        (#{region},#{name},#{type},#{thresholdAmount},#{discountAmount},#{currency},#{shopId},#{totalQuantity},0,#{perUserLimit},#{validDays},#{claimStart},#{claimEnd},#{status})
+    </insert>
+
+    <update id="updateTemplate">
+        UPDATE marketing_coupon_template SET
+          name=#{name},type=#{type},threshold_amount=#{thresholdAmount},discount_amount=#{discountAmount},
+          currency=#{currency},shop_id=#{shopId},total_quantity=#{totalQuantity},per_user_limit=#{perUserLimit},
+          valid_days=#{validDays},claim_start=#{claimStart},claim_end=#{claimEnd},status=#{status},
+          updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+    </update>
+
+    <update id="incrementClaimed">
+        UPDATE marketing_coupon_template SET claimed_quantity=claimed_quantity+1,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND is_deleted=FALSE AND status=1
+          AND (total_quantity=0 OR claimed_quantity &lt; total_quantity)
+    </update>
+
+    <select id="countUserCouponsOfTemplate" resultType="int">
+        SELECT COUNT(*) FROM user_coupon WHERE user_id=#{userId} AND template_id=#{templateId}
+    </select>
+
+    <insert id="insertUserCoupon" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_coupon
+        (template_id,user_id,region,type,threshold_amount,discount_amount,currency,shop_id,status,expire_at)
+        VALUES
+        (#{templateId},#{userId},#{region},#{type},#{thresholdAmount},#{discountAmount},#{currency},#{shopId},1,#{expireAt})
+    </insert>
+
+    <sql id="ucCols">uc.id,uc.template_id,uc.user_id,uc.region,uc.type,uc.threshold_amount,uc.discount_amount,uc.currency,uc.shop_id,uc.status,uc.used_order_id,uc.used_at,uc.expire_at,uc.created_at,t.name AS template_name</sql>
+
+    <select id="selectUserCoupons" resultType="com.tuowei.dazhongdianping.module.marketing.model.UserCouponRow">
+        SELECT <include refid="ucCols"/> FROM user_coupon uc
+        LEFT JOIN marketing_coupon_template t ON t.id=uc.template_id
+        WHERE uc.user_id=#{userId} AND uc.region=#{region}
+        <if test="status != null"> AND uc.status=#{status}</if>
+        ORDER BY uc.id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countUserCoupons" resultType="long">
+        SELECT COUNT(*) FROM user_coupon uc
+        WHERE uc.user_id=#{userId} AND uc.region=#{region}
+        <if test="status != null"> AND uc.status=#{status}</if>
+    </select>
+
+    <select id="selectUsableCoupons" resultType="com.tuowei.dazhongdianping.module.marketing.model.UserCouponRow">
+        SELECT <include refid="ucCols"/> FROM user_coupon uc
+        LEFT JOIN marketing_coupon_template t ON t.id=uc.template_id
+        WHERE uc.user_id=#{userId} AND uc.region=#{region} AND uc.status=1
+          AND (uc.expire_at IS NULL OR uc.expire_at &gt;= #{now})
+          AND uc.threshold_amount &lt;= #{amount}
+          AND (uc.shop_id=0 OR uc.shop_id=#{shopId})
+        ORDER BY uc.discount_amount DESC, uc.expire_at ASC
+    </select>
+
+    <select id="selectUserCoupon" resultType="com.tuowei.dazhongdianping.module.marketing.model.UserCouponRow">
+        SELECT <include refid="ucCols"/> FROM user_coupon uc
+        LEFT JOIN marketing_coupon_template t ON t.id=uc.template_id
+        WHERE uc.id=#{id} AND uc.user_id=#{userId} AND uc.region=#{region}
+    </select>
+
+    <update id="markCouponUsed">
+        UPDATE user_coupon SET status=2,used_at=#{usedAt}
+        WHERE id=#{id} AND user_id=#{userId} AND status=1
+    </update>
+
+    <update id="bindCouponOrderId">
+        UPDATE user_coupon SET used_order_id=#{orderId} WHERE id=#{id}
+    </update>
+
+    <update id="releaseCouponForOrder">
+        UPDATE user_coupon SET status=1,used_order_id=NULL,used_at=NULL
+        WHERE used_order_id=#{orderId} AND status=2
+    </update>
+
+    <update id="expireDueUserCoupons">
+        UPDATE user_coupon SET status=3
+        WHERE status=1 AND expire_at IS NOT NULL AND expire_at &lt; #{now}
+    </update>
+
+</mapper>

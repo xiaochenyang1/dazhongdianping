@@ -8,20 +8,41 @@ import {
   localizeWebTradeError,
   tradeStringsForRegion,
 } from '@/core/web_trade_localizations'
+import { marketingStringsForRegion } from '@/core/web_marketing_localizations'
 import { formatMoney } from '@/lib/currency'
 import { createOrder, fetchDeal } from '@/services/trade'
+import { fetchUsableCoupons } from '@/services/marketing'
 import type { DealDetail } from '@/types/trade'
+import type { UserCoupon } from '@/types/marketing'
 
 const props = defineProps<{ dealId: number }>()
 const router = useRouter()
 const { state: appState } = useAppContext()
 const { state: sessionState, openAuthDialog } = useUserSession()
 const copy = computed(() => tradeStringsForRegion(appState.region))
+const marketingCopy = computed(() => marketingStringsForRegion(appState.region))
 const deal = ref<DealDetail | null>(null)
 const quantity = ref(1)
 const loading = ref(true)
 const errorMessage = ref('')
+const usableCoupons = ref<UserCoupon[]>([])
+const selectedCouponId = ref<number | null>(null)
 let requestSequence = 0
+
+async function loadUsableCoupons() {
+  if (!sessionState.accessToken) {
+    usableCoupons.value = []
+    return
+  }
+  try {
+    usableCoupons.value = await fetchUsableCoupons(props.dealId, quantity.value)
+  } catch {
+    usableCoupons.value = []
+  }
+  if (selectedCouponId.value && !usableCoupons.value.some((c) => c.id === selectedCouponId.value)) {
+    selectedCouponId.value = null
+  }
+}
 
 async function load() {
   const request = ++requestSequence
@@ -46,7 +67,7 @@ async function buy() {
     return
   }
   try {
-    const order = await createOrder(props.dealId, quantity.value)
+    const order = await createOrder(props.dealId, quantity.value, selectedCouponId.value ?? undefined)
     await router.push(`/user/orders/${order.id}`)
   } catch (error) {
     errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.deal.createOrderFailed)
@@ -54,6 +75,11 @@ async function buy() {
 }
 
 watch([() => props.dealId, () => appState.region], () => void load(), { immediate: true })
+watch(
+  [() => props.dealId, () => quantity.value, () => appState.region, () => sessionState.accessToken],
+  () => void loadUsableCoupons(),
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -80,6 +106,17 @@ watch([() => props.dealId, () => appState.region], () => void load(), { immediat
         <label class="field">
           <span>{{ copy.deal.quantity }}</span>
           <input v-model.number="quantity" type="number" min="1" max="20" />
+        </label>
+        <label v-if="sessionState.accessToken" class="field" data-testid="deal-coupon-field">
+          <span>{{ marketingCopy.checkout.couponLabel }}</span>
+          <select v-model="selectedCouponId" data-testid="deal-coupon-select">
+            <option :value="null">
+              {{ usableCoupons.length ? marketingCopy.checkout.noCoupon : marketingCopy.checkout.noneUsable }}
+            </option>
+            <option v-for="coupon in usableCoupons" :key="coupon.id" :value="coupon.id">
+              {{ marketingCopy.checkout.optionLabel(coupon.name, coupon.discountAmount, coupon.currency) }}
+            </option>
+          </select>
         </label>
         <button class="primary-button" @click="buy">{{ copy.deal.buyNow }}</button>
       </div>

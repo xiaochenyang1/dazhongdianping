@@ -25,7 +25,9 @@ class TradeCompensationServiceTest {
         PaymentChannelResolver resolver = mock(PaymentChannelResolver.class);
         TradeService tradeService = mock(TradeService.class);
         PaymentChannel channel = mock(PaymentChannel.class);
-        TradeCompensationService service = new TradeCompensationService(mapper, resolver, tradeService);
+        com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService =
+                mock(com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService.class);
+        TradeCompensationService service = new TradeCompensationService(mapper, resolver, tradeService, marketingCouponService);
 
         RefundRow refund = new RefundRow();
         refund.setId(91L);
