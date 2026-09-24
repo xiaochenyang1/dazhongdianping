@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.tuowei.dazhongdianping.module.marketing.mapper.MarketingMapper">
 
-    <sql id="tplCols">id,region,name,type,threshold_amount,discount_amount,currency,shop_id,total_quantity,claimed_quantity,per_user_limit,valid_days,claim_start,claim_end,status,created_at,updated_at,is_deleted</sql>
+    <sql id="tplCols">id,region,name,type,threshold_amount,discount_amount,currency,shop_id,merchant_id,audit_status,reject_reason,total_quantity,claimed_quantity,per_user_limit,valid_days,claim_start,claim_end,status,created_at,updated_at,is_deleted</sql>
 
     <select id="selectTemplates" resultType="com.tuowei.dazhongdianping.module.marketing.model.CouponTemplateRow">
         SELECT <include refid="tplCols"/> FROM marketing_coupon_template
@@ -19,7 +19,7 @@
 
     <select id="selectClaimableTemplates" resultType="com.tuowei.dazhongdianping.module.marketing.model.CouponTemplateRow">
         SELECT <include refid="tplCols"/> FROM marketing_coupon_template
-        WHERE region=#{region} AND is_deleted=FALSE AND status=1
+        WHERE region=#{region} AND is_deleted=FALSE AND status=1 AND audit_status=2
           AND (claim_start IS NULL OR claim_start &lt;= #{now})
           AND (claim_end IS NULL OR claim_end &gt;= #{now})
         ORDER BY id DESC
@@ -48,7 +48,7 @@
 
     <update id="incrementClaimed">
         UPDATE marketing_coupon_template SET claimed_quantity=claimed_quantity+1,updated_at=CURRENT_TIMESTAMP
-        WHERE id=#{id} AND is_deleted=FALSE AND status=1
+        WHERE id=#{id} AND is_deleted=FALSE AND status=1 AND audit_status=2
           AND (total_quantity=0 OR claimed_quantity &lt; total_quantity)
     </update>
 
@@ -112,6 +112,25 @@
     <update id="expireDueUserCoupons">
         UPDATE user_coupon SET status=3
         WHERE status=1 AND expire_at IS NOT NULL AND expire_at &lt; #{now}
+    </update>
+
+    <insert id="insertMerchantTemplate" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO marketing_coupon_template
+        (region,name,type,threshold_amount,discount_amount,currency,shop_id,merchant_id,audit_status,reject_reason,total_quantity,claimed_quantity,per_user_limit,valid_days,status)
+        VALUES
+        (#{region},#{name},#{type},#{thresholdAmount},#{discountAmount},#{currency},#{shopId},#{merchantId},1,'',#{totalQuantity},0,#{perUserLimit},#{validDays},1)
+    </insert>
+
+    <select id="selectMerchantTemplates" resultType="com.tuowei.dazhongdianping.module.marketing.model.CouponTemplateRow">
+        SELECT <include refid="tplCols"/> FROM marketing_coupon_template
+        WHERE merchant_id=#{merchantId} AND region=#{region} AND is_deleted=FALSE
+        ORDER BY id DESC
+    </select>
+
+    <update id="updateTemplateAudit">
+        UPDATE marketing_coupon_template
+        SET audit_status=#{auditStatus},reject_reason=#{rejectReason},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE AND audit_status=1
     </update>
 
 </mapper>

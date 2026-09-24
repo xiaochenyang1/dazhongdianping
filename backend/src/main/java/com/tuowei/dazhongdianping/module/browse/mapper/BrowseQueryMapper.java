@@ -12,6 +12,7 @@ import com.tuowei.dazhongdianping.module.browse.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchSuggestionRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow;
+import com.tuowei.dazhongdianping.module.browse.model.ShopAmenityRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopDetailRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListQuery;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListRow;
@@ -38,6 +39,8 @@ public interface BrowseQueryMapper {
     List<ShopListRow> selectShops(ShopListQuery query);
 
     ShopDetailRow selectShopDetail(@Param("region") String region, @Param("shopId") Long shopId);
+
+    ShopAmenityRow selectShopAmenities(@Param("region") String region, @Param("shopId") Long shopId);
 
     List<ShopListRow> selectShopMerchantIds(@Param("region") String region,
                                            @Param("shopIds") List<Long> shopIds);

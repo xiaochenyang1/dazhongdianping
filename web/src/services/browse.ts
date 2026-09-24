@@ -27,6 +27,10 @@ export interface ShopQueryParams {
   minScore?: number
   hasDeal?: boolean
   openNow?: boolean
+  chineseService?: boolean
+  chineseMenu?: boolean
+  acceptAlipay?: boolean
+  acceptWechat?: boolean
   page?: number
   pageSize?: number
 }
@@ -55,6 +59,11 @@ export function fetchShops(params: ShopQueryParams) {
   return apiGet<PageResult<ShopListItem>>('/api/c/v1/search/shops', params)
 }
 
+/** 带侨服务筛选时走门店列表，搜索索引不含这些字段。 */
+export function fetchBrowseShops(params: ShopQueryParams) {
+  return apiGet<PageResult<ShopListItem>>('/api/c/v1/shops', params)
+}
+
 export function fetchShopDetail(shopId: number) {
   return apiGet<ShopDetail>(`/api/c/v1/shops/${shopId}`)
 }
@@ -64,7 +73,7 @@ export function fetchSimilarShops(shopId: number, limit = 6) {
 }
 
 export interface ShopReviewQuery {
-  sort?: 'latest' | 'popular' | 'score'
+  sort?: 'latest' | 'popular' | 'score' | 'helpful'
   minScore?: number
   hasImages?: boolean
 }

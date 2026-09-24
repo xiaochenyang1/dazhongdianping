@@ -45,6 +45,14 @@ export interface AdminStrings {
     marketingCoupons: string
     riskControl: string
     complaints: string
+    automod: string
+    supportTickets: string
+    invoices: string
+    guides: string
+    creatorTasks: string
+    experiments: string
+    campaignAudit: string
+    openapi: string
     adReview: string
     systemAdmins: string
     systemRoles: string
@@ -2811,6 +2819,14 @@ const zhCnStrings: AdminStrings = {
     marketingCoupons: '营销券',
     riskControl: '风控中心',
     complaints: '投诉纠纷',
+    automod: '机审命中',
+    supportTickets: '客服工单',
+    invoices: '发票税率',
+    guides: '攻略专题',
+    creatorTasks: '创作者任务',
+    experiments: '实验开关',
+    campaignAudit: '活动审核',
+    openapi: '开放平台',
     adReview: '广告投放',
     systemAdmins: '管理员账号',
     systemRoles: '角色与权限',
@@ -5475,6 +5491,14 @@ const enStrings: AdminStrings = {
     marketingCoupons: 'Marketing Coupons',
     riskControl: 'Risk Control',
     complaints: 'Complaints',
+    automod: 'Automod hits',
+    supportTickets: 'Support tickets',
+    invoices: 'Invoices',
+    guides: 'Guides',
+    creatorTasks: 'Creator tasks',
+    experiments: 'Experiments',
+    campaignAudit: 'Campaign review',
+    openapi: 'Open API',
     adReview: 'Ad Campaigns',
     systemAdmins: 'Admin Accounts',
     systemRoles: 'Roles & Permissions',

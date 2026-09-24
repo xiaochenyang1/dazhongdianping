@@ -79,6 +79,7 @@ export interface WebShopStrings {
     latest: string
     popular: string
     scoreSort: string
+    helpful: string
     minScore: string
     any: string
     points: (score: string) => string
@@ -175,6 +176,7 @@ const zhCnStrings: WebShopStrings = {
     latest: '最新',
     popular: '最热',
     scoreSort: '评分',
+    helpful: '有用',
     minScore: '最低评分',
     any: '不限',
     points: (score) => `${score} 分`,
@@ -271,6 +273,7 @@ const enStrings: WebShopStrings = {
     latest: 'Latest',
     popular: 'Most liked',
     scoreSort: 'Rating',
+    helpful: 'Helpful',
     minScore: 'Minimum rating',
     any: 'Any',
     points: (score) => formatEnglishCount(score, 'point'),

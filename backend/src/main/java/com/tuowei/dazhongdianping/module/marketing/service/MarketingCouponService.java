@@ -55,7 +55,8 @@ public class MarketingCouponService {
         UserSession u = requireUser();
         String region = region();
         CouponTemplateRow t = mapper.selectTemplate(templateId, region);
-        if (t == null || t.getStatus() == null || t.getStatus() != 1) {
+        if (t == null || t.getStatus() == null || t.getStatus() != 1
+                || t.getAuditStatus() == null || t.getAuditStatus() != 2) {
             throw new NotFoundException("优惠券不存在或已下架");
         }
         LocalDateTime now = LocalDateTime.now();

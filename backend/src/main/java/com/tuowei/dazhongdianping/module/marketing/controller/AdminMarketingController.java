@@ -3,10 +3,12 @@ package com.tuowei.dazhongdianping.module.marketing.controller;
 import com.tuowei.dazhongdianping.common.api.ApiResponse;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.module.admin.auth.AdminPermission;
+import com.tuowei.dazhongdianping.module.marketing.model.request.CampaignAuditRequest;
 import com.tuowei.dazhongdianping.module.marketing.model.request.CouponTemplateSaveRequest;
 import com.tuowei.dazhongdianping.module.marketing.model.response.CouponTemplateResponse;
 import com.tuowei.dazhongdianping.module.marketing.service.AdminMarketingService;
 import jakarta.validation.Valid;
+import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,5 +49,12 @@ public class AdminMarketingController {
             @PathVariable Long id,
             @Valid @RequestBody CouponTemplateSaveRequest request) {
         return ApiResponse.success("保存成功", "admin.marketing_coupon_saved", service.update(id, request));
+    }
+
+    @PostMapping("/{id}/audit")
+    @AdminPermission("operations:marketing:write")
+    public ApiResponse<Map<String, Object>> audit(
+            @PathVariable Long id, @Valid @RequestBody CampaignAuditRequest request) {
+        return ApiResponse.success("审核完成", "admin.marketing_coupon_audited", service.audit(id, request));
     }
 }

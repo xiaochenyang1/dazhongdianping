@@ -14,6 +14,8 @@ String localizeBrowseError(
       '门店不存在': strings.browseErrorShopNotFound,
       'sort 仅支持 latest、popular 或 score':
           strings.browseErrorUnsupportedReviewSort,
+      'sort 仅支持 latest、popular、score 或 helpful':
+          strings.browseErrorUnsupportedReviewSort,
       '搜索历史不存在': strings.browseErrorSearchHistoryNotFound,
       'shopId 无效': strings.browseErrorInvalidShopId,
       'targetType 只支持 1店铺 2帖子': strings.browseErrorUnsupportedFavoriteTarget,

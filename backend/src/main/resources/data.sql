@@ -106,7 +106,21 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (68, 'audit:complaint:read', '查看投诉纠纷工单', 'audit', 1, 1),
     (69, 'audit:complaint:write', '仲裁处置投诉纠纷', 'audit', 2, 1),
     (70, 'operations:ad:read', '查看广告投放', 'operations', 1, 1),
-    (71, 'operations:ad:write', '审核处置广告投放', 'operations', 2, 1);
+    (71, 'operations:ad:write', '审核处置广告投放', 'operations', 2, 1),
+    (72, 'finance:invoice:read', '查看发票与税率', 'finance', 1, 1),
+    (73, 'finance:invoice:write', '审核发票与税率', 'finance', 2, 1),
+    (74, 'audit:automod:read', '查看机审命中', 'audit', 1, 1),
+    (75, 'audit:automod:write', '处置机审命中', 'audit', 2, 1),
+    (76, 'operations:guide:read', '查看攻略', 'operations', 1, 1),
+    (77, 'operations:guide:write', '维护攻略', 'operations', 2, 1),
+    (78, 'operations:creator:read', '查看创作者任务', 'operations', 1, 1),
+    (79, 'operations:creator:write', '维护创作者任务', 'operations', 2, 1),
+    (80, 'operations:experiment:read', '查看实验与开关', 'operations', 1, 1),
+    (81, 'operations:experiment:write', '维护实验与开关', 'operations', 2, 1),
+    (82, 'support:ticket:read', '查看客服工单', 'support', 1, 1),
+    (83, 'support:ticket:write', '处理客服工单', 'support', 2, 1),
+    (84, 'openapi:read', '查看开放平台应用', 'system', 1, 1),
+    (85, 'openapi:write', '维护开放平台应用', 'system', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
@@ -114,10 +128,10 @@ INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
     (1, 'EU', TRUE);
 INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM admin_permission;
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
-    (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
-    (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59), (3, 64), (3, 65), (3, 68), (3, 69),
-    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57), (4, 62), (4, 63), (4, 66), (4, 67), (4, 70), (4, 71),
-    (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49), (5, 60);
+    (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53), (2, 74), (2, 75), (2, 82), (2, 83),
+    (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59), (3, 64), (3, 65), (3, 68), (3, 69), (3, 72), (3, 73),
+    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57), (4, 62), (4, 63), (4, 66), (4, 67), (4, 70), (4, 71), (4, 76), (4, 77), (4, 78), (4, 79), (4, 80), (4, 81),
+    (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49), (5, 60), (5, 84), (5, 85);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
     (1001, 'merchant_cn_hotpot@example.com', '沪上渝里餐饮', '王磊', '13800000001', 'CN', 1, 1, FALSE),
@@ -135,10 +149,10 @@ INSERT INTO merchant_application (
     (20002, 2002, 'https://cdn.example.com/licenses/merchant-2002.png', 'Noah', '["https://cdn.example.com/shops/2002/front.jpg"]', 1, '', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO merchant_role (id, code, name, permissions, status) VALUES
-    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,merchant:verify,complaint:view,complaint:reply,ad:view,ad:manage,consult:view,consult:reply,waitlist:view,waitlist:manage', 1),
-    (11, 'store_manager', '店长', 'shop:view,shop:edit,deal:edit,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,complaint:view,complaint:reply,ad:view,ad:manage,consult:view,consult:reply,waitlist:view,waitlist:manage', 1),
+    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,merchant:verify,complaint:view,complaint:reply,ad:view,ad:manage,consult:view,consult:reply,waitlist:view,waitlist:manage,marketing:view,marketing:manage,analytics:view,ticket:view,ticket:reply', 1),
+    (11, 'store_manager', '店长', 'shop:view,shop:edit,deal:edit,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,complaint:view,complaint:reply,ad:view,ad:manage,consult:view,consult:reply,waitlist:view,waitlist:manage,marketing:view,marketing:manage,analytics:view,ticket:view,ticket:reply', 1),
     (12, 'coupon_operator', '核销员', 'coupon:verify,shop:view,reservation:view,reservation:arrive,waitlist:view,waitlist:manage', 1),
-    (13, 'service_operator', '客服运营', 'shop:view,order:view,review:reply,review:appeal,reservation:view,reservation:confirm,complaint:view,complaint:reply,consult:view,consult:reply,waitlist:view,waitlist:manage', 1);
+    (13, 'service_operator', '客服运营', 'shop:view,order:view,review:reply,review:appeal,reservation:view,reservation:confirm,complaint:view,complaint:reply,consult:view,consult:reply,waitlist:view,waitlist:manage,ticket:view,ticket:reply', 1);
 
 INSERT INTO merchant_operator (id, merchant_id, account, password_hash, name, phone, email, operator_type, shop_scope_type, status, is_deleted) VALUES
     (11001, 1001, 'merchant_cn_hotpot@example.com', '$2a$10$7fHXsIct1JQL5H/MOEC.Z.G8N2zSOYBStbTgbSQI0D6tzes3SP6X6', '王磊', '13800000001', 'merchant_cn_hotpot@example.com', 1, 1, 1, FALSE),
@@ -363,10 +377,14 @@ INSERT INTO growth_rule (id, action, action_name, growth_value, points, daily_li
     (5, 'check_in', '每日签到', 2, 1, 1, TRUE);
 
 INSERT INTO level_config (level, min_growth, level_name, icon, privilege_json, enabled) VALUES
-    (1, 0, '新手', '', '{}', TRUE), (2, 20, '探索者', '', '{}', TRUE),
-    (3, 50, '分享家', '', '{}', TRUE), (4, 100, '资深食客', '', '{}', TRUE),
-    (5, 200, '城市达人', '', '{}', TRUE), (6, 500, '生活专家', '', '{}', TRUE),
-    (7, 1000, '首席体验官', '', '{}', TRUE), (8, 2000, '城市传奇', '', '{}', TRUE);
+    (1, 0, '新手', '', '{"badge":"新手","reviewWeight":1}', TRUE),
+    (2, 20, '探索者', '', '{"badge":"探索者","reviewWeight":1}', TRUE),
+    (3, 50, '分享家', '', '{"badge":"分享家","reviewWeight":2,"couponBoost":true}', TRUE),
+    (4, 100, '资深食客', '', '{"badge":"资深食客","reviewWeight":2,"couponBoost":true}', TRUE),
+    (5, 200, '城市达人', '', '{"badge":"城市达人","reviewWeight":3,"couponBoost":true,"prioritySupport":true}', TRUE),
+    (6, 500, '生活专家', '', '{"badge":"生活专家","reviewWeight":3,"couponBoost":true,"prioritySupport":true}', TRUE),
+    (7, 1000, '首席体验官', '', '{"badge":"首席体验官","reviewWeight":4,"couponBoost":true,"prioritySupport":true}', TRUE),
+    (8, 2000, '城市传奇', '', '{"badge":"城市传奇","reviewWeight":5,"couponBoost":true,"prioritySupport":true}', TRUE);
 
 INSERT INTO deal (id,shop_id,merchant_id,region,type,title,cover_image,price,original_price,currency,stock,sold_count,valid_start,valid_end,rules,audit_status,status,is_deleted) VALUES
  (40001,10001,1001,'CN',1,'双人川渝火锅套餐','https://placehold.co/1200x720/f97316/ffffff?text=Hotpot+Deal',88.00,156.00,'CNY',20,12,DATE '2026-07-01',DATE '2026-12-31','周末通用；需提前预约；不可与其他优惠同享。',1,1,FALSE),
@@ -431,3 +449,25 @@ INSERT INTO complaint_log (ticket_id, actor_type, actor_id, action, remark) VALU
 INSERT INTO ad_campaign (id, region, merchant_id, shop_id, name, slot_type, keyword, bid_cpc, daily_budget, spent_today, spend_date, total_spent, status, audit_status) VALUES
   (8001, 'CN', 1001, 10001, '火锅搜索推广', 1, '火锅', 2.50, 100.00, 0, NULL, 0, 1, 2),
   (8002, 'EU', 2001, 20001, 'Sichuan search promo', 1, 'sichuan', 3.00, 100.00, 0, NULL, 0, 1, 2);
+
+UPDATE shop SET chinese_service=TRUE, chinese_menu=TRUE, accept_alipay=TRUE, accept_wechat=TRUE
+WHERE id IN (10001, 20001);
+
+INSERT INTO tax_rate (id, region, name, rate_bp, status) VALUES
+    (1, 'CN', '餐饮服务增值税', 600, 1),
+    (2, 'EU', 'Standard VAT', 2000, 1);
+
+INSERT INTO guide_article (id, region, city_id, title, summary, cover_url, status, is_deleted) VALUES
+    (9001, 'CN', 1, '徐汇周末火锅怎么选', '两条本地人常去的锅底路线。', '', 2, FALSE),
+    (9002, 'EU', 101, 'Paris Chinese dining weekend', 'A short route for overseas Chinese in Paris.', '', 2, FALSE);
+INSERT INTO guide_section (id, article_id, sort_no, heading, body, shop_id) VALUES
+    (90011, 9001, 1, '聚餐首选', '渝里火锅适合多人，记得看排队。', 10001),
+    (90021, 9002, 1, 'Start here', 'Sichuan dinner for two is the easy first stop.', 20001);
+
+INSERT INTO creator_task (id, region, title, description, reward_points, status, is_deleted) VALUES
+    (9101, 'CN', '写下第一篇带图点评', '完成一篇带图点评后可领取积分。', 20, 1, FALSE),
+    (9102, 'EU', 'Write your first photo review', 'Claim points after publishing a photo review.', 20, 1, FALSE);
+
+INSERT INTO feature_flag (id, region, flag_key, description, enabled, rollout_percent) VALUES
+    (9201, 'CN', 'guide_home', '首页展示攻略入口', TRUE, 100),
+    (9202, 'EU', 'guide_home', 'Show guides on home', TRUE, 100);

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.dishreview.mapper.DishReviewMapper">
+
+    <select id="existsDish" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM dish d
+        JOIN shop s ON s.id = d.shop_id
+        WHERE d.id = #{dishId}
+          AND d.shop_id = #{shopId}
+          AND s.region = #{region}
+          AND s.status = 1
+          AND s.is_deleted = FALSE
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO dish_review(region, shop_id, dish_id, user_id, score, content)
+        VALUES(#{region}, #{shopId}, #{dishId}, #{userId}, #{score}, #{content})
+    </insert>
+
+    <select id="selectByDish" resultType="com.tuowei.dazhongdianping.module.dishreview.model.DishReviewRow">
+        SELECT id, region, shop_id, dish_id, user_id, score, content, created_at
+        FROM dish_review
+        WHERE shop_id = #{shopId}
+          AND dish_id = #{dishId}
+          AND region = #{region}
+          AND is_deleted = FALSE
+        ORDER BY id DESC
+    </select>
+</mapper>

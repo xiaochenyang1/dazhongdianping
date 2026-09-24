@@ -188,6 +188,16 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                         _reload();
                       },
                     ),
+                    ChoiceChip(
+                      key: const Key('shop-reviews-sort-helpful'),
+                      label: Text(strings.sortHelpful),
+                      selected: _sort == 'helpful',
+                      onSelected: (_) {
+                        if (_sort == 'helpful') return;
+                        setState(() => _sort = 'helpful');
+                        _reload();
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -311,6 +321,7 @@ class _ShopReviewsScreenState extends State<ShopReviewsScreen> {
                             const SizedBox(height: 8),
                             Text(
                               '${strings.likeCommentStats(likes: item.likedCount, comments: item.commentCount)}'
+                              ' · ${strings.reviewHelpful} ${item.helpfulCount}'
                               '${item.createdAt.isEmpty ? '' : ' · ${formatDisplayDateTime(item.createdAt, locale: strings.tag)}'}',
                               style: const TextStyle(fontSize: 12),
                             ),

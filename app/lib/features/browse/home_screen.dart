@@ -92,11 +92,16 @@ class _HomeScreenState extends State<HomeScreen> {
   int _notificationUnreadCount = 0;
   int _unreadRequestGeneration = 0;
   bool _openingNotifications = false;
+  bool _chineseService = false;
+  bool _chineseMenu = false;
+  bool _acceptAlipay = false;
+  bool _acceptWechat = false;
+  List<ShopSummary> _keptShops = const [];
 
   @override
   void initState() {
     super.initState();
-    _shops = widget.repository.loadFeaturedShops();
+    _shops = _trackShops(_loadShops());
     _recommendations = widget.recommendationRepository?.loadFeed();
     _refreshUnreadCount();
   }
@@ -117,8 +122,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<List<ShopSummary>> _loadShops() {
+    return widget.repository.loadShopsWithAmenities(
+      chineseService: _chineseService,
+      chineseMenu: _chineseMenu,
+      acceptAlipay: _acceptAlipay,
+      acceptWechat: _acceptWechat,
+    );
+  }
+
+  Future<List<ShopSummary>> _trackShops(Future<List<ShopSummary>> future) {
+    future
+        .then((shops) {
+          if (!mounted) return;
+          setState(() => _keptShops = shops);
+        })
+        .ignore();
+    return future;
+  }
+
   Future<void> _reloadShops() async {
-    final future = widget.repository.loadFeaturedShops();
+    final future = _trackShops(_loadShops());
     setState(() {
       _shops = future;
     });
@@ -127,6 +151,21 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       // FutureBuilder renders the request error.
     }
+  }
+
+  void _setAmenity({
+    bool? chineseService,
+    bool? chineseMenu,
+    bool? acceptAlipay,
+    bool? acceptWechat,
+  }) {
+    setState(() {
+      if (chineseService != null) _chineseService = chineseService;
+      if (chineseMenu != null) _chineseMenu = chineseMenu;
+      if (acceptAlipay != null) _acceptAlipay = acceptAlipay;
+      if (acceptWechat != null) _acceptWechat = acceptWechat;
+    });
+    _reloadShops();
   }
 
   Future<void> _reloadRecommendations() async {
@@ -446,17 +485,49 @@ class _HomeScreenState extends State<HomeScreen> {
               strings.featured,
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                FilterChip(
+                  key: const Key('home-amenity-chinese-service'),
+                  label: Text(strings.amenityChineseService),
+                  selected: _chineseService,
+                  onSelected: (selected) => _setAmenity(chineseService: selected),
+                ),
+                FilterChip(
+                  key: const Key('home-amenity-chinese-menu'),
+                  label: Text(strings.amenityChineseMenu),
+                  selected: _chineseMenu,
+                  onSelected: (selected) => _setAmenity(chineseMenu: selected),
+                ),
+                FilterChip(
+                  key: const Key('home-amenity-alipay'),
+                  label: Text(strings.amenityAlipay),
+                  selected: _acceptAlipay,
+                  onSelected: (selected) => _setAmenity(acceptAlipay: selected),
+                ),
+                FilterChip(
+                  key: const Key('home-amenity-wechat'),
+                  label: Text(strings.amenityWechat),
+                  selected: _acceptWechat,
+                  onSelected: (selected) => _setAmenity(acceptWechat: selected),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             FutureBuilder<List<ShopSummary>>(
               future: _shops,
               builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
+                final loading =
+                    snapshot.connectionState != ConnectionState.done;
+                if (loading && _keptShops.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.all(32),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                if (snapshot.hasError) {
+                if (!loading && snapshot.hasError && _keptShops.isEmpty) {
                   return Center(
                     child: Column(
                       children: [
@@ -469,7 +540,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 }
-                final shops = snapshot.data ?? const [];
+                final shops = !loading && snapshot.hasData
+                    ? snapshot.data!
+                    : _keptShops;
                 if (shops.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.all(32),

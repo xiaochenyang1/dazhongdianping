@@ -1,6 +1,6 @@
 # 当前已完成功能与 SQL 导入说明
 
-> 最后更新:2026-08-14
+> 最后更新:2026-09-23
 > M7 补充：已完成帖子与转发、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、关注流、私信、官方圈子、区域化话题广场、7 天热榜、三端页面、管理端治理和话题隐私治理。
 > 适用范围:当前仓库真实已落地的 `M1` 至 `M7` 本地闭环；FCM/APNs 服务端适配器已落地，但真实凭证、真机 smoke、真实欧洲支付、Google Maps 和目标环境凭证联调仍未完成
 
@@ -196,6 +196,20 @@
 - 真实 `MySQL` 导库 + 默认配置启动冒烟已补 `scripts/ci/mysql-smoke.ps1` 和 GitHub Actions 入口,并已于 `2026-07-12` 用临时 `MySQL 8` 实例 (`127.0.0.1:13306`) 在当前机器实跑通过；宿主机 `MySQL80` 的现成 root 凭证仍不可用，但这已经不是仓库侧阻塞。
 - `Redis` 状态存储和 `S3` 兼容对象存储代码入口已接入:验证码限流、`Idempotency-Key` 幂等缓存可通过 `APP_STATE_STORE_PROVIDER=redis` 切 Redis,文件上传可通过 `APP_FILE_STORAGE_PROVIDER=s3` 切 S3。仓库内 Playwright 浏览器冒烟已补,`scripts/ci/browser-smoke.ps1` 会直接托管 `web` / `admin-web` 的 Vite 进程并运行 `web/e2e/browser-smoke.spec.ts`,GitHub Actions 已纳入 `-IncludeBrowserSmoke`;真实后端关键链路 E2E 已补 `scripts/ci/browser-e2e.ps1`,并已覆盖真实图片上传、成长值流水页、手机号绑定、改密码后重新登录、后台成功导入以及游客点赞 / 评论 / 举报登录后自动续执行;`scripts/ci/storage-smoke.ps1` 已补 S3 兼容对象存储真上传冒烟并纳入 `-IncludeStorageSmoke`;`.github/workflows/release.yml` / `rollback.yml` 和 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已补最小发布 / 回滚自动化。还没完成的是带真实 MySQL / Redis / S3 / SSH 凭证的环境联调与发布回滚演练。
 
+### 1.9 经营、信任与内容运营补齐（2026-09-23）
+
+本地口径已补齐、且明确不做外卖、电影票、酒店全日房、KTV、会员黑卡、直播和多门店连锁：
+
+- 商户自助优惠券、秒杀、拼团：商户创建后待审，管理端审核；C 端公开列表，领取/开团/参团需登录。优惠券中心只展示 `audit_status=2`。
+- 发票：抬头、已支付订单申请、税率（CN 6% / EU 20%）、管理端开具或驳回。同一订单重复申请返回 409。
+- 点评信任：有用投票与按有用排序、菜品点评、社区译文、关键词自动拦截命中记录。
+- 客服工单：用户创建/回复，商户按门店回复，管理端回复并把待处理改为处理中，状态只允许 2/3/4。
+- 结构化探店攻略、创作者任务（完成后写积分流水 `action=creator_task`）、等级权益 `GET /api/c/v1/user/level-privileges`。
+- 商户经营趋势与 CSV 导出、广告投放报表。
+- 进程内消息 outbox（`message_outbox`，不是外部消息队列）、实验/功能开关、开放接口 HMAC（密钥只在创建时返回；签名原文为 `keyId\n时间戳\n方法\n路径`）。
+- 海外华人门店筛选：中文服务、中文菜单、支付宝、微信。筛选走 `GET /api/c/v1/shops`，详情展示走 `GET /api/c/v1/shops/{id}/amenities`。搜索接口不带这些字段。
+- 三端页面：`web`、`admin-web`、`merchant-web` 与 Flutter 用户中心入口均已接通。表结构写在测试用 `backend/src/main/resources/schema.sql` 与 `data.sql`，没有回写 `sql/mysql/01_schema.sql`。既有 MySQL 库先执行一次 `sql/mysql/15_local_life_ops_migration.sql`，再执行一次 `sql/mysql/16_marketing_coupon_migration.sql`（优惠券模板、用户券、订单抵扣字段）。
+
 ## 2. 这些状态已经标在哪些文档里
 
 | 文档 | 你该看什么 |
@@ -240,6 +254,7 @@
 | M7 APP 私信 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `conversation/message/user_block/message_report` | 1v1 文本（发送中显示进度，失败保留草稿并可直接重试）、会话列表分页（首次失败可重试、刷新失败保留列表）、消息历史向前分页（首次加载失败可重试且不误确认已读；已读同步失败仍保留已加载历史并明确提示），以及 Flutter 分页黑名单管理与解除拉黑（首次失败可重试、刷新失败保留名单；会话举报/拉黑进行中禁止重复提交）；列表保留分页元数据并按 ID 去重，另含举报、WebSocket、`messages` 导出与注销治理；PC Web 无入口 |
 | M7 官方圈子 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md` | `circle/circle_member`，`post.circle_id` | 区域官方圈子、加入退出、成员发帖、管理端维护、Flutter 完整互动、PC 只读、`circles` 隐私治理 |
 | M7 话题广场与热榜 | 已完成 | `README.md`、`docs/需求文档.md`、`docs/接口设计.md`、`docs/数据库设计.md`、`docs/测试清单与验收用例.md` | `topic/post_topic/topic_follow/topic_hot_snapshot` | Flutter 可关注，PC Web 只读，管理端治理/不可逆合并，数据库 7 天热榜，`topics` 隐私导出与注销治理 |
+| 经营与内容运营补齐 | 已完成（H2 本地口径；既有 MySQL 库用 `15_local_life_ops_migration.sql`，优惠券用 `16_marketing_coupon_migration.sql`） | `docs/integration/commerce.md`、`docs/integration/content-trust.md`、`docs/integration/growth-ops.md`、`docs/integration/support-openapi.md` | 测试库 `schema.sql` / `data.sql`：优惠券审核、秒杀/拼团、发票、有用票、译文、菜品点评、工单、攻略、创作者任务、实验开关、开放接口、消息 outbox、门店服务标记 | Web / 管理端 / 商户端 / Flutter 入口可演示；不改 `01_schema.sql` |
 
 ## 2.2 全局功能完成矩阵
 
@@ -253,8 +268,9 @@
 | PC Web 产品缺口 | 部分完成 | 首页、列表、详情、搜索、交易、预订、用户中心和社区只读页已落地；每日签到 `/user/check-in`、积分商城 `/user/points-mall`（列表/兑换/我的兑换/商品详情）、点评详情评论级举报已落地；商户高级筛选、真实分页、点评排序/评分/带图筛选、分享、门店相似推荐、公开页客户端运行时 metadata、登录用户门店浏览足迹（每用户每区域最多 50 条）、C 端运营活动公开列表/详情与首页透出、消息中心页（列表/分页/全部已读），券码通知定位，以及按 `PRERENDER_REGION` 区域化的 7 个静态公开入口和可选真实 API 详情快照预渲染、构建清单、sitemap/robots 已接入；发布脚本支持显式 `PRERENDER_REGIONS=CN,EU`，每区快照隔离写入 `web/seo-snapshots/<region>` 并由 release manifest 记录 | 常驻 SSR 服务、CN/EU 独立域名与缓存策略、真实部署验收；社区写操作/帖子评论举报仍故意只读 | 组件测试、后端查询测试、CN/EU 预渲染/快照脚本测试和本地 H2 快照构建已有证据；目标环境自动化尚未验收 |
 | 社区与消息尾项 | 部分完成 | 帖子、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、认证商户号、转发、关注流、私信、圈子、话题和通知聚合已落地；Flutter 通知中心支持分页、未读筛选及刷新失败保留数据；敏感词库管理 + 点评/帖子/评论/私信写入拦截已落地（`operations:sensitive_word:*`）；FCM/APNs 服务端适配器、重试和失效 token 停用已落地 | 真实移动推送凭证/真机 smoke、第三方机审 | 自动化覆盖已落地的社交关系、达人/认证商户审核与公开 badge、通知去重、`@提醒` 分发、隐私治理、敏感词拦截、推送契约和 Flutter 转发/互动链路；外部推送仍待验收 |
 | 移动推送适配器 | 部分完成（代码已落地） | `PushProvider` 统一契约；FCM HTTP v1 服务账号 JWT/OAuth2；APNs ES256 JWT；Flutter 登录登记、token 轮换回传、退出停用；Android 发布流水线按 secret 注入原生 Firebase 配置；通知事务提交后异步投递、临时错误退避重试、确定失效 token 条件清空；后端推送测试与 Flutter 设备生命周期测试通过 | 真实 FCM/APNs 凭证、Android/iOS 真机接收、前后台/杀进程和目标环境 smoke | 本地契约、服务层和客户端生命周期测试通过；无真实凭证时保持关闭，不把代码接入写成外部服务验收 |
-| Flutter 与真实第三方 | 部分完成 | Flutter 具备区域切换和应用级简体中文/繁体中文/英文委托；首页搜索、榜单活动、通知、用户中心、社区话题圈子、私信黑名单、交易预订点评认证、隐私账户达人成长、公开主页/收藏/足迹/门店详情点评/帖子详情编辑完整链路已迁移三语言，英文动态计数已覆盖单复数；Google Maps 已补 Android/iOS 交互地图、门店标记与选择联动、用户主动前台定位、当前位置显示和镜头聚焦、附近门店距离展示与就近排序、地图视野边界动态加载与请求防乱序、Web/未完成原生注入时 Static Maps 降级、坐标筛选、门店详情跳转和外部到店导航；Stripe PaymentSheet 与后端 PaymentIntent/Refund 已落地；未配置能力会诚实禁用；Android release 强制 production application ID 与独立 keystore，手工流水线可按环境/区域生成带 manifest 和 SHA-256 的签名 AAB | 点评翻译、真实地图 key/真机定位 smoke、Stripe 真实凭证/退款到账 smoke、PayPal/支付宝/微信、真实 FCM/APNs smoke、邮件短信、内容审核与 Google Play 上传 | 多域三语言组件测试、Flutter 全量测试、未配置阻断验证和移动发布工作流契约通过；真实 sandbox、凭证、商店账号和供应商联调仍待验收 |
+| Flutter 与真实第三方 | 部分完成 | Flutter 具备区域切换和应用级简体中文/繁体中文/英文委托；首页搜索、榜单活动、通知、用户中心、社区话题圈子、私信黑名单、交易预订点评认证、隐私账户达人成长、公开主页/收藏/足迹/门店详情点评/帖子详情编辑完整链路已迁移三语言，英文动态计数已覆盖单复数；用户中心已接工单、攻略、创作者任务、发票、秒杀、拼团和等级权益；社区点评译文已有后端与 Web 入口；Google Maps 已补 Android/iOS 交互地图、门店标记与选择联动、用户主动前台定位、当前位置显示和镜头聚焦、附近门店距离展示与就近排序、地图视野边界动态加载与请求防乱序、Web/未完成原生注入时 Static Maps 降级、坐标筛选、门店详情跳转和外部到店导航；Stripe PaymentSheet 与后端 PaymentIntent/Refund 已落地；未配置能力会诚实禁用；Android release 强制 production application ID 与独立 keystore，手工流水线可按环境/区域生成带 manifest 和 SHA-256 的签名 AAB | 真实地图 key/真机定位 smoke、Stripe 真实凭证/退款到账 smoke、PayPal/支付宝/微信、真实 FCM/APNs smoke、邮件短信、内容审核与 Google Play 上传 | 多域三语言组件测试、Flutter 全量测试、未配置阻断验证和移动发布工作流契约通过；真实 sandbox、凭证、商店账号和供应商联调仍待验收 |
 | 目标环境与上线执行 | 外部待验收 | MySQL、Redis、S3、ES、发布回滚脚本及 CI workflow 已存在；服务器 release bundle、部署和回滚均覆盖 C 端 Web、管理端与商户端 | 真实云资源、域名证书、CDN、SSH、预算、联系人和供应商账号 | 仅脚本和 workflow 已准备；目标环境发布/回滚演练尚未执行 |
+| 经营、信任与内容运营 | 已完成（H2 本地口径） | 商户券/秒杀/拼团审核、发票、有用票与译文、菜品点评、工单、攻略、创作者积分任务、等级权益、经营趋势与广告报表、实验开关、HMAC 开放接口（门店与公开点评）、进程内 outbox、华人服务筛选；C 端 Web、管理端、商户端和 Flutter 用户中心与首页筛选均有入口。定向控制器测试通过 | 视频点评仍未做；新表不写入 `sql/mysql/01_schema.sql`，既有库用 `15_local_life_ops_migration.sql`，优惠券表和订单抵扣字段用 `16_marketing_coupon_migration.sql`；开放接口密钥与真实商户对账不在本次范围 | `Ticket`、`OpenApi`、`Invoice`、`MarketingCampaign`、`MerchantAnalytics`、`Guide`、`Creator`、`Experiment`、`MessagePublisher`、`ContentTrust` 测试为 0 失败 |
 
 ## 3. SQL 怎么导
 
@@ -291,8 +307,10 @@
 - `sql/mysql/12_shop_search_sync_outbox_migration.sql`: 既有库创建门店搜索索引事务 outbox；首次启用 ES 仍先执行一次管理端全量重建，后续变更自动增量同步。
 - `sql/mysql/13_search_sync_operations_migration.sql`: 既有库补 `data:search_index:read` 权限，并默认授予超级管理员与数据管理员，用于进入搜索同步监控页。
 - `sql/mysql/14_admin_system_health_permission_migration.sql`: 既有库补 `system:health:read` 权限，默认仅授予超级管理员；健康状态跨区域展示，不受城市/门店范围影响。
+- `sql/mysql/15_local_life_ops_migration.sql`: 既有库补经营、信任与内容运营表，以及门店华人服务标记、点评有用数。
+- `sql/mysql/16_marketing_coupon_migration.sql`: 既有库补 `marketing_coupon_template`、`user_coupon`，以及订单 `original_amount` / `discount_amount` / `user_coupon_id`。在 `15` 之后执行一次。
 
-> 全新库只 `source` `01_schema.sql` + `02_seed_data.sql` 即可拿到上述表结构与权限；`03`–`14` 仅用于升级旧库，按序执行一次。
+> 全新库只 `source` `01_schema.sql` + `02_seed_data.sql` 即可拿到上述表结构与权限；`03`–`14` 仅用于升级旧库，按序执行一次。本地生活经营表在 `15_local_life_ops_migration.sql`，优惠券在 `16_marketing_coupon_migration.sql`，全新库也要再执行这两份。
 
 ### 3.3 导入后哪些表会直接有数据
 

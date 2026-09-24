@@ -1,13 +1,17 @@
 package com.tuowei.dazhongdianping.module.marketing.service;
 
+import com.tuowei.dazhongdianping.common.api.ConflictException;
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.module.marketing.mapper.MarketingMapper;
 import com.tuowei.dazhongdianping.module.marketing.model.CouponTemplateRow;
+import com.tuowei.dazhongdianping.module.marketing.model.request.CampaignAuditRequest;
 import com.tuowei.dazhongdianping.module.marketing.model.request.CouponTemplateSaveRequest;
 import com.tuowei.dazhongdianping.module.marketing.model.response.CouponTemplateResponse;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +55,34 @@ public class AdminMarketingService {
         row.setRegion(region);
         mapper.updateTemplate(row);
         return toResponse(mapper.selectTemplate(id, region));
+    }
+
+    @Transactional
+    public Map<String, Object> audit(Long id, CampaignAuditRequest request) {
+        String region = region();
+        CouponTemplateRow existing = mapper.selectTemplate(id, region);
+        if (existing == null) {
+            throw new NotFoundException("优惠券模板不存在");
+        }
+        int auditStatus = Boolean.TRUE.equals(request.approve()) ? 2 : 3;
+        String reason = "";
+        if (!Boolean.TRUE.equals(request.approve())) {
+            if (request.reason() == null || request.reason().isBlank()) {
+                throw new IllegalArgumentException("驳回需填写原因");
+            }
+            reason = request.reason().trim();
+        }
+        if (mapper.updateTemplateAudit(id, region, auditStatus, reason) == 0) {
+            throw new ConflictException("优惠券当前状态不可审核");
+        }
+        CouponTemplateRow saved = mapper.selectTemplate(id, region);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("id", saved.getId());
+        body.put("name", saved.getName());
+        body.put("auditStatus", saved.getAuditStatus());
+        body.put("rejectReason", saved.getRejectReason() == null ? "" : saved.getRejectReason());
+        body.put("status", saved.getStatus());
+        return body;
     }
 
     private CouponTemplateRow fromRequest(CouponTemplateSaveRequest r) {

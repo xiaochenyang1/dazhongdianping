@@ -58,6 +58,7 @@ class ShopDetailScreen extends StatefulWidget {
 
 class _ShopDetailScreenState extends State<ShopDetailScreen> {
   late Future<ShopDetail> _detail;
+  late Future<ShopAmenities> _amenities;
   Future<List<ShopSummary>>? _similar;
   Future<List<ShopReviewPreview>>? _reviews;
   bool _favorited = false;
@@ -73,6 +74,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   void initState() {
     super.initState();
     _detail = widget.repository.loadShopDetail(widget.shopId);
+    _amenities = widget.repository.loadShopAmenities(widget.shopId);
     _similar = _loadSimilar();
     _reviews = _loadReviewPreviews();
     if (widget.enableFavorite) {
@@ -413,8 +415,34 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     .map((tag) => Chip(label: Text(tag)))
                     .toList(),
               ),
+              const SizedBox(height: 16),
+              FutureBuilder<ShopAmenities>(
+                future: _amenities,
+                builder: (context, snapshot) {
+                  final amenities = snapshot.data;
+                  if (amenities == null || !amenities.any) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Wrap(
+                      key: const Key('shop-amenities'),
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (amenities.chineseService) Chip(label: Text(strings.amenityChineseService)),
+                        if (amenities.chineseMenu) Chip(label: Text(strings.amenityChineseMenu)),
+                        if (amenities.acceptAlipay) Chip(label: Text(strings.amenityAlipay)),
+                        if (amenities.acceptWechat) Chip(label: Text(strings.amenityWechat)),
+                      ],
+                    ),
+                  );
+                },
+              ),
               const SizedBox(height: 24),
-              _RecommendedDishesSection(dishes: shop.recommendedDishes),
+              _RecommendedDishesSection(
+                dishes: shop.recommendedDishes,
+                shopId: widget.shopId,
+                repository: widget.repository,
+              ),
               _ShopGallerySection(photos: shop.photos),
               if (widget.enableFavorite) ...[
                 FilledButton.tonalIcon(
@@ -823,8 +851,75 @@ class _ScoreBreakdownTile extends StatelessWidget {
 }
 
 class _RecommendedDishesSection extends StatelessWidget {
-  const _RecommendedDishesSection({required this.dishes});
+  const _RecommendedDishesSection({
+    required this.dishes,
+    required this.shopId,
+    required this.repository,
+  });
   final List<ShopDish> dishes;
+  final int shopId;
+  final BrowseRepository repository;
+
+  Future<void> _open(BuildContext context, ShopDish dish) async {
+    final score = TextEditingController(text: '5');
+    final content = TextEditingController();
+    var reviews = repository.loadDishReviews(shopId, dish.id);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        final strings = AppLocalizations.of(context);
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+          child: SizedBox(
+            height: 420,
+            child: StatefulBuilder(
+            builder: (context, setSheetState) {
+              return FutureBuilder<List<DishReviewItem>>(
+                future: reviews,
+                builder: (context, snapshot) {
+                  final items = snapshot.data ?? const <DishReviewItem>[];
+                  return ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Text(strings.dishReviewsTitle, style: Theme.of(context).textTheme.titleMedium),
+                      Text(dish.name),
+                      for (final item in items)
+                        ListTile(
+                          key: Key('dish-review-${item.id}'),
+                          title: Text('${item.score}'),
+                          subtitle: Text(item.content),
+                        ),
+                      TextField(controller: score, decoration: const InputDecoration(labelText: '1-5')),
+                      TextField(controller: content, decoration: InputDecoration(labelText: strings.dishReviewsTitle)),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FilledButton(
+                          onPressed: () async {
+                            await repository.createDishReview(
+                              shopId,
+                              dish.id,
+                              score: int.tryParse(score.text.trim()) ?? 5,
+                              content: content.text.trim(),
+                            );
+                            setSheetState(() => reviews = repository.loadDishReviews(shopId, dish.id));
+                          },
+                          child: Text(strings.dishReviewSubmit),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+            ),
+          ),
+        );
+      },
+    );
+    score.dispose();
+    content.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -853,6 +948,7 @@ class _RecommendedDishesSection extends StatelessWidget {
             child: ListTile(
               leading: const Icon(Icons.restaurant_menu),
               title: Text(dish.name),
+              onTap: () => _open(context, dish),
               subtitle:
                   dish.recommendReason == null || dish.recommendReason!.isEmpty
                   ? null

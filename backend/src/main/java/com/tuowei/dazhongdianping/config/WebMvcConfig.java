@@ -5,6 +5,7 @@ import com.tuowei.dazhongdianping.common.riskcontrol.RiskRequestInterceptor;
 import com.tuowei.dazhongdianping.module.admin.auth.AdminAuthInterceptor;
 import com.tuowei.dazhongdianping.module.auth.UserAuthInterceptor;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantAuthInterceptor;
+import com.tuowei.dazhongdianping.module.openapi.auth.OpenApiAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -18,6 +19,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final AdminAuthInterceptor adminAuthInterceptor;
     private final UserAuthInterceptor userAuthInterceptor;
     private final MerchantAuthInterceptor merchantAuthInterceptor;
+    private final OpenApiAuthInterceptor openApiAuthInterceptor;
     private final CorsProperties corsProperties;
 
     public WebMvcConfig(RegionInterceptor regionInterceptor,
@@ -25,12 +27,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         AdminAuthInterceptor adminAuthInterceptor,
                         UserAuthInterceptor userAuthInterceptor,
                         MerchantAuthInterceptor merchantAuthInterceptor,
+                        OpenApiAuthInterceptor openApiAuthInterceptor,
                         CorsProperties corsProperties) {
         this.regionInterceptor = regionInterceptor;
         this.riskRequestInterceptor = riskRequestInterceptor;
         this.adminAuthInterceptor = adminAuthInterceptor;
         this.userAuthInterceptor = userAuthInterceptor;
         this.merchantAuthInterceptor = merchantAuthInterceptor;
+        this.openApiAuthInterceptor = openApiAuthInterceptor;
         this.corsProperties = corsProperties;
     }
 
@@ -79,7 +83,15 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         ,"/api/c/v1/complaints","/api/c/v1/complaints/**"
                         ,"/api/c/v1/consult","/api/c/v1/consult/**"
                         ,"/api/c/v1/waitlist","/api/c/v1/waitlist/**"
+                        ,"/api/c/v1/invoices","/api/c/v1/invoices/**"
+                        ,"/api/c/v1/creator/**"
+                        ,"/api/c/v1/tickets","/api/c/v1/tickets/**"
+                        ,"/api/c/v1/marketing/seckill","/api/c/v1/marketing/seckill/**"
+                        ,"/api/c/v1/marketing/groupbuy","/api/c/v1/marketing/groupbuy/**"
+                        ,"/api/c/v1/experiments","/api/c/v1/experiments/**"
                 );
+        registry.addInterceptor(openApiAuthInterceptor)
+                .addPathPatterns("/api/open/v1/**");
     }
 
     @Override
