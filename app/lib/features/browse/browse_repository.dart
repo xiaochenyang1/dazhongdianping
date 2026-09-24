@@ -100,6 +100,7 @@ class ShopReviewPreview {
     this.authorCertificationCode,
     this.authorCertificationLabel,
     this.merchantReply,
+    this.helpfulCount = 0,
   });
 
   final int id;
@@ -112,6 +113,7 @@ class ShopReviewPreview {
   final String? authorCertificationCode;
   final String? authorCertificationLabel;
   final String? merchantReply;
+  final int helpfulCount;
 
   factory ShopReviewPreview.fromJson(Map<String, dynamic> json) {
     final author = _badgeFromJson(json['authorCertification']);
@@ -134,6 +136,7 @@ class ShopReviewPreview {
       authorCertificationCode: author.code,
       authorCertificationLabel: author.label,
       merchantReply: merchantReply,
+      helpfulCount: (json['helpfulCount'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -329,6 +332,49 @@ class ShopDish {
   }
 }
 
+class ShopAmenities {
+  const ShopAmenities({
+    required this.chineseService,
+    required this.chineseMenu,
+    required this.acceptAlipay,
+    required this.acceptWechat,
+  });
+
+  const ShopAmenities.none()
+      : chineseService = false,
+        chineseMenu = false,
+        acceptAlipay = false,
+        acceptWechat = false;
+
+  final bool chineseService;
+  final bool chineseMenu;
+  final bool acceptAlipay;
+  final bool acceptWechat;
+
+  bool get any => chineseService || chineseMenu || acceptAlipay || acceptWechat;
+
+  factory ShopAmenities.fromJson(Map<String, dynamic> json) => ShopAmenities(
+        chineseService: json['chineseService'] as bool? ?? false,
+        chineseMenu: json['chineseMenu'] as bool? ?? false,
+        acceptAlipay: json['acceptAlipay'] as bool? ?? false,
+        acceptWechat: json['acceptWechat'] as bool? ?? false,
+      );
+}
+
+class DishReviewItem {
+  const DishReviewItem({required this.id, required this.score, required this.content});
+
+  final int id;
+  final int score;
+  final String content;
+
+  factory DishReviewItem.fromJson(Map<String, dynamic> json) => DishReviewItem(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        score: (json['score'] as num?)?.toInt() ?? 0,
+        content: json['content'] as String? ?? '',
+      );
+}
+
 class ShopDetail {
   const ShopDetail({
     required this.id,
@@ -413,6 +459,23 @@ class ShopDetail {
 
 abstract class BrowseRepository {
   Future<List<ShopSummary>> loadFeaturedShops();
+  Future<List<ShopSummary>> loadShopsWithAmenities({
+    bool chineseService = false,
+    bool chineseMenu = false,
+    bool acceptAlipay = false,
+    bool acceptWechat = false,
+  }) => loadFeaturedShops();
+
+  /// 带服务筛选时走门店列表，否则仍走搜索索引。
+  Future<ShopSearchPage> loadFilteredShopPage({
+    String keyword = '',
+    int page = 1,
+    int pageSize = 20,
+    bool chineseService = false,
+    bool chineseMenu = false,
+    bool acceptAlipay = false,
+    bool acceptWechat = false,
+  }) => searchShopPage(keyword, page: page, pageSize: pageSize);
   Future<List<ShopSummary>> loadMapShops() => loadFeaturedShops();
   Future<List<ShopSummary>> loadNearbyMapShops({
     required double latitude,
@@ -445,6 +508,9 @@ abstract class BrowseRepository {
   }
 
   Future<ShopDetail> loadShopDetail(int shopId) => throw UnimplementedError();
+  Future<ShopAmenities> loadShopAmenities(int shopId) async => const ShopAmenities.none();
+  Future<List<DishReviewItem>> loadDishReviews(int shopId, int dishId) async => const [];
+  Future<void> createDishReview(int shopId, int dishId, {required int score, required String content}) async {}
   Future<List<SearchHotWord>> loadHotWords({int limit = 8}) =>
       throw UnimplementedError();
   Future<List<SearchHistoryItem>> loadSearchHistory({
@@ -528,6 +594,77 @@ class ApiBrowseRepository implements BrowseRepository {
   }
 
   @override
+  Future<List<ShopSummary>> loadShopsWithAmenities({
+    bool chineseService = false,
+    bool chineseMenu = false,
+    bool acceptAlipay = false,
+    bool acceptWechat = false,
+  }) async {
+    if (!chineseService && !chineseMenu && !acceptAlipay && !acceptWechat) {
+      return loadFeaturedShops();
+    }
+    final result = await client.getJson(
+      '/api/c/v1/shops',
+      query: {
+        'page': 1,
+        'pageSize': 12,
+        if (chineseService) 'chineseService': true,
+        if (chineseMenu) 'chineseMenu': true,
+        if (acceptAlipay) 'acceptAlipay': true,
+        if (acceptWechat) 'acceptWechat': true,
+      },
+    );
+    final list = result['list'] as List<dynamic>? ?? const [];
+    return list.cast<Map<String, dynamic>>().map(ShopSummary.fromJson).toList();
+  }
+
+  @override
+  Future<ShopSearchPage> loadFilteredShopPage({
+    String keyword = '',
+    int page = 1,
+    int pageSize = 20,
+    bool chineseService = false,
+    bool chineseMenu = false,
+    bool acceptAlipay = false,
+    bool acceptWechat = false,
+  }) async {
+    if (!chineseService && !chineseMenu && !acceptAlipay && !acceptWechat) {
+      return searchShopPage(keyword, page: page, pageSize: pageSize);
+    }
+    final result = await client.getJson(
+      '/api/c/v1/shops',
+      query: {
+        'page': page,
+        'pageSize': pageSize,
+        if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+        if (chineseService) 'chineseService': true,
+        if (chineseMenu) 'chineseMenu': true,
+        if (acceptAlipay) 'acceptAlipay': true,
+        if (acceptWechat) 'acceptWechat': true,
+      },
+    );
+    return _shopSearchPage(result, page, pageSize);
+  }
+
+  ShopSearchPage _shopSearchPage(
+    Map<String, dynamic> result,
+    int page,
+    int pageSize,
+  ) {
+    final list = result['list'] as List<dynamic>? ?? const [];
+    final items = list
+        .cast<Map<String, dynamic>>()
+        .map(ShopSummary.fromJson)
+        .toList();
+    return ShopSearchPage(
+      items: items,
+      total: (result['total'] as num?)?.toInt() ?? items.length,
+      page: (result['page'] as num?)?.toInt() ?? page,
+      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
+    );
+  }
+
+  @override
   Future<List<ShopSummary>> loadMapShops() async {
     final result = await client.getJson(
       '/api/c/v1/shops',
@@ -595,17 +732,7 @@ class ApiBrowseRepository implements BrowseRepository {
       '/api/c/v1/search/shops',
       query: {'keyword': keyword, 'page': page, 'pageSize': pageSize},
     );
-    final list = result['list'] as List<dynamic>? ?? const [];
-    final items = list
-        .cast<Map<String, dynamic>>()
-        .map(ShopSummary.fromJson)
-        .toList();
-    return ShopSearchPage(
-      items: items,
-      total: (result['total'] as num?)?.toInt() ?? items.length,
-      page: (result['page'] as num?)?.toInt() ?? page,
-      pageSize: (result['pageSize'] as num?)?.toInt() ?? pageSize,
-    );
+    return _shopSearchPage(result, page, pageSize);
   }
 
   @override
@@ -855,6 +982,37 @@ class ApiBrowseRepository implements BrowseRepository {
       hasImages: hasImages,
     );
     return pageResult.items;
+  }
+
+  @override
+  Future<ShopAmenities> loadShopAmenities(int shopId) async {
+    try {
+      final result = await client.getJson('/api/c/v1/shops/$shopId/amenities');
+      return ShopAmenities.fromJson(result);
+    } catch (_) {
+      return const ShopAmenities.none();
+    }
+  }
+
+  @override
+  Future<List<DishReviewItem>> loadDishReviews(int shopId, int dishId) async {
+    final result = await client.getJson('/api/c/v1/shops/$shopId/dishes/$dishId/reviews');
+    final raw = result['list'] ?? result['value'];
+    if (raw is! List) return const [];
+    return raw.whereType<Map<String, dynamic>>().map(DishReviewItem.fromJson).toList();
+  }
+
+  @override
+  Future<void> createDishReview(
+    int shopId,
+    int dishId, {
+    required int score,
+    required String content,
+  }) {
+    return client.postJson('/api/c/v1/shops/$shopId/dishes/$dishId/reviews', body: {
+      'score': score,
+      'content': content,
+    });
   }
 
   @override

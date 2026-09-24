@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.guide.mapper.GuideMapper">
+
+    <sql id="articleColumns">
+        id, region, city_id, title, summary, cover_url, status, created_at
+    </sql>
+
+    <select id="selectPublished" resultType="com.tuowei.dazhongdianping.module.guide.model.GuideArticleRow">
+        SELECT <include refid="articleColumns"/>
+        FROM guide_article
+        WHERE region=#{region} AND status=2 AND is_deleted=FALSE
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPublished" resultType="long">
+        SELECT COUNT(*) FROM guide_article
+        WHERE region=#{region} AND status=2 AND is_deleted=FALSE
+    </select>
+
+    <select id="selectAdmin" resultType="com.tuowei.dazhongdianping.module.guide.model.GuideArticleRow">
+        SELECT <include refid="articleColumns"/>
+        FROM guide_article
+        WHERE region=#{region} AND is_deleted=FALSE
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAdmin" resultType="long">
+        SELECT COUNT(*) FROM guide_article
+        WHERE region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <select id="selectById" resultType="com.tuowei.dazhongdianping.module.guide.model.GuideArticleRow">
+        SELECT <include refid="articleColumns"/>
+        FROM guide_article
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <select id="selectSections" resultType="com.tuowei.dazhongdianping.module.guide.model.GuideSectionRow">
+        SELECT id, article_id, sort_no, heading, body, shop_id
+        FROM guide_section
+        WHERE article_id=#{articleId}
+        ORDER BY sort_no ASC, id ASC
+    </select>
+
+    <insert id="insertArticle" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO guide_article(region, city_id, title, summary, cover_url, status)
+        VALUES(#{region}, #{cityId}, #{title}, #{summary}, #{coverUrl}, #{status})
+    </insert>
+
+    <update id="updateArticle">
+        UPDATE guide_article
+        SET title=#{title}, summary=#{summary}, cover_url=#{coverUrl}, city_id=#{cityId},
+            status=#{status}, updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+    </update>
+
+    <update id="updateStatus">
+        UPDATE guide_article
+        SET status=#{status}, updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+    </update>
+
+    <delete id="deleteSections">
+        DELETE FROM guide_section WHERE article_id=#{articleId}
+    </delete>
+
+    <insert id="insertSection" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO guide_section(article_id, sort_no, heading, body, shop_id)
+        VALUES(#{articleId}, #{sortNo}, #{heading}, #{body}, #{shopId})
+    </insert>
+
+</mapper>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.ticket.mapper.TicketMapper">
+
+    <select id="selectShopMerchantId" resultType="java.lang.Long">
+        SELECT merchant_id FROM shop
+        WHERE id=#{shopId} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <select id="countShop" resultType="int">
+        SELECT COUNT(*) FROM shop
+        WHERE id=#{shopId} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <insert id="insertTicket" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO support_ticket(region, requester_type, requester_id, shop_id, subject, content, status)
+        VALUES(#{region}, #{requesterType}, #{requesterId}, #{shopId}, #{subject}, #{content}, 1)
+    </insert>
+
+    <insert id="insertMessage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ticket_message(ticket_id, sender_type, sender_id, content)
+        VALUES(#{ticketId}, #{senderType}, #{senderId}, #{content})
+    </insert>
+
+    <update id="touch">
+        UPDATE support_ticket SET updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE support_ticket SET status=#{status}, updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region}
+    </update>
+
+    <sql id="ticketCols">
+        t.id, t.region, t.requester_type, t.requester_id, t.shop_id, t.subject, t.content,
+        t.status, t.created_at, t.updated_at, s.name AS shop_name
+    </sql>
+
+    <sql id="ticketFrom">
+        FROM support_ticket t
+        LEFT JOIN shop s ON s.id=t.shop_id
+    </sql>
+
+    <select id="selectOwned" resultType="com.tuowei.dazhongdianping.module.ticket.model.SupportTicketRow">
+        SELECT <include refid="ticketCols"/>
+        <include refid="ticketFrom"/>
+        WHERE t.id=#{id} AND t.region=#{region}
+          AND t.requester_type=#{requesterType} AND t.requester_id=#{requesterId}
+    </select>
+
+    <select id="selectById" resultType="com.tuowei.dazhongdianping.module.ticket.model.SupportTicketRow">
+        SELECT <include refid="ticketCols"/>
+        <include refid="ticketFrom"/>
+        WHERE t.id=#{id} AND t.region=#{region}
+    </select>
+
+    <select id="selectOwnedTickets" resultType="com.tuowei.dazhongdianping.module.ticket.model.SupportTicketRow">
+        SELECT <include refid="ticketCols"/>
+        <include refid="ticketFrom"/>
+        WHERE t.region=#{region} AND t.requester_type=#{requesterType} AND t.requester_id=#{requesterId}
+        ORDER BY t.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countOwnedTickets" resultType="long">
+        SELECT COUNT(*) FROM support_ticket
+        WHERE region=#{region} AND requester_type=#{requesterType} AND requester_id=#{requesterId}
+    </select>
+
+    <select id="selectAdminTickets" resultType="com.tuowei.dazhongdianping.module.ticket.model.SupportTicketRow">
+        SELECT <include refid="ticketCols"/>
+        <include refid="ticketFrom"/>
+        WHERE t.region=#{region}
+        <if test="status != null">AND t.status=#{status}</if>
+        ORDER BY t.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAdminTickets" resultType="long">
+        SELECT COUNT(*) FROM support_ticket
+        WHERE region=#{region}
+        <if test="status != null">AND status=#{status}</if>
+    </select>
+
+    <select id="selectMessages" resultType="com.tuowei.dazhongdianping.module.ticket.model.TicketMessageRow">
+        SELECT id, ticket_id, sender_type, sender_id, content, created_at
+        FROM ticket_message
+        WHERE ticket_id=#{ticketId}
+        ORDER BY id
+    </select>
+
+</mapper>

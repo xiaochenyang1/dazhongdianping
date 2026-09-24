@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.moderation.mapper.AutomodHitMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO automod_hit(region, biz_type, biz_id, user_id, decision, provider, reason)
+        VALUES(#{region}, #{bizType}, #{bizId}, #{userId}, #{decision}, #{provider}, #{reason})
+    </insert>
+
+    <sql id="hitWhere">
+        WHERE region = #{region}
+        <if test="decision != null">
+            AND decision = #{decision}
+        </if>
+    </sql>
+
+    <select id="countHits" resultType="long">
+        SELECT COUNT(*) FROM automod_hit
+        <include refid="hitWhere"/>
+    </select>
+
+    <select id="selectHits" resultType="com.tuowei.dazhongdianping.module.moderation.model.AutomodHitRow">
+        SELECT id, region, biz_type, biz_id, user_id, decision, provider, reason, created_at
+        FROM automod_hit
+        <include refid="hitWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

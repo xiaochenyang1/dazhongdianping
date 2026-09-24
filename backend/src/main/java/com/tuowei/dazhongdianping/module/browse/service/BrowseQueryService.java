@@ -22,6 +22,7 @@ import com.tuowei.dazhongdianping.module.browse.model.PhotoRow;
 import com.tuowei.dazhongdianping.module.browse.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchSuggestionRow;
+import com.tuowei.dazhongdianping.module.browse.model.ShopAmenityRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopDetailRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListQuery;
@@ -37,6 +38,7 @@ import com.tuowei.dazhongdianping.module.browse.model.response.ReviewPreviewResp
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHotWordResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchSuggestionResponse;
+import com.tuowei.dazhongdianping.module.browse.model.response.ShopAmenityResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopBrowseHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopDetailResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopListItemResponse;
@@ -165,6 +167,19 @@ public class BrowseQueryService {
         );
     }
 
+    public ShopAmenityResponse shopAmenities(Region region, Long shopId) {
+        ShopAmenityRow row = browseQueryMapper.selectShopAmenities(region.name(), shopId);
+        if (row == null) {
+            throw new NotFoundException("门店不存在");
+        }
+        return new ShopAmenityResponse(
+                Boolean.TRUE.equals(row.getChineseService()),
+                Boolean.TRUE.equals(row.getChineseMenu()),
+                Boolean.TRUE.equals(row.getAcceptAlipay()),
+                Boolean.TRUE.equals(row.getAcceptWechat())
+        );
+    }
+
     public List<ShopListItemResponse> listSimilarShops(Region region, Long shopId, int limit) {
         ShopDetailRow source = browseQueryMapper.selectShopDetail(region.name(), shopId);
         if (source == null) {
@@ -191,8 +206,8 @@ public class BrowseQueryService {
                                                              BigDecimal minScore,
                                                              Boolean hasImages) {
         ensureShopExists(region, shopId);
-        if (!List.of("latest", "popular", "score").contains(sort)) {
-            throw new IllegalArgumentException("sort 仅支持 latest、popular 或 score");
+        if (!List.of("latest", "popular", "score", "helpful").contains(sort)) {
+            throw new IllegalArgumentException("sort 仅支持 latest、popular、score 或 helpful");
         }
         int offset = (page - 1) * pageSize;
         long total = browseQueryMapper.countShopReviews(region.name(), shopId, minScore, hasImages);
@@ -479,7 +494,8 @@ public class BrowseQueryService {
                 row.getLikedCount(),
                 row.getCommentCount(),
                 toMerchantReplyResponse(row),
-                row.getCreatedAt().format(REVIEW_TIME_FORMATTER)
+                row.getCreatedAt().format(REVIEW_TIME_FORMATTER),
+                row.getHelpfulCount() == null ? 0 : row.getHelpfulCount()
         );
     }
 

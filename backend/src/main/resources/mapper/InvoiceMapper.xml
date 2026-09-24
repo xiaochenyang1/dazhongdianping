@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.invoice.mapper.InvoiceMapper">
+
+    <sql id="titleCols">id,user_id,region,title_type,name,tax_no,email,is_default,created_at</sql>
+    <sql id="requestCols">id,region,user_id,order_id,title_id,amount,tax_amount,currency,status,invoice_no,reject_reason,created_at</sql>
+
+    <select id="selectTitles" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceTitleRow">
+        SELECT <include refid="titleCols"/> FROM invoice_title
+        WHERE user_id=#{userId} AND region=#{region}
+        ORDER BY is_default DESC, id DESC
+    </select>
+
+    <select id="selectTitle" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceTitleRow">
+        SELECT <include refid="titleCols"/> FROM invoice_title
+        WHERE id=#{id} AND user_id=#{userId} AND region=#{region}
+    </select>
+
+    <update id="clearDefaultTitles">
+        UPDATE invoice_title SET is_default=FALSE, updated_at=CURRENT_TIMESTAMP
+        WHERE user_id=#{userId} AND region=#{region}
+    </update>
+
+    <insert id="insertTitle" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO invoice_title(user_id,region,title_type,name,tax_no,email,is_default)
+        VALUES(#{userId},#{region},#{titleType},#{name},#{taxNo},#{email},#{isDefault})
+    </insert>
+
+    <select id="selectOrder" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceOrderRow">
+        SELECT id,user_id,region,amount,currency,pay_status FROM `order` WHERE id=#{id}
+    </select>
+
+    <select id="countByOrder" resultType="int">
+        SELECT COUNT(*) FROM invoice_request WHERE order_id=#{orderId}
+    </select>
+
+    <select id="selectEnabledTaxRate" resultType="com.tuowei.dazhongdianping.module.invoice.model.TaxRateRow">
+        SELECT id,region,name,rate_bp,status FROM tax_rate
+        WHERE region=#{region} AND status=1
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insertRequest" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO invoice_request(region,user_id,order_id,title_id,amount,tax_amount,currency,status,invoice_no,reject_reason)
+        VALUES(#{region},#{userId},#{orderId},#{titleId},#{amount},#{taxAmount},#{currency},1,'','')
+    </insert>
+
+    <select id="selectUserRequests" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
+        SELECT <include refid="requestCols"/> FROM invoice_request
+        WHERE user_id=#{userId} AND region=#{region}
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countUserRequests" resultType="long">
+        SELECT COUNT(*) FROM invoice_request WHERE user_id=#{userId} AND region=#{region}
+    </select>
+
+    <select id="selectRequest" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
+        SELECT <include refid="requestCols"/> FROM invoice_request WHERE id=#{id} AND region=#{region}
+    </select>
+
+    <select id="selectAdminRequests" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
+        SELECT <include refid="requestCols"/> FROM invoice_request
+        WHERE region=#{region}
+        <if test="status != null">AND status=#{status}</if>
+        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAdminRequests" resultType="long">
+        SELECT COUNT(*) FROM invoice_request WHERE region=#{region}
+        <if test="status != null">AND status=#{status}</if>
+    </select>
+
+    <update id="issue">
+        UPDATE invoice_request
+        SET status=2,invoice_no=#{invoiceNo},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND status=1
+    </update>
+
+    <update id="reject">
+        UPDATE invoice_request
+        SET status=3,reject_reason=#{reason},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND status=1
+    </update>
+
+    <select id="selectTaxRates" resultType="com.tuowei.dazhongdianping.module.invoice.model.TaxRateRow">
+        SELECT id,region,name,rate_bp,status FROM tax_rate WHERE region=#{region} ORDER BY id
+    </select>
+
+    <select id="selectTaxRate" resultType="com.tuowei.dazhongdianping.module.invoice.model.TaxRateRow">
+        SELECT id,region,name,rate_bp,status FROM tax_rate WHERE id=#{id} AND region=#{region}
+    </select>
+
+    <update id="updateTaxRate">
+        UPDATE tax_rate
+        SET name=#{name},rate_bp=#{rateBp},status=#{status},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region}
+    </update>
+
+</mapper>

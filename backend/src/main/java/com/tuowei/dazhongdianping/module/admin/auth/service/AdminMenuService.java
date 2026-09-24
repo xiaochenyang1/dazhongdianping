@@ -23,13 +23,16 @@ public class AdminMenuService {
                         leaf("audit.shop_changes", "门店草稿审核", "/audit/shop-changes", "audit:shop_change:read"),
                         leaf("audit.deals", "团购审核", "/audit/deals", "audit:deal:read"),
                         leaf("audit.risk", "风控中心", "/audit/risk", "risk:event:read"),
-                        leaf("audit.complaints", "投诉纠纷", "/audit/complaints", "audit:complaint:read")
+                        leaf("audit.complaints", "投诉纠纷", "/audit/complaints", "audit:complaint:read"),
+                        leaf("audit.automod", "机审命中", "/audit/automod", "audit:automod:read"),
+                        leaf("support.tickets", "客服工单", "/support/tickets", "support:ticket:read")
                 )),
                 group("data", "数据管理", "/data", List.of(
                         leaf("data.shops", "商户管理", "/data/shops", "data:shop:read"),
                         leaf("data.import", "种子导入", "/data/import", "data:shop:import"),
                         leaf("data.meta", "基础数据", "/data/meta", "data:geo:read"),
                         leaf("data.orders", "订单退款", "/data/orders", "data:order:read"),
+                        leaf("data.invoices", "发票税率", "/data/invoices", "finance:invoice:read"),
                         leaf("data.search_sync", "搜索同步", "/data/search-sync", "data:search_index:read")
                 )),
                 group("operations", "运营配置", "/operations", List.of(
@@ -45,7 +48,11 @@ public class AdminMenuService {
                         leaf("operations.points_exchanges", "积分兑换单", "/operations/points-exchanges", "operations:points:read"),
                         leaf("operations.recommendation", "推荐权重", "/operations/recommendation", "operations:recommendation:read"),
                         leaf("operations.marketing", "营销券", "/operations/marketing", "operations:marketing:read"),
-                        leaf("operations.ads", "广告投放", "/operations/ads", "operations:ad:read")
+                        leaf("operations.campaign_audit", "活动审核", "/operations/campaign-audit", "operations:marketing:read"),
+                        leaf("operations.ads", "广告投放", "/operations/ads", "operations:ad:read"),
+                        leaf("operations.guides", "攻略专题", "/operations/guides", "operations:guide:read"),
+                        leaf("operations.creator", "创作者任务", "/operations/creator", "operations:creator:read"),
+                        leaf("operations.experiments", "实验开关", "/operations/experiments", "operations:experiment:read")
                 )),
                 group("system", "系统管理", "/system", List.of(
                         leaf("system.admins", "管理员账号", "/system/admins", "system:admin:read"),
@@ -54,7 +61,8 @@ public class AdminMenuService {
                         leaf("system.merchants", "商户账号", "/system/merchants", "system:merchant:read"),
                         leaf("system.health", "系统健康", "/system/health", "system:health:read"),
                         leaf("system.audit_logs", "审计日志", "/system/audit-logs", "system:audit_log:read"),
-                        leaf("system.privacy_tasks", "隐私任务", "/system/privacy-tasks", "system:privacy_task:read")
+                        leaf("system.privacy_tasks", "隐私任务", "/system/privacy-tasks", "system:privacy_task:read"),
+                        leaf("system.openapi", "开放平台", "/system/openapi", "openapi:read")
                 ))
         );
         List<AdminMenuResponse> result = new ArrayList<>();

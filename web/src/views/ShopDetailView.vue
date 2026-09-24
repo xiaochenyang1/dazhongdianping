@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ShopCard from '@/components/ShopCard.vue'
 import QaSection from '@/components/QaSection.vue'
+import DishReviews from '@/components/DishReviews.vue'
 import { useAppContext } from '@/composables/useAppContext'
 import { absoluteSeoUrl, toSeoDescription, useSeoMeta } from '@/composables/useSeoMeta'
 import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
@@ -11,10 +12,12 @@ import { localizeWebShopError, shopStringsForRegion } from '@/core/web_shop_loca
 import { complaintStringsForRegion } from '@/core/web_complaint_localizations'
 import { consultStringsForRegion } from '@/core/web_consult_localizations'
 import { waitlistStringsForRegion } from '@/core/web_waitlist_localizations'
+import { ticketStringsForRegion } from '@/core/web_ticket_localizations'
 import { startConsult } from '@/services/consult'
 import { useRouter } from 'vue-router'
 import { formatMoney } from '@/lib/currency'
 import { fetchShopDetail, fetchSimilarShops, fetchShopReviews } from '@/services/browse'
+import { fetchShopAmenities, type ShopAmenities } from '@/services/contentTrust'
 import { addFavorite, fetchFavorites, removeFavorite } from '@/services/favorite'
 import { fetchShopDeals } from '@/services/trade'
 import type { DealSummary } from '@/types/trade'
@@ -28,6 +31,7 @@ const { state: sessionState, openAuthDialog } = useUserSession()
 const loading = ref(false)
 const errorMessage = ref('')
 const shop = ref<ShopDetail | null>(null)
+const amenities = ref<ShopAmenities | null>(null)
 const reviews = ref<ReviewPreview[]>([])
 const favorited = ref(false)
 const favoriteLoading = ref(false)
@@ -42,6 +46,10 @@ const certificationCopy = computed(() => discoveryStringsForRegion(state.region)
 const complaintCopy = computed(() => complaintStringsForRegion(state.region))
 const consultCopy = computed(() => consultStringsForRegion(state.region))
 const waitlistCopy = computed(() => waitlistStringsForRegion(state.region))
+const ticketCopy = computed(() => ticketStringsForRegion(state.region))
+const amenityLabels = computed(() => state.region === 'EU'
+  ? { chineseService: 'Chinese service', chineseMenu: 'Chinese menu', acceptAlipay: 'Alipay', acceptWechat: 'WeChat Pay' }
+  : { chineseService: '中文服务', chineseMenu: '中文菜单', acceptAlipay: '支付宝', acceptWechat: '微信支付' })
 const router = useRouter()
 const consulting = ref(false)
 
@@ -104,6 +112,7 @@ async function loadShopDetail() {
   const requestId = ++detailRequestId
   const targetShopId = shopId.value
   shop.value = null
+  amenities.value = null
   reviews.value = []
   deals.value = []
   similarShops.value = []
@@ -130,6 +139,13 @@ async function loadShopDetail() {
     reviews.value = reviewPage.list
     deals.value = dealList
     similarShops.value = similarList
+    void fetchShopAmenities(targetShopId)
+      .then((value) => {
+        if (requestId === detailRequestId) amenities.value = value
+      })
+      .catch(() => {
+        if (requestId === detailRequestId) amenities.value = null
+      })
     if (sessionState.accessToken) {
       const favorites = await fetchFavorites(1, 1, 50)
       if (requestId !== detailRequestId) return
@@ -233,6 +249,12 @@ watch(
         <div class="tag-row">
           <span v-for="tag in shop.tags" :key="tag">{{ tag }}</span>
         </div>
+        <div v-if="amenities" class="tag-row" data-testid="shop-amenities">
+          <span v-if="amenities.chineseService">{{ amenityLabels.chineseService }}</span>
+          <span v-if="amenities.chineseMenu">{{ amenityLabels.chineseMenu }}</span>
+          <span v-if="amenities.acceptAlipay">{{ amenityLabels.acceptAlipay }}</span>
+          <span v-if="amenities.acceptWechat">{{ amenityLabels.acceptWechat }}</span>
+        </div>
         <div class="hero-actions">
           <RouterLink :to="`/shops/${shop.id}/reviews/new`" class="primary-link">{{ copy.detail.writeReview }}</RouterLink>
           <RouterLink :to="`/shops/${shop.id}/reviews`" class="secondary-button">{{ copy.detail.allReviews }}</RouterLink>
@@ -245,6 +267,7 @@ watch(
           <RouterLink :to="{ path: '/complaints/new', query: { shopId: shop.id } }" class="secondary-button">{{ complaintCopy.list.newComplaint }}</RouterLink>
           <button type="button" class="secondary-button" :disabled="consulting" data-testid="consult-merchant" @click="consultMerchant">{{ consultCopy.entry }}</button>
           <RouterLink :to="{ path: '/waitlist/join', query: { shopId: shop.id } }" class="secondary-button" data-testid="waitlist-join">{{ waitlistCopy.entry }}</RouterLink>
+          <RouterLink :to="{ path: '/user/tickets', query: { shopId: shop.id } }" class="secondary-button">{{ ticketCopy.eyebrow }}</RouterLink>
         </div>
         <p v-if="shareMessage" class="feedback" role="status">{{ shareMessage }}</p>
       </div>
@@ -296,6 +319,7 @@ watch(
               <p>{{ dish.recommendReason }}</p>
             </div>
             <strong>{{ formatMoney(dish.price, shop.currency) }}</strong>
+            <DishReviews :shop-id="shop.id" :dish-id="dish.id" :dish-name="dish.name" />
           </div>
         </div>
         <p v-else class="feedback">{{ copy.detail.noDishes }}</p>

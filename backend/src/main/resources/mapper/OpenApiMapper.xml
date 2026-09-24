@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.openapi.mapper.OpenApiMapper">
+
+    <insert id="insertApp" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO open_app(region, name, owner_merchant_id, status)
+        VALUES(#{region}, #{name}, #{ownerMerchantId}, 1)
+    </insert>
+
+    <!-- secret_hash 是内部密钥库，写入原始 secret，不做哈希，供 HMAC 校验。 -->
+    <insert id="insertKey" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO open_api_key(app_id, key_id, secret_hash, status)
+        VALUES(#{appId}, #{keyId}, #{secretHash}, #{status})
+    </insert>
+
+    <select id="selectApps" resultType="com.tuowei.dazhongdianping.module.openapi.model.OpenAppRow">
+        SELECT id, region, name, owner_merchant_id, status, created_at, updated_at
+        FROM open_app
+        WHERE region=#{region}
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectApp" resultType="com.tuowei.dazhongdianping.module.openapi.model.OpenAppRow">
+        SELECT id, region, name, owner_merchant_id, status, created_at, updated_at
+        FROM open_app
+        WHERE id=#{id} AND region=#{region}
+    </select>
+
+    <update id="updateAppStatus">
+        UPDATE open_app SET status=#{status}, updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region}
+    </update>
+
+    <select id="selectKeyIdsByAppIds" resultType="com.tuowei.dazhongdianping.module.openapi.model.OpenApiKeyRow">
+        SELECT id, app_id, key_id, status, created_at
+        FROM open_api_key
+        WHERE app_id IN
+        <foreach collection="appIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        ORDER BY id
+    </select>
+
+    <select id="selectCredential" resultType="com.tuowei.dazhongdianping.module.openapi.model.OpenApiCredential">
+        SELECT k.key_id, k.secret_hash, k.status, a.id AS app_id, a.region, a.status AS app_status
+        FROM open_api_key k
+        INNER JOIN open_app a ON a.id=k.app_id
+        WHERE k.key_id=#{keyId}
+    </select>
+
+    <select id="selectPublicShops" resultType="com.tuowei.dazhongdianping.module.openapi.model.OpenShopRow">
+        SELECT id, name, address, score
+        FROM shop
+        WHERE region=#{region} AND status=1 AND is_deleted=FALSE
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectPublicReviews" resultType="com.tuowei.dazhongdianping.module.openapi.model.OpenReviewRow">
+        SELECT id, shop_id, score_overall AS score, content
+        FROM review
+        WHERE region=#{region} AND audit_status=1 AND status=1 AND is_deleted=FALSE
+        <if test="shopId != null">AND shop_id=#{shopId}</if>
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

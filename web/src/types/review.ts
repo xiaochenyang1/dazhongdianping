@@ -31,6 +31,7 @@ export interface ReviewDetail {
   images: ReviewImage[]
   createdAt: string
   updatedAt: string
+  helpfulCount?: number
 }
 
 export interface ReviewComment {

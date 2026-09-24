@@ -2,6 +2,19 @@ import type { Region } from '@/types/browse'
 
 export interface WebCampaignStrings {
   tag: 'zh-CN' | 'en'
+  seckillEyebrow: string
+  seckillTitle: string
+  groupEyebrow: string
+  groupTitle: string
+  loading: string
+  empty: string
+  loadFailed: string
+  claim: string
+  open: string
+  join: string
+  teamId: string
+  stock: string
+  size: string
   rank: {
     listLoadFailed: string
     detailLoadFailed: string
@@ -49,6 +62,19 @@ export interface WebCampaignStrings {
 
 const zhCnStrings: WebCampaignStrings = {
   tag: 'zh-CN',
+  seckillEyebrow: '秒杀',
+  seckillTitle: '限时秒杀',
+  groupEyebrow: '拼团',
+  groupTitle: '拼团活动',
+  loading: '加载中...',
+  empty: '当前没有可参加的活动。',
+  loadFailed: '活动加载失败',
+  claim: '立即抢',
+  open: '开团',
+  join: '加入拼团',
+  teamId: '拼团号',
+  stock: '库存',
+  size: '成团人数',
   rank: {
     listLoadFailed: '榜单加载失败',
     detailLoadFailed: '榜单详情加载失败',
@@ -96,6 +122,19 @@ const zhCnStrings: WebCampaignStrings = {
 
 const enStrings: WebCampaignStrings = {
   tag: 'en',
+  seckillEyebrow: 'Flash sale',
+  seckillTitle: 'Limited-time deals',
+  groupEyebrow: 'Group buy',
+  groupTitle: 'Group deals',
+  loading: 'Loading...',
+  empty: 'Nothing is open right now.',
+  loadFailed: 'Could not load campaigns',
+  claim: 'Claim',
+  open: 'Start a group',
+  join: 'Join',
+  teamId: 'Team',
+  stock: 'Stock',
+  size: 'Group size',
   rank: {
     listLoadFailed: 'Could not load city rankings',
     detailLoadFailed: 'Could not load ranking details',

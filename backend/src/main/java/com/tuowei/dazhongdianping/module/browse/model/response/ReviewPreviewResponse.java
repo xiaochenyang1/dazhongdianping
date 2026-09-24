@@ -13,6 +13,7 @@ public record ReviewPreviewResponse(
         Integer likedCount,
         Integer commentCount,
         MerchantReplyResponse merchantReply,
-        String createdAt
+        String createdAt,
+        Integer helpfulCount
 ) {
 }

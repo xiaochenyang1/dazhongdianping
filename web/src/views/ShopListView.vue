@@ -8,7 +8,7 @@ import {
   discoveryStringsForRegion,
   localizeWebDiscoveryError,
 } from '@/core/web_discovery_localizations'
-import { fetchAreas, fetchCategories, fetchCities, fetchShops } from '@/services/browse'
+import { fetchAreas, fetchBrowseShops, fetchCategories, fetchCities, fetchShops } from '@/services/browse'
 import { fetchAdSlots, reportAdClick } from '@/services/ad'
 import { adStringsForRegion } from '@/core/web_ad_localizations'
 import type { Area, CategoryNode, City, ShopListItem } from '@/types/browse'
@@ -35,6 +35,9 @@ let areaRequestId = 0
 let shopRequestId = 0
 let cityChangeRequestId = 0
 const copy = computed(() => discoveryStringsForRegion(state.region))
+const amenityLabels = computed(() => state.region === 'EU'
+  ? { chineseService: 'Chinese service', chineseMenu: 'Chinese menu', acceptAlipay: 'Alipay', acceptWechat: 'WeChat Pay' }
+  : { chineseService: '中文服务', chineseMenu: '中文菜单', acceptAlipay: '支付宝', acceptWechat: '微信支付' })
 
 const filters = reactive({
   keyword: routeKeyword(),
@@ -47,6 +50,10 @@ const filters = reactive({
   minScore: '',
   hasDeal: '',
   openNow: '',
+  chineseService: false,
+  chineseMenu: false,
+  acceptAlipay: false,
+  acceptWechat: false,
 })
 
 const activeCityName = computed(() => cities.value.find((item) => item.id === filters.cityId)?.name ?? copy.value.shopList.unselectedCity)
@@ -215,7 +222,7 @@ async function loadShops(append = false) {
       if (requestId !== shopRequestId) return
       userLocation.value = location
     }
-    const page = await fetchShops({
+    const query = {
       keyword: requestFilters.keyword || undefined,
       categoryId: requestFilters.categoryId,
       cityId: requestFilters.cityId,
@@ -228,9 +235,15 @@ async function loadShops(append = false) {
       minScore: optionalNumber(requestFilters.minScore),
       hasDeal: optionalBoolean(requestFilters.hasDeal),
       openNow: optionalBoolean(requestFilters.openNow),
+      chineseService: requestFilters.chineseService || undefined,
+      chineseMenu: requestFilters.chineseMenu || undefined,
+      acceptAlipay: requestFilters.acceptAlipay || undefined,
+      acceptWechat: requestFilters.acceptWechat || undefined,
       page: targetPage,
       pageSize: 12,
-    })
+    }
+    const amenityOn = Boolean(query.chineseService || query.chineseMenu || query.acceptAlipay || query.acceptWechat)
+    const page = await (amenityOn ? fetchBrowseShops(query) : fetchShops(query))
     if (requestId !== shopRequestId) return
     shops.value = append ? [...shops.value, ...page.list] : page.list
     shopTotal.value = page.total
@@ -336,6 +349,10 @@ function resetFilters() {
   filters.minScore = ''
   filters.hasDeal = ''
   filters.openNow = ''
+  filters.chineseService = false
+  filters.chineseMenu = false
+  filters.acceptAlipay = false
+  filters.acceptWechat = false
   void loadShops()
 }
 
@@ -451,6 +468,23 @@ watch(
           <option value="true">{{ copy.shopList.openNow }}</option>
           <option value="false">{{ copy.shopList.closed }}</option>
         </select>
+      </label>
+
+      <label class="field">
+        <span>{{ amenityLabels.chineseService }}</span>
+        <input v-model="filters.chineseService" data-testid="filter-chinese-service" type="checkbox" />
+      </label>
+      <label class="field">
+        <span>{{ amenityLabels.chineseMenu }}</span>
+        <input v-model="filters.chineseMenu" type="checkbox" />
+      </label>
+      <label class="field">
+        <span>{{ amenityLabels.acceptAlipay }}</span>
+        <input v-model="filters.acceptAlipay" type="checkbox" />
+      </label>
+      <label class="field">
+        <span>{{ amenityLabels.acceptWechat }}</span>
+        <input v-model="filters.acceptWechat" type="checkbox" />
       </label>
 
       <div class="filters-panel__actions">

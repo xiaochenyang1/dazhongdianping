@@ -18,6 +18,11 @@ public class CouponTemplateRow {
     private String currency;
     /** 0=全平台通用，否则限定商户 */
     private Long shopId;
+    /** 0=平台券；非 0=商家自助建券 */
+    private Long merchantId;
+    /** 1=待审核 2=已通过 3=已驳回 */
+    private Integer auditStatus;
+    private String rejectReason;
     /** 0=不限量 */
     private Integer totalQuantity;
     private Integer claimedQuantity;

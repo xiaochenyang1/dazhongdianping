@@ -20,6 +20,10 @@ public class ShopListQuery {
     private BigDecimal minScore;
     private Boolean hasDeal;
     private Boolean openNow;
+    private Boolean chineseService;
+    private Boolean chineseMenu;
+    private Boolean acceptAlipay;
+    private Boolean acceptWechat;
     private String sort = "smart";
     private Double lat;
     private Double lng;
