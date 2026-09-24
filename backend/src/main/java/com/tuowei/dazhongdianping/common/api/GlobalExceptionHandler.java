@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import com.tuowei.dazhongdianping.common.riskcontrol.RiskBlockedException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -70,6 +71,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleForbiddenException(ForbiddenException exception) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error(403, exception.getMessage(), "common.forbidden"));
+    }
+
+    @ExceptionHandler(RiskBlockedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRiskBlockedException(RiskBlockedException exception) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(403, exception.getMessage(), exception.getMessageKey()));
     }
 
     @ExceptionHandler(RateLimitException.class)

@@ -98,7 +98,9 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (58, 'system:merchant:read', '查看商户账号', 'system', 1, 1),
     (59, 'system:merchant:write', '处置商户账号', 'system', 2, 1),
     (62, 'operations:recommendation:read', '查看推荐权重配置', 'operations', 1, 1),
-    (63, 'operations:recommendation:write', '维护推荐权重配置', 'operations', 2, 1);
+    (63, 'operations:recommendation:write', '维护推荐权重配置', 'operations', 2, 1),
+    (64, 'risk:event:read', '查看风控事件与规则', 'audit', 1, 1),
+    (65, 'risk:event:write', '处置风控事件与规则', 'audit', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
@@ -107,7 +109,7 @@ INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
 INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM admin_permission;
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
-    (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59),
+    (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59), (3, 64), (3, 65),
     (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57), (4, 62), (4, 63),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49), (5, 60);
 
@@ -385,3 +387,18 @@ INSERT INTO points_product (region, name, cover_image, description, points_price
 INSERT INTO recommendation_weight (region, affinity_weight, quality_weight, popularity_weight, distance_weight) VALUES
   ('CN', 40.00, 25.00, 20.00, 15.00),
   ('EU', 40.00, 25.00, 20.00, 15.00);
+
+-- 风控规则种子：频率、设备多账号、批量相似文本；两区域各一套
+-- scene: review_create 发点评 / trade_order 下单 / auth_register 注册
+-- action: 1=放行记录 2=转人审 3=拦截
+INSERT INTO risk_rule (region, rule_code, name, scene, action, threshold, window_seconds, risk_score, enabled, remark) VALUES
+  ('CN', 'review_freq', '点评高频提交', 'review_create', 2, 5, 3600, 40, TRUE, '同一用户 1 小时内提交超过 5 条点评转人审'),
+  ('CN', 'review_duplicate', '批量相似点评', 'review_create', 3, 85, 0, 60, TRUE, '与本人历史点评文本相似度超过 85% 判定为刷单并拦截'),
+  ('CN', 'device_multi_account', '设备多账号刷单', 'review_create', 2, 5, 0, 50, TRUE, '同一设备关联账号数超过 5 转人审'),
+  ('CN', 'order_freq', '下单高频', 'trade_order', 2, 10, 600, 30, TRUE, '同一用户 10 分钟内下单超过 10 笔转人审'),
+  ('CN', 'register_multi_account', '注册设备多账号', 'auth_register', 3, 5, 0, 70, TRUE, '同一设备关联账号数超过 5 时拦截新注册'),
+  ('EU', 'review_freq', 'High-frequency reviews', 'review_create', 2, 5, 3600, 40, TRUE, 'More than 5 reviews within 1 hour goes to manual audit'),
+  ('EU', 'review_duplicate', 'Duplicate review text', 'review_create', 3, 85, 0, 60, TRUE, 'Text similarity over 85% against own history is blocked as fake'),
+  ('EU', 'device_multi_account', 'Multi-account device', 'review_create', 2, 5, 0, 50, TRUE, 'Device linked to more than 5 accounts goes to manual audit'),
+  ('EU', 'order_freq', 'High-frequency orders', 'trade_order', 2, 10, 600, 30, TRUE, 'More than 10 orders within 10 minutes goes to manual audit'),
+  ('EU', 'register_multi_account', 'Multi-account device on register', 'auth_register', 3, 5, 0, 70, TRUE, 'Blocks new registration when a device is linked to more than 5 accounts');

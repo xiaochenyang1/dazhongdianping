@@ -1,3 +1,4 @@
+import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 
@@ -6,6 +7,10 @@ String localizeReviewError(
   Object error, {
   Map<String, String> overrides = const {},
 }) {
+  // 风控拦截：后端消息含动态命中原因，改用 messageKey 匹配统一友好文案
+  if (error is ApiException && error.messageKey == 'riskcontrol.review_blocked') {
+    return strings.reviewErrorRiskBlocked;
+  }
   return localizeAuthError(
     strings,
     error,

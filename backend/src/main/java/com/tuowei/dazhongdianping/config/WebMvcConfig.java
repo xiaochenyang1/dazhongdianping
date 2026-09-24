@@ -1,6 +1,7 @@
 package com.tuowei.dazhongdianping.config;
 
 import com.tuowei.dazhongdianping.common.region.RegionInterceptor;
+import com.tuowei.dazhongdianping.common.riskcontrol.RiskRequestInterceptor;
 import com.tuowei.dazhongdianping.module.admin.auth.AdminAuthInterceptor;
 import com.tuowei.dazhongdianping.module.auth.UserAuthInterceptor;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantAuthInterceptor;
@@ -13,17 +14,20 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final RegionInterceptor regionInterceptor;
+    private final RiskRequestInterceptor riskRequestInterceptor;
     private final AdminAuthInterceptor adminAuthInterceptor;
     private final UserAuthInterceptor userAuthInterceptor;
     private final MerchantAuthInterceptor merchantAuthInterceptor;
     private final CorsProperties corsProperties;
 
     public WebMvcConfig(RegionInterceptor regionInterceptor,
+                        RiskRequestInterceptor riskRequestInterceptor,
                         AdminAuthInterceptor adminAuthInterceptor,
                         UserAuthInterceptor userAuthInterceptor,
                         MerchantAuthInterceptor merchantAuthInterceptor,
                         CorsProperties corsProperties) {
         this.regionInterceptor = regionInterceptor;
+        this.riskRequestInterceptor = riskRequestInterceptor;
         this.adminAuthInterceptor = adminAuthInterceptor;
         this.userAuthInterceptor = userAuthInterceptor;
         this.merchantAuthInterceptor = merchantAuthInterceptor;
@@ -33,6 +37,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(regionInterceptor);
+        registry.addInterceptor(riskRequestInterceptor);
         registry.addInterceptor(adminAuthInterceptor)
                 .addPathPatterns("/api/admin/v1/**")
                 .excludePathPatterns("/api/admin/v1/auth/login");

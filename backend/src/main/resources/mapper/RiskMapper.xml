@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.riskcontrol.mapper.RiskMapper">
+
+    <resultMap id="ruleMap" type="com.tuowei.dazhongdianping.module.riskcontrol.model.RiskRuleRow">
+        <id property="id" column="id"/>
+        <result property="region" column="region"/>
+        <result property="ruleCode" column="rule_code"/>
+        <result property="name" column="name"/>
+        <result property="scene" column="scene"/>
+        <result property="action" column="action"/>
+        <result property="threshold" column="threshold"/>
+        <result property="windowSeconds" column="window_seconds"/>
+        <result property="riskScore" column="risk_score"/>
+        <result property="enabled" column="enabled"/>
+        <result property="remark" column="remark"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="eventMap" type="com.tuowei.dazhongdianping.module.riskcontrol.model.RiskEventRow">
+        <id property="id" column="id"/>
+        <result property="region" column="region"/>
+        <result property="scene" column="scene"/>
+        <result property="userId" column="user_id"/>
+        <result property="deviceFingerprint" column="device_fingerprint"/>
+        <result property="ip" column="ip"/>
+        <result property="bizId" column="biz_id"/>
+        <result property="riskScore" column="risk_score"/>
+        <result property="decision" column="decision"/>
+        <result property="hitRules" column="hit_rules"/>
+        <result property="reason" column="reason"/>
+        <result property="disposeStatus" column="dispose_status"/>
+        <result property="disposeRemark" column="dispose_remark"/>
+        <result property="disposedBy" column="disposed_by"/>
+        <result property="disposedAt" column="disposed_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- ============ 规则 ============ -->
+
+    <select id="selectEnabledRules" resultMap="ruleMap">
+        SELECT * FROM risk_rule
+        WHERE region = #{region}
+          AND scene = #{scene}
+          AND enabled = TRUE
+          AND is_deleted = FALSE
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectRules" resultMap="ruleMap">
+        SELECT * FROM risk_rule
+        WHERE region = #{region}
+          AND is_deleted = FALSE
+        ORDER BY scene ASC, id ASC
+    </select>
+
+    <select id="selectRuleById" resultMap="ruleMap">
+        SELECT * FROM risk_rule
+        WHERE id = #{id}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </select>
+
+    <update id="updateRule">
+        UPDATE risk_rule
+        SET action = #{action},
+            threshold = #{threshold},
+            window_seconds = #{windowSeconds},
+            risk_score = #{riskScore},
+            enabled = #{enabled},
+            remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </update>
+
+    <!-- ============ 事件 ============ -->
+
+    <insert id="insertEvent" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO risk_event(region, scene, user_id, device_fingerprint, ip, biz_id,
+                               risk_score, decision, hit_rules, reason, dispose_status)
+        VALUES(#{region}, #{scene}, #{userId}, #{deviceFingerprint}, #{ip}, #{bizId},
+               #{riskScore}, #{decision}, #{hitRules}, #{reason}, #{disposeStatus})
+    </insert>
+
+    <sql id="eventFilter">
+        WHERE region = #{region}
+        <if test="scene != null and scene != ''">AND scene = #{scene}</if>
+        <if test="decision != null">AND decision = #{decision}</if>
+        <if test="disposeStatus != null">AND dispose_status = #{disposeStatus}</if>
+    </sql>
+
+    <select id="selectEvents" resultMap="eventMap">
+        SELECT * FROM risk_event
+        <include refid="eventFilter"/>
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countEvents" resultType="long">
+        SELECT COUNT(*) FROM risk_event
+        <include refid="eventFilter"/>
+    </select>
+
+    <select id="selectEventById" resultMap="eventMap">
+        SELECT * FROM risk_event
+        WHERE id = #{id} AND region = #{region}
+    </select>
+
+    <update id="disposeEvent">
+        UPDATE risk_event
+        SET dispose_status = #{disposeStatus},
+            dispose_remark = #{disposeRemark},
+            disposed_by = #{disposedBy},
+            disposed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND region = #{region}
+    </update>
+
+    <!-- ============ 信号：按场景统计用户行为次数 ============ -->
+    <!-- review_create → review 表；trade_order → order 表；其余场景无频率语义返回 0 -->
+
+    <select id="countUserActions" resultType="int">
+        <choose>
+            <when test="scene == 'review_create'">
+                SELECT COUNT(*) FROM review
+                WHERE user_id = #{userId}
+                  AND region = #{region}
+                  AND is_deleted = FALSE
+                <if test="windowSeconds > 0">
+                    AND created_at >= DATEADD('SECOND', -#{windowSeconds}, CURRENT_TIMESTAMP)
+                </if>
+            </when>
+            <when test="scene == 'trade_order'">
+                SELECT COUNT(*) FROM `order`
+                WHERE user_id = #{userId}
+                  AND region = #{region}
+                <if test="windowSeconds > 0">
+                    AND created_at >= DATEADD('SECOND', -#{windowSeconds}, CURRENT_TIMESTAMP)
+                </if>
+            </when>
+            <otherwise>
+                SELECT 0
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectRecentReviewContents" resultType="string">
+        SELECT content FROM review
+        WHERE user_id = #{userId}
+          AND region = #{region}
+          AND is_deleted = FALSE
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- ============ 设备指纹 ============ -->
+
+    <select id="selectDevice" resultType="com.tuowei.dazhongdianping.module.riskcontrol.model.DeviceFingerprintRow">
+        SELECT id AS id,
+               user_count AS userCount,
+               blocked AS blocked,
+               last_user_id AS lastUserId
+        FROM device_fingerprint
+        WHERE region = #{region} AND fingerprint = #{fingerprint}
+    </select>
+
+    <insert id="insertDevice">
+        INSERT INTO device_fingerprint(region, fingerprint, user_count, last_user_id)
+        VALUES(#{region}, #{fingerprint}, 1, #{userId})
+    </insert>
+
+    <update id="updateDeviceSeen">
+        UPDATE device_fingerprint
+        SET last_user_id = #{userId},
+            last_seen_at = CURRENT_TIMESTAMP
+            <if test="newUser">, user_count = user_count + 1</if>
+        WHERE region = #{region} AND fingerprint = #{fingerprint}
+    </update>
+
+    <update id="incrementDeviceRiskHit">
+        UPDATE device_fingerprint
+        SET risk_hit_count = risk_hit_count + 1,
+            last_seen_at = CURRENT_TIMESTAMP
+        WHERE region = #{region} AND fingerprint = #{fingerprint}
+    </update>
+
+</mapper>
