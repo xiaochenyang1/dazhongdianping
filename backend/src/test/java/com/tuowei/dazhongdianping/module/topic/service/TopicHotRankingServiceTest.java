@@ -25,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -125,6 +126,7 @@ class TopicHotRankingServiceTest {
     }
 
     @Test
+    @Transactional
     void shouldMarkTopicsDirtyAndRecalculateAfterLikeAndComment() throws Exception {
         long topicId = insertTopic("EU", "热榜测试互动刷新", 1, false, 0, null, 0);
         long postId = insertPost("EU", "热榜测试互动帖子", 1, 1, false, LocalDateTime.now().minusDays(1));

@@ -96,7 +96,9 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (56, 'operations:points:read', '查看积分商城商品', 'operations', 1, 1),
     (57, 'operations:points:write', '维护积分商城商品', 'operations', 2, 1),
     (58, 'system:merchant:read', '查看商户账号', 'system', 1, 1),
-    (59, 'system:merchant:write', '处置商户账号', 'system', 2, 1);
+    (59, 'system:merchant:write', '处置商户账号', 'system', 2, 1),
+    (62, 'operations:recommendation:read', '查看推荐权重配置', 'operations', 1, 1),
+    (63, 'operations:recommendation:write', '维护推荐权重配置', 'operations', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
@@ -106,7 +108,7 @@ INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM adm
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59),
-    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57),
+    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57), (4, 62), (4, 63),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49), (5, 60);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
@@ -378,3 +380,8 @@ INSERT INTO points_product (region, name, cover_image, description, points_price
   ('EU', '€2 Dining Voucher', 'https://cdn.example.com/points/eu-voucher-2.png', 'Valid at all partner restaurants, €2 off per bill', 150, 500, 2, 0, 1, 1, 1, FALSE),
   ('EU', 'Afternoon Tea 50% Off', 'https://cdn.example.com/points/eu-tea-half.png', 'Half price afternoon tea, up to €4 off', 250, 300, 1, 0, 1, 1, 2, FALSE),
   ('EU', 'Member Week Pass', 'https://cdn.example.com/points/eu-week-pass.png', 'Priority booking and queue skip for one week', 600, 100, 1, 0, 2, 1, 3, FALSE);
+
+-- 推荐打分默认权重（按区域）
+INSERT INTO recommendation_weight (region, affinity_weight, quality_weight, popularity_weight, distance_weight) VALUES
+  ('CN', 40.00, 25.00, 20.00, 15.00),
+  ('EU', 40.00, 25.00, 20.00, 15.00);

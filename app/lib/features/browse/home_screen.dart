@@ -10,6 +10,7 @@ import 'package:dazhongdianping_app/features/circle/circle_repository.dart';
 import 'package:dazhongdianping_app/features/notification/notification_repository.dart';
 import 'package:dazhongdianping_app/features/rank/rank_list_screen.dart';
 import 'package:dazhongdianping_app/features/rank/rank_repository.dart';
+import 'package:dazhongdianping_app/features/recommendation/recommendation_repository.dart';
 import 'package:dazhongdianping_app/features/topic/topic_repository.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
@@ -44,6 +45,7 @@ class HomeScreen extends StatefulWidget {
     this.topicRepository,
     this.rankRepository,
     this.activityRepository,
+    this.recommendationRepository,
     this.notificationRepository,
     this.onCommunityLoginRequired,
   });
@@ -68,6 +70,7 @@ class HomeScreen extends StatefulWidget {
   final TopicRepository? topicRepository;
   final RankRepository? rankRepository;
   final ActivityRepository? activityRepository;
+  final RecommendationRepository? recommendationRepository;
   final NotificationRepository? notificationRepository;
   final ValueChanged<BuildContext>? onCommunityLoginRequired;
   @override
@@ -76,6 +79,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<ShopSummary>> _shops;
+  Future<List<ShopSummary>>? _recommendations;
   int _notificationUnreadCount = 0;
   int _unreadRequestGeneration = 0;
   bool _openingNotifications = false;
@@ -84,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _shops = widget.repository.loadFeaturedShops();
+    _recommendations = widget.recommendationRepository?.loadFeed();
     _refreshUnreadCount();
   }
 
@@ -93,6 +98,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (oldWidget.repository != widget.repository ||
         oldWidget.region != widget.region) {
       _reloadShops();
+    }
+    if (oldWidget.recommendationRepository != widget.recommendationRepository ||
+        oldWidget.region != widget.region) {
+      _reloadRecommendations();
     }
     if (oldWidget.notificationRepository != widget.notificationRepository) {
       _refreshUnreadCount();
@@ -111,8 +120,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _retry() =>
-      Future.wait<void>([_reloadShops(), _refreshUnreadCount()]);
+  Future<void> _reloadRecommendations() async {
+    final future = widget.recommendationRepository?.loadFeed();
+    setState(() {
+      _recommendations = future;
+    });
+    if (future == null) return;
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder renders the request error.
+    }
+  }
+
+  Future<void> _retry() => Future.wait<void>(
+        [_reloadShops(), _reloadRecommendations(), _refreshUnreadCount()],
+      );
 
   Future<void> _refreshUnreadCount() async {
     final requestGeneration = ++_unreadRequestGeneration;
@@ -321,6 +344,89 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
               ],
             ),
+            if (_recommendations != null) ...[
+              const SizedBox(height: 20),
+              Text(
+                strings.recommendedForYou,
+                key: const Key('home-recommendations-title'),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              FutureBuilder<List<ShopSummary>>(
+                future: _recommendations,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  final recommended = snapshot.data ?? const [];
+                  if (snapshot.hasError || recommended.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(strings.recommendationsEmpty),
+                    );
+                  }
+                  return Column(
+                    children: recommended
+                        .map(
+                          (shop) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Card(
+                              child: ListTile(
+                                key: Key('recommendation-card-${shop.id}'),
+                                contentPadding: const EdgeInsets.all(16),
+                                leading: CircleAvatar(
+                                  backgroundColor: const Color(0xFFFFE4D5),
+                                  child: Text(shop.name.characters.first),
+                                ),
+                                title: Text(
+                                  shop.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${shop.category} · ★ ${shop.score.toStringAsFixed(1)}',
+                                ),
+                                trailing: Text(
+                                  formatMoney(
+                                    shop.pricePerCapita,
+                                    shop.currency,
+                                    locale: strings.tag,
+                                  ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ShopDetailScreen(
+                                      repository: widget.repository,
+                                      shopId: shop.id,
+                                      tradeRepository: widget.tradeRepository,
+                                      reservationRepository:
+                                          widget.reservationRepository,
+                                      reviewRepository: widget.reviewRepository,
+                                      canInteractReviews:
+                                          widget.canInteractReviews,
+                                      thirdPartyConfig: widget.thirdPartyConfig,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+              ),
+            ],
             const SizedBox(height: 20),
             Text(
               strings.featured,

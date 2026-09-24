@@ -33,6 +33,9 @@ export interface WebDiscoveryStrings {
     viewDetails: string
     activityType: (type: number, fallback: string) => string
     activityChannel: (channel: number, fallback: string) => string
+    recommendEyebrow: string
+    recommendTitle: string
+    recommendEmpty: string
   }
   shopList: {
     loadFailed: string
@@ -134,6 +137,9 @@ const zhCnStrings: WebDiscoveryStrings = {
     viewDetails: '查看详情',
     activityType: (_type, fallback) => fallback,
     activityChannel: (_channel, fallback) => fallback,
+    recommendEyebrow: '为你精选',
+    recommendTitle: '猜你喜欢',
+    recommendEmpty: '暂时还没有足够的偏好数据，多逛逛就有啦。',
   },
   shopList: {
     loadFailed: '商户列表加载失败',
@@ -252,6 +258,9 @@ const enStrings: WebDiscoveryStrings = {
       4: 'Activities',
       5: 'Community',
     }[channel] ?? fallback),
+    recommendEyebrow: 'Picked for you',
+    recommendTitle: 'Recommended for you',
+    recommendEmpty: 'Not enough preference data yet — browse a bit more and it will fill in.',
   },
   shopList: {
     loadFailed: 'Could not load places',
