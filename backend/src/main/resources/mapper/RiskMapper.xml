@@ -131,7 +131,7 @@
                   AND region = #{region}
                   AND is_deleted = FALSE
                 <if test="windowSeconds > 0">
-                    AND created_at >= DATEADD('SECOND', -#{windowSeconds}, CURRENT_TIMESTAMP)
+                    AND created_at >= TIMESTAMPADD(SECOND, -#{windowSeconds}, CURRENT_TIMESTAMP)
                 </if>
             </when>
             <when test="scene == 'trade_order'">
@@ -139,7 +139,7 @@
                 WHERE user_id = #{userId}
                   AND region = #{region}
                 <if test="windowSeconds > 0">
-                    AND created_at >= DATEADD('SECOND', -#{windowSeconds}, CURRENT_TIMESTAMP)
+                    AND created_at >= TIMESTAMPADD(SECOND, -#{windowSeconds}, CURRENT_TIMESTAMP)
                 </if>
             </when>
             <otherwise>
