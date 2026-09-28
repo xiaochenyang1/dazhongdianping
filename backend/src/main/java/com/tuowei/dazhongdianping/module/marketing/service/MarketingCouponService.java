@@ -66,11 +66,11 @@ public class MarketingCouponService {
             throw new ConflictException("领券活动已结束");
         }
         int perUserLimit = t.getPerUserLimit() == null ? 1 : t.getPerUserLimit();
-        int owned = mapper.countUserCouponsOfTemplate(u.userId(), templateId);
-        if (owned >= perUserLimit) {
+        // 快速失败(非权威):无竞争时先给友好错误,省掉无谓的库存扣减争用。
+        if (mapper.countUserCouponsOfTemplate(u.userId(), templateId) >= perUserLimit) {
             throw new ConflictException("已达到每人限领数量");
         }
-        // 原子扣减发放量：限量券抢光时返回 0。
+        // 原子扣减发放量:限量券抢光时返回 0。此 UPDATE 持模板行写锁,串行化同模板的并发领取。
         if (mapper.incrementClaimed(templateId) == 0) {
             throw new ConflictException("优惠券已被领完");
         }
@@ -84,7 +84,11 @@ public class MarketingCouponService {
         row.setCurrency(t.getCurrency());
         row.setShopId(t.getShopId());
         row.setExpireAt(now.plusDays(t.getValidDays() == null ? 7 : t.getValidDays()));
-        mapper.insertUserCoupon(row);
+        // 权威的每人限领校验:带 COUNT 守卫的原子插入,0 行=已达上限。在库存扣减(持模板锁)之后执行,
+        // 借该锁串行化并发领取杜绝超领;此处抛异常会回滚上面已扣减的库存。
+        if (mapper.insertUserCouponIfUnderLimit(row, perUserLimit) == 0) {
+            throw new ConflictException("已达到每人限领数量");
+        }
         row.setTemplateName(t.getName());
         row.setStatus(1);
         return toUserCoupon(row);

@@ -56,11 +56,17 @@
         SELECT COUNT(*) FROM user_coupon WHERE user_id=#{userId} AND template_id=#{templateId}
     </select>
 
-    <insert id="insertUserCoupon" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertUserCouponIfUnderLimit" useGeneratedKeys="true" keyProperty="row.id">
         INSERT INTO user_coupon
         (template_id,user_id,region,type,threshold_amount,discount_amount,currency,shop_id,status,expire_at)
-        VALUES
-        (#{templateId},#{userId},#{region},#{type},#{thresholdAmount},#{discountAmount},#{currency},#{shopId},1,#{expireAt})
+        SELECT #{row.templateId},#{row.userId},#{row.region},#{row.type},#{row.thresholdAmount},
+               #{row.discountAmount},#{row.currency},#{row.shopId},1,#{row.expireAt}
+        FROM (SELECT 1) dummy
+        WHERE (
+            SELECT COUNT(*) FROM (
+                SELECT id FROM user_coupon WHERE user_id=#{row.userId} AND template_id=#{row.templateId}
+            ) owned
+        ) &lt; #{perUserLimit}
     </insert>
 
     <sql id="ucCols">uc.id,uc.template_id,uc.user_id,uc.region,uc.type,uc.threshold_amount,uc.discount_amount,uc.currency,uc.shop_id,uc.status,uc.used_order_id,uc.used_at,uc.expire_at,uc.created_at,t.name AS template_name</sql>

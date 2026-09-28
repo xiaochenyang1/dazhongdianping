@@ -36,7 +36,12 @@ public interface MarketingMapper {
     // ---- 用户券 ----
     int countUserCouponsOfTemplate(@Param("userId") Long userId, @Param("templateId") Long templateId);
 
-    void insertUserCoupon(UserCouponRow row);
+    /**
+     * 原子领券插入：仅当该用户已持有的同模板券数 &lt; perUserLimit 时才插入,返回受影响行数(0/1)。
+     * 用 COUNT 守卫的 INSERT ... SELECT 把「校验+插入」并成单条语句,配合
+     * {@link #incrementClaimed} 对模板行的写锁串行化,杜绝并发超领。
+     */
+    int insertUserCouponIfUnderLimit(@Param("row") UserCouponRow row, @Param("perUserLimit") int perUserLimit);
 
     List<UserCouponRow> selectUserCoupons(
             @Param("userId") Long userId,
