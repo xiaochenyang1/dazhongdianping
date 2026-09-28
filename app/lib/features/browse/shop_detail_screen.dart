@@ -9,6 +9,8 @@ import 'package:dazhongdianping_app/features/review/review_editor_screen.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
 import 'package:dazhongdianping_app/features/trade/deals_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
+import 'package:dazhongdianping_app/features/qa/qa_repository.dart';
+import 'package:dazhongdianping_app/features/qa/shop_qa_section.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +35,7 @@ class ShopDetailScreen extends StatefulWidget {
     this.enableFavorite = true,
     this.canInteractReviews = false,
     this.navigationLauncher,
+    this.qaRepository,
   });
   final BrowseRepository repository;
   final int shopId;
@@ -43,6 +46,7 @@ class ShopDetailScreen extends StatefulWidget {
   final bool enableFavorite;
   final bool canInteractReviews;
   final ShopNavigationLauncher? navigationLauncher;
+  final QaRepository? qaRepository;
 
   @override
   State<ShopDetailScreen> createState() => _ShopDetailScreenState();
@@ -637,6 +641,10 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     );
                   },
                 ),
+              ],
+              if (widget.qaRepository != null) ...[
+                const SizedBox(height: 28),
+                ShopQaSection(repository: widget.qaRepository!, shopId: widget.shopId),
               ],
               if (_similar != null) ...[
                 SizedBox(height: 28),

@@ -1500,3 +1500,29 @@ CREATE TABLE IF NOT EXISTS consult_message (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_consult_message_session ON consult_message(session_id, id);
+
+-- ============================================================
+-- "问大家" / 商户问答（qa）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS shop_question (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    shop_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    answer_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_shop_question_shop ON shop_question(shop_id, region, is_deleted, id);
+
+CREATE TABLE IF NOT EXISTS shop_answer (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    question_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_shop_answer_question ON shop_answer(question_id, is_deleted, id);
