@@ -155,6 +155,8 @@ const router = createRouter({
     { path: '/user/complaints', name: 'user-complaints', component: () => import('@/views/ComplaintsView.vue'), meta: { requiresAuth: true, title: '我的投诉', description: '查看投诉进度、商家申辩与平台仲裁结果。' } },
     { path: '/user/complaints/:id', name: 'user-complaint-detail', component: () => import('@/views/ComplaintDetailView.vue'), props: r => ({ complaintId: Number(r.params.id) }), meta: { requiresAuth: true, title: '投诉详情', description: '查看投诉处理日志与结论。' } },
     { path: '/complaints/new', name: 'complaint-create', component: () => import('@/views/ComplaintCreateView.vue'), props: r => ({ shopId: r.query.shopId ? Number(r.query.shopId) : undefined, orderId: r.query.orderId ? Number(r.query.orderId) : undefined }), meta: { requiresAuth: true, title: '发起投诉', description: '对门店或订单发起投诉。' } },
+    { path: '/user/consult', name: 'user-consult', component: () => import('@/views/ConsultSessionsView.vue'), meta: { requiresAuth: true, title: '在线咨询', description: '查看与商家的咨询会话。' } },
+    { path: '/user/consult/:id', name: 'user-consult-chat', component: () => import('@/views/ConsultChatView.vue'), props: r => ({ sessionId: Number(r.params.id) }), meta: { requiresAuth: true, title: '咨询会话', description: '与商家在线沟通。' } },
     {
       path: '/user/coupons/:code',
       name: 'user-coupon-detail',

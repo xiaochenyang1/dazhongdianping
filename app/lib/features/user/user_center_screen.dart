@@ -8,6 +8,8 @@ import 'package:dazhongdianping_app/features/message/blocked_users_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
 import 'package:dazhongdianping_app/features/complaint/complaint_repository.dart';
 import 'package:dazhongdianping_app/features/complaint/complaints_screen.dart';
+import 'package:dazhongdianping_app/features/consult/consult_repository.dart';
+import 'package:dazhongdianping_app/features/consult/consult_sessions_screen.dart';
 import 'package:dazhongdianping_app/features/marketing/coupon_center_screen.dart';
 import 'package:dazhongdianping_app/features/marketing/marketing_repository.dart';
 import 'package:dazhongdianping_app/features/marketing/my_marketing_coupons_screen.dart';
@@ -312,6 +314,19 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                   MaterialPageRoute(
                     builder: (_) => ComplaintsScreen(
                       repository: ComplaintRepository(widget.repository.api),
+                    ),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-consult'),
+                leading: const Icon(Icons.support_agent_outlined),
+                title: Text(strings.myConsultTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ConsultSessionsScreen(
+                      repository: ConsultRepository(widget.repository.api),
                     ),
                   ),
                 ),

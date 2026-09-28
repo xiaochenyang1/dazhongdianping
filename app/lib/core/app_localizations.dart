@@ -16,6 +16,16 @@ class AppLocalizations {
 
   static const _simplified = {
     'adLabel': '广告',
+    'consultEntry': '咨询商家',
+    'myConsultTitle': '在线咨询',
+    'consultSessionsEmpty': '还没有咨询会话，去商户页发起咨询吧。',
+    'consultLoadFailed': '咨询加载失败：{error}',
+    'consultSendFailed': '发送失败：{error}',
+    'consultMessagesEmpty': '还没有消息，发条消息开始咨询吧。',
+    'consultInputHint': '输入消息...',
+    'consultSend': '发送',
+    'consultYou': '我',
+    'consultMerchant': '商家',
     'myComplaintsTitle': '我的投诉',
     'complaintsEmpty': '你还没有发起过投诉。',
     'complaintsLoadFailed': '投诉加载失败：{error}',
@@ -1046,6 +1056,16 @@ class AppLocalizations {
   };
   static const _traditional = {
     'adLabel': '廣告',
+    'consultEntry': '諮詢商家',
+    'myConsultTitle': '線上諮詢',
+    'consultSessionsEmpty': '還沒有諮詢會話，去商戶頁發起諮詢吧。',
+    'consultLoadFailed': '諮詢載入失敗：{error}',
+    'consultSendFailed': '發送失敗：{error}',
+    'consultMessagesEmpty': '還沒有訊息，發條訊息開始諮詢吧。',
+    'consultInputHint': '輸入訊息...',
+    'consultSend': '發送',
+    'consultYou': '我',
+    'consultMerchant': '商家',
     'myComplaintsTitle': '我的投訴',
     'complaintsEmpty': '你還沒有發起過投訴。',
     'complaintsLoadFailed': '投訴載入失敗：{error}',
@@ -2076,6 +2096,16 @@ class AppLocalizations {
   };
   static const _english = {
     'adLabel': 'Ad',
+    'consultEntry': 'Chat with merchant',
+    'myConsultTitle': 'Live Chat',
+    'consultSessionsEmpty': 'No chats yet — start one from a shop page.',
+    'consultLoadFailed': 'Failed to load chat: {error}',
+    'consultSendFailed': 'Failed to send: {error}',
+    'consultMessagesEmpty': 'No messages yet — say hello to start.',
+    'consultInputHint': 'Type a message...',
+    'consultSend': 'Send',
+    'consultYou': 'You',
+    'consultMerchant': 'Merchant',
     'myComplaintsTitle': 'My Complaints',
     'complaintsEmpty': 'You have not filed any complaints yet.',
     'complaintsLoadFailed': 'Failed to load complaints: {error}',
@@ -3333,6 +3363,16 @@ class AppLocalizations {
   String get marketingCouponStatusUsed => _text('marketingCouponStatusUsed');
   String get marketingCouponStatusExpired => _text('marketingCouponStatusExpired');
   String get adLabel => _text('adLabel');
+  String get consultEntry => _text('consultEntry');
+  String get myConsultTitle => _text('myConsultTitle');
+  String get consultSessionsEmpty => _text('consultSessionsEmpty');
+  String consultLoadFailed(Object error) => _withError('consultLoadFailed', error);
+  String consultSendFailed(Object error) => _withError('consultSendFailed', error);
+  String get consultMessagesEmpty => _text('consultMessagesEmpty');
+  String get consultInputHint => _text('consultInputHint');
+  String get consultSend => _text('consultSend');
+  String get consultYou => _text('consultYou');
+  String get consultMerchant => _text('consultMerchant');
   String get myComplaintsTitle => _text('myComplaintsTitle');
   String get complaintsEmpty => _text('complaintsEmpty');
   String complaintsLoadFailed(Object error) => _withError('complaintsLoadFailed', error);
