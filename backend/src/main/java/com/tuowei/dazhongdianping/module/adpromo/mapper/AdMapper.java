@@ -1,6 +1,7 @@
 package com.tuowei.dazhongdianping.module.adpromo.mapper;
 
 import com.tuowei.dazhongdianping.module.adpromo.model.AdCampaignRow;
+import com.tuowei.dazhongdianping.module.adpromo.model.AdReportRow;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -53,4 +54,8 @@ public interface AdMapper {
             @Param("campaignId") Long campaignId, @Param("region") String region,
             @Param("shopId") Long shopId, @Param("userId") Long userId,
             @Param("cost") java.math.BigDecimal cost);
+
+    /** 门店广告报表：投放行上的花费，加上点击日志的次数与金额汇总。 */
+    List<AdReportRow> selectShopReport(
+            @Param("merchantId") Long merchantId, @Param("shopId") Long shopId, @Param("region") String region);
 }

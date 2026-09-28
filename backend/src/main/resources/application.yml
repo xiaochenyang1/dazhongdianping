@@ -74,6 +74,9 @@ app:
       enabled: ${APP_PAYMENT_STRIPE_ENABLED:false}
       secret-key: ${APP_PAYMENT_STRIPE_SECRET_KEY:}
       endpoint-secret: ${APP_PAYMENT_STRIPE_ENDPOINT_SECRET:}
+      connect-timeout-ms: ${APP_PAYMENT_STRIPE_CONNECT_TIMEOUT_MS:5000}
+      read-timeout-ms: ${APP_PAYMENT_STRIPE_READ_TIMEOUT_MS:20000}
+      max-network-retries: ${APP_PAYMENT_STRIPE_MAX_NETWORK_RETRIES:1}
   search:
     provider: ${APP_SEARCH_PROVIDER:mysql}
     base-url: ${APP_SEARCH_BASE_URL:http://127.0.0.1:9200}
@@ -83,6 +86,8 @@ app:
     sync-fixed-delay-ms: ${APP_SEARCH_SYNC_FIXED_DELAY_MS:5000}
     sync-initial-delay-ms: ${APP_SEARCH_SYNC_INITIAL_DELAY_MS:10000}
     sync-lock-timeout-seconds: ${APP_SEARCH_SYNC_LOCK_TIMEOUT_SECONDS:300}
+    connect-timeout-ms: ${APP_SEARCH_CONNECT_TIMEOUT_MS:3000}
+    read-timeout-ms: ${APP_SEARCH_READ_TIMEOUT_MS:8000}
     sync-retry-base-seconds: ${APP_SEARCH_SYNC_RETRY_BASE_SECONDS:15}
     sync-retry-max-seconds: ${APP_SEARCH_SYNC_RETRY_MAX_SECONDS:1800}
   infrastructure:

@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -35,7 +36,25 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
                                            RestClient.Builder restClientBuilder) {
         this.searchProperties = searchProperties;
         this.objectMapper = objectMapper;
-        this.restClient = restClientBuilder.baseUrl(searchProperties.getBaseUrl()).build();
+        restClientBuilder.baseUrl(searchProperties.getBaseUrl());
+        // Bound the connect/read time so a hung ES node fails fast and lets
+        // ShopSearchService fall back to MySQL, instead of blocking the request
+        // thread on the socket until the JVM default (effectively unbounded) elapses.
+        // 0 leaves the builder's factory untouched so MockRestServiceServer-bound
+        // unit tests keep working.
+        int connectTimeoutMs = searchProperties.getConnectTimeoutMs();
+        int readTimeoutMs = searchProperties.getReadTimeoutMs();
+        if (connectTimeoutMs > 0 || readTimeoutMs > 0) {
+            SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+            if (connectTimeoutMs > 0) {
+                requestFactory.setConnectTimeout(connectTimeoutMs);
+            }
+            if (readTimeoutMs > 0) {
+                requestFactory.setReadTimeout(readTimeoutMs);
+            }
+            restClientBuilder.requestFactory(requestFactory);
+        }
+        this.restClient = restClientBuilder.build();
     }
 
     @Override

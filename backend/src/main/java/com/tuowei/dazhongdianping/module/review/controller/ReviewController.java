@@ -11,6 +11,7 @@ import com.tuowei.dazhongdianping.module.review.model.request.ReviewSaveRequest;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentReportResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewDetailResponse;
+import com.tuowei.dazhongdianping.module.review.model.response.ReviewHelpfulResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewLikeResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewReportResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.UserReviewSummaryResponse;
@@ -53,6 +54,11 @@ public class ReviewController {
         String message = response.liked() ? "点赞成功" : "已取消点赞";
         String messageKey = response.liked() ? "review.like_on" : "review.like_off";
         return ApiResponse.success(message, messageKey, response);
+    }
+
+    @PostMapping("/reviews/{reviewId}/helpful")
+    public ApiResponse<ReviewHelpfulResponse> toggleHelpful(@PathVariable Long reviewId) {
+        return ApiResponse.success("已更新有用投票", "review.helpful_toggled", reviewService.toggleHelpful(reviewId));
     }
 
     @PostMapping("/reviews/{reviewId}/comments")

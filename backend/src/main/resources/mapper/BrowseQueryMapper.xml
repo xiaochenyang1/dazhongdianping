@@ -154,6 +154,18 @@
         <if test="openNow != null">
             AND s.open_now = #{openNow}
         </if>
+        <if test="chineseService != null and chineseService">
+            AND s.chinese_service = TRUE
+        </if>
+        <if test="chineseMenu != null and chineseMenu">
+            AND s.chinese_menu = TRUE
+        </if>
+        <if test="acceptAlipay != null and acceptAlipay">
+            AND s.accept_alipay = TRUE
+        </if>
+        <if test="acceptWechat != null and acceptWechat">
+            AND s.accept_wechat = TRUE
+        </if>
         <if test="sort == 'distance'">
             AND s.latitude IS NOT NULL
             AND s.longitude IS NOT NULL
@@ -277,6 +289,18 @@
           AND s.id = #{shopId}
     </select>
 
+    <select id="selectShopAmenities" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopAmenityRow">
+        SELECT s.chinese_service,
+               s.chinese_menu,
+               s.accept_alipay,
+               s.accept_wechat
+        FROM shop s
+        WHERE s.region = #{region}
+          AND s.status = 1
+          AND s.is_deleted = FALSE
+          AND s.id = #{shopId}
+    </select>
+
     <select id="selectShopMerchantIds" resultType="com.tuowei.dazhongdianping.module.browse.model.ShopListRow">
         SELECT s.id,
                s.merchant_id
@@ -377,6 +401,7 @@
                r.content,
                r.like_count AS liked_count,
                r.comment_count,
+               r.helpful_count,
                m.company_name AS merchant_reply_merchant_name,
                rr.content AS merchant_reply_content,
                rr.created_at AS merchant_reply_created_at,
@@ -392,6 +417,9 @@
             </when>
             <when test="sort == 'score'">
                 ORDER BY r.score_overall DESC, r.created_at DESC, r.id DESC
+            </when>
+            <when test="sort == 'helpful'">
+                ORDER BY r.helpful_count DESC, r.created_at DESC, r.id DESC
             </when>
             <otherwise>
                 ORDER BY r.created_at DESC, r.id DESC

@@ -51,6 +51,18 @@ public interface ReviewMapper {
 
     int countUserReviewLike(@Param("reviewId") Long reviewId, @Param("userId") Long userId);
 
+    int countUserHelpfulVote(@Param("reviewId") Long reviewId, @Param("userId") Long userId);
+
+    void insertHelpfulVote(@Param("reviewId") Long reviewId,
+                           @Param("userId") Long userId,
+                           @Param("region") String region);
+
+    int deleteHelpfulVote(@Param("reviewId") Long reviewId, @Param("userId") Long userId);
+
+    int refreshHelpfulCount(@Param("reviewId") Long reviewId);
+
+    int selectHelpfulCount(@Param("reviewId") Long reviewId);
+
     void insertReviewComment(ReviewCommentRow row);
 
     long countPublicRootReviewComments(@Param("reviewId") Long reviewId);

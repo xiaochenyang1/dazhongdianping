@@ -124,6 +124,19 @@ CREATE TABLE admin_role_permission (
   permission_id BIGINT NOT NULL,
   PRIMARY KEY (role_id, permission_id)
 );
+CREATE TABLE review (
+  id BIGINT NOT NULL PRIMARY KEY,
+  comment_count INT NOT NULL DEFAULT 0
+);
+CREATE TABLE `order` (
+  id BIGINT NOT NULL PRIMARY KEY,
+  unit_price DECIMAL(10,2) NOT NULL DEFAULT 0
+);
+CREATE TABLE merchant_role (
+  id BIGINT NOT NULL PRIMARY KEY,
+  code VARCHAR(64) NOT NULL,
+  permissions VARCHAR(1000) NOT NULL DEFAULT ''
+);
 INSERT INTO admin_role (id, code) VALUES
   (1, 'super_admin'),
   (2, 'data_operator');
@@ -146,7 +159,7 @@ grep -q 'explicit --baseline-version' "$run_dir/no-baseline.log" ||
 
 history_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$history_count" == "12" ]] || fail "expected 12 migration history rows, found $history_count"
+[[ "$history_count" == "14" ]] || fail "expected 14 migration history rows, found $history_count"
 non_applied_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e "SELECT COUNT(*) FROM dzdp_schema_migration WHERE state <> 'APPLIED';")"
 [[ "$non_applied_count" == "0" ]] || fail "old-baseline upgrade did not finish every migration"
@@ -156,8 +169,11 @@ SELECT
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='refund' AND column_name='channel_status') +
   (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='channel_statement_batch') +
   (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='shop_search_sync_task') +
-  (SELECT COUNT(*) FROM admin_permission WHERE code='system:health:read');")"
-[[ "$schema_probe" == "4" ]] || fail "migrations 03-14 did not produce the expected schema/data"
+  (SELECT COUNT(*) FROM admin_permission WHERE code='system:health:read') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='review' AND column_name='helpful_count') +
+  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='marketing_coupon_template') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='user_coupon_id');")"
+[[ "$schema_probe" == "7" ]] || fail "migrations 03-16 did not produce the expected schema/data"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -165,7 +181,7 @@ SELECT
   --lock-file "$run_dir/repeat.lock"
 repeat_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$repeat_count" == "12" ]] || fail "repeat apply changed migration history"
+[[ "$repeat_count" == "14" ]] || fail "repeat apply changed migration history"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -239,9 +255,9 @@ while read -r _checksum filename; do
 done < "$manifest"
 cp "$manifest" "$failure_root/migrations.sha256"
 printf 'THIS IS INTENTIONALLY INVALID SQL;\n' > \
-  "$failure_root/migrations/15_forced_failure_migration.sql"
-failure_hash="$(sha256sum "$failure_root/migrations/15_forced_failure_migration.sql" | awk '{print $1}')"
-printf '%s  %s\n' "$failure_hash" '15_forced_failure_migration.sql' >> \
+  "$failure_root/migrations/17_forced_failure_migration.sql"
+failure_hash="$(sha256sum "$failure_root/migrations/17_forced_failure_migration.sql" | awk '{print $1}')"
+printf '%s  %s\n' "$failure_hash" '17_forced_failure_migration.sql' >> \
   "$failure_root/migrations.sha256"
 
 switch_marker="$run_dir/current-switched"
@@ -256,7 +272,7 @@ if "$runner" \
 fi
 [[ ! -e "$switch_marker" ]] || fail "post-migration switch marker was created after failure"
 failed_state="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
-  -e 'SELECT state FROM dzdp_schema_migration WHERE version=15;')"
+  -e 'SELECT state FROM dzdp_schema_migration WHERE version=17;')"
 [[ "$failed_state" == "FAILED" ]] || fail "failed migration was not persisted as FAILED"
 
 if "$runner" \

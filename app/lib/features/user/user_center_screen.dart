@@ -6,8 +6,19 @@ import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/message/blocked_users_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
+import 'package:dazhongdianping_app/features/campaign/campaign_repository.dart';
+import 'package:dazhongdianping_app/features/campaign/group_buy_screen.dart';
+import 'package:dazhongdianping_app/features/campaign/level_privileges_screen.dart';
+import 'package:dazhongdianping_app/features/campaign/seckill_screen.dart';
 import 'package:dazhongdianping_app/features/complaint/complaint_repository.dart';
 import 'package:dazhongdianping_app/features/complaint/complaints_screen.dart';
+import 'package:dazhongdianping_app/features/creator/creator_repository.dart';
+import 'package:dazhongdianping_app/features/creator/creator_tasks_screen.dart';
+import 'package:dazhongdianping_app/features/guide/guide_repository.dart';
+import 'package:dazhongdianping_app/features/guide/guides_screen.dart';
+import 'package:dazhongdianping_app/features/invoice/invoices_screen.dart';
+import 'package:dazhongdianping_app/features/ticket/ticket_repository.dart';
+import 'package:dazhongdianping_app/features/ticket/tickets_screen.dart';
 import 'package:dazhongdianping_app/features/consult/consult_repository.dart';
 import 'package:dazhongdianping_app/features/consult/consult_sessions_screen.dart';
 import 'package:dazhongdianping_app/features/waitlist/waitlist_repository.dart';
@@ -317,6 +328,83 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                     builder: (_) => ComplaintsScreen(
                       repository: ComplaintRepository(widget.repository.api),
                     ),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-tickets'),
+                leading: const Icon(Icons.confirmation_number_outlined),
+                title: Text(strings.myTicketsTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => TicketsScreen(repository: TicketRepository(widget.repository.api)),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-guides'),
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(strings.guidesTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => GuidesScreen(repository: GuideRepository(widget.repository.api)),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-creator'),
+                leading: const Icon(Icons.edit_note_outlined),
+                title: Text(strings.creatorTasksTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CreatorTasksScreen(repository: CreatorRepository(widget.repository.api)),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-invoices'),
+                leading: const Icon(Icons.receipt_long_outlined),
+                title: Text(strings.invoicesTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => InvoicesScreen(repository: InvoiceRepository(widget.repository.api)),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-seckill'),
+                leading: const Icon(Icons.flash_on_outlined),
+                title: Text(strings.seckillTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SeckillScreen(repository: CampaignRepository(widget.repository.api)),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-groupbuy'),
+                leading: const Icon(Icons.groups_outlined),
+                title: Text(strings.groupBuyTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => GroupBuyScreen(repository: CampaignRepository(widget.repository.api)),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-level'),
+                leading: const Icon(Icons.workspace_premium_outlined),
+                title: Text(strings.levelPrivilegesTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => LevelPrivilegesScreen(repository: GrowthRepository(widget.repository.api)),
                   ),
                 ),
               ),

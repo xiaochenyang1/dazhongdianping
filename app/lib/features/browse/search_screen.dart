@@ -63,6 +63,13 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _panelError;
   int _panelRequestId = 0;
   int _searchRequestId = 0;
+  bool _chineseService = false;
+  bool _chineseMenu = false;
+  bool _acceptAlipay = false;
+  bool _acceptWechat = false;
+
+  bool get _amenityOn =>
+      _chineseService || _chineseMenu || _acceptAlipay || _acceptWechat;
 
   @override
   void initState() {
@@ -167,9 +174,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _search(String value) async {
     final keyword = value.trim();
-    if (keyword.isEmpty) return;
+    if (keyword.isEmpty && !_amenityOn) return;
     final requestId = ++_searchRequestId;
-    final future = widget.repository.searchShopPage(keyword);
+    final future = widget.repository.loadFilteredShopPage(
+      keyword: keyword,
+      chineseService: _chineseService,
+      chineseMenu: _chineseMenu,
+      acceptAlipay: _acceptAlipay,
+      acceptWechat: _acceptWechat,
+    );
     setState(() {
       _searchedKeyword = keyword;
       _results = future;
@@ -177,11 +190,11 @@ class _SearchScreenState extends State<SearchScreen> {
       _suggestions = const [];
       _loadingMore = false;
     });
-    _loadAdSlots(keyword, requestId);
+    if (keyword.isNotEmpty) _loadAdSlots(keyword, requestId);
     // Refresh history after a successful search so the new keyword appears.
     try {
       await future;
-      if (!mounted || requestId != _searchRequestId) return;
+      if (!mounted || requestId != _searchRequestId || keyword.isEmpty) return;
       final historyRevision = ++_historyRevision;
       setState(() => _loadingMoreHistory = false);
       final historyPage = await widget.repository.loadSearchHistoryPage(
@@ -276,19 +289,48 @@ class _SearchScreenState extends State<SearchScreen> {
       _controller.clear();
       _suggestions = const [];
       _loadingMore = false;
+      _chineseService = false;
+      _chineseMenu = false;
+      _acceptAlipay = false;
+      _acceptWechat = false;
     });
     _loadPanel();
   }
 
+  void _setAmenity({
+    bool? chineseService,
+    bool? chineseMenu,
+    bool? acceptAlipay,
+    bool? acceptWechat,
+  }) {
+    setState(() {
+      if (chineseService != null) _chineseService = chineseService;
+      if (chineseMenu != null) _chineseMenu = chineseMenu;
+      if (acceptAlipay != null) _acceptAlipay = acceptAlipay;
+      if (acceptWechat != null) _acceptWechat = acceptWechat;
+    });
+    final keyword = _controller.text.trim();
+    if (keyword.isEmpty && !_amenityOn) {
+      _showDiscovery();
+      return;
+    }
+    _search(keyword);
+  }
+
   Future<void> _loadMore(ShopSearchPage current) async {
-    if (_loadingMore || !current.hasMore || _searchedKeyword.isEmpty) return;
+    if (_loadingMore || !current.hasMore) return;
+    if (_searchedKeyword.isEmpty && !_amenityOn) return;
     final requestId = _searchRequestId;
     setState(() => _loadingMore = true);
     try {
-      final next = await widget.repository.searchShopPage(
-        _searchedKeyword,
+      final next = await widget.repository.loadFilteredShopPage(
+        keyword: _searchedKeyword,
         page: current.page + 1,
         pageSize: current.pageSize,
+        chineseService: _chineseService,
+        chineseMenu: _chineseMenu,
+        acceptAlipay: _acceptAlipay,
+        acceptWechat: _acceptWechat,
       );
       if (!mounted || requestId != _searchRequestId) return;
       final knownIds = current.items.map((shop) => shop.id).toSet();
@@ -481,6 +523,40 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ),
                 border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  FilterChip(
+                    key: const Key('search-amenity-chinese-service'),
+                    label: Text(strings.amenityChineseService),
+                    selected: _chineseService,
+                    onSelected: (selected) =>
+                        _setAmenity(chineseService: selected),
+                  ),
+                  FilterChip(
+                    key: const Key('search-amenity-chinese-menu'),
+                    label: Text(strings.amenityChineseMenu),
+                    selected: _chineseMenu,
+                    onSelected: (selected) => _setAmenity(chineseMenu: selected),
+                  ),
+                  FilterChip(
+                    key: const Key('search-amenity-alipay'),
+                    label: Text(strings.amenityAlipay),
+                    selected: _acceptAlipay,
+                    onSelected: (selected) => _setAmenity(acceptAlipay: selected),
+                  ),
+                  FilterChip(
+                    key: const Key('search-amenity-wechat'),
+                    label: Text(strings.amenityWechat),
+                    selected: _acceptWechat,
+                    onSelected: (selected) => _setAmenity(acceptWechat: selected),
+                  ),
+                ],
               ),
             ),
             if (_suggestions.isNotEmpty || _suggestLoading) ...[

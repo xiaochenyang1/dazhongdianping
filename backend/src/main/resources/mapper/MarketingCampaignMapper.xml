@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper">
+
+    <select id="selectShopCurrency" resultType="string">
+        SELECT currency FROM shop WHERE id=#{shopId} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <select id="countOwnedDeal" resultType="int">
+        SELECT COUNT(*) FROM deal
+        WHERE id=#{dealId} AND shop_id=#{shopId} AND merchant_id=#{merchantId}
+          AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <sql id="seckillCols">
+        id,region,shop_id,merchant_id,deal_id,title,seckill_price,currency,stock,sold,start_at,end_at,status,audit_status,reject_reason
+    </sql>
+
+    <insert id="insertSeckill" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO seckill_event
+        (region,shop_id,merchant_id,deal_id,title,seckill_price,currency,stock,sold,start_at,end_at,status,audit_status,reject_reason)
+        VALUES
+        (#{region},#{shopId},#{merchantId},#{dealId},#{title},#{seckillPrice},#{currency},#{stock},0,#{startAt},#{endAt},1,1,'')
+    </insert>
+
+    <select id="selectMerchantSeckills" resultType="com.tuowei.dazhongdianping.module.marketing.model.SeckillEventRow">
+        SELECT <include refid="seckillCols"/> FROM seckill_event
+        WHERE merchant_id=#{merchantId} AND shop_id=#{shopId} AND region=#{region} AND is_deleted=FALSE
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectActiveSeckills" resultType="com.tuowei.dazhongdianping.module.marketing.model.SeckillEventRow">
+        SELECT <include refid="seckillCols"/> FROM seckill_event
+        WHERE region=#{region} AND is_deleted=FALSE AND audit_status=2 AND status=1
+          AND start_at &lt;= #{now} AND end_at &gt;= #{now}
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectAdminSeckills" resultType="com.tuowei.dazhongdianping.module.marketing.model.SeckillEventRow">
+        SELECT <include refid="seckillCols"/> FROM seckill_event
+        WHERE region=#{region} AND is_deleted=FALSE
+        ORDER BY audit_status ASC, id DESC
+    </select>
+
+    <select id="selectSeckill" resultType="com.tuowei.dazhongdianping.module.marketing.model.SeckillEventRow">
+        SELECT <include refid="seckillCols"/> FROM seckill_event
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <update id="updateSeckillAudit">
+        UPDATE seckill_event
+        SET audit_status=#{auditStatus},reject_reason=#{rejectReason},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE AND audit_status=1
+    </update>
+
+    <update id="incrementSeckillSold">
+        UPDATE seckill_event
+        SET sold=sold+1,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+          AND audit_status=2 AND status=1 AND sold &lt; stock
+          AND start_at &lt;= #{now} AND end_at &gt;= #{now}
+    </update>
+
+    <select id="countSeckillClaim" resultType="int">
+        SELECT COUNT(*) FROM seckill_claim WHERE event_id=#{eventId} AND user_id=#{userId}
+    </select>
+
+    <insert id="insertSeckillClaim" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO seckill_claim(event_id,user_id,region) VALUES(#{eventId},#{userId},#{region})
+    </insert>
+
+    <sql id="groupCols">
+        id,region,shop_id,merchant_id,deal_id,title,group_price,currency,group_size,start_at,end_at,status,audit_status,reject_reason
+    </sql>
+
+    <insert id="insertGroup" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO groupbuy_campaign
+        (region,shop_id,merchant_id,deal_id,title,group_price,currency,group_size,start_at,end_at,status,audit_status,reject_reason)
+        VALUES
+        (#{region},#{shopId},#{merchantId},#{dealId},#{title},#{groupPrice},#{currency},#{groupSize},#{startAt},#{endAt},1,1,'')
+    </insert>
+
+    <select id="selectMerchantGroups" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyCampaignRow">
+        SELECT <include refid="groupCols"/> FROM groupbuy_campaign
+        WHERE merchant_id=#{merchantId} AND shop_id=#{shopId} AND region=#{region} AND is_deleted=FALSE
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectActiveGroups" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyCampaignRow">
+        SELECT <include refid="groupCols"/> FROM groupbuy_campaign
+        WHERE region=#{region} AND is_deleted=FALSE AND audit_status=2 AND status=1
+          AND start_at &lt;= #{now} AND end_at &gt;= #{now}
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectAdminGroups" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyCampaignRow">
+        SELECT <include refid="groupCols"/> FROM groupbuy_campaign
+        WHERE region=#{region} AND is_deleted=FALSE
+        ORDER BY audit_status ASC, id DESC
+    </select>
+
+    <select id="selectGroup" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyCampaignRow">
+        SELECT <include refid="groupCols"/> FROM groupbuy_campaign
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <update id="updateGroupAudit">
+        UPDATE groupbuy_campaign
+        SET audit_status=#{auditStatus},reject_reason=#{rejectReason},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE AND audit_status=1
+    </update>
+
+    <insert id="insertTeam" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO groupbuy_team(campaign_id,region,leader_user_id,status,member_count,expire_at)
+        VALUES(#{campaignId},#{region},#{leaderUserId},1,1,#{expireAt})
+    </insert>
+
+    <insert id="insertMember">
+        INSERT INTO groupbuy_member(team_id,user_id) VALUES(#{teamId},#{userId})
+    </insert>
+
+    <select id="selectTeam" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyTeamRow">
+        SELECT id,campaign_id,region,leader_user_id,status,member_count,expire_at
+        FROM groupbuy_team WHERE id=#{id}
+    </select>
+
+    <select id="countTeamMember" resultType="int">
+        SELECT COUNT(*) FROM groupbuy_member WHERE team_id=#{teamId} AND user_id=#{userId}
+    </select>
+
+    <update id="joinTeam">
+        UPDATE groupbuy_team
+        SET member_count=member_count+1,
+            status=CASE WHEN member_count+1 &gt;= #{groupSize} THEN 2 ELSE 1 END,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND status=1 AND expire_at &gt; #{now} AND member_count &lt; #{groupSize}
+    </update>
+
+</mapper>

@@ -291,6 +291,10 @@ CREATE TABLE IF NOT EXISTS shop (
     summary VARCHAR(255) NOT NULL,
     has_deal BOOLEAN NOT NULL DEFAULT FALSE,
     open_now BOOLEAN NOT NULL DEFAULT TRUE,
+    chinese_service BOOLEAN NOT NULL DEFAULT FALSE,
+    chinese_menu BOOLEAN NOT NULL DEFAULT FALSE,
+    accept_alipay BOOLEAN NOT NULL DEFAULT FALSE,
+    accept_wechat BOOLEAN NOT NULL DEFAULT FALSE,
     status TINYINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -432,6 +436,7 @@ CREATE TABLE IF NOT EXISTS review (
     cost DECIMAL(10,2) NOT NULL DEFAULT 0,
     currency CHAR(3) NOT NULL DEFAULT 'CNY',
     like_count INT NOT NULL DEFAULT 0,
+    helpful_count INT NOT NULL DEFAULT 0,
     comment_count INT NOT NULL DEFAULT 0,
     audit_status TINYINT NOT NULL DEFAULT 0,
     audit_remark VARCHAR(255) NOT NULL DEFAULT '',
@@ -1337,6 +1342,11 @@ CREATE TABLE IF NOT EXISTS marketing_coupon_template (
     currency CHAR(3) NOT NULL DEFAULT 'CNY',
     -- 限定商户（0 = 全平台通用）
     shop_id BIGINT NOT NULL DEFAULT 0,
+    -- 发券方：0=平台；非 0=商家自助建券
+    merchant_id BIGINT NOT NULL DEFAULT 0,
+    -- 审核：1=待审核 2=已通过 3=已驳回。平台券默认已通过
+    audit_status TINYINT NOT NULL DEFAULT 2,
+    reject_reason VARCHAR(255) NOT NULL DEFAULT '',
     -- 发放总量与已领取量（total_quantity=0 表示不限量）
     total_quantity INT NOT NULL DEFAULT 0,
     claimed_quantity INT NOT NULL DEFAULT 0,
@@ -1550,3 +1560,331 @@ CREATE TABLE IF NOT EXISTS waitlist_entry (
 );
 CREATE INDEX IF NOT EXISTS idx_waitlist_shop ON waitlist_entry(shop_id, table_type, status, id);
 CREATE INDEX IF NOT EXISTS idx_waitlist_user ON waitlist_entry(user_id, region, status, id);
+
+-- ============================================================
+-- 点评有用投票 / 点评翻译 / 菜品点评
+-- ============================================================
+CREATE TABLE IF NOT EXISTS review_helpful_vote (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    review_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_review_helpful_vote UNIQUE(review_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_review_helpful_user ON review_helpful_vote(user_id, review_id);
+
+CREATE TABLE IF NOT EXISTS review_translation (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    review_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    user_id BIGINT NOT NULL,
+    target_lang VARCHAR(8) NOT NULL,
+    content VARCHAR(2000) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_review_translation_user UNIQUE(review_id, user_id, target_lang)
+);
+CREATE INDEX IF NOT EXISTS idx_review_translation_review ON review_translation(review_id, target_lang, id);
+
+CREATE TABLE IF NOT EXISTS dish_review (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    shop_id BIGINT NOT NULL,
+    dish_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    score TINYINT NOT NULL,
+    content VARCHAR(500) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_dish_review_dish ON dish_review(dish_id, region, is_deleted, id);
+
+-- ============================================================
+-- 发票 / VAT
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tax_rate (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    name VARCHAR(64) NOT NULL,
+    rate_bp INT NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_tax_rate_region ON tax_rate(region, status, id);
+
+CREATE TABLE IF NOT EXISTS invoice_title (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    title_type TINYINT NOT NULL DEFAULT 1,
+    name VARCHAR(128) NOT NULL,
+    tax_no VARCHAR(64) NOT NULL DEFAULT '',
+    email VARCHAR(128) NOT NULL DEFAULT '',
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_invoice_title_user ON invoice_title(user_id, region, id);
+
+CREATE TABLE IF NOT EXISTS invoice_request (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    user_id BIGINT NOT NULL,
+    order_id BIGINT NOT NULL,
+    title_id BIGINT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    tax_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    currency CHAR(3) NOT NULL DEFAULT 'CNY',
+    status TINYINT NOT NULL DEFAULT 1,
+    invoice_no VARCHAR(64) NOT NULL DEFAULT '',
+    reject_reason VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_invoice_request_order UNIQUE(order_id)
+);
+CREATE INDEX IF NOT EXISTS idx_invoice_request_user ON invoice_request(user_id, region, status, id);
+CREATE INDEX IF NOT EXISTS idx_invoice_request_admin ON invoice_request(region, status, id);
+
+-- ============================================================
+-- 内容机审命中
+-- ============================================================
+CREATE TABLE IF NOT EXISTS automod_hit (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    biz_type VARCHAR(32) NOT NULL,
+    biz_id BIGINT NOT NULL DEFAULT 0,
+    user_id BIGINT NOT NULL DEFAULT 0,
+    decision TINYINT NOT NULL,
+    provider VARCHAR(32) NOT NULL DEFAULT '',
+    reason VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_automod_hit_region ON automod_hit(region, decision, id);
+
+-- ============================================================
+-- 秒杀 / 拼团
+-- ============================================================
+CREATE TABLE IF NOT EXISTS seckill_event (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    shop_id BIGINT NOT NULL,
+    merchant_id BIGINT NOT NULL,
+    deal_id BIGINT NOT NULL DEFAULT 0,
+    title VARCHAR(128) NOT NULL,
+    seckill_price DECIMAL(10,2) NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'CNY',
+    stock INT NOT NULL DEFAULT 0,
+    sold INT NOT NULL DEFAULT 0,
+    start_at TIMESTAMP NOT NULL,
+    end_at TIMESTAMP NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    audit_status TINYINT NOT NULL DEFAULT 1,
+    reject_reason VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_seckill_region ON seckill_event(region, audit_status, status, id);
+
+CREATE TABLE IF NOT EXISTS seckill_claim (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    event_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_seckill_claim UNIQUE(event_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS groupbuy_campaign (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    shop_id BIGINT NOT NULL,
+    merchant_id BIGINT NOT NULL,
+    deal_id BIGINT NOT NULL DEFAULT 0,
+    title VARCHAR(128) NOT NULL,
+    group_price DECIMAL(10,2) NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'CNY',
+    group_size INT NOT NULL DEFAULT 2,
+    start_at TIMESTAMP NOT NULL,
+    end_at TIMESTAMP NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    audit_status TINYINT NOT NULL DEFAULT 1,
+    reject_reason VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_groupbuy_campaign_region ON groupbuy_campaign(region, audit_status, status, id);
+
+CREATE TABLE IF NOT EXISTS groupbuy_team (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    campaign_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    leader_user_id BIGINT NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    member_count INT NOT NULL DEFAULT 1,
+    expire_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_groupbuy_team_campaign ON groupbuy_team(campaign_id, status, id);
+
+CREATE TABLE IF NOT EXISTS groupbuy_member (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    team_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_groupbuy_member UNIQUE(team_id, user_id)
+);
+
+-- ============================================================
+-- 攻略 / 创作者 / 实验开关
+-- ============================================================
+CREATE TABLE IF NOT EXISTS guide_article (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    city_id BIGINT NOT NULL DEFAULT 0,
+    title VARCHAR(128) NOT NULL,
+    summary VARCHAR(500) NOT NULL DEFAULT '',
+    cover_url VARCHAR(255) NOT NULL DEFAULT '',
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_guide_article_region ON guide_article(region, status, is_deleted, id);
+
+CREATE TABLE IF NOT EXISTS guide_section (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    article_id BIGINT NOT NULL,
+    sort_no INT NOT NULL DEFAULT 0,
+    heading VARCHAR(128) NOT NULL DEFAULT '',
+    body VARCHAR(4000) NOT NULL DEFAULT '',
+    shop_id BIGINT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_guide_section_article ON guide_section(article_id, sort_no, id);
+
+CREATE TABLE IF NOT EXISTS creator_task (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    title VARCHAR(128) NOT NULL,
+    description VARCHAR(1000) NOT NULL DEFAULT '',
+    reward_points INT NOT NULL DEFAULT 0,
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_creator_task_region ON creator_task(region, status, is_deleted, id);
+
+CREATE TABLE IF NOT EXISTS creator_task_claim (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    task_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL,
+    CONSTRAINT uk_creator_task_claim UNIQUE(task_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS feature_flag (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    flag_key VARCHAR(64) NOT NULL,
+    description VARCHAR(255) NOT NULL DEFAULT '',
+    enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    rollout_percent INT NOT NULL DEFAULT 100,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_feature_flag UNIQUE(region, flag_key)
+);
+
+CREATE TABLE IF NOT EXISTS experiment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    name VARCHAR(128) NOT NULL,
+    flag_key VARCHAR(64) NOT NULL DEFAULT '',
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_experiment_region ON experiment(region, status, id);
+
+CREATE TABLE IF NOT EXISTS experiment_assignment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    experiment_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    variant VARCHAR(16) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_experiment_assignment UNIQUE(experiment_id, user_id)
+);
+
+-- ============================================================
+-- 客服工单
+-- ============================================================
+CREATE TABLE IF NOT EXISTS support_ticket (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    requester_type TINYINT NOT NULL,
+    requester_id BIGINT NOT NULL,
+    shop_id BIGINT NOT NULL DEFAULT 0,
+    subject VARCHAR(128) NOT NULL,
+    content VARCHAR(2000) NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_support_ticket_requester ON support_ticket(requester_type, requester_id, region, id);
+CREATE INDEX IF NOT EXISTS idx_support_ticket_admin ON support_ticket(region, status, id);
+
+CREATE TABLE IF NOT EXISTS ticket_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ticket_id BIGINT NOT NULL,
+    sender_type TINYINT NOT NULL,
+    sender_id BIGINT NOT NULL DEFAULT 0,
+    content VARCHAR(2000) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_ticket_message_ticket ON ticket_message(ticket_id, id);
+
+-- ============================================================
+-- 开放平台
+-- ============================================================
+CREATE TABLE IF NOT EXISTS open_app (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    name VARCHAR(128) NOT NULL,
+    owner_merchant_id BIGINT NOT NULL DEFAULT 0,
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_open_app_region ON open_app(region, status, id);
+
+CREATE TABLE IF NOT EXISTS open_api_key (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    app_id BIGINT NOT NULL,
+    key_id VARCHAR(40) NOT NULL,
+    secret_hash VARCHAR(128) NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_open_api_key UNIQUE(key_id)
+);
+CREATE INDEX IF NOT EXISTS idx_open_api_key_app ON open_api_key(app_id, status);
+
+-- ============================================================
+-- 进程内消息 outbox（无外部 broker）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS message_outbox (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT '',
+    topic VARCHAR(64) NOT NULL,
+    payload VARCHAR(4000) NOT NULL DEFAULT '',
+    status TINYINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    published_at TIMESTAMP NULL
+);
+CREATE INDEX IF NOT EXISTS idx_message_outbox_status ON message_outbox(status, id);

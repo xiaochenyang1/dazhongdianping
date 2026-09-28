@@ -203,6 +203,7 @@ watch(
               <option value="latest">{{ copy.reviews.latest }}</option>
               <option value="popular">{{ copy.reviews.popular }}</option>
               <option value="score">{{ copy.reviews.scoreSort }}</option>
+              <option value="helpful">{{ copy.reviews.helpful }}</option>
             </select>
           </label>
           <label class="compact-field">
@@ -239,7 +240,7 @@ watch(
               <span>{{ formatWebDateTime(review.createdAt, copy.tag) }} · {{ review.score.toFixed(1) }}</span>
             </div>
             <p>{{ review.content }}</p>
-            <span class="review-card__foot">{{ copy.reviews.likes(review.likedCount) }} · {{ copy.reviews.comments(review.commentCount) }} · {{ copy.reviews.viewDetails }}</span>
+            <span class="review-card__foot">{{ copy.reviews.likes(review.likedCount) }} · {{ review.helpfulCount ?? 0 }} · {{ copy.reviews.comments(review.commentCount) }} · {{ copy.reviews.viewDetails }}</span>
           </article>
         </RouterLink>
       </div>

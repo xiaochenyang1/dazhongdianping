@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
 import { adminStringsForRegion } from '@/core/admin_localizations'
 import { fetchCouponTemplates, createCouponTemplate, updateCouponTemplate } from '@/services/admin'
+import { auditCouponTemplate } from '@/services/ops'
 import type { CouponTemplate, CouponTemplatePayload } from '@/types/admin'
 
 const { state } = useAdminSession()
@@ -139,6 +140,18 @@ function quotaText(t: CouponTemplate) {
   return t.totalQuantity === 0 ? copy.value.quotaUnlimited : copy.value.quotaText(t.claimedQuantity, t.totalQuantity)
 }
 
+async function audit(id: number, approve: boolean) {
+  if (!canWrite.value) return
+  errorMessage.value = ''
+  try {
+    await auditCouponTemplate(id, approve, approve ? '' : '不符合规则')
+    successMessage.value = approve ? '已通过' : '已驳回'
+    await load()
+  } catch (cause) {
+    errorMessage.value = messageOf(cause, copy.value.loadError)
+  }
+}
+
 watch(() => state.region, () => { closeForm(); resetForm(); load() }, { immediate: true })
 </script>
 
@@ -185,6 +198,8 @@ watch(() => state.region, () => { closeForm(); resetForm(); load() }, { immediat
           <td>{{ t.status === 1 ? copy.statusOn : copy.statusOff }}</td>
           <td>
             <button v-if="canWrite" type="button" class="link" @click="openEdit(t)">{{ copy.edit }}</button>
+            <button v-if="canWrite" type="button" class="link" @click="audit(t.id, true)">通过</button>
+            <button v-if="canWrite" type="button" class="link" @click="audit(t.id, false)">驳回</button>
           </td>
         </tr>
         <tr v-if="templates.length === 0">

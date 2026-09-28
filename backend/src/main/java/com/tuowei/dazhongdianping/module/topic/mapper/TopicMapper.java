@@ -97,23 +97,15 @@ public interface TopicMapper {
 
     int deleteHotSnapshot(@Param("topicId") Long topicId);
 
-    List<Long> selectPostIdsByTopic(@Param("topicId") Long topicId);
-
-    int countPostTopic(@Param("topicId") Long topicId, @Param("postId") Long postId);
-
-    int deletePostTopic(@Param("topicId") Long topicId, @Param("postId") Long postId);
-
-    int movePostTopic(@Param("sourceId") Long sourceId, @Param("targetId") Long targetId,
-                      @Param("postId") Long postId);
-
     List<Long> selectFollowerUserIds(@Param("topicId") Long topicId);
 
-    int countTopicFollow(@Param("topicId") Long topicId, @Param("userId") Long userId);
+    int deleteDuplicatePostTopics(@Param("sourceId") Long sourceId, @Param("targetId") Long targetId);
 
-    int deleteTopicFollow(@Param("topicId") Long topicId, @Param("userId") Long userId);
+    int reassignPostTopics(@Param("sourceId") Long sourceId, @Param("targetId") Long targetId);
 
-    int moveTopicFollow(@Param("sourceId") Long sourceId, @Param("targetId") Long targetId,
-                        @Param("userId") Long userId);
+    int deleteDuplicateTopicFollows(@Param("sourceId") Long sourceId, @Param("targetId") Long targetId);
+
+    int reassignTopicFollows(@Param("sourceId") Long sourceId, @Param("targetId") Long targetId);
 
     int markTopicMerged(@Param("sourceId") Long sourceId, @Param("region") String region,
                         @Param("targetId") Long targetId);

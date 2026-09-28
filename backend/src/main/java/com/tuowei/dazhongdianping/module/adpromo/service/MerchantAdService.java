@@ -7,10 +7,13 @@ import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.module.adpromo.mapper.AdMapper;
 import com.tuowei.dazhongdianping.module.adpromo.model.AdCampaignRow;
+import com.tuowei.dazhongdianping.module.adpromo.model.AdReportRow;
 import com.tuowei.dazhongdianping.module.adpromo.model.request.AdCampaignSaveRequest;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSession;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSessionContext;
 import com.tuowei.dazhongdianping.module.merchant.identity.service.MerchantAuthorizationService;
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -93,6 +96,32 @@ public class MerchantAdService {
             throw new ConflictException("广告投放状态更新失败");
         }
         return presenter.campaign(mapper.selectMerchantCampaign(id, session.merchantId(), region));
+    }
+
+    /** 门店投放报表。只读点击日志与已记账花费，不改变计费。 */
+    public Map<String, Object> report(Long shopId) {
+        MerchantSession session = requireSession();
+        authorizationService.requireShop(session, "ad:view", shopId);
+        List<Map<String, Object>> campaigns = mapper.selectShopReport(session.merchantId(), shopId, region())
+                .stream().map(this::reportMap).toList();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("shopId", shopId);
+        body.put("campaigns", campaigns);
+        return body;
+    }
+
+    private Map<String, Object> reportMap(AdReportRow row) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("id", row.getId());
+        body.put("shopId", row.getShopId());
+        body.put("name", row.getName());
+        body.put("status", row.getStatus());
+        body.put("auditStatus", row.getAuditStatus());
+        body.put("totalSpent", row.getTotalSpent() == null ? BigDecimal.ZERO : row.getTotalSpent());
+        body.put("spentToday", row.getSpentToday() == null ? BigDecimal.ZERO : row.getSpentToday());
+        body.put("clickCount", row.getClickCount() == null ? 0L : row.getClickCount());
+        body.put("clickCost", row.getClickCost() == null ? BigDecimal.ZERO : row.getClickCost());
+        return body;
     }
 
     private AdCampaignRow fromRequest(AdCampaignSaveRequest r) {

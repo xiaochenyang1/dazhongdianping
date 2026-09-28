@@ -31,6 +31,9 @@ export interface MerchantStrings {
     ads: string
     consult: string
     waitlist: string
+    tickets: string
+    marketing: string
+    analytics: string
   }
   shell: {
     workbenchEyebrow: string
@@ -738,6 +741,9 @@ const zhCnStrings: MerchantStrings = {
     ads: '广告推广',
     consult: '在线咨询',
     waitlist: '排队叫号',
+    tickets: '客服工单',
+    marketing: '营销活动',
+    analytics: '经营趋势',
   },
   shell: {
     workbenchEyebrow: '商户工作台',
@@ -1520,6 +1526,9 @@ const enStrings: MerchantStrings = {
     ads: 'Ad Promotion',
     consult: 'Live Chat',
     waitlist: 'Waitlist',
+    tickets: 'Support tickets',
+    marketing: 'Marketing',
+    analytics: 'Trends',
   },
   shell: {
     workbenchEyebrow: 'Merchant Console',

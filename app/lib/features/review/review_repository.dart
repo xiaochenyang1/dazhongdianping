@@ -96,6 +96,7 @@ class ReviewDetail {
     required this.commentCount,
     required this.likedByCurrentUser,
     required this.auditStatus,
+    this.helpfulCount = 0,
     required this.auditStatusText,
     required this.auditRemark,
     required this.status,
@@ -124,6 +125,7 @@ class ReviewDetail {
   final int likeCount;
   final int commentCount;
   final bool likedByCurrentUser;
+  final int helpfulCount;
   final int auditStatus;
   final String auditStatusText;
   final String auditRemark;
@@ -143,6 +145,7 @@ class ReviewDetail {
     int? likeCount,
     int? commentCount,
     bool? likedByCurrentUser,
+    int? helpfulCount,
   }) => ReviewDetail(
     id: id,
     shopId: shopId,
@@ -159,6 +162,7 @@ class ReviewDetail {
     likeCount: likeCount ?? this.likeCount,
     commentCount: commentCount ?? this.commentCount,
     likedByCurrentUser: likedByCurrentUser ?? this.likedByCurrentUser,
+    helpfulCount: helpfulCount ?? this.helpfulCount,
     auditStatus: auditStatus,
     auditStatusText: auditStatusText,
     auditRemark: auditRemark,
@@ -200,6 +204,7 @@ class ReviewDetail {
       likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
       commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
       likedByCurrentUser: json['likedByCurrentUser'] as bool? ?? false,
+      helpfulCount: (json['helpfulCount'] as num?)?.toInt() ?? 0,
       auditStatus: json['auditStatus'] as int? ?? 0,
       auditStatusText: json['auditStatusText'] as String? ?? '',
       auditRemark: json['auditRemark'] as String? ?? '',
@@ -324,6 +329,44 @@ class ReviewLikeResult {
         reviewId: json['reviewId'] as int? ?? 0,
         liked: json['liked'] as bool? ?? false,
         likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class ReviewHelpfulResult {
+  const ReviewHelpfulResult({
+    required this.reviewId,
+    required this.voted,
+    required this.helpfulCount,
+  });
+
+  final int reviewId;
+  final bool voted;
+  final int helpfulCount;
+
+  factory ReviewHelpfulResult.fromJson(Map<String, dynamic> json) =>
+      ReviewHelpfulResult(
+        reviewId: (json['reviewId'] as num?)?.toInt() ?? 0,
+        voted: json['voted'] as bool? ?? false,
+        helpfulCount: (json['helpfulCount'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class ReviewTranslation {
+  const ReviewTranslation({
+    required this.id,
+    required this.targetLang,
+    required this.content,
+  });
+
+  final int id;
+  final String targetLang;
+  final String content;
+
+  factory ReviewTranslation.fromJson(Map<String, dynamic> json) =>
+      ReviewTranslation(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        targetLang: json['targetLang'] as String? ?? '',
+        content: json['content'] as String? ?? '',
       );
 }
 
@@ -480,6 +523,29 @@ class ReviewRepository {
   Future<ReviewLikeResult> toggleLike(int reviewId) async {
     final result = await api.postJson('/api/c/v1/reviews/$reviewId/like');
     return ReviewLikeResult.fromJson(result);
+  }
+
+  Future<ReviewHelpfulResult> toggleHelpful(int reviewId) async {
+    final result = await api.postJson('/api/c/v1/reviews/$reviewId/helpful');
+    return ReviewHelpfulResult.fromJson(result);
+  }
+
+  Future<List<ReviewTranslation>> translations(int reviewId) async {
+    try {
+      final result = await api.getJson('/api/c/v1/reviews/$reviewId/translations');
+      final raw = result['list'] ?? result['value'];
+      if (raw is! List) return const [];
+      return raw.whereType<Map<String, dynamic>>().map(ReviewTranslation.fromJson).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> saveTranslation(int reviewId, {required String targetLang, required String content}) {
+    return api.postJson('/api/c/v1/reviews/$reviewId/translations', body: {
+      'targetLang': targetLang,
+      'content': content,
+    });
   }
 
   Future<List<ReviewComment>> loadComments(

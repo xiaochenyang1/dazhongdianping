@@ -25,7 +25,8 @@ public class UserAuthInterceptor implements HandlerInterceptor {
                 || isPublicUserProfileReadRequest(request) || isPublicShopReadRequest(request)
                 || isPublicSearchReadRequest(request)
                 || isPublicCircleReadRequest(request) || isPublicTopicReadRequest(request)
-                || isPublicPointsProductReadRequest(request)) {
+                || isPublicPointsProductReadRequest(request)
+                || isPublicMarketingCampaignReadRequest(request)) {
             if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
                 UserSessionContext.set(publicAuthService.authenticate(authorization.substring(7)));
             }
@@ -89,6 +90,16 @@ public class UserAuthInterceptor implements HandlerInterceptor {
         return "GET".equalsIgnoreCase(request.getMethod())
                 && request.getRequestURI() != null
                 && request.getRequestURI().matches("^/api/c/v1/points/products(/\\d+)?$");
+    }
+
+    private boolean isPublicMarketingCampaignReadRequest(HttpServletRequest request) {
+        // 秒杀场次和拼团活动允许游客浏览；下单、开团、参团仍需登录。
+        return "GET".equalsIgnoreCase(request.getMethod())
+                && request.getRequestURI() != null
+                && (request.getRequestURI().equals("/api/c/v1/marketing/seckill")
+                || request.getRequestURI().startsWith("/api/c/v1/marketing/seckill/")
+                || request.getRequestURI().equals("/api/c/v1/marketing/groupbuy")
+                || request.getRequestURI().startsWith("/api/c/v1/marketing/groupbuy/"));
     }
 
     @Override

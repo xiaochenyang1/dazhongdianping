@@ -17,6 +17,7 @@ import {
   reportReview,
   toggleReviewLike,
 } from '@/services/review'
+import { fetchReviewTranslations, saveReviewTranslation, toggleReviewHelpful, type ReviewTranslation } from '@/services/contentTrust'
 import type { ReviewComment, ReviewDetail } from '@/types/review'
 
 const props = defineProps<{
@@ -31,6 +32,10 @@ const { state: sessionState, openAuthDialog } = useUserSession()
 const loading = ref(false)
 const commentsLoading = ref(false)
 const likeLoading = ref(false)
+const helpfulLoading = ref(false)
+const translations = ref<ReviewTranslation[]>([])
+const translationLang = ref('en')
+const translationContent = ref('')
 const commentSubmitting = ref(false)
 const reportSubmitting = ref(false)
 const errorMessage = ref('')
@@ -216,6 +221,13 @@ async function loadReview() {
       : await fetchReviewDetail(targetReviewId)
     if (requestId !== reviewRequestId) return
     review.value = detail
+    void fetchReviewTranslations(targetReviewId)
+      .then((value) => {
+        if (requestId === reviewRequestId) translations.value = value
+      })
+      .catch(() => {
+        if (requestId === reviewRequestId) translations.value = []
+      })
     if (interactionEnabled.value) {
       await loadComments(targetReviewId, requestId)
     } else {
@@ -256,6 +268,29 @@ async function loadComments(reviewId = props.reviewId, parentRequestId = reviewR
       commentsLoading.value = false
     }
   }
+}
+
+async function handleHelpful() {
+  if (!review.value || !ensureSignedIn(() => handleHelpful())) return
+  helpfulLoading.value = true
+  try {
+    const result = await toggleReviewHelpful(review.value.id)
+    review.value.helpfulCount = result.helpfulCount
+  } catch (error) {
+    interactionErrorMessage.value = error instanceof Error ? error.message : copy.value.detail.likeFailed
+  } finally {
+    helpfulLoading.value = false
+  }
+}
+
+async function saveTranslation() {
+  if (!review.value || !ensureSignedIn(() => saveTranslation())) return
+  const saved = await saveReviewTranslation(review.value.id, {
+    targetLang: translationLang.value,
+    content: translationContent.value.trim(),
+  })
+  translationContent.value = ''
+  translations.value = [saved, ...translations.value.filter((item) => item.id !== saved.id)]
 }
 
 async function handleToggleLike(resumedReviewId?: unknown) {
@@ -591,6 +626,9 @@ watch(
         <button type="button" class="primary-button" :disabled="likeLoading" @click="handleToggleLike">
           {{ review.likedByCurrentUser ? copy.detail.unlike : copy.detail.like }} · {{ review.likeCount }}
         </button>
+        <button type="button" class="secondary-button" :disabled="helpfulLoading" data-testid="review-helpful" @click="handleHelpful">
+          {{ review.helpfulCount ?? 0 }}
+        </button>
         <button
           type="button"
           class="ghost-button"
@@ -647,6 +685,18 @@ watch(
           <button v-else type="button" class="secondary-button" @click="submitComment">{{ copy.detail.signInFirst }}</button>
         </div>
       </div>
+
+      <ul>
+        <li v-for="item in translations" :key="item.id">{{ item.targetLang }} · {{ item.content }}</li>
+      </ul>
+      <form @submit.prevent="saveTranslation">
+        <select v-model="translationLang">
+          <option value="zh">zh</option>
+          <option value="en">en</option>
+        </select>
+        <textarea v-model="translationContent" required rows="2" data-testid="review-translation" />
+        <button class="secondary-button" type="submit">OK</button>
+      </form>
 
       <p v-if="interactionMessage" class="feedback is-success">{{ interactionMessage }}</p>
       <p v-if="interactionErrorMessage" class="feedback is-error">{{ interactionErrorMessage }}</p>

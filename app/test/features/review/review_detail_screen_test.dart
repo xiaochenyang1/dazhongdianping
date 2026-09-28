@@ -452,6 +452,10 @@ void main() {
   });
 
   testWidgets('public review detail loads later comment pages', (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final api = DetailFakeApi()..paginateComments = true;
     await tester.pumpWidget(
       localizedApp(
@@ -480,6 +484,10 @@ void main() {
   testWidgets('public review detail supports like comment and report', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final api = DetailFakeApi();
     await tester.pumpWidget(
       localizedApp(

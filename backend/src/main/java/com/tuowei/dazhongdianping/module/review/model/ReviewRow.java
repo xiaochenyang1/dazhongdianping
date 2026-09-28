@@ -21,6 +21,7 @@ public class ReviewRow {
     private BigDecimal cost;
     private String currency;
     private Integer likeCount;
+    private Integer helpfulCount;
     private Integer commentCount;
     private Integer auditStatus;
     private String auditRemark;

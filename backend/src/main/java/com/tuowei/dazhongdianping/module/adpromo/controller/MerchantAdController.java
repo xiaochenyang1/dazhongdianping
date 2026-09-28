@@ -52,4 +52,9 @@ public class MerchantAdController {
     public ApiResponse<Map<String, Object>> resume(@PathVariable Long id) {
         return ApiResponse.success("已恢复投放", "merchant.ad_resumed", service.setStatus(id, 1));
     }
+
+    @GetMapping("/report")
+    public ApiResponse<Map<String, Object>> report(@RequestParam Long shopId) {
+        return ApiResponse.success(service.report(shopId));
+    }
 }

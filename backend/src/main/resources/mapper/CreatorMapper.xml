@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.creator.mapper.CreatorMapper">
+
+    <sql id="taskColumns">
+        id, region, title, description, reward_points, status, created_at
+    </sql>
+
+    <select id="selectOpen" resultType="com.tuowei.dazhongdianping.module.creator.model.CreatorTaskRow">
+        SELECT t.id, t.region, t.title, t.description, t.reward_points, t.status, t.created_at,
+               COALESCE(c.status, 0) AS claim_status, c.id AS claim_id
+        FROM creator_task t
+        LEFT JOIN creator_task_claim c ON c.task_id=t.id AND c.user_id=#{userId}
+        WHERE t.region=#{region} AND t.status=1 AND t.is_deleted=FALSE
+        ORDER BY t.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countOpen" resultType="long">
+        SELECT COUNT(*) FROM creator_task
+        WHERE region=#{region} AND status=1 AND is_deleted=FALSE
+    </select>
+
+    <select id="selectAdmin" resultType="com.tuowei.dazhongdianping.module.creator.model.CreatorTaskRow">
+        SELECT <include refid="taskColumns"/>
+        FROM creator_task
+        WHERE region=#{region} AND is_deleted=FALSE
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAdmin" resultType="long">
+        SELECT COUNT(*) FROM creator_task
+        WHERE region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <select id="selectTask" resultType="com.tuowei.dazhongdianping.module.creator.model.CreatorTaskRow">
+        SELECT <include refid="taskColumns"/>
+        FROM creator_task
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <select id="selectClaim" resultType="com.tuowei.dazhongdianping.module.creator.model.CreatorClaimRow">
+        SELECT id, task_id, user_id, region, status, created_at, completed_at
+        FROM creator_task_claim
+        WHERE task_id=#{taskId} AND user_id=#{userId}
+    </select>
+
+    <insert id="insertClaim" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO creator_task_claim(task_id, user_id, region, status)
+        VALUES(#{taskId}, #{userId}, #{region}, 1)
+    </insert>
+
+    <update id="completeClaim">
+        UPDATE creator_task_claim
+        SET status=2, completed_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND user_id=#{userId} AND status=1
+    </update>
+
+    <update id="addUserPoints">
+        UPDATE app_user
+        SET points = points + #{points}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+    </update>
+
+    <select id="selectUserPoints" resultType="int">
+        SELECT points FROM app_user WHERE id=#{userId}
+    </select>
+
+    <insert id="insertPointsLog">
+        INSERT INTO growth_points_log(user_id, type, action, biz_id, change_amount, balance_after, remark)
+        VALUES(#{userId}, 2, 'creator_task', #{bizId}, #{changeAmount}, #{balanceAfter}, #{remark})
+    </insert>
+
+    <insert id="insertTask" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO creator_task(region, title, description, reward_points, status)
+        VALUES(#{region}, #{title}, #{description}, #{rewardPoints}, #{status})
+    </insert>
+
+    <update id="updateTask">
+        UPDATE creator_task
+        SET title=#{title}, description=#{description}, reward_points=#{rewardPoints},
+            status=#{status}, updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
+    </update>
+
+</mapper>

@@ -123,6 +123,7 @@
         r.cost,
         r.currency,
         r.like_count,
+        r.helpful_count,
         r.comment_count,
         r.audit_status,
         r.audit_remark,
@@ -471,4 +472,38 @@
         WHERE id = #{shopId}
           AND is_deleted = FALSE
     </update>
+
+    <select id="countUserHelpfulVote" resultType="int">
+        SELECT COUNT(*)
+        FROM review_helpful_vote
+        WHERE review_id = #{reviewId}
+          AND user_id = #{userId}
+    </select>
+
+    <insert id="insertHelpfulVote">
+        INSERT INTO review_helpful_vote(review_id, user_id, region)
+        VALUES(#{reviewId}, #{userId}, #{region})
+    </insert>
+
+    <delete id="deleteHelpfulVote">
+        DELETE FROM review_helpful_vote
+        WHERE review_id = #{reviewId}
+          AND user_id = #{userId}
+    </delete>
+
+    <update id="refreshHelpfulCount">
+        UPDATE review
+        SET helpful_count = (
+            SELECT COUNT(*)
+            FROM review_helpful_vote
+            WHERE review_id = #{reviewId}
+        )
+        WHERE id = #{reviewId}
+    </update>
+
+    <select id="selectHelpfulCount" resultType="int">
+        SELECT helpful_count
+        FROM review
+        WHERE id = #{reviewId}
+    </select>
 </mapper>

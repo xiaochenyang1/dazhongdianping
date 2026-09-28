@@ -6,6 +6,7 @@ import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
+import com.tuowei.dazhongdianping.module.moderation.service.ContentModerationService;
 import com.tuowei.dazhongdianping.module.qa.mapper.QaMapper;
 import com.tuowei.dazhongdianping.module.qa.model.ShopAnswerRow;
 import com.tuowei.dazhongdianping.module.qa.model.ShopQuestionRow;
@@ -20,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class QaService {
 
     private final QaMapper mapper;
+    private final ContentModerationService contentModerationService;
 
-    public QaService(QaMapper mapper) {
+    public QaService(QaMapper mapper, ContentModerationService contentModerationService) {
         this.mapper = mapper;
+        this.contentModerationService = contentModerationService;
     }
 
     public PageResult<Map<String, Object>> questions(Long shopId, Integer page, Integer pageSize) {
@@ -35,13 +38,14 @@ public class QaService {
         return new PageResult<>(list, total, p, s, (p - 1) * s + list.size() < total);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public Map<String, Object> ask(Long shopId, String content) {
         UserSession u = requireUser();
         String region = region();
         if (!mapper.existsShop(shopId, region)) {
             throw new NotFoundException("门店不存在");
         }
+        contentModerationService.moderate(region, "qa", 0L, u.userId(), content);
         ShopQuestionRow row = new ShopQuestionRow();
         row.setRegion(region);
         row.setShopId(shopId);

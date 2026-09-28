@@ -30,6 +30,7 @@ public record ReviewDetailResponse(
         List<ReviewImageResponse> images,
         MerchantReplyResponse merchantReply,
         String createdAt,
-        String updatedAt
+        String updatedAt,
+        Integer helpfulCount
 ) {
 }

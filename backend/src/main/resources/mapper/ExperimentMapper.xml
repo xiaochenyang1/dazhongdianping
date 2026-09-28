@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.experiment.mapper.ExperimentMapper">
+
+    <select id="selectFlags" resultType="com.tuowei.dazhongdianping.module.experiment.model.FeatureFlagRow">
+        SELECT id, region, flag_key, description, enabled, rollout_percent, created_at
+        FROM feature_flag
+        WHERE region=#{region}
+        ORDER BY id
+    </select>
+
+    <select id="selectFlag" resultType="com.tuowei.dazhongdianping.module.experiment.model.FeatureFlagRow">
+        SELECT id, region, flag_key, description, enabled, rollout_percent, created_at
+        FROM feature_flag
+        WHERE id=#{id} AND region=#{region}
+    </select>
+
+    <select id="selectFlagByKey" resultType="com.tuowei.dazhongdianping.module.experiment.model.FeatureFlagRow">
+        SELECT id, region, flag_key, description, enabled, rollout_percent, created_at
+        FROM feature_flag
+        WHERE region=#{region} AND flag_key=#{flagKey}
+    </select>
+
+    <insert id="insertFlag" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO feature_flag(region, flag_key, description, enabled, rollout_percent)
+        VALUES(#{region}, #{flagKey}, #{description}, #{enabled}, #{rolloutPercent})
+    </insert>
+
+    <update id="updateFlag">
+        UPDATE feature_flag
+        SET flag_key=#{flagKey}, description=#{description}, enabled=#{enabled},
+            rollout_percent=#{rolloutPercent}, updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND region=#{region}
+    </update>
+
+    <select id="selectExperiments" resultType="com.tuowei.dazhongdianping.module.experiment.model.ExperimentRow">
+        SELECT id, region, name, flag_key, status, created_at
+        FROM experiment
+        WHERE region=#{region}
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectExperiment" resultType="com.tuowei.dazhongdianping.module.experiment.model.ExperimentRow">
+        SELECT id, region, name, flag_key, status, created_at
+        FROM experiment
+        WHERE id=#{id} AND region=#{region}
+    </select>
+
+    <insert id="insertExperiment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO experiment(region, name, flag_key, status)
+        VALUES(#{region}, #{name}, #{flagKey}, #{status})
+    </insert>
+
+    <select id="selectAssignment" resultType="com.tuowei.dazhongdianping.module.experiment.model.ExperimentAssignmentRow">
+        SELECT id, experiment_id, user_id, variant, created_at
+        FROM experiment_assignment
+        WHERE experiment_id=#{experimentId} AND user_id=#{userId}
+    </select>
+
+    <insert id="insertAssignment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO experiment_assignment(experiment_id, user_id, variant)
+        VALUES(#{experimentId}, #{userId}, #{variant})
+    </insert>
+
+</mapper>

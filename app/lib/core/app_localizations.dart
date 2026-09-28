@@ -56,6 +56,32 @@ class AppLocalizations {
     'consultYou': '我',
     'consultMerchant': '商家',
     'myComplaintsTitle': '我的投诉',
+    'myTicketsTitle': '我的工单',
+    'ticketsEmpty': '你还没有工单。',
+    'ticketsLoadFailed': '工单加载失败：{error}',
+    'ticketSubject': '主题',
+    'ticketContent': '内容',
+    'ticketSubmit': '提交工单',
+    'ticketReply': '回复',
+    'ticketSend': '发送',
+    'guidesTitle': '探店攻略',
+    'guidesEmpty': '暂时没有攻略。',
+    'guidesLoadFailed': '攻略加载失败：{error}',
+    'creatorTasksTitle': '创作者任务',
+    'creatorClaim': '领取',
+    'creatorComplete': '完成',
+    'creatorEmpty': '暂时没有任务。',
+    'invoicesTitle': '发票',
+    'invoiceRequest': '申请开票',
+    'invoiceName': '抬头名称',
+    'invoiceTaxNo': '税号',
+    'seckillTitle': '秒杀',
+    'seckillClaim': '抢购',
+    'seckillEmpty': '暂时没有秒杀。',
+    'groupBuyTitle': '拼团',
+    'groupBuyOpen': '开团',
+    'groupBuyJoin': '参团',
+    'levelPrivilegesTitle': '等级权益',
     'complaintsEmpty': '你还没有发起过投诉。',
     'complaintsLoadFailed': '投诉加载失败：{error}',
     'complaintDetailTitle': '投诉详情',
@@ -1008,6 +1034,17 @@ class AppLocalizations {
     'sortLatest': '最新',
     'sortHottest': '最热',
     'sortBestRated': '好评优先',
+    'sortHelpful': '有用优先',
+    'reviewHelpful': '有用',
+    'reviewTranslations': '社区译文',
+    'translationHint': '补充译文',
+    'translationSave': '保存译文',
+    'amenityChineseService': '中文服务',
+    'amenityChineseMenu': '中文菜单',
+    'amenityAlipay': '支付宝',
+    'amenityWechat': '微信',
+    'dishReviewsTitle': '菜品点评',
+    'dishReviewSubmit': '发表',
     'minScoreFour': '4 分以上',
     'withPhotosOnly': '只看带图',
     'alreadyAtEnd': '已经到底了',
@@ -1125,6 +1162,32 @@ class AppLocalizations {
     'consultYou': '我',
     'consultMerchant': '商家',
     'myComplaintsTitle': '我的投訴',
+    'myTicketsTitle': '我的工單',
+    'ticketsEmpty': '你還沒有工單。',
+    'ticketsLoadFailed': '工單載入失敗：{error}',
+    'ticketSubject': '主題',
+    'ticketContent': '內容',
+    'ticketSubmit': '提交工單',
+    'ticketReply': '回覆',
+    'ticketSend': '發送',
+    'guidesTitle': '探店攻略',
+    'guidesEmpty': '暫時沒有攻略。',
+    'guidesLoadFailed': '攻略載入失敗：{error}',
+    'creatorTasksTitle': '創作者任務',
+    'creatorClaim': '領取',
+    'creatorComplete': '完成',
+    'creatorEmpty': '暫時沒有任務。',
+    'invoicesTitle': '發票',
+    'invoiceRequest': '申請開票',
+    'invoiceName': '抬頭名稱',
+    'invoiceTaxNo': '稅號',
+    'seckillTitle': '秒殺',
+    'seckillClaim': '搶購',
+    'seckillEmpty': '暫時沒有秒殺。',
+    'groupBuyTitle': '拼團',
+    'groupBuyOpen': '開團',
+    'groupBuyJoin': '參團',
+    'levelPrivilegesTitle': '等級權益',
     'complaintsEmpty': '你還沒有發起過投訴。',
     'complaintsLoadFailed': '投訴載入失敗：{error}',
     'complaintDetailTitle': '投訴詳情',
@@ -2077,6 +2140,17 @@ class AppLocalizations {
     'sortLatest': '最新',
     'sortHottest': '最熱',
     'sortBestRated': '好評優先',
+    'sortHelpful': '有用優先',
+    'reviewHelpful': '有用',
+    'reviewTranslations': '社群譯文',
+    'translationHint': '補充譯文',
+    'translationSave': '儲存譯文',
+    'amenityChineseService': '中文服務',
+    'amenityChineseMenu': '中文菜單',
+    'amenityAlipay': '支付寶',
+    'amenityWechat': '微信',
+    'dishReviewsTitle': '菜品點評',
+    'dishReviewSubmit': '發表',
     'minScoreFour': '4 分以上',
     'withPhotosOnly': '只看帶圖',
     'alreadyAtEnd': '已經到底了',
@@ -2194,6 +2268,32 @@ class AppLocalizations {
     'consultYou': 'You',
     'consultMerchant': 'Merchant',
     'myComplaintsTitle': 'My Complaints',
+    'myTicketsTitle': 'My tickets',
+    'ticketsEmpty': 'You have no tickets yet.',
+    'ticketsLoadFailed': 'Failed to load tickets: {error}',
+    'ticketSubject': 'Subject',
+    'ticketContent': 'Details',
+    'ticketSubmit': 'Submit ticket',
+    'ticketReply': 'Reply',
+    'ticketSend': 'Send',
+    'guidesTitle': 'Guides',
+    'guidesEmpty': 'No guides yet.',
+    'guidesLoadFailed': 'Failed to load guides: {error}',
+    'creatorTasksTitle': 'Creator tasks',
+    'creatorClaim': 'Claim',
+    'creatorComplete': 'Complete',
+    'creatorEmpty': 'No tasks yet.',
+    'invoicesTitle': 'Invoices',
+    'invoiceRequest': 'Request invoice',
+    'invoiceName': 'Title name',
+    'invoiceTaxNo': 'Tax number',
+    'seckillTitle': 'Flash sale',
+    'seckillClaim': 'Claim',
+    'seckillEmpty': 'No flash sales right now.',
+    'groupBuyTitle': 'Group buy',
+    'groupBuyOpen': 'Start a group',
+    'groupBuyJoin': 'Join',
+    'levelPrivilegesTitle': 'Level perks',
     'complaintsEmpty': 'You have not filed any complaints yet.',
     'complaintsLoadFailed': 'Failed to load complaints: {error}',
     'complaintDetailTitle': 'Complaint detail',
@@ -3279,6 +3379,17 @@ class AppLocalizations {
     'sortLatest': 'Latest',
     'sortHottest': 'Top',
     'sortBestRated': 'Best rated',
+    'sortHelpful': 'Most helpful',
+    'reviewHelpful': 'Helpful',
+    'reviewTranslations': 'Community translations',
+    'translationHint': 'Add a translation',
+    'translationSave': 'Save translation',
+    'amenityChineseService': 'Chinese service',
+    'amenityChineseMenu': 'Chinese menu',
+    'amenityAlipay': 'Alipay',
+    'amenityWechat': 'WeChat',
+    'dishReviewsTitle': 'Dish reviews',
+    'dishReviewSubmit': 'Post',
     'minScoreFour': '4+ stars',
     'withPhotosOnly': 'With photos',
     'alreadyAtEnd': 'You have reached the end',
@@ -3490,6 +3601,32 @@ class AppLocalizations {
   String get consultYou => _text('consultYou');
   String get consultMerchant => _text('consultMerchant');
   String get myComplaintsTitle => _text('myComplaintsTitle');
+  String get myTicketsTitle => _text('myTicketsTitle');
+  String get ticketsEmpty => _text('ticketsEmpty');
+  String ticketsLoadFailed(Object error) => _withError('ticketsLoadFailed', error);
+  String get ticketSubject => _text('ticketSubject');
+  String get ticketContent => _text('ticketContent');
+  String get ticketSubmit => _text('ticketSubmit');
+  String get ticketReply => _text('ticketReply');
+  String get ticketSend => _text('ticketSend');
+  String get guidesTitle => _text('guidesTitle');
+  String get guidesEmpty => _text('guidesEmpty');
+  String guidesLoadFailed(Object error) => _withError('guidesLoadFailed', error);
+  String get creatorTasksTitle => _text('creatorTasksTitle');
+  String get creatorClaim => _text('creatorClaim');
+  String get creatorComplete => _text('creatorComplete');
+  String get creatorEmpty => _text('creatorEmpty');
+  String get invoicesTitle => _text('invoicesTitle');
+  String get invoiceRequest => _text('invoiceRequest');
+  String get invoiceName => _text('invoiceName');
+  String get invoiceTaxNo => _text('invoiceTaxNo');
+  String get seckillTitle => _text('seckillTitle');
+  String get seckillClaim => _text('seckillClaim');
+  String get seckillEmpty => _text('seckillEmpty');
+  String get groupBuyTitle => _text('groupBuyTitle');
+  String get groupBuyOpen => _text('groupBuyOpen');
+  String get groupBuyJoin => _text('groupBuyJoin');
+  String get levelPrivilegesTitle => _text('levelPrivilegesTitle');
   String get complaintsEmpty => _text('complaintsEmpty');
   String complaintsLoadFailed(Object error) => _withError('complaintsLoadFailed', error);
   String get complaintDetailTitle => _text('complaintDetailTitle');
@@ -5450,6 +5587,17 @@ class AppLocalizations {
   String get sortLatest => _text('sortLatest');
   String get sortHottest => _text('sortHottest');
   String get sortBestRated => _text('sortBestRated');
+  String get sortHelpful => _text('sortHelpful');
+  String get reviewHelpful => _text('reviewHelpful');
+  String get reviewTranslations => _text('reviewTranslations');
+  String get translationHint => _text('translationHint');
+  String get translationSave => _text('translationSave');
+  String get amenityChineseService => _text('amenityChineseService');
+  String get amenityChineseMenu => _text('amenityChineseMenu');
+  String get amenityAlipay => _text('amenityAlipay');
+  String get amenityWechat => _text('amenityWechat');
+  String get dishReviewsTitle => _text('dishReviewsTitle');
+  String get dishReviewSubmit => _text('dishReviewSubmit');
   String get minScoreFour => _text('minScoreFour');
   String get withPhotosOnly => _text('withPhotosOnly');
   String get alreadyAtEnd => _text('alreadyAtEnd');

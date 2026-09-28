@@ -22,6 +22,7 @@ import com.tuowei.dazhongdianping.module.browse.model.PhotoRow;
 import com.tuowei.dazhongdianping.module.browse.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchHistoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.SearchSuggestionRow;
+import com.tuowei.dazhongdianping.module.browse.model.ShopAmenityRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopBrowseHistoryRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopDetailRow;
 import com.tuowei.dazhongdianping.module.browse.model.ShopListQuery;
@@ -37,6 +38,7 @@ import com.tuowei.dazhongdianping.module.browse.model.response.ReviewPreviewResp
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHotWordResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchSuggestionResponse;
+import com.tuowei.dazhongdianping.module.browse.model.response.ShopAmenityResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopBrowseHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopDetailResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopListItemResponse;
@@ -59,21 +61,22 @@ import org.springframework.transaction.annotation.Transactional;
 public class BrowseQueryService {
 
     private static final DateTimeFormatter REVIEW_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-    /** 每个登录用户在同一区域最多保留的搜索历史条数。 */
-    private static final int SEARCH_HISTORY_LIMIT = 20;
     /** 每个登录用户在同一区域最多保留的门店浏览足迹条数。 */
     private static final int BROWSE_HISTORY_LIMIT = 50;
 
     private final BrowseQueryMapper browseQueryMapper;
     private final UserExpertCertificationService userExpertCertificationService;
     private final MerchantVerificationService merchantVerificationService;
+    private final SearchHistoryRecorder searchHistoryRecorder;
 
     public BrowseQueryService(BrowseQueryMapper browseQueryMapper,
                               UserExpertCertificationService userExpertCertificationService,
-                              MerchantVerificationService merchantVerificationService) {
+                              MerchantVerificationService merchantVerificationService,
+                              SearchHistoryRecorder searchHistoryRecorder) {
         this.browseQueryMapper = browseQueryMapper;
         this.userExpertCertificationService = userExpertCertificationService;
         this.merchantVerificationService = merchantVerificationService;
+        this.searchHistoryRecorder = searchHistoryRecorder;
     }
 
     public List<CategoryNodeResponse> listCategories(Region region) {
@@ -99,6 +102,7 @@ public class BrowseQueryService {
                 .toList();
     }
 
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "homeBanners")
     public List<BannerResponse> listHomeBanners(Region region, Long cityId) {
         return browseQueryMapper.selectHomeBanners(region.name(), cityId).stream()
                 .map(this::toBannerResponse)
@@ -165,6 +169,19 @@ public class BrowseQueryService {
         );
     }
 
+    public ShopAmenityResponse shopAmenities(Region region, Long shopId) {
+        ShopAmenityRow row = browseQueryMapper.selectShopAmenities(region.name(), shopId);
+        if (row == null) {
+            throw new NotFoundException("门店不存在");
+        }
+        return new ShopAmenityResponse(
+                Boolean.TRUE.equals(row.getChineseService()),
+                Boolean.TRUE.equals(row.getChineseMenu()),
+                Boolean.TRUE.equals(row.getAcceptAlipay()),
+                Boolean.TRUE.equals(row.getAcceptWechat())
+        );
+    }
+
     public List<ShopListItemResponse> listSimilarShops(Region region, Long shopId, int limit) {
         ShopDetailRow source = browseQueryMapper.selectShopDetail(region.name(), shopId);
         if (source == null) {
@@ -191,8 +208,8 @@ public class BrowseQueryService {
                                                              BigDecimal minScore,
                                                              Boolean hasImages) {
         ensureShopExists(region, shopId);
-        if (!List.of("latest", "popular", "score").contains(sort)) {
-            throw new IllegalArgumentException("sort 仅支持 latest、popular 或 score");
+        if (!List.of("latest", "popular", "score", "helpful").contains(sort)) {
+            throw new IllegalArgumentException("sort 仅支持 latest、popular、score 或 helpful");
         }
         int offset = (page - 1) * pageSize;
         long total = browseQueryMapper.countShopReviews(region.name(), shopId, minScore, hasImages);
@@ -479,7 +496,8 @@ public class BrowseQueryService {
                 row.getLikedCount(),
                 row.getCommentCount(),
                 toMerchantReplyResponse(row),
-                row.getCreatedAt().format(REVIEW_TIME_FORMATTER)
+                row.getCreatedAt().format(REVIEW_TIME_FORMATTER),
+                row.getHelpfulCount() == null ? 0 : row.getHelpfulCount()
         );
     }
 
@@ -517,7 +535,11 @@ public class BrowseQueryService {
         return counter;
     }
 
-    /** 登录用户搜索历史：同词刷新时间，超限按最近使用裁剪。搜索列表与 `/search/shops` 共用。 */
+    /**
+     * 登录用户搜索历史：解析当前用户后交给 {@link SearchHistoryRecorder} 在请求线程外写入
+     * （同词刷新时间，超限按最近使用裁剪）。搜索列表与 `/search/shops` 共用。生产环境下写入
+     * 为异步、最终一致；测试用同步执行器保证读写一致与事务回滚隔离。
+     */
     public void recordSearchHistoryIfNeeded(Region region, String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return;
@@ -526,24 +548,7 @@ public class BrowseQueryService {
         if (userSession == null) {
             return;
         }
-        String normalizedKeyword = keyword.trim();
-        SearchHistoryRow existing = browseQueryMapper.selectSearchHistoryByUserRegionKeyword(
-                userSession.userId(),
-                region.name(),
-                normalizedKeyword
-        );
-        if (existing != null) {
-            browseQueryMapper.touchSearchHistory(existing.getId());
-            browseQueryMapper.deleteExcessSearchHistory(userSession.userId(), region.name(), SEARCH_HISTORY_LIMIT);
-            return;
-        }
-        SearchHistoryRow row = new SearchHistoryRow();
-        row.setUserId(userSession.userId());
-        row.setRegion(region.name());
-        row.setKeyword(normalizedKeyword);
-        row.setSearchType(1);
-        browseQueryMapper.insertSearchHistory(row);
-        browseQueryMapper.deleteExcessSearchHistory(userSession.userId(), region.name(), SEARCH_HISTORY_LIMIT);
+        searchHistoryRecorder.record(userSession.userId(), region.name(), keyword.trim());
     }
 
     /** 登录用户门店足迹：同店刷新时间，超限按最近浏览裁剪。 */

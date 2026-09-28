@@ -14,6 +14,7 @@ import com.tuowei.dazhongdianping.module.browse.model.response.ReviewPreviewResp
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHotWordResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.SearchSuggestionResponse;
+import com.tuowei.dazhongdianping.module.browse.model.response.ShopAmenityResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopBrowseHistoryResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopDetailResponse;
 import com.tuowei.dazhongdianping.module.browse.model.response.ShopListItemResponse;
@@ -76,6 +77,11 @@ public class PublicBrowseController {
     @GetMapping("/shops/{shopId}")
     public ApiResponse<ShopDetailResponse> getShopDetail(@PathVariable Long shopId) {
         return ApiResponse.success(browseQueryService.getShopDetail(currentRegion(), shopId));
+    }
+
+    @GetMapping("/shops/{id}/amenities")
+    public ApiResponse<ShopAmenityResponse> shopAmenities(@PathVariable("id") Long shopId) {
+        return ApiResponse.success(browseQueryService.shopAmenities(currentRegion(), shopId));
     }
 
     @GetMapping("/shops/{shopId}/similar")

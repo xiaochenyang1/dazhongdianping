@@ -30,8 +30,20 @@ public interface MarketingMapper {
 
     int updateTemplate(CouponTemplateRow row);
 
-    /** 原子领券：仅当未限量或未发完时 +1，返回受影响行数。 */
+    /** 原子领券：仅当已过审、未限量或未发完时 +1，返回受影响行数。 */
     int incrementClaimed(@Param("id") Long id);
+
+    void insertMerchantTemplate(CouponTemplateRow row);
+
+    List<CouponTemplateRow> selectMerchantTemplates(
+            @Param("merchantId") Long merchantId, @Param("region") String region);
+
+    /** 审核商家券：仅待审核可处置，返回受影响行数。 */
+    int updateTemplateAudit(
+            @Param("id") Long id,
+            @Param("region") String region,
+            @Param("auditStatus") Integer auditStatus,
+            @Param("rejectReason") String rejectReason);
 
     // ---- 用户券 ----
     int countUserCouponsOfTemplate(@Param("userId") Long userId, @Param("templateId") Long templateId);

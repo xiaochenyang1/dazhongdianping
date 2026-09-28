@@ -101,4 +101,18 @@
         VALUES(#{campaignId},#{region},#{shopId},#{userId},#{cost})
     </insert>
 
+    <select id="selectShopReport" resultType="com.tuowei.dazhongdianping.module.adpromo.model.AdReportRow">
+        SELECT c.id, c.shop_id, c.name, c.status, c.audit_status, c.total_spent, c.spent_today,
+               COALESCE(x.click_count, 0) AS click_count,
+               COALESCE(x.click_cost, 0) AS click_cost
+        FROM ad_campaign c
+        LEFT JOIN (
+            SELECT campaign_id, COUNT(*) AS click_count, COALESCE(SUM(cost), 0) AS click_cost
+            FROM ad_click_log
+            GROUP BY campaign_id
+        ) x ON x.campaign_id = c.id
+        WHERE c.merchant_id=#{merchantId} AND c.shop_id=#{shopId} AND c.region=#{region} AND c.is_deleted=FALSE
+        ORDER BY c.id DESC
+    </select>
+
 </mapper>

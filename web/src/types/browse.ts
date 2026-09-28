@@ -93,6 +93,7 @@ export interface ReviewPreview {
   content: string
   likedCount: number
   commentCount: number
+  helpfulCount?: number
   createdAt: string
 }
 

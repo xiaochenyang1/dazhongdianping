@@ -14,6 +14,7 @@ public class ReviewRow {
     private String content;
     private Integer likedCount;
     private Integer commentCount;
+    private Integer helpfulCount;
     private String merchantReplyMerchantName;
     private String merchantReplyContent;
     private LocalDateTime merchantReplyCreatedAt;

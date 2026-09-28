@@ -13,6 +13,7 @@ import com.tuowei.dazhongdianping.module.auth.certification.service.UserExpertCe
 import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;
+import com.tuowei.dazhongdianping.module.moderation.service.ContentModerationService;
 import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.riskcontrol.service.ReviewRiskGuard;
@@ -33,6 +34,7 @@ import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentRepl
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentReportResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewCommentResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewDetailResponse;
+import com.tuowei.dazhongdianping.module.review.model.response.ReviewHelpfulResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewImageResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewLikeResponse;
 import com.tuowei.dazhongdianping.module.review.model.response.ReviewReportResponse;
@@ -74,6 +76,7 @@ public class ReviewService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     private final SensitiveWordFilterService sensitiveWordFilterService;
+    private final ContentModerationService contentModerationService;
     private final ReviewRiskGuard reviewRiskGuard;
 
     public ReviewService(ReviewMapper reviewMapper,
@@ -84,6 +87,7 @@ public class ReviewService {
                          NotificationService notificationService,
                          UserExpertCertificationService userExpertCertificationService,
                          SensitiveWordFilterService sensitiveWordFilterService,
+                         ContentModerationService contentModerationService,
                          ReviewRiskGuard reviewRiskGuard,
                          ApplicationEventPublisher applicationEventPublisher) {
         this.reviewMapper = reviewMapper;
@@ -94,14 +98,17 @@ public class ReviewService {
         this.notificationService = notificationService;
         this.userExpertCertificationService = userExpertCertificationService;
         this.sensitiveWordFilterService = sensitiveWordFilterService;
+        this.contentModerationService = contentModerationService;
         this.reviewRiskGuard = reviewRiskGuard;
         this.applicationEventPublisher = applicationEventPublisher;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public ReviewDetailResponse createReview(ReviewSaveRequest request) {
         AppUserRow currentUser = currentUserRow();
         ensureShopExists(currentRegion().name(), request.getShopId());
+        contentModerationService.moderate(
+                currentRegion().name(), "review", 0L, currentUser.getId(), request.getContent());
         sensitiveWordFilterService.assertClean(currentRegion().name(), request.getContent());
         // 反刷单/反虚假点评风控：BLOCK 直接抛异常拦截，REVIEW 强制转人审
         boolean riskForcesReview = reviewRiskGuard.guardReviewCreation(
@@ -182,6 +189,20 @@ public class ReviewService {
                 !liked,
                 reviewMapper.countReviewLikes(reviewId)
         );
+    }
+
+    @Transactional
+    public ReviewHelpfulResponse toggleHelpful(Long reviewId) {
+        UserSession session = currentUserSession();
+        ReviewRow review = requirePublicReview(reviewId);
+        boolean voted = reviewMapper.countUserHelpfulVote(reviewId, session.userId()) > 0;
+        if (voted) {
+            reviewMapper.deleteHelpfulVote(reviewId, session.userId());
+        } else {
+            reviewMapper.insertHelpfulVote(reviewId, session.userId(), review.getRegion());
+        }
+        reviewMapper.refreshHelpfulCount(reviewId);
+        return new ReviewHelpfulResponse(reviewId, !voted, reviewMapper.selectHelpfulCount(reviewId));
     }
 
     @Transactional
@@ -588,7 +609,8 @@ public class ReviewService {
                 images,
                 toMerchantReplyResponse(reviewMapper.selectMerchantReply(row.getId())),
                 formatDateTime(row.getCreatedAt()),
-                formatDateTime(row.getUpdatedAt())
+                formatDateTime(row.getUpdatedAt()),
+                row.getHelpfulCount() == null ? 0 : row.getHelpfulCount()
         );
     }
 

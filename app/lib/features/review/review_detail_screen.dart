@@ -35,6 +35,9 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   ReviewDetail? _visibleReview;
   ReviewComment? _replyTarget;
   bool _likeSaving = false;
+  bool _helpfulSaving = false;
+  final _translation = TextEditingController();
+  late Future<List<ReviewTranslation>> _translations;
   bool _commentSaving = false;
   bool _deleteSaving = false;
   bool _deleteDialogOpen = false;
@@ -52,12 +55,14 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
   void initState() {
     super.initState();
     _reloadReview();
+    _translations = widget.repository.translations(widget.reviewId);
   }
 
   @override
   void dispose() {
     _commentController.dispose();
     _reportController.dispose();
+    _translation.dispose();
     super.dispose();
   }
 
@@ -161,6 +166,32 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     } finally {
       if (mounted) setState(() => _likeSaving = false);
     }
+  }
+
+  Future<void> _toggleHelpful(ReviewDetail detail) async {
+    if (_helpfulSaving || !_interactionAllowed(detail)) return;
+    setState(() => _helpfulSaving = true);
+    try {
+      final result = await widget.repository.toggleHelpful(widget.reviewId);
+      if (!mounted) return;
+      setState(() {
+        _visibleReview = detail.copyWith(helpfulCount: result.helpfulCount);
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    } finally {
+      if (mounted) setState(() => _helpfulSaving = false);
+    }
+  }
+
+  Future<void> _saveTranslation() async {
+    final content = _translation.text.trim();
+    if (content.isEmpty) return;
+    final lang = AppLocalizations.of(context).tag.startsWith('zh') ? 'en' : 'zh';
+    await widget.repository.saveTranslation(widget.reviewId, targetLang: lang, content: content);
+    _translation.clear();
+    setState(() => _translations = widget.repository.translations(widget.reviewId));
   }
 
   Future<void> _submitComment(ReviewDetail detail) async {
@@ -813,6 +844,45 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  key: const Key('review-helpful-button'),
+                  onPressed: _helpfulSaving ? null : () => _toggleHelpful(review),
+                  icon: const Icon(Icons.thumb_up_alt_outlined),
+                  label: Text('${AppLocalizations.of(context).reviewHelpful} ${review.helpfulCount}'),
+                ),
+              ),
+              TextField(
+                controller: _translation,
+                decoration: InputDecoration(labelText: AppLocalizations.of(context).translationHint),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: _saveTranslation,
+                  child: Text(AppLocalizations.of(context).translationSave),
+                ),
+              ),
+              FutureBuilder<List<ReviewTranslation>>(
+                future: _translations,
+                builder: (context, snapshot) {
+                  final items = snapshot.data ?? const <ReviewTranslation>[];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(AppLocalizations.of(context).reviewTranslations),
+                      for (final item in items)
+                        ListTile(
+                          key: Key('review-translation-${item.id}'),
+                          title: Text(item.targetLang),
+                          subtitle: Text(item.content),
+                        ),
+                    ],
+                  );
+                },
               ),
             ] else if (!widget.owned &&
                 !widget.canInteract &&
