@@ -64,6 +64,8 @@ import type {
   LevelConfig,
   RecommendationWeight,
   RecommendationWeightPayload,
+  CouponTemplate,
+  CouponTemplatePayload,
   RiskEvent,
   RiskEventDisposePayload,
   RiskRule,
@@ -598,6 +600,16 @@ export function updateLevelConfig(level: number, payload: Omit<LevelConfig, 'lev
 
 export function fetchRecommendationWeight() { return apiGet<RecommendationWeight>('/api/admin/v1/recommendation/weight') }
 export function updateRecommendationWeight(payload: RecommendationWeightPayload) { return apiPut<RecommendationWeight>('/api/admin/v1/recommendation/weight', payload) }
+
+export function fetchCouponTemplates(params: { status?: number; page?: number; pageSize?: number }) {
+  return apiGet<PageResult<CouponTemplate>>('/api/admin/v1/marketing/coupon-templates', params)
+}
+export function createCouponTemplate(payload: CouponTemplatePayload) {
+  return apiPost<CouponTemplate>('/api/admin/v1/marketing/coupon-templates', payload)
+}
+export function updateCouponTemplate(id: number, payload: CouponTemplatePayload) {
+  return apiPut<CouponTemplate>(`/api/admin/v1/marketing/coupon-templates/${id}`, payload)
+}
 
 export function fetchRiskEvents(params: { scene?: string; decision?: number; disposeStatus?: number; page?: number; pageSize?: number }) {
   return apiGet<PageResult<RiskEvent>>('/api/admin/v1/risk/events', params)

@@ -42,6 +42,7 @@ export interface AdminStrings {
     pointsProductManagement: string
     pointsExchangeManagement: string
     recommendationWeight: string
+    marketingCoupons: string
     riskControl: string
     systemAdmins: string
     systemRoles: string
@@ -1835,6 +1836,48 @@ export interface AdminStrings {
     loadError: string
     readOnly: string
   }
+  marketingCoupons: {
+    title: string
+    description: string
+    create: string
+    edit: string
+    colName: string
+    colType: string
+    colDiscount: string
+    colThreshold: string
+    colScope: string
+    colQuota: string
+    colPerUser: string
+    colValidDays: string
+    colStatus: string
+    colActions: string
+    typeThreshold: string
+    typeNewcomer: string
+    scopePlatform: string
+    scopeShop: (shopId: number) => string
+    quotaUnlimited: string
+    quotaText: (claimed: number, total: number) => string
+    statusOn: string
+    statusOff: string
+    fieldName: string
+    fieldType: string
+    fieldThreshold: string
+    fieldDiscount: string
+    fieldCurrency: string
+    fieldShopId: string
+    fieldTotalQuantity: string
+    fieldPerUserLimit: string
+    fieldValidDays: string
+    fieldStatus: string
+    save: string
+    cancel: string
+    created: string
+    saved: string
+    empty: string
+    loadError: string
+    saveError: string
+    readOnly: string
+  }
   growthConfigs: {
     loadError: string
     ruleUpdateError: string
@@ -2449,6 +2492,7 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/operations/points-products': 'pointsProductManagement',
   '/operations/points-exchanges': 'pointsExchangeManagement',
   '/operations/recommendation': 'recommendationWeight',
+  '/operations/marketing': 'marketingCoupons',
   '/audit/risk': 'riskControl',
   '/system/admins': 'systemAdmins',
   '/system/roles': 'systemRoles',
@@ -2687,6 +2731,7 @@ const zhCnStrings: AdminStrings = {
     pointsProductManagement: '积分商品',
     pointsExchangeManagement: '积分兑换',
     recommendationWeight: '推荐权重',
+    marketingCoupons: '营销券',
     riskControl: '风控中心',
     systemAdmins: '管理员账号',
     systemRoles: '角色与权限',
@@ -4472,6 +4517,48 @@ const zhCnStrings: AdminStrings = {
     loadError: '推荐权重加载失败。',
     readOnly: '你只有推荐权重的只读权限。',
   },
+  marketingCoupons: {
+    title: '营销券模板',
+    description: '配置本区域领券中心的满减券与新客立减券，控制发放量、每人限领与有效期。',
+    create: '新建券模板',
+    edit: '编辑',
+    colName: '名称',
+    colType: '类型',
+    colDiscount: '抵扣',
+    colThreshold: '门槛',
+    colScope: '适用范围',
+    colQuota: '发放量',
+    colPerUser: '每人限领',
+    colValidDays: '有效期(天)',
+    colStatus: '状态',
+    colActions: '操作',
+    typeThreshold: '满减券',
+    typeNewcomer: '新客立减',
+    scopePlatform: '全平台',
+    scopeShop: (shopId: number) => `商户 #${shopId}`,
+    quotaUnlimited: '不限量',
+    quotaText: (claimed: number, total: number) => `${claimed} / ${total}`,
+    statusOn: '上架',
+    statusOff: '下架',
+    fieldName: '券名称',
+    fieldType: '券类型',
+    fieldThreshold: '满减门槛',
+    fieldDiscount: '抵扣金额',
+    fieldCurrency: '币种',
+    fieldShopId: '限定商户(0=全平台)',
+    fieldTotalQuantity: '发放总量(0=不限量)',
+    fieldPerUserLimit: '每人限领',
+    fieldValidDays: '领取后有效天数',
+    fieldStatus: '状态',
+    save: '保存',
+    cancel: '取消',
+    created: '券模板已创建。',
+    saved: '券模板已保存。',
+    empty: '当前区域暂无券模板。',
+    loadError: '券模板加载失败。',
+    saveError: '券模板保存失败。',
+    readOnly: '你只有营销券的只读权限。',
+  },
   riskControl: {
     title: '风控中心',
     description: '查看反刷单/反虚假点评命中事件，处置误报，并调整本区域风控规则阈值。',
@@ -5233,6 +5320,7 @@ const enStrings: AdminStrings = {
     pointsProductManagement: 'Points Products',
     pointsExchangeManagement: 'Points Redemptions',
     recommendationWeight: 'Recommendation Weights',
+    marketingCoupons: 'Marketing Coupons',
     riskControl: 'Risk Control',
     systemAdmins: 'Admin Accounts',
     systemRoles: 'Roles & Permissions',
@@ -7033,6 +7121,48 @@ const enStrings: AdminStrings = {
     saveError: 'Failed to save recommendation weights.',
     loadError: 'Failed to load recommendation weights.',
     readOnly: 'You have read-only access to recommendation weights.',
+  },
+  marketingCoupons: {
+    title: 'Coupon Templates',
+    description: 'Configure spend-and-save and new-customer coupons for this region\'s coupon center, controlling supply, per-user limit and validity.',
+    create: 'New template',
+    edit: 'Edit',
+    colName: 'Name',
+    colType: 'Type',
+    colDiscount: 'Discount',
+    colThreshold: 'Threshold',
+    colScope: 'Scope',
+    colQuota: 'Supply',
+    colPerUser: 'Per user',
+    colValidDays: 'Valid (days)',
+    colStatus: 'Status',
+    colActions: 'Actions',
+    typeThreshold: 'Spend & save',
+    typeNewcomer: 'New customer',
+    scopePlatform: 'Platform-wide',
+    scopeShop: (shopId: number) => `Shop #${shopId}`,
+    quotaUnlimited: 'Unlimited',
+    quotaText: (claimed: number, total: number) => `${claimed} / ${total}`,
+    statusOn: 'Active',
+    statusOff: 'Inactive',
+    fieldName: 'Coupon name',
+    fieldType: 'Coupon type',
+    fieldThreshold: 'Minimum spend',
+    fieldDiscount: 'Discount amount',
+    fieldCurrency: 'Currency',
+    fieldShopId: 'Limit to shop (0 = platform)',
+    fieldTotalQuantity: 'Total supply (0 = unlimited)',
+    fieldPerUserLimit: 'Per-user limit',
+    fieldValidDays: 'Valid days after claim',
+    fieldStatus: 'Status',
+    save: 'Save',
+    cancel: 'Cancel',
+    created: 'Coupon template created.',
+    saved: 'Coupon template saved.',
+    empty: 'No coupon templates in this region yet.',
+    loadError: 'Failed to load coupon templates.',
+    saveError: 'Failed to save coupon template.',
+    readOnly: 'You have read-only access to marketing coupons.',
   },
   riskControl: {
     title: 'Risk Control',

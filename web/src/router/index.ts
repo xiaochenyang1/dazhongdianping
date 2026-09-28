@@ -150,6 +150,8 @@ const router = createRouter({
     { path: '/user/orders', name: 'user-orders', component: () => import('@/views/OrdersView.vue'), meta: { requiresAuth: true, title: '我的订单', description: '查看团购订单及支付退款状态。' } },
     { path: '/user/orders/:id', name: 'user-order-detail', component: () => import('@/views/OrderDetailView.vue'), props: r => ({ orderId: Number(r.params.id) }), meta: { requiresAuth: true, title: '订单详情', description: '查看订单、支付和券码信息。' } },
     { path: '/user/coupons', name: 'user-coupons', component: () => import('@/views/CouponsView.vue'), meta: { requiresAuth: true, title: '我的券', description: '查看待使用、已使用、过期和退款券码。' } },
+    { path: '/coupons/center', name: 'coupon-center', component: () => import('@/views/CouponCenterView.vue'), meta: { title: '领券中心', description: '领取平台满减券与新客立减券，下单自动抵扣。' } },
+    { path: '/user/marketing-coupons', name: 'user-marketing-coupons', component: () => import('@/views/MarketingCouponsView.vue'), meta: { requiresAuth: true, title: '我的营销券', description: '查看已领取的满减券与立减券。' } },
     {
       path: '/user/coupons/:code',
       name: 'user-coupon-detail',

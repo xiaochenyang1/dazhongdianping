@@ -943,6 +943,39 @@ export interface GrowthRulePayload { action: string; actionName: string; growthV
 export interface RecommendationWeight { region: string; affinityWeight: number; qualityWeight: number; popularityWeight: number; distanceWeight: number }
 export interface RecommendationWeightPayload { affinityWeight: number; qualityWeight: number; popularityWeight: number; distanceWeight: number }
 
+export interface CouponTemplate {
+  id: number
+  region: string
+  name: string
+  type: number
+  typeText: string
+  thresholdAmount: number
+  discountAmount: number
+  currency: string
+  shopId: number
+  totalQuantity: number
+  claimedQuantity: number
+  perUserLimit: number
+  validDays: number
+  claimStart: string | null
+  claimEnd: string | null
+  status: number
+}
+export interface CouponTemplatePayload {
+  name: string
+  type: number
+  thresholdAmount: number
+  discountAmount: number
+  currency: string
+  shopId: number
+  totalQuantity: number
+  perUserLimit: number
+  validDays: number
+  claimStart?: string | null
+  claimEnd?: string | null
+  status: number
+}
+
 export interface RiskEvent {
   id: number
   region: string

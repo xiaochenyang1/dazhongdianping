@@ -34,7 +34,8 @@ class TradeServiceFailClosedTest {
             mock(CouponLifecycleService.class),
             mock(NotificationService.class),
             "payment-secret-for-runtime-safety-tests-001",
-            resolver
+            resolver,
+            mock(com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService.class)
     );
 
     @BeforeEach

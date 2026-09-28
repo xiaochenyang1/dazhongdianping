@@ -23,14 +23,17 @@ public class TradeCompensationService {
     private final TradeMapper mapper;
     private final PaymentChannelResolver channelResolver;
     private final TradeService tradeService;
+    private final com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService;
 
     public TradeCompensationService(
             TradeMapper mapper,
             PaymentChannelResolver channelResolver,
-            TradeService tradeService) {
+            TradeService tradeService,
+            com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService) {
         this.mapper = mapper;
         this.channelResolver = channelResolver;
         this.tradeService = tradeService;
+        this.marketingCouponService = marketingCouponService;
     }
 
     public TradeReconcileResult reconcile() {
@@ -45,6 +48,8 @@ public class TradeCompensationService {
                 if (mapper.restoreDealStock(order.getDealId(), order.getQuantity()) == 1) {
                     restoredStockOrders++;
                 }
+                // 超时关单释放已锁定的营销券，避免券被永久占用。
+                marketingCouponService.releaseForOrder(order.getId());
             }
         }
 

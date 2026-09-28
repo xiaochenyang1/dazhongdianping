@@ -73,6 +73,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         ,"/api/c/v1/topics","/api/c/v1/topics/**"
                         ,"/api/c/v1/points","/api/c/v1/points/**"
                         ,"/api/c/v1/recommendations/behaviors"
+                        ,"/api/c/v1/marketing/coupons/*/claim"
+                        ,"/api/c/v1/marketing/coupons/mine"
+                        ,"/api/c/v1/deals/*/usable-coupons"
                 );
     }
 

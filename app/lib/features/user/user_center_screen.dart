@@ -6,6 +6,9 @@ import 'package:dazhongdianping_app/features/browse/browse_history_screen.dart';
 import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
 import 'package:dazhongdianping_app/features/message/blocked_users_screen.dart';
 import 'package:dazhongdianping_app/features/message/message_repository.dart';
+import 'package:dazhongdianping_app/features/marketing/coupon_center_screen.dart';
+import 'package:dazhongdianping_app/features/marketing/marketing_repository.dart';
+import 'package:dazhongdianping_app/features/marketing/my_marketing_coupons_screen.dart';
 import 'package:dazhongdianping_app/features/points/points_mall_screen.dart';
 import 'package:dazhongdianping_app/features/points/points_repository.dart';
 import 'package:dazhongdianping_app/features/review/review_repository.dart';
@@ -271,6 +274,32 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                   );
                   await _reload();
                 },
+              ),
+              ListTile(
+                key: const Key('user-center-coupon-center'),
+                leading: const Icon(Icons.local_offer_outlined),
+                title: Text(strings.couponCenterTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CouponCenterScreen(
+                      repository: MarketingRepository(widget.repository.api),
+                    ),
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('user-center-marketing-coupons'),
+                leading: const Icon(Icons.confirmation_number_outlined),
+                title: Text(strings.myMarketingCouponsTitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MyMarketingCouponsScreen(
+                      repository: MarketingRepository(widget.repository.api),
+                    ),
+                  ),
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.block_outlined),

@@ -100,7 +100,9 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (62, 'operations:recommendation:read', '查看推荐权重配置', 'operations', 1, 1),
     (63, 'operations:recommendation:write', '维护推荐权重配置', 'operations', 2, 1),
     (64, 'risk:event:read', '查看风控事件与规则', 'audit', 1, 1),
-    (65, 'risk:event:write', '处置风控事件与规则', 'audit', 2, 1);
+    (65, 'risk:event:write', '处置风控事件与规则', 'audit', 2, 1),
+    (66, 'operations:marketing:read', '查看营销券模板', 'operations', 1, 1),
+    (67, 'operations:marketing:write', '维护营销券模板', 'operations', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
@@ -110,7 +112,7 @@ INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM adm
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59), (3, 64), (3, 65),
-    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57), (4, 62), (4, 63),
+    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57), (4, 62), (4, 63), (4, 66), (4, 67),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49), (5, 60);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
@@ -402,3 +404,12 @@ INSERT INTO risk_rule (region, rule_code, name, scene, action, threshold, window
   ('EU', 'device_multi_account', 'Multi-account device', 'review_create', 2, 5, 0, 50, TRUE, 'Device linked to more than 5 accounts goes to manual audit'),
   ('EU', 'order_freq', 'High-frequency orders', 'trade_order', 2, 10, 600, 30, TRUE, 'More than 10 orders within 10 minutes goes to manual audit'),
   ('EU', 'register_multi_account', 'Multi-account device on register', 'auth_register', 3, 5, 0, 70, TRUE, 'Blocks new registration when a device is linked to more than 5 accounts');
+
+-- 营销优惠券模板种子（领券中心）：CN/EU 各一批
+INSERT INTO marketing_coupon_template (id, region, name, type, threshold_amount, discount_amount, currency, shop_id, total_quantity, claimed_quantity, per_user_limit, valid_days, claim_start, claim_end, status) VALUES
+  (5001, 'CN', '满100减20', 1, 100.00, 20.00, 'CNY', 0, 1000, 0, 1, 30, NULL, NULL, 1),
+  (5002, 'CN', '满50减8', 1, 50.00, 8.00, 'CNY', 0, 0, 0, 3, 15, NULL, NULL, 1),
+  (5003, 'CN', '新客立减15', 2, 0.00, 15.00, 'CNY', 0, 5000, 0, 1, 7, NULL, NULL, 1),
+  (5011, 'EU', 'Spend 100 save 20', 1, 100.00, 20.00, 'EUR', 0, 1000, 0, 1, 30, NULL, NULL, 1),
+  (5012, 'EU', 'Spend 50 save 8', 1, 50.00, 8.00, 'EUR', 0, 0, 0, 3, 15, NULL, NULL, 1),
+  (5013, 'EU', 'New customer save 15', 2, 0.00, 15.00, 'EUR', 0, 5000, 0, 1, 7, NULL, NULL, 1);
