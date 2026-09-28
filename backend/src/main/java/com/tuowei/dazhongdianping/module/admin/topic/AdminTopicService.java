@@ -82,14 +82,12 @@ public class AdminTopicService {
         }
         if (!Integer.valueOf(1).equals(target.getStatus())) throw new IllegalArgumentException("目标话题不可用");
 
-        for (Long postId : mapper.selectPostIdsByTopic(sourceId)) {
-            if (mapper.countPostTopic(targetId, postId) > 0) mapper.deletePostTopic(sourceId, postId);
-            else mapper.movePostTopic(sourceId, targetId, postId);
-        }
-        for (Long userId : mapper.selectFollowerUserIds(sourceId)) {
-            if (mapper.countTopicFollow(targetId, userId) > 0) mapper.deleteTopicFollow(sourceId, userId);
-            else mapper.moveTopicFollow(sourceId, targetId, userId);
-        }
+        // Set-based re-link (avoids a per-row N+1): drop the source links that would
+        // collide with an existing target link, then reassign whatever remains.
+        mapper.deleteDuplicatePostTopics(sourceId, targetId);
+        mapper.reassignPostTopics(sourceId, targetId);
+        mapper.deleteDuplicateTopicFollows(sourceId, targetId);
+        mapper.reassignTopicFollows(sourceId, targetId);
 
         mapper.markTopicMerged(sourceId, region(), targetId);
         mapper.refreshPostCounts(List.of(targetId));

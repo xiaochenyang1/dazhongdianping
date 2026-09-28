@@ -208,26 +208,32 @@
 
   <delete id="deleteHotSnapshot">DELETE FROM topic_hot_snapshot WHERE topic_id=#{topicId}</delete>
 
-  <select id="selectPostIdsByTopic" resultType="long">
-    SELECT post_id FROM post_topic WHERE topic_id=#{topicId} ORDER BY id
-  </select>
-  <select id="countPostTopic" resultType="int">
-    SELECT COUNT(1) FROM post_topic WHERE topic_id=#{topicId} AND post_id=#{postId}
-  </select>
-  <delete id="deletePostTopic">DELETE FROM post_topic WHERE topic_id=#{topicId} AND post_id=#{postId}</delete>
-  <update id="movePostTopic">
-    UPDATE post_topic SET topic_id=#{targetId} WHERE topic_id=#{sourceId} AND post_id=#{postId}
-  </update>
-
   <select id="selectFollowerUserIds" resultType="long">
     SELECT user_id FROM topic_follow WHERE topic_id=#{topicId} ORDER BY id
   </select>
-  <select id="countTopicFollow" resultType="int">
-    SELECT COUNT(1) FROM topic_follow WHERE topic_id=#{topicId} AND user_id=#{userId}
-  </select>
-  <delete id="deleteTopicFollow">DELETE FROM topic_follow WHERE topic_id=#{topicId} AND user_id=#{userId}</delete>
-  <update id="moveTopicFollow">
-    UPDATE topic_follow SET topic_id=#{targetId} WHERE topic_id=#{sourceId} AND user_id=#{userId}
+  <!-- Merge re-link, set-based. The IN-subquery is wrapped in a derived table so
+       the self-referencing DELETE is legal on MySQL (and still runs on H2). The
+       delete clears rows that would collide with the target's unique index, so
+       the follow-up reassign never violates uk_post_topic / uk_topic_follow. -->
+  <delete id="deleteDuplicatePostTopics">
+    DELETE FROM post_topic
+    WHERE topic_id=#{sourceId}
+      AND post_id IN (SELECT post_id FROM (
+        SELECT post_id FROM post_topic WHERE topic_id=#{targetId}
+      ) AS existing)
+  </delete>
+  <update id="reassignPostTopics">
+    UPDATE post_topic SET topic_id=#{targetId} WHERE topic_id=#{sourceId}
+  </update>
+  <delete id="deleteDuplicateTopicFollows">
+    DELETE FROM topic_follow
+    WHERE topic_id=#{sourceId}
+      AND user_id IN (SELECT user_id FROM (
+        SELECT user_id FROM topic_follow WHERE topic_id=#{targetId}
+      ) AS existing)
+  </delete>
+  <update id="reassignTopicFollows">
+    UPDATE topic_follow SET topic_id=#{targetId} WHERE topic_id=#{sourceId}
   </update>
 
   <update id="markTopicMerged">
