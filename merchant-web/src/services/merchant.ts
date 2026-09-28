@@ -375,6 +375,40 @@ export interface MerchantComplaint {
   updatedAt?: string
   logs?: MerchantComplaintLog[]
 }
+export interface MerchantAdCampaign {
+  id: number
+  shopId: number
+  shopName: string
+  name: string
+  slotType: number
+  slotTypeText: string
+  keyword: string
+  bidCpc: number
+  dailyBudget: number
+  spentToday: number
+  totalSpent: number
+  status: number
+  statusText: string
+  auditStatus: number
+  auditStatusText: string
+  rejectReason: string
+  createdAt?: string
+  updatedAt?: string
+}
+export interface MerchantAdPayload {
+  shopId: number
+  name: string
+  slotType: number
+  keyword: string
+  bidCpc: number
+  dailyBudget: number
+}
+export function fetchAds(params?: object) { return apiGet<PageResult<MerchantAdCampaign>>('/api/b/v1/ads', params) }
+export function createAd(payload: MerchantAdPayload) { return apiPost<MerchantAdCampaign>('/api/b/v1/ads', payload) }
+export function updateAd(id: number, payload: MerchantAdPayload) { return apiPut<MerchantAdCampaign>(`/api/b/v1/ads/${id}`, payload) }
+export function pauseAd(id: number) { return apiPost<MerchantAdCampaign>(`/api/b/v1/ads/${id}/pause`) }
+export function resumeAd(id: number) { return apiPost<MerchantAdCampaign>(`/api/b/v1/ads/${id}/resume`) }
+
 export function fetchComplaints(params?: object) { return apiGet<PageResult<MerchantComplaint>>('/api/b/v1/complaints', params) }
 export function fetchComplaint(id: number) { return apiGet<MerchantComplaint>(`/api/b/v1/complaints/${id}`) }
 export function replyComplaint(id: number, reply: string) { return apiPost<MerchantComplaint>(`/api/b/v1/complaints/${id}/reply`, { reply }) }

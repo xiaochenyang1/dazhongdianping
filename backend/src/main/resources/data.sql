@@ -104,7 +104,9 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (66, 'operations:marketing:read', '查看营销券模板', 'operations', 1, 1),
     (67, 'operations:marketing:write', '维护营销券模板', 'operations', 2, 1),
     (68, 'audit:complaint:read', '查看投诉纠纷工单', 'audit', 1, 1),
-    (69, 'audit:complaint:write', '仲裁处置投诉纠纷', 'audit', 2, 1);
+    (69, 'audit:complaint:write', '仲裁处置投诉纠纷', 'audit', 2, 1),
+    (70, 'operations:ad:read', '查看广告投放', 'operations', 1, 1),
+    (71, 'operations:ad:write', '审核处置广告投放', 'operations', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
@@ -114,7 +116,7 @@ INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM adm
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
     (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59), (3, 64), (3, 65), (3, 68), (3, 69),
-    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57), (4, 62), (4, 63), (4, 66), (4, 67),
+    (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57), (4, 62), (4, 63), (4, 66), (4, 67), (4, 70), (4, 71),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49), (5, 60);
 
 INSERT INTO merchant (id, account, company_name, contact_name, contact_phone, region, audit_status, status, is_deleted) VALUES
@@ -133,8 +135,8 @@ INSERT INTO merchant_application (
     (20002, 2002, 'https://cdn.example.com/licenses/merchant-2002.png', 'Noah', '["https://cdn.example.com/shops/2002/front.jpg"]', 1, '', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO merchant_role (id, code, name, permissions, status) VALUES
-    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,merchant:verify,complaint:view,complaint:reply', 1),
-    (11, 'store_manager', '店长', 'shop:view,shop:edit,deal:edit,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,complaint:view,complaint:reply', 1),
+    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,merchant:verify,complaint:view,complaint:reply,ad:view,ad:manage', 1),
+    (11, 'store_manager', '店长', 'shop:view,shop:edit,deal:edit,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,complaint:view,complaint:reply,ad:view,ad:manage', 1),
     (12, 'coupon_operator', '核销员', 'coupon:verify,shop:view,reservation:view,reservation:arrive', 1),
     (13, 'service_operator', '客服运营', 'shop:view,order:view,review:reply,review:appeal,reservation:view,reservation:confirm,complaint:view,complaint:reply', 1);
 
@@ -424,3 +426,8 @@ INSERT INTO complaint_log (ticket_id, actor_type, actor_id, action, remark) VALU
   (7001, 1, 9001, 1, '套餐实际份量比页面展示少很多，希望核实。'),
   (7002, 1, 9002, 1, 'Cancelled the deal but the refund has not arrived after a week.'),
   (7002, 2, 12001, 2, 'We have escalated the refund to the payment channel.');
+
+-- 广告投放种子：CN/EU 各一条已审核通过、投放中
+INSERT INTO ad_campaign (id, region, merchant_id, shop_id, name, slot_type, keyword, bid_cpc, daily_budget, spent_today, spend_date, total_spent, status, audit_status) VALUES
+  (8001, 'CN', 1001, 10001, '火锅搜索推广', 1, '火锅', 2.50, 100.00, 0, NULL, 0, 1, 2),
+  (8002, 'EU', 2001, 20001, 'Sichuan search promo', 1, 'sichuan', 3.00, 100.00, 0, NULL, 0, 1, 2);

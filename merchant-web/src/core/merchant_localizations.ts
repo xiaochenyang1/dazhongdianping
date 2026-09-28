@@ -28,6 +28,7 @@ export interface MerchantStrings {
     verified: string
     staffs: string
     complaints: string
+    ads: string
   }
   shell: {
     workbenchEyebrow: string
@@ -274,6 +275,46 @@ export interface MerchantStrings {
     noReply: string
     resolution: string
     empty: string
+  }
+  ads: {
+    summary: string
+    loadError: string
+    saveError: string
+    create: string
+    edit: string
+    headers: {
+      name: string
+      shop: string
+      slot: string
+      keyword: string
+      bid: string
+      budget: string
+      spentToday: string
+      status: string
+      audit: string
+      actions: string
+    }
+    slotSearch: string
+    slotList: string
+    statusText: (status: number, fallback?: string) => string
+    auditText: (status: number, fallback?: string) => string
+    pause: string
+    resume: string
+    fieldShop: string
+    fieldName: string
+    fieldSlot: string
+    fieldKeyword: string
+    keywordHint: string
+    fieldBid: string
+    fieldBudget: string
+    budgetHint: string
+    save: string
+    cancel: string
+    created: string
+    saved: string
+    empty: string
+    unlimited: string
+    readOnly: string
   }
   reservationSlots: {
     filters: {
@@ -654,6 +695,7 @@ const zhCnStrings: MerchantStrings = {
     verified: '认证商户',
     staffs: '员工管理',
     complaints: '投诉纠纷',
+    ads: '广告推广',
   },
   shell: {
     workbenchEyebrow: '商户工作台',
@@ -927,6 +969,56 @@ const zhCnStrings: MerchantStrings = {
     noReply: '尚未申辩',
     resolution: '仲裁结论',
     empty: '暂无投诉工单。',
+  },
+  ads: {
+    summary: '为门店创建搜索/列表广告位，按点击计费，平台审核后投放。',
+    loadError: '广告加载失败',
+    saveError: '保存失败',
+    create: '新建投放',
+    edit: '编辑',
+    headers: {
+      name: '名称',
+      shop: '门店',
+      slot: '广告位',
+      keyword: '关键词',
+      bid: '点击出价',
+      budget: '日预算',
+      spentToday: '今日已花费',
+      status: '投放状态',
+      audit: '审核',
+      actions: '操作',
+    },
+    slotSearch: '搜索结果',
+    slotList: '首页/列表',
+    statusText: (status, fallback) => {
+      if (status === 0) return '已下线'
+      if (status === 2) return '已暂停'
+      if (status === 1) return '投放中'
+      return fallback || `状态 ${status}`
+    },
+    auditText: (status, fallback) => {
+      if (status === 2) return '已通过'
+      if (status === 3) return '已驳回'
+      if (status === 1) return '待审核'
+      return fallback || `审核 ${status}`
+    },
+    pause: '暂停',
+    resume: '恢复',
+    fieldShop: '推广门店',
+    fieldName: '投放名称',
+    fieldSlot: '广告位类型',
+    fieldKeyword: '搜索关键词',
+    keywordHint: '仅搜索广告位生效，留空表示不限',
+    fieldBid: '单次点击出价',
+    fieldBudget: '日预算(0=不限)',
+    budgetHint: '当日花费达到预算后自动停投',
+    save: '保存',
+    cancel: '取消',
+    created: '投放已创建，待平台审核',
+    saved: '投放已更新，待重新审核',
+    empty: '暂无广告投放。',
+    unlimited: '不限',
+    readOnly: '你没有广告管理权限。',
   },
   reservationSlots: {
     filters: {
@@ -1333,6 +1425,7 @@ const enStrings: MerchantStrings = {
     verified: 'Verified Merchant',
     staffs: 'Staff Management',
     complaints: 'Complaints',
+    ads: 'Ad Promotion',
   },
   shell: {
     workbenchEyebrow: 'Merchant Console',
@@ -1606,6 +1699,56 @@ const enStrings: MerchantStrings = {
     noReply: 'No rebuttal yet',
     resolution: 'Ruling',
     empty: 'No complaint tickets yet.',
+  },
+  ads: {
+    summary: 'Create search/list ad slots for your shops, billed per click, served after platform review.',
+    loadError: 'Failed to load ads',
+    saveError: 'Save failed',
+    create: 'New campaign',
+    edit: 'Edit',
+    headers: {
+      name: 'Name',
+      shop: 'Shop',
+      slot: 'Slot',
+      keyword: 'Keyword',
+      bid: 'CPC bid',
+      budget: 'Daily budget',
+      spentToday: 'Spent today',
+      status: 'Status',
+      audit: 'Review',
+      actions: 'Actions',
+    },
+    slotSearch: 'Search results',
+    slotList: 'Home/list',
+    statusText: (status, fallback) => {
+      if (status === 0) return 'Offline'
+      if (status === 2) return 'Paused'
+      if (status === 1) return 'Serving'
+      return fallback || `Status ${status}`
+    },
+    auditText: (status, fallback) => {
+      if (status === 2) return 'Approved'
+      if (status === 3) return 'Rejected'
+      if (status === 1) return 'Pending'
+      return fallback || `Review ${status}`
+    },
+    pause: 'Pause',
+    resume: 'Resume',
+    fieldShop: 'Shop',
+    fieldName: 'Campaign name',
+    fieldSlot: 'Slot type',
+    fieldKeyword: 'Search keyword',
+    keywordHint: 'Search slot only; leave blank for untargeted',
+    fieldBid: 'Cost per click',
+    fieldBudget: 'Daily budget (0 = unlimited)',
+    budgetHint: 'Serving stops once the daily budget is reached',
+    save: 'Save',
+    cancel: 'Cancel',
+    created: 'Campaign created, pending review',
+    saved: 'Campaign updated, pending re-review',
+    empty: 'No ad campaigns yet.',
+    unlimited: 'Unlimited',
+    readOnly: 'You do not have ad management permission.',
   },
   reservationSlots: {
     filters: {

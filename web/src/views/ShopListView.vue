@@ -9,7 +9,10 @@ import {
   localizeWebDiscoveryError,
 } from '@/core/web_discovery_localizations'
 import { fetchAreas, fetchCategories, fetchCities, fetchShops } from '@/services/browse'
+import { fetchAdSlots, reportAdClick } from '@/services/ad'
+import { adStringsForRegion } from '@/core/web_ad_localizations'
 import type { Area, CategoryNode, City, ShopListItem } from '@/types/browse'
+import type { AdSlot } from '@/types/ad'
 
 const { state, setCityId } = useAppContext()
 const route = useRoute()
@@ -22,6 +25,7 @@ const categories = ref<CategoryNode[]>([])
 const cities = ref<City[]>([])
 const areas = ref<Area[]>([])
 const shops = ref<ShopListItem[]>([])
+const adSlots = ref<AdSlot[]>([])
 const shopTotal = ref(0)
 const shopHasMore = ref(false)
 const shopPage = ref(1)
@@ -232,6 +236,7 @@ async function loadShops(append = false) {
     shopTotal.value = page.total
     shopPage.value = page.page
     shopHasMore.value = page.hasMore
+    if (!append) loadAdSlots(requestFilters.keyword, requestId)
   } catch (error) {
     if (requestId !== shopRequestId) return
     const message = localizeWebDiscoveryError(copy.value, error, copy.value.shopList.loadFailed)
@@ -243,6 +248,27 @@ async function loadShops(append = false) {
       else loading.value = false
     }
   }
+}
+
+const adCopy = computed(() => adStringsForRegion(state.region))
+
+async function loadAdSlots(keyword: string, requestId: number) {
+  const kw = (keyword || '').trim()
+  if (!kw) {
+    adSlots.value = []
+    return
+  }
+  try {
+    const slots = await fetchAdSlots(1, kw, 3)
+    if (requestId === shopRequestId) adSlots.value = slots
+  } catch {
+    if (requestId === shopRequestId) adSlots.value = []
+  }
+}
+
+function onAdClick(slot: AdSlot) {
+  // 计费为尽力而为，失败不阻断跳转。
+  reportAdClick(slot.campaignId).catch(() => {})
 }
 
 function optionalNumber(value: string | number) {
@@ -454,6 +480,23 @@ watch(
       <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
       <p v-else-if="loading" class="feedback">{{ copy.shopList.loadingResults }}</p>
       <p v-else-if="shops.length === 0" class="feedback">{{ copy.shopList.emptyResults }}</p>
+
+      <div v-if="adSlots.length" class="ad-slots" data-testid="ad-slots">
+        <RouterLink
+          v-for="slot in adSlots"
+          :key="slot.campaignId"
+          :to="`/shops/${slot.shopId}`"
+          class="ad-slot"
+          @click="onAdClick(slot)"
+        >
+          <img v-if="slot.coverUrl" :src="slot.coverUrl" :alt="slot.shopName" class="ad-slot__cover" />
+          <div class="ad-slot__body">
+            <span class="ad-slot__badge">{{ adCopy.adLabel }}</span>
+            <strong class="ad-slot__name">{{ slot.shopName }}</strong>
+            <span class="ad-slot__score">{{ slot.score }}</span>
+          </div>
+        </RouterLink>
+      </div>
 
       <div class="shop-grid">
         <RouterLink v-for="shop in shops" :key="shop.id" :to="`/shops/${shop.id}`" class="shop-grid__link">

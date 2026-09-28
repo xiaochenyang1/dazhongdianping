@@ -15,6 +15,7 @@ class AppLocalizations {
   ];
 
   static const _simplified = {
+    'adLabel': '广告',
     'myComplaintsTitle': '我的投诉',
     'complaintsEmpty': '你还没有发起过投诉。',
     'complaintsLoadFailed': '投诉加载失败：{error}',
@@ -1044,6 +1045,7 @@ class AppLocalizations {
     'shopGalleryMissing': '门店相册还没补齐，先靠点评和基础信息判断也不至于两眼一抹黑。',
   };
   static const _traditional = {
+    'adLabel': '廣告',
     'myComplaintsTitle': '我的投訴',
     'complaintsEmpty': '你還沒有發起過投訴。',
     'complaintsLoadFailed': '投訴載入失敗：{error}',
@@ -2073,6 +2075,7 @@ class AppLocalizations {
     'shopGalleryMissing': '店家相簿還沒補齊，先靠評論和基礎資訊判斷也不至於兩眼一抹黑。',
   };
   static const _english = {
+    'adLabel': 'Ad',
     'myComplaintsTitle': 'My Complaints',
     'complaintsEmpty': 'You have not filed any complaints yet.',
     'complaintsLoadFailed': 'Failed to load complaints: {error}',
@@ -3329,6 +3332,7 @@ class AppLocalizations {
   String get marketingCouponStatusUnused => _text('marketingCouponStatusUnused');
   String get marketingCouponStatusUsed => _text('marketingCouponStatusUsed');
   String get marketingCouponStatusExpired => _text('marketingCouponStatusExpired');
+  String get adLabel => _text('adLabel');
   String get myComplaintsTitle => _text('myComplaintsTitle');
   String get complaintsEmpty => _text('complaintsEmpty');
   String complaintsLoadFailed(Object error) => _withError('complaintsLoadFailed', error);
