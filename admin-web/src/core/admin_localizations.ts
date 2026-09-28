@@ -44,6 +44,7 @@ export interface AdminStrings {
     recommendationWeight: string
     marketingCoupons: string
     riskControl: string
+    complaints: string
     systemAdmins: string
     systemRoles: string
     systemUsers: string
@@ -1789,6 +1790,45 @@ export interface AdminStrings {
     loadError: string
     readOnly: string
   }
+  complaintArbitration: {
+    title: string
+    description: string
+    filterStatus: string
+    all: string
+    statusPending: string
+    statusProcessing: string
+    statusResolved: string
+    statusRejected: string
+    typeQuality: string
+    typeFalseAd: string
+    typeRefund: string
+    typeService: string
+    typeOther: string
+    colTicketNo: string
+    colShop: string
+    colType: string
+    colUser: string
+    colStatus: string
+    colCreatedAt: string
+    colActions: string
+    view: string
+    detailTitle: string
+    fieldContent: string
+    fieldMerchantReply: string
+    fieldResolution: string
+    fieldLogs: string
+    noReply: string
+    empty: string
+    loadError: string
+    disposeResolve: string
+    disposeReject: string
+    resolutionPlaceholder: string
+    dispose: string
+    disposed: string
+    disposeError: string
+    close: string
+    readOnly: string
+  }
   riskControl: {
     title: string
     description: string
@@ -2494,6 +2534,7 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/operations/recommendation': 'recommendationWeight',
   '/operations/marketing': 'marketingCoupons',
   '/audit/risk': 'riskControl',
+  '/audit/complaints': 'complaints',
   '/system/admins': 'systemAdmins',
   '/system/roles': 'systemRoles',
   '/system/users': 'systemUsers',
@@ -2733,6 +2774,7 @@ const zhCnStrings: AdminStrings = {
     recommendationWeight: '推荐权重',
     marketingCoupons: '营销券',
     riskControl: '风控中心',
+    complaints: '投诉纠纷',
     systemAdmins: '管理员账号',
     systemRoles: '角色与权限',
     systemUsers: '用户管理',
@@ -4559,6 +4601,45 @@ const zhCnStrings: AdminStrings = {
     saveError: '券模板保存失败。',
     readOnly: '你只有营销券的只读权限。',
   },
+  complaintArbitration: {
+    title: '投诉纠纷仲裁',
+    description: '受理消费者投诉，查看商家申辩与处理日志，仲裁裁定解决或驳回。',
+    filterStatus: '状态筛选',
+    all: '全部',
+    statusPending: '待受理',
+    statusProcessing: '处理中',
+    statusResolved: '已解决',
+    statusRejected: '已驳回',
+    typeQuality: '商品/服务质量',
+    typeFalseAd: '虚假宣传',
+    typeRefund: '退款纠纷',
+    typeService: '服务态度',
+    typeOther: '其他',
+    colTicketNo: '工单号',
+    colShop: '门店',
+    colType: '类型',
+    colUser: '投诉人',
+    colStatus: '状态',
+    colCreatedAt: '提交时间',
+    colActions: '操作',
+    view: '查看',
+    detailTitle: '工单详情',
+    fieldContent: '投诉内容',
+    fieldMerchantReply: '商家申辩',
+    fieldResolution: '仲裁结论',
+    fieldLogs: '处理日志',
+    noReply: '商家暂未申辩',
+    empty: '当前区域暂无投诉工单。',
+    loadError: '投诉工单加载失败。',
+    disposeResolve: '判定成立（已解决）',
+    disposeReject: '驳回投诉',
+    resolutionPlaceholder: '填写仲裁结论，将同步给用户与商家',
+    dispose: '提交处置',
+    disposed: '投诉已处置。',
+    disposeError: '投诉处置失败。',
+    close: '关闭',
+    readOnly: '你只有投诉纠纷的只读权限。',
+  },
   riskControl: {
     title: '风控中心',
     description: '查看反刷单/反虚假点评命中事件，处置误报，并调整本区域风控规则阈值。',
@@ -5322,6 +5403,7 @@ const enStrings: AdminStrings = {
     recommendationWeight: 'Recommendation Weights',
     marketingCoupons: 'Marketing Coupons',
     riskControl: 'Risk Control',
+    complaints: 'Complaints',
     systemAdmins: 'Admin Accounts',
     systemRoles: 'Roles & Permissions',
     systemUsers: 'User Management',
@@ -7163,6 +7245,45 @@ const enStrings: AdminStrings = {
     loadError: 'Failed to load coupon templates.',
     saveError: 'Failed to save coupon template.',
     readOnly: 'You have read-only access to marketing coupons.',
+  },
+  complaintArbitration: {
+    title: 'Complaint Arbitration',
+    description: 'Handle consumer complaints, review merchant rebuttals and the processing log, and rule to resolve or reject.',
+    filterStatus: 'Status',
+    all: 'All',
+    statusPending: 'Pending',
+    statusProcessing: 'Processing',
+    statusResolved: 'Resolved',
+    statusRejected: 'Rejected',
+    typeQuality: 'Product/service quality',
+    typeFalseAd: 'False advertising',
+    typeRefund: 'Refund dispute',
+    typeService: 'Service attitude',
+    typeOther: 'Other',
+    colTicketNo: 'Ticket',
+    colShop: 'Shop',
+    colType: 'Type',
+    colUser: 'Complainant',
+    colStatus: 'Status',
+    colCreatedAt: 'Submitted',
+    colActions: 'Actions',
+    view: 'View',
+    detailTitle: 'Ticket detail',
+    fieldContent: 'Complaint',
+    fieldMerchantReply: 'Merchant rebuttal',
+    fieldResolution: 'Ruling',
+    fieldLogs: 'Processing log',
+    noReply: 'No merchant rebuttal yet',
+    empty: 'No complaint tickets in this region yet.',
+    loadError: 'Failed to load complaint tickets.',
+    disposeResolve: 'Uphold (resolve)',
+    disposeReject: 'Reject complaint',
+    resolutionPlaceholder: 'Enter the ruling; it is shared with the user and merchant',
+    dispose: 'Submit ruling',
+    disposed: 'Complaint disposed.',
+    disposeError: 'Failed to dispose the complaint.',
+    close: 'Close',
+    readOnly: 'You have read-only access to complaints.',
   },
   riskControl: {
     title: 'Risk Control',

@@ -5,6 +5,7 @@ import { useAppContext } from '@/composables/useAppContext'
 import { useStripeCheckout } from '@/composables/useStripeCheckout'
 import { formatWebDateTime } from '@/core/web_localizations'
 import { localizeWebTradeError, tradeStringsForRegion } from '@/core/web_trade_localizations'
+import { complaintStringsForRegion } from '@/core/web_complaint_localizations'
 import { cancelOrder, completeMockPayment, fetchOrder, payOrder, refundOrder } from '@/services/trade'
 import { formatMoney } from '@/lib/currency'
 import type { PaymentIntent, TradeOrder } from '@/types/trade'
@@ -13,6 +14,7 @@ const props = defineProps<{ orderId: number }>()
 const route = useRoute()
 const { state } = useAppContext()
 const copy = computed(() => tradeStringsForRegion(state.region))
+const complaintCopy = computed(() => complaintStringsForRegion(state.region))
 
 const order = ref<TradeOrder | null>(null)
 const intent = ref<PaymentIntent | null>(null)
@@ -270,6 +272,11 @@ onBeforeUnmount(() => stopPolling())
         >
           {{ copy.orderDetail.requestRefund }}
         </button>
+        <RouterLink
+          v-if="order.shopId"
+          class="secondary-button"
+          :to="{ path: '/complaints/new', query: { shopId: order.shopId, orderId: order.id } }"
+        >{{ complaintCopy.list.newComplaint }}</RouterLink>
       </div>
 
       <section v-if="order.refund" class="content-card" data-testid="order-refund-card">

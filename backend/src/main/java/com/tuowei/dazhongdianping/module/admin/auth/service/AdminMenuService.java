@@ -22,7 +22,8 @@ public class AdminMenuService {
                         leaf("audit.merchant_verifications", "认证商户", "/audit/verified-merchants", "audit:merchant_verification:read"),
                         leaf("audit.shop_changes", "门店草稿审核", "/audit/shop-changes", "audit:shop_change:read"),
                         leaf("audit.deals", "团购审核", "/audit/deals", "audit:deal:read"),
-                        leaf("audit.risk", "风控中心", "/audit/risk", "risk:event:read")
+                        leaf("audit.risk", "风控中心", "/audit/risk", "risk:event:read"),
+                        leaf("audit.complaints", "投诉纠纷", "/audit/complaints", "audit:complaint:read")
                 )),
                 group("data", "数据管理", "/data", List.of(
                         leaf("data.shops", "商户管理", "/data/shops", "data:shop:read"),

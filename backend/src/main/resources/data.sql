@@ -102,7 +102,9 @@ INSERT INTO admin_permission (id, code, name, category, permission_type, status)
     (64, 'risk:event:read', '查看风控事件与规则', 'audit', 1, 1),
     (65, 'risk:event:write', '处置风控事件与规则', 'audit', 2, 1),
     (66, 'operations:marketing:read', '查看营销券模板', 'operations', 1, 1),
-    (67, 'operations:marketing:write', '维护营销券模板', 'operations', 2, 1);
+    (67, 'operations:marketing:write', '维护营销券模板', 'operations', 2, 1),
+    (68, 'audit:complaint:read', '查看投诉纠纷工单', 'audit', 1, 1),
+    (69, 'audit:complaint:write', '仲裁处置投诉纠纷', 'audit', 2, 1);
 
 INSERT INTO admin_user_role (admin_id, role_id) VALUES (1, 1);
 INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
@@ -111,7 +113,7 @@ INSERT INTO admin_region_scope (admin_id, region, all_cities) VALUES
 INSERT INTO admin_role_permission (role_id, permission_id) SELECT 1, id FROM admin_permission;
 INSERT INTO admin_role_permission (role_id, permission_id) VALUES
     (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 34), (2, 35), (2, 52), (2, 53),
-    (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59), (3, 64), (3, 65),
+    (3, 1), (3, 8), (3, 9), (3, 10), (3, 11), (3, 12), (3, 13), (3, 54), (3, 55), (3, 58), (3, 59), (3, 64), (3, 65), (3, 68), (3, 69),
     (4, 1), (4, 19), (4, 20), (4, 21), (4, 22), (4, 23), (4, 24), (4, 25), (4, 26), (4, 39), (4, 40), (4, 41), (4, 42), (4, 43), (4, 44), (4, 50), (4, 51), (4, 56), (4, 57), (4, 62), (4, 63), (4, 66), (4, 67),
     (5, 1), (5, 14), (5, 15), (5, 16), (5, 17), (5, 18), (5, 32), (5, 33), (5, 38), (5, 49), (5, 60);
 
@@ -131,10 +133,10 @@ INSERT INTO merchant_application (
     (20002, 2002, 'https://cdn.example.com/licenses/merchant-2002.png', 'Noah', '["https://cdn.example.com/shops/2002/front.jpg"]', 1, '', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO merchant_role (id, code, name, permissions, status) VALUES
-    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,merchant:verify', 1),
-    (11, 'store_manager', '店长', 'shop:view,shop:edit,deal:edit,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view', 1),
+    (1, 'owner', '主账号', 'shop:view,shop:edit,staff:manage,deal:edit,coupon:verify,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,merchant:verify,complaint:view,complaint:reply', 1),
+    (11, 'store_manager', '店长', 'shop:view,shop:edit,deal:edit,order:view,order:refund,review:reply,review:appeal,reservation:view,reservation:confirm,reservation:arrive,dashboard:view,complaint:view,complaint:reply', 1),
     (12, 'coupon_operator', '核销员', 'coupon:verify,shop:view,reservation:view,reservation:arrive', 1),
-    (13, 'service_operator', '客服运营', 'shop:view,order:view,review:reply,review:appeal,reservation:view,reservation:confirm', 1);
+    (13, 'service_operator', '客服运营', 'shop:view,order:view,review:reply,review:appeal,reservation:view,reservation:confirm,complaint:view,complaint:reply', 1);
 
 INSERT INTO merchant_operator (id, merchant_id, account, password_hash, name, phone, email, operator_type, shop_scope_type, status, is_deleted) VALUES
     (11001, 1001, 'merchant_cn_hotpot@example.com', '$2a$10$7fHXsIct1JQL5H/MOEC.Z.G8N2zSOYBStbTgbSQI0D6tzes3SP6X6', '王磊', '13800000001', 'merchant_cn_hotpot@example.com', 1, 1, 1, FALSE),
@@ -413,3 +415,12 @@ INSERT INTO marketing_coupon_template (id, region, name, type, threshold_amount,
   (5011, 'EU', 'Spend 100 save 20', 1, 100.00, 20.00, 'EUR', 0, 1000, 0, 1, 30, NULL, NULL, 1),
   (5012, 'EU', 'Spend 50 save 8', 1, 50.00, 8.00, 'EUR', 0, 0, 0, 3, 15, NULL, NULL, 1),
   (5013, 'EU', 'New customer save 15', 2, 0.00, 15.00, 'EUR', 0, 5000, 0, 1, 7, NULL, NULL, 1);
+
+-- 投诉纠纷种子（演示领用）：CN 一条待受理 + EU 一条处理中
+INSERT INTO complaint_ticket (id, region, ticket_no, user_id, shop_id, merchant_id, order_id, type, title, content, status, merchant_reply, merchant_replied_at) VALUES
+  (7001, 'CN', 'CTSEED0001', 9001, 10001, 1001, 0, 1, '菜品与描述不符', '套餐实际份量比页面展示少很多，希望核实。', 1, '', NULL),
+  (7002, 'EU', 'CTSEED0002', 9002, 20001, 2001, 0, 3, 'Refund not received', 'Cancelled the deal but the refund has not arrived after a week.', 2, 'We have escalated the refund to the payment channel.', CURRENT_TIMESTAMP);
+INSERT INTO complaint_log (ticket_id, actor_type, actor_id, action, remark) VALUES
+  (7001, 1, 9001, 1, '套餐实际份量比页面展示少很多，希望核实。'),
+  (7002, 1, 9002, 1, 'Cancelled the deal but the refund has not arrived after a week.'),
+  (7002, 2, 12001, 2, 'We have escalated the refund to the payment channel.');

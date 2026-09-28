@@ -976,6 +976,42 @@ export interface CouponTemplatePayload {
   status: number
 }
 
+export interface ComplaintLog {
+  id: number
+  actorType: number
+  actorTypeText: string
+  action: number
+  actionText: string
+  remark: string
+  createdAt: string | null
+}
+export interface ComplaintTicket {
+  id: number
+  ticketNo: string
+  userId: number
+  userNickname: string
+  shopId: number
+  shopName: string
+  orderId: number
+  type: number
+  typeText: string
+  title: string
+  content: string
+  status: number
+  statusText: string
+  merchantReply: string
+  merchantRepliedAt: string | null
+  resolution: string
+  resolvedAt: string | null
+  createdAt: string | null
+  updatedAt: string | null
+  logs?: ComplaintLog[]
+}
+export interface ComplaintDisposePayload {
+  resolved: boolean
+  resolution: string
+}
+
 export interface RiskEvent {
   id: number
   region: string

@@ -1376,3 +1376,48 @@ CREATE TABLE IF NOT EXISTS user_coupon (
 );
 CREATE INDEX IF NOT EXISTS idx_user_coupon_owner ON user_coupon(user_id, region, status, id);
 CREATE INDEX IF NOT EXISTS idx_user_coupon_template ON user_coupon(user_id, template_id);
+
+-- ============================================================
+-- 消费者投诉 / 交易纠纷仲裁（complaint）
+-- ============================================================
+-- 投诉工单：用户发起，商家申辩，平台仲裁，按区域隔离
+CREATE TABLE IF NOT EXISTS complaint_ticket (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    ticket_no VARCHAR(32) NOT NULL UNIQUE,
+    user_id BIGINT NOT NULL,
+    shop_id BIGINT NOT NULL DEFAULT 0,
+    merchant_id BIGINT NOT NULL DEFAULT 0,
+    order_id BIGINT NOT NULL DEFAULT 0,
+    -- 投诉类型：1=商品/服务质量 2=虚假宣传 3=退款纠纷 4=服务态度 5=其他
+    type TINYINT NOT NULL DEFAULT 1,
+    title VARCHAR(128) NOT NULL,
+    content VARCHAR(2000) NOT NULL,
+    -- 状态：1=待受理 2=处理中 3=已解决 4=已驳回
+    status TINYINT NOT NULL DEFAULT 1,
+    merchant_reply VARCHAR(2000) NOT NULL DEFAULT '',
+    merchant_replied_at TIMESTAMP NULL,
+    resolution VARCHAR(2000) NOT NULL DEFAULT '',
+    resolved_by BIGINT NOT NULL DEFAULT 0,
+    resolved_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_complaint_user ON complaint_ticket(user_id, region, status, id);
+CREATE INDEX IF NOT EXISTS idx_complaint_admin ON complaint_ticket(region, status, id);
+CREATE INDEX IF NOT EXISTS idx_complaint_merchant ON complaint_ticket(merchant_id, status, id);
+
+-- 投诉处理日志：记录状态流转（创建/申辩/受理/解决/驳回）
+CREATE TABLE IF NOT EXISTS complaint_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ticket_id BIGINT NOT NULL,
+    -- 操作方：1=用户 2=商家 3=平台
+    actor_type TINYINT NOT NULL,
+    actor_id BIGINT NOT NULL DEFAULT 0,
+    -- 动作：1=创建 2=商家申辩 3=平台受理 4=已解决 5=已驳回
+    action TINYINT NOT NULL,
+    remark VARCHAR(2000) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_complaint_log_ticket ON complaint_log(ticket_id, id);

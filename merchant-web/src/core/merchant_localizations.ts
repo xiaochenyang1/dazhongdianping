@@ -27,6 +27,7 @@ export interface MerchantStrings {
     reviews: string
     verified: string
     staffs: string
+    complaints: string
   }
   shell: {
     workbenchEyebrow: string
@@ -247,6 +248,32 @@ export interface MerchantStrings {
     noAppeal: string
     empty: string
     appealStatusText: (status: number, fallback?: string) => string
+  }
+  complaints: {
+    summary: string
+    loadError: string
+    replyRequired: string
+    replyError: string
+    replySuccess: string
+    filterStatus: string
+    all: string
+    headers: {
+      ticketNo: string
+      shop: string
+      type: string
+      user: string
+      status: string
+      content: string
+      reply: string
+      actions: string
+    }
+    statusText: (status: number, fallback?: string) => string
+    typeText: (type: number, fallback?: string) => string
+    replyPlaceholder: string
+    saveReply: string
+    noReply: string
+    resolution: string
+    empty: string
   }
   reservationSlots: {
     filters: {
@@ -626,6 +653,7 @@ const zhCnStrings: MerchantStrings = {
     reviews: '点评经营',
     verified: '认证商户',
     staffs: '员工管理',
+    complaints: '投诉纠纷',
   },
   shell: {
     workbenchEyebrow: '商户工作台',
@@ -860,6 +888,45 @@ const zhCnStrings: MerchantStrings = {
       if (status === 0) return '草稿'
       return fallback || `状态 ${status}`
     },
+  },
+  complaints: {
+    summary: '查看派发给本店的消费者投诉，及时申辩说明。',
+    loadError: '投诉加载失败',
+    replyRequired: '请填写申辩内容',
+    replyError: '申辩提交失败',
+    replySuccess: '申辩已提交',
+    filterStatus: '状态',
+    all: '全部',
+    headers: {
+      ticketNo: '工单号',
+      shop: '门店',
+      type: '类型',
+      user: '投诉人',
+      status: '状态',
+      content: '投诉内容',
+      reply: '申辩',
+      actions: '操作',
+    },
+    statusText: (status, fallback) => {
+      if (status === 2) return '处理中'
+      if (status === 3) return '已解决'
+      if (status === 4) return '已驳回'
+      if (status === 1) return '待受理'
+      return fallback || `状态 ${status}`
+    },
+    typeText: (type, fallback) => {
+      if (type === 2) return '虚假宣传'
+      if (type === 3) return '退款纠纷'
+      if (type === 4) return '服务态度'
+      if (type === 5) return '其他'
+      if (type === 1) return '商品/服务质量'
+      return fallback || `类型 ${type}`
+    },
+    replyPlaceholder: '填写申辩说明，平台会一并参考',
+    saveReply: '提交申辩',
+    noReply: '尚未申辩',
+    resolution: '仲裁结论',
+    empty: '暂无投诉工单。',
   },
   reservationSlots: {
     filters: {
@@ -1265,6 +1332,7 @@ const enStrings: MerchantStrings = {
     reviews: 'Review Operations',
     verified: 'Verified Merchant',
     staffs: 'Staff Management',
+    complaints: 'Complaints',
   },
   shell: {
     workbenchEyebrow: 'Merchant Console',
@@ -1499,6 +1567,45 @@ const enStrings: MerchantStrings = {
       if (status === 0) return 'Draft'
       return fallback || `Status ${status}`
     },
+  },
+  complaints: {
+    summary: 'Review consumer complaints routed to your shop and rebut promptly.',
+    loadError: 'Failed to load complaints',
+    replyRequired: 'Please enter your rebuttal',
+    replyError: 'Failed to submit the rebuttal',
+    replySuccess: 'Rebuttal submitted',
+    filterStatus: 'Status',
+    all: 'All',
+    headers: {
+      ticketNo: 'Ticket',
+      shop: 'Shop',
+      type: 'Type',
+      user: 'Complainant',
+      status: 'Status',
+      content: 'Complaint',
+      reply: 'Rebuttal',
+      actions: 'Actions',
+    },
+    statusText: (status, fallback) => {
+      if (status === 2) return 'Processing'
+      if (status === 3) return 'Resolved'
+      if (status === 4) return 'Rejected'
+      if (status === 1) return 'Pending'
+      return fallback || `Status ${status}`
+    },
+    typeText: (type, fallback) => {
+      if (type === 2) return 'False advertising'
+      if (type === 3) return 'Refund dispute'
+      if (type === 4) return 'Service attitude'
+      if (type === 5) return 'Other'
+      if (type === 1) return 'Product/service quality'
+      return fallback || `Type ${type}`
+    },
+    replyPlaceholder: 'Enter your rebuttal; the platform will take it into account',
+    saveReply: 'Submit rebuttal',
+    noReply: 'No rebuttal yet',
+    resolution: 'Ruling',
+    empty: 'No complaint tickets yet.',
   },
   reservationSlots: {
     filters: {

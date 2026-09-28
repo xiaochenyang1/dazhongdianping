@@ -66,6 +66,8 @@ import type {
   RecommendationWeightPayload,
   CouponTemplate,
   CouponTemplatePayload,
+  ComplaintTicket,
+  ComplaintDisposePayload,
   RiskEvent,
   RiskEventDisposePayload,
   RiskRule,
@@ -609,6 +611,16 @@ export function createCouponTemplate(payload: CouponTemplatePayload) {
 }
 export function updateCouponTemplate(id: number, payload: CouponTemplatePayload) {
   return apiPut<CouponTemplate>(`/api/admin/v1/marketing/coupon-templates/${id}`, payload)
+}
+
+export function fetchComplaints(params: { status?: number; page?: number; pageSize?: number }) {
+  return apiGet<PageResult<ComplaintTicket>>('/api/admin/v1/complaints', params)
+}
+export function fetchComplaint(id: number) {
+  return apiGet<ComplaintTicket>(`/api/admin/v1/complaints/${id}`)
+}
+export function disposeComplaint(id: number, payload: ComplaintDisposePayload) {
+  return apiPost<ComplaintTicket>(`/api/admin/v1/complaints/${id}/dispose`, payload)
 }
 
 export function fetchRiskEvents(params: { scene?: string; decision?: number; disposeStatus?: number; page?: number; pageSize?: number }) {

@@ -152,6 +152,9 @@ const router = createRouter({
     { path: '/user/coupons', name: 'user-coupons', component: () => import('@/views/CouponsView.vue'), meta: { requiresAuth: true, title: '我的券', description: '查看待使用、已使用、过期和退款券码。' } },
     { path: '/coupons/center', name: 'coupon-center', component: () => import('@/views/CouponCenterView.vue'), meta: { title: '领券中心', description: '领取平台满减券与新客立减券，下单自动抵扣。' } },
     { path: '/user/marketing-coupons', name: 'user-marketing-coupons', component: () => import('@/views/MarketingCouponsView.vue'), meta: { requiresAuth: true, title: '我的营销券', description: '查看已领取的满减券与立减券。' } },
+    { path: '/user/complaints', name: 'user-complaints', component: () => import('@/views/ComplaintsView.vue'), meta: { requiresAuth: true, title: '我的投诉', description: '查看投诉进度、商家申辩与平台仲裁结果。' } },
+    { path: '/user/complaints/:id', name: 'user-complaint-detail', component: () => import('@/views/ComplaintDetailView.vue'), props: r => ({ complaintId: Number(r.params.id) }), meta: { requiresAuth: true, title: '投诉详情', description: '查看投诉处理日志与结论。' } },
+    { path: '/complaints/new', name: 'complaint-create', component: () => import('@/views/ComplaintCreateView.vue'), props: r => ({ shopId: r.query.shopId ? Number(r.query.shopId) : undefined, orderId: r.query.orderId ? Number(r.query.orderId) : undefined }), meta: { requiresAuth: true, title: '发起投诉', description: '对门店或订单发起投诉。' } },
     {
       path: '/user/coupons/:code',
       name: 'user-coupon-detail',

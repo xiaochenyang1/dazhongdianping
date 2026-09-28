@@ -197,6 +197,7 @@ const router = createRouter({
         { path: 'operations/recommendation', name: 'recommendation-weight', component: () => import('@/views/RecommendationWeightView.vue'), meta: { requiresAuth: true, titleKey: 'recommendationWeight', requiredPermission: 'operations:recommendation:read' } },
         { path: 'operations/marketing', name: 'marketing-coupons', component: () => import('@/views/MarketingCouponsView.vue'), meta: { requiresAuth: true, titleKey: 'marketingCoupons', requiredPermission: 'operations:marketing:read' } },
         { path: 'audit/risk', name: 'risk-control', component: () => import('@/views/RiskControlView.vue'), meta: { requiresAuth: true, titleKey: 'riskControl', requiredPermission: 'risk:event:read' } },
+        { path: 'audit/complaints', name: 'complaint-arbitration', component: () => import('@/views/ComplaintArbitrationView.vue'), meta: { requiresAuth: true, titleKey: 'complaints', requiredPermission: 'audit:complaint:read' } },
         {
           path: 'system/admins',
           name: 'system-admins',
