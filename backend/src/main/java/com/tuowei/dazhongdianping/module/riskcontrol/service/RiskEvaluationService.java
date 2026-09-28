@@ -33,14 +33,17 @@ public class RiskEvaluationService {
 
     private final RiskMapper riskMapper;
     private final RiskSignalSource signalSource;
+    private final RiskEventRecorder eventRecorder;
     /** rule_code → RiskRule 实现（一个实现可注册多个 code）。 */
     private final Map<String, RiskRule> rulesByCode = new HashMap<>();
 
     public RiskEvaluationService(RiskMapper riskMapper,
                                  RiskSignalSource signalSource,
+                                 RiskEventRecorder eventRecorder,
                                  List<RiskRule> rules) {
         this.riskMapper = riskMapper;
         this.signalSource = signalSource;
+        this.eventRecorder = eventRecorder;
         for (RiskRule rule : rules) {
             for (String code : rule.codes()) {
                 rulesByCode.put(code, rule);
@@ -93,7 +96,9 @@ public class RiskEvaluationService {
 
         RiskDecision decision = new RiskDecision(
                 aggregated, totalScore, hitCodes, String.join("；", reasons));
+        // 审计事件用独立事务落库：即便主业务事务因 BLOCK 抛异常回滚，被拦截的命中记录仍需留痕。
         persistEvent(context, decision);
+        // 设备命中计数更新的是本事务刚写过的 device_fingerprint 行，须留在主事务内避免与独立事务互锁。
         if (StringUtils.hasText(context.deviceFingerprint())) {
             riskMapper.incrementDeviceRiskHit(context.region(), context.deviceFingerprint());
         }
@@ -113,7 +118,7 @@ public class RiskEvaluationService {
         row.setHitRules(String.join(",", decision.hitRules()));
         row.setReason(truncate(decision.reason(), 512));
         row.setDisposeStatus(0);
-        riskMapper.insertEvent(row);
+        eventRecorder.record(row);
     }
 
     /**
@@ -127,10 +132,13 @@ public class RiskEvaluationService {
         DeviceFingerprintRow existing = riskMapper.selectDevice(region, fingerprint);
         if (existing == null) {
             riskMapper.insertDevice(region, fingerprint, userId);
-            return;
+        } else {
+            riskMapper.updateDeviceSeen(region, fingerprint, userId);
         }
-        boolean newUser = userId != null && !userId.equals(existing.getLastUserId());
-        riskMapper.updateDeviceSeen(region, fingerprint, userId, newUser);
+        // 记录设备-用户明细，去重后的独立账号数由 device_fingerprint_user 统计
+        if (userId != null) {
+            riskMapper.upsertDeviceUser(region, fingerprint, userId);
+        }
     }
 
     private RiskRuleConfig toConfig(RiskRuleRow row, RiskScene scene) {

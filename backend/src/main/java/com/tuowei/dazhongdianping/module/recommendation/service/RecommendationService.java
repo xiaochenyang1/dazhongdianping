@@ -71,17 +71,17 @@ public class RecommendationService {
         UserSession session = UserSessionContext.get();
 
         Map<Long, Integer> affinity = new HashMap<>();
-        List<Long> preferredCategories = new ArrayList<>();
         if (session != null) {
             List<CategoryAffinityRow> rows = mapper.selectCategoryAffinity(session.userId(), region, AFFINITY_TOP);
             for (CategoryAffinityRow row : rows) {
                 if (row.getCategoryId() != null && row.getAffinity() != null) {
                     affinity.put(row.getCategoryId(), row.getAffinity());
-                    preferredCategories.add(row.getCategoryId());
                 }
             }
         }
 
+        // 全量召回后由打分器按品类偏好（affinity）加权排序，而非在召回阶段按品类硬过滤，
+        // 以保留质量/热度/距离维度的探索性，避免用户被锁死在既有偏好品类里。
         List<CandidateShopRow> candidates = mapper.selectCandidateShops(
                 region, cityId, null, null, CANDIDATE_POOL);
         if (candidates.isEmpty()) {

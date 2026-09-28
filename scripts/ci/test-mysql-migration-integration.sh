@@ -159,7 +159,7 @@ grep -q 'explicit --baseline-version' "$run_dir/no-baseline.log" ||
 
 history_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$history_count" == "14" ]] || fail "expected 14 migration history rows, found $history_count"
+[[ "$history_count" == "15" ]] || fail "expected 15 migration history rows, found $history_count"
 non_applied_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e "SELECT COUNT(*) FROM dzdp_schema_migration WHERE state <> 'APPLIED';")"
 [[ "$non_applied_count" == "0" ]] || fail "old-baseline upgrade did not finish every migration"
@@ -172,8 +172,9 @@ SELECT
   (SELECT COUNT(*) FROM admin_permission WHERE code='system:health:read') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='review' AND column_name='helpful_count') +
   (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='marketing_coupon_template') +
-  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='user_coupon_id');")"
-[[ "$schema_probe" == "7" ]] || fail "migrations 03-16 did not produce the expected schema/data"
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='user_coupon_id') +
+  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='risk_rule');")"
+[[ "$schema_probe" == "8" ]] || fail "migrations 03-17 did not produce the expected schema/data"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -181,7 +182,7 @@ SELECT
   --lock-file "$run_dir/repeat.lock"
 repeat_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$repeat_count" == "14" ]] || fail "repeat apply changed migration history"
+[[ "$repeat_count" == "15" ]] || fail "repeat apply changed migration history"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -255,9 +256,9 @@ while read -r _checksum filename; do
 done < "$manifest"
 cp "$manifest" "$failure_root/migrations.sha256"
 printf 'THIS IS INTENTIONALLY INVALID SQL;\n' > \
-  "$failure_root/migrations/17_forced_failure_migration.sql"
-failure_hash="$(sha256sum "$failure_root/migrations/17_forced_failure_migration.sql" | awk '{print $1}')"
-printf '%s  %s\n' "$failure_hash" '17_forced_failure_migration.sql' >> \
+  "$failure_root/migrations/18_forced_failure_migration.sql"
+failure_hash="$(sha256sum "$failure_root/migrations/18_forced_failure_migration.sql" | awk '{print $1}')"
+printf '%s  %s\n' "$failure_hash" '18_forced_failure_migration.sql' >> \
   "$failure_root/migrations.sha256"
 
 switch_marker="$run_dir/current-switched"
@@ -272,7 +273,7 @@ if "$runner" \
 fi
 [[ ! -e "$switch_marker" ]] || fail "post-migration switch marker was created after failure"
 failed_state="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
-  -e 'SELECT state FROM dzdp_schema_migration WHERE version=17;')"
+  -e 'SELECT state FROM dzdp_schema_migration WHERE version=18;')"
 [[ "$failed_state" == "FAILED" ]] || fail "failed migration was not persisted as FAILED"
 
 if "$runner" \

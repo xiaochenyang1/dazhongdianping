@@ -30,8 +30,9 @@ public class MapperRiskSignalSource implements RiskSignalSource {
 
     @Override
     public int countDeviceUsers(String region, String fingerprint) {
-        DeviceFingerprintRow row = riskMapper.selectDevice(region, fingerprint);
-        return row == null || row.getUserCount() == null ? 0 : row.getUserCount();
+        // 去重统计设备关联的独立用户数（读 device_fingerprint_user 明细，
+        // 而非旧的 device_fingerprint.user_count——后者累加的是「用户切换次数」，共享设备会被虚高）。
+        return riskMapper.countDeviceUsers(region, fingerprint);
     }
 
     @Override
