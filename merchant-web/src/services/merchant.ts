@@ -426,6 +426,28 @@ export interface ConsultThread {
   session: ConsultSession
   messages: ConsultMessage[]
 }
+export interface WaitlistEntry {
+  id: number
+  shopId: number
+  shopName: string
+  userId: number
+  userNickname: string
+  tableType: number
+  tableTypeText: string
+  partySize: number
+  queueNo: number
+  status: number
+  statusText: string
+  aheadCount: number
+  calledAt?: string
+  seatedAt?: string
+  createdAt?: string
+}
+export function fetchWaitlistQueue(shopId: number) { return apiGet<WaitlistEntry[]>('/api/b/v1/waitlist', { shopId }) }
+export function callWaitlist(id: number) { return apiPost<WaitlistEntry>(`/api/b/v1/waitlist/${id}/call`) }
+export function seatWaitlist(id: number) { return apiPost<WaitlistEntry>(`/api/b/v1/waitlist/${id}/seat`) }
+export function passWaitlist(id: number) { return apiPost<WaitlistEntry>(`/api/b/v1/waitlist/${id}/pass`) }
+
 export function fetchConsultSessions() { return apiGet<ConsultSession[]>('/api/b/v1/consult/sessions') }
 export function fetchConsultMessages(id: number) { return apiGet<ConsultThread>(`/api/b/v1/consult/sessions/${id}/messages`) }
 export function sendConsultMessage(id: number, content: string) { return apiPost<ConsultMessage>(`/api/b/v1/consult/sessions/${id}/messages`, { content }) }

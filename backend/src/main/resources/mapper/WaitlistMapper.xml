@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.waitlist.mapper.WaitlistMapper">
+
+    <select id="selectShopMerchantId" resultType="java.lang.Long">
+        SELECT merchant_id FROM shop WHERE id=#{shopId} AND region=#{region} AND is_deleted=FALSE
+    </select>
+
+    <select id="nextQueueNo" resultType="int">
+        SELECT COALESCE(MAX(queue_no),0)+1 FROM waitlist_entry
+        WHERE shop_id=#{shopId} AND table_type=#{tableType}
+    </select>
+
+    <insert id="insertEntry" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO waitlist_entry(region,shop_id,merchant_id,user_id,table_type,party_size,queue_no,status)
+        VALUES(#{region},#{shopId},#{merchantId},#{userId},#{tableType},#{partySize},#{queueNo},1)
+    </insert>
+
+    <sql id="cols">
+        w.id,w.region,w.shop_id,w.merchant_id,w.user_id,w.table_type,w.party_size,w.queue_no,w.status,
+        w.called_at,w.seated_at,w.created_at,w.updated_at,s.name AS shop_name,u.nickname AS user_nickname
+    </sql>
+
+    <select id="selectEntry" resultType="com.tuowei.dazhongdianping.module.waitlist.model.WaitlistEntryRow">
+        SELECT <include refid="cols"/>
+        FROM waitlist_entry w LEFT JOIN shop s ON s.id=w.shop_id LEFT JOIN app_user u ON u.id=w.user_id
+        WHERE w.id=#{id} AND w.region=#{region}
+    </select>
+
+    <select id="selectUserEntry" resultType="com.tuowei.dazhongdianping.module.waitlist.model.WaitlistEntryRow">
+        SELECT <include refid="cols"/>
+        FROM waitlist_entry w LEFT JOIN shop s ON s.id=w.shop_id LEFT JOIN app_user u ON u.id=w.user_id
+        WHERE w.id=#{id} AND w.user_id=#{userId} AND w.region=#{region}
+    </select>
+
+    <select id="selectMerchantEntry" resultType="com.tuowei.dazhongdianping.module.waitlist.model.WaitlistEntryRow">
+        SELECT <include refid="cols"/>
+        FROM waitlist_entry w LEFT JOIN shop s ON s.id=w.shop_id LEFT JOIN app_user u ON u.id=w.user_id
+        WHERE w.id=#{id} AND w.merchant_id=#{merchantId} AND w.region=#{region}
+    </select>
+
+    <select id="selectUserActiveEntries" resultType="com.tuowei.dazhongdianping.module.waitlist.model.WaitlistEntryRow">
+        SELECT <include refid="cols"/>
+        FROM waitlist_entry w LEFT JOIN shop s ON s.id=w.shop_id LEFT JOIN app_user u ON u.id=w.user_id
+        WHERE w.user_id=#{userId} AND w.region=#{region} AND w.status IN (1,2)
+        ORDER BY w.id DESC
+    </select>
+
+    <select id="selectShopQueue" resultType="com.tuowei.dazhongdianping.module.waitlist.model.WaitlistEntryRow">
+        SELECT <include refid="cols"/>
+        FROM waitlist_entry w LEFT JOIN shop s ON s.id=w.shop_id LEFT JOIN app_user u ON u.id=w.user_id
+        WHERE w.shop_id=#{shopId} AND w.merchant_id=#{merchantId} AND w.region=#{region} AND w.status IN (1,2)
+        ORDER BY w.table_type, w.queue_no
+    </select>
+
+    <select id="countActiveForUserShop" resultType="int">
+        SELECT COUNT(*) FROM waitlist_entry
+        WHERE user_id=#{userId} AND shop_id=#{shopId} AND region=#{region} AND status IN (1,2)
+    </select>
+
+    <select id="aheadCount" resultType="int">
+        SELECT COUNT(*) FROM waitlist_entry
+        WHERE shop_id=#{shopId} AND table_type=#{tableType} AND status=1 AND queue_no &lt; #{queueNo}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE waitlist_entry
+        SET status=#{toStatus},
+            <if test="calledAt != null">called_at=#{calledAt},</if>
+            <if test="seatedAt != null">seated_at=#{seatedAt},</if>
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND merchant_id=#{merchantId}
+          AND (status=#{fromA} <if test="fromB != null">OR status=#{fromB}</if>)
+    </update>
+
+    <update id="cancel">
+        UPDATE waitlist_entry SET status=5,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND user_id=#{userId} AND status=1
+    </update>
+
+</mapper>

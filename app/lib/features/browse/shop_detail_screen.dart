@@ -11,6 +11,8 @@ import 'package:dazhongdianping_app/features/trade/deals_screen.dart';
 import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:dazhongdianping_app/features/qa/qa_repository.dart';
 import 'package:dazhongdianping_app/features/qa/shop_qa_section.dart';
+import 'package:dazhongdianping_app/features/waitlist/waitlist_repository.dart';
+import 'package:dazhongdianping_app/features/waitlist/waitlist_join_screen.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +38,7 @@ class ShopDetailScreen extends StatefulWidget {
     this.canInteractReviews = false,
     this.navigationLauncher,
     this.qaRepository,
+    this.waitlistRepository,
   });
   final BrowseRepository repository;
   final int shopId;
@@ -47,6 +50,7 @@ class ShopDetailScreen extends StatefulWidget {
   final bool canInteractReviews;
   final ShopNavigationLauncher? navigationLauncher;
   final QaRepository? qaRepository;
+  final WaitlistRepository? waitlistRepository;
 
   @override
   State<ShopDetailScreen> createState() => _ShopDetailScreenState();
@@ -640,6 +644,22 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       }).toList(),
                     );
                   },
+                ),
+              ],
+              if (widget.waitlistRepository != null) ...[
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  key: const Key('shop-waitlist-join'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => WaitlistJoinScreen(
+                        repository: widget.waitlistRepository!,
+                        shopId: widget.shopId,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.timer_outlined),
+                  label: Text(AppLocalizations.of(context).waitlistEntry),
                 ),
               ],
               if (widget.qaRepository != null) ...[

@@ -157,6 +157,8 @@ const router = createRouter({
     { path: '/complaints/new', name: 'complaint-create', component: () => import('@/views/ComplaintCreateView.vue'), props: r => ({ shopId: r.query.shopId ? Number(r.query.shopId) : undefined, orderId: r.query.orderId ? Number(r.query.orderId) : undefined }), meta: { requiresAuth: true, title: '发起投诉', description: '对门店或订单发起投诉。' } },
     { path: '/user/consult', name: 'user-consult', component: () => import('@/views/ConsultSessionsView.vue'), meta: { requiresAuth: true, title: '在线咨询', description: '查看与商家的咨询会话。' } },
     { path: '/user/consult/:id', name: 'user-consult-chat', component: () => import('@/views/ConsultChatView.vue'), props: r => ({ sessionId: Number(r.params.id) }), meta: { requiresAuth: true, title: '咨询会话', description: '与商家在线沟通。' } },
+    { path: '/waitlist/join', name: 'waitlist-join', component: () => import('@/views/WaitlistJoinView.vue'), props: r => ({ shopId: r.query.shopId ? Number(r.query.shopId) : undefined }), meta: { requiresAuth: true, title: '排队取号', description: '在线排队取号。' } },
+    { path: '/user/waitlist', name: 'user-waitlist', component: () => import('@/views/MyWaitlistView.vue'), meta: { requiresAuth: true, title: '我的排队', description: '查看排队进度与叫号状态。' } },
     {
       path: '/user/coupons/:code',
       name: 'user-coupon-detail',
