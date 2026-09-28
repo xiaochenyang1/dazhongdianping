@@ -16,19 +16,19 @@ import org.junit.jupiter.api.Test;
 class RiskRuleTest {
 
     @Test
-    void userFrequencyHitsWhenWindowCountReachesThreshold() {
+    void userFrequencyHitsWhenWindowCountExceedsThreshold() {
         UserFrequencyRiskRule rule = new UserFrequencyRiskRule();
         RiskRuleConfig config = new RiskRuleConfig(
                 "review_freq", "点评高频", RiskScene.REVIEW_CREATE, RiskAction.REVIEW, 5, 3600, 40);
         RiskContext context = RiskContext.builder(RiskScene.REVIEW_CREATE, "CN").userId(1L).build();
 
-        // 窗口内已有 4 条 + 本次 = 5，达阈值
+        // 阈值 5，语义为「超过 5 条」：窗口内已有 5 条 + 本次 = 6，超过阈值 → 命中
         FakeSignals signals = new FakeSignals();
-        signals.userActionCount = 4;
+        signals.userActionCount = 5;
         assertTrue(rule.evaluate(context, config, signals).isHit());
 
-        // 窗口内 3 条 + 本次 = 4，未达
-        signals.userActionCount = 3;
+        // 窗口内 4 条 + 本次 = 5，恰好等于阈值不算超过 → 未命中（修复前的差一会在此误命中）
+        signals.userActionCount = 4;
         assertFalse(rule.evaluate(context, config, signals).isHit());
     }
 

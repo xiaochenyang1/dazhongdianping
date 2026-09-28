@@ -1325,6 +1325,19 @@ CREATE TABLE IF NOT EXISTS device_fingerprint (
 );
 CREATE INDEX IF NOT EXISTS idx_device_fingerprint_blocked ON device_fingerprint(region, blocked);
 
+-- 设备-用户关联明细：每条记录一个设备指纹上出现过的独立用户，
+-- 供「设备多账号」风控规则据此统计去重后的独立账号数（替代 device_fingerprint.user_count 的切换计数）。
+CREATE TABLE IF NOT EXISTS device_fingerprint_user (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
+    fingerprint VARCHAR(128) NOT NULL,
+    user_id BIGINT NOT NULL,
+    first_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_device_fingerprint_user UNIQUE(region, fingerprint, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_device_fingerprint_user ON device_fingerprint_user(region, fingerprint);
+
 -- ============================================================
 -- 商户营销工具（marketing）：优惠券模板 + 领券中心 + 用户券
 -- ============================================================

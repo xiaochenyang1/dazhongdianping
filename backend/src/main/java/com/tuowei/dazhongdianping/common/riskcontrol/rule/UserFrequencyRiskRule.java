@@ -32,10 +32,12 @@ public class UserFrequencyRiskRule implements RiskRule {
         }
         int count = signals.countUserActions(
                 context.region(), context.userId(), context.scene(), config.windowSeconds());
-        // count 为窗口内既有次数，加上当前这次后达到阈值即命中
-        if (count + 1 >= config.threshold()) {
+        // count 为窗口内既有次数，加上当前这次即窗口内总次数；
+        // 规则语义为「超过阈值」（种子文案「超过 N 条/笔」），故 total 严格大于阈值才命中。
+        int total = count + 1;
+        if (total > config.threshold()) {
             return RiskRuleHit.hit(config,
-                    "用户窗口内行为次数 " + (count + 1) + " 达到阈值 " + config.threshold());
+                    "用户窗口内行为次数 " + total + " 超过阈值 " + config.threshold());
         }
         return RiskRuleHit.miss();
     }

@@ -177,9 +177,19 @@
         UPDATE device_fingerprint
         SET last_user_id = #{userId},
             last_seen_at = CURRENT_TIMESTAMP
-            <if test="newUser">, user_count = user_count + 1</if>
         WHERE region = #{region} AND fingerprint = #{fingerprint}
     </update>
+
+    <insert id="upsertDeviceUser">
+        INSERT INTO device_fingerprint_user(region, fingerprint, user_id)
+        VALUES(#{region}, #{fingerprint}, #{userId})
+        ON DUPLICATE KEY UPDATE last_seen_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="countDeviceUsers" resultType="int">
+        SELECT COUNT(*) FROM device_fingerprint_user
+        WHERE region = #{region} AND fingerprint = #{fingerprint}
+    </select>
 
     <update id="incrementDeviceRiskHit">
         UPDATE device_fingerprint

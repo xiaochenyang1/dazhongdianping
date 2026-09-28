@@ -68,13 +68,22 @@ public interface RiskMapper {
             @Param("userId") Long userId
     );
 
-    /** 已存在设备时更新最后使用信息；newUser=true 时同时累加独立用户数。 */
+    /** 已存在设备时更新最后使用信息（最后用户 / 最后活跃时间）。 */
     void updateDeviceSeen(
             @Param("region") String region,
             @Param("fingerprint") String fingerprint,
-            @Param("userId") Long userId,
-            @Param("newUser") boolean newUser
+            @Param("userId") Long userId
     );
+
+    /** 记录设备上出现过的独立用户（幂等，撞唯一键即刷新 last_seen_at）。 */
+    void upsertDeviceUser(
+            @Param("region") String region,
+            @Param("fingerprint") String fingerprint,
+            @Param("userId") Long userId
+    );
+
+    /** 统计某设备指纹关联的去重独立用户数（设备多账号规则据此判定）。 */
+    int countDeviceUsers(@Param("region") String region, @Param("fingerprint") String fingerprint);
 
     /** 命中风控时累加该设备命中计数。 */
     void incrementDeviceRiskHit(@Param("region") String region, @Param("fingerprint") String fingerprint);
