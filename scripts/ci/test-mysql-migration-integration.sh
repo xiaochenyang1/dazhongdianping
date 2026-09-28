@@ -256,9 +256,9 @@ while read -r _checksum filename; do
 done < "$manifest"
 cp "$manifest" "$failure_root/migrations.sha256"
 printf 'THIS IS INTENTIONALLY INVALID SQL;\n' > \
-  "$failure_root/migrations/17_forced_failure_migration.sql"
-failure_hash="$(sha256sum "$failure_root/migrations/17_forced_failure_migration.sql" | awk '{print $1}')"
-printf '%s  %s\n' "$failure_hash" '17_forced_failure_migration.sql' >> \
+  "$failure_root/migrations/18_forced_failure_migration.sql"
+failure_hash="$(sha256sum "$failure_root/migrations/18_forced_failure_migration.sql" | awk '{print $1}')"
+printf '%s  %s\n' "$failure_hash" '18_forced_failure_migration.sql' >> \
   "$failure_root/migrations.sha256"
 
 switch_marker="$run_dir/current-switched"
@@ -273,7 +273,7 @@ if "$runner" \
 fi
 [[ ! -e "$switch_marker" ]] || fail "post-migration switch marker was created after failure"
 failed_state="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
-  -e 'SELECT state FROM dzdp_schema_migration WHERE version=17;')"
+  -e 'SELECT state FROM dzdp_schema_migration WHERE version=18;')"
 [[ "$failed_state" == "FAILED" ]] || fail "failed migration was not persisted as FAILED"
 
 if "$runner" \
