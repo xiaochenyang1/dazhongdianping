@@ -1,6 +1,7 @@
 package com.tuowei.dazhongdianping.module.dishreview.service;
 
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
+import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
@@ -16,16 +17,27 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DishReviewService {
 
+    private static final int MAX_PAGE_SIZE = 50;
+
     private final DishReviewMapper mapper;
 
     public DishReviewService(DishReviewMapper mapper) {
         this.mapper = mapper;
     }
 
-    public List<Map<String, Object>> list(Long shopId, Long dishId) {
+    public PageResult<Map<String, Object>> list(Long shopId, Long dishId, int page, int pageSize) {
         String region = region();
         requireDish(shopId, dishId, region);
-        return mapper.selectByDish(shopId, dishId, region).stream().map(this::toMap).toList();
+        int normalizedPage = Math.max(page, 1);
+        int normalizedPageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
+        int offset = (normalizedPage - 1) * normalizedPageSize;
+        long total = mapper.countByDish(shopId, dishId, region);
+        List<Map<String, Object>> items = mapper
+                .selectByDish(shopId, dishId, region, normalizedPageSize, offset)
+                .stream()
+                .map(this::toMap)
+                .toList();
+        return new PageResult<>(items, total, normalizedPage, normalizedPageSize, offset + items.size() < total);
     }
 
     @Transactional

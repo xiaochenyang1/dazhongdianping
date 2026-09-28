@@ -105,7 +105,8 @@ class ContentTrustControllerTest {
         mockMvc.perform(get("/api/c/v1/shops/{shopId}/dishes/{dishId}/reviews", 10001, 1)
                         .header("X-Region", "CN"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].content").value("毛肚很脆"));
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.list[0].content").value("毛肚很脆"));
 
         mockMvc.perform(post("/api/c/v1/shops/{shopId}/dishes/{dishId}/reviews", 10001, 999999)
                         .header("Authorization", bearer(user))

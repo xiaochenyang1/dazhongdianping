@@ -15,8 +15,15 @@ public interface DishReviewMapper {
 
     void insert(DishReviewRow row);
 
-    List<DishReviewRow> selectByDish(
+    long countByDish(
             @Param("shopId") Long shopId,
             @Param("dishId") Long dishId,
             @Param("region") String region);
+
+    List<DishReviewRow> selectByDish(
+            @Param("shopId") Long shopId,
+            @Param("dishId") Long dishId,
+            @Param("region") String region,
+            @Param("limit") int limit,
+            @Param("offset") int offset);
 }

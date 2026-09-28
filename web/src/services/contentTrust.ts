@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from '@/lib/http'
+import type { PageResult } from '@/types/browse'
 
 export interface ReviewHelpful {
   reviewId: number
@@ -52,8 +53,11 @@ export function saveReviewTranslation(reviewId: number, payload: { targetLang: s
   return apiPost<ReviewTranslation>(`/api/c/v1/reviews/${reviewId}/translations`, payload)
 }
 
-export function fetchDishReviews(shopId: number, dishId: number) {
-  return apiGet<DishReview[]>(`/api/c/v1/shops/${shopId}/dishes/${dishId}/reviews`)
+export function fetchDishReviews(shopId: number, dishId: number, page = 1, pageSize = 20) {
+  return apiGet<PageResult<DishReview>>(`/api/c/v1/shops/${shopId}/dishes/${dishId}/reviews`, {
+    page,
+    pageSize,
+  })
 }
 
 export function createDishReview(shopId: number, dishId: number, payload: { score: number; content: string }) {

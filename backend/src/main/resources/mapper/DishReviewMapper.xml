@@ -18,6 +18,15 @@
         VALUES(#{region}, #{shopId}, #{dishId}, #{userId}, #{score}, #{content})
     </insert>
 
+    <select id="countByDish" resultType="long">
+        SELECT COUNT(*)
+        FROM dish_review
+        WHERE shop_id = #{shopId}
+          AND dish_id = #{dishId}
+          AND region = #{region}
+          AND is_deleted = FALSE
+    </select>
+
     <select id="selectByDish" resultType="com.tuowei.dazhongdianping.module.dishreview.model.DishReviewRow">
         SELECT id, region, shop_id, dish_id, user_id, score, content, created_at
         FROM dish_review
@@ -26,5 +35,6 @@
           AND region = #{region}
           AND is_deleted = FALSE
         ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 </mapper>

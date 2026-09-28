@@ -29,11 +29,13 @@ public class RankService {
         this.merchantVerificationService = merchantVerificationService;
     }
 
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "rankList")
     public List<RankSummaryResponse> list(Region region, Long cityId, Long categoryId, Integer type) {
         validateType(type);
         return rankMapper.selectRanks(region.name(), cityId, categoryId, type).stream().map(this::toSummary).toList();
     }
 
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "rankDetail")
     public RankDetailResponse detail(Region region, Long rankId) {
         RankSummaryRow rank = rankMapper.selectRank(rankId, region.name());
         if (rank == null) {

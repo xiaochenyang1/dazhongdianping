@@ -13,6 +13,9 @@ public class SearchProperties {
     private long syncLockTimeoutSeconds = 300;
     private long syncRetryBaseSeconds = 15;
     private long syncRetryMaxSeconds = 1800;
+    /** 0 leaves the injected RestClient request factory untouched (used by unit tests bound to MockRestServiceServer). */
+    private int connectTimeoutMs = 0;
+    private int readTimeoutMs = 0;
 
     public Provider getProvider() {
         return provider;
@@ -76,6 +79,22 @@ public class SearchProperties {
 
     public void setSyncRetryMaxSeconds(long syncRetryMaxSeconds) {
         this.syncRetryMaxSeconds = syncRetryMaxSeconds;
+    }
+
+    public int getConnectTimeoutMs() {
+        return connectTimeoutMs;
+    }
+
+    public void setConnectTimeoutMs(int connectTimeoutMs) {
+        this.connectTimeoutMs = connectTimeoutMs;
+    }
+
+    public int getReadTimeoutMs() {
+        return readTimeoutMs;
+    }
+
+    public void setReadTimeoutMs(int readTimeoutMs) {
+        this.readTimeoutMs = readTimeoutMs;
     }
 
     public enum Provider {

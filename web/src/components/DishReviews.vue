@@ -7,14 +7,27 @@ const reviews = ref<DishReview[]>([])
 const score = ref(5)
 const content = ref('')
 const errorMessage = ref('')
+const page = ref(1)
+const pageSize = 20
+const hasMore = ref(false)
 
-async function load() {
+async function load(reset = true) {
   errorMessage.value = ''
   try {
-    reviews.value = await fetchDishReviews(props.shopId, props.dishId)
+    if (reset) {
+      page.value = 1
+    }
+    const result = await fetchDishReviews(props.shopId, props.dishId, page.value, pageSize)
+    reviews.value = reset ? result.list : [...reviews.value, ...result.list]
+    hasMore.value = result.hasMore
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : ''
   }
+}
+
+async function loadMore() {
+  page.value += 1
+  await load(false)
 }
 
 async function submit() {
@@ -28,7 +41,7 @@ async function submit() {
   }
 }
 
-watch(() => [props.shopId, props.dishId], load, { immediate: true })
+watch(() => [props.shopId, props.dishId], () => load(), { immediate: true })
 </script>
 
 <template>
@@ -37,6 +50,7 @@ watch(() => [props.shopId, props.dishId], load, { immediate: true })
     <ul>
       <li v-for="review in reviews" :key="review.id">{{ review.score }} · {{ review.content }}</li>
     </ul>
+    <button v-if="hasMore" class="secondary-button" type="button" @click="loadMore">More</button>
     <form @submit.prevent="submit">
       <label class="field">
         <span>{{ dishName }}</span>

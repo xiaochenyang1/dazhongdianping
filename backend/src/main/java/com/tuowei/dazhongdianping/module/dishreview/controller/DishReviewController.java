@@ -1,16 +1,17 @@
 package com.tuowei.dazhongdianping.module.dishreview.controller;
 
 import com.tuowei.dazhongdianping.common.api.ApiResponse;
+import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.module.dishreview.model.request.DishReviewCreateRequest;
 import com.tuowei.dazhongdianping.module.dishreview.service.DishReviewService;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,9 +25,12 @@ public class DishReviewController {
     }
 
     @GetMapping
-    public ApiResponse<List<Map<String, Object>>> list(
-            @PathVariable Long shopId, @PathVariable Long dishId) {
-        return ApiResponse.success(service.list(shopId, dishId));
+    public ApiResponse<PageResult<Map<String, Object>>> list(
+            @PathVariable Long shopId,
+            @PathVariable Long dishId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.success(service.list(shopId, dishId, page, pageSize));
     }
 
     @PostMapping
