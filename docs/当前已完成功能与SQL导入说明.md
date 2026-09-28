@@ -310,8 +310,9 @@
 - `sql/mysql/15_local_life_ops_migration.sql`: 既有库补经营、信任与内容运营表，以及门店华人服务标记、点评有用数。
 - `sql/mysql/16_marketing_coupon_migration.sql`: 既有库补 `marketing_coupon_template`、`user_coupon`，以及订单 `original_amount` / `discount_amount` / `user_coupon_id`。在 `15` 之后执行一次。
 - `sql/mysql/17_stack_features_migration.sql`: 既有库补此前遗漏的反刷单风控（`risk_rule` / `risk_event` / `device_fingerprint` / `device_fingerprint_user`）、个性化推荐（`user_behavior_event` / `recommendation_weight`）、投诉纠纷（`complaint_ticket` / `complaint_log`）、付费推广（`ad_campaign` / `ad_click_log`）、在线咨询（`consult_session` / `consult_message`）、问大家（`shop_question` / `shop_answer`）、排队候位（`waitlist_entry`）共 15 张表，并种子风控规则、推荐权重与 `risk:event:read|write` 权限。在 `16` 之后执行一次。此前这些表只在测试用 `schema.sql` 里、未进 MySQL 迁移，风控引擎对缺表 fail-open 会静默失效。
+- `sql/mysql/18_stack_permissions_migration.sql`: 既有库补上一份遗漏的权限种子——后台 `audit:complaint:read|write`（投诉纠纷）与 `operations:ad:read|write`（付费推广）两组权限行、把这两组与 `risk:event:*`（17 号只建行未挂角色）挂到 `super_admin` / `merchant_auditor` / `operations_manager`，并给商户角色 `merchant_role` 补 `complaint` / `ad` / `consult` / `waitlist` 权限串。在 `17` 之后执行一次。缺此迁移时生产后台的投诉/广告菜单与风控看板对任何管理员都不可访问。
 
-> 全新库只 `source` `01_schema.sql` + `02_seed_data.sql` 即可拿到上述表结构与权限；`03`–`14` 仅用于升级旧库，按序执行一次。本地生活经营表在 `15_local_life_ops_migration.sql`，优惠券在 `16_marketing_coupon_migration.sql`，风控/推荐/投诉/推广/咨询/问答/排队等表在 `17_stack_features_migration.sql`，全新库也要再执行这三份。
+> 全新库只 `source` `01_schema.sql` + `02_seed_data.sql` 即可拿到上述表结构与权限；`03`–`14` 仅用于升级旧库，按序执行一次。本地生活经营表在 `15_local_life_ops_migration.sql`，优惠券在 `16_marketing_coupon_migration.sql`，风控/推荐/投诉/推广/咨询/问答/排队等表在 `17_stack_features_migration.sql`，对应权限种子在 `18_stack_permissions_migration.sql`，全新库也要再执行这四份。
 
 ### 3.3 导入后哪些表会直接有数据
 
