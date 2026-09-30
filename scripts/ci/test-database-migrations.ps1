@@ -41,7 +41,7 @@ foreach ($line in $manifestLines) {
     $manifestNames += $fileName
     $expectedVersion++
 }
-Assert-True ($manifestNames.Count -eq 16) "the current release baseline must contain migrations 03 through 18"
+Assert-True ($manifestNames.Count -eq 17) "the current release baseline must contain migrations 03 through 19"
 Assert-True (-not ($manifestNames -match '^01_|^02_')) "foundational schema/seed files must not be release migrations"
 
 $incrementalNames = @(Get-ChildItem -LiteralPath $mysqlSourceDir -File -Filter "*_migration.sql" | Sort-Object Name | ForEach-Object Name)
@@ -55,7 +55,7 @@ $sourceDryRun = & $bash $runnerPath --dry-run
 if ($LASTEXITCODE -ne 0) {
     throw "source-layout migration runner dry-run failed"
 }
-Assert-True (($sourceDryRun -join "`n") -match "versions 03-18") "source-layout dry-run must report versions 03-18"
+Assert-True (($sourceDryRun -join "`n") -match "versions 03-19") "source-layout dry-run must report versions 03-19"
 
 $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("dzdp-migration-contract-" + [guid]::NewGuid().ToString("N"))
 try {
@@ -71,7 +71,7 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "packaged-layout migration runner dry-run failed"
     }
-    Assert-True (($stagedDryRun -join "`n") -match "versions 03-18") "packaged-layout dry-run must report versions 03-18"
+    Assert-True (($stagedDryRun -join "`n") -match "versions 03-19") "packaged-layout dry-run must report versions 03-19"
 }
 finally {
     if (Test-Path -LiteralPath $temporaryRoot) {
