@@ -19,7 +19,7 @@
                 rr.id,
                 'review' AS report_type,
                 rr.review_id AS target_id,
-                CAST(NULL AS INTEGER) AS target_type,
+                NULL AS target_type,
                 rr.reporter_user_id,
                 rr.reporter_user_name,
                 rr.reason,
@@ -43,7 +43,7 @@
                 pr.id,
                 'post' AS report_type,
                 pr.post_id AS target_id,
-                CAST(NULL AS INTEGER) AS target_type,
+                NULL AS target_type,
                 pr.reporter_user_id,
                 pr.reporter_user_name,
                 pr.reason,
@@ -85,8 +85,8 @@
                     WHEN mr.target_type = 1 THEN m.from_user_id
                     ELSE 0
                 END AS target_author_id,
-                CAST(NULL AS INTEGER) AS target_audit_status,
-                CAST(NULL AS INTEGER) AS target_status,
+                NULL AS target_audit_status,
+                NULL AS target_status,
                 mr.created_at
             FROM message_report mr
             LEFT JOIN app_user u ON u.id = mr.reporter_user_id
@@ -100,7 +100,7 @@
                 rcr.id,
                 'review_comment' AS report_type,
                 rcr.comment_id AS target_id,
-                CAST(NULL AS INTEGER) AS target_type,
+                NULL AS target_type,
                 rcr.reporter_user_id,
                 rcr.reporter_user_name,
                 rcr.reason,
@@ -125,7 +125,7 @@
                 pcr.id,
                 'post_comment' AS report_type,
                 pcr.comment_id AS target_id,
-                CAST(NULL AS INTEGER) AS target_type,
+                NULL AS target_type,
                 pcr.reporter_user_id,
                 pcr.reporter_user_name,
                 pcr.reason,
@@ -171,7 +171,7 @@
             rr.id,
             'review' AS report_type,
             rr.review_id AS target_id,
-            CAST(NULL AS INTEGER) AS target_type,
+            NULL AS target_type,
             rr.reporter_user_id,
             rr.reporter_user_name,
             rr.reason,
@@ -197,7 +197,7 @@
             pr.id,
             'post' AS report_type,
             pr.post_id AS target_id,
-            CAST(NULL AS INTEGER) AS target_type,
+            NULL AS target_type,
             pr.reporter_user_id,
             pr.reporter_user_name,
             pr.reason,
@@ -241,8 +241,8 @@
                 WHEN mr.target_type = 1 THEN m.from_user_id
                 ELSE 0
             END AS target_author_id,
-            CAST(NULL AS INTEGER) AS target_audit_status,
-            CAST(NULL AS INTEGER) AS target_status,
+            NULL AS target_audit_status,
+            NULL AS target_status,
             mr.created_at
         FROM message_report mr
         LEFT JOIN app_user u ON u.id = mr.reporter_user_id
@@ -257,7 +257,7 @@
             rcr.id,
             'review_comment' AS report_type,
             rcr.comment_id AS target_id,
-            CAST(NULL AS INTEGER) AS target_type,
+            NULL AS target_type,
             rcr.reporter_user_id,
             rcr.reporter_user_name,
             rcr.reason,
@@ -284,7 +284,7 @@
             pcr.id,
             'post_comment' AS report_type,
             pcr.comment_id AS target_id,
-            CAST(NULL AS INTEGER) AS target_type,
+            NULL AS target_type,
             pcr.reporter_user_id,
             pcr.reporter_user_name,
             pcr.reason,
