@@ -155,6 +155,36 @@ class IdempotencyFilterTest {
     }
 
     @Test
+    void shouldFailClosedWhenRedisRecordIsCorruptInsteadOfReexecuting() throws Exception {
+        InfrastructureProperties infrastructureProperties = new InfrastructureProperties();
+        infrastructureProperties.getStateStore().setProvider(InfrastructureProperties.StateStoreProvider.REDIS);
+        infrastructureProperties.getStateStore().setKeyPrefix("dzdp:test");
+
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        // 记录存在但既非当前格式也非历史格式 —— 模拟序列化结构变更/值损坏
+        when(valueOperations.get(anyString())).thenReturn("not-json-at-all::corrupt");
+
+        IdempotencyFilter filter = new IdempotencyFilter(
+                new ObjectMapper(),
+                infrastructureProperties,
+                providerOf(redisTemplate)
+        );
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(redisRequest(), response, (servletRequest, servletResponse) -> {
+            throw new AssertionError("corrupt idempotency record must not re-execute the downstream chain");
+        });
+
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(response.getContentAsString()).contains("common.idempotency_unreadable");
+        // fail-closed：不能删除损坏记录(否则一删即在下次请求重放写操作)
+        verify(redisTemplate, org.mockito.Mockito.never()).delete(anyString());
+    }
+
+    @Test
     void shouldExecuteConcurrentRedisRequestsAcrossFilterInstancesOnlyOnce() throws Exception {
         InfrastructureProperties infrastructureProperties = new InfrastructureProperties();
         infrastructureProperties.getStateStore().setProvider(InfrastructureProperties.StateStoreProvider.REDIS);

@@ -60,7 +60,8 @@ class ApplicationSafetyValidatorTest {
                 STRONG_PAYMENT_SECRET,
                 false,
                 verificationCode(false, "", false),
-                new CorsProperties()
+                new CorsProperties(),
+                redisInfrastructure()
         );
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, validator::afterPropertiesSet);
@@ -121,7 +122,8 @@ class ApplicationSafetyValidatorTest {
                 STRONG_PAYMENT_SECRET,
                 true,
                 verificationCode(true, "123456", true),
-                new CorsProperties()
+                new CorsProperties(),
+                redisInfrastructure()
         );
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, validator::afterPropertiesSet);
@@ -179,6 +181,49 @@ class ApplicationSafetyValidatorTest {
                 false,
                 verificationCode(false, "", false),
                 cors
+        ).afterPropertiesSet());
+    }
+
+    @Test
+    void shouldRejectLocalStateStoreInStrictMode() {
+        CorsProperties cors = new CorsProperties();
+        cors.setAllowedOriginPatterns(List.of("https://eu.example.com"));
+        InfrastructureProperties localStore = new InfrastructureProperties();
+        localStore.getStateStore().setProvider(InfrastructureProperties.StateStoreProvider.LOCAL);
+
+        for (String mode : List.of("pre", "prod")) {
+            ApplicationSafetyValidator validator = new ApplicationSafetyValidator(
+                    new MockEnvironment(),
+                    mode,
+                    STRONG_JWT_SECRET,
+                    STRONG_PAYMENT_SECRET,
+                    false,
+                    verificationCode(false, "", false),
+                    cors,
+                    localStore
+            );
+
+            IllegalStateException exception = assertThrows(IllegalStateException.class, validator::afterPropertiesSet);
+            assertEquals(true, exception.getMessage().startsWith("APP_STATE_STORE_PROVIDER must be redis in pre/prod"));
+        }
+    }
+
+    @Test
+    void shouldAllowLocalStateStoreInLocalMode() {
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("local");
+        InfrastructureProperties localStore = new InfrastructureProperties();
+        localStore.getStateStore().setProvider(InfrastructureProperties.StateStoreProvider.LOCAL);
+
+        assertDoesNotThrow(() -> new ApplicationSafetyValidator(
+                environment,
+                "local",
+                ApplicationSafetyValidator.LOCAL_JWT_SECRET,
+                ApplicationSafetyValidator.LOCAL_PAYMENT_SECRET,
+                true,
+                verificationCode(true, "123456", true),
+                new CorsProperties(),
+                localStore
         ).afterPropertiesSet());
     }
 
@@ -253,8 +298,15 @@ class ApplicationSafetyValidatorTest {
                 paymentSecret,
                 paymentMockEnabled,
                 verificationCode,
-                corsProperties
+                corsProperties,
+                redisInfrastructure()
         );
+    }
+
+    private InfrastructureProperties redisInfrastructure() {
+        InfrastructureProperties properties = new InfrastructureProperties();
+        properties.getStateStore().setProvider(InfrastructureProperties.StateStoreProvider.REDIS);
+        return properties;
     }
 
     private VerificationCodeProperties verificationCode(boolean mockEnabled,
