@@ -13,6 +13,10 @@ public record AdminAuditTaskResponse(
         String submittedBy,
         String summary,
         String remark,
+        Long claimedByAdminId,
+        String claimedByAdminName,
+        String claimedAt,
+        String claimExpiresAt,
         String createdAt,
         String updatedAt
 ) {

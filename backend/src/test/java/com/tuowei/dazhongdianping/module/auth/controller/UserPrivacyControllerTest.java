@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.module.auth.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,6 +14,8 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,24 +52,24 @@ class UserPrivacyControllerTest {
     }
 
     @Test
-    void shouldCreateExportTaskExposeOverviewAndDownloadZip() throws Exception {
+    void shouldExportAllModulesExposeOverviewAndDownloadZip() throws Exception {
         SessionFixture session = registerUser("privacy-export@example.com", "PrivacyPass1!");
         createReview(session.accessToken(), 10001L, "隐私导出测试点评，别整空文件糊弄人。");
+        List<String> modules = List.of(
+                "account", "reviews", "orders", "posts", "reservations", "favorites",
+                "browse_history", "follows", "messages", "circles", "topics", "check_ins", "points_exchanges"
+        );
 
         MvcResult createResult = mockMvc.perform(post("/api/c/v1/privacy/export-tasks")
                         .header("Authorization", bearer(session.accessToken()))
                         .header("Idempotency-Key", "privacy-export-task-001")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "modules": ["account", "reviews"],
-                                  "format": "zip"
-                                }
-                                """))
+                        .content(objectMapper.writeValueAsString(Map.of("modules", modules, "format", "zip"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.status").value(2))
                 .andExpect(jsonPath("$.data.statusText").value("可下载"))
+                .andExpect(jsonPath("$.data.modules.length()").value(modules.size()))
                 .andExpect(jsonPath("$.data.modules[0]").value("account"))
                 .andExpect(jsonPath("$.data.modules[1]").value("reviews"))
                 .andExpect(jsonPath("$.data.downloadUrl").value(
@@ -101,6 +104,7 @@ class UserPrivacyControllerTest {
 
         String zipContent = unzipSingleEntry(downloadResult.getResponse().getContentAsByteArray());
         JsonNode exportRoot = objectMapper.readTree(zipContent);
+        assertThat(exportRoot.path("modules").fieldNames()).toIterable().containsExactlyElementsOf(modules);
         assertJsonText(exportRoot, "/modules/account/email", "privacy-export@example.com");
         assertJsonText(exportRoot, "/modules/reviews/0/content", "隐私导出测试点评，别整空文件糊弄人。");
         assertJsonText(exportRoot, "/meta/userId", session.userId());

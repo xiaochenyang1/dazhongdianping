@@ -46,6 +46,7 @@ export interface AdminStrings {
     riskControl: string
     complaints: string
     automod: string
+    auditSlaAlerts: string
     supportTickets: string
     invoices: string
     guides: string
@@ -1186,6 +1187,38 @@ export interface AdminStrings {
     readOnly: string
     handled: string
     emptyState: string
+  }
+  auditSlaAlerts: {
+    eyebrow: string
+    heading: string
+    statusFilter: string
+    statuses: {
+      active: string
+      resolved: string
+      all: string
+    }
+    listSummary: (total: number) => string
+    tableHeaders: {
+      region: string
+      bizType: string
+      status: string
+      pendingCount: string
+      overdueCount: string
+      oldestPendingAt: string
+      firstOverdueAt: string
+      lastDetectedAt: string
+      resolvedAt: string
+    }
+    loading: string
+    empty: string
+    loadError: string
+    refresh: string
+    previousPage: string
+    page: (page: number) => string
+    nextPage: string
+    statusText: (status: number, fallback?: string) => string
+    bizTypeLabel: (bizType: number, fallback: string) => string
+    regionLabel: (region: Region) => string
   }
   shopChangeAudit: {
     loadError: string
@@ -2820,6 +2853,7 @@ const zhCnStrings: AdminStrings = {
     riskControl: '风控中心',
     complaints: '投诉纠纷',
     automod: '机审命中',
+    auditSlaAlerts: '审核超时提醒',
     supportTickets: '客服工单',
     invoices: '发票税率',
     guides: '攻略专题',
@@ -3990,6 +4024,38 @@ const zhCnStrings: AdminStrings = {
     readOnly: '当前账号仅可查看，无团购审核处理权限。',
     handled: '当前任务已经处理，只保留查看。',
     emptyState: '请先选择一条团购审核任务。',
+  },
+  auditSlaAlerts: {
+    eyebrow: '内容治理',
+    heading: '审核超时提醒',
+    statusFilter: '事件状态',
+    statuses: {
+      active: '进行中',
+      resolved: '已恢复',
+      all: '全部记录',
+    },
+    listSummary: (total) => `${total} 条提醒记录`,
+    tableHeaders: {
+      region: '区域',
+      bizType: '内容类型',
+      status: '状态',
+      pendingCount: '待审数量',
+      overdueCount: '超时数量',
+      oldestPendingAt: '最早待审',
+      firstOverdueAt: '首次提醒',
+      lastDetectedAt: '最近检测',
+      resolvedAt: '恢复时间',
+    },
+    loading: '加载中',
+    empty: '没有符合条件的提醒记录',
+    loadError: '提醒记录加载失败',
+    refresh: '刷新',
+    previousPage: '上一页',
+    page: (page) => `第 ${page} 页`,
+    nextPage: '下一页',
+    statusText: (status, fallback) => status === 0 ? '进行中' : status === 1 ? '已恢复' : fallback || `状态 ${status}`,
+    bizTypeLabel: (_bizType, fallback) => fallback,
+    regionLabel: (region) => region === 'EU' ? '欧洲' : '中国大陆',
   },
   shopChangeAudit: {
     loadError: '门店草稿审核任务加载失败',
@@ -5492,6 +5558,7 @@ const enStrings: AdminStrings = {
     riskControl: 'Risk Control',
     complaints: 'Complaints',
     automod: 'Automod hits',
+    auditSlaAlerts: 'Audit SLA alerts',
     supportTickets: 'Support tickets',
     invoices: 'Invoices',
     guides: 'Guides',
@@ -6673,6 +6740,44 @@ const enStrings: AdminStrings = {
     readOnly: 'This account is read-only and cannot process deal audits.',
     handled: 'This task has already been handled. View only.',
     emptyState: 'Select a deal audit task first.',
+  },
+  auditSlaAlerts: {
+    eyebrow: 'Content Governance',
+    heading: 'Audit SLA Alerts',
+    statusFilter: 'Event status',
+    statuses: {
+      active: 'Active',
+      resolved: 'Resolved',
+      all: 'All records',
+    },
+    listSummary: (total) => `${total} alert records`,
+    tableHeaders: {
+      region: 'Region',
+      bizType: 'Content type',
+      status: 'Status',
+      pendingCount: 'Pending',
+      overdueCount: 'Overdue',
+      oldestPendingAt: 'Oldest pending',
+      firstOverdueAt: 'First alert',
+      lastDetectedAt: 'Last detected',
+      resolvedAt: 'Resolved at',
+    },
+    loading: 'Loading',
+    empty: 'No matching alert records.',
+    loadError: 'Failed to load alert records.',
+    refresh: 'Refresh',
+    previousPage: 'Previous',
+    page: (page) => `Page ${page}`,
+    nextPage: 'Next',
+    statusText: (status, fallback) => status === 0 ? 'Active' : status === 1 ? 'Resolved' : fallback || `Status ${status}`,
+    bizTypeLabel: (bizType, fallback) => ({
+      10: 'Review comment',
+      11: 'Post comment',
+      12: 'Shop question',
+      13: 'Shop answer',
+      14: 'Direct message',
+    } as Record<number, string>)[bizType] || fallback,
+    regionLabel: (region) => region === 'EU' ? 'Europe' : 'Mainland China',
   },
   shopChangeAudit: {
     loadError: 'Failed to load shop draft audit tasks.',

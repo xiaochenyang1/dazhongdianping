@@ -116,7 +116,7 @@
     <update id="refreshPostRepostCount">UPDATE post SET repost_count=(SELECT COUNT(1) FROM post_repost WHERE post_id=#{postId}) WHERE id=#{postId}</update>
     <insert id="insertPostComment" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO post_comment(post_id,user_id,user_name,content,parent_id,reply_to,status,is_deleted)
-        VALUES(#{postId},#{userId},#{userName},#{content},#{parentId},#{replyTo},1,FALSE)
+        VALUES(#{postId},#{userId},#{userName},#{content},#{parentId},#{replyTo},#{status},FALSE)
     </insert>
     <select id="countRootPostComments" resultType="long">
         SELECT COUNT(1) FROM post_comment WHERE post_id=#{postId} AND status=1 AND is_deleted=FALSE AND parent_id=0

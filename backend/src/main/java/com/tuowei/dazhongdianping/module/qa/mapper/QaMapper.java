@@ -22,6 +22,11 @@ public interface QaMapper {
     ShopQuestionRow selectQuestion(
             @Param("id") Long id, @Param("shopId") Long shopId, @Param("region") String region);
 
+    ShopQuestionRow selectQuestionForOwner(@Param("id") Long id, @Param("shopId") Long shopId,
+                                           @Param("region") String region, @Param("userId") Long userId);
+
+    ShopQuestionRow selectQuestionByIdForAudit(@Param("id") Long id);
+
     void insertAnswer(ShopAnswerRow row);
 
     int incrementAnswerCount(@Param("questionId") Long questionId);

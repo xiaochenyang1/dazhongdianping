@@ -685,6 +685,9 @@ CREATE TABLE IF NOT EXISTS audit_task (
     machine_result TINYINT NOT NULL DEFAULT 0,
     status TINYINT NOT NULL DEFAULT 0,
     auditor_id BIGINT NOT NULL DEFAULT 0,
+    claimed_by_admin_id BIGINT NULL,
+    claimed_at TIMESTAMP NULL,
+    claim_expires_at TIMESTAMP NULL,
     remark VARCHAR(255) NOT NULL DEFAULT '',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -692,6 +695,26 @@ CREATE TABLE IF NOT EXISTS audit_task (
 
 CREATE INDEX IF NOT EXISTS idx_audit_task_region_status ON audit_task(region, biz_type, status, id);
 CREATE INDEX IF NOT EXISTS idx_audit_task_biz_status ON audit_task(biz_type, biz_id, status, id);
+CREATE INDEX IF NOT EXISTS idx_audit_task_claim ON audit_task(region, biz_type, status, claimed_by_admin_id, claim_expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_audit_sla_alert (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL,
+    biz_type TINYINT NOT NULL,
+    status TINYINT NOT NULL DEFAULT 0,
+    active_key VARCHAR(16) UNIQUE,
+    pending_count INT NOT NULL DEFAULT 0,
+    overdue_count INT NOT NULL DEFAULT 0,
+    oldest_pending_at TIMESTAMP NULL,
+    first_overdue_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_audit_sla_alert_region_status
+    ON admin_audit_sla_alert(region, status, first_overdue_at, id);
 
 CREATE TABLE IF NOT EXISTS audit_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -1534,6 +1557,7 @@ CREATE TABLE IF NOT EXISTS shop_question (
     user_id BIGINT NOT NULL,
     content VARCHAR(500) NOT NULL,
     answer_count INT NOT NULL DEFAULT 0,
+    status TINYINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -1545,6 +1569,7 @@ CREATE TABLE IF NOT EXISTS shop_answer (
     question_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     content VARCHAR(500) NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );

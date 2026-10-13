@@ -570,6 +570,26 @@ class _ChatScreenState extends State<ChatScreen> {
                                     : const Color(0xFF292522),
                               ),
                             ),
+                            if (mine && message.status == 0) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                AppLocalizations.of(context).refundStatusPending,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                            if (mine && message.status == 2) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                AppLocalizations.of(context).expertStatusRejected,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
                             if (message.createdAt.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(

@@ -95,6 +95,20 @@ CREATE TABLE post_comment (
   id BIGINT NOT NULL PRIMARY KEY,
   status TINYINT NOT NULL DEFAULT 0
 );
+CREATE TABLE audit_task (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  biz_type TINYINT NOT NULL,
+  biz_id BIGINT NOT NULL,
+  region VARCHAR(8) NOT NULL,
+  machine_result TINYINT NOT NULL DEFAULT 0,
+  status TINYINT NOT NULL DEFAULT 0,
+  auditor_id BIGINT NOT NULL DEFAULT 0,
+  remark VARCHAR(255) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_audit_task_region_status (region, biz_type, status, id),
+  KEY idx_audit_task_biz_status (biz_type, biz_id, status, id)
+);
 CREATE TABLE payment (
   id BIGINT NOT NULL PRIMARY KEY,
   channel_txn VARCHAR(64) NOT NULL DEFAULT ''
@@ -159,7 +173,7 @@ grep -q 'explicit --baseline-version' "$run_dir/no-baseline.log" ||
 
 history_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$history_count" == "17" ]] || fail "expected 17 migration history rows, found $history_count"
+[[ "$history_count" == "22" ]] || fail "expected 22 migration history rows, found $history_count"
 non_applied_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e "SELECT COUNT(*) FROM dzdp_schema_migration WHERE state <> 'APPLIED';")"
 [[ "$non_applied_count" == "0" ]] || fail "old-baseline upgrade did not finish every migration"
@@ -179,8 +193,12 @@ SELECT
      JOIN admin_permission p ON p.id=rp.permission_id AND p.code='operations:ad:read') +
   (SELECT COUNT(*) FROM admin_role_permission rp
      JOIN admin_role r ON r.id=rp.role_id AND r.code='super_admin'
-     JOIN admin_permission p ON p.id=rp.permission_id AND p.code='operations:marketing:read');")"
-[[ "$schema_probe" == "10" ]] || fail "migrations 03-19 did not produce the expected schema/data"
+     JOIN admin_permission p ON p.id=rp.permission_id AND p.code='operations:marketing:read') +
+  (SELECT IF(COUNT(*)=0,1,0) FROM ad_click_log WHERE user_id <> 0) +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='audit_task' AND index_name='idx_audit_task_region_queue_order') +
+  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='admin_audit_sla_alert') +
+  (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='audit_task' AND column_name IN ('claimed_by_admin_id','claimed_at','claim_expires_at'));")"
+[[ "$schema_probe" == "14" ]] || fail "migrations 03-24 schema/data probe expected 14, found $schema_probe"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -188,7 +206,7 @@ SELECT
   --lock-file "$run_dir/repeat.lock"
 repeat_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$repeat_count" == "17" ]] || fail "repeat apply changed migration history"
+[[ "$repeat_count" == "22" ]] || fail "repeat apply changed migration history"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -261,10 +279,14 @@ while read -r _checksum filename; do
   cp "$source_dir/$filename" "$failure_root/migrations/$filename"
 done < "$manifest"
 cp "$manifest" "$failure_root/migrations.sha256"
+latest_migration="$(awk 'END {print $2}' "$manifest")"
+latest_version="${latest_migration%%_*}"
+forced_failure_version=$((10#$latest_version + 1))
+forced_failure_name="$(printf '%02d_forced_failure_migration.sql' "$forced_failure_version")"
 printf 'THIS IS INTENTIONALLY INVALID SQL;\n' > \
-  "$failure_root/migrations/20_forced_failure_migration.sql"
-failure_hash="$(sha256sum "$failure_root/migrations/20_forced_failure_migration.sql" | awk '{print $1}')"
-printf '%s  %s\n' "$failure_hash" '20_forced_failure_migration.sql' >> \
+  "$failure_root/migrations/$forced_failure_name"
+failure_hash="$(sha256sum "$failure_root/migrations/$forced_failure_name" | awk '{print $1}')"
+printf '%s  %s\n' "$failure_hash" "$forced_failure_name" >> \
   "$failure_root/migrations.sha256"
 
 switch_marker="$run_dir/current-switched"
@@ -279,7 +301,7 @@ if "$runner" \
 fi
 [[ ! -e "$switch_marker" ]] || fail "post-migration switch marker was created after failure"
 failed_state="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
-  -e 'SELECT state FROM dzdp_schema_migration WHERE version=20;')"
+  -e "SELECT state FROM dzdp_schema_migration WHERE version=$forced_failure_version;")"
 [[ "$failed_state" == "FAILED" ]] || fail "failed migration was not persisted as FAILED"
 
 if "$runner" \
@@ -293,4 +315,43 @@ fi
 grep -q 'manual repair is required' "$run_dir/failure-rerun.log" ||
   fail "FAILED state did not require explicit manual repair"
 
-printf '[mysql-migration-integration] old baseline, repeat, verify, DB lock, checksum drift, and failure blocking passed.\n'
+fresh_database="dzdp_fresh_install_test"
+fresh_defaults="$run_dir/fresh-database.cnf"
+cp "$server_defaults" "$fresh_defaults"
+printf 'database=%s\n' "$fresh_database" >> "$fresh_defaults"
+chmod 600 "$fresh_defaults"
+mysql --defaults-extra-file="$server_defaults" -e \
+  "CREATE DATABASE $fresh_database DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql --defaults-extra-file="$fresh_defaults" < "$source_dir/01_schema.sql"
+mysql --defaults-extra-file="$fresh_defaults" < "$source_dir/02_seed_data.sql"
+
+"$runner" \
+  --defaults-extra-file "$fresh_defaults" \
+  --baseline-version 14 \
+  --release-version integration-fresh-install \
+  --lock-file "$run_dir/fresh-install.lock"
+
+fresh_history_counts="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e \
+  "SELECT SUM(state='BASELINED' AND version<=14), SUM(state='APPLIED' AND version>14) FROM dzdp_schema_migration;")"
+[[ "$fresh_history_counts" == $'12\t10' ]] ||
+  fail "fresh schema must baseline versions 03-14 and apply 15-24; found $fresh_history_counts"
+
+fresh_schema_probe="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e "
+SELECT
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='shop' AND column_name='chinese_service') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='review' AND column_name='helpful_count') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='original_amount') +
+  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='marketing_coupon_template') +
+  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='shop_question') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='shop_question' AND column_name='status') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='shop_answer' AND column_name='status') +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='audit_task' AND index_name='idx_audit_task_region_queue_order') +
+  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='admin_audit_sla_alert') +
+  (SELECT COUNT(*) FROM admin_role_permission rp
+     JOIN admin_role r ON r.id=rp.role_id AND r.code='super_admin'
+     JOIN admin_permission p ON p.id=rp.permission_id AND p.code='audit:automod:read') +
+  (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='audit_task' AND column_name IN ('claimed_by_admin_id','claimed_at','claim_expires_at'));")"
+[[ "$fresh_schema_probe" == "11" ]] ||
+  fail "fresh schema plus migrations 15-24 probe expected 11, found $fresh_schema_probe"
+
+printf '[mysql-migration-integration] old baseline, fresh baseline 14, repeat, verify, DB lock, checksum drift, and failure blocking passed.\n'

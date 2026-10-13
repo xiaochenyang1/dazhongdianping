@@ -24,6 +24,15 @@ async function loginFromAuthDialog(page: Page, account: string, password: string
   await authDialog.getByRole('button', { name: '登录', exact: true }).click()
 }
 
+async function navigateAdmin(page: Page, path: string) {
+  // Keep pending requests alive by navigating through the app instead of reloading the document.
+  const menu = page.getByRole('navigation', { name: '后台菜单' })
+  const link = menu.locator(`a[href="${path}"]`)
+  await expect(link).toBeVisible()
+  await link.click()
+  await expect(page).toHaveURL(`${adminBaseURL}${path}`)
+}
+
 async function expectApiSuccess<T>(response: APIResponse) {
   expect(response.ok()).toBeTruthy()
   const body = (await response.json()) as {
@@ -216,6 +225,15 @@ test.describe.serial('real backend review flow', () => {
     const diagnostics = collectBrowserErrors(adminPage)
 
     try {
+      // Keep identity/dashboard requests in flight long enough to catch navigation races seen in CI.
+      const network = await adminContext.newCDPSession(adminPage)
+      await network.send('Network.enable')
+      await network.send('Network.emulateNetworkConditions', {
+        offline: false,
+        latency: 150,
+        downloadThroughput: -1,
+        uploadThroughput: -1,
+      })
       await adminPage.goto(`${adminBaseURL}/login`)
       await adminPage.getByLabel('账号').fill('admin')
       await adminPage.getByLabel('密码').fill('admin123456')
@@ -227,7 +245,7 @@ test.describe.serial('real backend review flow', () => {
         && response.status() === 200
         && response.url().includes('/api/admin/v1/system/health'),
       )
-      await adminPage.goto(`${adminBaseURL}/system/health`)
+      await navigateAdmin(adminPage, '/system/health')
       const healthResponse = await healthResponsePromise
       const health = await expectApiSuccess<{
         status: string
@@ -302,7 +320,7 @@ test.describe.serial('real backend review flow', () => {
         && response.status() === 200
         && /\/api\/admin\/v1\/search\/sync-tasks(?:\?|$)/.test(response.url()),
       )
-      await adminPage.goto(`${adminBaseURL}/data/search-sync`)
+      await navigateAdmin(adminPage, '/data/search-sync')
       const [overviewResponse, tasksResponse] = await Promise.all([
         overviewResponsePromise,
         tasksResponsePromise,
@@ -505,7 +523,7 @@ test.describe.serial('real backend review flow', () => {
     await page.getByRole('button', { name: '搜索' }).click()
     await expect(page).toHaveURL(/\/shops\?keyword=%E7%81%AB%E9%94%85/)
     await expect(page.getByLabel('关键词')).toHaveValue('火锅')
-    await expect(page.getByText('渝里火锅徐汇店')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '渝里火锅徐汇店' })).toBeVisible()
 
     await page.goto('/shops/10001/reviews/new')
 
@@ -530,10 +548,12 @@ test.describe.serial('real backend review flow', () => {
 
     const adminPage = await context.newPage()
     await adminPage.goto(`${adminBaseURL}/login`)
+    await adminPage.getByLabel('账号').fill('admin')
+    await adminPage.getByLabel('密码').fill('admin123456')
     await adminPage.getByRole('button', { name: '进入后台' }).click()
     await expect(adminPage).toHaveURL(/\/dashboard/)
 
-    await adminPage.goto(`${adminBaseURL}/audit/reviews`)
+    await navigateAdmin(adminPage, '/audit/reviews')
     await expect(adminPage.getByText(reviewContent)).toBeVisible()
     await adminPage.getByRole('button', { name: '通过点评' }).click()
     await expect(adminPage.getByText(/已审核通过/)).toBeVisible()
@@ -764,10 +784,12 @@ test.describe.serial('real backend review flow', () => {
 
     const adminPage = await context.newPage()
     await adminPage.goto(`${adminBaseURL}/login`)
+    await adminPage.getByLabel('账号').fill('admin')
+    await adminPage.getByLabel('密码').fill('admin123456')
     await adminPage.getByRole('button', { name: '进入后台' }).click()
     await expect(adminPage).toHaveURL(/\/dashboard/)
 
-    await adminPage.goto(`${adminBaseURL}/data/import`)
+    await navigateAdmin(adminPage, '/data/import')
     await expect(adminPage.getByRole('heading', { name: /先让运营有办法造数/ })).toBeVisible()
     await adminPage.getByRole('button', { name: '开始导入' }).click()
     await expect(adminPage.getByText('导入完成：成功 1，失败 0。')).toBeVisible()
@@ -830,7 +852,7 @@ test.describe.serial('real backend review flow', () => {
       const adminMenu = adminPage.getByRole('navigation', { name: '后台菜单' })
       await expect(adminMenu.getByRole('link', { name: '管理员账号', exact: true })).toBeVisible()
 
-      await adminPage.goto(`${adminBaseURL}/system/roles`)
+      await navigateAdmin(adminPage, '/system/roles')
       await expect(adminPage.getByRole('main').getByRole('heading', { name: '角色与权限' })).toBeVisible()
       await adminPage.getByRole('button', { name: '新建角色' }).click()
       const roleForm = adminPage.getByTestId('role-form')
@@ -843,7 +865,7 @@ test.describe.serial('real backend review flow', () => {
       await expect(roleRow).toContainText(roleName)
       await expect(roleRow).toContainText('启用')
 
-      await adminPage.goto(`${adminBaseURL}/system/admins`)
+      await navigateAdmin(adminPage, '/system/admins')
       await expect(adminPage.getByRole('main').getByRole('heading', { name: '管理员账号' })).toBeVisible()
       await adminPage.getByRole('button', { name: '新建管理员' }).click()
       const accountForm = adminPage.getByTestId('admin-form')
@@ -926,7 +948,7 @@ test.describe.serial('real backend review flow', () => {
         403,
       )
 
-      await adminPage.goto(`${adminBaseURL}/system/roles`)
+      await navigateAdmin(adminPage, '/system/roles')
       const refreshedRoleRow = adminPage.locator('tr').filter({ hasText: roleCode })
       await expect(refreshedRoleRow).toContainText(roleName)
       adminPage.once('dialog', (dialog) => dialog.accept())
@@ -977,7 +999,7 @@ test.describe.serial('real backend review flow', () => {
       expect(revokedTasks.list).toEqual([])
       expect(revokedTasks.total).toBe(0)
 
-      await adminPage.goto(`${adminBaseURL}/system/roles`)
+      await navigateAdmin(adminPage, '/system/roles')
       const reenabledRoleRow = adminPage.locator('tr').filter({ hasText: roleCode })
       await expect(reenabledRoleRow).toContainText('已停用')
       adminPage.once('dialog', (dialog) => dialog.accept())
@@ -999,7 +1021,7 @@ test.describe.serial('real backend review flow', () => {
       await expect(reviewerPage.getByText('Loading review audit tasks...')).not.toBeVisible()
       await expect(reviewerPage.getByRole('button', { name: 'Apply filters', exact: true })).toBeVisible()
 
-      await adminPage.goto(`${adminBaseURL}/system/admins`)
+      await navigateAdmin(adminPage, '/system/admins')
       const refreshedAccountRow = adminPage.locator('tr').filter({ hasText: account })
       await expect(refreshedAccountRow).toContainText(roleName)
       adminPage.once('dialog', (dialog) => dialog.accept())

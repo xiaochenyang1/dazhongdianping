@@ -31,6 +31,12 @@ class MerchantAnalyticsControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private com.tuowei.dazhongdianping.module.adpromo.service.AdClickDeduplicator adClickDeduplicator;
+
+    @org.junit.jupiter.api.BeforeEach
+    void resetClickDedupe() {
+        adClickDeduplicator.clearAll();
+    }
 
     @Test
     void trendFillsEmptyDaysAndExportIsCsv() throws Exception {

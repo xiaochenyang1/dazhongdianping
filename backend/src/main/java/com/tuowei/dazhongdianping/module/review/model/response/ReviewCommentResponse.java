@@ -8,6 +8,7 @@ public record ReviewCommentResponse(
         Long userId,
         String userName,
         String content,
+        Integer status,
         Long parentId,
         ReviewCommentReplyResponse replyTo,
         List<ReviewCommentResponse> replies,

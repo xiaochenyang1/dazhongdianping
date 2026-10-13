@@ -26,7 +26,8 @@ public class UserAuthInterceptor implements HandlerInterceptor {
                 || isPublicSearchReadRequest(request)
                 || isPublicCircleReadRequest(request) || isPublicTopicReadRequest(request)
                 || isPublicPointsProductReadRequest(request)
-                || isPublicMarketingCampaignReadRequest(request)) {
+                || isPublicMarketingCampaignReadRequest(request)
+                || isPublicAdClickRequest(request)) {
             if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
                 UserSessionContext.set(publicAuthService.authenticate(authorization.substring(7)));
             }
@@ -100,6 +101,13 @@ public class UserAuthInterceptor implements HandlerInterceptor {
                 || request.getRequestURI().startsWith("/api/c/v1/marketing/seckill/")
                 || request.getRequestURI().equals("/api/c/v1/marketing/groupbuy")
                 || request.getRequestURI().startsWith("/api/c/v1/marketing/groupbuy/"));
+    }
+
+    private boolean isPublicAdClickRequest(HttpServletRequest request) {
+        // 游客可以点击广告；携带有效登录态时按用户去重，避免换 IP 后重复计费。
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && request.getRequestURI() != null
+                && request.getRequestURI().matches("^/api/c/v1/ads/\\d+/click$");
     }
 
     @Override

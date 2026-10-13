@@ -7,6 +7,7 @@ class ShopQuestion {
     required this.userNickname,
     required this.content,
     required this.answerCount,
+    required this.status,
     required this.latestAnswer,
     this.createdAt,
   });
@@ -15,6 +16,7 @@ class ShopQuestion {
   final String userNickname;
   final String content;
   final int answerCount;
+  final int status;
   final String latestAnswer;
   final String? createdAt;
 
@@ -23,6 +25,7 @@ class ShopQuestion {
         userNickname: json['userNickname'] as String? ?? '',
         content: json['content'] as String? ?? '',
         answerCount: (json['answerCount'] as num?)?.toInt() ?? 0,
+        status: (json['status'] as num?)?.toInt() ?? 1,
         latestAnswer: json['latestAnswer'] as String? ?? '',
         createdAt: json['createdAt'] as String?,
       );
@@ -34,18 +37,21 @@ class ShopAnswer {
     required this.id,
     required this.userNickname,
     required this.content,
+    required this.status,
     this.createdAt,
   });
 
   final int id;
   final String userNickname;
   final String content;
+  final int status;
   final String? createdAt;
 
   factory ShopAnswer.fromJson(Map<String, dynamic> json) => ShopAnswer(
         id: (json['id'] as num?)?.toInt() ?? 0,
         userNickname: json['userNickname'] as String? ?? '',
         content: json['content'] as String? ?? '',
+        status: (json['status'] as num?)?.toInt() ?? 1,
         createdAt: json['createdAt'] as String?,
       );
 }

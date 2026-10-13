@@ -670,8 +670,38 @@ export interface AdminAuditTask {
   submittedBy: string
   summary: string
   remark: string
+  claimedByAdminId: number | null
+  claimedByAdminName: string | null
+  claimedAt: string | null
+  claimExpiresAt: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface AdminAuditQueueMetric {
+  bizType: number
+  bizTypeText: string
+  pendingCount: number
+  oldestPendingAt: string | null
+  overdueCount: number
+  slaMinutes: number
+  processedCount: number
+  averageProcessingSeconds: number | null
+}
+
+export interface AdminAuditSlaAlert {
+  id: number
+  region: Region
+  bizType: number
+  bizTypeText: string
+  status: number
+  statusText: string
+  pendingCount: number
+  overdueCount: number
+  oldestPendingAt: string | null
+  firstOverdueAt: string
+  lastDetectedAt: string
+  resolvedAt: string | null
 }
 
 export interface AdminDashboardAuditBreakdown {

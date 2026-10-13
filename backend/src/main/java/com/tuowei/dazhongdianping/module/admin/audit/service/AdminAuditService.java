@@ -4,17 +4,26 @@ import com.tuowei.dazhongdianping.common.admin.AdminSession;
 import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
+import com.tuowei.dazhongdianping.common.api.ConflictException;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditLogQuery;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditSlaAlertQuery;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditSlaAlertRow;
 import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AuditQueueMetricRow;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AuditQueueOverdueRow;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AuditQueueSlaThreshold;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AuditLogRow;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditTaskQuery;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
+import com.tuowei.dazhongdianping.module.admin.audit.model.ModeratedContentRow;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditPassRequest;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditRejectRequest;
 import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditLogResponse;
+import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditQueueMetricResponse;
+import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditSlaAlertResponse;
 import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditTaskResponse;
 import com.tuowei.dazhongdianping.module.admin.auth.service.AdminPermissionChecker;
 import com.tuowei.dazhongdianping.module.admin.user.mapper.AdminAppUserMapper;
@@ -28,6 +37,12 @@ import com.tuowei.dazhongdianping.module.merchant.verification.service.MerchantV
 import com.tuowei.dazhongdianping.module.review.model.ReviewRow;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
 import com.tuowei.dazhongdianping.module.review.service.ReviewService;
+import com.tuowei.dazhongdianping.module.message.mapper.MessageMapper;
+import com.tuowei.dazhongdianping.module.message.model.MessageRow;
+import com.tuowei.dazhongdianping.module.message.model.response.MessageResponse;
+import com.tuowei.dazhongdianping.module.notification.websocket.NotificationSessionRegistry;
+import com.tuowei.dazhongdianping.module.qa.mapper.QaMapper;
+import com.tuowei.dazhongdianping.module.qa.model.ShopQuestionRow;
 import com.tuowei.dazhongdianping.module.circle.mapper.CircleMapper;
 import com.tuowei.dazhongdianping.module.community.mapper.CommunityMapper;
 import com.tuowei.dazhongdianping.module.community.model.PostRow;
@@ -45,9 +60,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -61,6 +80,15 @@ public class AdminAuditService {
     private static final int EXPERT_CERTIFICATION_BIZ_TYPE = 7;
     private static final int USER_APPEAL_BIZ_TYPE = 8;
     private static final int MERCHANT_VERIFICATION_BIZ_TYPE = 9;
+    private static final int REVIEW_COMMENT_BIZ_TYPE = 10;
+    private static final int POST_COMMENT_BIZ_TYPE = 11;
+    private static final int QA_QUESTION_BIZ_TYPE = 12;
+    private static final int QA_ANSWER_BIZ_TYPE = 13;
+    private static final int MESSAGE_BIZ_TYPE = 14;
+    private static final int AUDIT_CLAIM_LEASE_MINUTES = 15;
+    private static final List<Integer> MODERATED_BIZ_TYPES = List.of(
+            REVIEW_COMMENT_BIZ_TYPE, POST_COMMENT_BIZ_TYPE, QA_QUESTION_BIZ_TYPE, QA_ANSWER_BIZ_TYPE, MESSAGE_BIZ_TYPE
+    );
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String REVIEW_AUDIT_RESULT_TYPE = "review.audit.result";
     private static final String EXPERT_CERT_RESULT_TYPE = "expert.certification.result";
@@ -85,6 +113,24 @@ public class AdminAuditService {
     private final TopicUpdateNotificationService topicUpdateNotificationService;
     private final NotificationService notificationService;
     private final AdminPermissionChecker permissionChecker;
+    private final MessageMapper messageMapper;
+    private final QaMapper qaMapper;
+    private final NotificationSessionRegistry notificationSessions;
+
+    @Value("${app.admin.audit.sla.review-comment-minutes:30}")
+    private int reviewCommentSlaMinutes = 30;
+
+    @Value("${app.admin.audit.sla.post-comment-minutes:30}")
+    private int postCommentSlaMinutes = 30;
+
+    @Value("${app.admin.audit.sla.shop-question-minutes:60}")
+    private int shopQuestionSlaMinutes = 60;
+
+    @Value("${app.admin.audit.sla.shop-answer-minutes:60}")
+    private int shopAnswerSlaMinutes = 60;
+
+    @Value("${app.admin.audit.sla.direct-message-minutes:15}")
+    private int directMessageSlaMinutes = 15;
 
     public AdminAuditService(AdminAuditMapper adminAuditMapper,
                              ReviewMapper reviewMapper,
@@ -103,7 +149,10 @@ public class AdminAuditService {
                              MentionNotificationService mentionNotificationService,
                              TopicUpdateNotificationService topicUpdateNotificationService,
                              NotificationService notificationService,
-                             AdminPermissionChecker permissionChecker) {
+                             AdminPermissionChecker permissionChecker,
+                             MessageMapper messageMapper,
+                             QaMapper qaMapper,
+                             NotificationSessionRegistry notificationSessions) {
         this.adminAuditMapper = adminAuditMapper;
         this.reviewMapper = reviewMapper;
         this.reviewService = reviewService;
@@ -122,6 +171,9 @@ public class AdminAuditService {
         this.topicUpdateNotificationService = topicUpdateNotificationService;
         this.notificationService = notificationService;
         this.permissionChecker = permissionChecker;
+        this.messageMapper = messageMapper;
+        this.qaMapper = qaMapper;
+        this.notificationSessions = notificationSessions;
     }
 
     public PageResult<AdminAuditLogResponse> listLogs(AdminAuditLogQuery query) {
@@ -137,11 +189,115 @@ public class AdminAuditService {
         query.normalize();
         query.setRegion(currentRegion().name());
         query.setAllowedBizTypes(allowedBizTypes(false));
+        if (query.getAssignmentFilter() != null) {
+            if (!isModeratedBizType(query.getBizType())) {
+                throw new IllegalArgumentException("负责人筛选仅适用于内容复审队列");
+            }
+            query.setCurrentAdminId(currentAdmin().adminId());
+        }
         long total = adminAuditMapper.countAuditTasks(query);
         List<AdminAuditTaskResponse> items = adminAuditMapper.selectAuditTasks(query).stream()
                 .map(this::toAuditTaskResponse)
                 .toList();
         return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);
+    }
+
+    @Transactional
+    public AdminAuditTaskResponse claimTask(Long taskId, String requestIp) {
+        AuditTaskRow task = requireModeratedPendingTask(taskId);
+        Long adminId = currentAdmin().adminId();
+        if (adminAuditMapper.claimPendingModeratedAuditTask(taskId, adminId, AUDIT_CLAIM_LEASE_MINUTES) == 0) {
+            AuditTaskRow current = adminAuditMapper.selectAuditTaskById(taskId);
+            if (current != null && current.getStatus() != null && current.getStatus() == 0
+                    && current.getClaimedByAdminId() != null
+                    && !current.getClaimedByAdminId().equals(adminId)) {
+                throw new ConflictException("任务正由" + safeText(current.getClaimedByAdminName()) + "认领");
+            }
+            throw new ConflictException("审核任务状态已变更，刷新后重试");
+        }
+        adminAuditMapper.insertAuditLog(adminId, "audit_automod_claim", "audit_task:" + taskId,
+                "认领内容复审任务，有效期 " + AUDIT_CLAIM_LEASE_MINUTES + " 分钟", normalizeIp(requestIp));
+        return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
+    @Transactional
+    public AdminAuditTaskResponse releaseTask(Long taskId, String requestIp) {
+        AuditTaskRow task = requireModeratedPendingTask(taskId);
+        Long adminId = currentAdmin().adminId();
+        if (adminAuditMapper.releasePendingModeratedAuditTask(taskId, adminId) == 0) {
+            throw new ConflictException("该任务当前不属于你的认领");
+        }
+        adminAuditMapper.insertAuditLog(adminId, "audit_automod_release", "audit_task:" + taskId,
+                "释放内容复审任务", normalizeIp(requestIp));
+        return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
+    public List<AdminAuditQueueMetricResponse> listModerationQueueMetrics() {
+        List<Integer> readableTypes = MODERATED_BIZ_TYPES.stream()
+                .filter(allowedBizTypes(false)::contains)
+                .toList();
+        if (readableTypes.isEmpty()) {
+            return List.of();
+        }
+        Map<Integer, AuditQueueMetricRow> metricsByType = adminAuditMapper
+                .selectModerationQueueMetrics(currentRegion().name(), readableTypes)
+                .stream()
+                .collect(Collectors.toMap(AuditQueueMetricRow::getBizType, row -> row));
+        Map<Integer, Long> overdueCountsByType = adminAuditMapper
+                .selectModerationQueueOverdueCounts(currentRegion().name(), readableTypes, slaThresholds(readableTypes))
+                .stream()
+                .collect(Collectors.toMap(AuditQueueOverdueRow::getBizType, row -> row.getOverdueCount() == null ? 0L : row.getOverdueCount()));
+        return readableTypes.stream()
+                .map(bizType -> {
+                    AuditQueueMetricRow row = metricsByType.get(bizType);
+                    return new AdminAuditQueueMetricResponse(
+                            bizType,
+                            bizTypeText(bizType),
+                            row == null || row.getPendingCount() == null ? 0L : row.getPendingCount(),
+                            row == null ? null : formatNullableDateTime(row.getOldestPendingAt()),
+                            overdueCountsByType.getOrDefault(bizType, 0L),
+                            slaMinutes(bizType),
+                            row == null || row.getProcessedCount() == null ? 0L : row.getProcessedCount(),
+                            row == null ? null : row.getAverageProcessingSeconds()
+                    );
+                })
+                .toList();
+    }
+
+    public List<AuditQueueSlaThreshold> moderationSlaThresholds() {
+        return slaThresholds(MODERATED_BIZ_TYPES);
+    }
+
+    public PageResult<AdminAuditSlaAlertResponse> listSlaAlerts(AdminAuditSlaAlertQuery query) {
+        query.normalize();
+        query.setRegion(currentRegion().name());
+        query.setAllowedBizTypes(allowedBizTypes(false).stream().filter(MODERATED_BIZ_TYPES::contains).toList());
+        if (query.getAllowedBizTypes().isEmpty()) {
+            return new PageResult<>(List.of(), 0, query.getPage(), query.getPageSize(), false);
+        }
+        long total = adminAuditMapper.countAdminAuditSlaAlerts(query);
+        List<AdminAuditSlaAlertResponse> items = adminAuditMapper.selectAdminAuditSlaAlerts(query).stream()
+                .map(this::toSlaAlertResponse)
+                .toList();
+        return new PageResult<>(items, total, query.getPage(), query.getPageSize(), query.getOffset() + items.size() < total);
+    }
+
+    private List<AuditQueueSlaThreshold> slaThresholds(List<Integer> bizTypes) {
+        return bizTypes.stream()
+                .map(bizType -> new AuditQueueSlaThreshold(bizType, slaMinutes(bizType)))
+                .toList();
+    }
+
+    private int slaMinutes(int bizType) {
+        int minutes = switch (bizType) {
+            case REVIEW_COMMENT_BIZ_TYPE -> reviewCommentSlaMinutes;
+            case POST_COMMENT_BIZ_TYPE -> postCommentSlaMinutes;
+            case QA_QUESTION_BIZ_TYPE -> shopQuestionSlaMinutes;
+            case QA_ANSWER_BIZ_TYPE -> shopAnswerSlaMinutes;
+            case MESSAGE_BIZ_TYPE -> directMessageSlaMinutes;
+            default -> throw new IllegalArgumentException("不支持的人工复核类型: " + bizType);
+        };
+        return Math.max(1, minutes);
     }
 
     public Map<String, Object> shopChangeDetail(Long changeId) {
@@ -158,6 +314,9 @@ public class AdminAuditService {
     public AdminAuditTaskResponse passTask(Long taskId, AdminAuditPassRequest request, String requestIp) {
         AuditTaskRow task = requirePendingTask(taskId);
         requireAuditPermission(task.getBizType(), true);
+        if (isModeratedBizType(task.getBizType())) {
+            return decideModeratedTask(task, 1, normalizeRemark(request.getRemark()), "audit_automod_pass", requestIp);
+        }
         if (task.getBizType() == DEAL_BIZ_TYPE) {
             return passDealTask(task, request, requestIp);
         }
@@ -211,6 +370,9 @@ public class AdminAuditService {
     public AdminAuditTaskResponse rejectTask(Long taskId, AdminAuditRejectRequest request, String requestIp) {
         AuditTaskRow task = requirePendingTask(taskId);
         requireAuditPermission(task.getBizType(), true);
+        if (isModeratedBizType(task.getBizType())) {
+            return decideModeratedTask(task, 2, request.getReason().trim(), "audit_automod_reject", requestIp);
+        }
         if (task.getBizType() == DEAL_BIZ_TYPE) {
             return rejectDealTask(task, request, requestIp);
         }
@@ -245,6 +407,9 @@ public class AdminAuditService {
         if (reviewMapper.updateReviewAuditDecision(task.getBizId(), 2, request.getReason().trim()) == 0) {
             throw new NotFoundException("点评不存在");
         }
+        adminAuditMapper.invalidatePendingCommentAuditTasksByContent(
+                REVIEW_COMMENT_BIZ_TYPE, task.getBizId(), "任务失效：点评未通过审核"
+        );
         reviewService.invalidateMerchantAppealsForReview(task.getBizId(), "任务失效：点评已被平台隐藏");
         reviewMapper.resolvePendingReviewReports(task.getBizId());
         reviewService.recalculateShopAggregate(review.getShopId());
@@ -259,6 +424,158 @@ public class AdminAuditService {
         notifyReviewAuditResult(review, false, request.getReason().trim());
 
         return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(taskId));
+    }
+
+    private AdminAuditTaskResponse decideModeratedTask(
+            AuditTaskRow task,
+            int status,
+            String remark,
+            String action,
+            String requestIp
+    ) {
+        requireClaimOwner(task);
+        ModeratedContentRow content = adminAuditMapper.selectModeratedContent(task.getBizType(), task.getBizId());
+        if (content == null) {
+            throw new NotFoundException("待审核内容不存在或已处理");
+        }
+        MessageRow message = task.getBizType() == MESSAGE_BIZ_TYPE
+                ? messageMapper.selectPendingMessage(task.getBizId())
+                : null;
+        if (task.getBizType() == MESSAGE_BIZ_TYPE && message == null) {
+            throw new NotFoundException("待审核私信不存在或已处理");
+        }
+        if (adminAuditMapper.updateClaimedModeratedAuditTaskDecision(
+                task.getId(), status, currentAdmin().adminId(), remark) == 0) {
+            throw new ConflictException("认领已失效或任务状态已变更，请重新认领后重试");
+        }
+        if (adminAuditMapper.updateModeratedContentStatus(task.getBizType(), task.getBizId(), status, remark) == 0) {
+            throw new IllegalArgumentException("审核内容状态已变更");
+        }
+
+        if (task.getBizType() == REVIEW_COMMENT_BIZ_TYPE) {
+            reviewMapper.updateReviewInteractionCounts(
+                    content.getRelatedId(),
+                    reviewMapper.countReviewLikes(content.getRelatedId()),
+                    reviewMapper.countReviewComments(content.getRelatedId())
+            );
+            if (status == 1) {
+                ReviewRow review = reviewMapper.selectReviewById(content.getRelatedId());
+                if (review != null) {
+                    notifyCommentTarget(review.getUserId(), content, review.getRegion(), "review.comment",
+                            "点评新评论", "/reviews/" + review.getId());
+                    if (!java.util.Objects.equals(review.getUserId(), content.getReplyToUserId())) {
+                        notifyCommentTarget(content.getReplyToUserId(), content, review.getRegion(), "review.comment.reply",
+                                "评论被回复", "/reviews/" + review.getId());
+                    }
+                    mentionNotificationService.notifyMentionedUsers(
+                            content.getUserId(), review.getRegion(), content.getContent(), "有人@了你",
+                            "有人在点评评论中提到了你", "/reviews/" + review.getId());
+                }
+            }
+        } else if (task.getBizType() == POST_COMMENT_BIZ_TYPE) {
+            communityMapper.refreshPostCommentCount(content.getRelatedId());
+            if (status == 1) {
+                PostRow post = communityMapper.selectPostById(content.getRelatedId(), currentRegion().name());
+                if (post != null) {
+                    topicService.touchTopicsByPostId(post.getId());
+                    notifyCommentTarget(post.getUserId(), content, post.getRegion(), "post.comment",
+                            "帖子新评论", "/community/posts/" + post.getId());
+                    if (!java.util.Objects.equals(post.getUserId(), content.getReplyToUserId())) {
+                        notifyCommentTarget(content.getReplyToUserId(), content, post.getRegion(), "post.comment.reply",
+                                "评论被回复", "/community/posts/" + post.getId());
+                    }
+                    mentionNotificationService.notifyMentionedUsers(
+                            content.getUserId(), post.getRegion(), content.getContent(), "有人@了你",
+                            "有人在帖子评论中提到了你", "/community/posts/" + post.getId());
+                }
+            }
+        } else if (task.getBizType() == QA_ANSWER_BIZ_TYPE && status == 1) {
+            qaMapper.incrementAnswerCount(content.getRelatedId());
+            ShopQuestionRow question = qaMapper.selectQuestionByIdForAudit(content.getRelatedId());
+            if (question != null) {
+                notifyCommentTarget(question.getUserId(), content, question.getRegion(), "qa.answer",
+                        "问题有了新回答", "/shops/" + question.getShopId());
+            }
+        } else if (task.getBizType() == MESSAGE_BIZ_TYPE) {
+            message.setStatus(status);
+            if (status == 1) {
+                if (messageMapper.updateConversation(message.getConversationId(), message.getId(), preview(message.getContent())) == 0) {
+                    throw new NotFoundException("私信会话不存在");
+                }
+                notificationService.create(
+                        message.getToUserId(), message.getFromUserId(), "GLOBAL", "message.direct", "收到私信",
+                        messageMapper.selectUserName(message.getFromUserId()) + "：" + preview(message.getContent()),
+                        "/messages/conversations/" + message.getConversationId()
+                );
+                notifyMessageReceiver(message);
+            } else {
+                notificationService.create(
+                        message.getFromUserId(), "GLOBAL", "automod.audit.result", "私信未通过审核",
+                        "你的私信未通过审核" + (StringUtils.hasText(remark) ? "：" + remark : ""),
+                        "/messages/conversations/" + message.getConversationId()
+                );
+            }
+        }
+
+        if (task.getBizType() != MESSAGE_BIZ_TYPE) {
+            notifyModeratedContentAuthor(content, task.getBizType(), status == 1, remark);
+        }
+        adminAuditMapper.insertAuditLog(
+                currentAdmin().adminId(), action,
+                "automod:" + task.getBizType() + ":" + task.getBizId(),
+                remark,
+                normalizeIp(requestIp)
+        );
+        return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
+    private void notifyCommentTarget(Long targetUserId, ModeratedContentRow content, String region,
+                                     String type, String title, String linkUrl) {
+        if (targetUserId != null && !targetUserId.equals(content.getUserId())) {
+            notificationService.create(targetUserId, content.getUserId(), region, type, title,
+                    preview(content.getContent()), linkUrl);
+        }
+    }
+
+    private void notifyModeratedContentAuthor(ModeratedContentRow content, int bizType,
+                                               boolean approved, String remark) {
+        String link = switch (bizType) {
+            case REVIEW_COMMENT_BIZ_TYPE -> "/reviews/" + content.getRelatedId();
+            case POST_COMMENT_BIZ_TYPE -> "/community/posts/" + content.getRelatedId();
+            case QA_QUESTION_BIZ_TYPE -> "/shops/" + content.getRelatedId();
+            case QA_ANSWER_BIZ_TYPE -> {
+                ShopQuestionRow question = qaMapper.selectQuestionByIdForAudit(content.getRelatedId());
+                yield question == null ? "/" : "/shops/" + question.getShopId();
+            }
+            default -> "/";
+        };
+        notificationService.create(
+                content.getUserId(),
+                content.getRegion(),
+                "automod.audit.result",
+                approved ? "内容已通过审核" : "内容未通过审核",
+                approved ? "你的内容已公开展示" : "你的内容未通过审核" + (StringUtils.hasText(remark) ? "：" + remark : ""),
+                link + (link.contains("?") ? "&" : "?") + "audit=" + (approved ? "approved" : "rejected")
+        );
+    }
+
+    private void notifyMessageReceiver(MessageRow row) {
+        Runnable send = () -> notificationSessions.sendAllRegions(
+                row.getToUserId(),
+                Map.of("type", "message.new", "data", new MessageResponse(
+                        row.getId(), row.getConversationId(), row.getFromUserId(), row.getToUserId(), row.getContent(),
+                        row.getStatus(), row.isRead(), formatDateTime(row.getReadAt()), formatDateTime(row.getCreatedAt())))
+        );
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    send.run();
+                }
+            });
+        } else {
+            send.run();
+        }
     }
 
     private void notifyReviewAuditResult(ReviewRow review, boolean approved, String remark) {
@@ -317,6 +634,11 @@ public class AdminAuditService {
         if (adminAuditMapper.updatePostAuditDecision(task.getBizId(), currentRegion().name(), status,
                 status == 1 ? "" : remark) == 0) {
             throw new NotFoundException("帖子不存在或已重新提交");
+        }
+        if (status == 2) {
+            adminAuditMapper.invalidatePendingCommentAuditTasksByContent(
+                    POST_COMMENT_BIZ_TYPE, task.getBizId(), "任务失效：帖子未通过审核"
+            );
         }
         circleMapper.refreshPostCountByPostId(task.getBizId());
         topicService.refreshPostCountsByPostId(task.getBizId());
@@ -731,13 +1053,30 @@ public class AdminAuditService {
                 && row.getBizType() != REVIEW_APPEAL_BIZ_TYPE
                 && row.getBizType() != EXPERT_CERTIFICATION_BIZ_TYPE
                 && row.getBizType() != USER_APPEAL_BIZ_TYPE
-                && row.getBizType() != MERCHANT_VERIFICATION_BIZ_TYPE)) {
+                && row.getBizType() != MERCHANT_VERIFICATION_BIZ_TYPE
+                && !isModeratedBizType(row.getBizType()))) {
             throw new IllegalArgumentException("当前不支持此审核任务");
         }
         if (row.getStatus() == null || row.getStatus() != 0) {
             throw new IllegalArgumentException("审核任务已处理");
         }
         return row;
+    }
+
+    private AuditTaskRow requireModeratedPendingTask(Long taskId) {
+        AuditTaskRow task = requirePendingTask(taskId);
+        if (!isModeratedBizType(task.getBizType())) {
+            throw new IllegalArgumentException("当前任务不支持认领");
+        }
+        requireAuditPermission(task.getBizType(), true);
+        return task;
+    }
+
+    private void requireClaimOwner(AuditTaskRow task) {
+        Long currentAdminId = currentAdmin().adminId();
+        if (!currentAdminId.equals(task.getClaimedByAdminId())) {
+            throw new ConflictException("请先认领该任务后再审核");
+        }
     }
 
     private List<Integer> allowedBizTypes(boolean write) {
@@ -750,7 +1089,12 @@ public class AdminAuditService {
                         REVIEW_APPEAL_BIZ_TYPE,
                         EXPERT_CERTIFICATION_BIZ_TYPE,
                         USER_APPEAL_BIZ_TYPE,
-                        MERCHANT_VERIFICATION_BIZ_TYPE
+                        MERCHANT_VERIFICATION_BIZ_TYPE,
+                        REVIEW_COMMENT_BIZ_TYPE,
+                        POST_COMMENT_BIZ_TYPE,
+                        QA_QUESTION_BIZ_TYPE,
+                        QA_ANSWER_BIZ_TYPE,
+                        MESSAGE_BIZ_TYPE
                 )
                 .stream()
                 .filter(bizType -> session.permissions().contains(permissionFor(bizType, write)))
@@ -772,8 +1116,14 @@ public class AdminAuditService {
             case EXPERT_CERTIFICATION_BIZ_TYPE -> "audit:expert_certification:" + action;
             case USER_APPEAL_BIZ_TYPE -> "audit:user_appeal:" + action;
             case MERCHANT_VERIFICATION_BIZ_TYPE -> "audit:merchant_verification:" + action;
+            case REVIEW_COMMENT_BIZ_TYPE, POST_COMMENT_BIZ_TYPE, QA_QUESTION_BIZ_TYPE,
+                    QA_ANSWER_BIZ_TYPE, MESSAGE_BIZ_TYPE -> "audit:automod:" + action;
             default -> throw new IllegalArgumentException("不支持的审核类型");
         };
+    }
+
+    private boolean isModeratedBizType(Integer bizType) {
+        return bizType != null && MODERATED_BIZ_TYPES.contains(bizType);
     }
 
     private AdminAuditTaskResponse toAuditTaskResponse(AuditTaskRow row) {
@@ -790,8 +1140,29 @@ public class AdminAuditService {
                 row.getUserName(),
                 row.getReviewContent(),
                 row.getRemark(),
+                row.getClaimedByAdminId(),
+                row.getClaimedByAdminName(),
+                formatNullableDateTime(row.getClaimedAt()),
+                formatNullableDateTime(row.getClaimExpiresAt()),
                 formatDateTime(row.getCreatedAt()),
                 formatDateTime(row.getUpdatedAt())
+        );
+    }
+
+    private AdminAuditSlaAlertResponse toSlaAlertResponse(AdminAuditSlaAlertRow row) {
+        return new AdminAuditSlaAlertResponse(
+                row.getId(),
+                row.getRegion(),
+                row.getBizType(),
+                bizTypeText(row.getBizType()),
+                row.getStatus(),
+                row.getStatus() != null && row.getStatus() == 1 ? "已恢复" : "进行中",
+                row.getPendingCount(),
+                row.getOverdueCount(),
+                formatNullableDateTime(row.getOldestPendingAt()),
+                formatDateTime(row.getFirstOverdueAt()),
+                formatDateTime(row.getLastDetectedAt()),
+                formatNullableDateTime(row.getResolvedAt())
         );
     }
 
@@ -806,6 +1177,11 @@ public class AdminAuditService {
             case 7 -> "达人认证";
             case 8 -> "用户封禁申诉";
             case 9 -> "认证商户";
+            case REVIEW_COMMENT_BIZ_TYPE -> "点评评论";
+            case POST_COMMENT_BIZ_TYPE -> "帖子评论";
+            case QA_QUESTION_BIZ_TYPE -> "门店提问";
+            case QA_ANSWER_BIZ_TYPE -> "门店回答";
+            case MESSAGE_BIZ_TYPE -> "私信";
             default -> "未知";
         };
     }
@@ -842,6 +1218,10 @@ public class AdminAuditService {
 
     private String formatDateTime(LocalDateTime value) {
         return value == null ? "" : value.format(DATE_TIME_FORMATTER);
+    }
+
+    private String formatNullableDateTime(LocalDateTime value) {
+        return value == null ? null : value.format(DATE_TIME_FORMATTER);
     }
 
     private String normalizeRemark(String remark) {

@@ -26,6 +26,8 @@ finally {
 }
 foreach ($name in @(
     'APP_RUNTIME_MODE',
+    'APP_TRUSTED_PROXY_REGEX',
+    'APP_AD_CLICK_DEDUPE_SECONDS',
     'APP_AUTH_VERIFICATION_MOCK_ENABLED',
     'APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE',
     'APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED',
@@ -85,6 +87,8 @@ if ($template -notmatch 'APP_SEARCH_FALLBACK_ON_ERROR=false') { throw 'EU templa
 
 $contractEnvironment = [ordered]@{
     APP_RUNTIME_MODE = 'pre'
+    APP_TRUSTED_PROXY_REGEX = '^(?:10[.]42[.]0[.]12|10[.]42[.]0[.]13)$'
+    APP_AD_CLICK_DEDUPE_SECONDS = '1800'
     APP_DB_HOST = 'db.internal'
     APP_DB_NAME = 'dzdp_eu_contract'
     APP_DB_USERNAME = 'dzdp_contract'
@@ -155,6 +159,19 @@ try {
     }
 
     if ((Invoke-PreflightContract) -ne 0) { throw 'complete EU contract configuration must pass preflight' }
+
+    $env:APP_TRUSTED_PROXY_REGEX = '^10[.]42[.]0[.].+$'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'broad trusted-proxy regex must fail preflight' }
+    $env:APP_TRUSTED_PROXY_REGEX = $contractEnvironment.APP_TRUSTED_PROXY_REGEX
+
+    $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = ''
+    $aggregateOutput = @(& $bash $scriptPath 2>&1)
+    $aggregateExitCode = $LASTEXITCODE
+    if ($aggregateExitCode -eq 0) { throw 'missing CORS origins must fail preflight' }
+    if (-not ($aggregateOutput -match '\[missing\] PUBLIC_SITE_URL')) {
+        throw 'preflight must continue reporting missing configuration after a missing CORS origin'
+    }
+    $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = $contractEnvironment.APP_CORS_ALLOWED_ORIGIN_PATTERNS
 
     $env:APP_RUNTIME_MODE = 'prod'
     if ((Invoke-PreflightContract) -eq 0) { throw 'prod runtime identity must fail the EU pre-release gate' }

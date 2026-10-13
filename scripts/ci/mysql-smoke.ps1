@@ -23,7 +23,10 @@ $runningOnWindows = [System.Environment]::OSVersion.Platform -eq "Win32NT"
 $mvnw = Join-Path $backendDir $(if ($runningOnWindows) { "mvnw.cmd" } else { "mvnw" })
 $schemaSql = Join-Path $repoRoot "sql\mysql\01_schema.sql"
 $seedSql = Join-Path $repoRoot "sql\mysql\02_seed_data.sql"
+$migrationRunner = Join-Path $repoRoot "scripts\ci\mysql-migrate.sh"
+$migrationManifest = Join-Path $repoRoot "sql\mysql\migrations.sha256"
 $runDir = Join-Path ([System.IO.Path]::GetTempPath()) ("dazhongdianping-mysql-smoke-" + [System.Guid]::NewGuid().ToString("N"))
+$migrationDefaultsFile = Join-Path $runDir "mysql-migrate.cnf"
 
 if (-not $DbHost) { $DbHost = if ($env:APP_DB_HOST) { $env:APP_DB_HOST } else { "127.0.0.1" } }
 if ($DbPort -eq 0) { $DbPort = if ($env:APP_DB_PORT) { [int]$env:APP_DB_PORT } else { 3306 } }
@@ -64,6 +67,32 @@ function Invoke-Native {
     finally {
         Pop-Location
     }
+}
+
+function Invoke-MySqlFile {
+    param(
+        [string[]]$Arguments,
+        [string]$SqlFile
+    )
+
+    $originalOutputEncoding = $OutputEncoding
+    try {
+        $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+        Get-Content -LiteralPath $SqlFile -Raw | & $mysqlCommand.Source @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "mysql import of $SqlFile exited with code $LASTEXITCODE"
+        }
+    }
+    finally {
+        $OutputEncoding = $originalOutputEncoding
+    }
+}
+
+function ConvertTo-BashArgument {
+    param([string]$Value)
+
+    $normalized = $Value.Replace('\', '/')
+    return "'" + $normalized.Replace("'", "'\''") + "'"
 }
 
 function Start-ManagedProcess {
@@ -322,6 +351,7 @@ if ($DryRun) {
         }
         Write-Output "- Source sql/mysql/01_schema.sql into $DbName."
         Write-Output "- Source sql/mysql/02_seed_data.sql into $DbName."
+        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-24."
     }
     Write-Output "- Package backend with backend/mvnw.cmd -DskipTests package."
     Write-Output "- Start the packaged backend jar with APP_DB_* environment variables on port $BackendPort."
@@ -329,6 +359,10 @@ if ($DryRun) {
     Write-Output "- Smoke GET /api/c/v1/categories with X-Region=CN."
     Write-Output "- Smoke GET /api/c/v1/shops with X-Region=EU."
     Write-Output "- Smoke POST /api/admin/v1/auth/login and GET /api/b/v1/health."
+    if (-not $SkipImport) {
+        Write-Output "- Smoke GET /api/admin/v1/audit/tasks against the migrated MySQL schema."
+        Write-Output "- Smoke /api/admin/v1/audit/sla-alerts through overdue, rejection, and automatic recovery."
+    }
     Write-Output "- When APP_STATE_STORE_PROVIDER=redis, smoke send-code rate limiting and Idempotency-Key replay through Redis."
     if ($DropDatabaseAfter) {
         Write-Output "- In finally, drop $DbName only if this run created it; never drop a pre-existing database."
@@ -351,6 +385,16 @@ if (-not (Test-Path -LiteralPath $seedSql)) {
     throw "sql/mysql/02_seed_data.sql not found"
 }
 
+if (-not $SkipImport) {
+    if (-not (Test-Path -LiteralPath $migrationRunner)) {
+        throw "scripts/ci/mysql-migrate.sh not found"
+    }
+
+    if (-not (Test-Path -LiteralPath $migrationManifest)) {
+        throw "sql/mysql/migrations.sha256 not found"
+    }
+}
+
 $mysqlCommand = Get-Command mysql -ErrorAction SilentlyContinue
 if (-not $mysqlCommand) {
     throw "mysql client not found in PATH"
@@ -359,6 +403,13 @@ if (-not $mysqlCommand) {
 $javaCommand = Get-Command java -ErrorAction SilentlyContinue
 if (-not $javaCommand) {
     throw "java runtime not found in PATH"
+}
+
+if (-not $SkipImport) {
+    $bashCommand = Get-Command bash -ErrorAction SilentlyContinue
+    if (-not $bashCommand) {
+        throw "bash not found in PATH; mysql-migrate.sh is required to prepare the fresh database"
+    }
 }
 
 if (-not $backendPortWasExplicitlySupplied -and (Test-TcpPortListening -Port $BackendPort)) {
@@ -448,16 +499,64 @@ VALUES ('$databaseOwnershipToken');
         }
 
         Write-Step "importing sql/mysql/01_schema.sql into $DbName"
-        Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+        Invoke-MySqlFile -Arguments ($mysqlConnectionArgs + @(
             "--database=$DbName",
-            "-e", "source sql/mysql/01_schema.sql"
-        )) -WorkingDirectory $repoRoot
+            "--default-character-set=utf8mb4"
+        )) -SqlFile $schemaSql
 
         Write-Step "importing sql/mysql/02_seed_data.sql into $DbName"
-        Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+        Invoke-MySqlFile -Arguments ($mysqlConnectionArgs + @(
             "--database=$DbName",
-            "-e", "source sql/mysql/02_seed_data.sql"
-        )) -WorkingDirectory $repoRoot
+            "--default-character-set=utf8mb4"
+        )) -SqlFile $seedSql
+
+        Write-Step "applying MySQL migrations 15-24 from schema baseline 14"
+        $escapedDbPassword = $DbPassword.Replace('\', '\\').Replace('"', '\"')
+        $migrationDefaultsContent = @"
+[client]
+protocol=tcp
+host=$DbHost
+port=$DbPort
+user=$DbUsername
+password="$escapedDbPassword"
+database=$DbName
+"@
+        $migrationDefaultsContent = $migrationDefaultsContent.Trim()
+        [System.IO.File]::WriteAllText(
+            $migrationDefaultsFile,
+            $migrationDefaultsContent + [System.Environment]::NewLine,
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $migrationLockFile = Join-Path $runDir "mysql-smoke-migration.lock"
+        $runnerCommand = "chmod 600 $(ConvertTo-BashArgument $migrationDefaultsFile) && exec $(ConvertTo-BashArgument $migrationRunner) --defaults-extra-file $(ConvertTo-BashArgument $migrationDefaultsFile) --baseline-version 14 --release-version mysql-smoke --lock-file $(ConvertTo-BashArgument $migrationLockFile)"
+        Invoke-Native -FilePath $bashCommand.Source -Arguments @("-c", $runnerCommand) -WorkingDirectory $repoRoot
+        Remove-Item -LiteralPath $migrationDefaultsFile -Force
+    }
+
+    if (-not $SkipImport) {
+        $auditSmokeSql = @"
+SET @smoke_task_id = GREATEST((SELECT COALESCE(MAX(id), 0) + 1 FROM audit_task), 900000);
+SET @smoke_comment_id = GREATEST((SELECT COALESCE(MAX(id), 0) + 1 FROM review_comment), 900000);
+SET @smoke_review_id = (SELECT id FROM review WHERE region = 'CN' AND status = 1 ORDER BY id LIMIT 1);
+INSERT INTO review_comment (id, review_id, user_id, user_name, content, parent_id, reply_to, status, audit_remark, created_at, updated_at, is_deleted)
+SELECT @smoke_comment_id, @smoke_review_id, 9001, 'MySQL smoke', 'MySQL audit SLA smoke fixture', 0, 0, 0, '', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 60 MINUTE), CURRENT_TIMESTAMP, 0
+WHERE @smoke_review_id IS NOT NULL;
+INSERT INTO audit_task (id, biz_type, biz_id, region, machine_result, status, auditor_id, remark, created_at, updated_at)
+SELECT @smoke_task_id, 10, @smoke_comment_id, 'CN', 0, 0, 0, '', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 60 MINUTE), CURRENT_TIMESTAMP
+WHERE @smoke_review_id IS NOT NULL;
+SELECT @smoke_task_id;
+"@
+        $fixtureOutput = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName",
+            "--batch",
+            "--skip-column-names",
+            "-e", $auditSmokeSql
+        )) -WorkingDirectory $repoRoot)
+        $smokeTaskId = @($fixtureOutput | Where-Object { [string]$_ -match '^\d+$' } | Select-Object -Last 1)
+        if ($smokeTaskId.Count -eq 0) {
+            throw "MySQL audit SLA fixture could not find a published CN review"
+        }
+        $smokeTaskId = [string]$smokeTaskId[0]
     }
 
     Write-Step "starting backend on $baseUrl"
@@ -466,7 +565,8 @@ VALUES ('$databaseOwnershipToken');
         $backendJar.FullName,
         "--spring.profiles.active=local",
         "--server.port=$BackendPort",
-        "--management.health.redis.enabled=false"
+        "--management.health.redis.enabled=false",
+        "--app.admin.audit.sla.reminder-interval-ms=1000"
     ) -WorkingDirectory $backendDir
     $backendStartedByThisRun = $true
 
@@ -501,6 +601,51 @@ VALUES ('$databaseOwnershipToken');
     }
     if ($adminLoginReplay.data.accessToken -ne $adminLogin.data.accessToken) {
         throw "Idempotency-Key replay did not reuse the first admin login response"
+    }
+
+    if (-not $SkipImport) {
+        $auditHeaders = @{
+            "Authorization" = "Bearer $($adminLogin.data.accessToken)"
+            "X-Region" = "CN"
+        }
+        Write-Step "smoking MySQL audit queue and SLA alert APIs"
+        $auditTasks = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/tasks?bizType=10&status=0&page=1&pageSize=50" -Headers $auditHeaders
+        if (-not ($auditTasks.data.list | Where-Object { [string]$_.id -eq $smokeTaskId })) {
+            throw "GET /api/admin/v1/audit/tasks did not return the seeded MySQL smoke task"
+        }
+
+        $activeAlert = $null
+        for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            $activeAlerts = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/sla-alerts?status=0&page=1&pageSize=100" -Headers $auditHeaders
+            $activeAlert = $activeAlerts.data.list | Where-Object { $_.bizType -eq 10 } | Select-Object -First 1
+            if ($null -ne $activeAlert) {
+                break
+            }
+            Start-Sleep -Milliseconds 500
+        }
+        if ($null -eq $activeAlert -or $activeAlert.overdueCount -lt 1) {
+            throw "SLA scheduler did not create an active alert for the overdue MySQL smoke task"
+        }
+
+        $auditDecision = Invoke-Json -Method "POST" -Path "/api/admin/v1/audit/tasks/$smokeTaskId/reject" -Headers $auditHeaders -Body @{
+            reason = "MySQL smoke SLA verification"
+        }
+        if ($auditDecision.data.status -ne 2) {
+            throw "POST /api/admin/v1/audit/tasks/$smokeTaskId/reject did not process the task"
+        }
+
+        $resolvedAlert = $null
+        for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            $resolvedAlerts = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/sla-alerts?status=1&page=1&pageSize=100" -Headers $auditHeaders
+            $resolvedAlert = $resolvedAlerts.data.list | Where-Object { $_.bizType -eq 10 } | Select-Object -First 1
+            if ($null -ne $resolvedAlert) {
+                break
+            }
+            Start-Sleep -Milliseconds 500
+        }
+        if ($null -eq $resolvedAlert -or $null -eq $resolvedAlert.resolvedAt) {
+            throw "SLA scheduler did not resolve the alert after the MySQL smoke task was processed"
+        }
     }
 
     Write-Step "smoking B endpoint"
@@ -543,6 +688,10 @@ VALUES ('$databaseOwnershipToken');
 }
 finally {
     $cleanupFailures = [System.Collections.Generic.List[string]]::new()
+
+    if (Test-Path -LiteralPath $migrationDefaultsFile) {
+        Remove-Item -LiteralPath $migrationDefaultsFile -Force -ErrorAction SilentlyContinue
+    }
 
     if (-not $KeepBackend -and $backendStartedByThisRun -and $null -ne $backendProcess) {
         Write-Step "stopping backend"

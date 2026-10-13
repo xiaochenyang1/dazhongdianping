@@ -200,7 +200,7 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
     if (content.isEmpty) return;
     setState(() => _commentSaving = true);
     try {
-      await widget.repository.createComment(
+      final createdComment = await widget.repository.createComment(
         widget.reviewId,
         content,
         replyTo: _replyTarget?.id,
@@ -211,10 +211,18 @@ class _ReviewDetailScreenState extends State<ReviewDetailScreen> {
         _replyTarget = null;
         _commentRequestId++;
         _comments = _loadComments();
-        _visibleReview = detail.copyWith(commentCount: detail.commentCount + 1);
+        _visibleReview = detail.copyWith(
+          commentCount: detail.commentCount + (createdComment.status == 1 ? 1 : 0),
+        );
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).commentPublished)),
+        SnackBar(
+          content: Text(
+            createdComment.status == 0
+                ? AppLocalizations.of(context).reviewSubmittedPending
+                : AppLocalizations.of(context).commentPublished,
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;

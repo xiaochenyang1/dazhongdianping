@@ -2,6 +2,7 @@ package com.tuowei.dazhongdianping.module.adpromo.controller;
 
 import com.tuowei.dazhongdianping.common.api.ApiResponse;
 import com.tuowei.dazhongdianping.module.adpromo.service.AdService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,9 +31,12 @@ public class AdController {
         return ApiResponse.success(service.serve(slotType, keyword, limit));
     }
 
-    /** 广告点击上报并计费。 */
+    /**
+     * 广告点击上报并计费。匿名访客按 getRemoteAddr 去重（不信任客户端可伪造的 X-Forwarded-For；
+     * 反向代理部署需由容器 RemoteIpValve / forward-headers-strategy 在可信代理边界还原真实 IP）。
+     */
     @PostMapping("/{id}/click")
-    public ApiResponse<Map<String, Object>> click(@PathVariable Long id) {
-        return ApiResponse.success(service.click(id));
+    public ApiResponse<Map<String, Object>> click(@PathVariable Long id, HttpServletRequest request) {
+        return ApiResponse.success(service.click(id, request.getRemoteAddr()));
     }
 }

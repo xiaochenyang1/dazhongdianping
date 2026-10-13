@@ -3,6 +3,7 @@ package com.tuowei.dazhongdianping.module.review.service;
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
+import com.tuowei.dazhongdianping.common.moderation.ModerationDecision;
 import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
@@ -14,7 +15,6 @@ import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;
 import com.tuowei.dazhongdianping.module.moderation.service.ContentModerationService;
-import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.riskcontrol.service.ReviewRiskGuard;
 import com.tuowei.dazhongdianping.module.review.mapper.ReviewMapper;
@@ -75,7 +75,6 @@ public class ReviewService {
     private final UserExpertCertificationService userExpertCertificationService;
     private final ApplicationEventPublisher applicationEventPublisher;
 
-    private final SensitiveWordFilterService sensitiveWordFilterService;
     private final ContentModerationService contentModerationService;
     private final ReviewRiskGuard reviewRiskGuard;
 
@@ -86,7 +85,6 @@ public class ReviewService {
                          MerchantReviewMapper merchantReviewMapper,
                          NotificationService notificationService,
                          UserExpertCertificationService userExpertCertificationService,
-                         SensitiveWordFilterService sensitiveWordFilterService,
                          ContentModerationService contentModerationService,
                          ReviewRiskGuard reviewRiskGuard,
                          ApplicationEventPublisher applicationEventPublisher) {
@@ -97,7 +95,6 @@ public class ReviewService {
         this.merchantReviewMapper = merchantReviewMapper;
         this.notificationService = notificationService;
         this.userExpertCertificationService = userExpertCertificationService;
-        this.sensitiveWordFilterService = sensitiveWordFilterService;
         this.contentModerationService = contentModerationService;
         this.reviewRiskGuard = reviewRiskGuard;
         this.applicationEventPublisher = applicationEventPublisher;
@@ -107,9 +104,8 @@ public class ReviewService {
     public ReviewDetailResponse createReview(ReviewSaveRequest request) {
         AppUserRow currentUser = currentUserRow();
         ensureShopExists(currentRegion().name(), request.getShopId());
-        contentModerationService.moderate(
+        ModerationDecision moderationDecision = contentModerationService.moderate(
                 currentRegion().name(), "review", 0L, currentUser.getId(), request.getContent());
-        sensitiveWordFilterService.assertClean(currentRegion().name(), request.getContent());
         // 反刷单/反虚假点评风控：BLOCK 直接抛异常拦截，REVIEW 强制转人审
         boolean riskForcesReview = reviewRiskGuard.guardReviewCreation(
                 currentRegion().name(), currentUser.getId(), request.getContent());
@@ -135,7 +131,7 @@ public class ReviewService {
         reviewMapper.insertReview(row);
 
         boolean hasReviewImages = replaceReviewImages(row.getId(), request.getImages());
-        createAuditTask(row.getId(), row.getRegion(), 0,
+        createAuditTask(row.getId(), row.getRegion(), moderationDecision.code(),
                 riskForcesReview ? "风控命中：优先人工复核" : "");
         userGrowthService.rewardForCreatedReview(currentUser.getId(), row.getId());
         if (hasReviewImages) {
@@ -209,7 +205,8 @@ public class ReviewService {
     public ReviewCommentResponse createComment(Long reviewId, ReviewCommentCreateRequest request) {
         AppUserRow currentUser = currentUserRow();
         ReviewRow review = requirePublicReview(reviewId);
-        sensitiveWordFilterService.assertClean(review.getRegion(), request.getContent());
+        ModerationDecision moderationDecision = contentModerationService.moderate(
+                review.getRegion(), "review_comment", 0L, currentUser.getId(), request.getContent());
         ReviewCommentThreadTarget threadTarget = resolveReviewCommentThread(reviewId, request.getReplyTo());
 
         ReviewCommentRow row = new ReviewCommentRow();
@@ -219,9 +216,13 @@ public class ReviewService {
         row.setContent(request.getContent().trim());
         row.setParentId(threadTarget.parentId());
         row.setReplyTo(threadTarget.replyToId());
-        row.setStatus(1);
+        row.setStatus(moderationDecision == ModerationDecision.REVIEW ? 0 : 1);
         row.setCreatedAt(LocalDateTime.now());
         reviewMapper.insertReviewComment(row);
+        if (row.getStatus() == 0) {
+            createModeratedAuditTask(10, row.getId(), review.getRegion(), moderationDecision.code());
+            return toReviewCommentResponse(row, currentUser.getId(), threadTarget.replyTo(), List.of());
+        }
         refreshInteractionCounts(reviewId);
 
         Long reviewAuthorId = review.getUserId() != null && review.getUserId() > 0 ? review.getUserId() : null;
@@ -293,6 +294,7 @@ public class ReviewService {
         if (reviewMapper.softDeleteReviewComment(reviewId, commentId, currentUser.getId()) != 1) {
             throw new IllegalArgumentException("评论不存在或无权删除");
         }
+        adminAuditMapper.invalidatePendingCommentAuditTasksByParent(10, commentId, "任务失效：评论已删除");
         reviewMapper.softDeleteReviewCommentReplies(reviewId, commentId);
         refreshInteractionCounts(reviewId);
     }
@@ -382,12 +384,16 @@ public class ReviewService {
             throw new IllegalArgumentException("点评所属门店不可修改");
         }
         ensureShopExists(existing.getRegion(), existing.getShopId());
-        sensitiveWordFilterService.assertClean(existing.getRegion(), request.getContent());
+        ModerationDecision moderationDecision = contentModerationService.moderate(
+                existing.getRegion(), "review", reviewId, currentUser.getId(), request.getContent());
         boolean wasPublic = isPublicReview(existing);
         adminAuditMapper.invalidatePendingAuditTasksByBiz(
                 REVIEW_AUDIT_BIZ_TYPE,
                 reviewId,
                 EDITED_TASK_INVALID_REMARK
+        );
+        adminAuditMapper.invalidatePendingCommentAuditTasksByContent(
+                10, reviewId, "任务失效：点评已重新提交"
         );
         invalidateMerchantAppealsForReview(reviewId, EDITED_TASK_INVALID_REMARK);
 
@@ -416,7 +422,7 @@ public class ReviewService {
 
         reviewMapper.deleteReviewImagesByReviewId(reviewId);
         boolean hasReviewImages = replaceReviewImages(reviewId, request.getImages());
-        createAuditTask(reviewId, existing.getRegion(), 0, "");
+        createAuditTask(reviewId, existing.getRegion(), moderationDecision.code(), "");
         if (hasReviewImages) {
             userGrowthService.rewardForReviewImage(currentUser.getId(), reviewId);
         }
@@ -435,6 +441,9 @@ public class ReviewService {
                 REVIEW_AUDIT_BIZ_TYPE,
                 reviewId,
                 DELETED_TASK_INVALID_REMARK
+        );
+        adminAuditMapper.invalidatePendingCommentAuditTasksByContent(
+                10, reviewId, "任务失效：点评已删除"
         );
         invalidateMerchantAppealsForReview(reviewId, DELETED_TASK_INVALID_REMARK);
         int affected = reviewMapper.softDeleteReview(reviewId, currentUserSession().userId());
@@ -569,6 +578,18 @@ public class ReviewService {
         adminAuditMapper.insertAuditTask(row);
     }
 
+    private void createModeratedAuditTask(int bizType, Long bizId, String region, int machineResult) {
+        AuditTaskRow row = new AuditTaskRow();
+        row.setBizType(bizType);
+        row.setBizId(bizId);
+        row.setRegion(region);
+        row.setMachineResult(machineResult);
+        row.setStatus(0);
+        row.setAuditorId(0L);
+        row.setRemark("机审待复核");
+        adminAuditMapper.insertAuditTask(row);
+    }
+
     private void refreshInteractionCounts(Long reviewId) {
         reviewMapper.updateReviewInteractionCounts(
                 reviewId,
@@ -636,6 +657,7 @@ public class ReviewService {
                 row.getUserId(),
                 row.getUserName(),
                 row.getContent(),
+                row.getStatus(),
                 row.getParentId() == null ? 0L : row.getParentId(),
                 replyTo,
                 replies,

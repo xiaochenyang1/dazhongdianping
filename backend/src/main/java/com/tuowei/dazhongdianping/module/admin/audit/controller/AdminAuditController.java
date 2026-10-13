@@ -4,14 +4,18 @@ import com.tuowei.dazhongdianping.common.api.ApiResponse;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.module.admin.auth.AdminPermission;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditLogQuery;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditSlaAlertQuery;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditTaskQuery;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditPassRequest;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditRejectRequest;
 import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditLogResponse;
+import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditQueueMetricResponse;
+import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditSlaAlertResponse;
 import com.tuowei.dazhongdianping.module.admin.audit.model.response.AdminAuditTaskResponse;
 import com.tuowei.dazhongdianping.module.admin.audit.service.AdminAuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,6 +46,32 @@ public class AdminAuditController {
     @GetMapping("/audit/tasks")
     public ApiResponse<PageResult<AdminAuditTaskResponse>> listTasks(@Valid AdminAuditTaskQuery query) {
         return ApiResponse.success(adminAuditService.listTasks(query));
+    }
+
+    @PostMapping("/audit/tasks/{taskId}/claim")
+    public ApiResponse<AdminAuditTaskResponse> claimTask(@PathVariable Long taskId,
+                                                         HttpServletRequest httpServletRequest) {
+        return ApiResponse.success("已认领审核任务", "admin.audit_claimed",
+                adminAuditService.claimTask(taskId, httpServletRequest.getRemoteAddr()));
+    }
+
+    @PostMapping("/audit/tasks/{taskId}/release")
+    public ApiResponse<AdminAuditTaskResponse> releaseTask(@PathVariable Long taskId,
+                                                           HttpServletRequest httpServletRequest) {
+        return ApiResponse.success("已释放审核任务", "admin.audit_released",
+                adminAuditService.releaseTask(taskId, httpServletRequest.getRemoteAddr()));
+    }
+
+    @GetMapping("/audit/tasks/metrics")
+    @AdminPermission("audit:automod:read")
+    public ApiResponse<List<AdminAuditQueueMetricResponse>> listModerationQueueMetrics() {
+        return ApiResponse.success(adminAuditService.listModerationQueueMetrics());
+    }
+
+    @GetMapping("/audit/sla-alerts")
+    @AdminPermission("audit:automod:read")
+    public ApiResponse<PageResult<AdminAuditSlaAlertResponse>> listSlaAlerts(@Valid AdminAuditSlaAlertQuery query) {
+        return ApiResponse.success(adminAuditService.listSlaAlerts(query));
     }
 
     @GetMapping("/audit/shop-changes/{changeId}")

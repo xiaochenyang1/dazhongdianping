@@ -13,6 +13,10 @@ public class AuditTaskRow {
     private Integer machineResult;
     private Integer status;
     private Long auditorId;
+    private Long claimedByAdminId;
+    private String claimedByAdminName;
+    private LocalDateTime claimedAt;
+    private LocalDateTime claimExpiresAt;
     private String remark;
     private Long shopId;
     private String shopName;

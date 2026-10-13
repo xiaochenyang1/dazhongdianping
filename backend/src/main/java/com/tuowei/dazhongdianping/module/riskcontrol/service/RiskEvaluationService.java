@@ -57,13 +57,17 @@ public class RiskEvaluationService {
      * @return 聚合决策；调用方据 {@code action()} 决定放行 / 转人审 / 拦截
      */
     public RiskDecision evaluate(RiskContext context) {
+        RiskDecision decision;
         try {
-            return doEvaluate(context);
+            decision = doEvaluate(context);
         } catch (RuntimeException ex) {
-            // 风控是旁路能力，自身异常不应阻断主业务；放行并告警
+            // 规则加载/信号源等评估自身异常时,风控作为旁路能力降级放行并告警,不阻断主业务
             log.warn("风控评估异常，降级放行 scene={} user={}", context.scene(), context.userId(), ex);
             return RiskDecision.pass();
         }
+        // 决策已定后再落审计:审计/设备计数是旁路副作用,其失败绝不能把已判定的 REVIEW/BLOCK 降级为放行
+        recordDecision(context, decision);
+        return decision;
     }
 
     private RiskDecision doEvaluate(RiskContext context) {
@@ -94,15 +98,28 @@ public class RiskEvaluationService {
             return RiskDecision.pass();
         }
 
-        RiskDecision decision = new RiskDecision(
-                aggregated, totalScore, hitCodes, String.join("；", reasons));
-        // 审计事件用独立事务落库：即便主业务事务因 BLOCK 抛异常回滚，被拦截的命中记录仍需留痕。
-        persistEvent(context, decision);
-        // 设备命中计数更新的是本事务刚写过的 device_fingerprint 行，须留在主事务内避免与独立事务互锁。
-        if (StringUtils.hasText(context.deviceFingerprint())) {
-            riskMapper.incrementDeviceRiskHit(context.region(), context.deviceFingerprint());
+        return new RiskDecision(aggregated, totalScore, hitCodes, String.join("；", reasons));
+    }
+
+    /**
+     * 落命中审计:独立事务写 risk_event(即便主业务事务因 BLOCK 回滚仍留痕)+ 主事务内更新设备命中计数。
+     * 整体 best-effort:审计侧任何异常(risk_event 结构漂移、独立事务连接耗尽、设备行死锁等)只告警,
+     * 不再向上抛出,以免把 {@link #doEvaluate} 已判定的 REVIEW/BLOCK 静默降级为放行。
+     */
+    private void recordDecision(RiskContext context, RiskDecision decision) {
+        if (!decision.hasHit()) {
+            return;
         }
-        return decision;
+        try {
+            persistEvent(context, decision);
+            // 设备命中计数更新的是本事务刚写过的 device_fingerprint 行，须留在主事务内避免与独立事务互锁。
+            if (StringUtils.hasText(context.deviceFingerprint())) {
+                riskMapper.incrementDeviceRiskHit(context.region(), context.deviceFingerprint());
+            }
+        } catch (RuntimeException ex) {
+            log.error("风控审计落库失败，但已保留 {} 决策 scene={} user={}",
+                    decision.action(), context.scene(), context.userId(), ex);
+        }
     }
 
     private void persistEvent(RiskContext context, RiskDecision decision) {

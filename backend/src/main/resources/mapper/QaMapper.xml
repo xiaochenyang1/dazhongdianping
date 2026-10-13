@@ -7,38 +7,52 @@
     </select>
 
     <insert id="insertQuestion" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO shop_question(region,shop_id,user_id,content)
-        VALUES(#{region},#{shopId},#{userId},#{content})
+        INSERT INTO shop_question(region,shop_id,user_id,content,status)
+        VALUES(#{region},#{shopId},#{userId},#{content},#{status})
     </insert>
 
     <select id="selectQuestions" resultType="com.tuowei.dazhongdianping.module.qa.model.ShopQuestionRow">
-        SELECT q.id,q.region,q.shop_id,q.user_id,q.content,q.answer_count,q.created_at,
+        SELECT q.id,q.region,q.shop_id,q.user_id,q.content,q.answer_count,q.status,q.created_at,
                u.nickname AS user_nickname,
                (SELECT a.content FROM shop_answer a
-                WHERE a.question_id=q.id AND a.is_deleted=FALSE
+                WHERE a.question_id=q.id AND a.status=1 AND a.is_deleted=FALSE
                 ORDER BY a.id DESC LIMIT 1) AS latest_answer
         FROM shop_question q
         LEFT JOIN app_user u ON u.id=q.user_id
-        WHERE q.shop_id=#{shopId} AND q.region=#{region} AND q.is_deleted=FALSE
+        WHERE q.shop_id=#{shopId} AND q.region=#{region} AND q.status=1 AND q.is_deleted=FALSE
         ORDER BY q.id DESC LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="countQuestions" resultType="long">
         SELECT COUNT(*) FROM shop_question
-        WHERE shop_id=#{shopId} AND region=#{region} AND is_deleted=FALSE
+        WHERE shop_id=#{shopId} AND region=#{region} AND status=1 AND is_deleted=FALSE
     </select>
 
     <select id="selectQuestion" resultType="com.tuowei.dazhongdianping.module.qa.model.ShopQuestionRow">
-        SELECT q.id,q.region,q.shop_id,q.user_id,q.content,q.answer_count,q.created_at,
+        SELECT q.id,q.region,q.shop_id,q.user_id,q.content,q.answer_count,q.status,q.created_at,
                u.nickname AS user_nickname
         FROM shop_question q
         LEFT JOIN app_user u ON u.id=q.user_id
-        WHERE q.id=#{id} AND q.shop_id=#{shopId} AND q.region=#{region} AND q.is_deleted=FALSE
+        WHERE q.id=#{id} AND q.shop_id=#{shopId} AND q.region=#{region} AND q.status=1 AND q.is_deleted=FALSE
+    </select>
+
+    <select id="selectQuestionForOwner" resultType="com.tuowei.dazhongdianping.module.qa.model.ShopQuestionRow">
+        SELECT q.id,q.region,q.shop_id,q.user_id,q.content,q.answer_count,q.status,q.created_at,
+               u.nickname AS user_nickname
+        FROM shop_question q
+        LEFT JOIN app_user u ON u.id=q.user_id
+        WHERE q.id=#{id} AND q.shop_id=#{shopId} AND q.region=#{region}
+          AND q.user_id=#{userId} AND q.is_deleted=FALSE
+    </select>
+
+    <select id="selectQuestionByIdForAudit" resultType="com.tuowei.dazhongdianping.module.qa.model.ShopQuestionRow">
+        SELECT id,region,shop_id,user_id,content,answer_count,status,created_at
+        FROM shop_question WHERE id=#{id} AND is_deleted=FALSE
     </select>
 
     <insert id="insertAnswer" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO shop_answer(region,question_id,user_id,content)
-        VALUES(#{region},#{questionId},#{userId},#{content})
+        INSERT INTO shop_answer(region,question_id,user_id,content,status)
+        VALUES(#{region},#{questionId},#{userId},#{content},#{status})
     </insert>
 
     <update id="incrementAnswerCount">
@@ -46,10 +60,10 @@
     </update>
 
     <select id="selectAnswers" resultType="com.tuowei.dazhongdianping.module.qa.model.ShopAnswerRow">
-        SELECT a.id,a.region,a.question_id,a.user_id,a.content,a.created_at,u.nickname AS user_nickname
+        SELECT a.id,a.region,a.question_id,a.user_id,a.content,a.status,a.created_at,u.nickname AS user_nickname
         FROM shop_answer a
         LEFT JOIN app_user u ON u.id=a.user_id
-        WHERE a.question_id=#{questionId} AND a.is_deleted=FALSE
+        WHERE a.question_id=#{questionId} AND a.status=1 AND a.is_deleted=FALSE
         ORDER BY a.id
     </select>
 

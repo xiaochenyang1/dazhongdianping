@@ -1,6 +1,8 @@
 import { apiDelete, apiGet, apiPost, apiPostForm, apiPut } from '@/lib/http'
 import type {
   AdminAuditTask,
+  AdminAuditQueueMetric,
+  AdminAuditSlaAlert,
   AdminAuditLog,
   AdminDealDetail,
   AdminShopChangeDetail,
@@ -109,6 +111,13 @@ export interface AdminAuditTaskQuery {
   bizType?: number
   status?: number
   keyword?: string
+  assignmentFilter?: 'all' | 'unclaimed' | 'mine' | 'others'
+  page?: number
+  pageSize?: number
+}
+
+export interface AdminAuditSlaAlertQuery {
+  status?: number
   page?: number
   pageSize?: number
 }
@@ -289,6 +298,22 @@ export function getAdminSystemHealth() {
 
 export function listAuditTasks(query: AdminAuditTaskQuery) {
   return apiGet<PageResult<AdminAuditTask>>('/api/admin/v1/audit/tasks', query)
+}
+
+export function getModerationQueueMetrics() {
+  return apiGet<AdminAuditQueueMetric[]>('/api/admin/v1/audit/tasks/metrics')
+}
+
+export function claimAuditTask(taskId: number) {
+  return apiPost<AdminAuditTask>(`/api/admin/v1/audit/tasks/${taskId}/claim`)
+}
+
+export function releaseAuditTask(taskId: number) {
+  return apiPost<AdminAuditTask>(`/api/admin/v1/audit/tasks/${taskId}/release`)
+}
+
+export function listAdminAuditSlaAlerts(query: AdminAuditSlaAlertQuery) {
+  return apiGet<PageResult<AdminAuditSlaAlert>>('/api/admin/v1/audit/sla-alerts', query)
 }
 
 export function getAdminShopChangeDetail(changeId: number) {

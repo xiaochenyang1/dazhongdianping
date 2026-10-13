@@ -1,6 +1,6 @@
 # EU 预发环境配置清单
 
-更新时间：2026-08-17
+更新时间：2026-10-09
 
 当前候选基线以最新 `eu-pre-rc-*` tag 或通过 CI 的不可变提交 SHA 为准，不在本文内维护会过期的固定 SHA。
 
@@ -15,8 +15,9 @@
 | 类型 | 变量 |
 |---|---|
 | 运行身份 | `APP_RUNTIME_MODE=pre` |
+| 可信代理 | `APP_TRUSTED_PROXY_REGEX`：加单引号的锚定 Java 正则，只列出批准的 Ingress/负载均衡器 IPv4/IPv6 地址，用竖线分隔；IPv4 的点写作 `[.]` 或 `\.`，不接受网段、范围或通配符 |
 | MySQL | `APP_DB_HOST`、`APP_DB_PORT`、`APP_DB_NAME`、`APP_DB_USERNAME`、`APP_DB_PASSWORD` |
-| Redis | `APP_REDIS_HOST`、`APP_REDIS_PORT`、`APP_REDIS_PASSWORD`、`APP_REDIS_DATABASE`、`APP_STATE_STORE_PROVIDER=redis` |
+| Redis | `APP_REDIS_HOST`、`APP_REDIS_PORT`、`APP_REDIS_PASSWORD`、`APP_REDIS_DATABASE`、`APP_STATE_STORE_PROVIDER=redis`、`APP_AD_CLICK_DEDUPE_SECONDS=1800` |
 | 安全密钥 | `APP_AUTH_JWT_SECRET`、`APP_PAYMENT_NOTIFY_SECRET`，长度至少 32 字符 |
 | 浏览器跨域 | `APP_CORS_ALLOWED_ORIGIN_PATTERNS`，逗号分隔列出三个 Web 的真实 HTTPS origin；禁止通配符、本机地址、userinfo 和路径 |
 | 验证码总开关 | `APP_AUTH_VERIFICATION_MOCK_ENABLED=false`、`APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE=false`、`APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED=false` |
@@ -28,6 +29,44 @@
 | 移动推送 | `APP_PUSH_ENABLED=false`，直到真实 FCM/APNs 真机 smoke 通过 |
 | Web/SEO | `PUBLIC_SITE_URL=https://...`、`PRERENDER_API_BASE_URL=https://...`、`PRERENDER_REGION=EU`、`VITE_API_BASE_URL=https://...`、`VITE_WS_BASE_URL=wss://...`、`VITE_STRIPE_PUBLISHABLE_KEY=pk_test_*` |
 
+### EU 入口代理与广告点击 IP
+
+- 广告匿名点击以 `HttpServletRequest.getRemoteAddr()` 做去重；应用代码不读取请求方可伪造的 `X-Forwarded-For`。
+- Spring Boot/Tomcat 使用 native `RemoteIpValve`，默认不信任任何转发来源；预发启动时要求显式配置 `APP_TRUSTED_PROXY_REGEX`。该锚定正则应只列出实际 Ingress/负载均衡器的源 IP，并限制后端端口只能由这些代理访问。当前目标代理地址未知，模板不伪造网段。配置格式示例：`APP_TRUSTED_PROXY_REGEX='^(?:10[.]20[.]0[.]12|10[.]20[.]0[.]13)$'`；示例地址不可直接用于目标环境。
+- 风控请求上下文、管理员登录审计和管理员操作审计也统一读取容器处理后的 `getRemoteAddr()`，不会自行选择客户端提供的 `X-Forwarded-For` 第一段。
+- 应用只在请求内存中读取匿名访客 IP，并通过由服务密钥派生的 HMAC 指纹参与去重；原始 IP 不写入 `ad_click_log`、Redis 键或广告去重业务日志。EU `pre` 必须使用位于 EU 的 Redis；指纹键按默认 30 分钟过期。入口代理与基础设施访问日志的采集/留存由目标平台另行核验。
+- 隐私告知中文草案（上线前需产品/隐私负责人审核）：`为防止广告点击刷量和重复计费，我们会在匿名广告点击场景短时使用请求来源 IP 计算去重指纹。指纹仅保存在欧盟区域的去重存储中，最长 30 分钟后过期；原始 IP 不写入广告点击明细。`
+- EU 英文草案（上线前需产品/隐私负责人审核）：`To prevent ad-click abuse and duplicate billing, when you click an ad without signing in we temporarily use your IP address to create a deduplication fingerprint. The fingerprint is kept in our EU deduplication service for no more than 30 minutes. Your raw IP address is not written to the advertising click record.`
+- 批准上述文案前，确认 Redis 主从/备份所在地域及去重键 TTL；同时向平台负责人核实 Ingress、负载均衡器和基础设施访问日志是否记录源 IP、存放地域与留存时长。若平台日志会保存 IP，应由隐私负责人决定是否补充告知内容。
+
+### 代理验收步骤（目标环境参数齐备后执行）
+
+1. 网络负责人确认后端监听端口只允许批准的 Ingress/负载均衡器访问：从代理节点连接后端端口应成功；从指定的非代理网络连接同一地址和端口应失败。不要把仅“后端没有公网地址”当作防火墙验收，仍需验证实际网络边界。
+2. 建立一个仅供 EU `pre` 验收的低 CPC、有限日预算广告，并避免其他人同时点击。记录 campaign ID；点击会实际增加该预发广告的消耗。
+3. 把 `PRE_BASE_URL` 设为不带尾斜杠的 EU `pre` HTTPS 地址，把 `CAMPAIGN_ID` 设为该专用广告 ID；出口 A 和 B 必须有不同的真实出口地址。从出口 A 经 HTTPS Ingress 对同一 campaign 连续匿名点击两次，两次分别带不同的伪造 `X-Forwarded-For` 值；预期 `data.charged` 依次为 `true`、`false`。例如：
+
+   ```bash
+   curl --fail-with-body -sS -X POST \
+     "$PRE_BASE_URL/api/c/v1/ads/$CAMPAIGN_ID/click" \
+     -H 'X-Region: EU' -H 'X-Forwarded-For: 198.51.100.10'
+   curl --fail-with-body -sS -X POST \
+     "$PRE_BASE_URL/api/c/v1/ads/$CAMPAIGN_ID/click" \
+     -H 'X-Region: EU' -H 'X-Forwarded-For: 203.0.113.10'
+   ```
+
+4. 从有不同真实出口地址的出口 B，经同一 Ingress 对该 campaign 点击一次，并再次发送一个伪造的 `X-Forwarded-For` 值；预期 `data.charged=true`。A 的伪造头变化不应造成重复计费，B 的伪造头也不能与 A 合并去重。
+5. 通过只读数据库会话核对专用 campaign 的 `ad_click_log`：三次请求应只有两条计费明细，`user_id` 均为 `0`，金额合计应等于两次 CPC。不要查询或导出任何请求 IP；验收后暂停专用 campaign。
+
+   ```sql
+   SELECT COUNT(*) AS billed_clicks,
+          COALESCE(SUM(cost), 0) AS billed_amount,
+          SUM(user_id <> 0) AS rows_with_user_id
+   FROM ad_click_log
+   WHERE campaign_id = <CAMPAIGN_ID> AND region = 'EU';
+   ```
+
+   预期为 `billed_clicks=2`、`rows_with_user_id=0`，且 `billed_amount` 等于该 campaign 的两次 CPC。若同一出口 A 的第二次点击仍计费，或出口 B 的点击被去重，应先检查 Ingress 的转发头覆盖/追加策略及 Tomcat 解析到的代理链，不要放行发布。
+
 预检命令：
 
 ```bash
@@ -37,7 +76,7 @@ set +a
 ./scripts/ci/stripe-preflight.sh --check-cli
 ```
 
-没有安装 Stripe CLI 时，先去掉 `--check-cli` 只能证明配置格式，不算真实支付验收。
+运行预检需要 Bash、Python 3 和 Stripe CLI。没有安装 Stripe CLI 时，先去掉 `--check-cli` 只能证明配置格式，不算真实支付验收。
 
 ## 2. 目标机数据库迁移文件
 
@@ -56,7 +95,7 @@ set +a
 
 ## 3. GitHub `pre` Environment
 
-当前远程仓库已创建 `pre` Environment，并已写入以下无需外部资源即可确定的固定变量：`DEPLOY_SSH_PORT=22`、四个默认服务名和 `DEPLOY_DB_MIGRATION_MODE=apply`。正式预发前仍需补齐下表中依赖目标环境的变量和 secrets。
+2026-10-09 只读核对 GitHub `pre` Environment 后，当前可见的变量名为 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`；没有配置 secret 名称。不得把此清单当作变量值或凭证核验。正式预发前仍需补齐下表中依赖目标环境的变量和 secrets。
 
 Variables：
 
@@ -90,22 +129,24 @@ Secrets：
 
 ## 4. 最小验收顺序
 
-1. `stripe-preflight.sh --check-cli` 通过。
-2. 目标机后端以 `APP_RUNTIME_MODE=pre` 启动成功。
-3. MySQL、Redis、S3、Elasticsearch health/smoke 通过。
-4. SMTP 测试邮箱真实收到验证码。
-5. 至少一个欧洲手机号通过 Twilio 真实收到验证码。
-6. Stripe CLI 转发 `payment_intent.succeeded` 到后端，Webhook 验签通过并发券。
-7. 非法 Stripe 签名返回 `400`。
-8. EU Stripe 订单不能通过 `mock-complete` 绕过支付。
-9. 发布包 SHA-256 校验、部署 smoke 和回滚演练通过；部署与回滚 smoke 均只接受 `2xx`。
+1. 隐私告知覆盖 30 分钟以内的广告反刷 IP 临时处理；完成可信代理配置，并从代理入口验证真实地址恢复、伪造转发头拒绝和后端不可绕过代理直连。
+2. `stripe-preflight.sh --check-cli` 通过。
+3. 目标机后端以 `APP_RUNTIME_MODE=pre` 启动成功。
+4. MySQL、Redis、S3、Elasticsearch health/smoke 通过。
+5. SMTP 测试邮箱真实收到验证码。
+6. 至少一个欧洲手机号通过 Twilio 真实收到验证码。
+7. Stripe CLI 转发 `payment_intent.succeeded` 到后端，Webhook 验签通过并发券。
+8. 非法 Stripe 签名返回 `400`。
+9. EU Stripe 订单不能通过 `mock-complete` 绕过支付。
+10. 发布包 SHA-256 校验、部署 smoke 和回滚演练通过；部署与回滚 smoke 均只接受 `2xx`。
 
 ## 5. 当前阻塞
 
 - Stripe CLI 1.50.1 已安装，但没有真实 Stripe test 凭证与 Stripe CLI 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
-- GitHub `pre` Environment 已创建但尚未补齐目标机、数据库、Web/SEO 变量和 SSH secrets；`prod` Environment 尚未创建。
+- 当前核对到的 GitHub `pre` Environment 只有 6 个固定变量名、没有 secret 名称；目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证和 SSH secrets 均未齐备。`prod` Environment 尚未创建。
+- 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
 ## 6. 已完成的仓库侧准备
 

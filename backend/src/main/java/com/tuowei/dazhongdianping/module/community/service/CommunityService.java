@@ -3,6 +3,7 @@ package com.tuowei.dazhongdianping.module.community.service;
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
+import com.tuowei.dazhongdianping.common.moderation.ModerationDecision;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
@@ -28,7 +29,7 @@ import com.tuowei.dazhongdianping.module.community.model.response.PostCommentRep
 import com.tuowei.dazhongdianping.module.community.model.response.PostCommentReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostReportResponse;
 import com.tuowei.dazhongdianping.module.community.model.response.PostRepostResponse;
-import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
+import com.tuowei.dazhongdianping.module.moderation.service.ContentModerationService;
 import com.tuowei.dazhongdianping.module.notification.service.MentionNotificationService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
@@ -56,14 +57,14 @@ public class CommunityService {
     private final MentionNotificationService mentionNotificationService;
     private final UserExpertCertificationService userExpertCertificationService;
 
-    private final SensitiveWordFilterService sensitiveWordFilterService;
+    private final ContentModerationService contentModerationService;
 
     public CommunityService(CommunityMapper communityMapper, AdminAuditMapper adminAuditMapper,
                             CircleService circleService, CircleMapper circleMapper, TopicService topicService,
                             NotificationService notificationService,
                             MentionNotificationService mentionNotificationService,
                             UserExpertCertificationService userExpertCertificationService,
-                            SensitiveWordFilterService sensitiveWordFilterService) {
+                            ContentModerationService contentModerationService) {
         this.communityMapper = communityMapper;
         this.adminAuditMapper = adminAuditMapper;
         this.circleService = circleService;
@@ -72,13 +73,14 @@ public class CommunityService {
         this.notificationService = notificationService;
         this.mentionNotificationService = mentionNotificationService;
         this.userExpertCertificationService = userExpertCertificationService;
-        this.sensitiveWordFilterService = sensitiveWordFilterService;
+        this.contentModerationService = contentModerationService;
     }
 
     @Transactional
     public PostResponse create(PostSaveRequest request) {
         UserSession user = currentUser();
-        sensitiveWordFilterService.assertClean(region(), request.title(), request.content());
+        ModerationDecision moderationDecision = contentModerationService.moderate(
+                region(), "post", 0L, user.userId(), request.title(), request.content());
         PostRow row = new PostRow();
         if (request.circleId() != null) circleService.requirePostingMembership(request.circleId(), user.userId());
         row.setUserId(user.userId());
@@ -98,7 +100,7 @@ public class CommunityService {
 
         List<Long> topicIds = saveAssets(row.getId(), request);
         topicService.refreshPostCounts(topicIds);
-        createAuditTask(row.getId());
+        createAuditTask(row.getId(), moderationDecision.code());
         return ownedDetail(row.getId());
     }
 
@@ -113,7 +115,8 @@ public class CommunityService {
         UserSession user = currentUser();
         PostRow row = communityMapper.selectOwnedPost(postId, user.userId(), region());
         if (row == null) throw new NotFoundException("帖子不存在");
-        sensitiveWordFilterService.assertClean(region(), request.title(), request.content());
+        ModerationDecision moderationDecision = contentModerationService.moderate(
+                region(), "post", postId, user.userId(), request.title(), request.content());
         List<Long> oldTopicIds = topicService.topicIdsForPost(postId);
         row.setTitle(request.title().trim());
         row.setContent(request.content().trim());
@@ -129,7 +132,8 @@ public class CommunityService {
         affectedTopicIds.addAll(newTopicIds);
         topicService.refreshPostCounts(affectedTopicIds);
         adminAuditMapper.invalidatePendingAuditTasksByBiz(POST_BIZ_TYPE, postId, "任务失效：帖子已重新提交");
-        createAuditTask(postId);
+        adminAuditMapper.invalidatePendingCommentAuditTasksByContent(11, postId, "任务失效：帖子已重新提交");
+        createAuditTask(postId, moderationDecision.code());
         return ownedDetail(postId);
     }
 
@@ -143,6 +147,7 @@ public class CommunityService {
         circleMapper.refreshPostCountByPostId(postId);
         topicService.refreshPostCounts(topicIds);
         adminAuditMapper.invalidatePendingAuditTasksByBiz(POST_BIZ_TYPE, postId, "任务失效：帖子已删除");
+        adminAuditMapper.invalidatePendingCommentAuditTasksByContent(11, postId, "任务失效：帖子已删除");
     }
 
     public PostResponse publicDetail(Long postId) {
@@ -246,7 +251,8 @@ public class CommunityService {
     public PostCommentResponse createComment(Long postId, PostCommentCreateRequest request) {
         UserSession user = currentUser();
         PostRow post = requirePublicPost(postId);
-        sensitiveWordFilterService.assertClean(post.getRegion(), request.content());
+        ModerationDecision moderationDecision = contentModerationService.moderate(
+                post.getRegion(), "post_comment", 0L, user.userId(), request.content());
         PostCommentThreadTarget threadTarget = resolvePostCommentThread(postId, request.replyTo());
         PostCommentRow row = new PostCommentRow();
         row.setPostId(postId);
@@ -255,8 +261,13 @@ public class CommunityService {
         row.setContent(request.content().trim());
         row.setParentId(threadTarget.parentId());
         row.setReplyTo(threadTarget.replyToId());
+        row.setStatus(moderationDecision == ModerationDecision.REVIEW ? 0 : 1);
         row.setCreatedAt(LocalDateTime.now());
         communityMapper.insertPostComment(row);
+        if (row.getStatus() == 0) {
+            createModeratedAuditTask(row.getId(), post.getRegion(), moderationDecision.code());
+            return toComment(row, user.userId(), threadTarget.replyTo(), List.of());
+        }
         communityMapper.refreshPostCommentCount(postId);
         topicService.touchTopicsByPostId(postId);
 
@@ -331,6 +342,7 @@ public class CommunityService {
         if (communityMapper.softDeletePostComment(postId, commentId, user.userId()) != 1) {
             throw new IllegalArgumentException("评论不存在或无权删除");
         }
+        adminAuditMapper.invalidatePendingCommentAuditTasksByParent(11, commentId, "任务失效：评论已删除");
         communityMapper.softDeletePostCommentReplies(postId, commentId);
         communityMapper.refreshPostCommentCount(postId);
         topicService.touchTopicsByPostId(postId);
@@ -451,6 +463,7 @@ public class CommunityService {
                 row.getUserId(),
                 row.getUserName(),
                 row.getContent(),
+                row.getStatus(),
                 row.getParentId() == null ? 0L : row.getParentId(),
                 replyTo,
                 replies,
@@ -507,15 +520,27 @@ public class CommunityService {
         return topicIds;
     }
 
-    private void createAuditTask(Long postId) {
+    private void createAuditTask(Long postId, int machineResult) {
         AuditTaskRow task = new AuditTaskRow();
         task.setBizType(POST_BIZ_TYPE);
         task.setBizId(postId);
         task.setRegion(region());
-        task.setMachineResult(0);
+        task.setMachineResult(machineResult);
         task.setStatus(0);
         task.setAuditorId(0L);
         task.setRemark("");
+        adminAuditMapper.insertAuditTask(task);
+    }
+
+    private void createModeratedAuditTask(Long commentId, String taskRegion, int machineResult) {
+        AuditTaskRow task = new AuditTaskRow();
+        task.setBizType(11);
+        task.setBizId(commentId);
+        task.setRegion(taskRegion);
+        task.setMachineResult(machineResult);
+        task.setStatus(0);
+        task.setAuditorId(0L);
+        task.setRemark("机审待复核");
         adminAuditMapper.insertAuditTask(task);
     }
 

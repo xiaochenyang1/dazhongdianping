@@ -113,13 +113,15 @@ secret_length_check() {
 cors_origins_check() {
   local value="${1-}"
   check APP_CORS_ALLOWED_ORIGIN_PATTERNS "$value"
-  is_present "$value" || return
+  if ! is_present "$value"; then
+    return 0
+  fi
 
   local compact="${value//[[:space:]]/}"
   if [[ "$compact" == ,* || "$compact" == *, || "$compact" == *,,* ]]; then
     printf '[invalid] APP_CORS_ALLOWED_ORIGIN_PATTERNS must be a comma-separated list of origins\n' >&2
     failures=$((failures + 1))
-    return
+    return 0
   fi
 
   local item authority host port
@@ -204,6 +206,61 @@ elasticsearch_index_check() {
   fi
 }
 
+trusted_proxy_regex_check() {
+  local value="${1-}"
+  check APP_TRUSTED_PROXY_REGEX "$value"
+  if is_present "$value"; then
+    if [[ "${value:0:1}" != '^' || "${value: -1}" != '$' ]]; then
+      printf '[invalid] APP_TRUSTED_PROXY_REGEX must be anchored with ^ and $\n' >&2
+      failures=$((failures + 1))
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+      printf '[invalid] APP_TRUSTED_PROXY_REGEX validation requires python3\n' >&2
+      failures=$((failures + 1))
+    elif ! python3 -c '
+import ipaddress
+import sys
+
+pattern = sys.argv[1]
+if not (pattern.startswith("^") and pattern.endswith("$")):
+    raise SystemExit(1)
+body = pattern[1:-1]
+if body.startswith("(?:"):
+    if not body.endswith(")"):
+        raise SystemExit(1)
+    body = body[3:-1]
+elif "(" in body or ")" in body:
+    raise SystemExit(1)
+
+entries = body.split("|")
+if not entries or any(not entry for entry in entries):
+    raise SystemExit(1)
+for entry in entries:
+    address = []
+    index = 0
+    while index < len(entry):
+        if entry.startswith("[.]", index):
+            address.append(".")
+            index += 3
+        elif entry.startswith(r"\.", index):
+            address.append(".")
+            index += 2
+        elif entry[index] in "0123456789abcdefABCDEF:":
+            address.append(entry[index])
+            index += 1
+        else:
+            raise SystemExit(1)
+    try:
+        ipaddress.ip_address("".join(address))
+    except ValueError:
+        raise SystemExit(1)
+' "$value" >/dev/null 2>&1; then
+      printf '[invalid] APP_TRUSTED_PROXY_REGEX must be an anchored list of exact IPv4/IPv6 addresses separated by |; use [.] or \. for IPv4 dots\n' >&2
+      failures=$((failures + 1))
+    fi
+  fi
+}
+
 health_url=""
 check_cli=false
 while [[ $# -gt 0 ]]; do
@@ -237,6 +294,8 @@ if ! csv_contains "${APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES-}" "+8
 fi
 [[ "${APP_AUTH_VERIFICATION_ALIYUN_ENABLED-}" == "false" || "${APP_AUTH_VERIFICATION_ALIYUN_ENABLED-}" == "true" ]] || { printf '[invalid] APP_AUTH_VERIFICATION_ALIYUN_ENABLED must be true or false\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_STATE_STORE_PROVIDER-}" == "redis" ]] || { printf '[invalid] APP_STATE_STORE_PROVIDER must be redis\n' >&2; failures=$((failures + 1)); }
+trusted_proxy_regex_check "${APP_TRUSTED_PROXY_REGEX-}"
+[[ "${APP_AD_CLICK_DEDUPE_SECONDS-}" == "1800" ]] || { printf '[invalid] APP_AD_CLICK_DEDUPE_SECONDS must be 1800 (30 minutes)\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_FILE_STORAGE_PROVIDER-}" == "s3" ]] || { printf '[invalid] APP_FILE_STORAGE_PROVIDER must be s3\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_SEARCH_PROVIDER-}" == "elasticsearch" ]] || { printf '[invalid] APP_SEARCH_PROVIDER must be elasticsearch\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_SEARCH_FALLBACK_ON_ERROR-}" == "false" ]] || { printf '[invalid] APP_SEARCH_FALLBACK_ON_ERROR must be false\n' >&2; failures=$((failures + 1)); }

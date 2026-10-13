@@ -8,6 +8,7 @@ public record PostCommentResponse(
         Long userId,
         String userName,
         String content,
+        Integer status,
         Long parentId,
         PostCommentReplyResponse replyTo,
         List<PostCommentResponse> replies,
