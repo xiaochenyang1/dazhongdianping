@@ -197,7 +197,16 @@
         <include refid="auditWhere"/>
         <choose>
             <when test="status != null and status == 0">
-                ORDER BY t.created_at ASC, t.id ASC
+                ORDER BY CASE
+                <foreach collection="slaThresholds" item="threshold">
+                    WHEN t.biz_type = #{threshold.bizType}
+                         AND t.created_at &lt;= TIMESTAMPADD(MINUTE, 0 - CAST(#{threshold.slaMinutes} AS SIGNED), CURRENT_TIMESTAMP)
+                         AND (t.claimed_by_admin_id IS NULL OR t.claim_expires_at IS NULL
+                              OR t.claim_expires_at &lt;= CURRENT_TIMESTAMP) THEN 0
+                </foreach>
+                ELSE 1
+                END ASC,
+                t.created_at ASC, t.id ASC
             </when>
             <otherwise>
                 ORDER BY t.id DESC

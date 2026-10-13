@@ -16,6 +16,7 @@ public class AdminAuditTaskQuery {
     private String assignmentFilter;
     private Long currentAdminId;
     private List<Integer> allowedBizTypes;
+    private List<AuditQueueSlaThreshold> slaThresholds = List.of();
 
     @Min(value = 1, message = "page 最小为 1")
     private Integer page = 1;

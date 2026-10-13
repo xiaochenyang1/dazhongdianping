@@ -118,13 +118,10 @@ function assignmentText(task: AdminAuditTask) {
   return `${task.claimedByAdminName || '其他审核员'} · ${task.claimExpiresAt}`
 }
 
-function taskIsOverdue(task: AdminAuditTask, index: number) {
+function taskIsOverdue(task: AdminAuditTask) {
   const metric = metrics.value.find((item) => item.bizType === task.bizType)
-  if (metric && assignmentFilter.value !== 'all') {
-    return Date.now() - parseServerDateTime(task.createdAt) >= metric.slaMinutes * 60_000
-  }
-  const queuePosition = (pageNumber.value - 1) * auditPageSize + index
-  return metric !== undefined && queuePosition < metric.overdueCount
+  return metric !== undefined
+    && Date.now() - parseServerDateTime(task.createdAt) >= metric.slaMinutes * 60_000
 }
 
 function openLargestOverdueQueue() {
@@ -310,13 +307,13 @@ onUnmounted(() => {
               <tbody>
                 <tr v-if="loading"><td colspan="7" class="table-empty">加载中</td></tr>
                 <tr v-else-if="!tasks?.list.length"><td colspan="7" class="table-empty">当前类型没有待复审内容</td></tr>
-                <tr v-for="(task, index) in tasks?.list" :key="task.id">
+                <tr v-for="task in tasks?.list" :key="task.id">
                   <td><strong>#{{ task.id }}</strong><p>内容 #{{ task.bizId }}</p></td>
                   <td>{{ task.submittedBy || '未知用户' }}</td>
                   <td class="automod-summary">{{ task.summary }}</td>
                   <td>{{ task.createdAt }}</td>
                   <td>{{ assignmentText(task) }}</td>
-                  <td><span v-if="taskIsOverdue(task, index)" class="sla-overdue-label">已超时</span><span v-else>处理中</span></td>
+                  <td><span v-if="taskIsOverdue(task)" class="sla-overdue-label">已超时</span><span v-else>处理中</span></td>
                   <td><button type="button" class="table-action" @click="selectedTaskId = task.id">查看</button></td>
                 </tr>
               </tbody>

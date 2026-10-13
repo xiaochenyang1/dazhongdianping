@@ -189,6 +189,11 @@ public class AdminAuditService {
         query.normalize();
         query.setRegion(currentRegion().name());
         query.setAllowedBizTypes(allowedBizTypes(false));
+        query.setSlaThresholds(query.getStatus() != null && query.getStatus() == 0
+                ? slaThresholds(MODERATED_BIZ_TYPES.stream()
+                        .filter(query.getAllowedBizTypes()::contains)
+                        .toList())
+                : List.of());
         if (query.getAssignmentFilter() != null) {
             if (!isModeratedBizType(query.getBizType())) {
                 throw new IllegalArgumentException("负责人筛选仅适用于内容复审队列");
