@@ -112,6 +112,7 @@ export interface AdminAuditTaskQuery {
   status?: number
   keyword?: string
   assignmentFilter?: 'all' | 'unclaimed' | 'mine' | 'others'
+  overdueOnly?: boolean
   page?: number
   pageSize?: number
 }

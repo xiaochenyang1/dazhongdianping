@@ -127,6 +127,24 @@
         <if test="status != null">
             AND t.status = #{status}
         </if>
+        <if test="overdueOnly">
+            <choose>
+                <when test="slaThresholds == null or slaThresholds.isEmpty()">
+                    AND 1 = 0
+                </when>
+                <otherwise>
+                    AND t.biz_type IN
+                    <foreach collection="slaThresholds" item="threshold" open="(" separator="," close=")">
+                        #{threshold.bizType}
+                    </foreach>
+                    AND t.created_at &lt;= TIMESTAMPADD(MINUTE, 0 - CAST((CASE t.biz_type
+                    <foreach collection="slaThresholds" item="threshold">
+                        WHEN #{threshold.bizType} THEN #{threshold.slaMinutes}
+                    </foreach>
+                    END) AS SIGNED), CURRENT_TIMESTAMP)
+                </otherwise>
+            </choose>
+        </if>
         <if test="assignmentFilter == 'unclaimed'">
             AND (t.claimed_by_admin_id IS NULL OR t.claim_expires_at IS NULL OR t.claim_expires_at &lt;= CURRENT_TIMESTAMP)
         </if>

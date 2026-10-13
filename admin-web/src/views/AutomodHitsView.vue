@@ -14,6 +14,7 @@ const mode = ref<'queue' | 'hits'>('queue')
 const decision = ref<number | ''>('')
 const bizType = ref(10)
 const assignmentFilter = ref<'all' | 'unclaimed' | 'mine' | 'others'>('all')
+const overdueOnly = ref(false)
 const pageNumber = ref(1)
 const selectedTaskId = ref<number | null>(null)
 const approveRemark = ref('')
@@ -64,6 +65,7 @@ async function loadTasks() {
         bizType: bizType.value,
         status: 0,
         assignmentFilter: assignmentFilter.value,
+        overdueOnly: overdueOnly.value,
         page: pageNumber.value,
         pageSize: auditPageSize,
       }),
@@ -126,7 +128,12 @@ function taskIsOverdue(task: AdminAuditTask) {
 
 function openLargestOverdueQueue() {
   const metric = [...overdueMetrics.value].sort((a, b) => b.overdueCount - a.overdueCount)[0]
-  if (metric) selectBizType(metric.bizType)
+  if (!metric) return
+  bizType.value = metric.bizType
+  overdueOnly.value = true
+  pageNumber.value = 1
+  selectedTaskId.value = null
+  void loadTasks()
 }
 
 async function handleClaim() {
@@ -293,12 +300,19 @@ onUnmounted(() => {
             <option value="others">他人负责的</option>
           </select>
         </label>
+        <label class="field">
+          <span>SLA 状态</span>
+          <select v-model="overdueOnly" @change="pageNumber = 1; selectedTaskId = null; loadTasks()">
+            <option :value="false">全部状态</option>
+            <option :value="true">仅显示已超时</option>
+          </select>
+        </label>
       </div>
 
       <div class="two-column-layout">
         <section class="content-card">
           <div class="section-headline">
-            <h2>{{ tasks?.total ?? 0 }} 条待复审</h2>
+            <h2>{{ tasks?.total ?? 0 }} 条{{ overdueOnly ? '超时' : '' }}待复审</h2>
             <button type="button" class="secondary-button" :disabled="loading" @click="loadTasks">刷新</button>
           </div>
           <div class="table-shell">
@@ -306,7 +320,7 @@ onUnmounted(() => {
               <thead><tr><th>任务</th><th>提交人</th><th>内容</th><th>提交时间</th><th>负责人</th><th>SLA 状态</th><th>操作</th></tr></thead>
               <tbody>
                 <tr v-if="loading"><td colspan="7" class="table-empty">加载中</td></tr>
-                <tr v-else-if="!tasks?.list.length"><td colspan="7" class="table-empty">当前类型没有待复审内容</td></tr>
+                <tr v-else-if="!tasks?.list.length"><td colspan="7" class="table-empty">{{ overdueOnly ? '当前筛选下没有超时任务' : '当前类型没有待复审内容' }}</td></tr>
                 <tr v-for="task in tasks?.list" :key="task.id">
                   <td><strong>#{{ task.id }}</strong><p>内容 #{{ task.bizId }}</p></td>
                   <td>{{ task.submittedBy || '未知用户' }}</td>

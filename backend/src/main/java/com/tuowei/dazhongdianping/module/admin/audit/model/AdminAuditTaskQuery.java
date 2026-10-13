@@ -14,6 +14,7 @@ public class AdminAuditTaskQuery {
     private Integer status;
     private String keyword;
     private String assignmentFilter;
+    private boolean overdueOnly;
     private Long currentAdminId;
     private List<Integer> allowedBizTypes;
     private List<AuditQueueSlaThreshold> slaThresholds = List.of();

@@ -189,6 +189,16 @@ public class AdminAuditService {
         query.normalize();
         query.setRegion(currentRegion().name());
         query.setAllowedBizTypes(allowedBizTypes(false));
+        if (query.isOverdueOnly()) {
+            if ((query.getStatus() != null && query.getStatus() != 0)
+                    || (query.getBizType() != null && !isModeratedBizType(query.getBizType()))) {
+                throw new IllegalArgumentException("超时筛选仅适用于待复审内容");
+            }
+            query.setStatus(0);
+            query.setAllowedBizTypes(query.getAllowedBizTypes().stream()
+                    .filter(MODERATED_BIZ_TYPES::contains)
+                    .toList());
+        }
         query.setSlaThresholds(query.getStatus() != null && query.getStatus() == 0
                 ? slaThresholds(MODERATED_BIZ_TYPES.stream()
                         .filter(query.getAllowedBizTypes()::contains)
