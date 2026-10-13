@@ -281,12 +281,12 @@ try {
     New-Item -ItemType Directory -Path $backendOutputDir, $webOutputDir, $adminOutputDir, $merchantOutputDir, $migrationOutputDir -Force | Out-Null
 
     Copy-Item -LiteralPath $backendJar.FullName -Destination (Join-Path $backendOutputDir $backendJar.Name)
-    Copy-Item -LiteralPath $baseWebDistDir -Destination $webOutputDir -Recurse
+    Move-Item -LiteralPath $baseWebDistDir -Destination (Join-Path $webOutputDir "dist")
     if ($seoSnapshotEntries.Count -gt 0) {
         $seoOutputDir = Join-Path $webOutputDir "seo-snapshots"
         New-Item -ItemType Directory -Path $seoOutputDir -Force | Out-Null
         foreach ($entry in $seoSnapshotEntries) {
-            Copy-Item -LiteralPath (Join-Path $stagingDir ("__seo-" + $entry.region)) -Destination (Join-Path $seoOutputDir $entry.region) -Recurse
+            Move-Item -LiteralPath (Join-Path $stagingDir ("__seo-" + $entry.region)) -Destination (Join-Path $seoOutputDir $entry.region)
         }
     }
     Copy-Item -LiteralPath (Join-Path $adminDir "dist") -Destination $adminOutputDir -Recurse
