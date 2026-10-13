@@ -17,6 +17,8 @@ const assignmentFilter = ref<'all' | 'unclaimed' | 'mine' | 'others'>('all')
 const overdueOnly = ref(false)
 const pageNumber = ref(1)
 const selectedTaskId = ref<number | null>(null)
+const clockNow = ref(performance.now())
+const queueMeasuredAt = ref(clockNow.value)
 const approveRemark = ref('')
 const rejectReason = ref('')
 const errorMessage = ref('')
@@ -33,14 +35,21 @@ const selectedTask = computed(
 const selectedTaskClaimActive = computed(() => selectedTask.value !== null && claimIsActive(selectedTask.value))
 const selectedTaskIsClaimOwner = computed(() => selectedTask.value?.claimedByAdminId === currentAdminId.value)
 const canDecideSelectedTask = computed(() => canWrite.value && selectedTaskClaimActive.value && selectedTaskIsClaimOwner.value)
+let taskRequestId = 0
+let hitRequestId = 0
+
+function elapsedSeconds() {
+  return Math.max(0, (clockNow.value - queueMeasuredAt.value) / 1000)
+}
 
 function claimIsActive(task: AdminAuditTask) {
   return task.claimedByAdminId !== null
-    && task.claimExpiresAt !== null
-    && parseServerDateTime(task.claimExpiresAt) > Date.now()
+    && task.claimRemainingSeconds != null
+    && task.claimRemainingSeconds > elapsedSeconds()
 }
 
 async function loadHits() {
+  const requestId = ++hitRequestId
   errorMessage.value = ''
   try {
     const page = await fetchAutomodHits({
@@ -48,14 +57,15 @@ async function loadHits() {
       page: 1,
       pageSize: 20,
     })
-    hits.value = page.list
+    if (requestId === hitRequestId) hits.value = page.list
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '加载失败'
+    if (requestId === hitRequestId) errorMessage.value = error instanceof Error ? error.message : '加载失败'
   }
 }
 
 async function loadTasks() {
-  if (loading.value) return
+  const requestId = ++taskRequestId
+  const requestedAt = performance.now()
   loading.value = true
   errorMessage.value = ''
   try {
@@ -71,15 +81,19 @@ async function loadTasks() {
       }),
       getModerationQueueMetrics(),
     ])
+    if (requestId !== taskRequestId) return
+    // Measure from request start so network delay cannot extend a claim lease.
+    queueMeasuredAt.value = requestedAt
+    clockNow.value = performance.now()
     tasks.value = taskPage
     metrics.value = queueMetrics
     if (!tasks.value.list.some((task) => task.id === selectedTaskId.value)) {
       selectedTaskId.value = tasks.value.list[0]?.id ?? null
     }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '审核队列加载失败'
+    if (requestId === taskRequestId) errorMessage.value = error instanceof Error ? error.message : '审核队列加载失败'
   } finally {
-    loading.value = false
+    if (requestId === taskRequestId) loading.value = false
   }
 }
 
@@ -109,15 +123,10 @@ function formatDuration(seconds: number | null) {
   return `${safeSeconds}秒`
 }
 
-function formatOldestWait(oldestPendingAt: string | null) {
-  if (!oldestPendingAt) return '无待审'
-  const timestamp = parseServerDateTime(oldestPendingAt)
-  if (Number.isNaN(timestamp)) return oldestPendingAt
-  return formatDuration(Math.floor((Date.now() - timestamp) / 1000))
-}
-
-function parseServerDateTime(value: string) {
-  return Date.parse(`${value.replace(' ', 'T')}+08:00`)
+function formatOldestWait(metric: AdminAuditQueueMetric) {
+  if (metric.pendingCount === 0) return '无待审'
+  if (metric.oldestPendingAgeSeconds == null) return '暂无记录'
+  return formatDuration(metric.oldestPendingAgeSeconds + elapsedSeconds())
 }
 
 function assignmentText(task: AdminAuditTask) {
@@ -127,10 +136,22 @@ function assignmentText(task: AdminAuditTask) {
   return `${task.claimedByAdminName || '其他审核员'} · ${task.claimExpiresAt}`
 }
 
-function taskIsOverdue(task: AdminAuditTask) {
+function taskSlaRemainingSeconds(task: AdminAuditTask) {
   const metric = metrics.value.find((item) => item.bizType === task.bizType)
-  return metric !== undefined
-    && Date.now() - parseServerDateTime(task.createdAt) >= metric.slaMinutes * 60_000
+  if (!metric || task.ageSeconds == null) return null
+  return Math.ceil(metric.slaMinutes * 60 - task.ageSeconds - elapsedSeconds())
+}
+
+function taskIsOverdue(task: AdminAuditTask) {
+  const remainingSeconds = taskSlaRemainingSeconds(task)
+  return remainingSeconds !== null && remainingSeconds <= 0
+}
+
+function taskSlaText(task: AdminAuditTask) {
+  const remainingSeconds = taskSlaRemainingSeconds(task)
+  if (remainingSeconds === null) return 'SLA 暂不可用'
+  if (remainingSeconds <= 0) return `已超时 ${formatDuration(-remainingSeconds)}`
+  return `剩余 ${formatDuration(remainingSeconds)}`
 }
 
 function openOverdueQueue() {
@@ -182,7 +203,7 @@ async function handleRelease() {
 
 async function handlePass() {
   const task = selectedTask.value
-  if (!canWrite.value || !task || acting.value) return
+  if (!canDecideSelectedTask.value || !task || acting.value) return
   acting.value = true
   errorMessage.value = ''
   successMessage.value = ''
@@ -202,7 +223,7 @@ async function handlePass() {
 async function handleReject() {
   const task = selectedTask.value
   const reason = rejectReason.value.trim()
-  if (!canWrite.value || !task || acting.value) return
+  if (!canDecideSelectedTask.value || !task || acting.value) return
   if (!reason) {
     errorMessage.value = '请填写驳回原因'
     return
@@ -224,20 +245,33 @@ async function handleReject() {
 }
 
 watch(() => state.region, () => {
+  taskRequestId++
+  hitRequestId++
+  tasks.value = null
+  hits.value = []
+  metrics.value = []
   pageNumber.value = 1
   selectedTaskId.value = null
-  void loadTasks()
-  void loadHits()
+  approveRemark.value = ''
+  rejectReason.value = ''
+  successMessage.value = ''
+  if (mode.value === 'queue') void loadTasks()
+  else void loadHits()
 }, { immediate: true })
 
 let refreshTimer: number | undefined
+let clockTimer: number | undefined
 onMounted(() => {
+  clockTimer = window.setInterval(() => { clockNow.value = performance.now() }, 1_000)
   refreshTimer = window.setInterval(() => {
     if (mode.value === 'queue') void loadTasks()
   }, 60_000)
 })
 onUnmounted(() => {
+  taskRequestId++
+  hitRequestId++
   if (refreshTimer !== undefined) window.clearInterval(refreshTimer)
+  if (clockTimer !== undefined) window.clearInterval(clockTimer)
 })
 </script>
 
@@ -276,7 +310,7 @@ onUnmounted(() => {
                 <td>{{ metric.pendingCount }}</td>
                 <td>{{ formatDuration(metric.slaMinutes * 60) }}</td>
                 <td :class="{ 'sla-overdue-count': metric.overdueCount > 0 }">{{ metric.overdueCount }}</td>
-                <td>{{ formatOldestWait(metric.oldestPendingAt) }}</td>
+                <td>{{ formatOldestWait(metric) }}</td>
                 <td>{{ metric.processedCount }}</td>
                 <td>{{ formatDuration(metric.averageProcessingSeconds) }}</td>
               </tr>
@@ -335,7 +369,7 @@ onUnmounted(() => {
                   <td class="automod-summary">{{ task.summary }}</td>
                   <td>{{ task.createdAt }}</td>
                   <td>{{ assignmentText(task) }}</td>
-                  <td><span v-if="taskIsOverdue(task)" class="sla-overdue-label">已超时</span><span v-else>处理中</span></td>
+                  <td><span :class="{ 'sla-overdue-label': taskIsOverdue(task) }">{{ taskSlaText(task) }}</span></td>
                   <td><button type="button" class="table-action" @click="selectedTaskId = task.id">查看</button></td>
                 </tr>
               </tbody>

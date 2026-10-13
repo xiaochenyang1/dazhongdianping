@@ -130,7 +130,7 @@ jobs:
 
       - name: Verify all
         shell: pwsh
-        run: ./scripts/ci/verify-all.ps1 -IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeElasticsearchSmoke -IncludeFlutter
+        run: ./scripts/ci/verify-all.ps1 -IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeBrowserE2E -IncludeElasticsearchSmoke -IncludeFlutter
 
   database-migration-integration:
     runs-on: ubuntu-latest

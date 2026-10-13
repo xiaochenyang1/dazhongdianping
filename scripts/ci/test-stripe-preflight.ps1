@@ -165,6 +165,7 @@ try {
     $env:APP_TRUSTED_PROXY_REGEX = $contractEnvironment.APP_TRUSTED_PROXY_REGEX
 
     $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = ''
+    $env:PUBLIC_SITE_URL = ''
     $aggregateOutput = @(& $bash $scriptPath 2>&1)
     $aggregateExitCode = $LASTEXITCODE
     if ($aggregateExitCode -eq 0) { throw 'missing CORS origins must fail preflight' }
@@ -172,6 +173,7 @@ try {
         throw 'preflight must continue reporting missing configuration after a missing CORS origin'
     }
     $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = $contractEnvironment.APP_CORS_ALLOWED_ORIGIN_PATTERNS
+    $env:PUBLIC_SITE_URL = $contractEnvironment.PUBLIC_SITE_URL
 
     $env:APP_RUNTIME_MODE = 'prod'
     if ((Invoke-PreflightContract) -eq 0) { throw 'prod runtime identity must fail the EU pre-release gate' }

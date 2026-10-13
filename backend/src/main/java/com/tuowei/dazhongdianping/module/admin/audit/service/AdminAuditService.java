@@ -205,7 +205,8 @@ public class AdminAuditService {
                         .toList())
                 : List.of());
         if (query.getAssignmentFilter() != null) {
-            if (!isModeratedBizType(query.getBizType())) {
+            if (!isModeratedBizType(query.getBizType())
+                    && !(query.getBizType() == null && query.isOverdueOnly())) {
                 throw new IllegalArgumentException("负责人筛选仅适用于内容复审队列");
             }
             query.setCurrentAdminId(currentAdmin().adminId());
@@ -270,6 +271,7 @@ public class AdminAuditService {
                             bizTypeText(bizType),
                             row == null || row.getPendingCount() == null ? 0L : row.getPendingCount(),
                             row == null ? null : formatNullableDateTime(row.getOldestPendingAt()),
+                            row == null ? null : row.getOldestPendingAgeSeconds(),
                             overdueCountsByType.getOrDefault(bizType, 0L),
                             slaMinutes(bizType),
                             row == null || row.getProcessedCount() == null ? 0L : row.getProcessedCount(),
@@ -1159,7 +1161,9 @@ public class AdminAuditService {
                 row.getClaimedByAdminName(),
                 formatNullableDateTime(row.getClaimedAt()),
                 formatNullableDateTime(row.getClaimExpiresAt()),
+                row.getClaimRemainingSeconds(),
                 formatDateTime(row.getCreatedAt()),
+                row.getAgeSeconds(),
                 formatDateTime(row.getUpdatedAt())
         );
     }

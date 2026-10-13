@@ -1012,12 +1012,11 @@ test.describe.serial('real backend review flow', () => {
       await expect(restoredReviewerMenu.getByRole('link', { name: 'Review Audit', exact: true })).toBeVisible()
       const initialAuditTasksResponse = reviewerPage.waitForResponse((response) =>
         response.request().method() === 'GET'
-        && response.status() === 200
-        && response.url().includes('/api/admin/v1/audit/tasks'),
+        && new URL(response.url()).pathname === '/api/admin/v1/audit/tasks',
       )
       await restoredReviewerMenu.getByRole('link', { name: 'Review Audit', exact: true }).click()
       await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/audit/reviews$`))
-      await initialAuditTasksResponse
+      await expectApiSuccess(await initialAuditTasksResponse)
       await expect(reviewerPage.getByText('Loading review audit tasks...')).not.toBeVisible()
       await expect(reviewerPage.getByRole('button', { name: 'Apply filters', exact: true })).toBeVisible()
 

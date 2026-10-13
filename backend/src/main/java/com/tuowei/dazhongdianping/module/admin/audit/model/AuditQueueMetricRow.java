@@ -9,6 +9,7 @@ public class AuditQueueMetricRow {
     private Integer bizType;
     private Long pendingCount;
     private LocalDateTime oldestPendingAt;
+    private Long oldestPendingAgeSeconds;
     private Long processedCount;
     private Long averageProcessingSeconds;
 }

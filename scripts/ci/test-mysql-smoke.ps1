@@ -99,12 +99,13 @@ Assert-True $implicitDestructiveImportRejected "AllowDestructiveImport must requ
 
 $scriptContent = Get-Content -LiteralPath $scriptPath -Raw
 Assert-True ($scriptContent -match 'Invoke-MySqlFile -Arguments') "mysql-smoke must import SQL files through mysql standard input"
-Assert-True ($scriptContent -match '\$SqlFile \$schemaSql') "mysql-smoke must import the schema SQL directly"
-Assert-True ($scriptContent -match '\$SqlFile \$seedSql') "mysql-smoke must import the seed SQL directly"
+Assert-True ($scriptContent -match '-SqlFile \$schemaSql') "mysql-smoke must import the schema SQL directly"
+Assert-True ($scriptContent -match '-SqlFile \$seedSql') "mysql-smoke must import the seed SQL directly"
 Assert-True ($scriptContent -match 'mysql-migrate\.sh') "mysql-smoke must run the checked migration runner for a fresh schema"
 Assert-True ($scriptContent -match '--baseline-version 14') "mysql-smoke must establish baseline 14 before applying pending migrations"
 Assert-True ($scriptContent -match 'mysql-migrate\.cnf') "migration credentials must be written to a private temporary defaults file"
 Assert-True ($scriptContent -match 'audit/tasks/\$smokeTaskId/reject') "mysql-smoke must process its synthetic audit task through the API"
+Assert-True ($scriptContent -match '(?s)audit/tasks/\$smokeTaskId/claim.*audit/tasks/\$smokeTaskId/reject') "mysql-smoke must claim its synthetic task before submitting an audit decision"
 Assert-True ($scriptContent -match 'audit/sla-alerts\?status=1') "mysql-smoke must verify automatic SLA alert recovery"
 Assert-True ($scriptContent -match 'app\.admin\.audit\.sla\.reminder-interval-ms=1000') "mysql-smoke must shorten the reminder interval for its workflow check"
 Assert-True ($scriptContent -notmatch 'source sql/mysql/00_all_in_one\.sql') "mysql-smoke must not source the hard-coded all-in-one SQL"

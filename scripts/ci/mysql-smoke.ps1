@@ -361,6 +361,7 @@ if ($DryRun) {
     Write-Output "- Smoke POST /api/admin/v1/auth/login and GET /api/b/v1/health."
     if (-not $SkipImport) {
         Write-Output "- Smoke GET /api/admin/v1/audit/tasks against the migrated MySQL schema."
+        Write-Output "- Verify pending review queries for a reviewer without moderation SLA permissions."
         Write-Output "- Smoke /api/admin/v1/audit/sla-alerts through overdue, rejection, and automatic recovery."
     }
     Write-Output "- When APP_STATE_STORE_PROVIDER=redis, smoke send-code rate limiting and Idempotency-Key replay through Redis."
@@ -544,6 +545,16 @@ WHERE @smoke_review_id IS NOT NULL;
 INSERT INTO audit_task (id, biz_type, biz_id, region, machine_result, status, auditor_id, remark, created_at, updated_at)
 SELECT @smoke_task_id, 10, @smoke_comment_id, 'CN', 0, 0, 0, '', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 60 MINUTE), CURRENT_TIMESTAMP
 WHERE @smoke_review_id IS NOT NULL;
+INSERT INTO admin_user (account,password_hash,name,status)
+SELECT 'mysql.smoke.reviewer',password_hash,'MySQL review reader',1 FROM admin_user WHERE account='admin';
+SET @smoke_reviewer_id = LAST_INSERT_ID();
+INSERT INTO admin_role (code,name,description,status,built_in)
+VALUES ('mysql_smoke_review_reader','MySQL review reader','Smoke fixture',1,0);
+SET @smoke_role_id = LAST_INSERT_ID();
+INSERT INTO admin_user_role (admin_id,role_id) VALUES (@smoke_reviewer_id,@smoke_role_id);
+INSERT INTO admin_role_permission (role_id,permission_id)
+SELECT @smoke_role_id,id FROM admin_permission WHERE code='audit:review:read';
+INSERT INTO admin_region_scope (admin_id,region) VALUES (@smoke_reviewer_id,'CN');
 SELECT @smoke_task_id;
 "@
         $fixtureOutput = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
@@ -609,9 +620,29 @@ SELECT @smoke_task_id;
             "X-Region" = "CN"
         }
         Write-Step "smoking MySQL audit queue and SLA alert APIs"
+        $reviewerLogin = Invoke-Json -Method "POST" -Path "/api/admin/v1/auth/login" -Body @{
+            account = "mysql.smoke.reviewer"
+            password = "admin123456"
+        }
+        $pendingReviews = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/tasks?bizType=3&status=0" -Headers @{
+            "Authorization" = "Bearer $($reviewerLogin.data.accessToken)"
+            "X-Region" = "CN"
+        }
+        if ($pendingReviews.code -ne 0) {
+            throw "Restricted reviewer pending query failed without moderation SLA permissions"
+        }
         $auditTasks = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/tasks?bizType=10&status=0&page=1&pageSize=50" -Headers $auditHeaders
-        if (-not ($auditTasks.data.list | Where-Object { [string]$_.id -eq $smokeTaskId })) {
+        $queuedTask = $auditTasks.data.list | Where-Object { [string]$_.id -eq $smokeTaskId } | Select-Object -First 1
+        if ($null -eq $queuedTask) {
             throw "GET /api/admin/v1/audit/tasks did not return the seeded MySQL smoke task"
+        }
+        if ($null -eq $queuedTask.ageSeconds -or $queuedTask.ageSeconds -lt 3600) {
+            throw "MySQL audit queue did not report database-relative age for the overdue task"
+        }
+        $queueMetrics = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/tasks/metrics" -Headers $auditHeaders
+        $commentMetric = $queueMetrics.data | Where-Object { $_.bizType -eq 10 } | Select-Object -First 1
+        if ($null -eq $commentMetric.oldestPendingAgeSeconds -or $commentMetric.oldestPendingAgeSeconds -lt $queuedTask.ageSeconds) {
+            throw "MySQL audit metrics did not report the oldest pending age"
         }
 
         $activeAlert = $null
@@ -627,6 +658,13 @@ SELECT @smoke_task_id;
             throw "SLA scheduler did not create an active alert for the overdue MySQL smoke task"
         }
 
+        $claimedTask = Invoke-Json -Method "POST" -Path "/api/admin/v1/audit/tasks/$smokeTaskId/claim" -Headers $auditHeaders
+        if (-not $claimedTask.data.claimedByAdminId) {
+            throw "MySQL smoke task was not claimed before the audit decision"
+        }
+        if ($null -eq $claimedTask.data.claimRemainingSeconds -or $claimedTask.data.claimRemainingSeconds -lt 890 -or $claimedTask.data.claimRemainingSeconds -gt 900) {
+            throw "MySQL audit claim did not report the remaining lease seconds"
+        }
         $auditDecision = Invoke-Json -Method "POST" -Path "/api/admin/v1/audit/tasks/$smokeTaskId/reject" -Headers $auditHeaders -Body @{
             reason = "MySQL smoke SLA verification"
         }

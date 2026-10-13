@@ -17,7 +17,9 @@ public record AdminAuditTaskResponse(
         String claimedByAdminName,
         String claimedAt,
         String claimExpiresAt,
+        Long claimRemainingSeconds,
         String createdAt,
+        Long ageSeconds,
         String updatedAt
 ) {
 }

@@ -674,7 +674,9 @@ export interface AdminAuditTask {
   claimedByAdminName: string | null
   claimedAt: string | null
   claimExpiresAt: string | null
+  claimRemainingSeconds: number | null
   createdAt: string
+  ageSeconds: number | null
   updatedAt: string
 }
 
@@ -683,6 +685,7 @@ export interface AdminAuditQueueMetric {
   bizTypeText: string
   pendingCount: number
   oldestPendingAt: string | null
+  oldestPendingAgeSeconds: number | null
   overdueCount: number
   slaMinutes: number
   processedCount: number

@@ -5,6 +5,7 @@ public record AdminAuditQueueMetricResponse(
         String bizTypeText,
         Long pendingCount,
         String oldestPendingAt,
+        Long oldestPendingAgeSeconds,
         Long overdueCount,
         Integer slaMinutes,
         Long processedCount,

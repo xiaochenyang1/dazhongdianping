@@ -203,27 +203,32 @@
                claim_admin.name AS claimed_by_admin_name,
                t.claimed_at,
                t.claim_expires_at,
+               TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, t.claim_expires_at) AS claim_remaining_seconds,
                t.remark,
                CASE WHEN t.biz_type = 9 THEN NULL WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id WHEN t.biz_type = 10 THEN cr.shop_id WHEN t.biz_type = 11 THEN cp.shop_id WHEN t.biz_type = 12 THEN sq.shop_id WHEN t.biz_type = 13 THEN aq.shop_id ELSE r.shop_id END AS shop_id,
                CASE WHEN t.biz_type = 9 THEN '' WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name WHEN t.biz_type = 14 THEN '' ELSE s.name END AS shop_name,
                CASE WHEN t.biz_type = 9 THEN mvm.company_name WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name WHEN t.biz_type = 10 THEN rc.user_name WHEN t.biz_type = 11 THEN pc.user_name WHEN t.biz_type = 12 THEN COALESCE(NULLIF(squ.nickname, ''), CAST(sq.user_id AS CHAR)) WHEN t.biz_type = 13 THEN COALESCE(NULLIF(sua.nickname, ''), CAST(sa.user_id AS CHAR)) WHEN t.biz_type = 14 THEN COALESCE(NULLIF(mau.nickname, ''), mau.email, mau.phone) ELSE r.user_name END AS user_name,
                CASE WHEN t.biz_type = 9 THEN mv.reason WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title WHEN t.biz_type = 10 THEN rc.content WHEN t.biz_type = 11 THEN pc.content WHEN t.biz_type = 12 THEN sq.content WHEN t.biz_type = 13 THEN sa.content WHEN t.biz_type = 14 THEN msg.content ELSE r.content END AS review_content,
                t.created_at,
+               TIMESTAMPDIFF(SECOND, t.created_at, CURRENT_TIMESTAMP) AS age_seconds,
                t.updated_at
         FROM audit_task t
         <include refid="auditTaskJoins"/>
         <include refid="auditWhere"/>
         <choose>
             <when test="status != null and status == 0">
-                ORDER BY CASE
-                <foreach collection="slaThresholds" item="threshold">
-                    WHEN t.biz_type = #{threshold.bizType}
-                         AND t.created_at &lt;= TIMESTAMPADD(MINUTE, 0 - CAST(#{threshold.slaMinutes} AS SIGNED), CURRENT_TIMESTAMP)
-                         AND (t.claimed_by_admin_id IS NULL OR t.claim_expires_at IS NULL
-                              OR t.claim_expires_at &lt;= CURRENT_TIMESTAMP) THEN 0
-                </foreach>
-                ELSE 1
-                END ASC,
+                ORDER BY
+                <if test="slaThresholds != null and !slaThresholds.isEmpty()">
+                    CASE
+                    <foreach collection="slaThresholds" item="threshold">
+                        WHEN t.biz_type = #{threshold.bizType}
+                             AND t.created_at &lt;= TIMESTAMPADD(MINUTE, 0 - CAST(#{threshold.slaMinutes} AS SIGNED), CURRENT_TIMESTAMP)
+                             AND (t.claimed_by_admin_id IS NULL OR t.claim_expires_at IS NULL
+                                  OR t.claim_expires_at &lt;= CURRENT_TIMESTAMP) THEN 0
+                    </foreach>
+                    ELSE 1
+                    END ASC,
+                </if>
                 t.created_at ASC, t.id ASC
             </when>
             <otherwise>
@@ -237,6 +242,8 @@
         SELECT t.biz_type,
                SUM(CASE WHEN t.status = 0 THEN 1 ELSE 0 END) AS pending_count,
                MIN(CASE WHEN t.status = 0 THEN t.created_at END) AS oldest_pending_at,
+               TIMESTAMPDIFF(SECOND, MIN(CASE WHEN t.status = 0 THEN t.created_at END), CURRENT_TIMESTAMP)
+                   AS oldest_pending_age_seconds,
                SUM(CASE WHEN t.status IN (1, 2) AND t.auditor_id &gt; 0 THEN 1 ELSE 0 END) AS processed_count,
                ROUND(AVG(CASE WHEN t.status IN (1, 2) AND t.auditor_id &gt; 0
                               THEN TIMESTAMPDIFF(SECOND, t.created_at, t.updated_at) END))
@@ -347,12 +354,14 @@
                claim_admin.name AS claimed_by_admin_name,
                t.claimed_at,
                t.claim_expires_at,
+               TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, t.claim_expires_at) AS claim_remaining_seconds,
                t.remark,
                CASE WHEN t.biz_type = 9 THEN NULL WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id WHEN t.biz_type = 10 THEN cr.shop_id WHEN t.biz_type = 11 THEN cp.shop_id WHEN t.biz_type = 12 THEN sq.shop_id WHEN t.biz_type = 13 THEN aq.shop_id ELSE r.shop_id END AS shop_id,
                CASE WHEN t.biz_type = 9 THEN '' WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name WHEN t.biz_type = 14 THEN '' ELSE s.name END AS shop_name,
                CASE WHEN t.biz_type = 9 THEN mvm.company_name WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name WHEN t.biz_type = 10 THEN rc.user_name WHEN t.biz_type = 11 THEN pc.user_name WHEN t.biz_type = 12 THEN COALESCE(NULLIF(squ.nickname, ''), CAST(sq.user_id AS CHAR)) WHEN t.biz_type = 13 THEN COALESCE(NULLIF(sua.nickname, ''), CAST(sa.user_id AS CHAR)) WHEN t.biz_type = 14 THEN COALESCE(NULLIF(mau.nickname, ''), mau.email, mau.phone) ELSE r.user_name END AS user_name,
                CASE WHEN t.biz_type = 9 THEN mv.reason WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title WHEN t.biz_type = 10 THEN rc.content WHEN t.biz_type = 11 THEN pc.content WHEN t.biz_type = 12 THEN sq.content WHEN t.biz_type = 13 THEN sa.content WHEN t.biz_type = 14 THEN msg.content ELSE r.content END AS review_content,
                t.created_at,
+               TIMESTAMPDIFF(SECOND, t.created_at, CURRENT_TIMESTAMP) AS age_seconds,
                t.updated_at
         FROM audit_task t
         LEFT JOIN review r ON r.id = t.biz_id AND t.biz_type = 3
