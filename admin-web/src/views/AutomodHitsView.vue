@@ -12,7 +12,7 @@ const tasks = ref<PageResult<AdminAuditTask> | null>(null)
 const metrics = ref<AdminAuditQueueMetric[]>([])
 const mode = ref<'queue' | 'hits'>('queue')
 const decision = ref<number | ''>('')
-const bizType = ref(10)
+const bizType = ref<number | null>(10)
 const assignmentFilter = ref<'all' | 'unclaimed' | 'mine' | 'others'>('all')
 const overdueOnly = ref(false)
 const pageNumber = ref(1)
@@ -62,7 +62,7 @@ async function loadTasks() {
     const [taskPage, queueMetrics] = await Promise.all([
       listAuditTasks({
         region: state.region,
-        bizType: bizType.value,
+        bizType: bizType.value ?? undefined,
         status: 0,
         assignmentFilter: assignmentFilter.value,
         overdueOnly: overdueOnly.value,
@@ -85,6 +85,13 @@ async function loadTasks() {
 
 function selectBizType(value: number) {
   bizType.value = value
+  pageNumber.value = 1
+  selectedTaskId.value = null
+  void loadTasks()
+}
+
+function handleOverdueFilterChange() {
+  if (!overdueOnly.value && bizType.value === null) bizType.value = 10
   pageNumber.value = 1
   selectedTaskId.value = null
   void loadTasks()
@@ -126,10 +133,9 @@ function taskIsOverdue(task: AdminAuditTask) {
     && Date.now() - parseServerDateTime(task.createdAt) >= metric.slaMinutes * 60_000
 }
 
-function openLargestOverdueQueue() {
-  const metric = [...overdueMetrics.value].sort((a, b) => b.overdueCount - a.overdueCount)[0]
-  if (!metric) return
-  bizType.value = metric.bizType
+function openOverdueQueue() {
+  if (overdueCount.value === 0) return
+  bizType.value = null
   overdueOnly.value = true
   pageNumber.value = 1
   selectedTaskId.value = null
@@ -254,7 +260,7 @@ onUnmounted(() => {
     <template v-if="mode === 'queue'">
       <div v-if="overdueCount > 0" class="sla-alert" role="status" aria-live="polite">
         <div><strong>{{ overdueCount }} 条待复审内容已超过 SLA</strong><p>请优先处理已超时队列。</p></div>
-        <button type="button" class="secondary-button" @click="openLargestOverdueQueue">查看超时队列</button>
+        <button type="button" class="secondary-button" @click="openOverdueQueue">查看超时队列</button>
       </div>
       <section class="content-card">
         <div class="section-headline">
@@ -284,6 +290,7 @@ onUnmounted(() => {
         <label class="field">
           <span>内容类型</span>
           <select v-model.number="bizType" @change="pageNumber = 1; selectedTaskId = null; loadTasks()">
+            <option v-if="overdueOnly" :value="null">全部类型</option>
             <option :value="10">点评评论</option>
             <option :value="11">帖子评论</option>
             <option :value="12">门店提问</option>
@@ -302,7 +309,7 @@ onUnmounted(() => {
         </label>
         <label class="field">
           <span>SLA 状态</span>
-          <select v-model="overdueOnly" @change="pageNumber = 1; selectedTaskId = null; loadTasks()">
+          <select v-model="overdueOnly" @change="handleOverdueFilterChange">
             <option :value="false">全部状态</option>
             <option :value="true">仅显示已超时</option>
           </select>
@@ -317,12 +324,13 @@ onUnmounted(() => {
           </div>
           <div class="table-shell">
             <table class="data-table">
-              <thead><tr><th>任务</th><th>提交人</th><th>内容</th><th>提交时间</th><th>负责人</th><th>SLA 状态</th><th>操作</th></tr></thead>
+              <thead><tr><th>任务</th><th>内容类型</th><th>提交人</th><th>内容</th><th>提交时间</th><th>负责人</th><th>SLA 状态</th><th>操作</th></tr></thead>
               <tbody>
-                <tr v-if="loading"><td colspan="7" class="table-empty">加载中</td></tr>
-                <tr v-else-if="!tasks?.list.length"><td colspan="7" class="table-empty">{{ overdueOnly ? '当前筛选下没有超时任务' : '当前类型没有待复审内容' }}</td></tr>
+                <tr v-if="loading"><td colspan="8" class="table-empty">加载中</td></tr>
+                <tr v-else-if="!tasks?.list.length"><td colspan="8" class="table-empty">{{ overdueOnly ? '当前筛选下没有超时任务' : '当前类型没有待复审内容' }}</td></tr>
                 <tr v-for="task in tasks?.list" :key="task.id">
                   <td><strong>#{{ task.id }}</strong><p>内容 #{{ task.bizId }}</p></td>
+                  <td>{{ task.bizTypeText }}</td>
                   <td>{{ task.submittedBy || '未知用户' }}</td>
                   <td class="automod-summary">{{ task.summary }}</td>
                   <td>{{ task.createdAt }}</td>
