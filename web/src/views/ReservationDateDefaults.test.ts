@@ -29,20 +29,26 @@ describe('reservation date defaults', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 7, 3, 10, 0, 0))
     Object.values(reservationMocks).forEach((mock) => mock.mockReset())
+    reservationMocks.fetchReservationSlots.mockResolvedValue({
+      date: '2026-08-03', today: '2026-08-02', timeZone: 'Europe/Paris', list: [],
+    })
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it('defaults a new reservation to tomorrow and prevents past dates', () => {
+  it('uses the shop calendar returned by the API instead of the device date', async () => {
     const host = document.createElement('div')
     const app = createApp(ReservationCreateView, { shopId: 10001 })
     app.mount(host)
+    await flushView()
 
     const dateInput = host.querySelector<HTMLInputElement>('input[type="date"]')
-    expect(dateInput?.value).toBe('2026-08-04')
-    expect(dateInput?.min).toBe('2026-08-03')
+    expect(dateInput?.value).toBe('2026-08-03')
+    expect(dateInput?.min).toBe('2026-08-02')
+    expect(reservationMocks.fetchReservationSlots).toHaveBeenCalledWith(10001, undefined, 2)
+    expect(host.textContent).toContain('Europe/Paris')
 
     app.unmount()
   })
@@ -53,6 +59,7 @@ describe('reservation date defaults', () => {
       reservationNo: 'RS202608100001',
       shop: { id: 10001, name: '测试门店' },
       reserveTime: '2026-08-10 18:00:00',
+      timeZone: 'Europe/Paris', today: '2026-08-03',
       peopleCount: 2,
       statusText: '已确认',
       canCancel: true,

@@ -21,6 +21,7 @@ public class ShopListRow {
     private String address;
     private String areaName;
     private String cityName;
+    private String timeZone;
     private String categoryName;
     private Boolean hasDeal;
     private Boolean openNow;

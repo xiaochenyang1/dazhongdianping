@@ -74,6 +74,11 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger - [%X{traceId}] %msg%n"
 
 app:
+  launch:
+    eu:
+      creator-rewards-enabled: ${APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED:false}
+      seckill-enabled: ${APP_LAUNCH_EU_SECKILL_ENABLED:false}
+      group-buy-enabled: ${APP_LAUNCH_EU_GROUP_BUY_ENABLED:false}
   runtime-mode: ${APP_RUNTIME_MODE:prod}
   ad:
     click-dedupe-seconds: ${APP_AD_CLICK_DEDUPE_SECONDS:1800}

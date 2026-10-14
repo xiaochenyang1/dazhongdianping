@@ -25,6 +25,8 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   List<ReservationSlot> _slots = const [];
   ReservationSlot? _selectedSlot;
   late DateTime _date;
+  DateTime? _minimumDate;
+  String _slotTimeZone = '';
   bool _loading = false;
   bool _acting = false;
   bool _confirmingCancel = false;
@@ -53,7 +55,22 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
       final reservation = await widget.repository.loadReservation(
         widget.reservationId,
       );
-      if (mounted) setState(() => _reservation = reservation);
+      if (mounted) {
+        setState(() {
+          _reservation = reservation;
+          _minimumDate = DateTime.tryParse(reservation.today ?? '');
+          _slotTimeZone = reservation.timeZone;
+          if (widget.initialRescheduleDate == null) {
+            final current = DateTime.tryParse(reservation.reserveTime);
+            final suggested = current == null
+                ? _date
+                : DateTime(current.year, current.month, current.day + 1);
+            _date = _minimumDate != null && suggested.isBefore(_minimumDate!)
+                ? _minimumDate!
+                : suggested;
+          }
+        });
+      }
     } catch (error) {
       if (mounted) {
         final strings = AppLocalizations.of(context);
@@ -104,11 +121,17 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
     setState(() => _pickingDate = true);
     DateTime? next;
     try {
+      final first = _minimumDate ?? DateTime.now();
+      final last = DateTime(first.year, first.month, first.day + 180);
       next = await showDatePicker(
         context: context,
-        initialDate: _date,
-        firstDate: DateTime.now(),
-        lastDate: DateTime.now().add(const Duration(days: 180)),
+        initialDate: _date.isBefore(first)
+            ? first
+            : _date.isAfter(last)
+            ? last
+            : _date,
+        firstDate: first,
+        lastDate: last,
       );
     } finally {
       if (mounted) setState(() => _pickingDate = false);
@@ -128,14 +151,17 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
     final reservation = _reservation!;
     setState(() => _acting = true);
     try {
-      final slots = await widget.repository.loadSlots(
+      final availability = await widget.repository.loadAvailability(
         shopId: reservation.shopId,
         date: _dateText,
         peopleCount: reservation.peopleCount,
       );
       if (mounted) {
         setState(() {
-          _slots = slots;
+          _slots = availability.slots;
+          _minimumDate =
+              DateTime.tryParse(availability.today ?? '') ?? _minimumDate;
+          _slotTimeZone = availability.timeZone;
           _selectedSlot = null;
         });
       }
@@ -255,8 +281,9 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
                 ),
                 Text(
                   strings.reservationTimePeople(
-                    time: formatDisplayDateTime(
+                    time: formatReservationDateTime(
                       reservation.reserveTime,
+                      timeZone: reservation.timeZone,
                       locale: strings.tag,
                     ),
                     people: reservation.peopleCount,
@@ -308,6 +335,8 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
             ],
           ),
         ],
+        if (_slotTimeZone.isNotEmpty && reservation.canReschedule)
+          Text(_slotTimeZone),
         if (_slots.isNotEmpty) ...[
           const SizedBox(height: 12),
           Wrap(

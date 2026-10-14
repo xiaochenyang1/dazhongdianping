@@ -1,6 +1,8 @@
 package com.tuowei.dazhongdianping.module.creator.service;
 
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
+import com.tuowei.dazhongdianping.module.launch.LaunchPolicy;
+import com.tuowei.dazhongdianping.module.launch.LaunchPolicy.Feature;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
@@ -22,12 +24,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class CreatorService {
 
     private final CreatorMapper mapper;
+    private final LaunchPolicy launch;
 
-    public CreatorService(CreatorMapper mapper) {
+    public CreatorService(CreatorMapper mapper, LaunchPolicy launch) {
         this.mapper = mapper;
+        this.launch = launch;
     }
 
     public PageResult<Map<String, Object>> tasks(Integer page, Integer pageSize) {
+        launch.require(Feature.CREATOR_REWARDS);
         UserSession user = requireUser();
         String region = region();
         int p = page(page);
@@ -40,6 +45,7 @@ public class CreatorService {
 
     @Transactional
     public Map<String, Object> claim(Long taskId) {
+        launch.require(Feature.CREATOR_REWARDS);
         UserSession user = requireUser();
         String region = region();
         CreatorTaskRow task = requireOpenTask(taskId, region);
@@ -62,6 +68,7 @@ public class CreatorService {
 
     @Transactional
     public Map<String, Object> complete(Long taskId) {
+        launch.require(Feature.CREATOR_REWARDS);
         UserSession user = requireUser();
         CreatorTaskRow task = requireTask(taskId, region());
         CreatorClaimRow claim = mapper.selectClaim(taskId, user.userId());

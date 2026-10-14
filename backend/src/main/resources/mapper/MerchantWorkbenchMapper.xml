@@ -77,6 +77,7 @@
                s.longitude,
                a.name AS area_name,
                c.name AS city_name,
+               c.time_zone,
                cat.name AS category_name,
                s.has_deal,
                s.open_now,

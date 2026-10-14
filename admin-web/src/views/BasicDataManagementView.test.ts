@@ -39,8 +39,8 @@ const categories = [
   { id: 201, parentId: 200, name: 'Chinese', sortNo: 1, status: 1 },
 ]
 const cities = [
-  { id: 101, code: 'PAR', name: 'Paris', sortNo: 1, status: 1 },
-  { id: 102, code: 'BER', name: 'Berlin', sortNo: 2, status: 1 },
+  { id: 101, code: 'PAR', name: 'Paris', timeZone: 'Europe/Paris', sortNo: 1, status: 1 },
+  { id: 102, code: 'BER', name: 'Berlin', timeZone: 'Europe/Berlin', sortNo: 2, status: 0 },
 ]
 const areas = [{ id: 1011, cityId: 101, name: 'Le Marais', sortNo: 1, status: 1 }]
 

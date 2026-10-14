@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
-import { formatWebDateTime } from '@/core/web_localizations'
+import { formatWebReservationTime } from '@/core/web_localizations'
 import { localizeWebTradeError, tradeStringsForRegion } from '@/core/web_trade_localizations'
 import { fetchReservations } from '@/services/reservation'
 import type { Reservation } from '@/types/reservation'
@@ -99,7 +99,7 @@ watch(
         <img :src="item.shop.coverImage" :alt="item.shop.name" />
         <div class="rank-item__body">
           <h2>{{ item.shop.name }}</h2>
-          <p>{{ formatWebDateTime(item.reserveTime, copy.tag) }} · {{ copy.common.people(item.peopleCount) }}</p>
+          <p>{{ formatWebReservationTime(item.reserveTime, copy.tag, item.timeZone) }} · {{ copy.common.people(item.peopleCount) }}</p>
           <p class="muted">{{ copy.reservations.reservationNo(item.reservationNo) }}</p>
           <span class="status-pill">{{ copy.statuses.reservation(item.status, item.statusText) }}</span>
         </div>

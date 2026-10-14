@@ -3,6 +3,7 @@ package com.tuowei.dazhongdianping.module.reservation.mapper;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationLogRow;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationRow;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationSlotRow;
+import com.tuowei.dazhongdianping.module.reservation.model.ReservationShopRow;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -11,6 +12,10 @@ import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface ReservationMapper {
+
+    ReservationShopRow selectBookableShop(@Param("shopId") Long shopId,
+                                         @Param("region") String region,
+                                         @Param("forUpdate") boolean forUpdate);
 
     List<ReservationSlotRow> selectSlots(
             @Param("shopId") Long shopId,
@@ -85,6 +90,7 @@ public interface ReservationMapper {
             @Param("userId") Long userId,
             @Param("slotId") Long slotId,
             @Param("reserveTime") LocalDateTime reserveTime,
+            @Param("timeZone") String timeZone,
             @Param("status") Integer status
     );
 
@@ -102,14 +108,18 @@ public interface ReservationMapper {
             @Param("region") String region,
             @Param("slotId") Long slotId,
             @Param("reserveTime") LocalDateTime reserveTime,
+            @Param("timeZone") String timeZone,
             @Param("status") Integer status
     );
 
     List<ReservationRow> selectDueReminders(
             @Param("now") LocalDateTime now,
             @Param("windowEnd") LocalDateTime windowEnd,
+            @Param("timeZone") String timeZone,
             @Param("limit") Integer limit
     );
+
+    List<String> selectReminderTimeZones();
 
     int markRemindStatus(
             @Param("id") Long id,

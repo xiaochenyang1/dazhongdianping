@@ -56,7 +56,7 @@ class AdminGeoDataCaseInsensitiveControllerTest {
                         .header("Authorization", bearer())
                         .header("X-Region", "EU")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"code\":\"PARIS-LOWER\",\"name\":\"paris\",\"sortNo\":99}"))
+                        .content("{\"code\":\"PARIS-LOWER\",\"name\":\"paris\",\"timeZone\":\"Europe/Paris\",\"sortNo\":99}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("当前区域已存在同名城市"));
     }

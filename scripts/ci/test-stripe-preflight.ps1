@@ -72,6 +72,10 @@ foreach ($name in @(
     'APP_PUSH_ENABLED',
     'APP_CORS_ALLOWED_ORIGIN_PATTERNS',
     'VITE_WS_BASE_URL',
+    'VITE_DEFAULT_REGION',
+    'APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED',
+    'APP_LAUNCH_EU_SECKILL_ENABLED',
+    'APP_LAUNCH_EU_GROUP_BUY_ENABLED',
     'PRERENDER_REGION'
 )) {
     if ($script -notmatch [regex]::Escape($name)) { throw "stripe preflight must check $name" }
@@ -141,6 +145,10 @@ $contractEnvironment = [ordered]@{
     PUBLIC_SITE_URL = 'https://eu.example.com'
     PRERENDER_API_BASE_URL = 'https://api.eu.example.com'
     PRERENDER_REGION = 'EU'
+    VITE_DEFAULT_REGION = 'EU'
+    APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED = 'false'
+    APP_LAUNCH_EU_SECKILL_ENABLED = 'false'
+    APP_LAUNCH_EU_GROUP_BUY_ENABLED = 'false'
     VITE_API_BASE_URL = 'https://api.eu.example.com'
     VITE_WS_BASE_URL = 'wss://api.eu.example.com/ws'
     VITE_STRIPE_PUBLISHABLE_KEY = 'pk_' + 'test_contract'
@@ -159,6 +167,18 @@ try {
     }
 
     if ((Invoke-PreflightContract) -ne 0) { throw 'complete EU contract configuration must pass preflight' }
+
+    $env:VITE_DEFAULT_REGION = 'CN'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'a CN default for new Web visitors must fail the Paris launch gate' }
+    $env:VITE_DEFAULT_REGION = $contractEnvironment.VITE_DEFAULT_REGION
+
+    foreach ($feature in @('APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED', 'APP_LAUNCH_EU_SECKILL_ENABLED', 'APP_LAUNCH_EU_GROUP_BUY_ENABLED')) {
+        Set-Item -LiteralPath "Env:$feature" -Value 'true'
+        if ((Invoke-PreflightContract) -eq 0) { throw "enabled deferred feature $feature must fail the Paris launch gate" }
+        Remove-Item -LiteralPath "Env:$feature"
+        if ((Invoke-PreflightContract) -eq 0) { throw "unspecified deferred feature $feature must fail the Paris launch gate" }
+        Set-Item -LiteralPath "Env:$feature" -Value 'false'
+    }
 
     $env:APP_TRUSTED_PROXY_REGEX = '^10[.]42[.]0[.].+$'
     if ((Invoke-PreflightContract) -eq 0) { throw 'broad trusted-proxy regex must fail preflight' }

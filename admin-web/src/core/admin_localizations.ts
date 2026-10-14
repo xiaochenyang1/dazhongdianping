@@ -310,11 +310,13 @@ export interface AdminStrings {
       labels: {
         code: string
         name: string
+        timeZone: string
         sort: string
       }
       tableHeaders: {
         city: string
         code: string
+        timeZone: string
         sort: string
         status: string
         actions: string
@@ -3120,11 +3122,13 @@ const zhCnStrings: AdminStrings = {
       labels: {
         code: '编码',
         name: '名称',
+        timeZone: '时区（IANA）',
         sort: '排序',
       },
       tableHeaders: {
         city: '城市',
         code: '编码',
+        timeZone: '时区',
         sort: '排序',
         status: '状态',
         actions: '操作',
@@ -5827,11 +5831,13 @@ const enStrings: AdminStrings = {
       labels: {
         code: 'Code',
         name: 'Name',
+        timeZone: 'Time zone (IANA)',
         sort: 'Sort',
       },
       tableHeaders: {
         city: 'City',
         code: 'Code',
+        timeZone: 'Time zone',
         sort: 'Sort',
         status: 'Status',
         actions: 'Actions',

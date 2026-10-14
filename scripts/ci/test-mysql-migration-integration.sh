@@ -75,7 +75,19 @@ mysql --defaults-extra-file="$server_defaults" \
 
 mysql --defaults-extra-file="$database_defaults" <<'SQL'
 CREATE TABLE app_user (id BIGINT NOT NULL PRIMARY KEY);
-CREATE TABLE shop (id BIGINT NOT NULL PRIMARY KEY);
+CREATE TABLE city (
+  id BIGINT NOT NULL PRIMARY KEY,
+  code VARCHAR(32) NOT NULL,
+  region VARCHAR(8) NOT NULL,
+  name VARCHAR(64) NOT NULL,
+  status TINYINT NOT NULL DEFAULT 1
+);
+INSERT INTO city(id,code,region,name,status) VALUES
+  (101,'PAR','EU','Paris',1), (102,'BER','EU','Berlin',1);
+CREATE TABLE shop (id BIGINT NOT NULL PRIMARY KEY, city_id BIGINT NOT NULL, region VARCHAR(8) NOT NULL);
+INSERT INTO shop(id,city_id,region) VALUES (20001,101,'EU'), (20002,102,'EU');
+CREATE TABLE reservation (id BIGINT NOT NULL PRIMARY KEY, shop_id BIGINT NOT NULL, reserve_time DATETIME NOT NULL);
+INSERT INTO reservation(id,shop_id,reserve_time) VALUES (1,20001,'2026-12-01 18:30:00');
 CREATE TABLE admin_region_scope (
   admin_id BIGINT NOT NULL,
   region VARCHAR(8) NOT NULL,
@@ -173,7 +185,7 @@ grep -q 'explicit --baseline-version' "$run_dir/no-baseline.log" ||
 
 history_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$history_count" == "22" ]] || fail "expected 22 migration history rows, found $history_count"
+[[ "$history_count" == "23" ]] || fail "expected 23 migration history rows, found $history_count"
 non_applied_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e "SELECT COUNT(*) FROM dzdp_schema_migration WHERE state <> 'APPLIED';")"
 [[ "$non_applied_count" == "0" ]] || fail "old-baseline upgrade did not finish every migration"
@@ -197,8 +209,13 @@ SELECT
   (SELECT IF(COUNT(*)=0,1,0) FROM ad_click_log WHERE user_id <> 0) +
   (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='audit_task' AND index_name='idx_audit_task_region_queue_order') +
   (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='admin_audit_sla_alert') +
-  (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='audit_task' AND column_name IN ('claimed_by_admin_id','claimed_at','claim_expires_at'));")"
-[[ "$schema_probe" == "14" ]] || fail "migrations 03-24 schema/data probe expected 14, found $schema_probe"
+  (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='audit_task' AND column_name IN ('claimed_by_admin_id','claimed_at','claim_expires_at')) +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='city' AND column_name='time_zone') +
+  (SELECT COUNT(*) FROM city WHERE region='EU' AND code='PAR' AND status=1 AND time_zone='Europe/Paris') +
+  (SELECT COUNT(*) FROM city WHERE region='EU' AND code='BER' AND status=0 AND time_zone='Europe/Berlin') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone') +
+  (SELECT COUNT(*) FROM reservation WHERE id=1 AND time_zone='Europe/Paris');")"
+[[ "$schema_probe" == "19" ]] || fail "migrations 03-25 schema/data probe expected 19, found $schema_probe"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -206,7 +223,7 @@ SELECT
   --lock-file "$run_dir/repeat.lock"
 repeat_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$repeat_count" == "22" ]] || fail "repeat apply changed migration history"
+[[ "$repeat_count" == "23" ]] || fail "repeat apply changed migration history"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -333,8 +350,8 @@ mysql --defaults-extra-file="$fresh_defaults" < "$source_dir/02_seed_data.sql"
 
 fresh_history_counts="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e \
   "SELECT SUM(state='BASELINED' AND version<=14), SUM(state='APPLIED' AND version>14) FROM dzdp_schema_migration;")"
-[[ "$fresh_history_counts" == $'12\t10' ]] ||
-  fail "fresh schema must baseline versions 03-14 and apply 15-24; found $fresh_history_counts"
+[[ "$fresh_history_counts" == $'12\t11' ]] ||
+  fail "fresh schema must baseline versions 03-14 and apply 15-25; found $fresh_history_counts"
 
 fresh_schema_probe="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e "
 SELECT
@@ -350,8 +367,11 @@ SELECT
   (SELECT COUNT(*) FROM admin_role_permission rp
      JOIN admin_role r ON r.id=rp.role_id AND r.code='super_admin'
      JOIN admin_permission p ON p.id=rp.permission_id AND p.code='audit:automod:read') +
-  (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='audit_task' AND column_name IN ('claimed_by_admin_id','claimed_at','claim_expires_at'));")"
-[[ "$fresh_schema_probe" == "11" ]] ||
-  fail "fresh schema plus migrations 15-24 probe expected 11, found $fresh_schema_probe"
+  (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='audit_task' AND column_name IN ('claimed_by_admin_id','claimed_at','claim_expires_at')) +
+  (SELECT COUNT(*) FROM city WHERE region='EU' AND code='PAR' AND status=1 AND time_zone='Europe/Paris') +
+  (SELECT COUNT(*) FROM city WHERE region='EU' AND code='BER' AND status=0 AND time_zone='Europe/Berlin') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone');")"
+[[ "$fresh_schema_probe" == "14" ]] ||
+  fail "fresh schema plus migrations 15-25 probe expected 14, found $fresh_schema_probe"
 
 printf '[mysql-migration-integration] old baseline, fresh baseline 14, repeat, verify, DB lock, checksum drift, and failure blocking passed.\n'

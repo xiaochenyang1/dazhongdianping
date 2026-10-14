@@ -300,6 +300,10 @@ trusted_proxy_regex_check "${APP_TRUSTED_PROXY_REGEX-}"
 [[ "${APP_SEARCH_PROVIDER-}" == "elasticsearch" ]] || { printf '[invalid] APP_SEARCH_PROVIDER must be elasticsearch\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_SEARCH_FALLBACK_ON_ERROR-}" == "false" ]] || { printf '[invalid] APP_SEARCH_FALLBACK_ON_ERROR must be false\n' >&2; failures=$((failures + 1)); }
 [[ "${PRERENDER_REGION-}" == "EU" ]] || { printf '[invalid] PRERENDER_REGION must be EU\n' >&2; failures=$((failures + 1)); }
+[[ "${VITE_DEFAULT_REGION-}" == "EU" ]] || { printf '[invalid] VITE_DEFAULT_REGION must be EU\n' >&2; failures=$((failures + 1)); }
+[[ "${APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED-}" == "false" ]] || { printf '[invalid] APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED must be false for the Paris launch\n' >&2; failures=$((failures + 1)); }
+[[ "${APP_LAUNCH_EU_SECKILL_ENABLED-}" == "false" ]] || { printf '[invalid] APP_LAUNCH_EU_SECKILL_ENABLED must be false for the Paris launch\n' >&2; failures=$((failures + 1)); }
+[[ "${APP_LAUNCH_EU_GROUP_BUY_ENABLED-}" == "false" ]] || { printf '[invalid] APP_LAUNCH_EU_GROUP_BUY_ENABLED must be false for the Paris launch\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_PUSH_ENABLED-}" == "false" ]] || { printf '[invalid] APP_PUSH_ENABLED must be false until credentialed device smoke passes\n' >&2; failures=$((failures + 1)); }
 
 check APP_DB_HOST "${APP_DB_HOST-}"

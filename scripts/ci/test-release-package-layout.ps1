@@ -8,7 +8,7 @@ $environmentNames = @(
     'DEPLOY_ENVIRONMENT', 'GITHUB_SHA', 'PRERENDER_REGION', 'PRERENDER_REGIONS',
     'PUBLIC_SITE_URL', 'PRERENDER_API_BASE_URL', 'PUBLIC_SITE_URL_CN', 'PUBLIC_SITE_URL_EU',
     'PRERENDER_API_BASE_URL_CN', 'PRERENDER_API_BASE_URL_EU',
-    'VITE_API_BASE_URL', 'VITE_WS_BASE_URL', 'VITE_STRIPE_PUBLISHABLE_KEY'
+    'VITE_API_BASE_URL', 'VITE_WS_BASE_URL', 'VITE_STRIPE_PUBLISHABLE_KEY', 'VITE_DEFAULT_REGION'
 )
 $previousEnvironment = @{}
 foreach ($name in $environmentNames) {
@@ -24,6 +24,9 @@ function Assert-Layout {
 # the ZIP and manifests, and hashes migrations in an isolated fixture repo.
 function npm {
     $command = $args[-1]
+    if ((Split-Path (Get-Location) -Leaf) -eq 'web') {
+        Assert-Layout ($env:VITE_DEFAULT_REGION -eq $env:PRERENDER_REGION) 'Web runtime and SEO region must match'
+    }
     Set-Content -LiteralPath (Join-Path (Get-Location) 'dist/index.html') -Value "$($env:PRERENDER_REGION):$command" -Encoding utf8
     $global:LASTEXITCODE = 0
 }
@@ -53,6 +56,7 @@ function Test-Bundle {
         Assert-Layout (@($names | Where-Object { $_ -match '(^|/)__(base-web-dist|seo-)' }).Count -eq 0) 'Temporary build directories must not leak into the ZIP'
         Assert-Layout ((Read-ZipText $archive 'web/dist/index.html') -eq 'EU:build') 'The serving Web dist must retain the base region build'
         $manifest = Read-ZipText $archive 'release-manifest.json' | ConvertFrom-Json
+        Assert-Layout ($manifest.webRuntime.defaultRegion -eq 'EU') 'Serving web must default to EU'
         Assert-Layout ($manifest.commitSha -eq $env:GITHUB_SHA) 'Manifest must identify the candidate SHA'
         $migrationLines = (Read-ZipText $archive 'database/migrations.sha256') -split '\r?\n'
         Assert-Layout ($manifest.databaseMigrations.count -eq $migrationLines.Count) 'Migration count must match the archive manifest'
@@ -79,9 +83,8 @@ function Test-Bundle {
 }
 
 try {
-    foreach ($name in $environmentNames) { [Environment]::SetEnvironmentVariable($name, $null) }
+    foreach ($name in $environmentNames) { Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue }
     $env:GITHUB_SHA = '0123456789012345678901234567890123456789'
-    $env:PRERENDER_REGION = 'EU'
     foreach ($directory in @('scripts/ci', 'sql/mysql', 'backend/target', 'web/dist/assets', 'admin-web/dist/assets', 'merchant-web/dist/assets')) {
         New-Item -ItemType Directory -Path (Join-Path $fixtureRoot $directory) -Force | Out-Null
     }
@@ -103,17 +106,30 @@ try {
     $outputDir = Join-Path $fixtureRoot 'output'
     $bundle = & $fixtureScript -Version 'layout-local' -OutputDir $outputDir
     Test-Bundle -Bundle $bundle -WithSnapshots $false
+    foreach ($name in @('PRERENDER_REGION', 'PRERENDER_REGIONS', 'VITE_DEFAULT_REGION', 'PUBLIC_SITE_URL', 'PRERENDER_API_BASE_URL')) {
+        Assert-Layout (-not (Test-Path -LiteralPath "Env:$name")) "Local packaging must leave previously unset $name absent"
+    }
 
+    $env:PRERENDER_REGION = 'EU'
     $env:PRERENDER_REGIONS = 'CN,EU'
+    $env:VITE_DEFAULT_REGION = 'CN'
     $env:PUBLIC_SITE_URL_CN = 'https://cn.example.test'
     $env:PUBLIC_SITE_URL_EU = 'https://eu.example.test'
     $env:PRERENDER_API_BASE_URL_CN = 'https://api.cn.example.test'
     $env:PRERENDER_API_BASE_URL_EU = 'https://api.eu.example.test'
     $bundle = & $fixtureScript -Version 'layout-regional' -OutputDir $outputDir
     Test-Bundle -Bundle $bundle -WithSnapshots $true
+    Assert-Layout ($env:PRERENDER_REGION -eq 'EU' -and $env:PRERENDER_REGIONS -eq 'CN,EU' -and $env:VITE_DEFAULT_REGION -eq 'CN') 'Regional packaging must restore explicitly configured regions'
     Write-Output 'release package layout integration passed (local and regional SEO bundles)'
 }
 finally {
-    foreach ($name in $environmentNames) { [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name]) }
+    foreach ($name in $environmentNames) {
+        if ($null -eq $previousEnvironment[$name]) {
+            Remove-Item "Env:\$name" -ErrorAction SilentlyContinue
+        }
+        else {
+            Set-Item "Env:\$name" $previousEnvironment[$name]
+        }
+    }
     if (Test-Path -LiteralPath $fixtureRoot) { Remove-Item -LiteralPath $fixtureRoot -Recurse -Force }
 }

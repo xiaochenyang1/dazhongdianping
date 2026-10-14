@@ -9,11 +9,11 @@ INSERT INTO category (id, parent_id, region, name, sort_no) VALUES
     (202, 200, 'EU', 'Cafe', 2),
     (210, 0, 'EU', 'Lifestyle', 2);
 
-INSERT INTO city (id, code, region, name, sort_no) VALUES
-    (1, 'SH', 'CN', '上海', 1),
-    (2, 'BJ', 'CN', '北京', 2),
-    (101, 'PAR', 'EU', 'Paris', 1),
-    (102, 'BER', 'EU', 'Berlin', 2);
+INSERT INTO city (id, code, region, name, time_zone, sort_no, status) VALUES
+    (1, 'SH', 'CN', '上海', 'Asia/Shanghai', 1, 1),
+    (2, 'BJ', 'CN', '北京', 'Asia/Shanghai', 2, 1),
+    (101, 'PAR', 'EU', 'Paris', 'Europe/Paris', 1, 1),
+    (102, 'BER', 'EU', 'Berlin', 'Europe/Berlin', 2, 0);
 
 INSERT INTO area (id, city_id, region, name, sort_no) VALUES
     (11, 1, 'CN', '徐汇', 1),

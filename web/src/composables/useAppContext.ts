@@ -6,12 +6,13 @@ const REGION_STORAGE_KEY = 'dzdp:region'
 
 const savedCityId = localStorage.getItem(CITY_STORAGE_KEY)
 const savedRegion = localStorage.getItem(REGION_STORAGE_KEY)
+const defaultRegion: Region = import.meta.env.VITE_DEFAULT_REGION === 'EU' ? 'EU' : 'CN'
 
 const state = reactive<{
   region: Region
   cityId?: number
 }>({
-  region: savedRegion === 'EU' ? 'EU' : 'CN',
+  region: savedRegion === 'EU' || savedRegion === 'CN' ? savedRegion : defaultRegion,
   cityId: savedCityId ? Number(savedCityId) : undefined,
 })
 const readonlyState = readonly(state)

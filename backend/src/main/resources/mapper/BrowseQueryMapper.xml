@@ -19,6 +19,7 @@
         SELECT id,
                code,
                name,
+               time_zone,
                sort_no
         FROM city
         WHERE region = #{region}

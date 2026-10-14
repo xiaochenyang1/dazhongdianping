@@ -200,7 +200,7 @@ onMounted(load)
             <td>{{ item.reservationNo }}</td>
             <td>{{ item.shop.name }}</td>
             <td>
-              {{ item.reserveTime }}
+              {{ item.reserveTime }} {{ item.timeZone }}
               <div v-if="item.peopleCount" class="muted">{{ strings.reservations.peopleCount(item.peopleCount) }}</div>
             </td>
             <td>

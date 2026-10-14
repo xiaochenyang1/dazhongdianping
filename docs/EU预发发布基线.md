@@ -1,17 +1,21 @@
 # EU 首发与预发发布基线
 
-更新时间：2026-08-17
+更新时间：2026-10-14
 
 预发布加固已通过 PR #1 合入 `main`。后续发布仍必须使用通过 CI 的不可变提交 SHA 或最新 `eu-pre-rc-*` 标签，不把可移动分支名当作发布版本。
 
 ## 首发范围
 
-首发先冻结为 `EU`，目标是完成一条真实可验收的欧洲用户链路：
+首发范围已冻结为巴黎单城、仅 EUR，目标是完成一条真实可验收的欧洲用户链路。巴黎时区为 `Europe/Paris`；其他 EU 城市在首发中停用，不能创建或接收预订流量。EU 后端订单币种固定为 EUR，GBP 不在本轮范围内。
+
+开放功能沿用下列既有 EU 产品基线：
 
 - PC Web：浏览、搜索、门店详情、点评、团购、预订、用户中心和社区只读内容。
 - Flutter：登录、浏览、点评、团购、预订、通知、隐私中心和已落地的社区能力。
 - 商户端：门店、团购、预订、订单/退款、核销和点评经营。
 - 管理端：RBAC、基础数据、内容审核、商户治理、订单/退款、运营和隐私任务。
+
+创作者奖励、秒杀和拼团通过 `APP_LAUNCH_EU_*_ENABLED=false` 默认关闭：后端拒绝相关调用，Web/Flutter 隐藏入口，Web 直达路由回首页。预发配置检查要求三个开关显式为 `false`；这些能力单独验收后再开放。门店普通团购和在线预订仍属于既有核心交易链路。
 
 CN 保留为代码兼容区域，但不作为本轮真实支付验收目标；CN 支付仍是 `alipay_mock`。
 
@@ -22,6 +26,8 @@ CN 保留为代码兼容区域，但不作为本轮真实支付验收目标；CN
 - 常驻 SSR、独立域名/CDN 缓存和正式商店发布：留到预发基础链路稳定后执行。
 
 ## 已完成的发布证据
+
+2026-10-14 的巴黎首发、时区、延期功能和本地回归证据见 [本轮执行记录](巴黎首发优化与发布候选验证-2026-10-14.md)；最终候选以同一不可变 SHA 的 CI、nightly 和发布 manifest 为准。下列 8 月记录保留为历史证据，不能代替本轮验证。
 
 - `eu-pre-rc-20260816-3` 已发布并指向提交 `ca683d14a8661ab05fb0d6ede51dcae98a63b29f`；标签 CI 运行 `31983461176` 的全量验证和 MySQL 迁移集成作业均通过。
 - PR #1 已以 merge commit `71ee8f8e6215a04c4af5fba5d1b3b0688aa2a83c` 合入 `main`；主干 CI 运行 `31984095560` 的全量验证和 MySQL 迁移集成作业均通过。
@@ -47,6 +53,8 @@ set +a
 预发必须满足：运行身份为严格 `pre`、Stripe test mode 开启、mock 支付关闭、验证码 mock/回显/控制台通道关闭、SMTP 邮件与 Twilio 国际短信均可配置、Redis 状态存储、HTTPS S3 endpoint/public URL、明确的 Elasticsearch endpoint/index 且关闭 fallback、EU SEO 构建、HTTPS Web/API 地址和 WSS 通知地址。`APP_CORS_ALLOWED_ORIGIN_PATTERNS` 必须逐项列出真实 HTTPS Web origin，不允许通配符、本机地址、userinfo 或路径。SMTP 必须启用认证、STARTTLS 和健康检查；Twilio 必须覆盖国际号码并排除默认交给阿里云的 `+86`。阿里云在 EU 首发门禁中为可选 CN 通道，启用时才校验其 AccessKey、签名、模板和 `+86` 路由。预检脚本会执行这些格式和模式检查，但不会输出密钥内容。
 
 ## 通过条件
+
+构建时还需 `VITE_DEFAULT_REGION=EU`，保证新访客默认进入 EU；发布打包脚本按每份 Web 制品的预渲染区域注入默认区域，并写入 `release-manifest.json` 的 `webRuntime.defaultRegion`。已保存的合法 CN/EU 选择仍保留。
 
 1. 后端、三个 Web 前端和 Flutter 全量测试/构建通过。
 2. MySQL、Redis、S3、Elasticsearch smoke 通过。

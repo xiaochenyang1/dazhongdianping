@@ -76,6 +76,8 @@ class AdminRbacControllerTest {
 
     @Test
     void shouldCreateAdminAndImmediatelyRevokePermissionsWhenItsRoleIsDisabled() throws Exception {
+        // This test exercises a deliberate scope change between two active cities.
+        jdbc.update("UPDATE city SET status=1 WHERE id=102");
         String superAdminToken = login("admin", "admin123456");
         long roleId = createRole(superAdminToken, "eu_shop_operator", "EU 门店操作员", 14L);
 
@@ -180,7 +182,7 @@ class AdminRbacControllerTest {
                         .header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.id == 20001 && @.region == 'EU' && @.cityId == 101)]").isNotEmpty())
-                .andExpect(jsonPath("$.data[?(@.id == 20002 && @.region == 'EU' && @.cityId == 102)]").isNotEmpty());
+                .andExpect(jsonPath("$.data[?(@.id == 20002 && @.region == 'EU' && @.cityId == 102)]").isEmpty());
 
         long roleId = createRole(token, "shop_scope_validator", "门店白名单校验员", 14L);
         MvcResult result = mockMvc.perform(post("/api/admin/v1/rbac/admins")

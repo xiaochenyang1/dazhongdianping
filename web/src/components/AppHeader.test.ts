@@ -9,6 +9,9 @@ const browseMocks = vi.hoisted(() => ({
   fetchSearchSuggestions: vi.fn(),
 }))
 
+const launchMocks = vi.hoisted(() => ({ apiGet: vi.fn() }))
+vi.mock('@/lib/http', () => launchMocks)
+
 const routerMocks = vi.hoisted(() => ({
   push: vi.fn(),
 }))
@@ -78,6 +81,9 @@ async function flushView() {
 
 describe('AppHeader', () => {
   beforeEach(() => {
+    launchMocks.apiGet.mockImplementation(async (_path, _params, headers) => ({
+      region: headers['X-Region'], creatorRewards: headers['X-Region'] === 'CN', seckill: false, groupBuy: false,
+    }))
     Object.values(browseMocks).forEach((mock) => mock.mockReset())
     routerMocks.push.mockReset()
     notificationMocks.refresh.mockReset()
@@ -104,6 +110,8 @@ describe('AppHeader', () => {
     expect(host.textContent).toContain('Places')
     expect(host.textContent).toContain('Europe site')
     expect(host.textContent).toContain('Notifications')
+    expect(host.textContent).not.toContain('Creator')
+    expect(host.textContent).not.toContain('Flash sale')
     expect(host.querySelector('input[type="search"]')?.getAttribute('placeholder'))
       .toBe('Search hotpot, coffee or an area')
     expect(document.documentElement.lang).toBe('en')

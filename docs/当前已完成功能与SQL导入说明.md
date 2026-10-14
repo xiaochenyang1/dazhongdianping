@@ -1,6 +1,6 @@
 # 当前已完成功能与 SQL 导入说明
 
-> 最后更新:2026-10-09
+> 最后更新:2026-10-14
 > M7 补充：已完成帖子与转发、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、关注流、私信、官方圈子、区域化话题广场、7 天热榜、三端页面、管理端治理和话题隐私治理。
 > 适用范围:当前仓库真实已落地的 `M1` 至 `M7` 本地闭环；FCM/APNs 服务端适配器已落地，但真实凭证、真机 smoke、真实欧洲支付、Google Maps 和目标环境凭证联调仍未完成
 
@@ -86,6 +86,8 @@
 - 团购交易已完成：门店团购列表/详情、下单、有限库存原子扣减、未支付取消恢复库存、模拟支付、SHA-256 回调验签与幂等、按购买数量发券、订单/券列表、退款申请和已核销券退款拦截；退款不再由用户请求同步完成，而是进入商户审核。
 - 区域支付默认通道已隔离：`CN=alipay_mock`、`EU=stripe`;EU 区 Stripe test mode 已打通（PaymentIntent → Web/Flutter Elements/PaymentSheet → webhook 验签 → 发券），商户/平台退款审批已接 Stripe Refund、稳定幂等键与渠道回执持久化；真实凭证、退款到账 smoke 与生产 switchover 待验收。
 - 预订已完成：时段容量、自动/人工确认、创建、列表、详情、取消截止时间、改期重新确认、容量释放和变更时间线。
+- 巴黎首发已补城市 IANA 时区和预订时区快照：创建/改期/确认及时段启用统一校验门店与所属地理数据可用性；停用城市的历史预订保留查询、允许截止前取消和已确认记录的提醒。客户端显示门店当地时间，取消与提醒按真实时刻计算；新预订拒绝夏令时缺失/重复时间。具体接口契约见 [2026-10-14 执行记录](巴黎首发优化与发布候选验证-2026-10-14.md)。
+- EU 创作者奖励、秒杀和拼团默认关闭，后端在写入前拒绝延期功能，Web/Flutter 隐藏入口，Web 拦截直达路由；普通门店团购与预订继续开放。公开 `/api/c/v1/launch-config` 返回当前区域能力。
 - 商户履约后端已完成：确认、拒绝、到店、爽约、券码核销；SQL 同时约束商户归属、区域、当前状态和券有效期，避免串店操作。
 - Web 已完成团购详情、订单、券、在线预订、我的预订和预订详情页面；独立 `merchant-web` 已补齐注册、登录、资质提交/状态分流、概览、门店、员工、预订、团购、订单退款、点评回复/申诉页面。
 
@@ -289,12 +291,12 @@
 .\scripts\ci\mysql-smoke.ps1 -DbName dazhongdianping_smoke -DropDatabaseAfter
 ```
 
-`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-24 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
+`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-25 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
 
 ### 3.2 初始化与迁移 SQL 的作用
 
 - `sql/mysql/00_all_in_one.sql`: 已退役的安全阻断桩,执行时直接报错,不再串联破坏性建表脚本。
-- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-24 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
+- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-25 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
 - `sql/mysql/02_seed_data.sql`: 浏览数据、公开点评、待审/驳回审核案例、点评图片、点赞/评论演示数据、C 端演示账号、成长规则(含 `check_in`)。
 - `sql/mysql/03_admin_city_scope_migration.sql`: 既有数据库增加管理员城市/门店范围；只用于升级，不参与全新数据库初始化。
 - `sql/mysql/04_admin_import_batch_scope_migration.sql`: 既有数据库增加受限管理员本人导入批次查询索引；在 `03` 后执行一次。
@@ -318,7 +320,7 @@
 - `sql/mysql/22_audit_queue_fifo_migration.sql`: 为审核任务增加区域/类型/状态/提交时间索引，支持最久等待任务优先处理。
 - `sql/mysql/23_admin_audit_sla_alert_migration.sql`: 创建审核 SLA 提醒表。
 
-> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-24 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
+> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-25 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
 
 ### 3.3 导入后哪些表会直接有数据
 
@@ -384,7 +386,14 @@
 
 ## 5. 验证情况
 
-### 当前工作区本地回归（2026-10-09）
+### 巴黎首发本地回归（2026-10-14）
+
+- 后端 `620`、用户 Web `249`、管理 Web `170`、商户 Web `53`、Flutter `614` 项测试通过；三个 Web 生产构建、Flutter 静态分析与 Web 构建通过。
+- Playwright mock smoke `8/8`、真实 H2 后端 E2E `9/9` 通过，新增上海设备时区下巴黎预订、停用柏林和延期功能拦截。
+- 一次性 MySQL 8.4 完成旧库 `03–25`、新库基线 `14` 加 `15–25`、重入、verify、锁、checksum 漂移和失败阻断；真实 MySQL/Redis、S3/MinIO 上传读回、Elasticsearch 搜索均通过。
+- PowerShell 7.6.5 发布/回滚等契约已执行；代码改动、完整本地证据和同一 SHA 候选规则见 [巴黎首发优化与发布候选验证](巴黎首发优化与发布候选验证-2026-10-14.md)。实际 SMTP/Twilio/Stripe、目标部署、备份恢复和回滚仍待真实环境验收。
+
+### 历史工作区本地回归（2026-10-09）
 
 - 后端全量 `./mvnw test`：`588` 项通过；新增可信代理地址解析聚焦测试 `3` 项通过。全量回归覆盖广告去重、幂等、风控、相关接口和迁移后的应用映射。
 - `web`：`65` 个测试文件、`239` 项通过；`admin-web`：`45` 个文件、`165` 项通过；`merchant-web`：`22` 个文件、`53` 项通过。三个 Web 生产构建均通过。

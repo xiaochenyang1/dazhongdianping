@@ -91,7 +91,7 @@ public class BrowseQueryService {
     public List<CityResponse> listCities(Region region) {
         return browseQueryMapper.selectCitiesByRegion(region.name()).stream()
                 .sorted(Comparator.comparing(CityRow::getSortNo))
-                .map(row -> new CityResponse(row.getId(), row.getCode(), row.getName()))
+                .map(row -> new CityResponse(row.getId(), row.getCode(), row.getName(), row.getTimeZone()))
                 .toList();
     }
 

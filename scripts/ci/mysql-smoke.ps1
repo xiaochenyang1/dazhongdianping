@@ -351,7 +351,7 @@ if ($DryRun) {
         }
         Write-Output "- Source sql/mysql/01_schema.sql into $DbName."
         Write-Output "- Source sql/mysql/02_seed_data.sql into $DbName."
-        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-24."
+        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-25."
     }
     Write-Output "- Package backend with backend/mvnw.cmd -DskipTests package."
     Write-Output "- Start the packaged backend jar with APP_DB_* environment variables on port $BackendPort."
@@ -511,7 +511,7 @@ VALUES ('$databaseOwnershipToken');
             "--default-character-set=utf8mb4"
         )) -SqlFile $seedSql
 
-        Write-Step "applying MySQL migrations 15-24 from schema baseline 14"
+        Write-Step "applying MySQL migrations 15-25 from schema baseline 14"
         $escapedDbPassword = $DbPassword.Replace('\', '\\').Replace('"', '\"')
         $migrationDefaultsContent = @"
 [client]
@@ -615,6 +615,66 @@ SELECT @smoke_task_id;
     }
 
     if (-not $SkipImport) {
+        Write-Step "smoking Paris reservation timezone snapshots and EU launch switches on MySQL"
+        $euHeaders = @{ "X-Region" = "EU" }
+        $launch = Invoke-Json -Method "GET" -Path "/api/c/v1/launch-config" -Headers $euHeaders
+        if ($launch.data.region -ne "EU" -or $launch.data.creatorRewards -or $launch.data.seckill -or $launch.data.groupBuy) {
+            throw "Deferred EU launch capabilities must default to disabled"
+        }
+        $calendar = Invoke-Json -Method "GET" -Path "/api/c/v1/shops/20001/reservation-slots?peopleCount=2" -Headers $euHeaders
+        if ($calendar.data.timeZone -ne "Europe/Paris" -or -not $calendar.data.today) {
+            throw "Paris availability must include its timezone and local calendar"
+        }
+        $account = "paris-mysql-" + [guid]::NewGuid().ToString("N") + "@example.com"
+        Invoke-Json -Method "POST" -Path "/api/c/v1/auth/send-code" -Headers $euHeaders -Body @{
+            scene = "register"; type = "email"; account = $account; deviceId = $account
+        } | Out-Null
+        $user = Invoke-Json -Method "POST" -Path "/api/c/v1/auth/register" -Headers $euHeaders -Body @{
+            type = "email"; account = $account; code = "123456"; password = "Passw0rd!"
+        }
+        $euHeaders.Authorization = "Bearer $($user.data.accessToken)"
+        $reservationDate = ([datetime]$calendar.data.date).ToString("yyyy-MM-dd")
+        $reservation = Invoke-Json -Method "POST" -Path "/api/c/v1/reservations" -Headers $euHeaders -Body @{
+            shopId = 20001; reserveTime = "$reservationDate 18:30:00"; peopleCount = 2
+            contactName = "Paris smoke"; contactPhone = "+33123456789"
+        }
+        $reservationId = [long]$reservation.data.id
+        $parisZone = [TimeZoneInfo]::FindSystemTimeZoneById("Europe/Paris")
+        $wallTime = [datetime]::SpecifyKind([datetime]"$reservationDate 18:30:00", [DateTimeKind]::Unspecified)
+        $expectedUtc = [TimeZoneInfo]::ConvertTimeToUtc($wallTime, $parisZone)
+        if ($reservation.data.timeZone -ne "Europe/Paris" -or ([DateTimeOffset]$reservation.data.reserveAt).UtcDateTime -ne $expectedUtc) {
+            throw "MySQL reservation must preserve Paris wall time and return the correct UTC instant"
+        }
+        $snapshot = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName", "--batch", "--skip-column-names", "-e",
+            "SELECT time_zone FROM reservation WHERE id=$reservationId;"
+        )) -WorkingDirectory $repoRoot)
+        if ($snapshot -notcontains "Europe/Paris") { throw "Reservation timezone snapshot was not stored in MySQL" }
+        $nextDate = ([datetime]$reservationDate).AddDays(1).ToString("yyyy-MM-dd")
+        $changed = Invoke-Json -Method "POST" -Path "/api/c/v1/reservations/$reservationId/reschedule" -Headers $euHeaders -Body @{
+            reserveTime = "$nextDate 19:00:00"; reason = "MySQL smoke reschedule"
+        }
+        if ($changed.data.rescheduleCount -ne 1 -or $changed.data.timeZone -ne "Europe/Paris") {
+            throw "Paris reservation could not be rescheduled on MySQL"
+        }
+        $cancelled = Invoke-Json -Method "POST" -Path "/api/c/v1/reservations/$reservationId/cancel" -Headers $euHeaders
+        if ($cancelled.data.status -ne 3) { throw "Paris reservation could not be cancelled on MySQL" }
+        foreach ($probe in @(
+            @{ Path = "/api/c/v1/reservations"; Status = 404; Body = @{
+                shopId = 20002; reserveTime = "$reservationDate 18:30:00"; peopleCount = 2
+                contactName = "Blocked city"; contactPhone = "+33123456789"
+            } },
+            @{ Path = "/api/c/v1/creator/tasks/9102/claim"; Status = 403; Body = @{} }
+        )) {
+            $actualStatus = $null
+            try { Invoke-Json -Method "POST" -Path $probe.Path -Headers $euHeaders -Body $probe.Body | Out-Null }
+            catch {
+                if (-not $_.Exception.Response) { throw }
+                $actualStatus = [int]$_.Exception.Response.StatusCode
+            }
+            if ($actualStatus -ne $probe.Status) { throw "Launch guard $($probe.Path) expected HTTP $($probe.Status), got $actualStatus" }
+        }
+
         $auditHeaders = @{
             "Authorization" = "Bearer $($adminLogin.data.accessToken)"
             "X-Region" = "CN"

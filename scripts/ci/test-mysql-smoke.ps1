@@ -42,7 +42,7 @@ Assert-True ($dryRunText -match "sql/mysql/01_schema.sql") "dry-run output must 
 Assert-True ($dryRunText -match "sql/mysql/02_seed_data.sql") "dry-run output must mention the seed SQL"
 Assert-True ($dryRunText -match "mysql-migrate.sh") "dry-run output must mention the migration runner"
 Assert-True ($dryRunText -match "baseline 14") "fresh MySQL provisioning must establish schema baseline 14"
-Assert-True ($dryRunText -match "migrations 15-24") "fresh MySQL provisioning must apply migrations 15 through 24"
+Assert-True ($dryRunText -match "migrations 15-25") "fresh MySQL provisioning must apply migrations 15 through 25"
 Assert-True ($dryRunText -notmatch "sql/mysql/00_all_in_one.sql") "dry-run output must not use the hard-coded all-in-one SQL"
 Assert-True ($dryRunText -match "refuse") "default import plan must say an existing database is refused"
 Assert-True ($dryRunText -match "backend") "dry-run output must mention backend startup"

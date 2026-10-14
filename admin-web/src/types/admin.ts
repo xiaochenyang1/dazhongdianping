@@ -902,6 +902,7 @@ export interface AdminGeoCity {
   id: number
   code: string
   name: string
+  timeZone: string
   sortNo: number
   status: number
 }
@@ -923,6 +924,7 @@ export interface GeoCategoryPayload {
 export interface GeoCityPayload {
   code: string
   name: string
+  timeZone: string
   sortNo: number
 }
 

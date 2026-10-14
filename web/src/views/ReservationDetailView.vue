@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
-import { formatWebDateTime } from '@/core/web_localizations'
+import { formatWebDateTime, formatWebReservationTime } from '@/core/web_localizations'
 import { localizeWebTradeError, tradeStringsForRegion } from '@/core/web_trade_localizations'
 import { addDaysToDateInput, toLocalDateInputValue } from '@/lib/local-date'
 import {
@@ -19,8 +19,9 @@ const { state } = useAppContext()
 const copy = computed(() => tradeStringsForRegion(state.region))
 
 const reservation = ref<Reservation | null>(null)
-const minimumDate = toLocalDateInputValue()
-const date = ref(addDaysToDateInput(minimumDate, 1))
+const minimumDate = ref('')
+const slotTimeZone = ref('')
+const date = ref('')
 const slots = ref<ReservationSlot[]>([])
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -37,8 +38,10 @@ const statusBanner = computed(() => {
 async function load() {
   errorMessage.value = ''
   reservation.value = await fetchReservation(props.reservationId)
+  minimumDate.value = reservation.value.today || toLocalDateInputValue()
+  slotTimeZone.value = reservation.value.timeZone || ''
   const suggestedDate = addDaysToDateInput(reservation.value.reserveTime, 1)
-  date.value = suggestedDate < minimumDate ? minimumDate : suggestedDate
+  date.value = suggestedDate < minimumDate.value ? minimumDate.value : suggestedDate
 }
 
 async function cancel() {
@@ -54,9 +57,11 @@ async function findSlots() {
   if (!reservation.value) return
   errorMessage.value = ''
   try {
-    slots.value = (
-      await fetchReservationSlots(reservation.value.shop.id, date.value, reservation.value.peopleCount)
-    ).list
+    slots.value = []
+    const result = await fetchReservationSlots(reservation.value.shop.id, date.value, reservation.value.peopleCount)
+    slots.value = result.list
+    minimumDate.value = result.today || minimumDate.value
+    slotTimeZone.value = result.timeZone || slotTimeZone.value
   } catch (error) {
     errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.reservationDetail.slotLoadFailed)
   }
@@ -98,7 +103,7 @@ watch(
         <p class="eyebrow">{{ copy.reservationDetail.reservation }} {{ reservation.reservationNo }}</p>
         <h1>{{ reservation.shop.name }}</h1>
         <p>
-          {{ formatWebDateTime(reservation.reserveTime, copy.tag) }} · {{ copy.common.people(reservation.peopleCount) }} ·
+          {{ formatWebReservationTime(reservation.reserveTime, copy.tag, reservation.timeZone) }} · {{ copy.common.people(reservation.peopleCount) }} ·
           {{ copy.statuses.reservation(reservation.status, reservation.statusText) }}
         </p>
       </div>
@@ -111,7 +116,8 @@ watch(
     <div class="hero-actions">
       <button v-if="reservation.canCancel" class="secondary-button" type="button" @click="cancel">{{ copy.reservationDetail.cancel }}</button>
       <template v-if="reservation.canReschedule">
-        <input v-model="date" type="date" :min="minimumDate" />
+        <input v-model="date" type="date" :min="minimumDate" @change="slots = []" />
+        <span class="muted">{{ slotTimeZone }}</span>
         <button class="secondary-button" type="button" @click="findSlots">{{ copy.reservationDetail.findSlots }}</button>
       </template>
     </div>

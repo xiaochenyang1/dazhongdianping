@@ -59,7 +59,8 @@ class AdminHotWordControllerTest {
                         .header("X-Region", "EU"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].term").value("Remote"))
-                .andExpect(jsonPath("$.data[0].score").value(2))
+                // Berlin is disabled for launch, so its shop tags do not add heat.
+                .andExpect(jsonPath("$.data[0].score").value(1))
                 .andExpect(jsonPath("$.data[1].term").value("Breakfast"))
                 .andExpect(jsonPath("$.data[1].score").value(1));
 

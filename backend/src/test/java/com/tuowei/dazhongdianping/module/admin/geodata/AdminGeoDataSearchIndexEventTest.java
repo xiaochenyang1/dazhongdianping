@@ -27,13 +27,13 @@ class AdminGeoDataSearchIndexEventTest {
     void shouldRefreshReferencedShopIndexAfterGeoStatusChanges() {
         RegionContext.setRegion(Region.EU);
         try {
-            geoDataService.updateCategoryStatus(202L, 0);
-            geoDataService.updateCityStatus(102L, 0);
-            geoDataService.updateAreaStatus(1021L, 0);
+            geoDataService.updateCategoryStatus(201L, 0);
+            geoDataService.updateCityStatus(101L, 0);
+            geoDataService.updateAreaStatus(1011L, 0);
 
             assertThat(applicationEvents.stream(ShopSearchIndexChangedEvent.class)
                     .map(ShopSearchIndexChangedEvent::shopId)
-                    .filter(shopId -> shopId.equals(20002L)))
+                    .filter(shopId -> shopId.equals(20001L)))
                     .hasSize(3);
         } finally {
             RegionContext.clear();

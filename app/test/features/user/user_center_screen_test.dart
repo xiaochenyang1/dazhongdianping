@@ -18,6 +18,8 @@ class CenterFakeApi implements JsonApi, JsonMutationApi {
   CenterFakeApi({this.failFirst = false});
 
   final bool failFirst;
+  bool launchEnabled = false;
+  Object? launchError;
   Object? profileError;
   int profileRequests = 0;
   int checkInStatusRequests = 0;
@@ -29,6 +31,15 @@ class CenterFakeApi implements JsonApi, JsonMutationApi {
     String path, {
     Map<String, Object?>? query,
   }) async {
+    if (path == '/api/c/v1/launch-config') {
+      if (launchError != null) throw launchError!;
+      return {
+        'region': 'EU',
+        'creatorRewards': launchEnabled,
+        'seckill': launchEnabled,
+        'groupBuy': launchEnabled,
+      };
+    }
     if (path == '/api/c/v1/user/check-in/status') {
       checkInStatusRequests++;
       return {
@@ -129,6 +140,61 @@ Widget localizedApp({
 }
 
 void main() {
+  for (final enabled in [false, true]) {
+    testWidgets('deferred menu entries follow launch config: $enabled', (
+      tester,
+    ) async {
+      final api = CenterFakeApi()..launchEnabled = enabled;
+      final auth = AuthController(
+        repository: AuthRepository(api),
+        store: MemorySessionStore(),
+      );
+      await tester.pumpWidget(
+        localizedApp(
+          home: UserCenterScreen(
+            repository: UserRepository(api),
+            authController: auth,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final list = tester.widget<ListView>(find.byType(ListView));
+      final children =
+          (list.childrenDelegate as SliverChildListDelegate).children;
+      for (final key in ['creator', 'seckill', 'groupbuy']) {
+        expect(
+          children.any((child) => child.key == Key('user-center-$key')),
+          enabled,
+        );
+      }
+    });
+  }
+
+  testWidgets('a failed launch config hides deferred entries', (tester) async {
+    final api = CenterFakeApi()..launchError = StateError('offline');
+    final auth = AuthController(
+      repository: AuthRepository(api),
+      store: MemorySessionStore(),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        home: UserCenterScreen(
+          repository: UserRepository(api),
+          authController: auth,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final list = tester.widget<ListView>(find.byType(ListView));
+    final children =
+        (list.childrenDelegate as SliverChildListDelegate).children;
+    expect(
+      children.any((child) => child.key == const Key('user-center-creator')),
+      isFalse,
+    );
+    expect(api.profileRequests, 1);
+  });
+
   testWidgets('user center switches English chrome', (tester) async {
     final api = CenterFakeApi();
     final auth = AuthController(

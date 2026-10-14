@@ -13,6 +13,9 @@ public record CitySaveRequest(
         @NotBlank(message = "name 不能为空")
         @Size(max = 64, message = "name 最长为 64 个字符")
         String name,
+        @NotBlank(message = "timeZone 不能为空")
+        @Size(max = 64, message = "timeZone 最长为 64 个字符")
+        String timeZone,
         @NotNull(message = "sortNo 不能为空")
         @Min(value = 0, message = "sortNo 不能小于 0")
         @Max(value = 999999, message = "sortNo 不能大于 999999")

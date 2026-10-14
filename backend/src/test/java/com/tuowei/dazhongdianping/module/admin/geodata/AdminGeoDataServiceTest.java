@@ -46,7 +46,7 @@ class AdminGeoDataServiceTest {
         doThrow(new DuplicateKeyException("duplicate city")).when(mapper).insertCity(any());
 
         ConflictException exception = assertThrows(ConflictException.class,
-                () -> service.createCity(new CitySaveRequest("PAR", "Paris", 1)));
+                () -> service.createCity(new CitySaveRequest("PAR", "Paris", "Europe/Paris", 1)));
 
         assertEquals("当前区域已存在相同城市编码或名称", exception.getMessage());
     }

@@ -6,7 +6,9 @@ import com.tuowei.dazhongdianping.module.reservation.model.ReservationLogRow;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationReminderResult;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationRow;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.slf4j.Logger;
@@ -30,20 +32,33 @@ public class ReservationReminderService {
 
     private final ReservationMapper reservationMapper;
     private final NotificationService notificationService;
+    private final ReservationTimeService time;
 
     public ReservationReminderService(
             ReservationMapper reservationMapper,
-            NotificationService notificationService
+            NotificationService notificationService,
+            ReservationTimeService time
     ) {
         this.reservationMapper = reservationMapper;
         this.notificationService = notificationService;
+        this.time = time;
     }
 
     @Transactional
     public ReservationReminderResult dispatchDueReminders() {
-        LocalDateTime now = LocalDateTime.now().withNano(0);
-        LocalDateTime windowEnd = now.plusMinutes(TWO_HOUR_MINUTES);
-        List<ReservationRow> due = reservationMapper.selectDueReminders(now, windowEnd, BATCH_SIZE);
+        Instant snapshot = time.now();
+        List<ReservationRow> due = reservationMapper.selectReminderTimeZones().stream()
+                .flatMap(timeZone -> {
+                    ZoneId zone = ZoneId.of(timeZone);
+                    LocalDateTime now = LocalDateTime.ofInstant(snapshot, zone);
+                    return reservationMapper.selectDueReminders(
+                            now,
+                            LocalDateTime.ofInstant(snapshot.plusSeconds(TWO_HOUR_MINUTES * 60L), zone),
+                            timeZone,
+                            BATCH_SIZE
+                    ).stream();
+                })
+                .toList();
 
         int twoHourSent = 0;
         int thirtyMinuteSent = 0;
@@ -51,9 +66,14 @@ public class ReservationReminderService {
 
         for (ReservationRow reservation : due) {
             int currentStatus = reservation.getRemindStatus() == null ? 0 : reservation.getRemindStatus();
-            long minutesUntil = Duration.between(now, reservation.getReserveTime()).toMinutes();
+            Duration remaining = Duration.between(snapshot, time.reservationInstant(reservation));
+            if (remaining.isNegative() || remaining.isZero() || remaining.compareTo(Duration.ofHours(2)) > 0) {
+                skipped++;
+                continue;
+            }
+            boolean withinThirtyMinutes = remaining.compareTo(Duration.ofMinutes(THIRTY_MINUTE_MINUTES)) <= 0;
 
-            if (minutesUntil <= THIRTY_MINUTE_MINUTES && (currentStatus & FLAG_THIRTY_MINUTE) == 0) {
+            if (withinThirtyMinutes && (currentStatus & FLAG_THIRTY_MINUTE) == 0) {
                 if (sendReminder(reservation, currentStatus, currentStatus | FLAG_THIRTY_MINUTE, THIRTY_MINUTE_MINUTES)) {
                     thirtyMinuteSent++;
                     currentStatus = currentStatus | FLAG_THIRTY_MINUTE;
@@ -63,8 +83,7 @@ public class ReservationReminderService {
                 }
             }
 
-            if (minutesUntil <= TWO_HOUR_MINUTES
-                    && minutesUntil > THIRTY_MINUTE_MINUTES
+            if (!withinThirtyMinutes
                     && (currentStatus & FLAG_TWO_HOUR) == 0) {
                 if (sendReminder(reservation, currentStatus, currentStatus | FLAG_TWO_HOUR, TWO_HOUR_MINUTES)) {
                     twoHourSent++;
@@ -101,7 +120,8 @@ public class ReservationReminderService {
         String title = windowMinutes == THIRTY_MINUTE_MINUTES
                 ? "预订即将开始（30 分钟）"
                 : "预订提醒（2 小时）";
-        String content = shopName + " · " + reserveTimeText + " · " + reservation.getPeopleCount() + " 人";
+        String content = shopName + " · " + reserveTimeText + " " + reservation.getTimeZone()
+                + " · " + reservation.getPeopleCount() + " 人";
         // Include window marker so 2h / 30m reminders stay distinct in the unread aggregate.
         String linkUrl = "/user/reservations/" + reservation.getId() + "?remind=" + windowMinutes;
 

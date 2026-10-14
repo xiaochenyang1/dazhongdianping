@@ -22,6 +22,7 @@ $publicSiteUrl = $env:PUBLIC_SITE_URL
 $prerenderApiBaseUrl = $env:PRERENDER_API_BASE_URL
 $prerenderRegion = if ($env:PRERENDER_REGION) { $env:PRERENDER_REGION } else { "EU" }
 $prerenderRegionsRaw = $env:PRERENDER_REGIONS
+$originalViteDefaultRegion = $env:VITE_DEFAULT_REGION
 $originalPrerenderRegion = $env:PRERENDER_REGION
 $originalPrerenderRegions = $env:PRERENDER_REGIONS
 $originalPublicSiteUrl = $env:PUBLIC_SITE_URL
@@ -233,6 +234,7 @@ try {
     # Build the serving dist for the first region, then retain each additional
     # region under web/seo-snapshots/<region> so they cannot overwrite one another.
     $env:PRERENDER_REGION = $baseRegion
+    $env:VITE_DEFAULT_REGION = $baseRegion
     $env:PUBLIC_SITE_URL = $baseConfiguration.SiteUrl
     $env:PRERENDER_API_BASE_URL = $baseConfiguration.ApiBaseUrl
 
@@ -248,6 +250,7 @@ try {
             continue
         }
         $env:PRERENDER_REGION = $configuration.Region
+        $env:VITE_DEFAULT_REGION = $configuration.Region
         $env:PUBLIC_SITE_URL = $configuration.SiteUrl
         $env:PRERENDER_API_BASE_URL = $configuration.ApiBaseUrl
         Invoke-Native -FilePath "npm" -Arguments @("run", "build:prerender:data") -WorkingDirectory $webDir
@@ -313,6 +316,7 @@ try {
             count = $migrationEntries.Count
         }
         webRuntime = [ordered]@{
+            defaultRegion = $baseRegion
             apiBaseUrl = if ($viteApiBaseUrl) { $viteApiBaseUrl } else { "" }
             webSocketBaseUrl = if ($viteWebSocketBaseUrl) { $viteWebSocketBaseUrl } else { "" }
             stripeConfigured = -not [string]::IsNullOrWhiteSpace($viteStripePublishableKey)
@@ -345,10 +349,21 @@ try {
     Write-Output $bundlePath
 }
 finally {
-    $env:PRERENDER_REGION = $originalPrerenderRegion
-    $env:PRERENDER_REGIONS = $originalPrerenderRegions
-    $env:PUBLIC_SITE_URL = $originalPublicSiteUrl
-    $env:PRERENDER_API_BASE_URL = $originalPrerenderApiBaseUrl
+    $environmentToRestore = @{
+        VITE_DEFAULT_REGION = $originalViteDefaultRegion
+        PRERENDER_REGION = $originalPrerenderRegion
+        PRERENDER_REGIONS = $originalPrerenderRegions
+        PUBLIC_SITE_URL = $originalPublicSiteUrl
+        PRERENDER_API_BASE_URL = $originalPrerenderApiBaseUrl
+    }
+    foreach ($entry in $environmentToRestore.GetEnumerator()) {
+        if ($null -eq $entry.Value) {
+            Remove-Item -LiteralPath "Env:$($entry.Key)" -ErrorAction SilentlyContinue
+        }
+        else {
+            Set-Item -LiteralPath "Env:$($entry.Key)" -Value $entry.Value
+        }
+    }
     if (Test-Path -LiteralPath $stagingDir) {
         Remove-Item -LiteralPath $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
     }

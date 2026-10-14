@@ -1,4 +1,6 @@
 import 'package:dazhongdianping_app/core/app_localizations.dart';
+import 'package:dazhongdianping_app/core/app_config.dart';
+import 'package:dazhongdianping_app/core/launch_capabilities.dart';
 import 'package:dazhongdianping_app/features/auth/auth_controller.dart';
 import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/auth/auth_repository.dart';
@@ -44,6 +46,7 @@ class UserCenterScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.authController,
+    this.region,
     this.browseRepository,
     this.reviewRepository,
     this.canInteractReviews = false,
@@ -53,6 +56,7 @@ class UserCenterScreen extends StatefulWidget {
   });
   final UserRepository repository;
   final AuthController authController;
+  final AppRegion? region;
   final BrowseRepository? browseRepository;
   final ReviewRepository? reviewRepository;
   final bool canInteractReviews;
@@ -67,6 +71,8 @@ class UserCenterScreen extends StatefulWidget {
 class _UserCenterScreenState extends State<UserCenterScreen> {
   late Future<UserProfile> _profile;
   UserProfile? _profileOverride;
+  LaunchCapabilities _capabilities = const LaunchCapabilities();
+  int _launchVersion = 0;
   bool _loggingOut = false;
   bool _reloading = false;
 
@@ -74,10 +80,33 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
   void initState() {
     super.initState();
     _profile = widget.repository.loadProfile();
+    _loadCapabilities();
+  }
+
+  @override
+  void didUpdateWidget(covariant UserCenterScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.region != widget.region ||
+        oldWidget.repository.api != widget.repository.api) {
+      _capabilities = const LaunchCapabilities();
+      _loadCapabilities();
+    }
+  }
+
+  Future<void> _loadCapabilities() async {
+    final version = ++_launchVersion;
+    final available = await LaunchCapabilities.load(
+      widget.repository.api,
+      region: widget.region,
+    );
+    if (mounted && version == _launchVersion) {
+      setState(() => _capabilities = available);
+    }
   }
 
   Future<void> _reload() async {
     if (_reloading) return;
+    _loadCapabilities();
     final future = widget.repository.loadProfile();
     setState(() {
       _profile = future;
@@ -282,9 +311,7 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                   await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => PointsMallScreen(
-                        repository: PointsMallRepository(
-                          widget.repository.api,
-                        ),
+                        repository: PointsMallRepository(widget.repository.api),
                         points: profile.points,
                       ),
                     ),
@@ -338,7 +365,9 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => TicketsScreen(repository: TicketRepository(widget.repository.api)),
+                    builder: (_) => TicketsScreen(
+                      repository: TicketRepository(widget.repository.api),
+                    ),
                   ),
                 ),
               ),
@@ -349,21 +378,26 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => GuidesScreen(repository: GuideRepository(widget.repository.api)),
+                    builder: (_) => GuidesScreen(
+                      repository: GuideRepository(widget.repository.api),
+                    ),
                   ),
                 ),
               ),
-              ListTile(
-                key: const Key('user-center-creator'),
-                leading: const Icon(Icons.edit_note_outlined),
-                title: Text(strings.creatorTasksTitle),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => CreatorTasksScreen(repository: CreatorRepository(widget.repository.api)),
+              if (_capabilities.creatorRewards)
+                ListTile(
+                  key: const Key('user-center-creator'),
+                  leading: const Icon(Icons.edit_note_outlined),
+                  title: Text(strings.creatorTasksTitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CreatorTasksScreen(
+                        repository: CreatorRepository(widget.repository.api),
+                      ),
+                    ),
                   ),
                 ),
-              ),
               ListTile(
                 key: const Key('user-center-invoices'),
                 leading: const Icon(Icons.receipt_long_outlined),
@@ -371,32 +405,40 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => InvoicesScreen(repository: InvoiceRepository(widget.repository.api)),
+                    builder: (_) => InvoicesScreen(
+                      repository: InvoiceRepository(widget.repository.api),
+                    ),
                   ),
                 ),
               ),
-              ListTile(
-                key: const Key('user-center-seckill'),
-                leading: const Icon(Icons.flash_on_outlined),
-                title: Text(strings.seckillTitle),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SeckillScreen(repository: CampaignRepository(widget.repository.api)),
+              if (_capabilities.seckill)
+                ListTile(
+                  key: const Key('user-center-seckill'),
+                  leading: const Icon(Icons.flash_on_outlined),
+                  title: Text(strings.seckillTitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SeckillScreen(
+                        repository: CampaignRepository(widget.repository.api),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              ListTile(
-                key: const Key('user-center-groupbuy'),
-                leading: const Icon(Icons.groups_outlined),
-                title: Text(strings.groupBuyTitle),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => GroupBuyScreen(repository: CampaignRepository(widget.repository.api)),
+              if (_capabilities.groupBuy)
+                ListTile(
+                  key: const Key('user-center-groupbuy'),
+                  leading: const Icon(Icons.groups_outlined),
+                  title: Text(strings.groupBuyTitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => GroupBuyScreen(
+                        repository: CampaignRepository(widget.repository.api),
+                      ),
+                    ),
                   ),
                 ),
-              ),
               ListTile(
                 key: const Key('user-center-level'),
                 leading: const Icon(Icons.workspace_premium_outlined),
@@ -404,7 +446,9 @@ class _UserCenterScreenState extends State<UserCenterScreen> {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => LevelPrivilegesScreen(repository: GrowthRepository(widget.repository.api)),
+                    builder: (_) => LevelPrivilegesScreen(
+                      repository: GrowthRepository(widget.repository.api),
+                    ),
                   ),
                 ),
               ),

@@ -7,6 +7,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.Instant;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -30,6 +35,14 @@ class MerchantFulfillmentControllerTest {
 
     @Autowired
     JdbcTemplate jdbc;
+
+    @MockBean
+    Clock clock;
+
+    @BeforeEach
+    void fixedReservationClock() {
+        when(clock.instant()).thenReturn(Instant.parse("2026-07-01T10:00:00Z"));
+    }
 
     @Test
     void shouldConfirmArriveRejectReservationAndVerifyCoupon() throws Exception {

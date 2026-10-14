@@ -1,12 +1,14 @@
 # EU 预发环境配置清单
 
-更新时间：2026-10-09
+更新时间：2026-10-14
 
 当前候选基线以最新 `eu-pre-rc-*` tag 或通过 CI 的不可变提交 SHA 为准，不在本文内维护会过期的固定 SHA。
 
 这份清单只记录变量名、位置和验收动作，不记录真实密钥。真实值应写入密钥管理系统、目标机私有 env 文件或 GitHub Environment variables/secrets。
 
 ## 1. 目标机运行环境
+
+首发地理与币种范围已冻结：巴黎单城（`Europe/Paris`），EU 订单仅 EUR；其他 EU 城市停用，英国/GBP 不包含在本次预发验收中。
 
 从 [`deploy/eu-pre.env.example`](../deploy/eu-pre.env.example) 复制一份到目标机或密钥管理系统，替换所有 `CHANGE_ME`。复制后的真实文件不得提交到仓库。
 
@@ -27,7 +29,8 @@
 | Elasticsearch | `APP_SEARCH_PROVIDER=elasticsearch`、`APP_SEARCH_BASE_URL`、`APP_SEARCH_INDEX_NAME`、`APP_SEARCH_FALLBACK_ON_ERROR=false` |
 | S3 兼容存储 | `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_BUCKET`、`APP_S3_REGION`、`APP_S3_ENDPOINT=https://...`、`APP_S3_PUBLIC_BASE_URL=https://...`、`APP_S3_ACCESS_KEY`、`APP_S3_SECRET_KEY` |
 | 移动推送 | `APP_PUSH_ENABLED=false`，直到真实 FCM/APNs 真机 smoke 通过 |
-| Web/SEO | `PUBLIC_SITE_URL=https://...`、`PRERENDER_API_BASE_URL=https://...`、`PRERENDER_REGION=EU`、`VITE_API_BASE_URL=https://...`、`VITE_WS_BASE_URL=wss://...`、`VITE_STRIPE_PUBLISHABLE_KEY=pk_test_*` |
+| 延期功能 | `APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED=false`、`APP_LAUNCH_EU_SECKILL_ENABLED=false`、`APP_LAUNCH_EU_GROUP_BUY_ENABLED=false` |
+| Web/SEO | `PUBLIC_SITE_URL=https://...`、`PRERENDER_API_BASE_URL=https://...`、`PRERENDER_REGION=EU`、`VITE_DEFAULT_REGION=EU`、`VITE_API_BASE_URL=https://...`、`VITE_WS_BASE_URL=wss://...`、`VITE_STRIPE_PUBLISHABLE_KEY=pk_test_*` |
 
 ### EU 入口代理与广告点击 IP
 
@@ -95,7 +98,7 @@ set +a
 
 ## 3. GitHub `pre` Environment
 
-2026-10-09 只读核对 GitHub `pre` Environment 后，当前可见的变量名为 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`；没有配置 secret 名称。不得把此清单当作变量值或凭证核验。正式预发前仍需补齐下表中依赖目标环境的变量和 secrets。
+2026-10-14 只读核对 GitHub `pre` Environment 后，当前可见的变量名为 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`；没有配置 secret 名称。不得把此清单当作变量值或凭证核验。正式预发前仍需补齐下表中依赖目标环境的变量和 secrets。
 
 Variables：
 
@@ -149,6 +152,8 @@ Secrets：
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
 ## 6. 已完成的仓库侧准备
+
+本轮巴黎首发和候选验证记录见 [2026-10-14 执行记录](巴黎首发优化与发布候选验证-2026-10-14.md)。以下旧候选保留为历史记录：
 
 - `eu-pre-rc-20260816-3` 已发布；标签 CI 的全量验证和 MySQL 迁移集成作业通过。
 - PR #1 已合入 `main`；合并提交的主干 CI 全部通过。

@@ -127,6 +127,81 @@ function containsCategoryId(categories: Array<{ id: number; children?: unknown[]
   )
 }
 
+test.describe('Paris launch', () => {
+  test.use({ timezoneId: 'Asia/Shanghai' })
+
+  test('books Paris in shop time and blocks deferred EU entry points', async ({ page, context, request }) => {
+    const headers = { 'X-Region': 'EU' }
+    const account = `paris-launch-${Date.now()}@example.com`
+    await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
+      headers, data: { scene: 'register', type: 'email', account, deviceId: account },
+    }))
+    const session = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
+      await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
+        headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!' },
+      }),
+    )
+    const userHeaders = { ...headers, Authorization: `Bearer ${session.accessToken}` }
+    const availability = await expectApiSuccess<{ date: string; today: string; timeZone: string }>(
+      await request.get(`${backendBaseURL}/api/c/v1/shops/20001/reservation-slots`, {
+        headers, params: { peopleCount: 2 },
+      }),
+    )
+    expect(availability.timeZone).toBe('Europe/Paris')
+    const merchant = await expectApiSuccess<{ accessToken: string }>(
+      await request.post(`${backendBaseURL}/api/b/v1/auth/login`, {
+        headers, data: { account: 'merchant_eu_sichuan@example.com', password: 'merchant123456' },
+      }),
+    )
+    await expectApiSuccess(await request.post(`${backendBaseURL}/api/b/v1/reservation-slots`, {
+      headers: { ...headers, Authorization: `Bearer ${merchant.accessToken}` },
+      data: { shopId: 20001, bizDate: availability.date, startTime: '18:30:00', endTime: '20:30:00',
+        capacity: 8, confirmMode: 2, cancelBeforeMinutes: 120, enabled: true },
+    }))
+    await context.addInitScript((auth) => {
+      localStorage.setItem('dzdp:region', 'EU')
+      localStorage.setItem('dzdp:user-access-token', auth.accessToken)
+      localStorage.setItem('dzdp:user-refresh-token', auth.refreshToken)
+      localStorage.setItem('dzdp:user-profile', JSON.stringify(auth.user))
+    }, session)
+
+    await page.goto('/shops/20001/reserve')
+    await expect(page.getByLabel('Date', { exact: true })).toHaveValue(availability.date)
+    await expect(page.getByLabel('Date', { exact: true })).toHaveAttribute('min', availability.today)
+    await expect(page.getByTestId('reservation-time-zone')).toHaveText('Europe/Paris')
+    await expect(page.locator('.top-nav')).not.toContainText('Creator')
+    await expect(page.locator('.top-nav')).not.toContainText('Flash sale')
+    await page.getByRole('button', { name: /18:30:00-20:30:00/ }).click()
+    await page.getByLabel('Contact name', { exact: true }).fill('Paris visitor')
+    await page.getByLabel('Phone number', { exact: true }).fill('+33123456789')
+    await page.getByRole('button', { name: 'Book now', exact: true }).click()
+    await expect(page).toHaveURL(/\/user\/reservations\/\d+$/)
+    const reservationId = page.url().split('/').pop()
+    await expect(page.locator('.page-header')).toContainText('18:30 Europe/Paris')
+    await page.getByRole('button', { name: 'Cancel booking', exact: true }).click()
+    await expect(page.getByText('Booking cancelled.', { exact: true })).toBeVisible()
+    const cancelled = await expectApiSuccess<{ status: number; timeZone: string; reserveAt: string }>(
+      await request.get(`${backendBaseURL}/api/c/v1/reservations/${reservationId}`, { headers: userHeaders }),
+    )
+    expect(cancelled.status).toBe(3)
+    expect(cancelled.timeZone).toBe('Europe/Paris')
+    expect(cancelled.reserveAt).toMatch(/Z$/)
+
+    await expectApiFailure(await request.post(`${backendBaseURL}/api/c/v1/reservations`, {
+      headers: userHeaders, data: { shopId: 20002, reserveTime: `${availability.date} 18:30:00`,
+        peopleCount: 2, contactName: 'Paris visitor', contactPhone: '+33123456789' },
+    }), 404)
+    await expectApiFailure(await request.post(`${backendBaseURL}/api/c/v1/creator/tasks/9102/claim`, {
+      headers: userHeaders,
+    }), 403)
+    for (const path of ['/user/creator', '/marketing/seckill', '/marketing/groupbuy']) {
+      await page.goto(path)
+      await expect(page).toHaveURL(/\/$/)
+      await expect(page.locator('.auth-dialog')).toHaveCount(0)
+    }
+  })
+})
+
 async function createApprovedPublicReview(request: APIRequestContext, content: string) {
   const reviewerSession = await expectApiSuccess<{
     accessToken: string
@@ -387,7 +462,7 @@ test.describe.serial('real backend review flow', () => {
       const city = await expectApiSuccess<{ id: number; code: string; status: number }>(
         await request.post(`${backendBaseURL}/api/admin/v1/cities`, {
           headers,
-          data: { code: cityCode.toLowerCase(), name: cityName, sortNo: 9999 },
+          data: { code: cityCode.toLowerCase(), name: cityName, timeZone: 'Europe/Paris', sortNo: 9999 },
         }),
       )
       cityId = city.id

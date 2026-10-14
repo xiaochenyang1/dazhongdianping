@@ -1,6 +1,7 @@
 package com.tuowei.dazhongdianping;
 
 import com.tuowei.dazhongdianping.config.FileStorageProperties;
+import com.tuowei.dazhongdianping.config.LaunchProperties;
 import com.tuowei.dazhongdianping.config.CorsProperties;
 import com.tuowei.dazhongdianping.config.InfrastructureProperties;
 import com.tuowei.dazhongdianping.config.PrivacyProperties;
@@ -19,6 +20,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @MapperScan("com.tuowei.dazhongdianping.module")
 @EnableConfigurationProperties({
         FileStorageProperties.class,
+        LaunchProperties.class,
         InfrastructureProperties.class,
         SendCodeRateLimitProperties.class,
         VerificationCodeProperties.class,

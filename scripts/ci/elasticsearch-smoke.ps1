@@ -107,7 +107,7 @@ if ($DryRun) {
     Write-Output "- Require a real Elasticsearch 8 service at $ElasticsearchBaseUrl."
     Write-Output "- Package and start the backend with isolated H2 data, APP_SEARCH_PROVIDER=elasticsearch, and APP_SEARCH_FALLBACK_ON_ERROR=false."
     Write-Output "- Login as admin and POST /api/admin/v1/search/reindex."
-    Write-Output "- Verify Chinese keyword, pinyin keyword, fuzzy correction, category/region filters, and geo distance sorting through /api/c/v1/search/shops."
+    Write-Output "- Verify Chinese keyword, pinyin keyword, fuzzy correction, category/region filters, Paris-only EU availability, and geo distance sorting through /api/c/v1/search/shops."
     Write-Output "- Delete the temporary Elasticsearch index and stop the managed backend in finally."
     exit 0
 }
@@ -139,7 +139,8 @@ try {
 
     Write-Step "rebuilding Elasticsearch index"
     $reindex = Invoke-Api -Method POST -Path "/api/admin/v1/search/reindex" -Headers $adminHeaders
-    if ([int]$reindex.data.indexed -ne 4) { throw "reindex expected 4 shops but indexed $($reindex.data.indexed)" }
+    # Paris is the only enabled EU city; the two CN shops remain available.
+    if ([int]$reindex.data.indexed -ne 3) { throw "reindex expected 3 active shops but indexed $($reindex.data.indexed)" }
     Start-Sleep -Seconds 1
 
     Write-Step "verifying Chinese, pinyin and fuzzy queries"
@@ -150,6 +151,11 @@ try {
     Write-Step "verifying filters, region isolation and distance"
     Assert-FirstShop (Invoke-Api GET "/api/c/v1/search/shops?categoryId=111" @{ "X-Region" = "CN" }) 10002 "category filter"
     Assert-FirstShop (Invoke-Api GET "/api/c/v1/search/shops?keyword=Sichuan" @{ "X-Region" = "EU" }) 20001 "EU region"
+    $euShops = Invoke-Api GET "/api/c/v1/search/shops" @{ "X-Region" = "EU" }
+    Assert-FirstShop $euShops 20001 "Paris-only EU launch"
+    if ([long]$euShops.data.total -ne 1) { throw "EU search must contain only the active Paris shop" }
+    $disabledCity = Invoke-Api GET "/api/c/v1/search/shops?cityId=102" @{ "X-Region" = "EU" }
+    if ([long]$disabledCity.data.total -ne 0) { throw "disabled Berlin city leaked into EU search" }
     $crossRegion = Invoke-Api GET "/api/c/v1/search/shops?keyword=Sichuan" @{ "X-Region" = "CN" }
     if ([long]$crossRegion.data.total -ne 0) { throw "region isolation leaked EU results into CN" }
     $distance = Invoke-Api GET "/api/c/v1/search/shops?sort=distance&lat=31.2297&lng=121.4470" @{ "X-Region" = "CN" }

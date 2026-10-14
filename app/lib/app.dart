@@ -411,6 +411,7 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                 Navigator.of(screenContext).push(
                   MaterialPageRoute(
                     builder: (_) => UserCenterScreen(
+                      region: settings.region,
                       repository: UserRepository(apiClient),
                       authController: authController,
                       browseRepository: ApiBrowseRepository(apiClient),

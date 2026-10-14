@@ -62,6 +62,9 @@ class ReservationDetail {
     required this.shopName,
     required this.address,
     required this.reserveTime,
+    this.timeZone = '',
+    this.reserveAt,
+    this.today,
     required this.peopleCount,
     required this.contactName,
     required this.contactPhone,
@@ -81,6 +84,9 @@ class ReservationDetail {
   final String shopName;
   final String address;
   final String reserveTime;
+  final String timeZone;
+  final DateTime? reserveAt;
+  final String? today;
   final int peopleCount;
   final String contactName;
   final String contactPhone;
@@ -103,6 +109,9 @@ class ReservationDetail {
       shopName: shop['name'] as String? ?? '',
       address: shop['address'] as String? ?? '',
       reserveTime: json['reserveTime'] as String? ?? '',
+      timeZone: json['timeZone'] as String? ?? '',
+      reserveAt: DateTime.tryParse(json['reserveAt'] as String? ?? '')?.toUtc(),
+      today: json['today'] as String?,
       peopleCount: json['peopleCount'] as int? ?? 0,
       contactName: json['contactName'] as String? ?? '',
       contactPhone: json['contactPhone'] as String? ?? '',
@@ -149,6 +158,9 @@ class ReservationSummary {
     required this.reservationNo,
     required this.shopName,
     required this.reserveTime,
+    this.timeZone = '',
+    this.reserveAt,
+    this.today,
     required this.peopleCount,
     required this.status,
     required this.statusText,
@@ -158,6 +170,9 @@ class ReservationSummary {
   final String reservationNo;
   final String shopName;
   final String reserveTime;
+  final String timeZone;
+  final DateTime? reserveAt;
+  final String? today;
   final int peopleCount;
   final int status;
   final String statusText;
@@ -169,6 +184,9 @@ class ReservationSummary {
       reservationNo: json['reservationNo'] as String? ?? '',
       shopName: shop['name'] as String? ?? '',
       reserveTime: json['reserveTime'] as String? ?? '',
+      timeZone: json['timeZone'] as String? ?? '',
+      reserveAt: DateTime.tryParse(json['reserveAt'] as String? ?? '')?.toUtc(),
+      today: json['today'] as String?,
       peopleCount: json['peopleCount'] as int? ?? 0,
       status: json['status'] as int? ?? 0,
       statusText: json['statusText'] as String? ?? '',
@@ -192,25 +210,55 @@ class ReservationPage {
   bool get hasMore => items.length < total;
 }
 
+class ReservationAvailability {
+  const ReservationAvailability({
+    required this.date,
+    this.today,
+    required this.timeZone,
+    required this.slots,
+  });
+  final String date;
+  final String? today;
+  final String timeZone;
+  final List<ReservationSlot> slots;
+}
+
 class ReservationRepository {
   ReservationRepository(this.api);
   final JsonApi api;
+
+  Future<ReservationAvailability> loadAvailability({
+    required int shopId,
+    String? date,
+    required int peopleCount,
+  }) async {
+    final result = await api.getJson(
+      '/api/c/v1/shops/$shopId/reservation-slots',
+      query: {
+        if (date != null && date.isNotEmpty) 'date': date,
+        'peopleCount': peopleCount,
+      },
+    );
+    return ReservationAvailability(
+      date: result['date'] as String? ?? date ?? '',
+      today: result['today'] as String?,
+      timeZone: result['timeZone'] as String? ?? '',
+      slots: (result['list'] as List<dynamic>? ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(ReservationSlot.fromJson)
+          .toList(),
+    );
+  }
 
   Future<List<ReservationSlot>> loadSlots({
     required int shopId,
     required String date,
     required int peopleCount,
-  }) async {
-    final result = await api.getJson(
-      '/api/c/v1/shops/$shopId/reservation-slots',
-      query: {'date': date, 'peopleCount': peopleCount},
-    );
-    final list = result['list'] as List<dynamic>? ?? const [];
-    return list
-        .cast<Map<String, dynamic>>()
-        .map(ReservationSlot.fromJson)
-        .toList();
-  }
+  }) async => (await loadAvailability(
+    shopId: shopId,
+    date: date,
+    peopleCount: peopleCount,
+  )).slots;
 
   Future<ReservationResult> create({
     required int shopId,

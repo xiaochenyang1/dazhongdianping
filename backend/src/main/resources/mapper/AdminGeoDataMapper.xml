@@ -76,20 +76,20 @@
     </select>
 
     <select id="selectCities" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminCityRow">
-        SELECT id, code, region, name, sort_no, status
+        SELECT id, code, region, name, time_zone, sort_no, status
         FROM city
         WHERE region = #{region}
         ORDER BY sort_no ASC, id ASC
     </select>
 
     <select id="selectCity" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminCityRow">
-        SELECT id, code, region, name, sort_no, status
+        SELECT id, code, region, name, time_zone, sort_no, status
         FROM city
         WHERE region = #{region} AND id = #{id}
     </select>
 
     <select id="selectCityForUpdate" resultType="com.tuowei.dazhongdianping.module.admin.geodata.model.AdminCityRow">
-        SELECT id, code, region, name, sort_no, status
+        SELECT id, code, region, name, time_zone, sort_no, status
         FROM city
         WHERE region = #{region} AND id = #{id}
         FOR UPDATE
@@ -108,12 +108,12 @@
     </select>
 
     <insert id="insertCity" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO city(code, region, name, sort_no, status)
-        VALUES(#{code}, #{region}, #{name}, #{sortNo}, #{status})
+        INSERT INTO city(code, region, name, time_zone, sort_no, status)
+        VALUES(#{code}, #{region}, #{name}, #{timeZone}, #{sortNo}, #{status})
     </insert>
 
     <update id="updateCity">
-        UPDATE city SET code = #{code}, name = #{name}, sort_no = #{sortNo}
+        UPDATE city SET code = #{code}, name = #{name}, time_zone = #{timeZone}, sort_no = #{sortNo}
         WHERE region = #{region} AND id = #{id}
     </update>
 

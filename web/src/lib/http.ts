@@ -263,8 +263,8 @@ async function downloadRequest(config: RetryableRequestConfig): Promise<Blob> {
   }
 }
 
-export function apiGet<T>(url: string, params?: object) {
-  return request<T>({ url, method: 'GET', params })
+export function apiGet<T>(url: string, params?: object, headers?: Record<string, string>) {
+  return request<T>({ url, method: 'GET', params, headers })
 }
 
 export function apiPost<T>(url: string, data?: unknown) {

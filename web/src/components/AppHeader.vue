@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { featureForPath, useLaunchCapabilities } from '@/composables/useLaunchCapabilities'
 import { useAppContext } from '@/composables/useAppContext'
 import { useUserSession } from '@/composables/useUserSession'
 import { logoutUser } from '@/services/auth'
@@ -56,7 +57,17 @@ let searchHistoryRequestId = 0
 
 const strings = computed(() => webStringsForRegion(state.region))
 const notificationStrings = computed(() => notificationStringsForRegion(state.region))
-const navItems = computed(() => strings.value.nav)
+const { capabilities, load: loadCapabilities } = useLaunchCapabilities()
+const navItems = computed(() => strings.value.nav.filter(item => {
+  const feature = featureForPath(item.to)
+  return !feature || capabilities.value[feature]
+}))
+watch(() => state.region, async region => {
+  const available = await loadCapabilities(region)
+  if (state.region !== region) return
+  const feature = featureForPath(route.path)
+  if (feature && !available[feature]) void router.replace('/')
+}, { immediate: true })
 applyWebDocumentMeta(state.region, route.name)
 const userInitial = computed(() => (
   sessionState.currentUser?.nickname?.slice(0, 1) || strings.value.session.userInitial

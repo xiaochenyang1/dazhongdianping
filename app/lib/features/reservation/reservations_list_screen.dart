@@ -243,8 +243,9 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
                         subtitle: Text(
                           strings.reservationListMeta(
                             no: item.reservationNo,
-                            time: formatDisplayDateTime(
+                            time: formatReservationDateTime(
                               item.reserveTime,
+                              timeZone: item.timeZone,
                               locale: strings.tag,
                             ),
                             people: item.peopleCount,
