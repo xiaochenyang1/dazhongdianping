@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
-@SpringBootTest
+@SpringBootTest(properties = "app.launch.deferred-features-enabled=true")
 @AutoConfigureMockMvc
 class MarketingCampaignControllerTest {
 

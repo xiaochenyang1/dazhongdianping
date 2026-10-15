@@ -130,7 +130,7 @@ function containsCategoryId(categories: Array<{ id: number; children?: unknown[]
 test.describe('Paris launch', () => {
   test.use({ timezoneId: 'Asia/Shanghai' })
 
-  test('books Paris in shop time and blocks deferred EU entry points', async ({ page, context, request }) => {
+  test('books Paris in shop time and blocks deferred entry points across regions', async ({ page, context, request }) => {
     const headers = { 'X-Region': 'EU' }
     const account = `paris-launch-${Date.now()}@example.com`
     await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
@@ -138,7 +138,7 @@ test.describe('Paris launch', () => {
     }))
     const session = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
       await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
-        headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!' },
+        headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
       }),
     )
     const userHeaders = { ...headers, Authorization: `Bearer ${session.accessToken}` }
@@ -159,7 +159,7 @@ test.describe('Paris launch', () => {
         capacity: 8, confirmMode: 2, cancelBeforeMinutes: 120, enabled: true },
     }))
     await context.addInitScript((auth) => {
-      localStorage.setItem('dzdp:region', 'EU')
+      if (!localStorage.getItem('dzdp:region')) localStorage.setItem('dzdp:region', 'EU')
       localStorage.setItem('dzdp:user-access-token', auth.accessToken)
       localStorage.setItem('dzdp:user-refresh-token', auth.refreshToken)
       localStorage.setItem('dzdp:user-profile', JSON.stringify(auth.user))
@@ -191,13 +191,35 @@ test.describe('Paris launch', () => {
       headers: userHeaders, data: { shopId: 20002, reserveTime: `${availability.date} 18:30:00`,
         peopleCount: 2, contactName: 'Paris visitor', contactPhone: '+33123456789' },
     }), 404)
-    await expectApiFailure(await request.post(`${backendBaseURL}/api/c/v1/creator/tasks/9102/claim`, {
-      headers: userHeaders,
-    }), 403)
-    for (const path of ['/user/creator', '/marketing/seckill', '/marketing/groupbuy']) {
-      await page.goto(path)
-      await expect(page).toHaveURL(/\/$/)
-      await expect(page.locator('.auth-dialog')).toHaveCount(0)
+    for (const region of ['EU', 'CN', '']) {
+      const probeHeaders: Record<string, string> = { Authorization: `Bearer ${session.accessToken}` }
+      if (region) probeHeaders['X-Region'] = region
+      const launch = await expectApiSuccess(await request.get(`${backendBaseURL}/api/c/v1/launch-config`, {
+        headers: probeHeaders,
+      }))
+      expect(launch).toEqual({ region: region || 'CN', creatorRewards: false, seckill: false, groupBuy: false })
+      const taskId = region === 'EU' ? 9102 : 9101
+      for (const action of ['claim', 'complete']) {
+        await expectApiFailure(await request.post(`${backendBaseURL}/api/c/v1/creator/tasks/${taskId}/${action}`, {
+          headers: probeHeaders,
+        }), 403)
+      }
+    }
+    const profile = await expectApiSuccess<{ preferredRegion: string; points: number }>(
+      await request.get(`${backendBaseURL}/api/c/v1/user/me`, { headers: userHeaders }),
+    )
+    expect(profile.preferredRegion).toBe('EU')
+    expect(profile.points).toBe(0)
+
+    for (const region of ['EU', 'CN']) {
+      await page.locator('.region-switch').getByRole('button', { name: region, exact: true }).click()
+      for (const path of ['/user/creator', '/marketing/seckill', '/marketing/groupbuy']) {
+        await page.goto(path)
+        await expect(page).toHaveURL(/\/$/)
+        await expect(page.locator('.region-switch').getByRole('button', { name: region, exact: true })).toHaveClass(/is-active/)
+        await expect(page.locator(`.top-nav a[href="${path}"]`)).toHaveCount(0)
+        await expect(page.locator('.auth-dialog')).toHaveCount(0)
+      }
     }
   })
 })

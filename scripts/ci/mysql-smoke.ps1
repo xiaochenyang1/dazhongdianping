@@ -615,7 +615,7 @@ SELECT @smoke_task_id;
     }
 
     if (-not $SkipImport) {
-        Write-Step "smoking Paris reservation timezone snapshots and EU launch switches on MySQL"
+        Write-Step "smoking Paris reservation timezone snapshots and deployment launch switches on MySQL"
         $euHeaders = @{ "X-Region" = "EU" }
         $launch = Invoke-Json -Method "GET" -Path "/api/c/v1/launch-config" -Headers $euHeaders
         if ($launch.data.region -ne "EU" -or $launch.data.creatorRewards -or $launch.data.seckill -or $launch.data.groupBuy) {
@@ -630,7 +630,7 @@ SELECT @smoke_task_id;
             scene = "register"; type = "email"; account = $account; deviceId = $account
         } | Out-Null
         $user = Invoke-Json -Method "POST" -Path "/api/c/v1/auth/register" -Headers $euHeaders -Body @{
-            type = "email"; account = $account; code = "123456"; password = "Passw0rd!"
+            type = "email"; account = $account; code = "123456"; password = "Passw0rd!"; preferredRegion = "EU"
         }
         $euHeaders.Authorization = "Bearer $($user.data.accessToken)"
         $reservationDate = ([datetime]$calendar.data.date).ToString("yyyy-MM-dd")
@@ -673,6 +673,65 @@ SELECT @smoke_task_id;
                 $actualStatus = [int]$_.Exception.Response.StatusCode
             }
             if ($actualStatus -ne $probe.Status) { throw "Launch guard $($probe.Path) expected HTTP $($probe.Status), got $actualStatus" }
+        }
+
+        Write-Step "checking that an EU account cannot earn deferred rewards through CN or missing region headers"
+        foreach ($regionHeader in @("EU", "CN", "")) {
+            $probeHeaders = @{ Authorization = "Bearer $($user.data.accessToken)" }
+            if ($regionHeader) { $probeHeaders["X-Region"] = $regionHeader }
+            $expectedRegion = if ($regionHeader) { $regionHeader } else { "CN" }
+            $launch = Invoke-Json -Method "GET" -Path "/api/c/v1/launch-config" -Headers $probeHeaders
+            if ($launch.data.region -ne $expectedRegion -or $launch.data.creatorRewards -or $launch.data.seckill -or $launch.data.groupBuy) {
+                throw "Deferred launch capabilities must stay disabled for region header '$regionHeader'"
+            }
+            $taskId = if ($expectedRegion -eq "EU") { 9102 } else { 9101 }
+            foreach ($action in @("claim", "complete")) {
+                $actualStatus = $null
+                try { Invoke-Json -Method "POST" -Path "/api/c/v1/creator/tasks/$taskId/$action" -Headers $probeHeaders | Out-Null }
+                catch {
+                    if (-not $_.Exception.Response) { throw }
+                    $actualStatus = [int]$_.Exception.Response.StatusCode
+                }
+                if ($actualStatus -ne 403) { throw "Creator $action with region header '$regionHeader' expected HTTP 403, got $actualStatus" }
+            }
+        }
+        $profile = Invoke-Json -Method "GET" -Path "/api/c/v1/user/me" -Headers $euHeaders
+        if ($profile.data.preferredRegion -ne "EU" -or $profile.data.points -ne 0) {
+            throw "The EU account gained points after blocked cross-region creator requests"
+        }
+
+        # This no-value product exists only in the database imported by this smoke run.
+        $productFixtureSql = @"
+INSERT INTO points_product (region, name, description, points_price, stock)
+VALUES ('EU', 'Launch guard smoke fixture', 'No real value; isolated smoke database only', 20, 1);
+SELECT LAST_INSERT_ID();
+"@
+        $productOutput = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName", "--batch", "--skip-column-names", "-e", $productFixtureSql
+        )) -WorkingDirectory $repoRoot)
+        $productId = [long]($productOutput | Where-Object { [string]$_ -match '^\d+$' } | Select-Object -Last 1)
+        if ($productId -le 0) { throw "Failed to create the isolated EU points product" }
+        $actualStatus = $null
+        try { Invoke-Json -Method "POST" -Path "/api/c/v1/points/products/$productId/exchange" -Headers $euHeaders | Out-Null }
+        catch {
+            if (-not $_.Exception.Response) { throw }
+            $actualStatus = [int]$_.Exception.Response.StatusCode
+        }
+        if ($actualStatus -ne 400) { throw "An unfunded EU exchange expected HTTP 400, got $actualStatus" }
+        $userId = [long]$user.data.user.id
+        $integritySql = @"
+SELECT stock, exchange_count,
+    (SELECT points FROM app_user WHERE id=$userId),
+    (SELECT COUNT(*) FROM creator_task_claim WHERE user_id=$userId),
+    (SELECT COUNT(*) FROM growth_points_log WHERE user_id=$userId AND action='creator_task'),
+    (SELECT COUNT(*) FROM points_exchange WHERE user_id=$userId)
+FROM points_product WHERE id=$productId;
+"@
+        $integrity = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName", "--batch", "--skip-column-names", "-e", $integritySql
+        )) -WorkingDirectory $repoRoot)
+        if ($integrity.Count -ne 1 -or $integrity[0] -ne "1`t0`t0`t0`t0`t0") {
+            throw "Blocked cross-region rewards and exchange must preserve stock, balances and records; got: $integrity"
         }
 
         $auditHeaders = @{

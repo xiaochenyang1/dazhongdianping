@@ -75,6 +75,7 @@ logging:
 
 app:
   launch:
+    deferred-features-enabled: ${APP_LAUNCH_DEFERRED_FEATURES_ENABLED:false}
     eu:
       creator-rewards-enabled: ${APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED:false}
       seckill-enabled: ${APP_LAUNCH_EU_SECKILL_ENABLED:false}

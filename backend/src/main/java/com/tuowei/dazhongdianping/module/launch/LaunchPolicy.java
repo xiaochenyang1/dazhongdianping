@@ -18,9 +18,15 @@ public class LaunchPolicy {
     }
 
     public Capabilities capabilities(Region region) {
+        // Points are shared across regions. A request header must not reopen
+        // deferred rewards or campaigns on a deployment that has disabled them.
+        if (!properties.isDeferredFeaturesEnabled()) {
+            return new Capabilities(region.name(), false, false, false);
+        }
         boolean cn = region == Region.CN;
-        return new Capabilities(region.name(), cn || properties.isCreatorRewardsEnabled(),
-                cn || properties.isSeckillEnabled(), cn || properties.isGroupBuyEnabled());
+        LaunchProperties.Eu eu = properties.getEu();
+        return new Capabilities(region.name(), cn || eu.isCreatorRewardsEnabled(),
+                cn || eu.isSeckillEnabled(), cn || eu.isGroupBuyEnabled());
     }
 
     public void require(Feature feature) {

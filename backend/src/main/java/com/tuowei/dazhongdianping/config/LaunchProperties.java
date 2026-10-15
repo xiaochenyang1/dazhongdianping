@@ -3,11 +3,17 @@ package com.tuowei.dazhongdianping.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** EU launch switches stay disabled unless an operator explicitly enables them. */
+/** Deferred features require deployment opt-in before any regional capability can open. */
 @Data
-@ConfigurationProperties(prefix = "app.launch.eu")
+@ConfigurationProperties(prefix = "app.launch")
 public class LaunchProperties {
-    private boolean creatorRewardsEnabled;
-    private boolean seckillEnabled;
-    private boolean groupBuyEnabled;
+    private boolean deferredFeaturesEnabled;
+    private final Eu eu = new Eu();
+
+    @Data
+    public static class Eu {
+        private boolean creatorRewardsEnabled;
+        private boolean seckillEnabled;
+        private boolean groupBuyEnabled;
+    }
 }

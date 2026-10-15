@@ -1,6 +1,6 @@
 # EU 预发环境配置清单
 
-更新时间：2026-10-14
+更新时间：2026-10-15
 
 当前候选基线以最新 `eu-pre-rc-*` tag 或通过 CI 的不可变提交 SHA 为准，不在本文内维护会过期的固定 SHA。
 
@@ -29,7 +29,7 @@
 | Elasticsearch | `APP_SEARCH_PROVIDER=elasticsearch`、`APP_SEARCH_BASE_URL`、`APP_SEARCH_INDEX_NAME`、`APP_SEARCH_FALLBACK_ON_ERROR=false` |
 | S3 兼容存储 | `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_BUCKET`、`APP_S3_REGION`、`APP_S3_ENDPOINT=https://...`、`APP_S3_PUBLIC_BASE_URL=https://...`、`APP_S3_ACCESS_KEY`、`APP_S3_SECRET_KEY` |
 | 移动推送 | `APP_PUSH_ENABLED=false`，直到真实 FCM/APNs 真机 smoke 通过 |
-| 延期功能 | `APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED=false`、`APP_LAUNCH_EU_SECKILL_ENABLED=false`、`APP_LAUNCH_EU_GROUP_BUY_ENABLED=false` |
+| 延期功能 | 部署总开关 `APP_LAUNCH_DEFERRED_FEATURES_ENABLED=false`，同时关闭所有区域的延期能力；另保留 `APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED=false`、`APP_LAUNCH_EU_SECKILL_ENABLED=false`、`APP_LAUNCH_EU_GROUP_BUY_ENABLED=false` |
 | Web/SEO | `PUBLIC_SITE_URL=https://...`、`PRERENDER_API_BASE_URL=https://...`、`PRERENDER_REGION=EU`、`VITE_DEFAULT_REGION=EU`、`VITE_API_BASE_URL=https://...`、`VITE_WS_BASE_URL=wss://...`、`VITE_STRIPE_PUBLISHABLE_KEY=pk_test_*` |
 
 ### EU 入口代理与广告点击 IP
