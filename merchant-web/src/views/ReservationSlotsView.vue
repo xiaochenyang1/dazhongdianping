@@ -49,7 +49,7 @@ function messageOf(cause: unknown) {
 
 async function loadShops() {
   const page = await fetchShops({ page: 1, pageSize: 100 })
-  shops.value = page.list.map((item) => ({ id: Number(item.id), name: String(item.name) }))
+  shops.value = page.list.map((item) => ({ id: Number(item.id), name: String(item.name), timeZone: item.timeZone as string | undefined }))
   if (!filters.shopId && shops.value[0]) {
     filters.shopId = shops.value[0].id
   }
@@ -76,12 +76,24 @@ async function load() {
   }
 }
 
+function shopTimeZone(shopId: number) {
+  return shops.value.find(shop => shop.id === shopId)?.timeZone || (state.region === 'EU' ? 'Europe/Paris' : 'Asia/Shanghai')
+}
+
+function shopToday(shopId: number) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: shopTimeZone(shopId), year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date())
+  const value = (type: string) => parts.find(part => part.type === type)?.value
+  return `${value('year')}-${value('month')}-${value('day')}`
+}
+
 function openCreate() {
   if (!canEdit.value) return
   const shopId = filters.shopId === '' ? Number(shops.value[0]?.id || 0) : Number(filters.shopId)
   editor.value = {
     shopId,
-    bizDate: filters.dateFrom || new Date().toISOString().slice(0, 10),
+    bizDate: filters.dateFrom || shopToday(shopId),
     startTime: '18:00:00',
     endTime: '20:00:00',
     capacity: 10,
@@ -241,7 +253,7 @@ watch(
           <tr v-for="item in items" :key="item.id">
             <td>{{ item.shopName || item.shopId }}</td>
             <td>{{ item.bizDate }}</td>
-            <td>{{ item.startTime }} - {{ item.endTime }}</td>
+            <td>{{ item.startTime }} - {{ item.endTime }} {{ item.timeZone }}</td>
             <td>{{ strings.reservationSlots.capacitySummary(item.reservedCount, item.capacity, item.remainingCount) }}</td>
             <td>{{ strings.reservationSlots.confirmModeSummary(item.confirmMode, item.cancelBeforeMinutes) }}</td>
             <td>{{ strings.reservationSlots.statusText(item.enabled) }}</td>
@@ -262,6 +274,7 @@ watch(
     </div>
 
     <div v-if="editor && canEdit" class="card" style="margin-top: 16px">
+      <p class="muted" data-testid="slot-time-zone">{{ shopTimeZone(editor.shopId) }}</p>
       <h3>{{ editor.id ? strings.reservationSlots.editorTitles.edit : strings.reservationSlots.editorTitles.create }}</h3>
       <form class="row-actions" style="flex-wrap: wrap; gap: 12px" data-testid="slot-editor" @submit.prevent="submitEditor">
         <label>
@@ -272,7 +285,7 @@ watch(
         </label>
         <label>
           <span class="muted">{{ strings.reservationSlots.editorLabels.date }}</span>
-          <input v-model="editor.bizDate" name="slot-date" type="date" required />
+          <input v-model="editor.bizDate" name="slot-date" type="date" :min="shopToday(editor.shopId)" required />
         </label>
         <label>
           <span class="muted">{{ strings.reservationSlots.editorLabels.start }}</span>

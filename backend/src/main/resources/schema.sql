@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS city (
     code VARCHAR(32) NOT NULL,
     region VARCHAR(8) NOT NULL,
     name VARCHAR_IGNORECASE(64) NOT NULL,
+    time_zone VARCHAR(64) NOT NULL DEFAULT 'UTC',
     sort_no INT NOT NULL DEFAULT 0,
     status TINYINT NOT NULL DEFAULT 1
 );
@@ -685,6 +686,9 @@ CREATE TABLE IF NOT EXISTS audit_task (
     machine_result TINYINT NOT NULL DEFAULT 0,
     status TINYINT NOT NULL DEFAULT 0,
     auditor_id BIGINT NOT NULL DEFAULT 0,
+    claimed_by_admin_id BIGINT NULL,
+    claimed_at TIMESTAMP NULL,
+    claim_expires_at TIMESTAMP NULL,
     remark VARCHAR(255) NOT NULL DEFAULT '',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -692,6 +696,26 @@ CREATE TABLE IF NOT EXISTS audit_task (
 
 CREATE INDEX IF NOT EXISTS idx_audit_task_region_status ON audit_task(region, biz_type, status, id);
 CREATE INDEX IF NOT EXISTS idx_audit_task_biz_status ON audit_task(biz_type, biz_id, status, id);
+CREATE INDEX IF NOT EXISTS idx_audit_task_claim ON audit_task(region, biz_type, status, claimed_by_admin_id, claim_expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_audit_sla_alert (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    region VARCHAR(8) NOT NULL,
+    biz_type TINYINT NOT NULL,
+    status TINYINT NOT NULL DEFAULT 0,
+    active_key VARCHAR(16) UNIQUE,
+    pending_count INT NOT NULL DEFAULT 0,
+    overdue_count INT NOT NULL DEFAULT 0,
+    oldest_pending_at TIMESTAMP NULL,
+    first_overdue_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_audit_sla_alert_region_status
+    ON admin_audit_sla_alert(region, status, first_overdue_at, id);
 
 CREATE TABLE IF NOT EXISTS audit_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -895,7 +919,7 @@ CREATE INDEX IF NOT EXISTS idx_channel_statement_batch_region ON channel_stateme
 CREATE TABLE IF NOT EXISTS channel_statement_item (id BIGINT AUTO_INCREMENT PRIMARY KEY, batch_id BIGINT NOT NULL, line_no INT NOT NULL, transaction_type VARCHAR(32) NOT NULL DEFAULT '', channel_transaction_id VARCHAR(128) NOT NULL DEFAULT '', amount DECIMAL(12,2), currency CHAR(3) NOT NULL DEFAULT '', channel_status VARCHAR(32) NOT NULL DEFAULT '', occurred_at VARCHAR(64) NOT NULL DEFAULT '', order_no VARCHAR(32) NOT NULL DEFAULT '', local_biz_type VARCHAR(16) NOT NULL DEFAULT '', local_biz_id BIGINT NOT NULL DEFAULT 0, local_amount DECIMAL(12,2), local_currency CHAR(3) NOT NULL DEFAULT '', local_status TINYINT, reconcile_status VARCHAR(16) NOT NULL, discrepancy_reason VARCHAR(255) NOT NULL DEFAULT '', raw_data CLOB, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE INDEX IF NOT EXISTS idx_channel_statement_item_batch ON channel_statement_item(batch_id, reconcile_status, line_no, id);
 CREATE TABLE IF NOT EXISTS reservation_slot (id BIGINT AUTO_INCREMENT PRIMARY KEY,shop_id BIGINT NOT NULL,region VARCHAR(8) NOT NULL,biz_date DATE NOT NULL,start_time TIME NOT NULL,end_time TIME NOT NULL,capacity INT NOT NULL,reserved_count INT NOT NULL DEFAULT 0,confirm_mode TINYINT NOT NULL DEFAULT 2,cancel_before_minutes INT NOT NULL DEFAULT 120,enabled BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS reservation (id BIGINT AUTO_INCREMENT PRIMARY KEY,reservation_no VARCHAR(32) NOT NULL UNIQUE,user_id BIGINT NOT NULL,shop_id BIGINT NOT NULL,slot_id BIGINT NOT NULL DEFAULT 0,region VARCHAR(8) NOT NULL,reserve_time TIMESTAMP NOT NULL,people_count INT NOT NULL,contact_name VARCHAR(64) NOT NULL,contact_phone VARCHAR(32) NOT NULL,remark VARCHAR(255) NOT NULL DEFAULT '',status TINYINT NOT NULL DEFAULT 0,merchant_staff_id BIGINT NOT NULL DEFAULT 0,confirmed_at TIMESTAMP NULL,arrived_at TIMESTAMP NULL,cancelled_at TIMESTAMP NULL,rejected_at TIMESTAMP NULL,reschedule_count TINYINT NOT NULL DEFAULT 0,remind_status TINYINT NOT NULL DEFAULT 0,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS reservation (id BIGINT AUTO_INCREMENT PRIMARY KEY,reservation_no VARCHAR(32) NOT NULL UNIQUE,user_id BIGINT NOT NULL,shop_id BIGINT NOT NULL,slot_id BIGINT NOT NULL DEFAULT 0,region VARCHAR(8) NOT NULL,reserve_time TIMESTAMP NOT NULL,time_zone VARCHAR(64) NOT NULL DEFAULT '',people_count INT NOT NULL,contact_name VARCHAR(64) NOT NULL,contact_phone VARCHAR(32) NOT NULL,remark VARCHAR(255) NOT NULL DEFAULT '',status TINYINT NOT NULL DEFAULT 0,merchant_staff_id BIGINT NOT NULL DEFAULT 0,confirmed_at TIMESTAMP NULL,arrived_at TIMESTAMP NULL,cancelled_at TIMESTAMP NULL,rejected_at TIMESTAMP NULL,reschedule_count TINYINT NOT NULL DEFAULT 0,remind_status TINYINT NOT NULL DEFAULT 0,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS reservation_change_log (id BIGINT AUTO_INCREMENT PRIMARY KEY,reservation_id BIGINT NOT NULL,action_type TINYINT NOT NULL,operator_type TINYINT NOT NULL,operator_id BIGINT NOT NULL DEFAULT 0,from_status TINYINT NOT NULL DEFAULT 0,to_status TINYINT NOT NULL DEFAULT 0,old_reserve_time TIMESTAMP NULL,new_reserve_time TIMESTAMP NULL,remark VARCHAR(255) NOT NULL DEFAULT '',created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_growth_points_log_user_type_action_biz
@@ -1534,6 +1558,7 @@ CREATE TABLE IF NOT EXISTS shop_question (
     user_id BIGINT NOT NULL,
     content VARCHAR(500) NOT NULL,
     answer_count INT NOT NULL DEFAULT 0,
+    status TINYINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -1545,6 +1570,7 @@ CREATE TABLE IF NOT EXISTS shop_answer (
     question_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     content VARCHAR(500) NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );

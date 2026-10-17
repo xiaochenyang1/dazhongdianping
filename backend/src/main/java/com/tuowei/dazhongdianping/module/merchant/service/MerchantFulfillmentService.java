@@ -10,6 +10,8 @@ import com.tuowei.dazhongdianping.module.notification.service.NotificationServic
 import com.tuowei.dazhongdianping.module.reservation.mapper.ReservationMapper;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationLogRow;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationRow;
+import com.tuowei.dazhongdianping.module.reservation.service.ReservationAvailabilityService;
+import com.tuowei.dazhongdianping.module.reservation.service.ReservationTimeService;
 import com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper;
 import com.tuowei.dazhongdianping.module.trade.model.CouponRow;
 import java.time.LocalDate;
@@ -30,17 +32,23 @@ public class MerchantFulfillmentService {
     private final TradeMapper tradeMapper;
     private final MerchantAuthorizationService authorizationService;
     private final NotificationService notificationService;
+    private final ReservationAvailabilityService availability;
+    private final ReservationTimeService time;
 
     public MerchantFulfillmentService(
             ReservationMapper reservationMapper,
             TradeMapper tradeMapper,
             MerchantAuthorizationService authorizationService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            ReservationAvailabilityService availability,
+            ReservationTimeService time
     ) {
         this.reservationMapper = reservationMapper;
         this.tradeMapper = tradeMapper;
         this.authorizationService = authorizationService;
         this.notificationService = notificationService;
+        this.availability = availability;
+        this.time = time;
     }
 
     @Transactional
@@ -131,6 +139,10 @@ public class MerchantFulfillmentService {
         if (reservation.getStatus() != fromStatus) {
             throw new IllegalArgumentException("预订当前状态不允许此操作");
         }
+        if (toStatus == 1) {
+            availability.lockAvailable(reservation.getShopId(), region());
+            time.requireFuture(reservation.getReserveTime(), reservation.getTimeZone());
+        }
         if (reservationMapper.updateMerchantStatus(
                 reservationId,
                 merchant.merchantId(),
@@ -177,7 +189,7 @@ public class MerchantFulfillmentService {
             default -> "预订状态已更新";
         };
         String content = shopName
-                + (reserveTimeText.isBlank() ? "" : " · " + reserveTimeText)
+                + (reserveTimeText.isBlank() ? "" : " · " + reserveTimeText + " " + reservation.getTimeZone())
                 + (peopleText.isBlank() ? "" : " · " + peopleText)
                 + " · " + actionText
                 + (remark == null || remark.isBlank() || "商户确认".equals(remark) || "确认到店".equals(remark) || "标记爽约".equals(remark)
@@ -236,6 +248,8 @@ public class MerchantFulfillmentService {
         result.put("shopId", row.getShopId());
         result.put("shopName", row.getShopName());
         result.put("reserveTime", row.getReserveTime());
+        result.put("timeZone", row.getTimeZone());
+        result.put("reserveAt", time.reservationInstant(row));
         result.put("peopleCount", row.getPeopleCount());
         result.put("status", row.getStatus());
         result.put("statusText", reservationStatusText(row.getStatus()));

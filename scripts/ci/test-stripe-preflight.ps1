@@ -26,6 +26,8 @@ finally {
 }
 foreach ($name in @(
     'APP_RUNTIME_MODE',
+    'APP_TRUSTED_PROXY_REGEX',
+    'APP_AD_CLICK_DEDUPE_SECONDS',
     'APP_AUTH_VERIFICATION_MOCK_ENABLED',
     'APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE',
     'APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED',
@@ -70,6 +72,11 @@ foreach ($name in @(
     'APP_PUSH_ENABLED',
     'APP_CORS_ALLOWED_ORIGIN_PATTERNS',
     'VITE_WS_BASE_URL',
+    'VITE_DEFAULT_REGION',
+    'APP_LAUNCH_DEFERRED_FEATURES_ENABLED',
+    'APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED',
+    'APP_LAUNCH_EU_SECKILL_ENABLED',
+    'APP_LAUNCH_EU_GROUP_BUY_ENABLED',
     'PRERENDER_REGION'
 )) {
     if ($script -notmatch [regex]::Escape($name)) { throw "stripe preflight must check $name" }
@@ -85,6 +92,8 @@ if ($template -notmatch 'APP_SEARCH_FALLBACK_ON_ERROR=false') { throw 'EU templa
 
 $contractEnvironment = [ordered]@{
     APP_RUNTIME_MODE = 'pre'
+    APP_TRUSTED_PROXY_REGEX = '^(?:10[.]42[.]0[.]12|10[.]42[.]0[.]13)$'
+    APP_AD_CLICK_DEDUPE_SECONDS = '1800'
     APP_DB_HOST = 'db.internal'
     APP_DB_NAME = 'dzdp_eu_contract'
     APP_DB_USERNAME = 'dzdp_contract'
@@ -137,6 +146,11 @@ $contractEnvironment = [ordered]@{
     PUBLIC_SITE_URL = 'https://eu.example.com'
     PRERENDER_API_BASE_URL = 'https://api.eu.example.com'
     PRERENDER_REGION = 'EU'
+    VITE_DEFAULT_REGION = 'EU'
+    APP_LAUNCH_DEFERRED_FEATURES_ENABLED = 'false'
+    APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED = 'false'
+    APP_LAUNCH_EU_SECKILL_ENABLED = 'false'
+    APP_LAUNCH_EU_GROUP_BUY_ENABLED = 'false'
     VITE_API_BASE_URL = 'https://api.eu.example.com'
     VITE_WS_BASE_URL = 'wss://api.eu.example.com/ws'
     VITE_STRIPE_PUBLISHABLE_KEY = 'pk_' + 'test_contract'
@@ -155,6 +169,33 @@ try {
     }
 
     if ((Invoke-PreflightContract) -ne 0) { throw 'complete EU contract configuration must pass preflight' }
+
+    $env:VITE_DEFAULT_REGION = 'CN'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'a CN default for new Web visitors must fail the Paris launch gate' }
+    $env:VITE_DEFAULT_REGION = $contractEnvironment.VITE_DEFAULT_REGION
+
+    foreach ($feature in @('APP_LAUNCH_DEFERRED_FEATURES_ENABLED', 'APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED', 'APP_LAUNCH_EU_SECKILL_ENABLED', 'APP_LAUNCH_EU_GROUP_BUY_ENABLED')) {
+        Set-Item -LiteralPath "Env:$feature" -Value 'true'
+        if ((Invoke-PreflightContract) -eq 0) { throw "enabled deferred feature $feature must fail the Paris launch gate" }
+        Remove-Item -LiteralPath "Env:$feature"
+        if ((Invoke-PreflightContract) -eq 0) { throw "unspecified deferred feature $feature must fail the Paris launch gate" }
+        Set-Item -LiteralPath "Env:$feature" -Value 'false'
+    }
+
+    $env:APP_TRUSTED_PROXY_REGEX = '^10[.]42[.]0[.].+$'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'broad trusted-proxy regex must fail preflight' }
+    $env:APP_TRUSTED_PROXY_REGEX = $contractEnvironment.APP_TRUSTED_PROXY_REGEX
+
+    $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = ''
+    $env:PUBLIC_SITE_URL = ''
+    $aggregateOutput = @(& $bash $scriptPath 2>&1)
+    $aggregateExitCode = $LASTEXITCODE
+    if ($aggregateExitCode -eq 0) { throw 'missing CORS origins must fail preflight' }
+    if (-not ($aggregateOutput -match '\[missing\] PUBLIC_SITE_URL')) {
+        throw 'preflight must continue reporting missing configuration after a missing CORS origin'
+    }
+    $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = $contractEnvironment.APP_CORS_ALLOWED_ORIGIN_PATTERNS
+    $env:PUBLIC_SITE_URL = $contractEnvironment.PUBLIC_SITE_URL
 
     $env:APP_RUNTIME_MODE = 'prod'
     if ((Invoke-PreflightContract) -eq 0) { throw 'prod runtime identity must fail the EU pre-release gate' }
@@ -176,9 +217,27 @@ try {
     if ((Invoke-PreflightContract) -eq 0) { throw 'partial Twilio routing must fail the EU launch gate' }
     $env:APP_AUTH_VERIFICATION_TWILIO_ROUTE_PREFIXES = $contractEnvironment.APP_AUTH_VERIFICATION_TWILIO_ROUTE_PREFIXES
 
-    $env:APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES = ''
-    if ((Invoke-PreflightContract) -eq 0) { throw 'missing +86 Twilio exclusion must fail preflight' }
+    foreach ($missingExclusion in @('', ' , , ', $null)) {
+        if ($null -eq $missingExclusion) {
+            Remove-Item Env:APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES = $missingExclusion
+        }
+        $env:PUBLIC_SITE_URL = ''
+        $aggregateOutput = @(& $bash $scriptPath 2>&1)
+        if ($LASTEXITCODE -eq 0) { throw 'missing +86 Twilio exclusion must fail preflight' }
+        if (-not ($aggregateOutput -match 'EXCLUDED_ROUTE_PREFIXES must include \+86')) {
+            throw 'missing Twilio exclusion must produce a configuration diagnostic'
+        }
+        if (-not ($aggregateOutput -match '\[missing\] PUBLIC_SITE_URL') -or
+            -not ($aggregateOutput -match 'configuration failed with') -or
+            ($aggregateOutput -match 'unbound variable')) {
+            throw 'empty Twilio routing must not abort the remaining preflight checks on Bash 3.2'
+        }
+    }
     $env:APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES = $contractEnvironment.APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES
+    $env:PUBLIC_SITE_URL = $contractEnvironment.PUBLIC_SITE_URL
 
     $env:APP_PAYMENT_NOTIFY_SECRET = 'too-short'
     if ((Invoke-PreflightContract) -eq 0) { throw 'short payment notification secret must fail preflight' }

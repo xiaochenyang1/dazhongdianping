@@ -620,6 +620,10 @@ class AppLocalizations {
     'reservationErrorRescheduleUnavailable': '当前预订暂时无法改期',
     'reservationErrorSlotNotFound': '预订时段不存在',
     'reservationErrorNotFound': '这笔预订不存在',
+    'reservationErrorPlaceUnavailable': '门店当前不可预订',
+    'reservationErrorPastTime': '请选择晚于门店当前时间的时段',
+    'reservationErrorDstTime': '该时间处于夏令时切换，请选择其他时段',
+
     'dateLabel': '日期 {date}',
     'peopleCount': '{count} 人',
     'slotsLoadFailed': '时段加载失败：{error}',
@@ -1726,6 +1730,10 @@ class AppLocalizations {
     'reservationErrorRescheduleUnavailable': '目前預訂暫時無法改期',
     'reservationErrorSlotNotFound': '預訂時段不存在',
     'reservationErrorNotFound': '這筆預訂不存在',
+    'reservationErrorPlaceUnavailable': '門店目前無法預訂',
+    'reservationErrorPastTime': '請選擇晚於門店目前時間的時段',
+    'reservationErrorDstTime': '該時間處於夏令時間切換，請選擇其他時段',
+
     'dateLabel': '日期 {date}',
     'peopleCount': '{count} 人',
     'slotsLoadFailed': '時段載入失敗：{error}',
@@ -2336,7 +2344,8 @@ class AppLocalizations {
     'searchHint': 'Search restaurants, supermarkets and services',
     'featured': 'Featured near you',
     'recommendedForYou': 'Recommended for you',
-    'recommendationsEmpty': 'Not enough preference data yet — browse a bit more and it will fill in.',
+    'recommendationsEmpty':
+        'Not enough preference data yet — browse a bit more and it will fill in.',
     'profile': 'Me',
     'homeSubtitle': 'Chinese-friendly places nearby',
     'europe': 'Europe',
@@ -2897,6 +2906,12 @@ class AppLocalizations {
         'This reservation cannot be rescheduled right now.',
     'reservationErrorSlotNotFound': 'This reservation slot could not be found.',
     'reservationErrorNotFound': 'This reservation could not be found.',
+    'reservationErrorPlaceUnavailable': 'This place is not accepting bookings.',
+    'reservationErrorPastTime':
+        "Choose a future time in the place’s time zone.",
+    'reservationErrorDstTime':
+        'This time is affected by daylight saving. Choose another time slot.',
+
     'dateLabel': 'Date {date}',
     'peopleCount': '{count} guests',
     'slotsLoadFailed': 'Could not load time slots: {error}',
@@ -2952,7 +2967,8 @@ class AppLocalizations {
     'reviewErrorUserUnavailable': 'Your account is currently unavailable.',
     'reviewErrorShopUnavailable': 'This place is unavailable for reviews.',
     'reviewErrorShopImmutable': 'The place for this review cannot be changed.',
-    'reviewErrorRiskBlocked': 'This review triggered a risk-control rule and cannot be submitted right now. Please contact support if you believe this is a mistake.',
+    'reviewErrorRiskBlocked':
+        'This review triggered a risk-control rule and cannot be submitted right now. Please contact support if you believe this is a mistake.',
     'auditRemarkLabel': 'Audit note: {remark}',
     'merchantReplyLabel': 'Merchant reply: {reply}',
     'anonymousUser': 'Anonymous user',
@@ -3546,25 +3562,31 @@ class AppLocalizations {
   String get recommendationsEmpty => _text('recommendationsEmpty');
   String get couponCenterTitle => _text('couponCenterTitle');
   String get couponCenterEmpty => _text('couponCenterEmpty');
-  String couponCenterLoadFailed(Object error) => _withError('couponCenterLoadFailed', error);
+  String couponCenterLoadFailed(Object error) =>
+      _withError('couponCenterLoadFailed', error);
   String get couponClaim => _text('couponClaim');
   String get couponClaimed => _text('couponClaimed');
   String get couponSoldOut => _text('couponSoldOut');
   String get couponClaimSuccess => _text('couponClaimSuccess');
-  String couponClaimFailed(Object error) => _withError('couponClaimFailed', error);
+  String couponClaimFailed(Object error) =>
+      _withError('couponClaimFailed', error);
   String get myMarketingCouponsTitle => _text('myMarketingCouponsTitle');
   String get marketingCouponsEmpty => _text('marketingCouponsEmpty');
-  String myMarketingCouponsLoadFailed(Object error) => _withError('myMarketingCouponsLoadFailed', error);
+  String myMarketingCouponsLoadFailed(Object error) =>
+      _withError('myMarketingCouponsLoadFailed', error);
   String get couponTypeThreshold => _text('couponTypeThreshold');
   String get couponTypeNewcomer => _text('couponTypeNewcomer');
-  String get marketingCouponStatusUnused => _text('marketingCouponStatusUnused');
+  String get marketingCouponStatusUnused =>
+      _text('marketingCouponStatusUnused');
   String get marketingCouponStatusUsed => _text('marketingCouponStatusUsed');
-  String get marketingCouponStatusExpired => _text('marketingCouponStatusExpired');
+  String get marketingCouponStatusExpired =>
+      _text('marketingCouponStatusExpired');
   String get adLabel => _text('adLabel');
   String get waitlistEntry => _text('waitlistEntry');
   String get myWaitlistTitle => _text('myWaitlistTitle');
   String get waitlistEmpty => _text('waitlistEmpty');
-  String waitlistLoadFailed(Object error) => _withError('waitlistLoadFailed', error);
+  String waitlistLoadFailed(Object error) =>
+      _withError('waitlistLoadFailed', error);
   String get waitlistJoinTitle => _text('waitlistJoinTitle');
   String get waitlistTableType => _text('waitlistTableType');
   String get waitlistTableSmall => _text('waitlistTableSmall');
@@ -3572,10 +3594,12 @@ class AppLocalizations {
   String get waitlistTableLarge => _text('waitlistTableLarge');
   String get waitlistPartySize => _text('waitlistPartySize');
   String get waitlistJoin => _text('waitlistJoin');
-  String waitlistJoinFailed(Object error) => _withError('waitlistJoinFailed', error);
+  String waitlistJoinFailed(Object error) =>
+      _withError('waitlistJoinFailed', error);
   String get waitlistJoinSuccess => _text('waitlistJoinSuccess');
   String get waitlistCancel => _text('waitlistCancel');
-  String waitlistCancelFailed(Object error) => _withError('waitlistCancelFailed', error);
+  String waitlistCancelFailed(Object error) =>
+      _withError('waitlistCancelFailed', error);
   String waitlistAhead(int count) => _withCount('waitlistAhead', count);
   String get waitlistNo => _text('waitlistNo');
   String get qaSectionTitle => _text('qaSectionTitle');
@@ -3593,8 +3617,10 @@ class AppLocalizations {
   String get consultEntry => _text('consultEntry');
   String get myConsultTitle => _text('myConsultTitle');
   String get consultSessionsEmpty => _text('consultSessionsEmpty');
-  String consultLoadFailed(Object error) => _withError('consultLoadFailed', error);
-  String consultSendFailed(Object error) => _withError('consultSendFailed', error);
+  String consultLoadFailed(Object error) =>
+      _withError('consultLoadFailed', error);
+  String consultSendFailed(Object error) =>
+      _withError('consultSendFailed', error);
   String get consultMessagesEmpty => _text('consultMessagesEmpty');
   String get consultInputHint => _text('consultInputHint');
   String get consultSend => _text('consultSend');
@@ -3603,7 +3629,8 @@ class AppLocalizations {
   String get myComplaintsTitle => _text('myComplaintsTitle');
   String get myTicketsTitle => _text('myTicketsTitle');
   String get ticketsEmpty => _text('ticketsEmpty');
-  String ticketsLoadFailed(Object error) => _withError('ticketsLoadFailed', error);
+  String ticketsLoadFailed(Object error) =>
+      _withError('ticketsLoadFailed', error);
   String get ticketSubject => _text('ticketSubject');
   String get ticketContent => _text('ticketContent');
   String get ticketSubmit => _text('ticketSubmit');
@@ -3611,7 +3638,8 @@ class AppLocalizations {
   String get ticketSend => _text('ticketSend');
   String get guidesTitle => _text('guidesTitle');
   String get guidesEmpty => _text('guidesEmpty');
-  String guidesLoadFailed(Object error) => _withError('guidesLoadFailed', error);
+  String guidesLoadFailed(Object error) =>
+      _withError('guidesLoadFailed', error);
   String get creatorTasksTitle => _text('creatorTasksTitle');
   String get creatorClaim => _text('creatorClaim');
   String get creatorComplete => _text('creatorComplete');
@@ -3628,7 +3656,8 @@ class AppLocalizations {
   String get groupBuyJoin => _text('groupBuyJoin');
   String get levelPrivilegesTitle => _text('levelPrivilegesTitle');
   String get complaintsEmpty => _text('complaintsEmpty');
-  String complaintsLoadFailed(Object error) => _withError('complaintsLoadFailed', error);
+  String complaintsLoadFailed(Object error) =>
+      _withError('complaintsLoadFailed', error);
   String get complaintDetailTitle => _text('complaintDetailTitle');
   String get complaintCreateTitle => _text('complaintCreateTitle');
   String get complaintTypeLabel => _text('complaintTypeLabel');
@@ -3638,7 +3667,8 @@ class AppLocalizations {
   String get complaintContentHint => _text('complaintContentHint');
   String get complaintSubmit => _text('complaintSubmit');
   String get complaintSubmitting => _text('complaintSubmitting');
-  String complaintSubmitFailed(Object error) => _withError('complaintSubmitFailed', error);
+  String complaintSubmitFailed(Object error) =>
+      _withError('complaintSubmitFailed', error);
   String get complaintSubmitSuccess => _text('complaintSubmitSuccess');
   String get complaintMerchantReply => _text('complaintMerchantReply');
   String get complaintResolution => _text('complaintResolution');
@@ -4668,6 +4698,11 @@ class AppLocalizations {
   String get reservationErrorSlotNotFound =>
       _text('reservationErrorSlotNotFound');
   String get reservationErrorNotFound => _text('reservationErrorNotFound');
+  String get reservationErrorPlaceUnavailable =>
+      _text('reservationErrorPlaceUnavailable');
+  String get reservationErrorPastTime => _text('reservationErrorPastTime');
+  String get reservationErrorDstTime => _text('reservationErrorDstTime');
+
   String dateLabel(String date) =>
       _text('dateLabel').replaceFirst('{date}', date);
   String peopleCount(int count) => _isEnglish

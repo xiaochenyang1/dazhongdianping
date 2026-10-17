@@ -10,10 +10,11 @@ import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
+import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
 import com.tuowei.dazhongdianping.module.message.mapper.MessageMapper;
 import com.tuowei.dazhongdianping.module.message.model.MessageRow;
 import com.tuowei.dazhongdianping.module.message.model.request.SendMessageRequest;
-import com.tuowei.dazhongdianping.module.moderation.service.SensitiveWordFilterService;
+import com.tuowei.dazhongdianping.module.moderation.service.ContentModerationService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import com.tuowei.dazhongdianping.module.notification.websocket.NotificationSessionRegistry;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +37,7 @@ class MessageRealtimeTest {
         MessageMapper mapper = Mockito.mock(MessageMapper.class);
         NotificationSessionRegistry sessions = Mockito.mock(NotificationSessionRegistry.class);
         NotificationService notifications = Mockito.mock(NotificationService.class);
-        SensitiveWordFilterService sensitiveWordFilterService = Mockito.mock(SensitiveWordFilterService.class);
+        ContentModerationService contentModerationService = Mockito.mock(ContentModerationService.class);
         when(mapper.countAvailableUser(22L)).thenReturn(1);
         when(mapper.countBlockEitherDirection(11L, 22L)).thenReturn(0);
         when(mapper.findConversation(11L, 22L)).thenReturn(33L);
@@ -50,7 +51,7 @@ class MessageRealtimeTest {
         RegionContext.setRegion(Region.CN);
         TransactionSynchronizationManager.initSynchronization();
 
-        new MessageService(mapper, sessions, notifications, sensitiveWordFilterService)
+        new MessageService(mapper, sessions, notifications, contentModerationService, Mockito.mock(AdminAuditMapper.class))
                 .send(new SendMessageRequest(22L, "事务消息"));
 
         verify(sessions, never()).sendAllRegions(eq(22L), any());

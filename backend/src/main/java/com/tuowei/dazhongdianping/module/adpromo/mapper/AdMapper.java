@@ -52,8 +52,7 @@ public interface AdMapper {
 
     void insertClickLog(
             @Param("campaignId") Long campaignId, @Param("region") String region,
-            @Param("shopId") Long shopId, @Param("userId") Long userId,
-            @Param("cost") java.math.BigDecimal cost);
+            @Param("shopId") Long shopId, @Param("cost") java.math.BigDecimal cost);
 
     /** 门店广告报表：投放行上的花费，加上点击日志的次数与金额汇总。 */
     List<AdReportRow> selectShopReport(

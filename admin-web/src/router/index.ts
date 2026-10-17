@@ -205,6 +205,7 @@ const router = createRouter({
         { path: 'audit/risk', name: 'risk-control', component: () => import('@/views/RiskControlView.vue'), meta: { requiresAuth: true, titleKey: 'riskControl', requiredPermission: 'risk:event:read' } },
         { path: 'audit/complaints', name: 'complaint-arbitration', component: () => import('@/views/ComplaintArbitrationView.vue'), meta: { requiresAuth: true, titleKey: 'complaints', requiredPermission: 'audit:complaint:read' } },
         { path: 'audit/automod', name: 'automod-hits', component: () => import('@/views/AutomodHitsView.vue'), meta: { requiresAuth: true, titleKey: 'automod', requiredPermission: 'audit:automod:read' } },
+        { path: 'audit/sla-alerts', name: 'audit-sla-alerts', component: () => import('@/views/AdminAuditSlaAlertsView.vue'), meta: { requiresAuth: true, titleKey: 'auditSlaAlerts', requiredPermission: 'audit:automod:read' } },
         { path: 'support/tickets', name: 'support-tickets', component: () => import('@/views/SupportTicketsView.vue'), meta: { requiresAuth: true, titleKey: 'supportTickets', requiredPermission: 'support:ticket:read' } },
         {
           path: 'system/admins',

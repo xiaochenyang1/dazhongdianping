@@ -1,6 +1,6 @@
 # 当前已完成功能与 SQL 导入说明
 
-> 最后更新:2026-09-23
+> 最后更新:2026-10-14
 > M7 补充：已完成帖子与转发、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、关注流、私信、官方圈子、区域化话题广场、7 天热榜、三端页面、管理端治理和话题隐私治理。
 > 适用范围:当前仓库真实已落地的 `M1` 至 `M7` 本地闭环；FCM/APNs 服务端适配器已落地，但真实凭证、真机 smoke、真实欧洲支付、Google Maps 和目标环境凭证联调仍未完成
 
@@ -86,6 +86,8 @@
 - 团购交易已完成：门店团购列表/详情、下单、有限库存原子扣减、未支付取消恢复库存、模拟支付、SHA-256 回调验签与幂等、按购买数量发券、订单/券列表、退款申请和已核销券退款拦截；退款不再由用户请求同步完成，而是进入商户审核。
 - 区域支付默认通道已隔离：`CN=alipay_mock`、`EU=stripe`;EU 区 Stripe test mode 已打通（PaymentIntent → Web/Flutter Elements/PaymentSheet → webhook 验签 → 发券），商户/平台退款审批已接 Stripe Refund、稳定幂等键与渠道回执持久化；真实凭证、退款到账 smoke 与生产 switchover 待验收。
 - 预订已完成：时段容量、自动/人工确认、创建、列表、详情、取消截止时间、改期重新确认、容量释放和变更时间线。
+- 巴黎首发已补城市 IANA 时区和预订时区快照：创建/改期/确认及时段启用统一校验门店与所属地理数据可用性；停用城市的历史预订保留查询、允许截止前取消和已确认记录的提醒。客户端显示门店当地时间，取消与提醒按真实时刻计算；新预订拒绝夏令时缺失/重复时间。具体接口契约见 [2026-10-14 执行记录](巴黎首发优化与发布候选验证-2026-10-14.md)。
+- EU 创作者奖励、秒杀和拼团默认关闭，后端在写入前拒绝延期功能，Web/Flutter 隐藏入口，Web 拦截直达路由；普通门店团购与预订继续开放。公开 `/api/c/v1/launch-config` 返回当前区域能力。
 - 商户履约后端已完成：确认、拒绝、到店、爽约、券码核销；SQL 同时约束商户归属、区域、当前状态和券有效期，避免串店操作。
 - Web 已完成团购详情、订单、券、在线预订、我的预订和预订详情页面；独立 `merchant-web` 已补齐注册、登录、资质提交/状态分流、概览、门店、员工、预订、团购、订单退款、点评回复/申诉页面。
 
@@ -120,7 +122,7 @@
 - 浏览侧已完成首页、搜索（热词 + 登录用户搜索历史面板 + 输入联想 + 门店结果历史分页，支持清空/单条删除）、门店详情（含门店收藏/取消收藏、公开点评预览与相似门店推荐）、独立门店点评列表（排序、评分和带图筛选，筛选请求防乱序覆盖，后续页按点评 ID 去重）、城市榜单列表/详情、运营活动列表/详情、团购下单与在线预订；未配置 Google Maps、真实支付渠道时明确展示不可用原因，不把占位能力写成已接通。自 `2026-08-12` 起首页地图入口进一步收口：Google Maps 未配置时直接隐藏按钮，不再展示“点击即弹提示”的半成品入口；自 `2026-08-13` 起继续补成可用地图闭环：公开门店列表/详情返回坐标，Android/iOS 在 Dart 与原生层均完成 Key 注入后展示可拖动、缩放、点击标记并与门店选择联动的交互地图，Web 或原生注入未完成时降级 Static Maps，详情页可打开 Google Maps 到店导航；交互地图还支持用户点击后申请前台定位权限、显示当前位置和聚焦镜头，并调用后端距离排序、展示米/公里距离；地图拖动或缩放停止后会按可见边界刷新门店，快速连续移动只应用最后一次请求，空结果或失败时保留已有标记。拒绝或服务关闭时保留列表浏览且不申请后台定位。真实 key/真机定位 smoke 仍待验收。验证码/支付渠道未配置时后端 fail-closed 返回 503，Firebase 占位走 NoOp 回退，均不伪装成功。同日起 Flutter 门店详情与后端 `ShopDetailResponse` / Web `ShopDetailView.vue` 对齐 §3.3：补齐封面图（`coverUrl`，缺失时占位容器而非空 `Image.network`）、口味/环境/服务三维评分明细、推荐菜（含推荐理由与价格）、门店相册（三宫格 `GridView`，图片加载失败回退占位图），三语言文案全覆盖。
 - 首页在 `CN / EU` 区域或浏览仓储变化时会自动重新加载推荐门店，避免区域标题更新后继续展示旧区域列表。
 - 【`2026-09-20` 新增】个性化推荐引擎（recommendation）全栈落地：后端 `module/recommendation` 基于用户行为埋点（浏览/收藏/下单/搜索，写入 `user_behavior_event`）聚合品类偏好，配合店铺质量、热度（`shop_view_daily`）与就近距离做可解释加权打分（打分策略 SPI 位于 `common/recommendation`，权重按区域存 `recommendation_weight`，运营可在 Admin 后台调整）。C 端 `GET /api/c/v1/recommendations/feed`（匿名可用，登录后个性化）与 `POST /api/c/v1/recommendations/behaviors`（需登录）；Web 首页与 Flutter 首页新增“猜你喜欢”分区；admin-web `/operations/recommendation` 权重配置页（`operations:recommendation:read/write`，已挂后端菜单）。仍为规则打分，非 ML；后端 507、web 217、admin-web 157、Flutter 582 测试全绿。
-- 【`2026-09-21` 新增】反刷单/反虚假点评风控引擎（riskcontrol）全栈落地：后端 `module/riskcontrol` 提供规则引擎，规则接口 SPI 位于 `common/riskcontrol`（`RiskRule` 多实现——用户高频 `review_freq`/`order_freq`、设备多账号 `device_multi_account`/`register_multi_account`、批量相似文本 `review_duplicate`），命中动作聚合取最严格（放行/转人审/拦截）。表 `risk_rule`（按区域可配阈值/窗口/动作/风险分）、`risk_event`（命中事件看板与处置）、`device_fingerprint`（设备画像与拉黑）。挂钩点：点评提交经 `ReviewRiskGuard` 调 `RiskEvaluationService.evaluate`，`BLOCK` 抛 `RiskBlockedException`（403 + `riskcontrol.review_blocked`），`REVIEW` 强制进人审队列并标注审核备注；风控自身异常降级放行不阻断主流程。请求级设备指纹/IP 由 `RiskRequestInterceptor` 从 `X-Device-Id`/`X-Forwarded-For` 注入 `RiskRequestContext`。admin-web `/audit/risk` 风控中心（事件看板 + 处置 + 规则管理，`risk:event:read/write`，已挂后端 audit 菜单）；web/Flutter 无独立 UI，仅本地化拦截提示（Flutter 增 `deviceProvider` 可选头，默认不引入平台依赖）。后端 516、admin-web 159、web 219、Flutter 584 测试全绿。
+- 【`2026-09-21` 新增】反刷单/反虚假点评风控引擎（riskcontrol）全栈落地：后端 `module/riskcontrol` 提供规则引擎，规则接口 SPI 位于 `common/riskcontrol`（`RiskRule` 多实现——用户高频 `review_freq`/`order_freq`、设备多账号 `device_multi_account`/`register_multi_account`、批量相似文本 `review_duplicate`），命中动作聚合取最严格（放行/转人审/拦截）。表 `risk_rule`（按区域可配阈值/窗口/动作/风险分）、`risk_event`（命中事件看板与处置）、`device_fingerprint`（设备画像与拉黑）。挂钩点：点评提交经 `ReviewRiskGuard` 调 `RiskEvaluationService.evaluate`，`BLOCK` 抛 `RiskBlockedException`（403 + `riskcontrol.review_blocked`），`REVIEW` 强制进人审队列并标注审核备注；风控自身异常降级放行不阻断主流程。请求级设备指纹/IP 由 `RiskRequestInterceptor` 从 `X-Device-Id` 和容器可信代理处理后的 `getRemoteAddr()` 注入 `RiskRequestContext`，不自行读取客户端转发头。admin-web `/audit/risk` 风控中心（事件看板 + 处置 + 规则管理，`risk:event:read/write`，已挂后端 audit 菜单）；web/Flutter 无独立 UI，仅本地化拦截提示（Flutter 增 `deviceProvider` 可选头，默认不引入平台依赖）。后端 516、admin-web 159、web 219、Flutter 584 测试全绿。
 - 独立门店点评列表首次加载失败可重试，重试保留当前排序和筛选条件。
 - 点评侧已完成新建、本人详情回填编辑、四维评分、消费金额、标签、系统相册选图、评论区历史分页与楼中楼回复，以及带鉴权/区域/语言/幂等键的 multipart 图片上传。
 - 点评编辑器会明确反馈选图、上传和保存失败，失败后保留表单并恢复操作按钮；异步入口会拦截重复上传和重复提交。
@@ -206,6 +208,7 @@
 - 客服工单：用户创建/回复，商户按门店回复，管理端回复并把待处理改为处理中，状态只允许 2/3/4。
 - 结构化探店攻略、创作者任务（完成后写积分流水 `action=creator_task`）、等级权益 `GET /api/c/v1/user/level-privileges`。
 - 商户经营趋势与 CSV 导出、广告投放报表。
+- 广告点击同一登录用户或匿名客户端在 30 分钟窗口内只计费一次；匿名 IP 由 Tomcat 在可信代理配置后提供，只在请求内存中使用，再以服务密钥派生的 HMAC 指纹放入带 TTL 的 EU Redis 去重键；原始 IP 不写入 Redis 键、点击数据库或去重业务日志。Redis claim 使用随机令牌，只有广告扣费事务提交后才保留；事务回滚时按令牌 compare-and-delete 释放，避免失败请求占住去重窗口。点击计费明细不再保留用户 ID，新日志省略该列，`sql/mysql/20_ad_click_log_anonymization_migration.sql` 将已有点击明细中的用户 ID 匿名化为 `0`；商户报表仍按广告/门店汇总。EU 预发仍须填入实际代理 IP 正则、限制后端直连，并在隐私告知中说明短时反刷处理；详情见 `docs/EU预发环境配置清单.md` 的“EU 入口代理与广告点击 IP”。
 - 进程内消息 outbox（`message_outbox`，不是外部消息队列）、实验/功能开关、开放接口 HMAC（密钥只在创建时返回；签名原文为 `keyId\n时间戳\n方法\n路径`）。
 - 海外华人门店筛选：中文服务、中文菜单、支付宝、微信。筛选走 `GET /api/c/v1/shops`，详情展示走 `GET /api/c/v1/shops/{id}/amenities`。搜索接口不带这些字段。
 - 三端页面：`web`、`admin-web`、`merchant-web` 与 Flutter 用户中心入口均已接通。表结构写在测试用 `backend/src/main/resources/schema.sql` 与 `data.sql`，没有回写 `sql/mysql/01_schema.sql`。既有 MySQL 库先执行一次 `sql/mysql/15_local_life_ops_migration.sql`，再执行一次 `sql/mysql/16_marketing_coupon_migration.sql`（优惠券模板、用户券、订单抵扣字段）。
@@ -288,12 +291,12 @@
 .\scripts\ci\mysql-smoke.ps1 -DbName dazhongdianping_smoke -DropDatabaseAfter
 ```
 
-`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库并依次 `source` `01_schema.sql`、`02_seed_data.sql`;同名库已存在时会拒绝执行,避免 `01_schema.sql` 的重建逻辑误清业务数据。已准备好的数据库应使用 `-SkipImport`,确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符,并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
+`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-25 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
 
 ### 3.2 初始化与迁移 SQL 的作用
 
 - `sql/mysql/00_all_in_one.sql`: 已退役的安全阻断桩,执行时直接报错,不再串联破坏性建表脚本。
-- `sql/mysql/01_schema.sql`: 当前代码口径的建表脚本,已包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等现行表。
+- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-25 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
 - `sql/mysql/02_seed_data.sql`: 浏览数据、公开点评、待审/驳回审核案例、点评图片、点赞/评论演示数据、C 端演示账号、成长规则(含 `check_in`)。
 - `sql/mysql/03_admin_city_scope_migration.sql`: 既有数据库增加管理员城市/门店范围；只用于升级，不参与全新数据库初始化。
 - `sql/mysql/04_admin_import_batch_scope_migration.sql`: 既有数据库增加受限管理员本人导入批次查询索引；在 `03` 后执行一次。
@@ -307,13 +310,17 @@
 - `sql/mysql/12_shop_search_sync_outbox_migration.sql`: 既有库创建门店搜索索引事务 outbox；首次启用 ES 仍先执行一次管理端全量重建，后续变更自动增量同步。
 - `sql/mysql/13_search_sync_operations_migration.sql`: 既有库补 `data:search_index:read` 权限，并默认授予超级管理员与数据管理员，用于进入搜索同步监控页。
 - `sql/mysql/14_admin_system_health_permission_migration.sql`: 既有库补 `system:health:read` 权限，默认仅授予超级管理员；健康状态跨区域展示，不受城市/门店范围影响。
-- `sql/mysql/15_local_life_ops_migration.sql`: 既有库补经营、信任与内容运营表，以及门店华人服务标记、点评有用数。
+- `sql/mysql/15_local_life_ops_migration.sql`: 在新库初始化和既有库升级中补经营、信任与内容运营表，以及门店华人服务标记、点评有用数。
 - `sql/mysql/16_marketing_coupon_migration.sql`: 既有库补 `marketing_coupon_template`、`user_coupon`，以及订单 `original_amount` / `discount_amount` / `user_coupon_id`。在 `15` 之后执行一次。
 - `sql/mysql/17_stack_features_migration.sql`: 既有库补此前遗漏的反刷单风控（`risk_rule` / `risk_event` / `device_fingerprint` / `device_fingerprint_user`）、个性化推荐（`user_behavior_event` / `recommendation_weight`）、投诉纠纷（`complaint_ticket` / `complaint_log`）、付费推广（`ad_campaign` / `ad_click_log`）、在线咨询（`consult_session` / `consult_message`）、问大家（`shop_question` / `shop_answer`）、排队候位（`waitlist_entry`）共 15 张表，并种子风控规则、推荐权重与 `risk:event:read|write` 权限。在 `16` 之后执行一次。此前这些表只在测试用 `schema.sql` 里、未进 MySQL 迁移，风控引擎对缺表 fail-open 会静默失效。
 - `sql/mysql/18_stack_permissions_migration.sql`: 既有库补上一份遗漏的权限种子——后台 `audit:complaint:read|write`（投诉纠纷）与 `operations:ad:read|write`（付费推广）两组权限行、把这两组与 `risk:event:*`（17 号只建行未挂角色）挂到 `super_admin` / `merchant_auditor` / `operations_manager`，并给商户角色 `merchant_role` 补 `complaint` / `ad` / `consult` / `waitlist` 权限串。在 `17` 之后执行一次。缺此迁移时生产后台的投诉/广告菜单与风控看板对任何管理员都不可访问。
 - `sql/mysql/19_marketing_recommendation_permissions_migration.sql`: 既有库补营销券后台 `operations:marketing:read|write` 与推荐权重后台 `operations:recommendation:read|write` 四行权限,并挂到 `super_admin` / `operations_manager`。在 `18` 之后执行一次。这两组权限码被营销/活动审核/推荐后台控制器与菜单引用,`16` 号营销迁移只建券表未写权限行,缺此迁移时含 super_admin 在内所有管理员访问券模板/活动审核/推荐权重端点全部 403,商户券/秒杀/拼团永远停在待审无人能放行。
+- `sql/mysql/20_ad_click_log_anonymization_migration.sql`: 将历史广告点击明细中的 `user_id` 归零。点击报表只需要广告、门店、区域、费用和时间；用户身份不参与计费或报表，新点击日志也不再保存用户 ID。
+- `sql/mysql/21_content_moderation_review_migration.sql`: 为门店问答增加可见状态，支持机审待复核内容先隐藏、人工通过后公开。
+- `sql/mysql/22_audit_queue_fifo_migration.sql`: 为审核任务增加区域/类型/状态/提交时间索引，支持最久等待任务优先处理。
+- `sql/mysql/23_admin_audit_sla_alert_migration.sql`: 创建审核 SLA 提醒表。
 
-> 全新库只 `source` `01_schema.sql` + `02_seed_data.sql` 即可拿到上述表结构与权限；`03`–`14` 仅用于升级旧库，按序执行一次。本地生活经营表在 `15_local_life_ops_migration.sql`，优惠券在 `16_marketing_coupon_migration.sql`，风控/推荐/投诉/推广/咨询/问答/排队等表在 `17_stack_features_migration.sql`，特性权限种子在 `18_stack_permissions_migration.sql`，营销/推荐后台权限在 `19_marketing_recommendation_permissions_migration.sql`，全新库也要再执行这五份。
+> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-25 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
 
 ### 3.3 导入后哪些表会直接有数据
 
@@ -378,6 +385,23 @@
 - 管理员账号: `admin` / `admin123456`；初始化脚本写入 `admin_user` 的 BCrypt `password_hash`，并同时写入内置角色、权限关联和 `CN/EU` 区域范围。
 
 ## 5. 验证情况
+
+### 巴黎首发本地回归（2026-10-14）
+
+- 后端 `620`、用户 Web `249`、管理 Web `170`、商户 Web `53`、Flutter `614` 项测试通过；三个 Web 生产构建、Flutter 静态分析与 Web 构建通过。
+- Playwright mock smoke `8/8`、真实 H2 后端 E2E `9/9` 通过，新增上海设备时区下巴黎预订、停用柏林和延期功能拦截。
+- 一次性 MySQL 8.4 完成旧库 `03–25`、新库基线 `14` 加 `15–25`、重入、verify、锁、checksum 漂移和失败阻断；真实 MySQL/Redis、S3/MinIO 上传读回、Elasticsearch 搜索均通过。
+- PowerShell 7.6.5 发布/回滚等契约已执行；代码改动、完整本地证据和同一 SHA 候选规则见 [巴黎首发优化与发布候选验证](巴黎首发优化与发布候选验证-2026-10-14.md)。实际 SMTP/Twilio/Stripe、目标部署、备份恢复和回滚仍待真实环境验收。
+
+### 历史工作区本地回归（2026-10-09）
+
+- 后端全量 `./mvnw test`：`588` 项通过；新增可信代理地址解析聚焦测试 `3` 项通过。全量回归覆盖广告去重、幂等、风控、相关接口和迁移后的应用映射。
+- `web`：`65` 个测试文件、`239` 项通过；`admin-web`：`45` 个文件、`165` 项通过；`merchant-web`：`22` 个文件、`53` 项通过。三个 Web 生产构建均通过。
+- Flutter：`607` 项测试通过，`flutter analyze` 无问题，Flutter Web 构建通过。
+- 真实后端 Playwright E2E：此前 `8/8` 通过（H2 本地后端）。MySQL 8.4 迁移集成已在本次修改后通过：从显式基线 `2` 升级 `03–20`、重复应用、verify、数据库锁、checksum 漂移和失败迁移阻断均通过，且校验了点击日志用户 ID 匿名化。
+- `stripe-preflight.sh` 使用仓库 `.example` 模板和 `--check-cli` 实际运行，报告 `29` 项待补配置；Stripe CLI `1.50.1` 可用。另用精确地址列表确认代理配置项通过格式校验，用宽泛网段正则确认其被拒绝。该检查不证明第三方连通或真实送达。
+- GitHub `pre` Environment 只读核对到 6 个变量（服务名、SSH 端口、迁移模式），没有配置 secret 名称；真实目标机和供应商配置尚未提供。此处不记录也不读取 secret 值。
+- 本机没有 `pwsh`，因此 `verify-all.ps1` 和 PowerShell 契约脚本本身未运行；通过直接运行对应的 Maven、npm、Flutter、Bash 与 MySQL 集成命令验证。目标环境的 MySQL/S3/Elasticsearch smoke 和部署/回滚尚未执行。
 
 - `2026-08-04` 单商户经营操作历史查询闭环完成：已有 `merchant_operation_log` 写入可通过区域隔离的管理端 API 和商户治理页面查询，支持操作人 ID、稳定动作码、目标类型、操作人/详情关键词与分页筛选；返回真实操作人、结构化目标和详情，CN/EU 页面翻译已知动作并保留未知动作原码。后端商户治理 `8` 条、管理端页面 `10` 条聚焦测试和生产构建通过。
 - `2026-08-04` 管理端商户治理补齐城市/门店范围：城市或门店受限管理员必须覆盖商户全部有效门店，才能查看商户、员工与经营历史或执行账号状态处置；部分覆盖、跨城市和无门店商户按不存在处理，避免单店权限影响其他城市账号。区域全量管理员行为不变，后端商户治理 `9` 条聚焦测试通过。
@@ -485,14 +509,14 @@
 
 还没做的验证:
 
-- 临时 `MySQL 8` 实例上的实际导库 + 默认配置启动冒烟最近一次于 `2026-07-12` 跑绿；本轮未重跑。宿主机 `MySQL80` 的现成 root 凭证仍不可用，但不是仓库侧阻塞。
-- 带真实云 / 测试环境凭证的 Redis / S3 联调、SSH 发布 / 回滚演练还没在目标环境跑绿:仓库内脚本和 workflow 已补齐,但还需要实际 `DEPLOY_*`、`APP_S3_*`、`APP_STATE_STORE_PROVIDER` 等环境参数和主机密钥。
-- 更多浏览器 E2E / 手工回归还没补完整；本轮文档记录的聚焦验证不能外推为所有业务和目标环境均已验收。
+- 本次 E2E 覆盖 8 条 H2 本地链路，不等于 MySQL 运行配置、S3、Elasticsearch、真邮件/短信或目标环境部署验收。
+- GitHub `pre` Environment 和目标机仍缺完整运行参数、SMTP/Twilio/Stripe 真实测试凭证、SSH 发布配置、HTTPS/WSS 域名和回滚 smoke URL。
+- 本机没有 PowerShell 7，因此仓库的 PowerShell 契约脚本与 `verify-all.ps1` 包装器尚未执行；直接运行的对应本地测试结果见上。
 
 ## 6. 下一步建议
 
 如果你现在要继续往下干,最合理的顺序是:
 
-1. `scripts/ci/mysql-smoke.ps1` 已经在临时 `MySQL 8` 实例上跑绿；如果要复用宿主机 `MySQL80`,先把它那套 root 凭证修好。
-2. 接着给目标环境的 `MySQL / Redis / 对象存储 / SSH` 参数补齐,跑绿现有 `storage-smoke.ps1`、`deploy-release.ps1` 和 `rollback-release.ps1`。
-3. 用真实 FCM/APNs 凭证完成设备注册、前后台接收、失效 token 和重试 smoke，再推进真实支付、地图和 MySQL / Redis / S3 / SSH 凭证联调；本地达人认证、认证商户号、帖子转发、评论盖楼、帖子正文/评论 `@提醒`、话题广场/热榜已经落地。
+1. 先由环境负责人补齐 `pre` Environment variables/secrets 与目标机私有 env；只通过 GitHub Environment/密钥管理系统写入，不把真实密钥放进仓库或聊天。
+2. 运行 `stripe-preflight.sh --check-cli`；通过后依次做目标环境 MySQL、Redis、S3、Elasticsearch、SMTP/Twilio 和 Stripe smoke。
+3. 用通过 CI 的不可变 SHA 发布到 `test`/`pre`，完成部署 smoke、数据库迁移校验和回滚演练。FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。

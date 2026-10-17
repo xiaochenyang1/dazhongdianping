@@ -15,7 +15,13 @@
 
 ## 当前实现状态
 
-截至 `2026-08-02`，当前代码不是 PPT 工程，已经有一套能在本地跑起来的最小闭环：
+截至 `2026-10-14`，项目已覆盖约定范围内的大部分本地业务闭环；当前仍需区分本地功能完成与目标环境验收：
+
+功能完成矩阵和验收证据统一维护在 [`docs/当前已完成功能与SQL导入说明.md`](docs/当前已完成功能与SQL导入说明.md) §2.2、§5。EU 预发所需的目标机、供应商凭证和 GitHub Environment 配置尚未齐备，不能把本地测试通过当作上线验收。
+
+巴黎单城、EUR 首发限制已接到预订、搜索和延期功能入口；预订以门店时区处理日期、取消和提醒。五端本地回归、真实中间件及浏览器验证记录见 [`巴黎首发优化与发布候选验证`](docs/巴黎首发优化与发布候选验证-2026-10-14.md)。
+
+创作者奖励、秒杀和拼团现由部署总开关 `APP_LAUNCH_DEFERRED_FEATURES_ENABLED` 控制，默认在 CN/EU 均关闭，省略区域头也不能开启。仅在独立功能开发环境中显式设为 `true` 可恢复 CN 演示；EU 仍受三个区域功能开关约束。巴黎预发须保持四个开关均为 `false`，普通团购和预订不受影响。
 
 - `M1` 本地已完成：首页 / 列表 / 详情浏览，`CN / EU` 区域隔离，头部关键词搜索到商户列表(MySQL fallback,不是 ES 终态)，并已补公开搜索建议 / 热词 fallback 接口、登录用户搜索历史、历史清空入口和头部联想面板；管理端登录、门店 CRUD、种子导入、导入批次查询。
 - `M2` 已完成后端认证 + 点评/审核/互动最小闭环，`web` 已接登录弹层、游客拦截恢复、写点评 / 改点评、我的点评、点评详情互动区、我的资料 / 账号绑定 / 改密码、成长值流水页、公开用户主页：验证码发送、注册、验证码/密码登录、重置密码、`refresh`、`logout`、`/user/me`、`PUT /user/profile`、`POST /user/bind`、`PUT /user/password`、`GET /user/:id`、`GET /user/growth/records`、写点评 / 改点评 / 删点评 / 看点评详情 / 我的点评、点赞 / 评论 / 举报、本地图片上传、审核任务通过 / 驳回、门店评分聚合回写；游客在点赞 / 评论 / 举报时触发登录，登录后会自动续执行原动作。
@@ -38,7 +44,7 @@
 - 管理端种子导入失败时会生成真实本地错误明细文件，批次查询返回同一条 `errorFile` 路径。
 - 当前后端默认运行配置已指向 `MySQL`；可直接导入 MySQL 的脚本已补到 `sql/mysql/`，并带公开点评、点评图片、点赞/评论演示数据、审核演示数据、`user_expert_certification` 表与 `audit:expert_certification:*` 权限种子，以及可直接密码登录的 C 端演示账号。`H2` 仍保留为 `h2` profile 和测试环境使用。
 - 文件上传默认仍可本地落盘，也已接入 S3 兼容对象存储上传入口：配置 `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_*` 后，`POST /api/c/v1/files/upload` 会上传到对象存储并返回公开 URL。
-- `CI/CD` 已补本地复用脚本和 GitHub Actions:`scripts/ci/verify-all.ps1` 负责后端测试、Web/管理端/商户端测试与构建，以及可选 Flutter、MySQL、S3 兼容对象存储、Elasticsearch、浏览器冒烟 / E2E；`ci.yml` 当前同时起 MySQL 8、Redis 7、MinIO、Elasticsearch 8 服务,执行 `-IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeElasticsearchSmoke`，并用独立 MySQL 8.4 job 验证 `03-14` 真实增量迁移；`.github/workflows/nightly.yml` 已补定时夜跑和手工触发,会追加 `-IncludeBrowserE2E`;`.github/workflows/release.yml` 已补测试环境自动部署和 `pre/prod` 手工发版入口,`.github/workflows/rollback.yml` 已补手工回滚入口,配套 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已落库，发布包和部署 / 回滚服务均覆盖 `web`、`admin-web`、`merchant-web`。
+- `CI/CD` 已补本地复用脚本和 GitHub Actions:`scripts/ci/verify-all.ps1` 负责后端测试、Web/管理端/商户端测试与构建，以及可选 Flutter、MySQL、S3 兼容对象存储、Elasticsearch、浏览器冒烟 / E2E；`ci.yml` 当前同时起 MySQL 8、Redis 7、MinIO、Elasticsearch 8 服务,执行 `-IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeBrowserE2E -IncludeElasticsearchSmoke -IncludeFlutter`，并用独立 MySQL 8.4 job 验证 `03-25` 真实增量迁移；`.github/workflows/nightly.yml` 已补定时夜跑和手工触发,复用同一套浏览器 E2E 回归;`.github/workflows/release.yml` 已补测试环境自动部署和 `pre/prod` 手工发版入口,`.github/workflows/rollback.yml` 已补手工回滚入口,配套 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已落库，发布包和部署 / 回滚服务均覆盖 `web`、`admin-web`、`merchant-web`。
 
 完整的“已完成 / 部分完成 / 外部待验收”证据请看 `docs/当前已完成功能与SQL导入说明.md` 的“全局功能完成矩阵”；根 README 只保留启动入口和阶段摘要，不再重复维护第二套完成判断。
 
@@ -535,7 +541,7 @@ npm run build
 注意:
 
 - 这套脚本对应的是**当前已经落地的代码能力**,不是文档里未来大而全的终态库表。
-- `mysql-smoke.ps1` 默认只向本轮新建的数据库导入 `01_schema.sql` 和 `02_seed_data.sql`;若同名库已存在会直接拒绝,可改用新的临时 `-DbName` 或对已准备好的库使用 `-SkipImport`。只有显式同时传入 `-DbName` 与 `-AllowDestructiveImport` 才允许重置既有库。`-DropDatabaseAfter` 同样必须配合显式 `-DbName`;只有本次执行实际创建且所有权标记仍匹配的库会在 `finally` 中删除。
+- `mysql-smoke.ps1` 对新库导入 `01_schema.sql`、`02_seed_data.sql`，然后把快照按迁移基线 14 登记并通过 `mysql-migrate.sh` 应用 15-25 号迁移；后端启动后会检查公开接口、管理员登录、审核队列、SLA 提醒生成与自动恢复、B 端健康接口。若同名库已存在会直接拒绝，可改用新的临时 `-DbName` 或对已准备好的完整数据库使用 `-SkipImport`。只有显式同时传入 `-DbName` 与 `-AllowDestructiveImport` 才允许重置既有库。`-DropDatabaseAfter` 同样必须配合显式 `-DbName`;只有本次执行实际创建且所有权标记仍匹配的库会在 `finally` 中删除。
 - 会预置浏览数据、公开点评、点评图片、点赞/评论演示数据、待审 / 驳回审核案例和两个可直接密码登录的 C 端演示账号,方便你导库后直接演示当前已完成功能。
   - 点评互动相关表已经备好:`review_like`、`review_comment`、`review_report`;其中举报表默认等你实际点一次举报后再产生业务数据。
   - 搜索历史表 `search_history` 已备好,默认空表;登录用户带关键词搜索商户列表后会写入当前区域历史。

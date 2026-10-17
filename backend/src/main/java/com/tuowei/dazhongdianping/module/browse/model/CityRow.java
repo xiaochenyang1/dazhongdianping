@@ -7,5 +7,6 @@ public class CityRow {
     private Long id;
     private String code;
     private String name;
+    private String timeZone;
     private Integer sortNo;
 }

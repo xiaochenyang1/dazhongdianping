@@ -3,10 +3,13 @@ package com.tuowei.dazhongdianping.module.qa.service;
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
 import com.tuowei.dazhongdianping.common.api.PageResult;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
+import com.tuowei.dazhongdianping.common.moderation.ModerationDecision;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
 import com.tuowei.dazhongdianping.module.moderation.service.ContentModerationService;
+import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
 import com.tuowei.dazhongdianping.module.qa.mapper.QaMapper;
 import com.tuowei.dazhongdianping.module.qa.model.ShopAnswerRow;
 import com.tuowei.dazhongdianping.module.qa.model.ShopQuestionRow;
@@ -22,10 +25,13 @@ public class QaService {
 
     private final QaMapper mapper;
     private final ContentModerationService contentModerationService;
+    private final AdminAuditMapper adminAuditMapper;
 
-    public QaService(QaMapper mapper, ContentModerationService contentModerationService) {
+    public QaService(QaMapper mapper, ContentModerationService contentModerationService,
+                     AdminAuditMapper adminAuditMapper) {
         this.mapper = mapper;
         this.contentModerationService = contentModerationService;
+        this.adminAuditMapper = adminAuditMapper;
     }
 
     public PageResult<Map<String, Object>> questions(Long shopId, Integer page, Integer pageSize) {
@@ -45,14 +51,18 @@ public class QaService {
         if (!mapper.existsShop(shopId, region)) {
             throw new NotFoundException("门店不存在");
         }
-        contentModerationService.moderate(region, "qa", 0L, u.userId(), content);
+        ModerationDecision decision = contentModerationService.moderate(region, "qa", 0L, u.userId(), content);
         ShopQuestionRow row = new ShopQuestionRow();
         row.setRegion(region);
         row.setShopId(shopId);
         row.setUserId(u.userId());
         row.setContent(content.trim());
+        row.setStatus(decision == ModerationDecision.REVIEW ? 0 : 1);
         mapper.insertQuestion(row);
-        return questionMap(mapper.selectQuestion(row.getId(), shopId, region));
+        if (row.getStatus() == 0) {
+            createAuditTask(12, row.getId(), region, decision.code());
+        }
+        return questionMap(mapper.selectQuestionForOwner(row.getId(), shopId, region, u.userId()));
     }
 
     public List<Map<String, Object>> answers(Long shopId, Long questionId) {
@@ -71,13 +81,19 @@ public class QaService {
         if (q == null) {
             throw new NotFoundException("问题不存在");
         }
+        ModerationDecision decision = contentModerationService.moderate(region, "qa_answer", 0L, u.userId(), content);
         ShopAnswerRow row = new ShopAnswerRow();
         row.setRegion(region);
         row.setQuestionId(questionId);
         row.setUserId(u.userId());
         row.setContent(content.trim());
+        row.setStatus(decision == ModerationDecision.REVIEW ? 0 : 1);
         mapper.insertAnswer(row);
-        mapper.incrementAnswerCount(questionId);
+        if (row.getStatus() == 1) {
+            mapper.incrementAnswerCount(questionId);
+        } else {
+            createAuditTask(13, row.getId(), region, decision.code());
+        }
         return answerMap(row);
     }
 
@@ -89,6 +105,7 @@ public class QaService {
         m.put("userNickname", q.getUserNickname() == null ? "" : q.getUserNickname());
         m.put("content", q.getContent());
         m.put("answerCount", q.getAnswerCount() == null ? 0 : q.getAnswerCount());
+        m.put("status", q.getStatus() == null ? 1 : q.getStatus());
         m.put("latestAnswer", q.getLatestAnswer() == null ? "" : q.getLatestAnswer());
         m.put("createdAt", q.getCreatedAt());
         return m;
@@ -101,6 +118,7 @@ public class QaService {
         m.put("userId", a.getUserId());
         m.put("userNickname", a.getUserNickname() == null ? "" : a.getUserNickname());
         m.put("content", a.getContent());
+        m.put("status", a.getStatus() == null ? 1 : a.getStatus());
         m.put("createdAt", a.getCreatedAt());
         return m;
     }
@@ -115,5 +133,17 @@ public class QaService {
 
     private String region() {
         return RegionContext.getRegion().name();
+    }
+
+    private void createAuditTask(int bizType, Long bizId, String region, int machineResult) {
+        AuditTaskRow task = new AuditTaskRow();
+        task.setBizType(bizType);
+        task.setBizId(bizId);
+        task.setRegion(region);
+        task.setMachineResult(machineResult);
+        task.setStatus(0);
+        task.setAuditorId(0L);
+        task.setRemark("机审待复核");
+        adminAuditMapper.insertAuditTask(task);
     }
 }

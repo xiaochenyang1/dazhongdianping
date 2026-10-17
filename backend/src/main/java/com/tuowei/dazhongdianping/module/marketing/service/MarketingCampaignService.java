@@ -1,6 +1,8 @@
 package com.tuowei.dazhongdianping.module.marketing.service;
 
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
+import com.tuowei.dazhongdianping.module.launch.LaunchPolicy;
+import com.tuowei.dazhongdianping.module.launch.LaunchPolicy.Feature;
 import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
@@ -23,17 +25,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class MarketingCampaignService {
 
     private final MarketingCampaignMapper mapper;
+    private final LaunchPolicy launch;
 
-    public MarketingCampaignService(MarketingCampaignMapper mapper) {
+    public MarketingCampaignService(MarketingCampaignMapper mapper, LaunchPolicy launch) {
         this.mapper = mapper;
+        this.launch = launch;
     }
 
     public List<Map<String, Object>> seckills() {
+        launch.require(Feature.SECKILL);
         return mapper.selectActiveSeckills(region(), LocalDateTime.now()).stream().map(this::seckillMap).toList();
     }
 
     @Transactional
     public Map<String, Object> claimSeckill(Long id) {
+        launch.require(Feature.SECKILL);
         UserSession user = requireUser();
         String region = region();
         LocalDateTime now = LocalDateTime.now();
@@ -71,11 +77,13 @@ public class MarketingCampaignService {
     }
 
     public List<Map<String, Object>> groupBuys() {
+        launch.require(Feature.GROUP_BUY);
         return mapper.selectActiveGroups(region(), LocalDateTime.now()).stream().map(this::groupMap).toList();
     }
 
     @Transactional
     public Map<String, Object> openTeam(Long campaignId) {
+        launch.require(Feature.GROUP_BUY);
         UserSession user = requireUser();
         String region = region();
         LocalDateTime now = LocalDateTime.now();
@@ -92,6 +100,7 @@ public class MarketingCampaignService {
 
     @Transactional
     public Map<String, Object> joinTeam(Long teamId) {
+        launch.require(Feature.GROUP_BUY);
         UserSession user = requireUser();
         String region = region();
         LocalDateTime now = LocalDateTime.now();

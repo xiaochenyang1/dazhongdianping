@@ -40,6 +40,14 @@ spring:
 
 server:
   port: 8080
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      # Never trust forwarded addresses by default. pre/prod must provide a
+      # narrow, anchored regex for the actual ingress/LB peer addresses.
+      internal-proxies: "${APP_TRUSTED_PROXY_REGEX:(?!)}"
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
 
 management:
   endpoints:
@@ -66,7 +74,16 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger - [%X{traceId}] %msg%n"
 
 app:
+  launch:
+    deferred-features-enabled: ${APP_LAUNCH_DEFERRED_FEATURES_ENABLED:false}
+    eu:
+      creator-rewards-enabled: ${APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED:false}
+      seckill-enabled: ${APP_LAUNCH_EU_SECKILL_ENABLED:false}
+      group-buy-enabled: ${APP_LAUNCH_EU_GROUP_BUY_ENABLED:false}
   runtime-mode: ${APP_RUNTIME_MODE:prod}
+  ad:
+    click-dedupe-seconds: ${APP_AD_CLICK_DEDUPE_SECONDS:1800}
+    click-dedupe-cleanup-ms: ${APP_AD_CLICK_DEDUPE_CLEANUP_MS:60000}
   payment:
     notify-secret: ${APP_PAYMENT_NOTIFY_SECRET:}
     mock-enabled: ${APP_PAYMENT_MOCK_ENABLED:false}
@@ -96,6 +113,14 @@ app:
       key-prefix: ${APP_STATE_STORE_KEY_PREFIX:dzdp}
   admin:
     access-token-expire-seconds: ${APP_ADMIN_ACCESS_TOKEN_EXPIRE_SECONDS:7200}
+    audit:
+      sla:
+        reminder-interval-ms: ${APP_ADMIN_AUDIT_SLA_REMINDER_INTERVAL_MS:60000}
+        review-comment-minutes: ${APP_ADMIN_AUDIT_SLA_REVIEW_COMMENT_MINUTES:30}
+        post-comment-minutes: ${APP_ADMIN_AUDIT_SLA_POST_COMMENT_MINUTES:30}
+        shop-question-minutes: ${APP_ADMIN_AUDIT_SLA_SHOP_QUESTION_MINUTES:60}
+        shop-answer-minutes: ${APP_ADMIN_AUDIT_SLA_SHOP_ANSWER_MINUTES:60}
+        direct-message-minutes: ${APP_ADMIN_AUDIT_SLA_DIRECT_MESSAGE_MINUTES:15}
   merchant:
     account: ${APP_MERCHANT_ACCOUNT:merchant_eu_sichuan@example.com}
     password: ${APP_MERCHANT_PASSWORD:merchant123456}

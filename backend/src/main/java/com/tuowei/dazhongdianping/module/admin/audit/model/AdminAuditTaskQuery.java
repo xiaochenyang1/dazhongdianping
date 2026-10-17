@@ -13,7 +13,11 @@ public class AdminAuditTaskQuery {
     private Integer bizType;
     private Integer status;
     private String keyword;
+    private String assignmentFilter;
+    private boolean overdueOnly;
+    private Long currentAdminId;
     private List<Integer> allowedBizTypes;
+    private List<AuditQueueSlaThreshold> slaThresholds = List.of();
 
     @Min(value = 1, message = "page 最小为 1")
     private Integer page = 1;
@@ -38,6 +42,14 @@ public class AdminAuditTaskQuery {
             keyword = keyword.trim();
             if (keyword.length() > 64) {
                 keyword = keyword.substring(0, 64);
+            }
+        }
+        if (!StringUtils.hasText(assignmentFilter) || "all".equalsIgnoreCase(assignmentFilter.trim())) {
+            assignmentFilter = null;
+        } else {
+            assignmentFilter = assignmentFilter.trim().toLowerCase();
+            if (!List.of("unclaimed", "mine", "others").contains(assignmentFilter)) {
+                throw new IllegalArgumentException("负责人筛选条件无效");
             }
         }
         if (page == null || page < 1) {

@@ -74,7 +74,7 @@ export interface MerchantStaffPayload {
   shopScopeType: 1 | 2
   shopIds: number[]
 }
-export interface MerchantShopOption { id: number; name: string }
+export interface MerchantShopOption { id: number; name: string; timeZone?: string }
 export interface MerchantOrderRefund {
   id?: number
   amount?: number
@@ -115,6 +115,8 @@ export interface MerchantReservationSlot {
   shopId: number
   shopName?: string
   bizDate: string
+  timeZone?: string
+  today?: string
   startTime: string
   endTime: string
   capacity: number
@@ -141,6 +143,8 @@ export interface MerchantReservation {
   shop: { id: number; name: string }
   slotId: number
   reserveTime: string
+  timeZone?: string
+  reserveAt?: string
   status: number
   statusText: string
   canConfirm: boolean

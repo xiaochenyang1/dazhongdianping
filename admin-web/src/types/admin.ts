@@ -670,8 +670,41 @@ export interface AdminAuditTask {
   submittedBy: string
   summary: string
   remark: string
+  claimedByAdminId: number | null
+  claimedByAdminName: string | null
+  claimedAt: string | null
+  claimExpiresAt: string | null
+  claimRemainingSeconds: number | null
   createdAt: string
+  ageSeconds: number | null
   updatedAt: string
+}
+
+export interface AdminAuditQueueMetric {
+  bizType: number
+  bizTypeText: string
+  pendingCount: number
+  oldestPendingAt: string | null
+  oldestPendingAgeSeconds: number | null
+  overdueCount: number
+  slaMinutes: number
+  processedCount: number
+  averageProcessingSeconds: number | null
+}
+
+export interface AdminAuditSlaAlert {
+  id: number
+  region: Region
+  bizType: number
+  bizTypeText: string
+  status: number
+  statusText: string
+  pendingCount: number
+  overdueCount: number
+  oldestPendingAt: string | null
+  firstOverdueAt: string
+  lastDetectedAt: string
+  resolvedAt: string | null
 }
 
 export interface AdminDashboardAuditBreakdown {
@@ -869,6 +902,7 @@ export interface AdminGeoCity {
   id: number
   code: string
   name: string
+  timeZone: string
   sortNo: number
   status: number
 }
@@ -890,6 +924,7 @@ export interface GeoCategoryPayload {
 export interface GeoCityPayload {
   code: string
   name: string
+  timeZone: string
   sortNo: number
 }
 

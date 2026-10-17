@@ -4,6 +4,7 @@ public record AdminCityResponse(
         Long id,
         String code,
         String name,
+        String timeZone,
         Integer sortNo,
         Integer status
 ) {

@@ -21,8 +21,10 @@ public interface MessageMapper {
                            @Param("preview") String preview);
     long countConversations(@Param("userId") Long userId);
     List<ConversationRow> listConversations(@Param("userId") Long userId, @Param("limit") int limit, @Param("offset") int offset);
-    long countMessages(@Param("conversationId") Long conversationId);
-    List<MessageRow> listMessages(@Param("conversationId") Long conversationId, @Param("limit") int limit, @Param("offset") int offset);
+    long countMessages(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
+    List<MessageRow> listMessages(@Param("conversationId") Long conversationId, @Param("userId") Long userId,
+                                  @Param("limit") int limit, @Param("offset") int offset);
+    MessageRow selectPendingMessage(@Param("messageId") Long messageId);
     int markRead(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
     int insertBlock(@Param("userId") Long userId, @Param("blockedUserId") Long blockedUserId);
     int deleteBlock(@Param("userId") Long userId, @Param("blockedUserId") Long blockedUserId);

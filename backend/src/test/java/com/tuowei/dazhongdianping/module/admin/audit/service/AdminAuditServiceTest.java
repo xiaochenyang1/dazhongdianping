@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -12,8 +13,10 @@ import static org.mockito.Mockito.when;
 import com.tuowei.dazhongdianping.common.admin.AdminSession;
 import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
 import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
+import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.module.admin.auth.service.AdminPermissionChecker;
 import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
+import com.tuowei.dazhongdianping.module.admin.audit.model.AuditQueueMetricRow;
 import com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditPassRequest;
 import com.tuowei.dazhongdianping.module.admin.audit.model.request.AdminAuditRejectRequest;
@@ -28,6 +31,7 @@ import com.tuowei.dazhongdianping.module.merchant.shop.service.MerchantShopChang
 import com.tuowei.dazhongdianping.module.search.event.ShopSearchIndexChangedEvent;
 import com.tuowei.dazhongdianping.module.topic.service.TopicService;
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -91,6 +95,31 @@ class AdminAuditServiceTest {
     @AfterEach
     void clearAdminSession() {
         AdminSessionContext.clear();
+        RegionContext.clear();
+    }
+
+    @Test
+    void shouldReturnQueueMetricsOnlyForReadableModerationTypes() {
+        setAdminSession("audit:automod:read");
+        AuditQueueMetricRow commentMetrics = new AuditQueueMetricRow();
+        commentMetrics.setBizType(10);
+        commentMetrics.setPendingCount(3L);
+        commentMetrics.setOldestPendingAt(LocalDateTime.of(2026, 10, 11, 8, 30));
+        commentMetrics.setProcessedCount(12L);
+        commentMetrics.setAverageProcessingSeconds(1800L);
+        when(adminAuditMapper.selectModerationQueueMetrics(eq("CN"), eq(List.of(10, 11, 12, 13, 14))))
+                .thenReturn(List.of(commentMetrics));
+
+        var result = adminAuditService.listModerationQueueMetrics();
+
+        assertThat(result).hasSize(5);
+        assertThat(result.get(0).bizTypeText()).isEqualTo("点评评论");
+        assertThat(result.get(0).pendingCount()).isEqualTo(3L);
+        assertThat(result.get(0).oldestPendingAt()).isEqualTo("2026-10-11 08:30:00");
+        assertThat(result.get(0).processedCount()).isEqualTo(12L);
+        assertThat(result.get(0).averageProcessingSeconds()).isEqualTo(1800L);
+        assertThat(result.get(1).pendingCount()).isZero();
+        verify(adminAuditMapper).selectModerationQueueMetrics("CN", List.of(10, 11, 12, 13, 14));
     }
 
     @Test

@@ -24,6 +24,8 @@ public class ReservationRow {
     private String shopName;
     private String coverImage;
     private String address;
+    private String timeZone;
+    private Boolean bookingEnabled;
     private LocalTime startTime;
     private LocalTime endTime;
     private Integer confirmMode;

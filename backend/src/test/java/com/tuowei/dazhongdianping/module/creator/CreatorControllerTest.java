@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
-@SpringBootTest
+@SpringBootTest(properties = "app.launch.deferred-features-enabled=true")
 @AutoConfigureMockMvc
 class CreatorControllerTest {
 
@@ -45,9 +45,7 @@ class CreatorControllerTest {
 
         mockMvc.perform(get("/api/c/v1/creator/tasks")
                         .header("Authorization", bearer(user.token())).header("X-Region", "EU"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.list[?(@.id==9102)].claimStatus", hasItem(0)))
-                .andExpect(jsonPath("$.data.list[?(@.id==9101)].id").doesNotExist());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/api/c/v1/creator/tasks/{id}/claim", 9102)
                         .header("Authorization", bearer(user.token())).header("X-Region", "CN"))

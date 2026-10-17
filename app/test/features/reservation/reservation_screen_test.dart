@@ -34,6 +34,8 @@ class ReservationScreenApi implements JsonApi {
     if (slotRequests > 1) await retryGate?.future;
     return {
       'date': '2026-07-16',
+      'today': '2026-07-15',
+      'timeZone': 'Europe/Paris',
       'list': [
         {
           'slotId': 3,
@@ -87,6 +89,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Book online'), findsOneWidget);
+    expect(find.text('Europe/Paris'), findsOneWidget);
+    expect(find.text('Date 2026-07-16'), findsOneWidget);
     expect(find.text('Submit reservation'), findsOneWidget);
   });
 

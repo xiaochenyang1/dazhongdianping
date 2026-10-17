@@ -97,8 +97,8 @@
     </update>
 
     <insert id="insertClickLog">
-        INSERT INTO ad_click_log(campaign_id,region,shop_id,user_id,cost)
-        VALUES(#{campaignId},#{region},#{shopId},#{userId},#{cost})
+        INSERT INTO ad_click_log(campaign_id,region,shop_id,cost)
+        VALUES(#{campaignId},#{region},#{shopId},#{cost})
     </insert>
 
     <select id="selectShopReport" resultType="com.tuowei.dazhongdianping.module.adpromo.model.AdReportRow">

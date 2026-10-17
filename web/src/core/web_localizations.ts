@@ -394,3 +394,9 @@ export function formatWebDateTime(raw: string, locale: WebLocaleTag) {
     ? `${day}/${month}/${year} ${hour}:${minute}`
     : `${year}/${Number(month)}/${Number(day)} ${hour}:${minute}`
 }
+
+// reserveTime is the shop's wall clock time; never reinterpret it in the device zone.
+export function formatWebReservationTime(raw: string, locale: WebLocaleTag, timeZone?: string) {
+  const formatted = formatWebDateTime(raw, locale)
+  return timeZone ? `${formatted} ${timeZone}` : formatted
+}

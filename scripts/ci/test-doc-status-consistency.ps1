@@ -34,7 +34,7 @@ Assert-Contains $currentStatus 'Flutter 与真实第三方' '缺少 Flutter 与�
 Assert-Contains $currentStatus '目标环境与上线执行' '缺少目标环境缺口'
 Assert-NotContains $currentStatus '剩余未完成项是 M7 关系链/私信/圈子/真实推送' '关注、私信和圈子已完成，不能再次列为未完成'
 
-Assert-Contains $requirements '> 实现状态权威入口:`当前已完成功能与SQL导入说明.md` §2.2' '需求文档未声明状态权威入口'
+Assert-Contains $requirements '当前实现与验收状态以 [`当前已完成功能与SQL导入说明.md`](当前已完成功能与SQL导入说明.md) §2.2、§5 为准' '需求文档未声明当前状态权威入口'
 Assert-Contains $readme '全局功能完成矩阵' '根 README 未指向全局功能完成矩阵'
 Assert-Contains $testChecklist '仓库全量本地基线已于 2026-07-18 重新验证通过' '测试清单没有本轮验证事实'
 

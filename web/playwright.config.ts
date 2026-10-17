@@ -33,7 +33,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: `http://127.0.0.1:${webPort}`,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
     ...devices['Desktop Chrome'],
     ...(browserExecutablePath
       ? { launchOptions: { executablePath: browserExecutablePath } }

@@ -40,6 +40,9 @@ Assert-True ($dryRunText -match "APP_DB_PASSWORD \(configured\)") "mysql-smoke m
 Assert-True ($explicitEmptyPasswordText -match "explicit -DbPassword \(empty\)") "an explicitly empty -DbPassword must override APP_DB_PASSWORD"
 Assert-True ($dryRunText -match "sql/mysql/01_schema.sql") "dry-run output must mention the schema SQL"
 Assert-True ($dryRunText -match "sql/mysql/02_seed_data.sql") "dry-run output must mention the seed SQL"
+Assert-True ($dryRunText -match "mysql-migrate.sh") "dry-run output must mention the migration runner"
+Assert-True ($dryRunText -match "baseline 14") "fresh MySQL provisioning must establish schema baseline 14"
+Assert-True ($dryRunText -match "migrations 15-25") "fresh MySQL provisioning must apply migrations 15 through 25"
 Assert-True ($dryRunText -notmatch "sql/mysql/00_all_in_one.sql") "dry-run output must not use the hard-coded all-in-one SQL"
 Assert-True ($dryRunText -match "refuse") "default import plan must say an existing database is refused"
 Assert-True ($dryRunText -match "backend") "dry-run output must mention backend startup"
@@ -47,6 +50,8 @@ Assert-True ($dryRunText -match "package") "dry-run output must mention backend 
 Assert-True ($dryRunText -match "/actuator/health") "dry-run output must mention health polling"
 Assert-True ($dryRunText -match "/api/c/v1/categories") "dry-run output must mention public browse smoke"
 Assert-True ($dryRunText -match "/api/admin/v1/auth/login") "dry-run output must mention admin login smoke"
+Assert-True ($dryRunText -match "/api/admin/v1/audit/tasks") "dry-run output must mention audit queue smoke"
+Assert-True ($dryRunText -match "/api/admin/v1/audit/sla-alerts") "dry-run output must mention SLA alert smoke"
 Assert-True ($dryRunText -match "/api/b/v1/health") "dry-run output must mention B endpoint smoke"
 
 $cleanupDryRunOutput = & $scriptPath -DryRun -DbName $smokeDbName -DropDatabaseAfter
@@ -63,6 +68,7 @@ $skipImportDryRunText = $skipImportDryRunOutput -join "`n"
 Assert-True ($skipImportDryRunText -match "Skip database import") "SkipImport dry-run output must explicitly say database import is skipped"
 Assert-True ($skipImportDryRunText -notmatch "sql/mysql/01_schema.sql") "SkipImport dry-run output must not claim the schema SQL will be imported"
 Assert-True ($skipImportDryRunText -notmatch "sql/mysql/02_seed_data.sql") "SkipImport dry-run output must not claim the seed SQL will be imported"
+Assert-True ($skipImportDryRunText -notmatch "baseline 14") "SkipImport dry-run output must not claim the migration baseline will be established"
 
 $invalidNameRejected = $false
 try {
@@ -92,8 +98,16 @@ catch {
 Assert-True $implicitDestructiveImportRejected "AllowDestructiveImport must require an explicitly supplied DbName"
 
 $scriptContent = Get-Content -LiteralPath $scriptPath -Raw
-Assert-True ($scriptContent -match 'source sql/mysql/01_schema\.sql') "mysql-smoke must source the schema SQL directly"
-Assert-True ($scriptContent -match 'source sql/mysql/02_seed_data\.sql') "mysql-smoke must source the seed SQL directly"
+Assert-True ($scriptContent -match 'Invoke-MySqlFile -Arguments') "mysql-smoke must import SQL files through mysql standard input"
+Assert-True ($scriptContent -match '-SqlFile \$schemaSql') "mysql-smoke must import the schema SQL directly"
+Assert-True ($scriptContent -match '-SqlFile \$seedSql') "mysql-smoke must import the seed SQL directly"
+Assert-True ($scriptContent -match 'mysql-migrate\.sh') "mysql-smoke must run the checked migration runner for a fresh schema"
+Assert-True ($scriptContent -match '--baseline-version 14') "mysql-smoke must establish baseline 14 before applying pending migrations"
+Assert-True ($scriptContent -match 'mysql-migrate\.cnf') "migration credentials must be written to a private temporary defaults file"
+Assert-True ($scriptContent -match 'audit/tasks/\$smokeTaskId/reject') "mysql-smoke must process its synthetic audit task through the API"
+Assert-True ($scriptContent -match '(?s)audit/tasks/\$smokeTaskId/claim.*audit/tasks/\$smokeTaskId/reject') "mysql-smoke must claim its synthetic task before submitting an audit decision"
+Assert-True ($scriptContent -match 'audit/sla-alerts\?status=1') "mysql-smoke must verify automatic SLA alert recovery"
+Assert-True ($scriptContent -match 'app\.admin\.audit\.sla\.reminder-interval-ms=1000') "mysql-smoke must shorten the reminder interval for its workflow check"
 Assert-True ($scriptContent -notmatch 'source sql/mysql/00_all_in_one\.sql') "mysql-smoke must not source the hard-coded all-in-one SQL"
 Assert-True ($scriptContent -match 'CREATE DATABASE') "mysql-smoke must create the requested database"
 Assert-True ($scriptContent -match '--database') "mysql-smoke must select the requested database for imports"

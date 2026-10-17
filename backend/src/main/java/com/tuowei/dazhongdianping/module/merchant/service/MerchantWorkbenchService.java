@@ -111,7 +111,8 @@ public class MerchantWorkbenchService {
                 row.getOpenNow(),
                 splitTags(row.getTags()),
                 null,
-                null
+                null,
+                row.getTimeZone()
         );
     }
 

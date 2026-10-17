@@ -1,3 +1,4 @@
+import { featureForPath, loadLaunchCapabilities } from '@/composables/useLaunchCapabilities'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserSession } from '@/composables/useUserSession'
 import { useAppContext } from '@/composables/useAppContext'
@@ -271,7 +272,13 @@ const router = createRouter({
   },
 })
 
-router.beforeEach((to, from) => {
+router.beforeEach(async (to, from) => {
+  const feature = featureForPath(to.path)
+  if (feature) {
+    const region = useAppContext().state.region
+    const capabilities = await loadLaunchCapabilities(region)
+    if (useAppContext().state.region !== region || !capabilities[feature]) return { name: 'home' }
+  }
   const { state, openAuthDialog } = useUserSession()
 
   if (to.meta.requiresAuth && !state.accessToken) {

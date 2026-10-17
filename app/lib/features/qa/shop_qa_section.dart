@@ -47,9 +47,14 @@ class _ShopQaSectionState extends State<ShopQaSection> {
     setState(() => _asking = true);
     final strings = AppLocalizations.of(context);
     try {
-      await widget.repository.ask(widget.shopId, content);
+      final question = await widget.repository.ask(widget.shopId, content);
       _askController.clear();
       _reload();
+      if (mounted && question.status == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.reviewSubmittedPending)),
+        );
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,8 +90,12 @@ class _ShopQaSectionState extends State<ShopQaSection> {
     try {
       final answer = await widget.repository.answer(widget.shopId, q.id, content);
       controller?.clear();
-      if (mounted) {
+      if (mounted && answer.status == 1) {
         setState(() => _answers[q.id] = [...(_answers[q.id] ?? const []), answer]);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.reviewSubmittedPending)),
+        );
       }
     } catch (error) {
       if (mounted) {

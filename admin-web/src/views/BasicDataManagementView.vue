@@ -146,8 +146,8 @@ function openCityEditor(item?: AdminGeoCity) {
   if (!canWrite.value) return
   resetMessages()
   cityEditor.value = item
-    ? { id: item.id, code: item.code, name: item.name, sortNo: item.sortNo }
-    : { code: '', name: '', sortNo: 0 }
+    ? { id: item.id, code: item.code, name: item.name, timeZone: item.timeZone, sortNo: item.sortNo }
+    : { code: '', name: '', timeZone: state.region === 'CN' ? 'Asia/Shanghai' : 'Europe/Paris', sortNo: 0 }
 }
 
 function openAreaEditor(item?: AdminGeoArea) {
@@ -191,6 +191,7 @@ async function submitCity() {
   const payload: GeoCityPayload = {
     code: editor.code.trim().toUpperCase(),
     name: editor.name.trim(),
+    timeZone: editor.timeZone.trim(),
     sortNo: Number(editor.sortNo),
   }
   try {
@@ -555,6 +556,17 @@ watch(
           />
         </label>
         <label class="field">
+          <span>{{ strings.basicDataManagement.city.labels.timeZone }}</span>
+          <input
+            v-model="cityEditor.timeZone"
+            name="city-time-zone"
+            maxlength="64"
+            placeholder="Europe/Paris"
+            required
+            :disabled="saving"
+          />
+        </label>
+        <label class="field">
           <span>{{ strings.basicDataManagement.city.labels.sort }}</span>
           <input
             v-model.number="cityEditor.sortNo"
@@ -587,6 +599,7 @@ watch(
             <tr>
               <th>{{ strings.basicDataManagement.city.tableHeaders.city }}</th>
               <th>{{ strings.basicDataManagement.city.tableHeaders.code }}</th>
+              <th>{{ strings.basicDataManagement.city.tableHeaders.timeZone }}</th>
               <th>{{ strings.basicDataManagement.city.tableHeaders.sort }}</th>
               <th>{{ strings.basicDataManagement.city.tableHeaders.status }}</th>
               <th v-if="canWrite">{{ strings.basicDataManagement.city.tableHeaders.actions }}</th>
@@ -599,6 +612,7 @@ watch(
                 <p>#{{ item.id }}</p>
               </td>
               <td><span class="code-box">{{ item.code }}</span></td>
+              <td><span class="code-box">{{ item.timeZone }}</span></td>
               <td class="numeric-cell">{{ item.sortNo }}</td>
               <td>
                 <span

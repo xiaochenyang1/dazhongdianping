@@ -2,6 +2,25 @@ import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('reservation wall time is displayed in the shop zone across DST', () {
+    expect(
+      formatReservationDateTime(
+        '2026-03-29T03:30:00',
+        timeZone: 'Europe/Paris',
+        locale: 'en',
+      ),
+      '29/03/2026 03:30 Europe/Paris',
+    );
+    expect(
+      formatReservationDateTime(
+        '2026-10-25 03:30:00',
+        timeZone: 'Europe/Paris',
+        locale: 'zh-CN',
+      ),
+      '2026/10/25 03:30 Europe/Paris',
+    );
+  });
+
   test('formats EUR and GBP using requested locale', () {
     expect(formatMoney(12.5, 'EUR', locale: 'en_GB'), '€12.50');
     expect(formatMoney(20, 'GBP', locale: 'en_GB'), '£20.00');

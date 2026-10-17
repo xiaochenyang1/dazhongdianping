@@ -20,30 +20,48 @@ public class ContentModerationService {
 
     private final ContentModerationProvider provider;
     private final AutomodHitMapper mapper;
+    private final AutomodHitWriter hitWriter;
 
-    public ContentModerationService(ContentModerationProvider provider, AutomodHitMapper mapper) {
+    public ContentModerationService(
+            ContentModerationProvider provider,
+            AutomodHitMapper mapper,
+            AutomodHitWriter hitWriter) {
         this.provider = provider;
         this.mapper = mapper;
+        this.hitWriter = hitWriter;
     }
 
     /**
      * 调用机审提供者。BLOCK / REVIEW 写入 automod_hit；BLOCK 拒绝内容。
      * PASS 不插行。bizId 在业务插入前可为 0。
      */
-    public void moderate(String region, String bizType, long bizId, long userId, String... texts) {
+    public ModerationDecision moderate(String region, String bizType, long bizId, long userId, String... texts) {
+        return moderateForAuditRegion(region, region, bizType, bizId, userId, texts);
+    }
+
+    public ModerationDecision moderateForAuditRegion(
+            String region,
+            String auditRegion,
+            String bizType,
+            long bizId,
+            long userId,
+            String... texts) {
         ModerationResult result = provider.moderate(region, texts);
-        if (result == null || result.decision() == null || result.decision() == ModerationDecision.PASS) {
-            return;
+        if (result == null || result.decision() == null) {
+            throw new IllegalStateException("内容机审未返回有效结论");
+        }
+        if (result.decision() == ModerationDecision.PASS) {
+            return ModerationDecision.PASS;
         }
         AutomodHitRow row = new AutomodHitRow();
-        row.setRegion(region);
+        row.setRegion(auditRegion);
         row.setBizType(bizType);
         row.setBizId(bizId);
         row.setUserId(userId);
         row.setDecision(result.decision().code());
         row.setProvider(result.provider() == null ? "" : result.provider());
         row.setReason(truncate(result.reason()));
-        mapper.insert(row);
+        hitWriter.record(row);
         if (result.decision() == ModerationDecision.BLOCK) {
             String reason = result.reason();
             if (reason == null || reason.isBlank()) {
@@ -51,6 +69,7 @@ public class ContentModerationService {
             }
             throw new IllegalArgumentException("内容未通过机审：" + reason);
         }
+        return result.decision();
     }
 
     public PageResult<Map<String, Object>> listHits(AutomodHitQuery query) {

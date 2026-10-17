@@ -17,6 +17,7 @@ import com.tuowei.dazhongdianping.module.search.event.ShopSearchIndexChangedEven
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.IntSupplier;
@@ -125,11 +126,13 @@ public class AdminGeoDataService {
         String currentRegion = region();
         String code = normalizeCode(request.code());
         String name = request.name().trim();
+        String timeZone = normalizeTimeZone(request.timeZone());
         requireCityAvailable(code, name, null, currentRegion);
         AdminCityRow row = new AdminCityRow();
         row.setCode(code);
         row.setRegion(currentRegion);
         row.setName(name);
+        row.setTimeZone(timeZone);
         row.setSortNo(request.sortNo());
         row.setStatus(1);
         runWithConflict(() -> mapper.insertCity(row), "当前区域已存在相同城市编码或名称");
@@ -142,9 +145,11 @@ public class AdminGeoDataService {
         AdminCityRow row = requireCityForUpdate(id, currentRegion);
         String code = normalizeCode(request.code());
         String name = request.name().trim();
+        String timeZone = normalizeTimeZone(request.timeZone());
         requireCityAvailable(code, name, id, currentRegion);
         row.setCode(code);
         row.setName(name);
+        row.setTimeZone(timeZone);
         row.setSortNo(request.sortNo());
         if (runWithConflict(() -> mapper.updateCity(row), "当前区域已存在相同城市编码或名称") != 1) {
             throw new NotFoundException("城市不存在");
@@ -417,7 +422,7 @@ public class AdminGeoDataService {
 
     private AdminCityResponse toCityResponse(AdminCityRow row) {
         return new AdminCityResponse(
-                row.getId(), row.getCode(), row.getName(), row.getSortNo(), row.getStatus());
+                row.getId(), row.getCode(), row.getName(), row.getTimeZone(), row.getSortNo(), row.getStatus());
     }
 
     private AdminAreaResponse toAreaResponse(AdminAreaRow row) {
@@ -427,6 +432,18 @@ public class AdminGeoDataService {
 
     private String normalizeCode(String code) {
         return code.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeTimeZone(String timeZone) {
+        String normalized = timeZone.trim();
+        try {
+            if (!ZoneId.getAvailableZoneIds().contains(normalized)) {
+                throw new IllegalArgumentException();
+            }
+        } catch (RuntimeException exception) {
+            throw new IllegalArgumentException("timeZone 必须是有效的 IANA 时区");
+        }
+        return normalized;
     }
 
     private String region() {

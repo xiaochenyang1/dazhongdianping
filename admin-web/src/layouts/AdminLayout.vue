@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAdminSession } from '@/composables/useAdminSession'
 import {
@@ -7,8 +7,8 @@ import {
   adminRouteTitleKey,
   adminStringsForRegion,
 } from '@/core/admin_localizations'
-import { fetchAdminMe, fetchAdminMenus, logoutAdmin } from '@/services/admin'
-import type { AdminMenuItem, Region } from '@/types/admin'
+import { fetchAdminMe, fetchAdminMenus, getModerationQueueMetrics, logoutAdmin } from '@/services/admin'
+import type { AdminAuditQueueMetric, AdminMenuItem, Region } from '@/types/admin'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,10 +19,30 @@ const menus = ref<AdminMenuItem[]>([])
 const loadingMenus = ref(false)
 const errorMessage = ref('')
 const identityReady = ref(false)
+const moderationMetrics = ref<AdminAuditQueueMetric[]>([])
 let hydrationRequestId = 0
 
 const pageTitle = computed(() => strings.value.routeTitles[adminRouteTitleKey(route.meta.titleKey)])
 const availableRegions = computed<Region[]>(() => state.regions.length > 0 ? state.regions : ['CN', 'EU'])
+const canReadModeration = computed(() => state.permissions.includes('audit:automod:read'))
+const moderationOverdueCount = computed(() => moderationMetrics.value.reduce((total, metric) => total + metric.overdueCount, 0))
+
+async function refreshModerationAlerts() {
+  if (!state.token || !canReadModeration.value) {
+    moderationMetrics.value = []
+    return
+  }
+  const token = state.token
+  const region = state.region
+  try {
+    const latestMetrics = await getModerationQueueMetrics()
+    if (state.token === token && state.region === region && canReadModeration.value) {
+      moderationMetrics.value = latestMetrics
+    }
+  } catch {
+    return
+  }
+}
 
 function localizedMenuLabel(item: AdminMenuItem) {
   return adminMenuLabel(strings.value, item)
@@ -108,6 +128,19 @@ watch(
   },
   { immediate: true },
 )
+
+watch(() => [state.token, state.region, canReadModeration.value], () => {
+  moderationMetrics.value = []
+  void refreshModerationAlerts()
+}, { immediate: true })
+
+let alertRefreshTimer: number | undefined
+onMounted(() => {
+  alertRefreshTimer = window.setInterval(() => void refreshModerationAlerts(), 60_000)
+})
+onUnmounted(() => {
+  if (alertRefreshTimer !== undefined) window.clearInterval(alertRefreshTimer)
+})
 </script>
 
 <template>
@@ -159,6 +192,9 @@ watch(
         </div>
 
         <div class="topbar-actions">
+          <RouterLink v-if="canReadModeration" to="/audit/sla-alerts" class="sla-nav-alert">
+            {{ moderationOverdueCount > 0 ? `超时待审 ${moderationOverdueCount} · 查看记录` : '审核提醒记录' }}
+          </RouterLink>
           <label class="compact-field">
             <span>{{ strings.shell.regionLabel }}</span>
             <select :value="state.region" @change="setRegion(($event.target as HTMLSelectElement).value as Region)">
@@ -182,3 +218,11 @@ watch(
     </div>
   </div>
 </template>
+
+<style scoped>
+.sla-nav-alert {
+  color: #b42318;
+  font-weight: 700;
+  white-space: nowrap;
+}
+</style>

@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer'
-import { expect, test, type APIRequestContext, type APIResponse, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type APIResponse, type Page, type Response } from '@playwright/test'
 
 const adminPort = Number(process.env.PLAYWRIGHT_ADMIN_PORT ?? 15174)
 const adminBaseURL = `http://127.0.0.1:${adminPort}`
@@ -24,14 +24,38 @@ async function loginFromAuthDialog(page: Page, account: string, password: string
   await authDialog.getByRole('button', { name: '登录', exact: true }).click()
 }
 
-async function expectApiSuccess<T>(response: APIResponse) {
-  expect(response.ok()).toBeTruthy()
+async function loginToAdminConsole(page: Page, account = 'admin', password = 'admin123456') {
+  await page.goto(`${adminBaseURL}/login`)
+  // Login fields deliberately start empty; never rely on demo credentials being prefilled.
+  await page.locator('input[autocomplete="username"]').fill(account)
+  await page.locator('input[autocomplete="current-password"]').fill(password)
+  const loginResponse = page.waitForResponse((response) =>
+    response.request().method() === 'POST'
+    && new URL(response.url()).pathname === '/api/admin/v1/auth/login',
+  )
+  await page.getByRole('button', { name: /进入后台|Enter console/ }).click()
+  await expectApiSuccess(await loginResponse)
+  await expect(page).toHaveURL(`${adminBaseURL}/dashboard`)
+}
+
+async function navigateAdmin(page: Page, path: string) {
+  // Keep pending requests alive by navigating through the app instead of reloading the document.
+  const menu = page.getByRole('navigation', { name: '后台菜单' })
+  const link = menu.locator(`a[href="${path}"]`)
+  await expect(link).toBeVisible()
+  await link.click()
+  await expect(page).toHaveURL(`${adminBaseURL}${path}`)
+}
+
+async function expectApiSuccess<T>(response: APIResponse | Response) {
   const body = (await response.json()) as {
     code: number
     message: string
     data: T
   }
-  expect(body.code).toBe(0)
+  const diagnostic = `${response.status()} ${body.message}`
+  expect(response.ok(), diagnostic).toBeTruthy()
+  expect(body.code, diagnostic).toBe(0)
   return body.data
 }
 
@@ -117,6 +141,103 @@ function containsCategoryId(categories: Array<{ id: number; children?: unknown[]
     || containsCategoryId((category.children ?? []) as Array<{ id: number; children?: unknown[] }>, categoryId),
   )
 }
+
+test.describe('Paris launch', () => {
+  test.use({ timezoneId: 'Asia/Shanghai' })
+
+  test('books Paris in shop time and blocks deferred entry points across regions', async ({ page, context, request }) => {
+    const headers = { 'X-Region': 'EU' }
+    const account = `paris-launch-${Date.now()}@example.com`
+    await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
+      headers, data: { scene: 'register', type: 'email', account, deviceId: account },
+    }))
+    const session = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
+      await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
+        headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
+      }),
+    )
+    const userHeaders = { ...headers, Authorization: `Bearer ${session.accessToken}` }
+    const availability = await expectApiSuccess<{ date: string; today: string; timeZone: string }>(
+      await request.get(`${backendBaseURL}/api/c/v1/shops/20001/reservation-slots`, {
+        headers, params: { peopleCount: 2 },
+      }),
+    )
+    expect(availability.timeZone).toBe('Europe/Paris')
+    const merchant = await expectApiSuccess<{ accessToken: string }>(
+      await request.post(`${backendBaseURL}/api/b/v1/auth/login`, {
+        headers, data: { account: 'merchant_eu_sichuan@example.com', password: 'merchant123456' },
+      }),
+    )
+    await expectApiSuccess(await request.post(`${backendBaseURL}/api/b/v1/reservation-slots`, {
+      headers: { ...headers, Authorization: `Bearer ${merchant.accessToken}` },
+      data: { shopId: 20001, bizDate: availability.date, startTime: '18:30:00', endTime: '20:30:00',
+        capacity: 8, confirmMode: 2, cancelBeforeMinutes: 120, enabled: true },
+    }))
+    await context.addInitScript((auth) => {
+      if (!localStorage.getItem('dzdp:region')) localStorage.setItem('dzdp:region', 'EU')
+      localStorage.setItem('dzdp:user-access-token', auth.accessToken)
+      localStorage.setItem('dzdp:user-refresh-token', auth.refreshToken)
+      localStorage.setItem('dzdp:user-profile', JSON.stringify(auth.user))
+    }, session)
+
+    await page.goto('/shops/20001/reserve')
+    await expect(page.getByLabel('Date', { exact: true })).toHaveValue(availability.date)
+    await expect(page.getByLabel('Date', { exact: true })).toHaveAttribute('min', availability.today)
+    await expect(page.getByTestId('reservation-time-zone')).toHaveText('Europe/Paris')
+    await expect(page.locator('.top-nav')).not.toContainText('Creator')
+    await expect(page.locator('.top-nav')).not.toContainText('Flash sale')
+    await page.getByRole('button', { name: /18:30:00-20:30:00/ }).click()
+    await page.getByLabel('Contact name', { exact: true }).fill('Paris visitor')
+    await page.getByLabel('Phone number', { exact: true }).fill('+33123456789')
+    await page.getByRole('button', { name: 'Book now', exact: true }).click()
+    await expect(page).toHaveURL(/\/user\/reservations\/\d+$/)
+    const reservationId = page.url().split('/').pop()
+    await expect(page.locator('.page-header')).toContainText('18:30 Europe/Paris')
+    await page.getByRole('button', { name: 'Cancel booking', exact: true }).click()
+    await expect(page.getByText('Booking cancelled.', { exact: true })).toBeVisible()
+    const cancelled = await expectApiSuccess<{ status: number; timeZone: string; reserveAt: string }>(
+      await request.get(`${backendBaseURL}/api/c/v1/reservations/${reservationId}`, { headers: userHeaders }),
+    )
+    expect(cancelled.status).toBe(3)
+    expect(cancelled.timeZone).toBe('Europe/Paris')
+    expect(cancelled.reserveAt).toMatch(/Z$/)
+
+    await expectApiFailure(await request.post(`${backendBaseURL}/api/c/v1/reservations`, {
+      headers: userHeaders, data: { shopId: 20002, reserveTime: `${availability.date} 18:30:00`,
+        peopleCount: 2, contactName: 'Paris visitor', contactPhone: '+33123456789' },
+    }), 404)
+    for (const region of ['EU', 'CN', '']) {
+      const probeHeaders: Record<string, string> = { Authorization: `Bearer ${session.accessToken}` }
+      if (region) probeHeaders['X-Region'] = region
+      const launch = await expectApiSuccess(await request.get(`${backendBaseURL}/api/c/v1/launch-config`, {
+        headers: probeHeaders,
+      }))
+      expect(launch).toEqual({ region: region || 'CN', creatorRewards: false, seckill: false, groupBuy: false })
+      const taskId = region === 'EU' ? 9102 : 9101
+      for (const action of ['claim', 'complete']) {
+        await expectApiFailure(await request.post(`${backendBaseURL}/api/c/v1/creator/tasks/${taskId}/${action}`, {
+          headers: probeHeaders,
+        }), 403)
+      }
+    }
+    const profile = await expectApiSuccess<{ preferredRegion: string; points: number }>(
+      await request.get(`${backendBaseURL}/api/c/v1/user/me`, { headers: userHeaders }),
+    )
+    expect(profile.preferredRegion).toBe('EU')
+    expect(profile.points).toBe(0)
+
+    for (const region of ['EU', 'CN']) {
+      await page.locator('.region-switch').getByRole('button', { name: region, exact: true }).click()
+      for (const path of ['/user/creator', '/marketing/seckill', '/marketing/groupbuy']) {
+        await page.goto(path)
+        await expect(page).toHaveURL(/\/$/)
+        await expect(page.locator('.region-switch').getByRole('button', { name: region, exact: true })).toHaveClass(/is-active/)
+        await expect(page.locator(`.top-nav a[href="${path}"]`)).toHaveCount(0)
+        await expect(page.locator('.auth-dialog')).toHaveCount(0)
+      }
+    }
+  })
+})
 
 async function createApprovedPublicReview(request: APIRequestContext, content: string) {
   const reviewerSession = await expectApiSuccess<{
@@ -216,18 +337,23 @@ test.describe.serial('real backend review flow', () => {
     const diagnostics = collectBrowserErrors(adminPage)
 
     try {
-      await adminPage.goto(`${adminBaseURL}/login`)
-      await adminPage.getByLabel('账号').fill('admin')
-      await adminPage.getByLabel('密码').fill('admin123456')
-      await adminPage.getByRole('button', { name: '进入后台' }).click()
-      await expect(adminPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
+      // Keep identity/dashboard requests in flight long enough to catch navigation races seen in CI.
+      const network = await adminContext.newCDPSession(adminPage)
+      await network.send('Network.enable')
+      await network.send('Network.emulateNetworkConditions', {
+        offline: false,
+        latency: 150,
+        downloadThroughput: -1,
+        uploadThroughput: -1,
+      })
+      await loginToAdminConsole(adminPage)
 
       const healthResponsePromise = adminPage.waitForResponse((response) =>
         response.request().method() === 'GET'
         && response.status() === 200
         && response.url().includes('/api/admin/v1/system/health'),
       )
-      await adminPage.goto(`${adminBaseURL}/system/health`)
+      await navigateAdmin(adminPage, '/system/health')
       const healthResponse = await healthResponsePromise
       const health = await expectApiSuccess<{
         status: string
@@ -302,7 +428,7 @@ test.describe.serial('real backend review flow', () => {
         && response.status() === 200
         && /\/api\/admin\/v1\/search\/sync-tasks(?:\?|$)/.test(response.url()),
       )
-      await adminPage.goto(`${adminBaseURL}/data/search-sync`)
+      await navigateAdmin(adminPage, '/data/search-sync')
       const [overviewResponse, tasksResponse] = await Promise.all([
         overviewResponsePromise,
         tasksResponsePromise,
@@ -369,7 +495,7 @@ test.describe.serial('real backend review flow', () => {
       const city = await expectApiSuccess<{ id: number; code: string; status: number }>(
         await request.post(`${backendBaseURL}/api/admin/v1/cities`, {
           headers,
-          data: { code: cityCode.toLowerCase(), name: cityName, sortNo: 9999 },
+          data: { code: cityCode.toLowerCase(), name: cityName, timeZone: 'Europe/Paris', sortNo: 9999 },
         }),
       )
       cityId = city.id
@@ -505,7 +631,7 @@ test.describe.serial('real backend review flow', () => {
     await page.getByRole('button', { name: '搜索' }).click()
     await expect(page).toHaveURL(/\/shops\?keyword=%E7%81%AB%E9%94%85/)
     await expect(page.getByLabel('关键词')).toHaveValue('火锅')
-    await expect(page.getByText('渝里火锅徐汇店')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '渝里火锅徐汇店' })).toBeVisible()
 
     await page.goto('/shops/10001/reviews/new')
 
@@ -529,11 +655,9 @@ test.describe.serial('real backend review flow', () => {
     expect(reviewId).toBeTruthy()
 
     const adminPage = await context.newPage()
-    await adminPage.goto(`${adminBaseURL}/login`)
-    await adminPage.getByRole('button', { name: '进入后台' }).click()
-    await expect(adminPage).toHaveURL(/\/dashboard/)
+    await loginToAdminConsole(adminPage)
 
-    await adminPage.goto(`${adminBaseURL}/audit/reviews`)
+    await navigateAdmin(adminPage, '/audit/reviews')
     await expect(adminPage.getByText(reviewContent)).toBeVisible()
     await adminPage.getByRole('button', { name: '通过点评' }).click()
     await expect(adminPage.getByText(/已审核通过/)).toBeVisible()
@@ -763,11 +887,9 @@ test.describe.serial('real backend review flow', () => {
     )
 
     const adminPage = await context.newPage()
-    await adminPage.goto(`${adminBaseURL}/login`)
-    await adminPage.getByRole('button', { name: '进入后台' }).click()
-    await expect(adminPage).toHaveURL(/\/dashboard/)
+    await loginToAdminConsole(adminPage)
 
-    await adminPage.goto(`${adminBaseURL}/data/import`)
+    await navigateAdmin(adminPage, '/data/import')
     await expect(adminPage.getByRole('heading', { name: /先让运营有办法造数/ })).toBeVisible()
     await adminPage.getByRole('button', { name: '开始导入' }).click()
     await expect(adminPage.getByText('导入完成：成功 1，失败 0。')).toBeVisible()
@@ -822,15 +944,11 @@ test.describe.serial('real backend review flow', () => {
     const retainedReviewerDiagnostics = collectBrowserErrors(retainedReviewerPage)
 
     try {
-      await adminPage.goto(`${adminBaseURL}/login`)
-      await adminPage.getByLabel('账号').fill('admin')
-      await adminPage.getByLabel('密码').fill('admin123456')
-      await adminPage.getByRole('button', { name: '进入后台' }).click()
-      await expect(adminPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
+      await loginToAdminConsole(adminPage)
       const adminMenu = adminPage.getByRole('navigation', { name: '后台菜单' })
       await expect(adminMenu.getByRole('link', { name: '管理员账号', exact: true })).toBeVisible()
 
-      await adminPage.goto(`${adminBaseURL}/system/roles`)
+      await navigateAdmin(adminPage, '/system/roles')
       await expect(adminPage.getByRole('main').getByRole('heading', { name: '角色与权限' })).toBeVisible()
       await adminPage.getByRole('button', { name: '新建角色' }).click()
       const roleForm = adminPage.getByTestId('role-form')
@@ -843,7 +961,7 @@ test.describe.serial('real backend review flow', () => {
       await expect(roleRow).toContainText(roleName)
       await expect(roleRow).toContainText('启用')
 
-      await adminPage.goto(`${adminBaseURL}/system/admins`)
+      await navigateAdmin(adminPage, '/system/admins')
       await expect(adminPage.getByRole('main').getByRole('heading', { name: '管理员账号' })).toBeVisible()
       await adminPage.getByRole('button', { name: '新建管理员' }).click()
       const accountForm = adminPage.getByTestId('admin-form')
@@ -858,11 +976,7 @@ test.describe.serial('real backend review flow', () => {
       await expect(accountRow).toContainText('EU')
       await expect(accountRow).toContainText('启用')
 
-      await reviewerPage.goto(`${adminBaseURL}/login`)
-      await reviewerPage.getByLabel('账号').fill(account)
-      await reviewerPage.getByLabel('密码').fill(password)
-      await reviewerPage.getByRole('button', { name: '进入后台' }).click()
-      await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
+      await loginToAdminConsole(reviewerPage, account, password)
       await expect(reviewerPage.getByLabel('Region')).toHaveValue('EU')
 
       const reviewerMenu = reviewerPage.getByRole('navigation', { name: 'Admin navigation' })
@@ -926,7 +1040,7 @@ test.describe.serial('real backend review flow', () => {
         403,
       )
 
-      await adminPage.goto(`${adminBaseURL}/system/roles`)
+      await navigateAdmin(adminPage, '/system/roles')
       const refreshedRoleRow = adminPage.locator('tr').filter({ hasText: roleCode })
       await expect(refreshedRoleRow).toContainText(roleName)
       adminPage.once('dialog', (dialog) => dialog.accept())
@@ -977,7 +1091,7 @@ test.describe.serial('real backend review flow', () => {
       expect(revokedTasks.list).toEqual([])
       expect(revokedTasks.total).toBe(0)
 
-      await adminPage.goto(`${adminBaseURL}/system/roles`)
+      await navigateAdmin(adminPage, '/system/roles')
       const reenabledRoleRow = adminPage.locator('tr').filter({ hasText: roleCode })
       await expect(reenabledRoleRow).toContainText('已停用')
       adminPage.once('dialog', (dialog) => dialog.accept())
@@ -990,16 +1104,15 @@ test.describe.serial('real backend review flow', () => {
       await expect(restoredReviewerMenu.getByRole('link', { name: 'Review Audit', exact: true })).toBeVisible()
       const initialAuditTasksResponse = reviewerPage.waitForResponse((response) =>
         response.request().method() === 'GET'
-        && response.status() === 200
-        && response.url().includes('/api/admin/v1/audit/tasks'),
+        && new URL(response.url()).pathname === '/api/admin/v1/audit/tasks',
       )
       await restoredReviewerMenu.getByRole('link', { name: 'Review Audit', exact: true }).click()
       await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/audit/reviews$`))
-      await initialAuditTasksResponse
+      await expectApiSuccess(await initialAuditTasksResponse)
       await expect(reviewerPage.getByText('Loading review audit tasks...')).not.toBeVisible()
       await expect(reviewerPage.getByRole('button', { name: 'Apply filters', exact: true })).toBeVisible()
 
-      await adminPage.goto(`${adminBaseURL}/system/admins`)
+      await navigateAdmin(adminPage, '/system/admins')
       const refreshedAccountRow = adminPage.locator('tr').filter({ hasText: account })
       await expect(refreshedAccountRow).toContainText(roleName)
       adminPage.once('dialog', (dialog) => dialog.accept())

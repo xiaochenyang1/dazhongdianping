@@ -19,7 +19,10 @@ class ReservationScreen extends StatefulWidget {
 }
 
 class _ReservationScreenState extends State<ReservationScreen> {
-  late DateTime date;
+  DateTime? date;
+  DateTime? shopToday;
+  String timeZone = '';
+  int slotVersion = 0;
   int peopleCount = 2;
   ReservationSlot? selected;
   late Future<List<ReservationSlot>> slots;
@@ -32,17 +35,53 @@ class _ReservationScreenState extends State<ReservationScreen> {
   @override
   void initState() {
     super.initState();
-    date = widget.initialDate ?? DateTime.now().add(const Duration(days: 1));
+    date = widget.initialDate;
     slots = loadSlots();
   }
 
-  String get dateText =>
-      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  Future<List<ReservationSlot>> loadSlots() => widget.repository.loadSlots(
-    shopId: widget.shopId,
-    date: dateText,
-    peopleCount: peopleCount,
-  );
+  String get dateText => date == null
+      ? ''
+      : '${date!.year}-${date!.month.toString().padLeft(2, '0')}-${date!.day.toString().padLeft(2, '0')}';
+
+  Future<List<ReservationSlot>> loadSlots() async {
+    final version = ++slotVersion;
+    final result = await widget.repository.loadAvailability(
+      shopId: widget.shopId,
+      date: dateText.isEmpty ? null : dateText,
+      peopleCount: peopleCount,
+    );
+    if (mounted && version == slotVersion) {
+      setState(() {
+        date = DateTime.tryParse(result.date) ?? date;
+        shopToday = DateTime.tryParse(result.today ?? '') ?? shopToday;
+        timeZone = result.timeZone;
+      });
+    }
+    return result.slots;
+  }
+
+  Future<void> pickDate() async {
+    if (date == null) return;
+    final first = shopToday ?? date!;
+    final last = DateTime(first.year, first.month, first.day + 180);
+    final initial = date!.isBefore(first)
+        ? first
+        : date!.isAfter(last)
+        ? last
+        : date!;
+    final next = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
+    );
+    if (next == null || !mounted) return;
+    setState(() {
+      date = next;
+      selected = null;
+      slots = loadSlots();
+    });
+  }
 
   Future<void> retrySlots() async {
     if (retryingSlots) return;
@@ -131,7 +170,14 @@ class _ReservationScreenState extends State<ReservationScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: Text(strings.dateLabel(dateText))),
+              Expanded(
+                child: TextButton.icon(
+                  key: const Key('reservation-create-pick-date'),
+                  onPressed: date == null ? null : pickDate,
+                  icon: const Icon(Icons.calendar_today_outlined),
+                  label: Text(strings.dateLabel(dateText)),
+                ),
+              ),
               DropdownButton<int>(
                 value: peopleCount,
                 items: [1, 2, 3, 4, 5, 6]
@@ -153,6 +199,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
               ),
             ],
           ),
+          if (timeZone.isNotEmpty)
+            Text(timeZone, key: const Key('reservation-time-zone')),
           const SizedBox(height: 12),
           FutureBuilder<List<ReservationSlot>>(
             future: slots,

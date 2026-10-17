@@ -45,10 +45,12 @@ class DirectMessage {
     required this.fromUserId,
     required this.toUserId,
     required this.content,
+    required this.status,
     required this.read,
     required this.createdAt,
   });
   final int id, conversationId, fromUserId, toUserId;
+  final int status;
   final String content, createdAt;
   final bool read;
   factory DirectMessage.fromJson(Map<String, dynamic> json) => DirectMessage(
@@ -57,6 +59,7 @@ class DirectMessage {
     fromUserId: json['fromUserId'] as int,
     toUserId: json['toUserId'] as int,
     content: json['content'] as String? ?? '',
+    status: json['status'] as int? ?? 1,
     read: json['read'] as bool? ?? false,
     createdAt: json['createdAt'] as String? ?? '',
   );

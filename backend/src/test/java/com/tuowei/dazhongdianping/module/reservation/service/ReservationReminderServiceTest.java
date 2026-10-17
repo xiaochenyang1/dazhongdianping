@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tuowei.dazhongdianping.module.reservation.model.ReservationReminderResult;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,8 +42,8 @@ class ReservationReminderServiceTest {
     @Test
     void shouldSendTwoHourAndThirtyMinuteRemindersWithoutDuplication() throws Exception {
         RegisteredUser user = registerUser();
-        LocalDateTime twoHourReserve = LocalDateTime.now().plusMinutes(90).withSecond(0).withNano(0);
-        LocalDateTime thirtyMinuteReserve = LocalDateTime.now().plusMinutes(20).withSecond(0).withNano(0);
+        LocalDateTime twoHourReserve = LocalDateTime.now(ZoneId.of("Asia/Shanghai")).plusMinutes(90).withSecond(0).withNano(0);
+        LocalDateTime thirtyMinuteReserve = LocalDateTime.now(ZoneId.of("Asia/Shanghai")).plusMinutes(20).withSecond(0).withNano(0);
 
         long twoHourId = insertConfirmedReservation(user.userId(), twoHourReserve, shortNo("2H"));
         long thirtyMinuteId = insertConfirmedReservation(user.userId(), thirtyMinuteReserve, shortNo("30"));
@@ -107,7 +108,7 @@ class ReservationReminderServiceTest {
     @Test
     void shouldResetRemindStatusAfterRescheduleAndAllowNewWindow() throws Exception {
         RegisteredUser user = registerUser();
-        LocalDateTime original = LocalDateTime.now().plusMinutes(80).withSecond(0).withNano(0);
+        LocalDateTime original = LocalDateTime.now(ZoneId.of("Asia/Shanghai")).plusMinutes(80).withSecond(0).withNano(0);
         long reservationId = insertConfirmedReservation(user.userId(), original, shortNo("RS"));
 
         ReservationReminderResult first = reminderService.dispatchDueReminders();
@@ -118,7 +119,7 @@ class ReservationReminderServiceTest {
                 reservationId
         ));
 
-        LocalDateTime next = LocalDateTime.now().plusMinutes(100).withSecond(0).withNano(0);
+        LocalDateTime next = LocalDateTime.now(ZoneId.of("Asia/Shanghai")).plusMinutes(100).withSecond(0).withNano(0);
         jdbc.update(
                 "UPDATE reservation SET reserve_time=?, remind_status=0, updated_at=CURRENT_TIMESTAMP WHERE id=?",
                 next,

@@ -27,6 +27,9 @@ class ReservationFakeApi implements JsonApi {
               'address': 'Berlin Mitte',
             },
             'reserveTime': '2026-07-16T18:00:00',
+            'timeZone': 'Europe/Paris',
+            'reserveAt': '2026-07-16T16:00:00Z',
+            'today': '2026-07-15',
             'peopleCount': 2,
             'status': 1,
             'statusText': '已确认',
@@ -47,6 +50,9 @@ class ReservationFakeApi implements JsonApi {
         },
         'slotId': 3,
         'reserveTime': '2026-07-16T18:00:00',
+        'timeZone': 'Europe/Paris',
+        'reserveAt': '2026-07-16T16:00:00Z',
+        'today': '2026-07-15',
         'peopleCount': 2,
         'contactName': 'Li',
         'contactPhone': '+447700900000',
@@ -72,6 +78,8 @@ class ReservationFakeApi implements JsonApi {
     }
     return {
       'date': '2026-07-16',
+      'today': '2026-07-15',
+      'timeZone': 'Europe/Paris',
       'list': [
         {
           'slotId': 3,
@@ -101,6 +109,9 @@ class ReservationFakeApi implements JsonApi {
       },
       'slotId': 3,
       'reserveTime': '2026-07-16T18:00:00',
+      'timeZone': 'Europe/Paris',
+      'reserveAt': '2026-07-16T16:00:00Z',
+      'today': '2026-07-15',
       'peopleCount': 2,
       'contactName': 'Li',
       'contactPhone': '+447700900000',
@@ -118,6 +129,17 @@ class ReservationFakeApi implements JsonApi {
 }
 
 void main() {
+  test('uses shop calendar metadata without sending a device date', () async {
+    final api = ReservationFakeApi();
+    final available = await ReservationRepository(
+      api,
+    ).loadAvailability(shopId: 2, peopleCount: 2);
+    expect(api.query!.containsKey('date'), isFalse);
+    expect(available.date, '2026-07-16');
+    expect(available.today, '2026-07-15');
+    expect(available.timeZone, 'Europe/Paris');
+  });
+
   test('reservation repository loads slots and creates reservation', () async {
     final api = ReservationFakeApi();
     final repository = ReservationRepository(api);
@@ -154,6 +176,9 @@ void main() {
       expect(api.path, '/api/c/v1/reservations/11');
       expect(detail.shopName, 'EU Shop');
       expect(detail.status, 1);
+      expect(detail.timeZone, 'Europe/Paris');
+      expect(detail.reserveAt, DateTime.utc(2026, 7, 16, 16));
+      expect(detail.today, '2026-07-15');
       expect(detail.confirmMode, 1);
       expect(detail.timeline.single.actionType, 1);
       expect(detail.timeline.single.actionText, '创建预订');

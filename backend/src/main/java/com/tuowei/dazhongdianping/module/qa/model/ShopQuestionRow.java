@@ -10,6 +10,7 @@ public class ShopQuestionRow {
     private Long userId;
     private String content;
     private Integer answerCount;
+    private Integer status;
     private LocalDateTime createdAt;
     private String userNickname;
     private String latestAnswer;
@@ -26,6 +27,8 @@ public class ShopQuestionRow {
     public void setContent(String content) { this.content = content; }
     public Integer getAnswerCount() { return answerCount; }
     public void setAnswerCount(Integer answerCount) { this.answerCount = answerCount; }
+    public Integer getStatus() { return status; }
+    public void setStatus(Integer status) { this.status = status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public String getUserNickname() { return userNickname; }

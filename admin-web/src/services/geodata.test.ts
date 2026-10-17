@@ -52,7 +52,7 @@ describe('admin geodata service', () => {
     await listGeoCities()
     expect(apiGet).toHaveBeenCalledWith('/api/admin/v1/cities')
 
-    const payload = { code: 'PAR', name: 'Paris', sortNo: 1 }
+    const payload = { code: 'PAR', name: 'Paris', timeZone: 'Europe/Paris', sortNo: 1 }
     await createGeoCity(payload)
     expect(apiPost).toHaveBeenCalledWith('/api/admin/v1/cities', payload)
 

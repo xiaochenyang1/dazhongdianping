@@ -21,8 +21,18 @@ public record ShopListItemResponse(
         Boolean openNow,
         List<String> tags,
         Double distanceMeters,
-        MerchantVerificationBadgeResponse merchantCertification
+        MerchantVerificationBadgeResponse merchantCertification,
+        String timeZone
 ) {
+    public ShopListItemResponse(Long id, Long merchantId, String name, String coverUrl, BigDecimal score,
+                                BigDecimal pricePerCapita, String currency, String address, Double latitude,
+                                Double longitude, String areaName, String cityName, Boolean hasDeal,
+                                Boolean openNow, List<String> tags, Double distanceMeters,
+                                MerchantVerificationBadgeResponse merchantCertification) {
+        this(id, merchantId, name, coverUrl, score, pricePerCapita, currency, address, latitude, longitude,
+                areaName, cityName, hasDeal, openNow, tags, distanceMeters, merchantCertification, null);
+    }
+
     public ShopListItemResponse(Long id,
                                 String name,
                                 String coverUrl,
@@ -93,7 +103,8 @@ public record ShopListItemResponse(
                 openNow,
                 tags,
                 distanceMeters,
-                merchantCertification
+                merchantCertification,
+                timeZone
         );
     }
 }

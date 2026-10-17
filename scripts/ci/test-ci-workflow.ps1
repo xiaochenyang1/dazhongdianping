@@ -26,6 +26,7 @@ Assert-True ($workflow -match "verify-all\.ps1") "workflow must run scripts/ci/v
 Assert-True ($workflow -match "IncludeMysqlSmoke") "workflow must include the MySQL smoke gate"
 Assert-True ($workflow -match "IncludeStorageSmoke") "workflow must include the storage smoke gate"
 Assert-True ($workflow -match "IncludeBrowserSmoke") "workflow must include the browser smoke gate"
+Assert-True ($workflow -match "IncludeBrowserE2E") "workflow must run real backend browser flows before merge"
 Assert-True ($workflow -match "playwright install --with-deps chromium") "workflow must install Playwright Chromium for browser smoke"
 Assert-True ($workflow -match "PLAYWRIGHT_CHANNEL: chromium") "workflow must run browser smoke with the Chromium channel"
 Assert-True ($workflow -match "mysql:8") "workflow must provision MySQL 8"

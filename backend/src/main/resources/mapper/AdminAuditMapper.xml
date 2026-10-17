@@ -84,11 +84,23 @@
         LEFT JOIN app_user bau ON bau.id = ba.user_id AND t.biz_type = 8
         LEFT JOIN merchant_verification mv ON mv.id = t.biz_id AND t.biz_type = 9
         LEFT JOIN merchant mvm ON mvm.id = mv.merchant_id AND t.biz_type = 9
+        LEFT JOIN review_comment rc ON rc.id = t.biz_id AND t.biz_type = 10
+        LEFT JOIN review cr ON cr.id = rc.review_id AND t.biz_type = 10
+        LEFT JOIN post_comment pc ON pc.id = t.biz_id AND t.biz_type = 11
+        LEFT JOIN post cp ON cp.id = pc.post_id AND t.biz_type = 11
+        LEFT JOIN shop_question sq ON sq.id = t.biz_id AND t.biz_type = 12
+        LEFT JOIN shop_answer sa ON sa.id = t.biz_id AND t.biz_type = 13
+        LEFT JOIN shop_question aq ON aq.id = sa.question_id AND t.biz_type = 13
+        LEFT JOIN app_user squ ON squ.id = sq.user_id AND t.biz_type = 12
+        LEFT JOIN app_user sua ON sua.id = sa.user_id AND t.biz_type = 13
+        LEFT JOIN message msg ON msg.id = t.biz_id AND t.biz_type = 14
+        LEFT JOIN app_user mau ON mau.id = msg.from_user_id AND t.biz_type = 14
         LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
-        LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
+        LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id WHEN t.biz_type = 10 THEN cr.shop_id WHEN t.biz_type = 11 THEN cp.shop_id WHEN t.biz_type = 12 THEN sq.shop_id WHEN t.biz_type = 13 THEN aq.shop_id ELSE r.shop_id END
         LEFT JOIN merchant m ON m.id = d.merchant_id
         LEFT JOIN merchant sm ON sm.id = sc.merchant_id
         LEFT JOIN merchant ram ON ram.id = ra.merchant_id
+        LEFT JOIN admin_user claim_admin ON claim_admin.id = t.claimed_by_admin_id
     </sql>
 
     <sql id="auditWhere">
@@ -115,6 +127,36 @@
         <if test="status != null">
             AND t.status = #{status}
         </if>
+        <if test="overdueOnly">
+            <choose>
+                <when test="slaThresholds == null or slaThresholds.isEmpty()">
+                    AND 1 = 0
+                </when>
+                <otherwise>
+                    AND t.biz_type IN
+                    <foreach collection="slaThresholds" item="threshold" open="(" separator="," close=")">
+                        #{threshold.bizType}
+                    </foreach>
+                    AND t.created_at &lt;= TIMESTAMPADD(MINUTE, 0 - CAST((CASE t.biz_type
+                    <foreach collection="slaThresholds" item="threshold">
+                        WHEN #{threshold.bizType} THEN #{threshold.slaMinutes}
+                    </foreach>
+                    END) AS SIGNED), CURRENT_TIMESTAMP)
+                </otherwise>
+            </choose>
+        </if>
+        <if test="assignmentFilter == 'unclaimed'">
+            AND (t.claimed_by_admin_id IS NULL OR t.claim_expires_at IS NULL OR t.claim_expires_at &lt;= CURRENT_TIMESTAMP)
+        </if>
+        <if test="assignmentFilter == 'mine'">
+            AND t.claimed_by_admin_id = #{currentAdminId}
+            AND t.claim_expires_at &gt; CURRENT_TIMESTAMP
+        </if>
+        <if test="assignmentFilter == 'others'">
+            AND t.claimed_by_admin_id IS NOT NULL
+            AND t.claimed_by_admin_id &lt;&gt; #{currentAdminId}
+            AND t.claim_expires_at &gt; CURRENT_TIMESTAMP
+        </if>
         <if test="keyword != null and keyword != ''">
             AND (
                 CAST(t.biz_id AS CHAR) LIKE CONCAT('%', #{keyword}, '%')
@@ -132,6 +174,12 @@
                 OR COALESCE(au.nickname, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(bau.nickname, '') LIKE CONCAT('%', #{keyword}, '%')
                 OR COALESCE(ba.account, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(rc.content, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(pc.content, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(sq.content, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(sa.content, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(msg.content, '') LIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(mau.nickname, '') LIKE CONCAT('%', #{keyword}, '%')
             )
         </if>
     </sql>
@@ -151,17 +199,146 @@
                t.machine_result,
                t.status,
                t.auditor_id,
+               t.claimed_by_admin_id,
+               claim_admin.name AS claimed_by_admin_name,
+               t.claimed_at,
+               t.claim_expires_at,
+               TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, t.claim_expires_at) AS claim_remaining_seconds,
                t.remark,
-               CASE WHEN t.biz_type = 9 THEN NULL WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
-               CASE WHEN t.biz_type = 9 THEN '' WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
-               CASE WHEN t.biz_type = 9 THEN mvm.company_name WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
-               CASE WHEN t.biz_type = 9 THEN mv.reason WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
+               CASE WHEN t.biz_type = 9 THEN NULL WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id WHEN t.biz_type = 10 THEN cr.shop_id WHEN t.biz_type = 11 THEN cp.shop_id WHEN t.biz_type = 12 THEN sq.shop_id WHEN t.biz_type = 13 THEN aq.shop_id ELSE r.shop_id END AS shop_id,
+               CASE WHEN t.biz_type = 9 THEN '' WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name WHEN t.biz_type = 14 THEN '' ELSE s.name END AS shop_name,
+               CASE WHEN t.biz_type = 9 THEN mvm.company_name WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name WHEN t.biz_type = 10 THEN rc.user_name WHEN t.biz_type = 11 THEN pc.user_name WHEN t.biz_type = 12 THEN COALESCE(NULLIF(squ.nickname, ''), CAST(sq.user_id AS CHAR)) WHEN t.biz_type = 13 THEN COALESCE(NULLIF(sua.nickname, ''), CAST(sa.user_id AS CHAR)) WHEN t.biz_type = 14 THEN COALESCE(NULLIF(mau.nickname, ''), mau.email, mau.phone) ELSE r.user_name END AS user_name,
+               CASE WHEN t.biz_type = 9 THEN mv.reason WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title WHEN t.biz_type = 10 THEN rc.content WHEN t.biz_type = 11 THEN pc.content WHEN t.biz_type = 12 THEN sq.content WHEN t.biz_type = 13 THEN sa.content WHEN t.biz_type = 14 THEN msg.content ELSE r.content END AS review_content,
                t.created_at,
+               TIMESTAMPDIFF(SECOND, t.created_at, CURRENT_TIMESTAMP) AS age_seconds,
                t.updated_at
         FROM audit_task t
         <include refid="auditTaskJoins"/>
         <include refid="auditWhere"/>
-        ORDER BY t.id DESC
+        <choose>
+            <when test="status != null and status == 0">
+                ORDER BY
+                <if test="slaThresholds != null and !slaThresholds.isEmpty()">
+                    CASE
+                    <foreach collection="slaThresholds" item="threshold">
+                        WHEN t.biz_type = #{threshold.bizType}
+                             AND t.created_at &lt;= TIMESTAMPADD(MINUTE, 0 - CAST(#{threshold.slaMinutes} AS SIGNED), CURRENT_TIMESTAMP)
+                             AND (t.claimed_by_admin_id IS NULL OR t.claim_expires_at IS NULL
+                                  OR t.claim_expires_at &lt;= CURRENT_TIMESTAMP) THEN 0
+                    </foreach>
+                    ELSE 1
+                    END ASC,
+                </if>
+                t.created_at ASC, t.id ASC
+            </when>
+            <otherwise>
+                ORDER BY t.id DESC
+            </otherwise>
+        </choose>
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectModerationQueueMetrics" resultType="com.tuowei.dazhongdianping.module.admin.audit.model.AuditQueueMetricRow">
+        SELECT t.biz_type,
+               SUM(CASE WHEN t.status = 0 THEN 1 ELSE 0 END) AS pending_count,
+               MIN(CASE WHEN t.status = 0 THEN t.created_at END) AS oldest_pending_at,
+               TIMESTAMPDIFF(SECOND, MIN(CASE WHEN t.status = 0 THEN t.created_at END), CURRENT_TIMESTAMP)
+                   AS oldest_pending_age_seconds,
+               SUM(CASE WHEN t.status IN (1, 2) AND t.auditor_id &gt; 0 THEN 1 ELSE 0 END) AS processed_count,
+               ROUND(AVG(CASE WHEN t.status IN (1, 2) AND t.auditor_id &gt; 0
+                              THEN TIMESTAMPDIFF(SECOND, t.created_at, t.updated_at) END))
+                   AS average_processing_seconds
+        FROM audit_task t
+        WHERE t.region = #{region}
+          AND t.biz_type IN (10, 11, 12, 13, 14)
+          <choose>
+              <when test="allowedBizTypes == null or allowedBizTypes.isEmpty()">
+                  AND 1 = 0
+              </when>
+              <otherwise>
+                  AND t.biz_type IN
+                  <foreach collection="allowedBizTypes" item="allowedBizType" open="(" separator="," close=")">
+                      #{allowedBizType}
+                  </foreach>
+              </otherwise>
+          </choose>
+        GROUP BY t.biz_type
+    </select>
+
+    <select id="selectModerationQueueOverdueCounts" resultType="com.tuowei.dazhongdianping.module.admin.audit.model.AuditQueueOverdueRow">
+        SELECT t.biz_type,
+               COUNT(1) AS overdue_count
+        FROM audit_task t
+        WHERE t.region = #{region}
+          AND t.status = 0
+          AND t.biz_type IN
+          <foreach collection="allowedBizTypes" item="allowedBizType" open="(" separator="," close=")">
+              #{allowedBizType}
+          </foreach>
+          AND t.created_at &lt;= TIMESTAMPADD(MINUTE, 0 - CAST((CASE t.biz_type
+          <foreach collection="slaThresholds" item="threshold">
+              WHEN #{threshold.bizType} THEN #{threshold.slaMinutes}
+          </foreach>
+          END) AS SIGNED), CURRENT_TIMESTAMP)
+        GROUP BY t.biz_type
+    </select>
+
+    <insert id="upsertAdminAuditSlaAlert">
+        INSERT INTO admin_audit_sla_alert(
+            region, biz_type, status, active_key, pending_count, overdue_count,
+            oldest_pending_at, first_overdue_at, last_detected_at
+        )
+        VALUES (
+            #{region}, #{bizType}, 0, CONCAT(#{region}, ':', #{bizType}),
+            #{pendingCount}, #{overdueCount}, #{oldestPendingAt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON DUPLICATE KEY UPDATE
+            pending_count = VALUES(pending_count),
+            overdue_count = VALUES(overdue_count),
+            oldest_pending_at = VALUES(oldest_pending_at),
+            last_detected_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <update id="resolveAdminAuditSlaAlert">
+        UPDATE admin_audit_sla_alert
+        SET status = 1,
+            active_key = NULL,
+            resolved_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE region = #{region}
+          AND biz_type = #{bizType}
+          AND status = 0
+    </update>
+
+    <sql id="adminAuditSlaAlertWhere">
+        WHERE region = #{region}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="allowedBizTypes == null or allowedBizTypes.isEmpty()">
+            AND 1 = 0
+        </if>
+        <if test="allowedBizTypes != null and !allowedBizTypes.isEmpty()">
+            AND biz_type IN
+            <foreach collection="allowedBizTypes" item="allowedBizType" open="(" separator="," close=")">
+                #{allowedBizType}
+            </foreach>
+        </if>
+    </sql>
+
+    <select id="countAdminAuditSlaAlerts" resultType="long">
+        SELECT COUNT(1)
+        FROM admin_audit_sla_alert
+        <include refid="adminAuditSlaAlertWhere"/>
+    </select>
+
+    <select id="selectAdminAuditSlaAlerts" resultType="com.tuowei.dazhongdianping.module.admin.audit.model.AdminAuditSlaAlertRow">
+        SELECT id, region, biz_type, status, pending_count, overdue_count, oldest_pending_at,
+               first_overdue_at, last_detected_at, resolved_at, created_at
+        FROM admin_audit_sla_alert
+        <include refid="adminAuditSlaAlertWhere"/>
+        ORDER BY status ASC, first_overdue_at DESC, id DESC
         LIMIT #{pageSize} OFFSET #{offset}
     </select>
 
@@ -173,12 +350,18 @@
                t.machine_result,
                t.status,
                t.auditor_id,
+               t.claimed_by_admin_id,
+               claim_admin.name AS claimed_by_admin_name,
+               t.claimed_at,
+               t.claim_expires_at,
+               TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, t.claim_expires_at) AS claim_remaining_seconds,
                t.remark,
-               CASE WHEN t.biz_type = 9 THEN NULL WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END AS shop_id,
-               CASE WHEN t.biz_type = 9 THEN '' WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name ELSE s.name END AS shop_name,
-               CASE WHEN t.biz_type = 9 THEN mvm.company_name WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name ELSE r.user_name END AS user_name,
-               CASE WHEN t.biz_type = 9 THEN mv.reason WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title ELSE r.content END AS review_content,
+               CASE WHEN t.biz_type = 9 THEN NULL WHEN t.biz_type = 8 THEN NULL WHEN t.biz_type = 7 THEN NULL WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id WHEN t.biz_type = 10 THEN cr.shop_id WHEN t.biz_type = 11 THEN cp.shop_id WHEN t.biz_type = 12 THEN sq.shop_id WHEN t.biz_type = 13 THEN aq.shop_id ELSE r.shop_id END AS shop_id,
+               CASE WHEN t.biz_type = 9 THEN '' WHEN t.biz_type = 8 THEN '' WHEN t.biz_type = 7 THEN '' WHEN t.biz_type = 5 THEN sc.name WHEN t.biz_type = 14 THEN '' ELSE s.name END AS shop_name,
+               CASE WHEN t.biz_type = 9 THEN mvm.company_name WHEN t.biz_type = 8 THEN COALESCE(NULLIF(bau.nickname, ''), ba.account) WHEN t.biz_type = 7 THEN au.nickname WHEN t.biz_type = 6 THEN ram.company_name WHEN t.biz_type = 5 THEN sm.company_name WHEN t.biz_type = 4 THEN p.user_name WHEN t.biz_type = 2 THEN m.company_name WHEN t.biz_type = 10 THEN rc.user_name WHEN t.biz_type = 11 THEN pc.user_name WHEN t.biz_type = 12 THEN COALESCE(NULLIF(squ.nickname, ''), CAST(sq.user_id AS CHAR)) WHEN t.biz_type = 13 THEN COALESCE(NULLIF(sua.nickname, ''), CAST(sa.user_id AS CHAR)) WHEN t.biz_type = 14 THEN COALESCE(NULLIF(mau.nickname, ''), mau.email, mau.phone) ELSE r.user_name END AS user_name,
+               CASE WHEN t.biz_type = 9 THEN mv.reason WHEN t.biz_type = 8 THEN ba.reason WHEN t.biz_type = 7 THEN uc.reason WHEN t.biz_type = 6 THEN ar.content WHEN t.biz_type = 5 THEN sc.summary WHEN t.biz_type = 4 THEN p.content WHEN t.biz_type = 2 THEN d.title WHEN t.biz_type = 10 THEN rc.content WHEN t.biz_type = 11 THEN pc.content WHEN t.biz_type = 12 THEN sq.content WHEN t.biz_type = 13 THEN sa.content WHEN t.biz_type = 14 THEN msg.content ELSE r.content END AS review_content,
                t.created_at,
+               TIMESTAMPDIFF(SECOND, t.created_at, CURRENT_TIMESTAMP) AS age_seconds,
                t.updated_at
         FROM audit_task t
         LEFT JOIN review r ON r.id = t.biz_id AND t.biz_type = 3
@@ -192,13 +375,78 @@
         LEFT JOIN app_user bau ON bau.id = ba.user_id AND t.biz_type = 8
         LEFT JOIN merchant_verification mv ON mv.id = t.biz_id AND t.biz_type = 9
         LEFT JOIN merchant mvm ON mvm.id = mv.merchant_id AND t.biz_type = 9
+        LEFT JOIN review_comment rc ON rc.id = t.biz_id AND t.biz_type = 10
+        LEFT JOIN review cr ON cr.id = rc.review_id AND t.biz_type = 10
+        LEFT JOIN post_comment pc ON pc.id = t.biz_id AND t.biz_type = 11
+        LEFT JOIN post cp ON cp.id = pc.post_id AND t.biz_type = 11
+        LEFT JOIN shop_question sq ON sq.id = t.biz_id AND t.biz_type = 12
+        LEFT JOIN shop_answer sa ON sa.id = t.biz_id AND t.biz_type = 13
+        LEFT JOIN shop_question aq ON aq.id = sa.question_id AND t.biz_type = 13
+        LEFT JOIN app_user squ ON squ.id = sq.user_id AND t.biz_type = 12
+        LEFT JOIN app_user sua ON sua.id = sa.user_id AND t.biz_type = 13
+        LEFT JOIN message msg ON msg.id = t.biz_id AND t.biz_type = 14
+        LEFT JOIN app_user mau ON mau.id = msg.from_user_id AND t.biz_type = 14
         LEFT JOIN review ar ON ar.id = ra.review_id AND t.biz_type = 6
-        LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id ELSE r.shop_id END
+        LEFT JOIN shop s ON s.id = CASE WHEN t.biz_type = 6 THEN ra.shop_id WHEN t.biz_type = 5 THEN sc.target_shop_id WHEN t.biz_type = 4 THEN p.shop_id WHEN t.biz_type = 2 THEN d.shop_id WHEN t.biz_type = 10 THEN cr.shop_id WHEN t.biz_type = 11 THEN cp.shop_id WHEN t.biz_type = 12 THEN sq.shop_id WHEN t.biz_type = 13 THEN aq.shop_id ELSE r.shop_id END
         LEFT JOIN merchant m ON m.id = d.merchant_id
         LEFT JOIN merchant sm ON sm.id = sc.merchant_id
         LEFT JOIN merchant ram ON ram.id = ra.merchant_id
+        LEFT JOIN admin_user claim_admin ON claim_admin.id = t.claimed_by_admin_id
         WHERE t.id = #{taskId}
     </select>
+
+    <select id="selectModeratedContent" resultType="com.tuowei.dazhongdianping.module.admin.audit.model.ModeratedContentRow">
+        <choose>
+            <when test="bizType == 10">
+                SELECT rc.id,rc.user_id,cr.region,rc.content,rc.review_id AS related_id,
+                       reply.user_id AS reply_to_user_id
+                FROM review_comment rc JOIN review cr ON cr.id=rc.review_id
+                LEFT JOIN review_comment reply ON reply.id=rc.reply_to AND reply.is_deleted=FALSE
+                WHERE rc.id=#{bizId} AND rc.status=0 AND rc.is_deleted=FALSE
+            </when>
+            <when test="bizType == 11">
+                SELECT pc.id,pc.user_id,cp.region,pc.content,pc.post_id AS related_id,
+                       reply.user_id AS reply_to_user_id
+                FROM post_comment pc JOIN post cp ON cp.id=pc.post_id
+                LEFT JOIN post_comment reply ON reply.id=pc.reply_to AND reply.is_deleted=FALSE
+                WHERE pc.id=#{bizId} AND pc.status=0 AND pc.is_deleted=FALSE
+            </when>
+            <when test="bizType == 12">
+                SELECT sq.id,sq.user_id,sq.region,sq.content,sq.shop_id AS related_id
+                FROM shop_question sq WHERE sq.id=#{bizId} AND sq.status=0 AND sq.is_deleted=FALSE
+            </when>
+            <when test="bizType == 13">
+                SELECT sa.id,sa.user_id,sa.region,sa.content,sa.question_id AS related_id
+                FROM shop_answer sa WHERE sa.id=#{bizId} AND sa.status=0 AND sa.is_deleted=FALSE
+            </when>
+            <when test="bizType == 14">
+                SELECT msg.id,msg.from_user_id AS user_id,'GLOBAL' AS region,msg.content,msg.conversation_id AS related_id
+                FROM message msg WHERE msg.id=#{bizId} AND msg.status=0 AND msg.is_deleted=FALSE
+            </when>
+        </choose>
+    </select>
+
+    <update id="updateModeratedContentStatus">
+        <choose>
+            <when test="bizType == 10">
+                UPDATE review_comment SET status=#{status},audit_remark=#{remark},updated_at=CURRENT_TIMESTAMP
+                WHERE id=#{bizId} AND status=0 AND is_deleted=FALSE
+            </when>
+            <when test="bizType == 11">
+                UPDATE post_comment SET status=#{status},audit_remark=#{remark},updated_at=CURRENT_TIMESTAMP
+                WHERE id=#{bizId} AND status=0 AND is_deleted=FALSE
+            </when>
+            <when test="bizType == 12">
+                UPDATE shop_question SET status=#{status} WHERE id=#{bizId} AND status=0 AND is_deleted=FALSE
+            </when>
+            <when test="bizType == 13">
+                UPDATE shop_answer SET status=#{status} WHERE id=#{bizId} AND status=0 AND is_deleted=FALSE
+            </when>
+            <when test="bizType == 14">
+                UPDATE message SET status=#{status} WHERE id=#{bizId} AND status=0 AND is_deleted=FALSE
+            </when>
+        </choose>
+    </update>
 
     <select id="selectPendingAuditTaskByBiz" resultType="com.tuowei.dazhongdianping.module.admin.audit.model.AuditTaskRow">
         SELECT t.id,
@@ -250,6 +498,34 @@
           AND status = 0
     </update>
 
+    <update id="invalidatePendingCommentAuditTasksByParent">
+        UPDATE audit_task
+        SET status=2,auditor_id=0,remark=#{remark},updated_at=CURRENT_TIMESTAMP
+        WHERE status=0 AND biz_type=#{bizType} AND biz_id IN
+        <choose>
+            <when test="bizType == 10">
+                (SELECT id FROM review_comment WHERE id=#{parentId} OR parent_id=#{parentId})
+            </when>
+            <when test="bizType == 11">
+                (SELECT id FROM post_comment WHERE id=#{parentId} OR parent_id=#{parentId})
+            </when>
+        </choose>
+    </update>
+
+    <update id="invalidatePendingCommentAuditTasksByContent">
+        UPDATE audit_task
+        SET status=2,auditor_id=0,remark=#{remark},updated_at=CURRENT_TIMESTAMP
+        WHERE status=0 AND biz_type=#{bizType} AND biz_id IN
+        <choose>
+            <when test="bizType == 10">
+                (SELECT id FROM review_comment WHERE review_id=#{contentId})
+            </when>
+            <when test="bizType == 11">
+                (SELECT id FROM post_comment WHERE post_id=#{contentId})
+            </when>
+        </choose>
+    </update>
+
     <update id="updateAuditTaskDecision">
         UPDATE audit_task
         SET status = #{status},
@@ -258,6 +534,47 @@
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{taskId}
           AND status = 0
+    </update>
+
+    <update id="claimPendingModeratedAuditTask">
+        UPDATE audit_task
+        SET claimed_at = CASE
+                WHEN claimed_by_admin_id = #{adminId} AND claim_expires_at &gt; CURRENT_TIMESTAMP THEN claimed_at
+                ELSE CURRENT_TIMESTAMP
+            END,
+            claimed_by_admin_id = #{adminId},
+            claim_expires_at = TIMESTAMPADD(MINUTE, #{leaseMinutes}, CURRENT_TIMESTAMP),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{taskId}
+          AND status = 0
+          AND biz_type IN (10, 11, 12, 13, 14)
+          AND (claimed_by_admin_id IS NULL OR claim_expires_at IS NULL
+               OR claim_expires_at &lt;= CURRENT_TIMESTAMP OR claimed_by_admin_id = #{adminId})
+    </update>
+
+    <update id="releasePendingModeratedAuditTask">
+        UPDATE audit_task
+        SET claimed_by_admin_id = NULL,
+            claimed_at = NULL,
+            claim_expires_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{taskId}
+          AND status = 0
+          AND biz_type IN (10, 11, 12, 13, 14)
+          AND claimed_by_admin_id = #{adminId}
+    </update>
+
+    <update id="updateClaimedModeratedAuditTaskDecision">
+        UPDATE audit_task
+        SET status = #{status},
+            auditor_id = #{adminId},
+            remark = #{remark},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{taskId}
+          AND status = 0
+          AND biz_type IN (10, 11, 12, 13, 14)
+          AND claimed_by_admin_id = #{adminId}
+          AND claim_expires_at &gt; CURRENT_TIMESTAMP
     </update>
 
     <update id="updateDealAuditDecision">

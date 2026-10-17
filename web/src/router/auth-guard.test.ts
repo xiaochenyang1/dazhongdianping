@@ -1,15 +1,39 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+const launchMocks = vi.hoisted(() => ({ load: vi.fn() }))
+vi.mock('@/composables/useLaunchCapabilities', async importOriginal => ({
+  ...await importOriginal<typeof import('@/composables/useLaunchCapabilities')>(),
+  loadLaunchCapabilities: launchMocks.load,
+}))
+import { useAppContext } from '@/composables/useAppContext'
 import router from '@/router'
 import { useUserSession } from '@/composables/useUserSession'
 
 describe('auth guarded routes', () => {
   beforeEach(async () => {
     window.scrollTo = () => {}
+    useAppContext().setRegion('CN')
+    launchMocks.load.mockResolvedValue({ region: 'EU', creatorRewards: false, seckill: false, groupBuy: false })
     localStorage.clear()
     const session = useUserSession()
     session.clearSession()
     session.closeAuthDialog()
     await router.replace('/')
+  })
+
+  it.each(['/user/creator', '/marketing/seckill', '/marketing/groupbuy'])('blocks deferred EU deep link %s before asking for login', async path => {
+    useAppContext().setRegion('EU')
+    await router.push(path)
+    expect(router.currentRoute.value.name).toBe('home')
+    expect(useUserSession().state.authDialogOpen).toBe(false)
+    expect(launchMocks.load).toHaveBeenCalledWith('EU')
+  })
+
+  it('uses the normal authentication flow when a capability is explicitly enabled', async () => {
+    useAppContext().setRegion('EU')
+    launchMocks.load.mockResolvedValue({ region: 'EU', creatorRewards: true, seckill: false, groupBuy: false })
+    await router.push('/user/creator')
+    expect(useUserSession().state.authDialogOpen).toBe(true)
+    expect(useUserSession().state.redirectTo).toBe('/user/creator')
   })
 
   it('opens login dialog and preserves redirect when visiting a protected page as guest', async () => {

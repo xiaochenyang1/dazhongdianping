@@ -26,11 +26,6 @@ public class RiskRequestInterceptor implements HandlerInterceptor {
     }
 
     private String resolveIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(forwarded)) {
-            int comma = forwarded.indexOf(',');
-            return comma > 0 ? forwarded.substring(0, comma).trim() : forwarded.trim();
-        }
         return request.getRemoteAddr() == null ? "" : request.getRemoteAddr();
     }
 }

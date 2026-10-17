@@ -46,6 +46,7 @@ describe('ReservationDetailView', () => {
       shop: { id: 20001, name: '巴黎川菜馆', coverImage: '', address: 'Paris' },
       slotId: 51001,
       reserveTime: '2026-07-26 18:30:00',
+      reserveAt: '2026-07-26T16:30:00Z', timeZone: 'Europe/Paris', today: '2026-07-25',
       peopleCount: 2,
       contactName: 'Lina',
       contactPhone: '+33123456789',
@@ -90,6 +91,7 @@ describe('ReservationDetailView', () => {
     const { app, host } = mount()
     await flush()
 
+    expect(host.textContent).toContain('26/07/2026 18:30 Europe/Paris')
     expect(host.textContent).toContain('Confirmed')
     expect(host.textContent).toContain('Confirmed by place')
     expect(host.textContent).toContain('Place')

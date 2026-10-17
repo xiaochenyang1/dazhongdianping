@@ -25,6 +25,7 @@ public class ApplicationSafetyValidator implements InitializingBean {
     private final boolean strictSpringProfile;
     private final boolean matchingDevelopmentSpringProfile;
     private final CorsProperties corsProperties;
+    private final InfrastructureProperties infrastructureProperties;
 
     public ApplicationSafetyValidator(
             Environment environment,
@@ -33,13 +34,15 @@ public class ApplicationSafetyValidator implements InitializingBean {
             @Value("${app.payment.notify-secret:}") String paymentNotifySecret,
             @Value("${app.payment.mock-enabled:false}") boolean paymentMockEnabled,
             VerificationCodeProperties verificationCode,
-            CorsProperties corsProperties) {
+            CorsProperties corsProperties,
+            InfrastructureProperties infrastructureProperties) {
         this.runtimeMode = runtimeMode == null ? "" : runtimeMode.trim().toLowerCase(Locale.ROOT);
         this.jwtSecret = jwtSecret == null ? "" : jwtSecret.trim();
         this.paymentNotifySecret = paymentNotifySecret == null ? "" : paymentNotifySecret.trim();
         this.paymentMockEnabled = paymentMockEnabled;
         this.verificationCode = verificationCode;
         this.corsProperties = corsProperties;
+        this.infrastructureProperties = infrastructureProperties;
         this.strictSpringProfile = Arrays.stream(environment.getActiveProfiles())
                 .map(profile -> profile.toLowerCase(Locale.ROOT))
                 .anyMatch(profile -> "pre".equals(profile) || "prod".equals(profile));
@@ -73,6 +76,13 @@ public class ApplicationSafetyValidator implements InitializingBean {
             if (verificationCode.isDevConsoleEnabled()) {
                 throw new IllegalStateException(
                         "APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED must be false in pre/prod");
+            }
+            if (infrastructureProperties.getStateStore().getProvider()
+                    != InfrastructureProperties.StateStoreProvider.REDIS) {
+                throw new IllegalStateException(
+                        "APP_STATE_STORE_PROVIDER must be redis in pre/prod; the in-memory local store is "
+                                + "per-instance and silently breaks idempotency and send-code rate limiting "
+                                + "across nodes");
             }
         }
 

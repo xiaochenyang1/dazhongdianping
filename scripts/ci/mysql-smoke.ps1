@@ -23,7 +23,10 @@ $runningOnWindows = [System.Environment]::OSVersion.Platform -eq "Win32NT"
 $mvnw = Join-Path $backendDir $(if ($runningOnWindows) { "mvnw.cmd" } else { "mvnw" })
 $schemaSql = Join-Path $repoRoot "sql\mysql\01_schema.sql"
 $seedSql = Join-Path $repoRoot "sql\mysql\02_seed_data.sql"
+$migrationRunner = Join-Path $repoRoot "scripts\ci\mysql-migrate.sh"
+$migrationManifest = Join-Path $repoRoot "sql\mysql\migrations.sha256"
 $runDir = Join-Path ([System.IO.Path]::GetTempPath()) ("dazhongdianping-mysql-smoke-" + [System.Guid]::NewGuid().ToString("N"))
+$migrationDefaultsFile = Join-Path $runDir "mysql-migrate.cnf"
 
 if (-not $DbHost) { $DbHost = if ($env:APP_DB_HOST) { $env:APP_DB_HOST } else { "127.0.0.1" } }
 if ($DbPort -eq 0) { $DbPort = if ($env:APP_DB_PORT) { [int]$env:APP_DB_PORT } else { 3306 } }
@@ -64,6 +67,32 @@ function Invoke-Native {
     finally {
         Pop-Location
     }
+}
+
+function Invoke-MySqlFile {
+    param(
+        [string[]]$Arguments,
+        [string]$SqlFile
+    )
+
+    $originalOutputEncoding = $OutputEncoding
+    try {
+        $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+        Get-Content -LiteralPath $SqlFile -Raw | & $mysqlCommand.Source @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "mysql import of $SqlFile exited with code $LASTEXITCODE"
+        }
+    }
+    finally {
+        $OutputEncoding = $originalOutputEncoding
+    }
+}
+
+function ConvertTo-BashArgument {
+    param([string]$Value)
+
+    $normalized = $Value.Replace('\', '/')
+    return "'" + $normalized.Replace("'", "'\''") + "'"
 }
 
 function Start-ManagedProcess {
@@ -322,6 +351,7 @@ if ($DryRun) {
         }
         Write-Output "- Source sql/mysql/01_schema.sql into $DbName."
         Write-Output "- Source sql/mysql/02_seed_data.sql into $DbName."
+        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-25."
     }
     Write-Output "- Package backend with backend/mvnw.cmd -DskipTests package."
     Write-Output "- Start the packaged backend jar with APP_DB_* environment variables on port $BackendPort."
@@ -329,6 +359,11 @@ if ($DryRun) {
     Write-Output "- Smoke GET /api/c/v1/categories with X-Region=CN."
     Write-Output "- Smoke GET /api/c/v1/shops with X-Region=EU."
     Write-Output "- Smoke POST /api/admin/v1/auth/login and GET /api/b/v1/health."
+    if (-not $SkipImport) {
+        Write-Output "- Smoke GET /api/admin/v1/audit/tasks against the migrated MySQL schema."
+        Write-Output "- Verify pending review queries for a reviewer without moderation SLA permissions."
+        Write-Output "- Smoke /api/admin/v1/audit/sla-alerts through overdue, rejection, and automatic recovery."
+    }
     Write-Output "- When APP_STATE_STORE_PROVIDER=redis, smoke send-code rate limiting and Idempotency-Key replay through Redis."
     if ($DropDatabaseAfter) {
         Write-Output "- In finally, drop $DbName only if this run created it; never drop a pre-existing database."
@@ -351,6 +386,16 @@ if (-not (Test-Path -LiteralPath $seedSql)) {
     throw "sql/mysql/02_seed_data.sql not found"
 }
 
+if (-not $SkipImport) {
+    if (-not (Test-Path -LiteralPath $migrationRunner)) {
+        throw "scripts/ci/mysql-migrate.sh not found"
+    }
+
+    if (-not (Test-Path -LiteralPath $migrationManifest)) {
+        throw "sql/mysql/migrations.sha256 not found"
+    }
+}
+
 $mysqlCommand = Get-Command mysql -ErrorAction SilentlyContinue
 if (-not $mysqlCommand) {
     throw "mysql client not found in PATH"
@@ -359,6 +404,13 @@ if (-not $mysqlCommand) {
 $javaCommand = Get-Command java -ErrorAction SilentlyContinue
 if (-not $javaCommand) {
     throw "java runtime not found in PATH"
+}
+
+if (-not $SkipImport) {
+    $bashCommand = Get-Command bash -ErrorAction SilentlyContinue
+    if (-not $bashCommand) {
+        throw "bash not found in PATH; mysql-migrate.sh is required to prepare the fresh database"
+    }
 }
 
 if (-not $backendPortWasExplicitlySupplied -and (Test-TcpPortListening -Port $BackendPort)) {
@@ -448,16 +500,74 @@ VALUES ('$databaseOwnershipToken');
         }
 
         Write-Step "importing sql/mysql/01_schema.sql into $DbName"
-        Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+        Invoke-MySqlFile -Arguments ($mysqlConnectionArgs + @(
             "--database=$DbName",
-            "-e", "source sql/mysql/01_schema.sql"
-        )) -WorkingDirectory $repoRoot
+            "--default-character-set=utf8mb4"
+        )) -SqlFile $schemaSql
 
         Write-Step "importing sql/mysql/02_seed_data.sql into $DbName"
-        Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+        Invoke-MySqlFile -Arguments ($mysqlConnectionArgs + @(
             "--database=$DbName",
-            "-e", "source sql/mysql/02_seed_data.sql"
-        )) -WorkingDirectory $repoRoot
+            "--default-character-set=utf8mb4"
+        )) -SqlFile $seedSql
+
+        Write-Step "applying MySQL migrations 15-25 from schema baseline 14"
+        $escapedDbPassword = $DbPassword.Replace('\', '\\').Replace('"', '\"')
+        $migrationDefaultsContent = @"
+[client]
+protocol=tcp
+host=$DbHost
+port=$DbPort
+user=$DbUsername
+password="$escapedDbPassword"
+database=$DbName
+"@
+        $migrationDefaultsContent = $migrationDefaultsContent.Trim()
+        [System.IO.File]::WriteAllText(
+            $migrationDefaultsFile,
+            $migrationDefaultsContent + [System.Environment]::NewLine,
+            [System.Text.UTF8Encoding]::new($false)
+        )
+        $migrationLockFile = Join-Path $runDir "mysql-smoke-migration.lock"
+        $runnerCommand = "chmod 600 $(ConvertTo-BashArgument $migrationDefaultsFile) && exec $(ConvertTo-BashArgument $migrationRunner) --defaults-extra-file $(ConvertTo-BashArgument $migrationDefaultsFile) --baseline-version 14 --release-version mysql-smoke --lock-file $(ConvertTo-BashArgument $migrationLockFile)"
+        Invoke-Native -FilePath $bashCommand.Source -Arguments @("-c", $runnerCommand) -WorkingDirectory $repoRoot
+        Remove-Item -LiteralPath $migrationDefaultsFile -Force
+    }
+
+    if (-not $SkipImport) {
+        $auditSmokeSql = @"
+SET @smoke_task_id = GREATEST((SELECT COALESCE(MAX(id), 0) + 1 FROM audit_task), 900000);
+SET @smoke_comment_id = GREATEST((SELECT COALESCE(MAX(id), 0) + 1 FROM review_comment), 900000);
+SET @smoke_review_id = (SELECT id FROM review WHERE region = 'CN' AND status = 1 ORDER BY id LIMIT 1);
+INSERT INTO review_comment (id, review_id, user_id, user_name, content, parent_id, reply_to, status, audit_remark, created_at, updated_at, is_deleted)
+SELECT @smoke_comment_id, @smoke_review_id, 9001, 'MySQL smoke', 'MySQL audit SLA smoke fixture', 0, 0, 0, '', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 60 MINUTE), CURRENT_TIMESTAMP, 0
+WHERE @smoke_review_id IS NOT NULL;
+INSERT INTO audit_task (id, biz_type, biz_id, region, machine_result, status, auditor_id, remark, created_at, updated_at)
+SELECT @smoke_task_id, 10, @smoke_comment_id, 'CN', 0, 0, 0, '', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 60 MINUTE), CURRENT_TIMESTAMP
+WHERE @smoke_review_id IS NOT NULL;
+INSERT INTO admin_user (account,password_hash,name,status)
+SELECT 'mysql.smoke.reviewer',password_hash,'MySQL review reader',1 FROM admin_user WHERE account='admin';
+SET @smoke_reviewer_id = LAST_INSERT_ID();
+INSERT INTO admin_role (code,name,description,status,built_in)
+VALUES ('mysql_smoke_review_reader','MySQL review reader','Smoke fixture',1,0);
+SET @smoke_role_id = LAST_INSERT_ID();
+INSERT INTO admin_user_role (admin_id,role_id) VALUES (@smoke_reviewer_id,@smoke_role_id);
+INSERT INTO admin_role_permission (role_id,permission_id)
+SELECT @smoke_role_id,id FROM admin_permission WHERE code='audit:review:read';
+INSERT INTO admin_region_scope (admin_id,region) VALUES (@smoke_reviewer_id,'CN');
+SELECT @smoke_task_id;
+"@
+        $fixtureOutput = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName",
+            "--batch",
+            "--skip-column-names",
+            "-e", $auditSmokeSql
+        )) -WorkingDirectory $repoRoot)
+        $smokeTaskId = @($fixtureOutput | Where-Object { [string]$_ -match '^\d+$' } | Select-Object -Last 1)
+        if ($smokeTaskId.Count -eq 0) {
+            throw "MySQL audit SLA fixture could not find a published CN review"
+        }
+        $smokeTaskId = [string]$smokeTaskId[0]
     }
 
     Write-Step "starting backend on $baseUrl"
@@ -466,7 +576,8 @@ VALUES ('$databaseOwnershipToken');
         $backendJar.FullName,
         "--spring.profiles.active=local",
         "--server.port=$BackendPort",
-        "--management.health.redis.enabled=false"
+        "--management.health.redis.enabled=false",
+        "--app.admin.audit.sla.reminder-interval-ms=1000"
     ) -WorkingDirectory $backendDir
     $backendStartedByThisRun = $true
 
@@ -501,6 +612,197 @@ VALUES ('$databaseOwnershipToken');
     }
     if ($adminLoginReplay.data.accessToken -ne $adminLogin.data.accessToken) {
         throw "Idempotency-Key replay did not reuse the first admin login response"
+    }
+
+    if (-not $SkipImport) {
+        Write-Step "smoking Paris reservation timezone snapshots and deployment launch switches on MySQL"
+        $euHeaders = @{ "X-Region" = "EU" }
+        $launch = Invoke-Json -Method "GET" -Path "/api/c/v1/launch-config" -Headers $euHeaders
+        if ($launch.data.region -ne "EU" -or $launch.data.creatorRewards -or $launch.data.seckill -or $launch.data.groupBuy) {
+            throw "Deferred EU launch capabilities must default to disabled"
+        }
+        $calendar = Invoke-Json -Method "GET" -Path "/api/c/v1/shops/20001/reservation-slots?peopleCount=2" -Headers $euHeaders
+        if ($calendar.data.timeZone -ne "Europe/Paris" -or -not $calendar.data.today) {
+            throw "Paris availability must include its timezone and local calendar"
+        }
+        $account = "paris-mysql-" + [guid]::NewGuid().ToString("N") + "@example.com"
+        Invoke-Json -Method "POST" -Path "/api/c/v1/auth/send-code" -Headers $euHeaders -Body @{
+            scene = "register"; type = "email"; account = $account; deviceId = $account
+        } | Out-Null
+        $user = Invoke-Json -Method "POST" -Path "/api/c/v1/auth/register" -Headers $euHeaders -Body @{
+            type = "email"; account = $account; code = "123456"; password = "Passw0rd!"; preferredRegion = "EU"
+        }
+        $euHeaders.Authorization = "Bearer $($user.data.accessToken)"
+        $reservationDate = ([datetime]$calendar.data.date).ToString("yyyy-MM-dd")
+        $reservation = Invoke-Json -Method "POST" -Path "/api/c/v1/reservations" -Headers $euHeaders -Body @{
+            shopId = 20001; reserveTime = "$reservationDate 18:30:00"; peopleCount = 2
+            contactName = "Paris smoke"; contactPhone = "+33123456789"
+        }
+        $reservationId = [long]$reservation.data.id
+        $parisZone = [TimeZoneInfo]::FindSystemTimeZoneById("Europe/Paris")
+        $wallTime = [datetime]::SpecifyKind([datetime]"$reservationDate 18:30:00", [DateTimeKind]::Unspecified)
+        $expectedUtc = [TimeZoneInfo]::ConvertTimeToUtc($wallTime, $parisZone)
+        if ($reservation.data.timeZone -ne "Europe/Paris" -or ([DateTimeOffset]$reservation.data.reserveAt).UtcDateTime -ne $expectedUtc) {
+            throw "MySQL reservation must preserve Paris wall time and return the correct UTC instant"
+        }
+        $snapshot = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName", "--batch", "--skip-column-names", "-e",
+            "SELECT time_zone FROM reservation WHERE id=$reservationId;"
+        )) -WorkingDirectory $repoRoot)
+        if ($snapshot -notcontains "Europe/Paris") { throw "Reservation timezone snapshot was not stored in MySQL" }
+        $nextDate = ([datetime]$reservationDate).AddDays(1).ToString("yyyy-MM-dd")
+        $changed = Invoke-Json -Method "POST" -Path "/api/c/v1/reservations/$reservationId/reschedule" -Headers $euHeaders -Body @{
+            reserveTime = "$nextDate 19:00:00"; reason = "MySQL smoke reschedule"
+        }
+        if ($changed.data.rescheduleCount -ne 1 -or $changed.data.timeZone -ne "Europe/Paris") {
+            throw "Paris reservation could not be rescheduled on MySQL"
+        }
+        $cancelled = Invoke-Json -Method "POST" -Path "/api/c/v1/reservations/$reservationId/cancel" -Headers $euHeaders
+        if ($cancelled.data.status -ne 3) { throw "Paris reservation could not be cancelled on MySQL" }
+        foreach ($probe in @(
+            @{ Path = "/api/c/v1/reservations"; Status = 404; Body = @{
+                shopId = 20002; reserveTime = "$reservationDate 18:30:00"; peopleCount = 2
+                contactName = "Blocked city"; contactPhone = "+33123456789"
+            } },
+            @{ Path = "/api/c/v1/creator/tasks/9102/claim"; Status = 403; Body = @{} }
+        )) {
+            $actualStatus = $null
+            try { Invoke-Json -Method "POST" -Path $probe.Path -Headers $euHeaders -Body $probe.Body | Out-Null }
+            catch {
+                if (-not $_.Exception.Response) { throw }
+                $actualStatus = [int]$_.Exception.Response.StatusCode
+            }
+            if ($actualStatus -ne $probe.Status) { throw "Launch guard $($probe.Path) expected HTTP $($probe.Status), got $actualStatus" }
+        }
+
+        Write-Step "checking that an EU account cannot earn deferred rewards through CN or missing region headers"
+        foreach ($regionHeader in @("EU", "CN", "")) {
+            $probeHeaders = @{ Authorization = "Bearer $($user.data.accessToken)" }
+            if ($regionHeader) { $probeHeaders["X-Region"] = $regionHeader }
+            $expectedRegion = if ($regionHeader) { $regionHeader } else { "CN" }
+            $launch = Invoke-Json -Method "GET" -Path "/api/c/v1/launch-config" -Headers $probeHeaders
+            if ($launch.data.region -ne $expectedRegion -or $launch.data.creatorRewards -or $launch.data.seckill -or $launch.data.groupBuy) {
+                throw "Deferred launch capabilities must stay disabled for region header '$regionHeader'"
+            }
+            $taskId = if ($expectedRegion -eq "EU") { 9102 } else { 9101 }
+            foreach ($action in @("claim", "complete")) {
+                $actualStatus = $null
+                try { Invoke-Json -Method "POST" -Path "/api/c/v1/creator/tasks/$taskId/$action" -Headers $probeHeaders | Out-Null }
+                catch {
+                    if (-not $_.Exception.Response) { throw }
+                    $actualStatus = [int]$_.Exception.Response.StatusCode
+                }
+                if ($actualStatus -ne 403) { throw "Creator $action with region header '$regionHeader' expected HTTP 403, got $actualStatus" }
+            }
+        }
+        $profile = Invoke-Json -Method "GET" -Path "/api/c/v1/user/me" -Headers $euHeaders
+        if ($profile.data.preferredRegion -ne "EU" -or $profile.data.points -ne 0) {
+            throw "The EU account gained points after blocked cross-region creator requests"
+        }
+
+        # This no-value product exists only in the database imported by this smoke run.
+        $productFixtureSql = @"
+INSERT INTO points_product (region, name, description, points_price, stock)
+VALUES ('EU', 'Launch guard smoke fixture', 'No real value; isolated smoke database only', 20, 1);
+SELECT LAST_INSERT_ID();
+"@
+        $productOutput = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName", "--batch", "--skip-column-names", "-e", $productFixtureSql
+        )) -WorkingDirectory $repoRoot)
+        $productId = [long]($productOutput | Where-Object { [string]$_ -match '^\d+$' } | Select-Object -Last 1)
+        if ($productId -le 0) { throw "Failed to create the isolated EU points product" }
+        $actualStatus = $null
+        try { Invoke-Json -Method "POST" -Path "/api/c/v1/points/products/$productId/exchange" -Headers $euHeaders | Out-Null }
+        catch {
+            if (-not $_.Exception.Response) { throw }
+            $actualStatus = [int]$_.Exception.Response.StatusCode
+        }
+        if ($actualStatus -ne 400) { throw "An unfunded EU exchange expected HTTP 400, got $actualStatus" }
+        $userId = [long]$user.data.user.id
+        $integritySql = @"
+SELECT stock, exchange_count,
+    (SELECT points FROM app_user WHERE id=$userId),
+    (SELECT COUNT(*) FROM creator_task_claim WHERE user_id=$userId),
+    (SELECT COUNT(*) FROM growth_points_log WHERE user_id=$userId AND action='creator_task'),
+    (SELECT COUNT(*) FROM points_exchange WHERE user_id=$userId)
+FROM points_product WHERE id=$productId;
+"@
+        $integrity = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName", "--batch", "--skip-column-names", "-e", $integritySql
+        )) -WorkingDirectory $repoRoot)
+        if ($integrity.Count -ne 1 -or $integrity[0] -ne "1`t0`t0`t0`t0`t0") {
+            throw "Blocked cross-region rewards and exchange must preserve stock, balances and records; got: $integrity"
+        }
+
+        $auditHeaders = @{
+            "Authorization" = "Bearer $($adminLogin.data.accessToken)"
+            "X-Region" = "CN"
+        }
+        Write-Step "smoking MySQL audit queue and SLA alert APIs"
+        $reviewerLogin = Invoke-Json -Method "POST" -Path "/api/admin/v1/auth/login" -Body @{
+            account = "mysql.smoke.reviewer"
+            password = "admin123456"
+        }
+        $pendingReviews = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/tasks?bizType=3&status=0" -Headers @{
+            "Authorization" = "Bearer $($reviewerLogin.data.accessToken)"
+            "X-Region" = "CN"
+        }
+        if ($pendingReviews.code -ne 0) {
+            throw "Restricted reviewer pending query failed without moderation SLA permissions"
+        }
+        $auditTasks = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/tasks?bizType=10&status=0&page=1&pageSize=50" -Headers $auditHeaders
+        $queuedTask = $auditTasks.data.list | Where-Object { [string]$_.id -eq $smokeTaskId } | Select-Object -First 1
+        if ($null -eq $queuedTask) {
+            throw "GET /api/admin/v1/audit/tasks did not return the seeded MySQL smoke task"
+        }
+        if ($null -eq $queuedTask.ageSeconds -or $queuedTask.ageSeconds -lt 3600) {
+            throw "MySQL audit queue did not report database-relative age for the overdue task"
+        }
+        $queueMetrics = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/tasks/metrics" -Headers $auditHeaders
+        $commentMetric = $queueMetrics.data | Where-Object { $_.bizType -eq 10 } | Select-Object -First 1
+        if ($null -eq $commentMetric.oldestPendingAgeSeconds -or $commentMetric.oldestPendingAgeSeconds -lt $queuedTask.ageSeconds) {
+            throw "MySQL audit metrics did not report the oldest pending age"
+        }
+
+        $activeAlert = $null
+        for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            $activeAlerts = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/sla-alerts?status=0&page=1&pageSize=100" -Headers $auditHeaders
+            $activeAlert = $activeAlerts.data.list | Where-Object { $_.bizType -eq 10 } | Select-Object -First 1
+            if ($null -ne $activeAlert) {
+                break
+            }
+            Start-Sleep -Milliseconds 500
+        }
+        if ($null -eq $activeAlert -or $activeAlert.overdueCount -lt 1) {
+            throw "SLA scheduler did not create an active alert for the overdue MySQL smoke task"
+        }
+
+        $claimedTask = Invoke-Json -Method "POST" -Path "/api/admin/v1/audit/tasks/$smokeTaskId/claim" -Headers $auditHeaders
+        if (-not $claimedTask.data.claimedByAdminId) {
+            throw "MySQL smoke task was not claimed before the audit decision"
+        }
+        if ($null -eq $claimedTask.data.claimRemainingSeconds -or $claimedTask.data.claimRemainingSeconds -lt 890 -or $claimedTask.data.claimRemainingSeconds -gt 900) {
+            throw "MySQL audit claim did not report the remaining lease seconds"
+        }
+        $auditDecision = Invoke-Json -Method "POST" -Path "/api/admin/v1/audit/tasks/$smokeTaskId/reject" -Headers $auditHeaders -Body @{
+            reason = "MySQL smoke SLA verification"
+        }
+        if ($auditDecision.data.status -ne 2) {
+            throw "POST /api/admin/v1/audit/tasks/$smokeTaskId/reject did not process the task"
+        }
+
+        $resolvedAlert = $null
+        for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            $resolvedAlerts = Invoke-Json -Method "GET" -Path "/api/admin/v1/audit/sla-alerts?status=1&page=1&pageSize=100" -Headers $auditHeaders
+            $resolvedAlert = $resolvedAlerts.data.list | Where-Object { $_.bizType -eq 10 } | Select-Object -First 1
+            if ($null -ne $resolvedAlert) {
+                break
+            }
+            Start-Sleep -Milliseconds 500
+        }
+        if ($null -eq $resolvedAlert -or $null -eq $resolvedAlert.resolvedAt) {
+            throw "SLA scheduler did not resolve the alert after the MySQL smoke task was processed"
+        }
     }
 
     Write-Step "smoking B endpoint"
@@ -543,6 +845,10 @@ VALUES ('$databaseOwnershipToken');
 }
 finally {
     $cleanupFailures = [System.Collections.Generic.List[string]]::new()
+
+    if (Test-Path -LiteralPath $migrationDefaultsFile) {
+        Remove-Item -LiteralPath $migrationDefaultsFile -Force -ErrorAction SilentlyContinue
+    }
 
     if (-not $KeepBackend -and $backendStartedByThisRun -and $null -ne $backendProcess) {
         Write-Step "stopping backend"

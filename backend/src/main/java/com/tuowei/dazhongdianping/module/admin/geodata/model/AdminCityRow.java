@@ -8,6 +8,7 @@ public class AdminCityRow {
     private String code;
     private String region;
     private String name;
+    private String timeZone;
     private Integer sortNo;
     private Integer status;
 }

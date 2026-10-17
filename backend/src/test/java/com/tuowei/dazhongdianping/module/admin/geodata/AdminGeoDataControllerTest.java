@@ -36,6 +36,25 @@ class AdminGeoDataControllerTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
+    void shouldRequireAnIanaTimeZoneForCities() throws Exception {
+        String token = loginToken("admin");
+        for (String zone : new String[]{"", "Europe/Unknown", "+02:00", "Paris"}) {
+            mockMvc.perform(post("/api/admin/v1/cities")
+                            .header("Authorization", bearer(token)).header("X-Region", "EU")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(java.util.Map.of(
+                                    "code", "TZTEST", "name", "Timezone test", "timeZone", zone, "sortNo", 1))))
+                    .andExpect(status().isBadRequest());
+        }
+        mockMvc.perform(post("/api/admin/v1/cities")
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"TZTEST\",\"name\":\"Timezone test\",\"sortNo\":1}"))
+                .andExpect(status().isBadRequest());
+        assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM city WHERE code='TZTEST'", Integer.class));
+    }
+
+    @Test
     void shouldRequireAuthenticationAndEnforceReadWritePermissions() throws Exception {
         mockMvc.perform(get("/api/admin/v1/categories").header("X-Region", "EU"))
                 .andExpect(status().isUnauthorized());
@@ -186,10 +205,11 @@ class AdminGeoDataControllerTest {
         long cityId = findId(mockMvc.perform(post("/api/admin/v1/cities")
                         .header("Authorization", bearer(token)).header("X-Region", "EU")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"code\":\" plan \",\"name\":\" Plan City \",\"sortNo\":8}"))
+                        .content("{\"code\":\" plan \",\"name\":\" Plan City \",\"timeZone\":\"Europe/Paris\",\"sortNo\":8}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.code").value("PLAN"))
                 .andExpect(jsonPath("$.data.name").value("Plan City"))
+                .andExpect(jsonPath("$.data.timeZone").value("Europe/Paris"))
                 .andReturn());
 
         long areaId = findId(mockMvc.perform(post("/api/admin/v1/areas")
@@ -204,7 +224,7 @@ class AdminGeoDataControllerTest {
         mockMvc.perform(put("/api/admin/v1/cities/{id}", cityId)
                         .header("Authorization", bearer(token)).header("X-Region", "EU")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"code\":\" pln \",\"name\":\" Plan Ville \",\"sortNo\":2}"))
+                        .content("{\"code\":\" pln \",\"name\":\" Plan Ville \",\"timeZone\":\"Europe/Paris\",\"sortNo\":2}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.code").value("PLN"))
                 .andExpect(jsonPath("$.data.sortNo").value(2));
@@ -252,7 +272,7 @@ class AdminGeoDataControllerTest {
         long cityId = findId(mockMvc.perform(post("/api/admin/v1/cities")
                         .header("Authorization", bearer(token)).header("X-Region", "EU")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"code\":\"SCOPE\",\"name\":\"Scope City\",\"sortNo\":9}"))
+                        .content("{\"code\":\"SCOPE\",\"name\":\"Scope City\",\"timeZone\":\"Europe/Paris\",\"sortNo\":9}"))
                 .andExpect(status().isOk())
                 .andReturn());
         jdbcTemplate.update(
@@ -273,12 +293,12 @@ class AdminGeoDataControllerTest {
         mockMvc.perform(post("/api/admin/v1/cities")
                         .header("Authorization", bearer(token)).header("X-Region", "EU")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"code\":\"par\",\"name\":\"Other City\",\"sortNo\":1}"))
+                        .content("{\"code\":\"par\",\"name\":\"Other City\",\"timeZone\":\"Europe/Paris\",\"sortNo\":1}"))
                 .andExpect(status().isConflict());
         mockMvc.perform(post("/api/admin/v1/cities")
                         .header("Authorization", bearer(token)).header("X-Region", "EU")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"code\":\"OTHER\",\"name\":\"Paris\",\"sortNo\":1}"))
+                        .content("{\"code\":\"OTHER\",\"name\":\"Paris\",\"timeZone\":\"Europe/Paris\",\"sortNo\":1}"))
                 .andExpect(status().isConflict());
         mockMvc.perform(post("/api/admin/v1/areas")
                         .header("Authorization", bearer(token)).header("X-Region", "EU")
@@ -303,7 +323,7 @@ class AdminGeoDataControllerTest {
         long targetCityId = findId(mockMvc.perform(post("/api/admin/v1/cities")
                         .header("Authorization", bearer(token)).header("X-Region", "EU")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"code\":\"MOVE\",\"name\":\"Move Target\",\"sortNo\":9}"))
+                        .content("{\"code\":\"MOVE\",\"name\":\"Move Target\",\"timeZone\":\"Europe/Paris\",\"sortNo\":9}"))
                 .andExpect(status().isOk())
                 .andReturn());
 

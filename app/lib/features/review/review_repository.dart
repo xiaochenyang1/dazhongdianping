@@ -235,6 +235,7 @@ class ReviewComment {
     required this.userId,
     required this.userName,
     required this.content,
+    required this.status,
     required this.parentId,
     required this.replyTo,
     required this.replies,
@@ -247,6 +248,7 @@ class ReviewComment {
   final int userId;
   final String userName;
   final String content;
+  final int status;
   final int parentId;
   final ReviewCommentReplyTarget? replyTo;
   final List<ReviewComment> replies;
@@ -259,6 +261,7 @@ class ReviewComment {
     userId: json['userId'] as int? ?? 0,
     userName: json['userName'] as String? ?? '',
     content: json['content'] as String? ?? '',
+    status: json['status'] as int? ?? 1,
     parentId: json['parentId'] as int? ?? 0,
     replyTo: ReviewCommentReplyTarget.fromNullableJson(
       json['replyTo'] as Map<String, dynamic>?,

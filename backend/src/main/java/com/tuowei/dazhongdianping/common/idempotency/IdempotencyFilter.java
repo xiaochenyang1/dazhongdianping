@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.common.idempotency;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tuowei.dazhongdianping.common.api.ApiResponse;
 import com.tuowei.dazhongdianping.config.InfrastructureProperties;
@@ -88,6 +89,11 @@ public class IdempotencyFilter extends OncePerRequestFilter {
         String idempotencyKey = request.getHeader(IDEMPOTENCY_KEY_HEADER);
         if (!isValidKey(idempotencyKey)) {
             writeError(response, HttpStatus.BAD_REQUEST, 400, "Idempotency-Key 长度必须在 16 到 64 位之间", "common.bad_request");
+            return;
+        }
+        if (useRedis() && redisTemplate == null) {
+            writeError(response, HttpStatus.SERVICE_UNAVAILABLE, 503,
+                    "幂等存储不可用，请稍后重试", "common.service_unavailable");
             return;
         }
 
@@ -197,67 +203,83 @@ public class IdempotencyFilter extends OncePerRequestFilter {
                                     String bodyHash,
                                     String scopeKey) throws IOException, ServletException {
         String key = redisKey(scopeKey);
-        RedisIdempotencyRecord existing = readRedisRecord(key);
-        if (existing != null) {
-            replayRedisRecord(response, key, existing, bodyHash);
-            return;
-        }
-
-        RedisIdempotencyRecord processing = RedisIdempotencyRecord.processing(
-                bodyHash,
-                UUID.randomUUID().toString(),
-                Instant.now().plus(REDIS_PROCESSING_TTL)
-        );
-        boolean claimed = Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(
-                key,
-                objectMapper.writeValueAsString(processing),
-                REDIS_PROCESSING_TTL
-        ));
-        if (!claimed) {
-            RedisIdempotencyRecord claimedRecord = readRedisRecord(key);
-            if (claimedRecord == null) {
-                writeError(response, HttpStatus.CONFLICT, 409, "相同请求正在处理中，请稍后重试", "common.idempotency_in_progress");
+        try {
+            RedisIdempotencyRecord existing = readRedisRecord(key);
+            if (existing != null) {
+                replayRedisRecord(response, key, existing, bodyHash);
                 return;
             }
-            replayRedisRecord(response, key, claimedRecord, bodyHash);
-            return;
-        }
 
-        try {
+            RedisIdempotencyRecord processing = RedisIdempotencyRecord.processing(
+                    bodyHash,
+                    UUID.randomUUID().toString(),
+                    Instant.now().plus(REDIS_PROCESSING_TTL)
+            );
+            boolean claimed = Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(
+                    key,
+                    objectMapper.writeValueAsString(processing),
+                    REDIS_PROCESSING_TTL
+            ));
+            if (!claimed) {
+                RedisIdempotencyRecord claimedRecord = readRedisRecord(key);
+                if (claimedRecord == null) {
+                    writeError(response, HttpStatus.CONFLICT, 409, "相同请求正在处理中，请稍后重试", "common.idempotency_in_progress");
+                    return;
+                }
+                replayRedisRecord(response, key, claimedRecord, bodyHash);
+                return;
+            }
+
             ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
-            filterChain.doFilter(request, wrappedResponse);
-            byte[] responseBody = wrappedResponse.getContentAsByteArray();
+            try {
+                filterChain.doFilter(request, wrappedResponse);
+            } catch (IOException | ServletException | RuntimeException exception) {
+                redisTemplate.delete(key);
+                throw exception;
+            }
+            // 业务已执行：缓存或发送响应失败时保留记录，防止客户端重试再次执行业务。
             StoredResponse completedResponse = StoredResponse.from(
                     wrappedResponse,
-                    responseBody,
+                    wrappedResponse.getContentAsByteArray(),
                     bodyHash,
                     Instant.now().plus(ttl)
             );
             RedisIdempotencyRecord completed = RedisIdempotencyRecord.completed(completedResponse);
             redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(completed), ttl);
             wrappedResponse.copyBodyToResponse();
-        } catch (IOException | ServletException | RuntimeException exception) {
-            redisTemplate.delete(key);
-            throw exception;
+        } catch (CorruptIdempotencyRecordException exception) {
+            // 幂等记录损坏/格式不兼容：无法确定原请求是否已执行，拒绝重放以免重复副作用。
+            writeError(response, HttpStatus.CONFLICT, 409,
+                    "幂等记录无法解析，为避免重复执行已拒绝，请稍后重试", "common.idempotency_unreadable");
         }
     }
 
     private RedisIdempotencyRecord readRedisRecord(String key) {
         String json = redisTemplate.opsForValue().get(key);
-        if (!StringUtils.hasText(json)) {
+        if (json == null) {
             return null;
         }
         try {
-            return objectMapper.readValue(json, RedisIdempotencyRecord.class);
-        } catch (IOException currentFormatException) {
-            try {
-                StoredResponse legacyResponse = objectMapper.readValue(json, StoredResponse.class);
-                return RedisIdempotencyRecord.completed(legacyResponse);
-            } catch (IOException legacyFormatException) {
-                redisTemplate.delete(key);
-                return null;
+            JsonNode root = objectMapper.readTree(json);
+            if (root != null && root.isObject()) {
+                // 按字段识别版本，兼容 Spring 默认忽略未知字段的 Jackson 配置。
+                if (root.has("state")) {
+                    RedisIdempotencyRecord record = objectMapper.treeToValue(root, RedisIdempotencyRecord.class);
+                    if (record.valid()) {
+                        return record;
+                    }
+                } else {
+                    StoredResponse legacy = objectMapper.treeToValue(root, StoredResponse.class);
+                    if (legacy.valid()) {
+                        return RedisIdempotencyRecord.completed(legacy);
+                    }
+                }
             }
+        } catch (IOException | IllegalArgumentException exception) {
+            throw new CorruptIdempotencyRecordException(key);
         }
+        // 包括空值、JSON null、缺失字段和未知状态；记录存在就不能当作首次请求。
+        throw new CorruptIdempotencyRecordException(key);
     }
 
     private void replayRedisRecord(HttpServletResponse response,
@@ -301,8 +323,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
     }
 
     private boolean useRedis() {
-        return infrastructureProperties.getStateStore().getProvider() == InfrastructureProperties.StateStoreProvider.REDIS
-                && redisTemplate != null;
+        return infrastructureProperties.getStateStore().getProvider() == InfrastructureProperties.StateStoreProvider.REDIS;
     }
 
     private String redisKey(String scopeKey) {
@@ -395,6 +416,19 @@ public class IdempotencyFilter extends OncePerRequestFilter {
             String bodyHash,
             long expiresAtEpochMillis
     ) {
+        boolean valid() {
+            return status >= 100 && status <= 599
+                    && StringUtils.hasText(bodyHash)
+                    && expiresAtEpochMillis > 0
+                    && body != null
+                    && StringUtils.hasText(characterEncoding)
+                    && Charset.isSupported(characterEncoding)
+                    && headers != null
+                    && headers.entrySet().stream().allMatch(entry -> StringUtils.hasText(entry.getKey())
+                            && entry.getValue() != null
+                            && entry.getValue().stream().allMatch(value -> value != null));
+        }
+
         static StoredResponse from(ContentCachingResponseWrapper response,
                                    byte[] body,
                                    String bodyHash,
@@ -430,6 +464,19 @@ public class IdempotencyFilter extends OncePerRequestFilter {
             StoredResponse response,
             long expiresAtEpochMillis
     ) {
+        private boolean valid() {
+            if (!StringUtils.hasText(state) || !StringUtils.hasText(bodyHash) || expiresAtEpochMillis <= 0) {
+                return false;
+            }
+            return switch (state) {
+                case "PROCESSING" -> StringUtils.hasText(ownerToken) && response == null;
+                case "COMPLETED" -> response != null && response.valid()
+                        && bodyHash.equals(response.bodyHash())
+                        && expiresAtEpochMillis == response.expiresAtEpochMillis();
+                default -> false;
+            };
+        }
+
         private static RedisIdempotencyRecord processing(String bodyHash, String ownerToken, Instant expiresAt) {
             return new RedisIdempotencyRecord("PROCESSING", bodyHash, ownerToken, null, expiresAt.toEpochMilli());
         }
@@ -446,6 +493,13 @@ public class IdempotencyFilter extends OncePerRequestFilter {
 
         private boolean completed() {
             return "COMPLETED".equals(state) && response != null;
+        }
+    }
+
+    private static final class CorruptIdempotencyRecordException extends RuntimeException {
+
+        private CorruptIdempotencyRecordException(String key) {
+            super("Idempotency record is unparseable for key " + key);
         }
     }
 

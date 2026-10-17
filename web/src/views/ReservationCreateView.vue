@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
 import { localizeWebTradeError, tradeStringsForRegion } from '@/core/web_trade_localizations'
-import { addDaysToDateInput, toLocalDateInputValue } from '@/lib/local-date'
 import { createReservation, fetchReservationSlots } from '@/services/reservation'
 import type { ReservationSlot } from '@/types/reservation'
 
@@ -11,8 +10,11 @@ const props = defineProps<{ shopId: number }>()
 const router = useRouter()
 const { state } = useAppContext()
 const copy = computed(() => tradeStringsForRegion(state.region))
-const minimumDate = toLocalDateInputValue()
-const date = ref(addDaysToDateInput(minimumDate, 1))
+const minimumDate = ref('')
+const date = ref('')
+const timeZone = ref('')
+const loading = ref(false)
+let searchVersion = 0
 const people = ref(2)
 const slots = ref<ReservationSlot[]>([])
 const selected = ref<ReservationSlot | null>(null)
@@ -22,12 +24,24 @@ const remark = ref('')
 const errorMessage = ref('')
 
 async function search() {
+  const version = ++searchVersion
   errorMessage.value = ''
+  slots.value = []
+  selected.value = null
+  loading.value = true
   try {
-    slots.value = (await fetchReservationSlots(props.shopId, date.value, people.value)).list
-    selected.value = null
+    const result = await fetchReservationSlots(props.shopId, date.value || undefined, people.value)
+    if (version !== searchVersion) return
+    date.value = result.date
+    minimumDate.value = result.today || ''
+    timeZone.value = result.timeZone || ''
+    slots.value = result.list
   } catch (error) {
-    errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.reservationCreate.slotLoadFailed)
+    if (version === searchVersion) {
+      errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.reservationCreate.slotLoadFailed)
+    }
+  } finally {
+    if (version === searchVersion) loading.value = false
   }
 }
 
@@ -52,14 +66,21 @@ async function submit() {
   }
 }
 
+watch([date, people], () => {
+  slots.value = []
+  selected.value = null
+}, { flush: 'sync' })
+
 watch(
-  () => state.region,
+  [() => state.region, () => props.shopId],
   () => {
-    slots.value = []
-    selected.value = null
-    errorMessage.value = ''
+    date.value = ''
+    timeZone.value = ''
+    void search()
   },
+  { immediate: true },
 )
+onUnmounted(() => { searchVersion++ })
 </script>
 
 <template>
@@ -70,10 +91,11 @@ watch(
     <p v-if="errorMessage" class="feedback is-error">{{ errorMessage }}</p>
     <section class="content-card">
       <div class="form-grid form-grid--two">
-        <label class="field"><span>{{ copy.reservationCreate.date }}</span><input v-model="date" type="date" :min="minimumDate" /></label>
-        <label class="field"><span>{{ copy.reservationCreate.people }}</span><input v-model.number="people" type="number" min="1" max="50" /></label>
+        <label class="field"><span>{{ copy.reservationCreate.date }}</span><input v-model="date" type="date" :min="minimumDate" :disabled="loading" /></label>
+        <label class="field"><span>{{ copy.reservationCreate.people }}</span><input v-model.number="people" type="number" min="1" max="50" :disabled="loading" /></label>
       </div>
-      <button class="primary-button" @click="search">{{ copy.reservationCreate.searchSlots }}</button>
+      <p v-if="timeZone" class="muted" data-testid="reservation-time-zone">{{ timeZone }}</p>
+      <button class="primary-button" :disabled="loading" @click="search">{{ copy.reservationCreate.searchSlots }}</button>
       <div class="tag-row">
         <button
           v-for="slot in slots"

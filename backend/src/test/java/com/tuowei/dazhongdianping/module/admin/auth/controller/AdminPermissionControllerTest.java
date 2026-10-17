@@ -77,6 +77,36 @@ class AdminPermissionControllerTest {
     }
 
     @Test
+    void shouldListPendingReviewsInFifoOrderWithoutModerationPermissions() throws Exception {
+        jdbc.update("DELETE FROM audit_task WHERE region='EU' AND biz_type=3");
+        jdbc.update("""
+                INSERT INTO audit_task(id,biz_type,biz_id,region,machine_result,status,auditor_id,remark,created_at)
+                VALUES (9905,3,10001,'EU',0,0,0,'较新点评','2026-01-02 10:00:00'),
+                       (9906,3,10002,'EU',0,0,0,'较早点评','2026-01-01 10:00:00')
+                """);
+        String token = loginToken();
+
+        mockMvc.perform(get("/api/admin/v1/audit/tasks")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "EU")
+                        .param("bizType", "3")
+                        .param("status", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.list[0].id").value(9906))
+                .andExpect(jsonPath("$.data.list[1].id").value(9905));
+
+        mockMvc.perform(get("/api/admin/v1/audit/tasks")
+                        .header("Authorization", bearer(token))
+                        .header("X-Region", "EU")
+                        .param("bizType", "4")
+                        .param("status", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0))
+                .andExpect(jsonPath("$.data.list").isEmpty());
+    }
+
+    @Test
     void shouldRejectAuditDecisionWithoutBusinessTypeWritePermission() throws Exception {
         jdbc.update("INSERT INTO audit_task(id,biz_type,biz_id,region,machine_result,status,auditor_id,remark) "
                         + "VALUES (9902,4,10002,'EU',0,0,0,'待审帖子')");

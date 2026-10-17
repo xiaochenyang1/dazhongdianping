@@ -29,6 +29,7 @@ DROP TABLE IF EXISTS `user_expert_certification`;
 DROP TABLE IF EXISTS `merchant_verification`;
 DROP TABLE IF EXISTS `app_user`;
 DROP TABLE IF EXISTS `audit_log`;
+DROP TABLE IF EXISTS `admin_audit_sla_alert`;
 DROP TABLE IF EXISTS `audit_task`;
 DROP TABLE IF EXISTS `merchant_review_appeal`;
 DROP TABLE IF EXISTS `review_merchant_reply`;
