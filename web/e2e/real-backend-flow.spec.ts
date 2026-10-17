@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer'
-import { expect, test, type APIRequestContext, type APIResponse, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type APIResponse, type Page, type Response } from '@playwright/test'
 
 const adminPort = Number(process.env.PLAYWRIGHT_ADMIN_PORT ?? 15174)
 const adminBaseURL = `http://127.0.0.1:${adminPort}`
@@ -24,6 +24,20 @@ async function loginFromAuthDialog(page: Page, account: string, password: string
   await authDialog.getByRole('button', { name: '登录', exact: true }).click()
 }
 
+async function loginToAdminConsole(page: Page, account = 'admin', password = 'admin123456') {
+  await page.goto(`${adminBaseURL}/login`)
+  // Login fields deliberately start empty; never rely on demo credentials being prefilled.
+  await page.locator('input[autocomplete="username"]').fill(account)
+  await page.locator('input[autocomplete="current-password"]').fill(password)
+  const loginResponse = page.waitForResponse((response) =>
+    response.request().method() === 'POST'
+    && new URL(response.url()).pathname === '/api/admin/v1/auth/login',
+  )
+  await page.getByRole('button', { name: /进入后台|Enter console/ }).click()
+  await expectApiSuccess(await loginResponse)
+  await expect(page).toHaveURL(`${adminBaseURL}/dashboard`)
+}
+
 async function navigateAdmin(page: Page, path: string) {
   // Keep pending requests alive by navigating through the app instead of reloading the document.
   const menu = page.getByRole('navigation', { name: '后台菜单' })
@@ -33,14 +47,15 @@ async function navigateAdmin(page: Page, path: string) {
   await expect(page).toHaveURL(`${adminBaseURL}${path}`)
 }
 
-async function expectApiSuccess<T>(response: APIResponse) {
-  expect(response.ok()).toBeTruthy()
+async function expectApiSuccess<T>(response: APIResponse | Response) {
   const body = (await response.json()) as {
     code: number
     message: string
     data: T
   }
-  expect(body.code).toBe(0)
+  const diagnostic = `${response.status()} ${body.message}`
+  expect(response.ok(), diagnostic).toBeTruthy()
+  expect(body.code, diagnostic).toBe(0)
   return body.data
 }
 
@@ -331,11 +346,7 @@ test.describe.serial('real backend review flow', () => {
         downloadThroughput: -1,
         uploadThroughput: -1,
       })
-      await adminPage.goto(`${adminBaseURL}/login`)
-      await adminPage.getByLabel('账号').fill('admin')
-      await adminPage.getByLabel('密码').fill('admin123456')
-      await adminPage.getByRole('button', { name: '进入后台' }).click()
-      await expect(adminPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
+      await loginToAdminConsole(adminPage)
 
       const healthResponsePromise = adminPage.waitForResponse((response) =>
         response.request().method() === 'GET'
@@ -644,11 +655,7 @@ test.describe.serial('real backend review flow', () => {
     expect(reviewId).toBeTruthy()
 
     const adminPage = await context.newPage()
-    await adminPage.goto(`${adminBaseURL}/login`)
-    await adminPage.getByLabel('账号').fill('admin')
-    await adminPage.getByLabel('密码').fill('admin123456')
-    await adminPage.getByRole('button', { name: '进入后台' }).click()
-    await expect(adminPage).toHaveURL(/\/dashboard/)
+    await loginToAdminConsole(adminPage)
 
     await navigateAdmin(adminPage, '/audit/reviews')
     await expect(adminPage.getByText(reviewContent)).toBeVisible()
@@ -880,11 +887,7 @@ test.describe.serial('real backend review flow', () => {
     )
 
     const adminPage = await context.newPage()
-    await adminPage.goto(`${adminBaseURL}/login`)
-    await adminPage.getByLabel('账号').fill('admin')
-    await adminPage.getByLabel('密码').fill('admin123456')
-    await adminPage.getByRole('button', { name: '进入后台' }).click()
-    await expect(adminPage).toHaveURL(/\/dashboard/)
+    await loginToAdminConsole(adminPage)
 
     await navigateAdmin(adminPage, '/data/import')
     await expect(adminPage.getByRole('heading', { name: /先让运营有办法造数/ })).toBeVisible()
@@ -941,11 +944,7 @@ test.describe.serial('real backend review flow', () => {
     const retainedReviewerDiagnostics = collectBrowserErrors(retainedReviewerPage)
 
     try {
-      await adminPage.goto(`${adminBaseURL}/login`)
-      await adminPage.getByLabel('账号').fill('admin')
-      await adminPage.getByLabel('密码').fill('admin123456')
-      await adminPage.getByRole('button', { name: '进入后台' }).click()
-      await expect(adminPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
+      await loginToAdminConsole(adminPage)
       const adminMenu = adminPage.getByRole('navigation', { name: '后台菜单' })
       await expect(adminMenu.getByRole('link', { name: '管理员账号', exact: true })).toBeVisible()
 
@@ -977,11 +976,7 @@ test.describe.serial('real backend review flow', () => {
       await expect(accountRow).toContainText('EU')
       await expect(accountRow).toContainText('启用')
 
-      await reviewerPage.goto(`${adminBaseURL}/login`)
-      await reviewerPage.getByLabel('账号').fill(account)
-      await reviewerPage.getByLabel('密码').fill(password)
-      await reviewerPage.getByRole('button', { name: '进入后台' }).click()
-      await expect(reviewerPage).toHaveURL(new RegExp(`${adminBaseURL}/dashboard$`))
+      await loginToAdminConsole(reviewerPage, account, password)
       await expect(reviewerPage.getByLabel('Region')).toHaveValue('EU')
 
       const reviewerMenu = reviewerPage.getByRole('navigation', { name: 'Admin navigation' })

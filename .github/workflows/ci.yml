@@ -132,6 +132,18 @@ jobs:
         shell: pwsh
         run: ./scripts/ci/verify-all.ps1 -IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeBrowserE2E -IncludeElasticsearchSmoke -IncludeFlutter
 
+      - name: Preserve browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-browser-failures-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            /tmp/dazhongdianping-e2e-*/
+            /tmp/dazhongdianping-browser-smoke-*/
+            web/playwright-report/
+
   database-migration-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 10
