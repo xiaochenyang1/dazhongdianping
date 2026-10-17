@@ -155,6 +155,9 @@ cors_origins_check() {
 csv_contains() {
   local csv="${1-}"
   local expected="$2"
+  # Bash 3.2 treats an empty array as unset under nounset. Missing routing is
+  # a configuration error to report, not a reason to abort all later checks.
+  [[ -n "${csv//[[:space:],]/}" ]] || return 1
   local item
   local items=()
   IFS=',' read -r -a items <<< "$csv"

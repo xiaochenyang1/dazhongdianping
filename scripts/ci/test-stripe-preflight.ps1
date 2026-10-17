@@ -217,9 +217,27 @@ try {
     if ((Invoke-PreflightContract) -eq 0) { throw 'partial Twilio routing must fail the EU launch gate' }
     $env:APP_AUTH_VERIFICATION_TWILIO_ROUTE_PREFIXES = $contractEnvironment.APP_AUTH_VERIFICATION_TWILIO_ROUTE_PREFIXES
 
-    $env:APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES = ''
-    if ((Invoke-PreflightContract) -eq 0) { throw 'missing +86 Twilio exclusion must fail preflight' }
+    foreach ($missingExclusion in @('', ' , , ', $null)) {
+        if ($null -eq $missingExclusion) {
+            Remove-Item Env:APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES = $missingExclusion
+        }
+        $env:PUBLIC_SITE_URL = ''
+        $aggregateOutput = @(& $bash $scriptPath 2>&1)
+        if ($LASTEXITCODE -eq 0) { throw 'missing +86 Twilio exclusion must fail preflight' }
+        if (-not ($aggregateOutput -match 'EXCLUDED_ROUTE_PREFIXES must include \+86')) {
+            throw 'missing Twilio exclusion must produce a configuration diagnostic'
+        }
+        if (-not ($aggregateOutput -match '\[missing\] PUBLIC_SITE_URL') -or
+            -not ($aggregateOutput -match 'configuration failed with') -or
+            ($aggregateOutput -match 'unbound variable')) {
+            throw 'empty Twilio routing must not abort the remaining preflight checks on Bash 3.2'
+        }
+    }
     $env:APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES = $contractEnvironment.APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES
+    $env:PUBLIC_SITE_URL = $contractEnvironment.PUBLIC_SITE_URL
 
     $env:APP_PAYMENT_NOTIFY_SECRET = 'too-short'
     if ((Invoke-PreflightContract) -eq 0) { throw 'short payment notification secret must fail preflight' }
