@@ -8,6 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
+import com.google.zxing.common.HybridBinarizer;
+import java.io.ByteArrayInputStream;
+import java.util.Base64;
+import javax.imageio.ImageIO;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
@@ -61,7 +68,7 @@ class TradeControllerTest {
                 .andExpect(jsonPath("$.data.code").value(couponCode))
                 .andExpect(jsonPath("$.data.usable").value(true))
                 .andExpect(jsonPath("$.data.qrPayload").value(couponCode))
-                .andExpect(jsonPath("$.data.qrImageUrl").value(org.hamcrest.Matchers.containsString("create-qr-code")))
+                .andExpect(jsonPath("$.data.qrImageUrl").value(org.hamcrest.Matchers.startsWith("data:image/png;base64,")))
                 .andExpect(jsonPath("$.data.rules").value(org.hamcrest.Matchers.containsString("周末通用")));
 
         mockMvc.perform(post("/api/c/v1/orders/{id}/refund", orderId).header("Authorization", bearer(token)).header("X-Region", "CN")
@@ -76,6 +83,50 @@ class TradeControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"重复申请\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("订单已有退款申请"));
+    }
+
+    @Test
+    void shouldDecodeInlineEuCouponPngAndRedeemItThroughExistingMerchantApi() throws Exception {
+        String token = registerToken();
+        MvcResult created = mockMvc.perform(post("/api/c/v1/orders")
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"dealId\":41001,\"quantity\":1}"))
+                .andExpect(status().isOk()).andReturn();
+        long id = objectMapper.readTree(created.getResponse().getContentAsString()).at("/data/id").asLong();
+        MvcResult paid = mockMvc.perform(post("/api/c/v1/orders/{id}/pay/mock-complete", id)
+                        .header("Authorization", bearer(token)).header("X-Region", "EU"))
+                .andExpect(status().isOk()).andReturn();
+        String code = objectMapper.readTree(paid.getResponse().getContentAsString()).at("/data/coupons/0/code").asText();
+        MvcResult detail = mockMvc.perform(get("/api/c/v1/coupons/{code}", code)
+                        .header("Authorization", bearer(token)).header("X-Region", "EU"))
+                .andExpect(status().isOk()).andReturn();
+        String source = objectMapper.readTree(detail.getResponse().getContentAsString()).at("/data/qrImageUrl").asText();
+        String prefix = "data:image/png;base64,";
+        assertThat(source).startsWith(prefix).doesNotContain("https:");
+        var png = ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(source.substring(prefix.length()))));
+        assertThat(png.getWidth()).isEqualTo(240);
+        assertThat(png.getHeight()).isEqualTo(240);
+        var bitmap = new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(png)));
+        String scannedCode = new MultiFormatReader().decode(bitmap).getText();
+        assertThat(scannedCode).isEqualTo(code);
+
+        mockMvc.perform(get("/api/c/v1/coupons/{code}", code).header("X-Region", "EU"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/c/v1/coupons/{code}", code)
+                        .header("Authorization", bearer(token)).header("X-Region", "CN"))
+                .andExpect(status().isNotFound());
+
+        MvcResult login = mockMvc.perform(post("/api/b/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"account\":\"merchant_eu_sichuan@example.com\",\"password\":\"merchant123456\"}"))
+                .andExpect(status().isOk()).andReturn();
+        String merchant = objectMapper.readTree(login.getResponse().getContentAsString()).at("/data/accessToken").asText();
+        mockMvc.perform(post("/api/b/v1/coupons/{code}/verify", scannedCode)
+                        .header("Authorization", bearer(merchant)).header("X-Region", "EU"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value(2));
+        mockMvc.perform(post("/api/b/v1/coupons/{code}/verify", scannedCode)
+                        .header("Authorization", bearer(merchant)).header("X-Region", "EU"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

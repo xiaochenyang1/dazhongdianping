@@ -127,6 +127,7 @@ export interface WebTradeStrings {
     back: string
     loading: string
     qrAlt: (code: string) => string
+    qrUnavailable: string
     verifyHint: (backendHint?: string) => string
     code: string
     copied: string
@@ -363,6 +364,7 @@ const zhCnStrings: WebTradeStrings = {
     back: '返回我的券',
     loading: '券码详情加载中...',
     qrAlt: (code) => `券码二维码 ${code}`,
+    qrUnavailable: '二维码暂不可用，请出示下方券码由商户核销。',
     verifyHint: (backendHint) => backendHint?.trim() || '到店后出示二维码或券码，由商户核销。',
     code: '券码',
     copied: '已复制',
@@ -530,6 +532,7 @@ const enStrings: WebTradeStrings = {
     back: 'Back to vouchers',
     loading: 'Loading voucher details...',
     qrAlt: (code) => `QR code for voucher ${code}`,
+    qrUnavailable: 'QR code unavailable. Show the voucher code below to redeem it.',
     verifyHint: (backendHint) => {
       const value = backendHint?.trim()
       return value && !HAN_TEXT.test(value)

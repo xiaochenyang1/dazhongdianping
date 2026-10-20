@@ -16,6 +16,8 @@ vi.mock('vue-router', () => ({
 
 import CouponDetailView from './CouponDetailView.vue'
 
+const inlinePng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8Dwn4GBgYGJAQoAHxcCAr7afKQAAAAASUVORK5CYII='
+
 async function flush() {
   await Promise.resolve()
   await Promise.resolve()
@@ -52,7 +54,7 @@ describe('CouponDetailView', () => {
       validEnd: '2026-12-31',
       usable: true,
       qrPayload: 'CPABC123',
-      qrImageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=CPABC123',
+      qrImageUrl: inlinePng,
       verifyHint: '到店后出示二维码或券码，由商户核销。',
     })
     Object.defineProperty(navigator, 'clipboard', {
@@ -69,7 +71,7 @@ describe('CouponDetailView', () => {
     expect(host.textContent).toContain('双人套餐')
     expect(host.textContent).toContain('CPABC123')
     expect(host.textContent).toContain('到店后出示二维码或券码')
-    expect(host.querySelector('[data-testid="coupon-qr-image"]')?.getAttribute('src')).toContain('create-qr-code')
+    expect(host.querySelector('[data-testid="coupon-qr-image"]')?.getAttribute('src')).toBe(inlinePng)
 
     host.querySelector<HTMLButtonElement>('[data-testid="copy-coupon-code"]')?.click()
     await flush()
@@ -83,6 +85,34 @@ describe('CouponDetailView', () => {
     const { app, host } = mount('MISSING')
     await flush()
     expect(host.textContent).toContain('券码不存在')
+    app.unmount()
+  })
+
+  it.each([
+    'https://api.qrserver.com/v1/create-qr-code/?data=CPABC123',
+    '//example.com/qr?code=CPABC123',
+    'data:image/svg+xml;base64,PHN2Zz4=',
+    'data:image/png;base64,invalid<',
+  ])('keeps manual redemption available without rendering unsafe QR source %s', async (qrImageUrl) => {
+    const detail = await tradeMocks.fetchCouponDetail()
+    tradeMocks.fetchCouponDetail.mockResolvedValue({ ...detail, qrImageUrl })
+    const { app, host } = mount()
+    await flush()
+    expect(host.querySelector('[data-testid="coupon-qr-image"]')).toBeNull()
+    expect(host.textContent).toContain('请出示下方券码')
+    host.querySelector<HTMLButtonElement>('[data-testid="copy-coupon-code"]')?.click()
+    await flush()
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('CPABC123')
+    app.unmount()
+  })
+
+  it('falls back to the voucher code if the embedded PNG cannot be displayed', async () => {
+    const { app, host } = mount()
+    await flush()
+    host.querySelector('[data-testid="coupon-qr-image"]')?.dispatchEvent(new Event('error'))
+    await flush()
+    expect(host.querySelector('[data-testid="coupon-qr-image"]')).toBeNull()
+    expect(host.textContent).toContain('请出示下方券码')
     app.unmount()
   })
 

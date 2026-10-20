@@ -94,9 +94,7 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
   return m;
  }
  private String buildQrImageUrl(String payload){
-  if(payload==null||payload.isBlank())return "";
-  return "https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data="
-          +java.net.URLEncoder.encode(payload,StandardCharsets.UTF_8);
+  return CouponQrCodeRenderer.pngDataUrl(payload);
  }
  private void notifyOrderPaid(OrderRow order){
   if(order==null||order.getUserId()==null)return;
