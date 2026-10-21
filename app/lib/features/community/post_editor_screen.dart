@@ -1,6 +1,9 @@
 import 'package:dazhongdianping_app/features/community/community_repository.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/community/community_error_localizer.dart';
+import 'package:dazhongdianping_app/features/community/post_commerce_picker_screen.dart';
+import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -66,10 +69,84 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   int? _auditStatus;
   String _auditStatusText = '';
   String _auditRemark = '';
+  int? _shopId;
+  int? _dealId;
+  int? _circleId;
+  PostShopLink? _linkedShop;
+  PostDealLink? _linkedDeal;
+  bool _choosingLink = false;
+
+  bool get _actionsBlocked =>
+      _busy ||
+      _loading ||
+      _deleting ||
+      _deleteDialogOpen ||
+      _choosingLink ||
+      _loadError != null;
+
+  Future<void> _chooseShop() async {
+    if (_actionsBlocked) return;
+    setState(() => _choosingLink = true);
+    try {
+      final shop = await Navigator.of(context).push<ShopSummary>(
+        MaterialPageRoute(
+          builder: (_) => PostShopPickerScreen(
+            repository: ApiBrowseRepository(widget.repository.api),
+          ),
+        ),
+      );
+      if (!mounted || shop == null) return;
+      setState(() {
+        if (_shopId != shop.id) {
+          _dealId = null;
+          _linkedDeal = null;
+        }
+        _shopId = shop.id;
+        _linkedShop = PostShopLink(
+          id: shop.id,
+          available: true,
+          name: shop.name,
+        );
+      });
+    } finally {
+      if (mounted) setState(() => _choosingLink = false);
+    }
+  }
+
+  Future<void> _chooseDeal() async {
+    if (_shopId == null || _actionsBlocked) return;
+    setState(() => _choosingLink = true);
+    try {
+      final deal = await Navigator.of(context).push<DealSummary>(
+        MaterialPageRoute(
+          builder: (_) => PostDealPickerScreen(
+            repository: TradeRepository(widget.repository.api),
+            shopId: _shopId!,
+          ),
+        ),
+      );
+      if (!mounted || deal == null) return;
+      setState(() {
+        _dealId = deal.id;
+        _linkedDeal = PostDealLink(
+          id: deal.id,
+          available: true,
+          shopId: deal.shopId,
+          title: deal.title,
+          coverImage: deal.coverImage,
+          price: deal.price,
+          currency: deal.currency,
+        );
+      });
+    } finally {
+      if (mounted) setState(() => _choosingLink = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _circleId = widget.circleId;
     if (widget.postId != null) _load();
   }
 
@@ -92,6 +169,11 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         _auditStatus = post.auditStatus;
         _auditStatusText = post.auditStatusText;
         _auditRemark = post.auditRemark;
+        _shopId = post.shopId;
+        _dealId = post.dealId;
+        _circleId = post.circleId ?? widget.circleId;
+        _linkedShop = post.linkedShop;
+        _linkedDeal = post.linkedDeal;
       });
     } catch (error) {
       if (mounted) {
@@ -116,11 +198,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   }
 
   Future<void> _pick() async {
-    if (_busy ||
-        _loading ||
-        _deleting ||
-        _deleteDialogOpen ||
-        _images.length >= 9) {
+    if (_actionsBlocked || _images.length >= 9) {
       return;
     }
     setState(() => _busy = true);
@@ -150,11 +228,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
   }
 
   Future<void> _submit() async {
-    if (_busy ||
-        _loading ||
-        _deleting ||
-        _deleteDialogOpen ||
-        _loadError != null) {
+    if (_actionsBlocked) {
       return;
     }
     if (!_formKey.currentState!.validate()) return;
@@ -162,7 +236,9 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
       title: _title.text.trim(),
       content: _content.text.trim(),
       contentType: 1,
-      circleId: widget.circleId,
+      circleId: _circleId,
+      shopId: _shopId,
+      dealId: _dealId,
       images: _images,
       topics: _topics.text
           .split(RegExp('[,，]'))
@@ -204,7 +280,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
 
   Future<void> _delete() async {
     final postId = widget.postId;
-    if (postId == null || _deleting || _busy || _deleteDialogOpen) return;
+    if (postId == null || _actionsBlocked) return;
     setState(() => _deleteDialogOpen = true);
     bool? confirmed;
     try {
@@ -253,6 +329,74 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
     }
   }
 
+  Widget _commerceFields(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          strings.postRelatedContent,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        ListTile(
+          key: const Key('post-choose-shop'),
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.storefront_outlined),
+          title: Text(
+            _shopId == null
+                ? strings.postChooseShop
+                : _linkedShop?.available == true && _linkedShop?.id == _shopId
+                ? _linkedShop!.name
+                : strings.postShopUnavailable,
+          ),
+          onTap: _actionsBlocked ? null : _chooseShop,
+          trailing: _shopId == null
+              ? const Icon(Icons.chevron_right)
+              : IconButton(
+                  key: const Key('post-remove-shop'),
+                  tooltip: strings.postRemoveLink,
+                  onPressed: _actionsBlocked
+                      ? null
+                      : () => setState(() {
+                          _shopId = null;
+                          _dealId = null;
+                          _linkedShop = null;
+                          _linkedDeal = null;
+                        }),
+                  icon: const Icon(Icons.close),
+                ),
+        ),
+        ListTile(
+          key: const Key('post-choose-deal'),
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.local_offer_outlined),
+          title: Text(
+            _dealId == null
+                ? strings.postChooseDeal
+                : _linkedDeal?.available == true && _linkedDeal?.id == _dealId
+                ? _linkedDeal!.title
+                : strings.postDealUnavailable,
+          ),
+          subtitle: _shopId == null ? Text(strings.postChooseShopFirst) : null,
+          onTap: _shopId == null || _actionsBlocked ? null : _chooseDeal,
+          trailing: _dealId == null
+              ? null
+              : IconButton(
+                  key: const Key('post-remove-deal'),
+                  tooltip: strings.postRemoveLink,
+                  onPressed: _actionsBlocked
+                      ? null
+                      : () => setState(() {
+                          _dealId = null;
+                          _linkedDeal = null;
+                        }),
+                  icon: const Icon(Icons.close),
+                ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -265,14 +409,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
         if (widget.postId != null)
           TextButton(
             key: const Key('post-delete-button'),
-            onPressed:
-                _deleting ||
-                    _deleteDialogOpen ||
-                    _busy ||
-                    _loading ||
-                    _loadError != null
-                ? null
-                : _delete,
+            onPressed: _actionsBlocked ? null : _delete,
             child: Text(
               _deleting
                   ? AppLocalizations.of(context).deleting
@@ -293,7 +430,7 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
                     context,
                   ).postEditorLoadFailed(_loadError!),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   key: const Key('post-editor-retry'),
                   onPressed: _load,
@@ -305,102 +442,107 @@ class _PostEditorScreenState extends State<PostEditorScreen> {
           )
         : Form(
             key: _formKey,
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(18),
-              children: [
-                if (widget.circleName != null) ...[
-                  Card(
-                    color: const Color(0xFFFFE5D8),
-                    child: ListTile(
-                      leading: const Icon(Icons.groups_2_outlined),
-                      title: Text(
-                        AppLocalizations.of(
-                          context,
-                        ).publishToCircle(widget.circleName!),
-                      ),
-                      subtitle: Text(
-                        AppLocalizations.of(context).circlePostNeedsAudit,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                if (_auditStatus != null || _auditStatusText.isNotEmpty) ...[
-                  Card(
-                    color: const Color(0xFFFFF4D6),
-                    child: ListTile(
-                      title: Text(
-                        AppLocalizations.of(context).auditStatusLabel(
-                          status: _auditStatus,
-                          fallback: _auditStatusText,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (widget.circleName != null) ...[
+                    Card(
+                      color: const Color(0xFFFFE5D8),
+                      child: ListTile(
+                        leading: const Icon(Icons.groups_2_outlined),
+                        title: Text(
+                          AppLocalizations.of(
+                            context,
+                          ).publishToCircle(widget.circleName!),
+                        ),
+                        subtitle: Text(
+                          AppLocalizations.of(context).circlePostNeedsAudit,
                         ),
                       ),
-                      subtitle: _auditRemark.isEmpty
-                          ? null
-                          : Text(
-                              AppLocalizations.of(
-                                context,
-                              ).auditRemarkLabel(_auditRemark),
-                            ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  if (_auditStatus != null || _auditStatusText.isNotEmpty) ...[
+                    Card(
+                      color: const Color(0xFFFFF4D6),
+                      child: ListTile(
+                        title: Text(
+                          AppLocalizations.of(context).auditStatusLabel(
+                            status: _auditStatus,
+                            fallback: _auditStatusText,
+                          ),
+                        ),
+                        subtitle: _auditRemark.isEmpty
+                            ? null
+                            : Text(
+                                AppLocalizations.of(
+                                  context,
+                                ).auditRemarkLabel(_auditRemark),
+                              ),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                  ],
+                  TextFormField(
+                    key: const Key('post-title'),
+                    controller: _title,
+                    maxLength: 80,
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context).titleLabel,
+                    ),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? AppLocalizations.of(context).pleaseEnterTitle
+                        : null,
+                  ),
+                  TextFormField(
+                    key: const Key('post-content'),
+                    controller: _content,
+                    minLines: 5,
+                    maxLines: 10,
+                    maxLength: 5000,
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context).bodyLabel,
+                    ),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? AppLocalizations.of(context).pleaseEnterBody
+                        : null,
+                  ),
+                  TextField(
+                    key: const Key('post-topics'),
+                    controller: _topics,
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(
+                        context,
+                      ).topicsCommaSeparated,
                     ),
                   ),
-                  SizedBox(height: 10),
+                  SizedBox(height: 12),
+                  _commerceFields(context),
+                  const SizedBox(height: 12),
+                  Text(
+                    AppLocalizations.of(context).uploadedCount(_images.length),
+                  ),
+                  OutlinedButton.icon(
+                    key: const Key('post-add-image'),
+                    onPressed: _actionsBlocked || _images.length >= 9
+                        ? null
+                        : _pick,
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    label: Text(AppLocalizations.of(context).addImages),
+                  ),
+                  SizedBox(height: 18),
+                  FilledButton(
+                    key: const Key('post-submit'),
+                    onPressed: _actionsBlocked ? null : _submit,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Text(AppLocalizations.of(context).submitForAudit),
+                    ),
+                  ),
                 ],
-                TextFormField(
-                  key: const Key('post-title'),
-                  controller: _title,
-                  maxLength: 80,
-                  decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context).titleLabel,
-                  ),
-                  validator: (v) => v == null || v.trim().isEmpty
-                      ? AppLocalizations.of(context).pleaseEnterTitle
-                      : null,
-                ),
-                TextFormField(
-                  key: const Key('post-content'),
-                  controller: _content,
-                  minLines: 5,
-                  maxLines: 10,
-                  maxLength: 5000,
-                  decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context).bodyLabel,
-                  ),
-                  validator: (v) => v == null || v.trim().isEmpty
-                      ? AppLocalizations.of(context).pleaseEnterBody
-                      : null,
-                ),
-                TextField(
-                  key: const Key('post-topics'),
-                  controller: _topics,
-                  decoration: InputDecoration(
-                    labelText: AppLocalizations.of(
-                      context,
-                    ).topicsCommaSeparated,
-                  ),
-                ),
-                SizedBox(height: 12),
-                Text(
-                  AppLocalizations.of(context).uploadedCount(_images.length),
-                ),
-                OutlinedButton.icon(
-                  key: const Key('post-add-image'),
-                  onPressed: _busy || _deleteDialogOpen || _images.length >= 9
-                      ? null
-                      : _pick,
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
-                  label: Text(AppLocalizations.of(context).addImages),
-                ),
-                SizedBox(height: 18),
-                FilledButton(
-                  key: const Key('post-submit'),
-                  onPressed: _busy || _deleteDialogOpen ? null : _submit,
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Text(AppLocalizations.of(context).submitForAudit),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
   );

@@ -58,13 +58,15 @@ public class CommunityService {
     private final UserExpertCertificationService userExpertCertificationService;
 
     private final ContentModerationService contentModerationService;
+    private final PostCommerceLinkService commerceLinks;
 
     public CommunityService(CommunityMapper communityMapper, AdminAuditMapper adminAuditMapper,
                             CircleService circleService, CircleMapper circleMapper, TopicService topicService,
                             NotificationService notificationService,
                             MentionNotificationService mentionNotificationService,
                             UserExpertCertificationService userExpertCertificationService,
-                            ContentModerationService contentModerationService) {
+                            ContentModerationService contentModerationService,
+                            PostCommerceLinkService commerceLinks) {
         this.communityMapper = communityMapper;
         this.adminAuditMapper = adminAuditMapper;
         this.circleService = circleService;
@@ -74,11 +76,13 @@ public class CommunityService {
         this.mentionNotificationService = mentionNotificationService;
         this.userExpertCertificationService = userExpertCertificationService;
         this.contentModerationService = contentModerationService;
+        this.commerceLinks = commerceLinks;
     }
 
     @Transactional
     public PostResponse create(PostSaveRequest request) {
         UserSession user = currentUser();
+        commerceLinks.validate(request, region(), null);
         ModerationDecision moderationDecision = contentModerationService.moderate(
                 region(), "post", 0L, user.userId(), request.title(), request.content());
         PostRow row = new PostRow();
@@ -115,6 +119,7 @@ public class CommunityService {
         UserSession user = currentUser();
         PostRow row = communityMapper.selectOwnedPost(postId, user.userId(), region());
         if (row == null) throw new NotFoundException("帖子不存在");
+        commerceLinks.validate(request, region(), row);
         ModerationDecision moderationDecision = contentModerationService.moderate(
                 region(), "post", postId, user.userId(), request.title(), request.content());
         List<Long> oldTopicIds = topicService.topicIdsForPost(postId);
@@ -409,7 +414,8 @@ public class CommunityService {
         return toResponse(
                 row,
                 repostedByCurrentUser,
-                userExpertCertificationService.approvedBadge(row.getUserId(), row.getRegion())
+                userExpertCertificationService.approvedBadge(row.getUserId(), row.getRegion()),
+                true
         );
     }
 
@@ -425,19 +431,22 @@ public class CommunityService {
                 region()
         );
         return rows.stream()
-                .map(row -> toResponse(row, repostedPostIds.contains(row.getId()), badges.get(row.getUserId())))
+                .map(row -> toResponse(row, repostedPostIds.contains(row.getId()), badges.get(row.getUserId()), false))
                 .toList();
     }
 
     private PostResponse toResponse(PostRow row,
                                     boolean repostedByCurrentUser,
-                                    UserExpertCertificationBadgeResponse authorCertification) {
+                                    UserExpertCertificationBadgeResponse authorCertification,
+                                    boolean includeCommerceLinks) {
         return new PostResponse(
                 row.getId(), row.getUserId(), row.getCircleId(), row.getCircleName(), row.getUserName(), row.getTitle(), row.getContent(), row.getContentType(),
                 row.getShopId(), row.getDealId(), row.getLikeCount(), row.getCommentCount(), row.getRepostCount(), repostedByCurrentUser, row.getAuditStatus(),
                 auditStatusText(row.getAuditStatus()), row.getAuditRemark(), row.getStatus(), authorCertification,
                 communityMapper.selectPostImages(row.getId()), communityMapper.selectPostTopics(row.getId()),
-                format(row.getCreatedAt()), format(row.getUpdatedAt())
+                format(row.getCreatedAt()), format(row.getUpdatedAt()),
+                includeCommerceLinks ? commerceLinks.shop(row.getShopId(), row.getRegion()) : null,
+                includeCommerceLinks ? commerceLinks.deal(row.getDealId(), row.getRegion(), row.getShopId()) : null
         );
     }
 

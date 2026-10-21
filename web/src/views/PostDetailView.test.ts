@@ -20,6 +20,15 @@ vi.mock('vue-router', () => ({
 }))
 
 import PostDetailView from './PostDetailView.vue'
+import { useAppContext } from '@/composables/useAppContext'
+
+const linkedPost = {
+  id: 88, userId: 9, userName: 'Author', title: 'Paris dinner', content: 'A local guide',
+  topics: [], images: [], likeCount: 0, commentCount: 0, createdAt: '2026-10-21 12:00:00',
+  shopId: 20001, dealId: 41001,
+  linkedShop: { id: 20001, available: true, name: 'Maison Sichuan Paris', coverUrl: '' },
+  linkedDeal: { id: 41001, available: true, shopId: 20001, title: 'Dinner for Two', coverImage: '', price: 32, currency: 'EUR' },
+}
 
 const RouterLinkStub = {
   props: ['to'],
@@ -44,6 +53,7 @@ function mount(postId = 88) {
 
 describe('PostDetailView', () => {
   beforeEach(() => {
+    useAppContext().setRegion('CN')
     communityMocks.fetchPost.mockReset()
     communityMocks.fetchPostComments.mockReset()
     routeState.query = { audit: 'approved' }
@@ -94,5 +104,45 @@ describe('PostDetailView', () => {
     )
     app.unmount()
     Reflect.deleteProperty(navigator, 'share')
+  })
+
+  it('shows public association cards with local detail links and EUR pricing', async () => {
+    useAppContext().setRegion('EU')
+    communityMocks.fetchPost.mockResolvedValue(linkedPost)
+    const { app, host } = mount()
+    await flush()
+    expect(host.querySelector('[data-testid="post-shop-link"]')?.getAttribute('href')).toBe('/shops/20001')
+    expect(host.querySelector('[data-testid="post-deal-link"]')?.getAttribute('href')).toBe('/deals/41001')
+    expect(host.textContent).toContain('Maison Sichuan Paris')
+    expect(host.textContent).toContain('€32.00 EUR')
+    expect(host.textContent).toContain('Places and deals in this post')
+    app.unmount()
+  })
+
+  it('keeps the post readable and removes navigation when associations are unavailable', async () => {
+    communityMocks.fetchPost.mockResolvedValue({
+      ...linkedPost,
+      linkedShop: { ...linkedPost.linkedShop, available: false },
+      linkedDeal: { ...linkedPost.linkedDeal, available: false },
+    })
+    const { app, host } = mount()
+    await flush()
+    expect(host.textContent).toContain('A local guide')
+    expect(host.textContent).toContain('该门店已下架或暂不可查看')
+    expect(host.textContent).toContain('该团购已下架或暂不可查看')
+    expect(host.querySelector('[data-testid="post-shop-link"]')).toBeNull()
+    expect(host.querySelector('[data-testid="post-deal-link"]')).toBeNull()
+    expect(host.textContent).not.toContain('Maison Sichuan Paris')
+    expect(host.textContent).not.toContain('Dinner for Two')
+    app.unmount()
+  })
+
+  it('does not turn absent or mismatched association metadata into a navigable link', async () => {
+    communityMocks.fetchPost.mockResolvedValue({ ...linkedPost, linkedShop: undefined, linkedDeal: { ...linkedPost.linkedDeal, id: 40001 } })
+    const { app, host } = mount()
+    await flush()
+    expect(host.querySelector('[data-testid="post-shop-link"]')).toBeNull()
+    expect(host.querySelector('[data-testid="post-deal-link"]')).toBeNull()
+    app.unmount()
   })
 })

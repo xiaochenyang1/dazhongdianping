@@ -8,6 +8,7 @@ import { useAppContext } from '@/composables/useAppContext'
 import { communityStringsForRegion, localizeWebCommunityError } from '@/core/web_community_localizations'
 import { discoveryStringsForRegion } from '@/core/web_discovery_localizations'
 import { formatWebDateTime } from '@/core/web_localizations'
+import { formatMoney } from '@/lib/currency'
 
 const props = defineProps<{ postId: number }>()
 const route = useRoute()
@@ -19,6 +20,10 @@ const post = ref<CommunityPost | null>(null)
 const comments = ref<CommunityComment[]>([])
 const errorMessage = ref('')
 const shareMessage = ref('')
+const linkedShop = computed(() => post.value?.linkedShop?.available && post.value.linkedShop.id === post.value.shopId
+  ? post.value.linkedShop : null)
+const linkedDeal = computed(() => post.value?.linkedDeal?.available && post.value.linkedDeal.id === post.value.dealId
+  ? post.value.linkedDeal : null)
 let requestSequence = 0
 
 const auditBanner = computed(() => {
@@ -180,6 +185,25 @@ watch(
       </div>
     </article>
 
+    <section v-if="post.shopId || post.dealId" class="content-card" data-testid="post-commerce-links">
+      <h2>{{ copy.post.related }}</h2>
+      <div class="post-commerce-grid">
+        <RouterLink v-if="linkedShop" :to="`/shops/${linkedShop.id}`" class="post-commerce-card" data-testid="post-shop-link">
+          <img v-if="linkedShop.coverUrl" :src="linkedShop.coverUrl" alt="" loading="lazy" @error="($event.target as HTMLImageElement).hidden = true" />
+          <div><span class="muted">{{ copy.post.linkedShop }}</span><h3>{{ linkedShop.name }}</h3></div>
+        </RouterLink>
+        <p v-else-if="post.shopId" class="post-commerce-card muted" data-testid="post-shop-unavailable">{{ copy.post.shopUnavailable }}</p>
+        <RouterLink v-if="linkedDeal" :to="`/deals/${linkedDeal.id}`" class="post-commerce-card" data-testid="post-deal-link">
+          <img v-if="linkedDeal.coverImage" :src="linkedDeal.coverImage" alt="" loading="lazy" @error="($event.target as HTMLImageElement).hidden = true" />
+          <div>
+            <span class="muted">{{ copy.post.linkedDeal }}</span><h3>{{ linkedDeal.title }}</h3>
+            <strong v-if="linkedDeal.price != null">{{ formatMoney(linkedDeal.price, linkedDeal.currency, 2) }}</strong>
+          </div>
+        </RouterLink>
+        <p v-else-if="post.dealId" class="post-commerce-card muted" data-testid="post-deal-unavailable">{{ copy.post.dealUnavailable }}</p>
+      </div>
+    </section>
+
     <p class="feedback">{{ copy.post.readOnly }}</p>
 
     <section class="content-card">
@@ -207,6 +231,11 @@ watch(
 </template>
 
 <style scoped>
+.post-commerce-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.post-commerce-card { display: flex; align-items: center; gap: 14px; margin: 0; padding: 16px; border: 1px solid #e2e8f0; border-radius: 14px; color: inherit; text-decoration: none; }
+a.post-commerce-card:hover { border-color: #f97316; background: #fff7ed; }
+.post-commerce-card img { width: 76px; height: 76px; object-fit: cover; border-radius: 10px; }
+.post-commerce-card h3 { margin: 5px 0; overflow-wrap: anywhere; }
 .review-list--threaded {
   display: grid;
   gap: 16px;

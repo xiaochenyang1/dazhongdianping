@@ -83,7 +83,7 @@ public class CircleService {
                         badges.get(row.getUserId()),
                         communityMapper.selectPostImages(row.getId()), communityMapper.selectPostTopics(row.getId()),
                         row.getCreatedAt() == null ? "" : row.getCreatedAt().format(FORMATTER),
-                        row.getUpdatedAt() == null ? "" : row.getUpdatedAt().format(FORMATTER))).toList();
+                        row.getUpdatedAt() == null ? "" : row.getUpdatedAt().format(FORMATTER), null, null)).toList();
         return new PageResult<>(items, total, window.page(), window.size(), window.offset() + items.size() < total);
     }
 

@@ -26,6 +26,8 @@ public record PostResponse(
         List<String> images,
         List<String> topics,
         String createdAt,
-        String updatedAt
+        String updatedAt,
+        PostShopLinkResponse linkedShop,
+        PostDealLinkResponse linkedDeal
 ) {
 }

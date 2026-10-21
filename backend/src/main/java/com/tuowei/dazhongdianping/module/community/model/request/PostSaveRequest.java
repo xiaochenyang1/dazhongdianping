@@ -19,8 +19,8 @@ public record PostSaveRequest(
         @Min(value = 1, message = "contentType 仅支持 1 或 2")
         @Max(value = 2, message = "contentType 仅支持 1 或 2")
         Integer contentType,
-        Long shopId,
-        Long dealId,
+        @Min(value = 1, message = "shopId 必须大于 0") Long shopId,
+        @Min(value = 1, message = "dealId 必须大于 0") Long dealId,
         @Size(max = 9, message = "images 最多 9 张")
         List<@NotBlank(message = "图片地址不能为空") String> images,
         @Size(max = 5, message = "topics 最多 5 个")
