@@ -15,6 +15,12 @@ const coupon = ref<CouponDetail | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
 const copied = ref(false)
+const qrFailed = ref(false)
+// Only render the PNG embedded in the authenticated response, including with older servers.
+const qrImage = computed(() => {
+  const source = coupon.value?.qrImageUrl || ''
+  return /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(source) ? source : ''
+})
 
 const usableLabel = computed(() => {
   if (!coupon.value) return ''
@@ -25,6 +31,7 @@ async function load() {
   loading.value = true
   errorMessage.value = ''
   copied.value = false
+  qrFailed.value = false
   try {
     coupon.value = await fetchCouponDetail(props.code)
   } catch (error) {
@@ -75,12 +82,14 @@ watch(
       <section class="content-card coupon-detail-card" data-testid="coupon-detail-card">
         <div class="coupon-qr-panel">
           <img
-            v-if="coupon.qrImageUrl"
+            v-if="qrImage && !qrFailed"
             class="coupon-qr"
-            :src="coupon.qrImageUrl"
+            :src="qrImage"
             :alt="copy.couponDetail.qrAlt(coupon.code)"
             data-testid="coupon-qr-image"
+            @error="qrFailed = true"
           />
+          <p v-else class="muted">{{ copy.couponDetail.qrUnavailable }}</p>
           <p class="muted">{{ copy.couponDetail.verifyHint(coupon.verifyHint) }}</p>
         </div>
 

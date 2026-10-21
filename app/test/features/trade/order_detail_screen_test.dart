@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
@@ -11,6 +12,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 
+const couponPngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8Dwn4GBgYGJAQoAHxcCAr7afKQAAAAASUVORK5CYII=';
+
 class OrderDetailApi implements JsonApi {
   OrderDetailApi({
     this.failFirstCoupon = false,
@@ -18,6 +22,7 @@ class OrderDetailApi implements JsonApi {
     this.paid = false,
     this.currency = 'EUR',
     this.clientSecret,
+    this.qrImageUrl = '',
   });
 
   final bool failFirstCoupon;
@@ -25,6 +30,7 @@ class OrderDetailApi implements JsonApi {
   bool paid;
   final String currency;
   final String? clientSecret;
+  final String qrImageUrl;
   int couponRequests = 0;
   Completer<void>? couponGate;
   String? path;
@@ -94,7 +100,7 @@ class OrderDetailApi implements JsonApi {
         'verifyAt': '',
         'usable': true,
         'qrPayload': 'CP-DEMO-2026',
-        'qrImageUrl': '',
+        'qrImageUrl': qrImageUrl,
         'verifyHint': '到店后出示二维码或券码，由商户核销。',
       };
     }
@@ -166,6 +172,55 @@ Widget localizedApp({
 }
 
 void main() {
+  testWidgets('coupon QR uses embedded PNG bytes without an image download', (
+    tester,
+  ) async {
+    final api = OrderDetailApi(
+      qrImageUrl: 'data:image/png;base64,$couponPngBase64',
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        home: CouponDetailScreen(
+          repository: TradeRepository(api),
+          code: 'CP-DEMO-2026',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final image = tester.widget<Image>(
+      find.byKey(const Key('coupon-qr-image')),
+    );
+    expect(image.image, isA<MemoryImage>());
+    expect((image.image as MemoryImage).bytes, base64Decode(couponPngBase64));
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final source in [
+    'https://api.qrserver.com/v1/create-qr-code/?data=CP-DEMO-2026',
+    'data:image/png;base64,invalid!',
+    'data:image/png;base64,aGVsbG8=',
+  ]) {
+    testWidgets(
+      'coupon keeps manual code and does not fetch invalid QR source $source',
+      (tester) async {
+        final api = OrderDetailApi(qrImageUrl: source);
+        await tester.pumpWidget(
+          localizedApp(
+            home: CouponDetailScreen(
+              repository: TradeRepository(api),
+              code: 'CP-DEMO-2026',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('coupon-qr-image')), findsNothing);
+        expect(find.text('CP-DEMO-2026'), findsOneWidget);
+        expect(find.byKey(const Key('copy-coupon-code')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('order detail formats money using the current locale', (
     tester,
   ) async {
@@ -585,10 +640,7 @@ void main() {
     // presentPaymentSheet 都回空 Map → _parsePaymentSheetResult 视为成功。
     // 注意:插件侧用的是 JSONMethodCodec,mock channel 必须匹配,否则
     // 用 StandardMethodCodec 解码 JSON 字节会抛错,initPaymentSheet 失败。
-    const channel = MethodChannel(
-      'flutter.stripe/payments',
-      JSONMethodCodec(),
-    );
+    const channel = MethodChannel('flutter.stripe/payments', JSONMethodCodec());
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
       call,
     ) async {

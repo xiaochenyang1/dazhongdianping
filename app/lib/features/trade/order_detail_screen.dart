@@ -552,7 +552,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
           final verifyHint = detail?.verifyHint.isNotEmpty == true
               ? detail!.verifyHint
               : strings.defaultVerifyHint;
-          final qrImageUrl = detail?.qrImageUrl ?? '';
+          final qrImageBytes = detail?.qrImageBytes;
           final couponStatusText = strings.couponStatusLabel(
             status: coupon.status,
             fallback: coupon.statusText,
@@ -597,15 +597,18 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                               : strings.copyCouponCode,
                         ),
                       ),
-                      if (qrImageUrl.isNotEmpty) ...[
+                      if (qrImageBytes != null) ...[
                         const SizedBox(height: 16),
-                        Image.network(
-                          qrImageUrl,
+                        Image.memory(
+                          qrImageBytes,
                           key: const Key('coupon-qr-image'),
                           width: 220,
                           height: 220,
                           errorBuilder: (_, _, _) => Text(strings.qrLoadFailed),
                         ),
+                      ] else if (detail != null) ...[
+                        const SizedBox(height: 16),
+                        Text(strings.qrLoadFailed),
                       ],
                     ],
                   ),

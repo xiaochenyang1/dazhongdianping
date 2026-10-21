@@ -330,6 +330,50 @@ async function createApprovedPublicReview(request: APIRequestContext, content: s
   return createdReview.id
 }
 
+test('renders a redeemable coupon QR without contacting an external image service', async ({ page, context, request }) => {
+  const headers = { 'X-Region': 'EU' }
+  const account = `coupon-qr-${Date.now()}@example.com`
+  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
+    headers, data: { scene: 'register', type: 'email', account, deviceId: account },
+  }))
+  const session = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
+    await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
+      headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
+    }),
+  )
+  const userHeaders = { ...headers, Authorization: `Bearer ${session.accessToken}` }
+  const order = await expectApiSuccess<{ id: number }>(await request.post(`${backendBaseURL}/api/c/v1/orders`, {
+    headers: userHeaders, data: { dealId: 41001, quantity: 1 },
+  }))
+  const paid = await expectApiSuccess<{ coupons: Array<{ code: string }> }>(
+    await request.post(`${backendBaseURL}/api/c/v1/orders/${order.id}/pay/mock-complete`, { headers: userHeaders }),
+  )
+  const code = paid.coupons[0].code
+  const externalImageRequests: string[] = []
+  await page.route('**/*', async (route) => {
+    const resource = route.request()
+    const url = new URL(resource.url())
+    if (resource.resourceType() === 'image' && !['127.0.0.1', 'localhost'].includes(url.hostname)) {
+      externalImageRequests.push(resource.url())
+      await route.abort()
+    } else {
+      await route.continue()
+    }
+  })
+  await context.addInitScript((auth) => {
+    localStorage.setItem('dzdp:region', 'EU')
+    localStorage.setItem('dzdp:user-access-token', auth.accessToken)
+    localStorage.setItem('dzdp:user-refresh-token', auth.refreshToken)
+    localStorage.setItem('dzdp:user-profile', JSON.stringify(auth.user))
+  }, session)
+  await page.goto(`/user/coupons/${encodeURIComponent(code)}`)
+  await expect(page.getByTestId('coupon-detail-code')).toHaveText(code)
+  const qr = page.getByTestId('coupon-qr-image')
+  await expect(qr).toHaveAttribute('src', /^data:image\/png;base64,/)
+  await expect.poll(() => qr.evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBe(240)
+  expect(externalImageRequests).toEqual([])
+})
+
 test.describe.serial('real backend review flow', () => {
   test('shows safe system health and disables search sync mutations for the MySQL provider', async ({ browser }) => {
     const adminContext = await browser.newContext()

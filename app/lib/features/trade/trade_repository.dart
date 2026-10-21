@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dazhongdianping_app/core/api_client.dart';
 
 class DealSummary {
@@ -265,6 +268,24 @@ class CouponDetail extends Coupon {
   final String qrPayload;
   final String qrImageUrl;
   final String verifyHint;
+
+  /// Accept only an embedded PNG from the authenticated coupon response.
+  /// In particular, never fetch legacy third-party URLs containing voucher codes.
+  Uint8List? get qrImageBytes {
+    const prefix = 'data:image/png;base64,';
+    if (!qrImageUrl.startsWith(prefix)) return null;
+    try {
+      final bytes = base64Decode(qrImageUrl.substring(prefix.length));
+      const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+      if (bytes.length < signature.length) return null;
+      for (var i = 0; i < signature.length; i++) {
+        if (bytes[i] != signature[i]) return null;
+      }
+      return bytes;
+    } on FormatException {
+      return null;
+    }
+  }
 
   factory CouponDetail.fromJson(Map<String, dynamic> json) => CouponDetail(
     id: json['id'] as int,
