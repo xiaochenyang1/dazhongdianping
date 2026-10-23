@@ -581,7 +581,7 @@ class UserPrivacyControllerTest {
         Integer anonymizedDirectMessageNotifications = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM user_notification WHERE user_id=? AND actor_user_id IS NULL AND content='你收到过来自已注销用户的私信' AND link_url=''", Integer.class, relatedUserId);
         Integer remainingBlocks = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM user_block WHERE user_id=? OR blocked_user_id=?", Integer.class, session.userId(), session.userId());
         Integer governedMessages = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM message WHERE conversation_id=? AND from_user_id=0 AND content='消息已因账号注销移除'", Integer.class, messageConversationId);
-        Integer anonymizedReports = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM message_report WHERE target_id=? AND reporter_user_id=0", Integer.class, messageConversationId);
+        Integer anonymizedReports = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM message_report WHERE target_id=? AND reporter_user_id IS NULL", Integer.class, messageConversationId);
         Integer remainingCircleMemberships = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM circle_member WHERE user_id=?", Integer.class, session.userId());
         Integer governedCircleCount = jdbcTemplate.queryForObject("SELECT member_count FROM circle WHERE id=?", Integer.class, deletionCircleId);
         Integer remainingTopicFollows = jdbcTemplate.queryForObject(

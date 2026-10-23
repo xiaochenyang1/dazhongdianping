@@ -39,6 +39,17 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
   bool _includeBrowseHistory = true;
   bool _includeCheckIns = true;
   bool _includePointsExchanges = true;
+  bool _includeInvoices = true;
+  bool _includeTickets = true;
+  bool _includeConsult = true;
+  bool _includeWaitlist = true;
+  bool _includeTranslations = true;
+  bool _includeMarketingCoupons = true;
+  bool _includeComplaints = true;
+  bool _includeQuestions = true;
+  bool _includeDishReviews = true;
+  bool _includeActivities = true;
+  bool _includeBehavior = true;
   bool _creatingExport = false;
   bool _loadingMoreExports = false;
   bool _retrying = false;
@@ -264,6 +275,17 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
       if (_includeBrowseHistory) 'browse_history',
       if (_includeCheckIns) 'check_ins',
       if (_includePointsExchanges) 'points_exchanges',
+      if (_includeInvoices) 'invoices',
+      if (_includeTickets) 'tickets',
+      if (_includeConsult) 'consult',
+      if (_includeWaitlist) 'waitlist',
+      if (_includeTranslations) 'translations',
+      if (_includeMarketingCoupons) 'marketing_coupons',
+      if (_includeComplaints) 'complaints',
+      if (_includeQuestions) 'questions',
+      if (_includeDishReviews) 'dish_reviews',
+      if (_includeActivities) 'activities',
+      if (_includeBehavior) 'behavior',
     ];
     if (modules.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -645,6 +667,116 @@ class _PrivacyOverviewScreenState extends State<PrivacyOverviewScreen> {
                     selected: _includePointsExchanges,
                     onSelected: (selected) {
                       setState(() => _includePointsExchanges = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-invoices'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleInvoices,
+                    ),
+                    selected: _includeInvoices,
+                    onSelected: (selected) {
+                      setState(() => _includeInvoices = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-tickets'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleTickets,
+                    ),
+                    selected: _includeTickets,
+                    onSelected: (selected) {
+                      setState(() => _includeTickets = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-consult'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleConsult,
+                    ),
+                    selected: _includeConsult,
+                    onSelected: (selected) {
+                      setState(() => _includeConsult = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-waitlist'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleWaitlist,
+                    ),
+                    selected: _includeWaitlist,
+                    onSelected: (selected) {
+                      setState(() => _includeWaitlist = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-translations'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleTranslations,
+                    ),
+                    selected: _includeTranslations,
+                    onSelected: (selected) {
+                      setState(() => _includeTranslations = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-marketing_coupons'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleMarketingCoupons,
+                    ),
+                    selected: _includeMarketingCoupons,
+                    onSelected: (selected) {
+                      setState(() => _includeMarketingCoupons = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-complaints'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleComplaints,
+                    ),
+                    selected: _includeComplaints,
+                    onSelected: (selected) {
+                      setState(() => _includeComplaints = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-questions'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleQuestions,
+                    ),
+                    selected: _includeQuestions,
+                    onSelected: (selected) {
+                      setState(() => _includeQuestions = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-dish_reviews'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleDishReviews,
+                    ),
+                    selected: _includeDishReviews,
+                    onSelected: (selected) {
+                      setState(() => _includeDishReviews = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-activities'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleActivities,
+                    ),
+                    selected: _includeActivities,
+                    onSelected: (selected) {
+                      setState(() => _includeActivities = selected);
+                    },
+                  ),
+                  FilterChip(
+                    key: const Key('privacy-module-behavior'),
+                    label: Text(
+                      AppLocalizations.of(context).exportModuleBehavior,
+                    ),
+                    selected: _includeBehavior,
+                    onSelected: (selected) {
+                      setState(() => _includeBehavior = selected);
                     },
                   ),
                 ],

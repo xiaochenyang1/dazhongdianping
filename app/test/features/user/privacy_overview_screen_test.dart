@@ -603,6 +603,17 @@ void main() {
         'browse_history',
         'check_ins',
         'points_exchanges',
+        'invoices',
+        'tickets',
+        'consult',
+        'waitlist',
+        'translations',
+        'marketing_coupons',
+        'complaints',
+        'questions',
+        'dish_reviews',
+        'activities',
+        'behavior',
       ],
       'format': 'zip',
     });
@@ -613,12 +624,55 @@ void main() {
     expect(find.text('签到记录'), findsOneWidget);
     expect(find.text('积分兑换'), findsOneWidget);
     expect(
-      find.text('帖子、关注关系、私信、圈子、话题关注、浏览足迹、签到记录和积分兑换均支持真实导出。'),
+      find.text('选择需要的模块，导出本账号在所有区域的数据。登录凭证和推送 token 不包含在导出中。'),
       findsOneWidget,
     );
     await scrollTo(tester, find.text('任务 #10'));
     expect(find.text('任务 #10'), findsOneWidget);
   });
+
+  testWidgets(
+    'privacy center can choose newer modules and rejects no selection',
+    (tester) async {
+      final api = PrivacyScreenApi();
+      await tester.pumpWidget(
+        localizedApp(
+          home: PrivacyOverviewScreen(
+            repository: PrivacyRepository(api),
+            accounts: const ['user@example.com'],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final chips = tester
+          .widgetList<FilterChip>(find.byType(FilterChip))
+          .toList();
+      expect(chips, hasLength(24));
+      for (final chip in chips) {
+        chip.onSelected!(false);
+      }
+      await tester.pumpAndSettle();
+      final create = find.byKey(const Key('privacy-create-export'));
+      await scrollTo(tester, create);
+      await tester.tap(create);
+      await tester.pumpAndSettle();
+      expect(api.createExportRequests, 0);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('privacy-module-invoices')),
+        -240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('privacy-module-invoices')));
+      await scrollTo(tester, create);
+      await tester.tap(create);
+      await tester.pumpAndSettle();
+      expect(api.postedBody, {
+        'modules': ['invoices'],
+        'format': 'zip',
+      });
+    },
+  );
 
   testWidgets('privacy center guards duplicate export creation', (
     tester,
@@ -635,6 +689,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final create = find.byKey(const Key('privacy-create-export'));
+    await scrollTo(tester, create);
     await tester.tap(create);
     await tester.tap(create);
 

@@ -208,11 +208,17 @@
                updated_at
         FROM privacy_delete_task
         WHERE user_id = #{userId}
-          AND status = 1
-          AND cooling_off_expire_at &lt;= CURRENT_TIMESTAMP
-        ORDER BY id DESC
+          AND ((status = 1 AND cooling_off_expire_at &lt;= CURRENT_TIMESTAMP)
+            OR (status = 3 AND domain_cleanup_version &lt; 1
+                AND NOT EXISTS(SELECT 1 FROM app_user WHERE id = #{userId} AND is_deleted = FALSE)))
+        ORDER BY CASE WHEN status = 1 THEN 0 ELSE 1 END, id DESC
         LIMIT 1
         FOR UPDATE
+    </select>
+
+    <select id="selectAccountForDeletionForUpdate" resultType="com.tuowei.dazhongdianping.module.auth.model.AppUserRow">
+        SELECT id,nickname,avatar,email,phone,password_hash,gender,signature,preferred_region,growth_value,level,points,status,last_login_at
+        FROM app_user WHERE id=#{userId} FOR UPDATE
     </select>
 
     <update id="cancelDeleteTask">
@@ -226,11 +232,12 @@
 
     <update id="completeDeleteTask">
         UPDATE privacy_delete_task
-        SET status = 3,
-            completed_at = #{completedAt},
+        SET completed_at = CASE WHEN status = 1 THEN #{completedAt} ELSE completed_at END,
+            status = 3,
+            domain_cleanup_version = 1,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{taskId}
-          AND status = 1
+          AND (status = 1 OR (status = 3 AND domain_cleanup_version &lt; 1))
     </update>
 
     <delete id="deleteBrowseHistoryByUserId">
@@ -278,7 +285,6 @@
             is_deleted = TRUE,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{userId}
-          AND is_deleted = FALSE
     </update>
 
     <update id="anonymizeReviews">
@@ -301,6 +307,7 @@
         UPDATE review_report
         SET reporter_user_id = 0,
             reporter_user_name = #{nickname},
+            reason = '',
             updated_at = CURRENT_TIMESTAMP
         WHERE reporter_user_id = #{userId}
     </update>
@@ -314,7 +321,7 @@
         UPDATE post_comment SET user_id=0,user_name=#{nickname},updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}
     </update>
     <update id="anonymizePostReports">
-        UPDATE post_report SET reporter_user_id=0,reporter_user_name=#{nickname},updated_at=CURRENT_TIMESTAMP WHERE reporter_user_id=#{userId}
+        UPDATE post_report SET reporter_user_id=NULL,reporter_user_name=#{nickname},reason='',updated_at=CURRENT_TIMESTAMP WHERE reporter_user_id=#{userId}
     </update>
 
     <select id="selectReviewsByUserId" resultType="com.tuowei.dazhongdianping.module.review.model.ReviewRow">
@@ -516,20 +523,21 @@
     </select>
     <delete id="deleteMessageBlocksByUserId">DELETE FROM user_block WHERE user_id=#{userId} OR blocked_user_id=#{userId}</delete>
     <update id="anonymizeMessagesByUserId">
-        UPDATE message SET from_user_id=CASE WHEN from_user_id=#{userId} THEN 0 ELSE from_user_id END,
-            to_user_id=CASE WHEN to_user_id=#{userId} THEN 0 ELSE to_user_id END,
-            content=CASE WHEN from_user_id=#{userId} THEN '消息已因账号注销移除' ELSE content END,
+        UPDATE message SET content=CASE WHEN from_user_id=#{userId} OR from_user_id=0 THEN '消息已因账号注销移除' ELSE content END,
             is_read=CASE WHEN to_user_id=#{userId} THEN TRUE ELSE is_read END,
-            read_at=CASE WHEN to_user_id=#{userId} AND read_at IS NULL THEN CURRENT_TIMESTAMP ELSE read_at END
+            read_at=CASE WHEN to_user_id=#{userId} AND read_at IS NULL THEN CURRENT_TIMESTAMP ELSE read_at END,
+            from_user_id=CASE WHEN from_user_id=#{userId} THEN 0 ELSE from_user_id END,
+            to_user_id=CASE WHEN to_user_id=#{userId} THEN 0 ELSE to_user_id END
         WHERE from_user_id=#{userId} OR to_user_id=#{userId}
+           OR (from_user_id=0 AND conversation_id IN(SELECT id FROM conversation WHERE user_a=#{userId} OR user_b=#{userId}))
     </update>
-    <update id="anonymizeMessageReportsByUserId">UPDATE message_report SET reporter_user_id=0 WHERE reporter_user_id=#{userId}</update>
+    <update id="anonymizeMessageReportsByUserId">UPDATE message_report SET reporter_user_id=NULL,reason='' WHERE reporter_user_id=#{userId}</update>
     <select id="selectCirclesForExport" resultType="map">
         SELECT c.id,c.name,c.region,cm.created_at AS joinedAt FROM circle_member cm JOIN circle c ON c.id=cm.circle_id
         WHERE cm.user_id=#{userId} ORDER BY cm.id DESC
     </select>
     <update id="decrementCircleMemberCountsByUserId">
-        UPDATE circle SET member_count=CASE WHEN member_count&gt;0 THEN member_count-1 ELSE 0 END,updated_at=CURRENT_TIMESTAMP
+        UPDATE circle SET member_count=(SELECT COUNT(*) FROM circle_member WHERE circle_id=circle.id AND user_id!=#{userId}),updated_at=CURRENT_TIMESTAMP
         WHERE id IN (SELECT circle_id FROM circle_member WHERE user_id=#{userId})
     </update>
     <delete id="deleteCircleMembershipsByUserId">DELETE FROM circle_member WHERE user_id=#{userId}</delete>
@@ -555,4 +563,21 @@
         FROM user_check_in WHERE user_id=#{userId} ORDER BY check_in_date ASC, id ASC
     </select>
     <delete id="deleteCheckInsByUserId">DELETE FROM user_check_in WHERE user_id=#{userId}</delete>
+    <select id="selectDueDeleteUserIds" resultType="long">
+        SELECT user_id FROM privacy_delete_task t
+        WHERE (status=1 AND cooling_off_expire_at &lt;= CURRENT_TIMESTAMP)
+           OR (status=3 AND domain_cleanup_version &lt; 1
+               AND NOT EXISTS(SELECT 1 FROM app_user u WHERE u.id=t.user_id AND u.is_deleted=FALSE))
+        ORDER BY CASE WHEN status=1 THEN 0 ELSE 1 END,cooling_off_expire_at,id LIMIT #{limit}
+    </select>
+    <select id="selectExpiredOrRevokedExportTasks" resultType="com.tuowei.dazhongdianping.module.auth.model.PrivacyExportTaskRow">
+        SELECT id,file_path FROM privacy_export_task
+        WHERE file_path != '' AND (status IN(3,5) OR (expire_at IS NOT NULL AND expire_at &lt;= CURRENT_TIMESTAMP))
+        ORDER BY id LIMIT #{limit}
+    </select>
+    <update id="clearExportFile">
+        UPDATE privacy_export_task SET file_path='',file_name='',
+               status=CASE WHEN status=5 THEN 5 ELSE 3 END,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{taskId} AND (status IN(3,5) OR (expire_at IS NOT NULL AND expire_at &lt;= CURRENT_TIMESTAMP))
+    </update>
 </mapper>

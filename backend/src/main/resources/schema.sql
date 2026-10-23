@@ -667,7 +667,7 @@ CREATE INDEX IF NOT EXISTS idx_post_comment_post ON post_comment(post_id, status
 CREATE TABLE IF NOT EXISTS post_report (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     post_id BIGINT NOT NULL,
-    reporter_user_id BIGINT NOT NULL,
+    reporter_user_id BIGINT NULL,
     reporter_user_name VARCHAR(64) NOT NULL,
     reason VARCHAR(200) NOT NULL,
     status TINYINT NOT NULL DEFAULT 0,
@@ -756,12 +756,14 @@ CREATE TABLE IF NOT EXISTS privacy_delete_task (
     cooling_off_expire_at TIMESTAMP NOT NULL,
     completed_at TIMESTAMP NULL,
     cancelled_at TIMESTAMP NULL,
+    domain_cleanup_version TINYINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_privacy_delete_task_user_created ON privacy_delete_task(user_id, created_at, id);
 CREATE INDEX IF NOT EXISTS idx_privacy_delete_task_user_status ON privacy_delete_task(user_id, status, id);
+CREATE INDEX IF NOT EXISTS idx_privacy_delete_task_cleanup ON privacy_delete_task(status, domain_cleanup_version, id);
 
 CREATE TABLE IF NOT EXISTS user_policy_accept_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -780,7 +782,7 @@ CREATE INDEX IF NOT EXISTS idx_policy_accept_type_version ON user_policy_accept_
 CREATE TABLE IF NOT EXISTS user_device (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    device_uid VARCHAR(128) NOT NULL,
+    device_uid VARCHAR(128) NULL,
     platform TINYINT NOT NULL,
     push_channel TINYINT NOT NULL DEFAULT 0,
     push_token VARCHAR(255) NOT NULL DEFAULT '',
@@ -1078,7 +1080,7 @@ CREATE INDEX IF NOT EXISTS idx_user_notification_user_region_read
     ON user_notification(user_id, region, is_read, id);
 
 CREATE TABLE IF NOT EXISTS conversation (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY, user_a BIGINT NOT NULL, user_b BIGINT NOT NULL,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY, user_a BIGINT NULL, user_b BIGINT NULL,
     last_message_id BIGINT NULL, last_message_preview VARCHAR(200) NOT NULL DEFAULT '',
     last_message_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT uk_conversation_users UNIQUE(user_a,user_b)
@@ -1094,7 +1096,7 @@ CREATE TABLE IF NOT EXISTS user_block (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT uk_user_block UNIQUE(user_id,blocked_user_id)
 );
 CREATE TABLE IF NOT EXISTS message_report (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY, reporter_user_id BIGINT NOT NULL, target_type TINYINT NOT NULL,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY, reporter_user_id BIGINT NULL, target_type TINYINT NOT NULL,
     target_id BIGINT NOT NULL, reason VARCHAR(255) NOT NULL, status TINYINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_message_report UNIQUE(reporter_user_id,target_type,target_id)
@@ -1155,7 +1157,7 @@ CREATE TABLE IF NOT EXISTS review_comment_report (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     review_id BIGINT NOT NULL,
     comment_id BIGINT NOT NULL,
-    reporter_user_id BIGINT NOT NULL,
+    reporter_user_id BIGINT NULL,
     reporter_user_name VARCHAR(64) NOT NULL,
     reason VARCHAR(200) NOT NULL,
     status TINYINT NOT NULL DEFAULT 0,
@@ -1170,7 +1172,7 @@ CREATE TABLE IF NOT EXISTS post_comment_report (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     post_id BIGINT NOT NULL,
     comment_id BIGINT NOT NULL,
-    reporter_user_id BIGINT NOT NULL,
+    reporter_user_id BIGINT NULL,
     reporter_user_name VARCHAR(64) NOT NULL,
     reason VARCHAR(200) NOT NULL,
     status TINYINT NOT NULL DEFAULT 0,
@@ -1521,7 +1523,7 @@ CREATE INDEX IF NOT EXISTS idx_ad_click_campaign ON ad_click_log(campaign_id, id
 CREATE TABLE IF NOT EXISTS consult_session (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     region VARCHAR(8) NOT NULL DEFAULT 'CN',
-    user_id BIGINT NOT NULL,
+    user_id BIGINT NULL,
     shop_id BIGINT NOT NULL,
     merchant_id BIGINT NOT NULL,
     last_message VARCHAR(500) NOT NULL DEFAULT '',
@@ -1821,7 +1823,7 @@ CREATE INDEX IF NOT EXISTS idx_creator_task_region ON creator_task(region, statu
 CREATE TABLE IF NOT EXISTS creator_task_claim (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     task_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
+    user_id BIGINT NULL,
     region VARCHAR(8) NOT NULL DEFAULT 'CN',
     status TINYINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
