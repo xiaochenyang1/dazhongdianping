@@ -111,7 +111,8 @@
     </update>
 
     <update id="releaseCouponForOrder">
-        UPDATE user_coupon SET status=1,used_order_id=NULL,used_at=NULL
+        UPDATE user_coupon SET status=CASE WHEN EXISTS(SELECT 1 FROM app_user u WHERE u.id=user_coupon.user_id AND u.is_deleted=FALSE) THEN 1 ELSE 3 END,
+               used_order_id=NULL,used_at=NULL
         WHERE used_order_id=#{orderId} AND status=2
     </update>
 

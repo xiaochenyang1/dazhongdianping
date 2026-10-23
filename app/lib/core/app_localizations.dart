@@ -835,7 +835,18 @@ class AppLocalizations {
     'exportModuleBrowseHistory': '浏览足迹',
     'exportModuleCheckIns': '签到记录',
     'exportModulePointsExchanges': '积分兑换',
-    'privacyExportHint': '帖子、关注关系、私信、圈子、话题关注、浏览足迹、签到记录和积分兑换均支持真实导出。',
+    'exportModuleInvoices': '发票数据',
+    'exportModuleTickets': '客服工单',
+    'exportModuleConsult': '商家咨询',
+    'exportModuleWaitlist': '排队记录',
+    'exportModuleTranslations': '点评翻译',
+    'exportModuleMarketingCoupons': '优惠券数据',
+    'exportModuleComplaints': '投诉记录',
+    'exportModuleQuestions': '问答数据',
+    'exportModuleDishReviews': '菜品点评',
+    'exportModuleActivities': '活动参与',
+    'exportModuleBehavior': '行为记录',
+    'privacyExportHint': '选择需要的模块，导出本账号在所有区域的数据。登录凭证和推送 token 不包含在导出中。',
     'noExportTasks': '还没有导出任务',
     'agreementRecordsHint': '记录你确认过的用户协议和隐私政策版本，省得日后各说各话。',
     'noAgreementRecords': '还没有协议同意记录。',
@@ -1957,7 +1968,18 @@ class AppLocalizations {
     'exportModuleBrowseHistory': '瀏覽足跡',
     'exportModuleCheckIns': '簽到紀錄',
     'exportModulePointsExchanges': '積分兌換',
-    'privacyExportHint': '貼文、追蹤關係、私信、圈子、話題追蹤、瀏覽足跡、簽到紀錄和積分兌換均支援真實匯出。',
+    'exportModuleInvoices': '發票資料',
+    'exportModuleTickets': '客服工單',
+    'exportModuleConsult': '商家諮詢',
+    'exportModuleWaitlist': '排隊紀錄',
+    'exportModuleTranslations': '點評翻譯',
+    'exportModuleMarketingCoupons': '優惠券資料',
+    'exportModuleComplaints': '投訴紀錄',
+    'exportModuleQuestions': '問答資料',
+    'exportModuleDishReviews': '菜品點評',
+    'exportModuleActivities': '活動參與',
+    'exportModuleBehavior': '行為紀錄',
+    'privacyExportHint': '選擇需要的模組，匯出本帳號在所有區域的資料。登入憑證和推播 token 不包含在匯出中。',
     'noExportTasks': '還沒有匯出任務',
     'agreementRecordsHint': '記錄你確認過的使用者協議和隱私政策版本，省得日後各說各話。',
     'noAgreementRecords': '還沒有協議同意記錄。',
@@ -3187,9 +3209,20 @@ class AppLocalizations {
     'exportModuleBrowseHistory': 'Browsing history',
     'exportModuleCheckIns': 'Check-ins',
     'exportModulePointsExchanges': 'Points redemptions',
+    'exportModuleInvoices': 'Invoices',
+    'exportModuleTickets': 'Support tickets',
+    'exportModuleConsult': 'Merchant consultations',
+    'exportModuleWaitlist': 'Waitlist entries',
+    'exportModuleTranslations': 'Review translations',
+    'exportModuleMarketingCoupons': 'Discount coupons',
+    'exportModuleComplaints': 'Complaints',
+    'exportModuleQuestions': 'Questions and answers',
+    'exportModuleDishReviews': 'Dish reviews',
+    'exportModuleActivities': 'Activity participation',
+    'exportModuleBehavior': 'Activity history',
     'privacyExportHint':
-        'Posts, follows, messages, circles, topic follows, browsing history, '
-        'check-ins and points redemptions support real exports.',
+        'Choose modules to export your account data across all regions. '
+        'Login credentials and push tokens are excluded.',
     'noExportTasks': 'No export tasks yet',
     'agreementRecordsHint':
         'We keep the terms and privacy versions you accepted, so records stay clear later.',
@@ -5031,6 +5064,18 @@ class AppLocalizations {
   String get exportModuleCheckIns => _text('exportModuleCheckIns');
   String get exportModulePointsExchanges =>
       _text('exportModulePointsExchanges');
+  String get exportModuleInvoices => _text('exportModuleInvoices');
+  String get exportModuleTickets => _text('exportModuleTickets');
+  String get exportModuleConsult => _text('exportModuleConsult');
+  String get exportModuleWaitlist => _text('exportModuleWaitlist');
+  String get exportModuleTranslations => _text('exportModuleTranslations');
+  String get exportModuleMarketingCoupons =>
+      _text('exportModuleMarketingCoupons');
+  String get exportModuleComplaints => _text('exportModuleComplaints');
+  String get exportModuleQuestions => _text('exportModuleQuestions');
+  String get exportModuleDishReviews => _text('exportModuleDishReviews');
+  String get exportModuleActivities => _text('exportModuleActivities');
+  String get exportModuleBehavior => _text('exportModuleBehavior');
   String get privacyExportHint => _text('privacyExportHint');
   String get noExportTasks => _text('noExportTasks');
   String get agreementRecordsHint => _text('agreementRecordsHint');
@@ -5299,6 +5344,17 @@ class AppLocalizations {
       'browse_history' => exportModuleBrowseHistory,
       'check_ins' => exportModuleCheckIns,
       'points_exchanges' => exportModulePointsExchanges,
+      'invoices' => exportModuleInvoices,
+      'tickets' => exportModuleTickets,
+      'consult' => exportModuleConsult,
+      'waitlist' => exportModuleWaitlist,
+      'translations' => exportModuleTranslations,
+      'marketing_coupons' => exportModuleMarketingCoupons,
+      'complaints' => exportModuleComplaints,
+      'questions' => exportModuleQuestions,
+      'dish_reviews' => exportModuleDishReviews,
+      'activities' => exportModuleActivities,
+      'behavior' => exportModuleBehavior,
       _ => module,
     };
   }

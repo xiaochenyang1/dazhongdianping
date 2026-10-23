@@ -75,6 +75,14 @@ mysql --defaults-extra-file="$server_defaults" \
 
 mysql --defaults-extra-file="$database_defaults" <<'SQL'
 CREATE TABLE app_user (id BIGINT NOT NULL PRIMARY KEY);
+CREATE TABLE privacy_delete_task (id BIGINT NOT NULL PRIMARY KEY,user_id BIGINT NOT NULL,status TINYINT NOT NULL DEFAULT 1);
+CREATE TABLE user_device (id BIGINT NOT NULL PRIMARY KEY,device_uid VARCHAR(128) NOT NULL);
+CREATE TABLE conversation (id BIGINT NOT NULL PRIMARY KEY,user_a BIGINT NOT NULL,user_b BIGINT NOT NULL,UNIQUE KEY uk_conversation_users(user_a,user_b));
+CREATE TABLE post_report (id BIGINT NOT NULL PRIMARY KEY,reporter_user_id BIGINT NOT NULL);
+CREATE TABLE review_comment_report (id BIGINT NOT NULL PRIMARY KEY,review_id BIGINT NOT NULL,comment_id BIGINT NOT NULL,reporter_user_id BIGINT NOT NULL,reporter_user_name VARCHAR(64) NOT NULL,reason VARCHAR(200) NOT NULL,status TINYINT NOT NULL DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,is_deleted BOOLEAN NOT NULL DEFAULT FALSE,UNIQUE KEY uk_review_comment_report_user(comment_id,reporter_user_id));
+CREATE TABLE post_comment_report (id BIGINT NOT NULL PRIMARY KEY,post_id BIGINT NOT NULL,comment_id BIGINT NOT NULL,reporter_user_id BIGINT NOT NULL,reporter_user_name VARCHAR(64) NOT NULL,reason VARCHAR(200) NOT NULL,status TINYINT NOT NULL DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,is_deleted BOOLEAN NOT NULL DEFAULT FALSE,UNIQUE KEY uk_post_comment_report_user(comment_id,reporter_user_id));
+CREATE TABLE message_report (id BIGINT NOT NULL PRIMARY KEY,reporter_user_id BIGINT NOT NULL);
+
 CREATE TABLE city (
   id BIGINT NOT NULL PRIMARY KEY,
   code VARCHAR(32) NOT NULL,
@@ -185,7 +193,10 @@ grep -q 'explicit --baseline-version' "$run_dir/no-baseline.log" ||
 
 history_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$history_count" == "23" ]] || fail "expected 23 migration history rows, found $history_count"
+[[ "$history_count" == "24" ]] || fail "expected 24 migration history rows, found $history_count"
+cleanup_marker_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e \
+  "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='privacy_delete_task' AND column_name='domain_cleanup_version' AND column_default='0';")"
+[[ "$cleanup_marker_count" == "1" ]] || fail "historical deletions must receive a pending cleanup marker"
 non_applied_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e "SELECT COUNT(*) FROM dzdp_schema_migration WHERE state <> 'APPLIED';")"
 [[ "$non_applied_count" == "0" ]] || fail "old-baseline upgrade did not finish every migration"
@@ -215,7 +226,7 @@ SELECT
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='BER' AND status=0 AND time_zone='Europe/Berlin') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone') +
   (SELECT COUNT(*) FROM reservation WHERE id=1 AND time_zone='Europe/Paris');")"
-[[ "$schema_probe" == "19" ]] || fail "migrations 03-25 schema/data probe expected 19, found $schema_probe"
+[[ "$schema_probe" == "19" ]] || fail "migrations 03-26 schema/data probe expected 19, found $schema_probe"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -223,7 +234,7 @@ SELECT
   --lock-file "$run_dir/repeat.lock"
 repeat_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$repeat_count" == "23" ]] || fail "repeat apply changed migration history"
+[[ "$repeat_count" == "24" ]] || fail "repeat apply changed migration history"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -350,8 +361,8 @@ mysql --defaults-extra-file="$fresh_defaults" < "$source_dir/02_seed_data.sql"
 
 fresh_history_counts="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e \
   "SELECT SUM(state='BASELINED' AND version<=14), SUM(state='APPLIED' AND version>14) FROM dzdp_schema_migration;")"
-[[ "$fresh_history_counts" == $'12\t11' ]] ||
-  fail "fresh schema must baseline versions 03-14 and apply 15-25; found $fresh_history_counts"
+[[ "$fresh_history_counts" == $'12\t12' ]] ||
+  fail "fresh schema must baseline versions 03-14 and apply 15-26; found $fresh_history_counts"
 
 fresh_schema_probe="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e "
 SELECT
@@ -372,6 +383,6 @@ SELECT
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='BER' AND status=0 AND time_zone='Europe/Berlin') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone');")"
 [[ "$fresh_schema_probe" == "14" ]] ||
-  fail "fresh schema plus migrations 15-25 probe expected 14, found $fresh_schema_probe"
+  fail "fresh schema plus migrations 15-26 probe expected 14, found $fresh_schema_probe"
 
 printf '[mysql-migration-integration] old baseline, fresh baseline 14, repeat, verify, DB lock, checksum drift, and failure blocking passed.\n'

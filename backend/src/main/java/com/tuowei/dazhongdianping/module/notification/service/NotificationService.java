@@ -67,6 +67,10 @@ public class NotificationService {
 
     @Transactional
     public Map<String, Object> create(Long userId, Long actorUserId, String region, String type, String title, String content, String linkUrl) {
+        // Serialize with deletion so schedulers and delayed supplier callbacks cannot recreate personal notifications afterwards.
+        if (userId == null || mapper.lockNonDeletedRecipient(userId) == null) {
+            return Map.of("delivered", false);
+        }
         String normalizedLinkUrl = linkUrl == null ? "" : linkUrl;
         NotificationRow aggregate = normalizedLinkUrl.isBlank()
                 ? null

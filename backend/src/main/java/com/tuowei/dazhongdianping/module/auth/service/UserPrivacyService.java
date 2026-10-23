@@ -51,7 +51,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -65,6 +64,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -73,7 +74,7 @@ public class UserPrivacyService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<>() {
     };
-    private static final Set<String> ALLOWED_EXPORT_MODULES = Set.of(
+    private static final List<String> ALLOWED_EXPORT_MODULES = List.of(
             "account",
             "orders",
             "reviews",
@@ -86,12 +87,16 @@ public class UserPrivacyService {
             "circles",
             "topics",
             "check_ins",
-            "points_exchanges"
+            "points_exchanges",
+            "invoices", "tickets", "consult", "waitlist", "translations", "marketing_coupons",
+            "complaints", "questions", "dish_reviews", "activities", "behavior"
     );
     private static final String DEFAULT_EXPORT_FORMAT = "zip";
 
     private final AuthCommandMapper authCommandMapper;
     private final UserPrivacyMapper userPrivacyMapper;
+    private final UserPrivacyDomainService privacyDomainService;
+    private final UserPrivacyArchiveService privacyArchiveService;
     private final BrowseQueryMapper browseQueryMapper;
     private final PointsMapper pointsMapper;
     private final PrivacyProperties privacyProperties;
@@ -101,12 +106,16 @@ public class UserPrivacyService {
 
     public UserPrivacyService(AuthCommandMapper authCommandMapper,
                               UserPrivacyMapper userPrivacyMapper,
+                              UserPrivacyDomainService privacyDomainService,
+                              UserPrivacyArchiveService privacyArchiveService,
                               BrowseQueryMapper browseQueryMapper,
                               PointsMapper pointsMapper,
                               PrivacyProperties privacyProperties,
                               ObjectMapper objectMapper) {
         this.authCommandMapper = authCommandMapper;
         this.userPrivacyMapper = userPrivacyMapper;
+        this.privacyDomainService = privacyDomainService;
+        this.privacyArchiveService = privacyArchiveService;
         this.browseQueryMapper = browseQueryMapper;
         this.pointsMapper = pointsMapper;
         this.privacyProperties = privacyProperties;
@@ -143,7 +152,9 @@ public class UserPrivacyService {
 
     @Transactional
     public PrivacyExportTaskResponse createExportTask(PrivacyExportTaskCreateRequest request) {
-        AppUserRow currentUser = currentUserRow();
+        // Serialize archive creation with deletion so a ready archive cannot appear after deletion has revoked the user's files.
+        AppUserRow currentUser = authCommandMapper.selectUserByIdForUpdate(currentUserId());
+        requireActiveUser(currentUser);
         if (userPrivacyMapper.countRecentExportTasks(
                 currentUser.getId(),
                 LocalDateTime.now().minusHours(24)
@@ -241,7 +252,8 @@ public class UserPrivacyService {
 
     @Transactional
     public PrivacyDeleteTaskResponse createDeleteTask(PrivacyDeleteTaskCreateRequest request) {
-        AppUserRow currentUser = currentUserRow();
+        AppUserRow currentUser = authCommandMapper.selectUserByIdForUpdate(currentUserId());
+        requireActiveUser(currentUser);
         PrivacyDeleteTaskRow activeTask = userPrivacyMapper.selectActiveDeleteTaskByUserId(currentUser.getId());
         if (activeTask != null) {
             throw new IllegalArgumentException("当前已有删除任务处理中");
@@ -287,52 +299,68 @@ public class UserPrivacyService {
             return;
         }
 
-        AppUserRow userRow = authCommandMapper.selectUserByIdForUpdate(userId);
-        if (userRow != null) {
-            String anonymousName = anonymousNickname(userId);
-            String email = userRow.getEmail();
-            String phone = userRow.getPhone();
+        // Include already-deleted accounts so completed tasks from older releases receive domain cleanup.
+        AppUserRow userRow = userPrivacyMapper.selectAccountForDeletionForUpdate(userId);
+        String anonymousName = anonymousNickname(userId);
+        String email = userRow == null ? null : userRow.getEmail();
+        String phone = userRow == null ? null : userRow.getPhone();
 
-            userPrivacyMapper.anonymizeReviews(userId, anonymousName);
-            userPrivacyMapper.anonymizeReviewComments(userId, anonymousName);
-            userPrivacyMapper.anonymizeReviewReports(userId, anonymousName);
-            List<Long> repostedPostIds = userPrivacyMapper.selectAffectedRepostPostIdsForDeletion(userId);
-            userPrivacyMapper.deletePostRepostsForAccountDeletion(userId);
-            for (Long postId : repostedPostIds) {
-                userPrivacyMapper.refreshPostRepostCount(postId);
-            }
-            userPrivacyMapper.anonymizePosts(userId, anonymousName);
-            userPrivacyMapper.anonymizePostComments(userId, anonymousName);
-            userPrivacyMapper.anonymizePostReports(userId, anonymousName);
-            userPrivacyMapper.deleteBrowseHistoryByUserId(userId);
-            userPrivacyMapper.deleteSearchHistoryByUserId(userId);
-            userPrivacyMapper.deleteGrowthPointsLogsByUserId(userId);
-            userPrivacyMapper.deleteCheckInsByUserId(userId);
-            userPrivacyMapper.deleteFollowRelationsByUserId(userId);
-            userPrivacyMapper.deleteNotificationsByUserId(userId);
-            userPrivacyMapper.anonymizeActorNotificationsByActor(userId);
-            userPrivacyMapper.deleteMessageBlocksByUserId(userId);
-            userPrivacyMapper.anonymizeMessagesByUserId(userId);
-            userPrivacyMapper.anonymizeMessageReportsByUserId(userId);
-            userPrivacyMapper.decrementCircleMemberCountsByUserId(userId);
-            userPrivacyMapper.deleteCircleMembershipsByUserId(userId);
-            List<Long> followedTopicIds = userPrivacyMapper.selectFollowedTopicIdsByUserId(userId);
-            userPrivacyMapper.deleteTopicFollowsByUserId(userId);
-            for (Long topicId : followedTopicIds) {
-                userPrivacyMapper.refreshTopicFollowerCount(topicId);
-            }
-            if (StringUtils.hasText(email)) {
-                userPrivacyMapper.deleteVerificationCodesByTarget(email);
-            }
-            if (StringUtils.hasText(phone)) {
-                userPrivacyMapper.deleteVerificationCodesByTarget(phone);
-            }
-            authCommandMapper.revokeUserSessionsByUserId(userId);
-            userPrivacyMapper.disableDevicesByUserId(userId);
-            userPrivacyMapper.anonymizeUser(userId, anonymousName);
+        privacyDomainService.deleteAccountData(userId);
+        userPrivacyMapper.anonymizeReviews(userId, anonymousName);
+        userPrivacyMapper.anonymizeReviewComments(userId, anonymousName);
+        userPrivacyMapper.anonymizeReviewReports(userId, anonymousName);
+        List<Long> repostedPostIds = userPrivacyMapper.selectAffectedRepostPostIdsForDeletion(userId);
+        userPrivacyMapper.deletePostRepostsForAccountDeletion(userId);
+        for (Long postId : repostedPostIds) {
+            userPrivacyMapper.refreshPostRepostCount(postId);
         }
+        userPrivacyMapper.anonymizePosts(userId, anonymousName);
+        userPrivacyMapper.anonymizePostComments(userId, anonymousName);
+        userPrivacyMapper.anonymizePostReports(userId, anonymousName);
+        userPrivacyMapper.deleteBrowseHistoryByUserId(userId);
+        userPrivacyMapper.deleteSearchHistoryByUserId(userId);
+        userPrivacyMapper.deleteGrowthPointsLogsByUserId(userId);
+        userPrivacyMapper.deleteCheckInsByUserId(userId);
+        userPrivacyMapper.deleteFollowRelationsByUserId(userId);
+        userPrivacyMapper.deleteNotificationsByUserId(userId);
+        userPrivacyMapper.anonymizeActorNotificationsByActor(userId);
+        userPrivacyMapper.deleteMessageBlocksByUserId(userId);
+        userPrivacyMapper.anonymizeMessagesByUserId(userId);
+        userPrivacyMapper.anonymizeMessageReportsByUserId(userId);
+        privacyDomainService.unlinkConversations(userId);
+        userPrivacyMapper.decrementCircleMemberCountsByUserId(userId);
+        userPrivacyMapper.deleteCircleMembershipsByUserId(userId);
+        List<Long> followedTopicIds = userPrivacyMapper.selectFollowedTopicIdsByUserId(userId);
+        userPrivacyMapper.deleteTopicFollowsByUserId(userId);
+        for (Long topicId : followedTopicIds) {
+            userPrivacyMapper.refreshTopicFollowerCount(topicId);
+        }
+        if (StringUtils.hasText(email)) {
+            userPrivacyMapper.deleteVerificationCodesByTarget(email);
+        }
+        if (StringUtils.hasText(phone)) {
+            userPrivacyMapper.deleteVerificationCodesByTarget(phone);
+        }
+        authCommandMapper.revokeUserSessionsByUserId(userId);
+        userPrivacyMapper.disableDevicesByUserId(userId);
+        userPrivacyMapper.anonymizeUser(userId, anonymousName);
 
         userPrivacyMapper.completeDeleteTask(dueTask.getId(), LocalDateTime.now());
+        // Database revocation is transactional; physical removal happens only after successful commit and is retried by the scheduler.
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                cleanupExpiredExportArchives();
+            }
+        });
+    }
+
+    public List<Long> dueDeleteUserIds() {
+        return userPrivacyMapper.selectDueDeleteUserIds(100);
+    }
+
+    public void cleanupExpiredExportArchives() {
+        privacyArchiveService.cleanupExpiredArchives();
     }
 
     private void expireReadyExportTasks(Long userId) {
@@ -363,12 +391,10 @@ public class UserPrivacyService {
         return userSession.userId();
     }
 
-    private AppUserRow currentUserRow() {
-        AppUserRow userRow = authCommandMapper.selectUserById(currentUserId());
+    private void requireActiveUser(AppUserRow userRow) {
         if (userRow == null || userRow.getStatus() == null || userRow.getStatus() != 1) {
             throw new UnauthorizedException("用户状态不可用");
         }
-        return userRow;
     }
 
     private List<String> normalizeExportModules(List<String> modules) {
@@ -475,7 +501,8 @@ public class UserPrivacyService {
         meta.put("userId", currentUser.getId());
         meta.put("generatedAt", formatDateTime(LocalDateTime.now()));
         meta.put("format", format);
-        meta.put("note", "仅导出已真实落地并明确选择的模块；未落地模块不会生成空数据冒充完成。");
+        meta.put("scope", "account_all_regions");
+        meta.put("note", "导出所选模块中属于本账号的数据，覆盖 CN/EU；登录凭证、推送 token 和支付密钥不导出。");
         root.put("meta", meta);
 
         Map<String, Object> moduleData = new LinkedHashMap<>();
@@ -494,7 +521,7 @@ public class UserPrivacyService {
                 case "topics" -> userPrivacyMapper.selectTopicsForExport(currentUser.getId());
                 case "check_ins" -> buildCheckInModule(currentUser.getId());
                 case "points_exchanges" -> buildPointsExchangeModule(currentUser.getId());
-                default -> List.of();
+                default -> privacyDomainService.exportModule(module, currentUser.getId());
             });
         }
         root.put("modules", moduleData);
@@ -518,6 +545,7 @@ public class UserPrivacyService {
         account.put("points", currentUser.getPoints());
         account.put("growthValue", currentUser.getGrowthValue());
         account.put("signature", currentUser.getSignature());
+        account.put("records", privacyDomainService.accountRecords(currentUser.getId()));
         account.put("growthRecords", userPrivacyMapper.selectGrowthPointsLogsByUserId(currentUser.getId()).stream()
                 .map(this::toGrowthRecordExportItem)
                 .toList());
@@ -549,6 +577,7 @@ public class UserPrivacyService {
             item.put("updatedAt", formatDateTime(row.getUpdatedAt()));
             items.add(item);
         }
+        items.addAll(privacyDomainService.reviewInteractions(userId));
         return items;
     }
 
@@ -586,6 +615,7 @@ public class UserPrivacyService {
             item.put("repostedAt", formatDateTime(row.getCreatedAt()));
             items.add(item);
         }
+        items.addAll(privacyDomainService.postInteractions(userId));
         return items;
     }
 
@@ -612,6 +642,8 @@ public class UserPrivacyService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("conversations", userPrivacyMapper.selectMessageConversationsForExport(userId));
         result.put("messages", userPrivacyMapper.selectMessagesForExport(userId));
+        result.put("reports", privacyDomainService.messageReports(userId));
+        result.put("blocks", privacyDomainService.messageBlocks(userId));
         return result;
     }
 
@@ -654,8 +686,15 @@ public class UserPrivacyService {
     }
 
     private List<Map<String, Object>> buildOrderModule(Long userId) {
+        Map<String, List<Map<String, Object>>> records = privacyDomainService.orderRecords(userId);
         return userPrivacyMapper.selectOrdersByUserId(userId).stream()
-                .map(this::toOrderExportItem)
+                .map(row -> {
+                    Map<String, Object> item = toOrderExportItem(row);
+                    records.forEach((type, rows) -> item.put(type, rows.stream()
+                            .filter(record -> ((Number) record.get("orderId")).longValue() == row.getId())
+                            .toList()));
+                    return item;
+                })
                 .toList();
     }
 
@@ -682,8 +721,15 @@ public class UserPrivacyService {
     }
 
     private List<Map<String, Object>> buildReservationModule(Long userId) {
+        List<Map<String, Object>> logs = privacyDomainService.reservationLogs(userId);
         return userPrivacyMapper.selectReservationsByUserId(userId).stream()
-                .map(this::toReservationExportItem)
+                .map(row -> {
+                    Map<String, Object> item = toReservationExportItem(row);
+                    item.put("logs", logs.stream()
+                            .filter(record -> ((Number) record.get("reservationId")).longValue() == row.getId())
+                            .toList());
+                    return item;
+                })
                 .toList();
     }
 
@@ -813,7 +859,7 @@ public class UserPrivacyService {
     }
 
     private String anonymousNickname(Long userId) {
-        return "已注销用户" + (userId % 10000);
+        return "已注销用户";
     }
 
     private PrivacyExportTaskResponse toExportTaskResponse(PrivacyExportTaskRow row) {

@@ -38,7 +38,7 @@
         FROM consult_session c
         LEFT JOIN shop s ON s.id=c.shop_id
         LEFT JOIN app_user u ON u.id=c.user_id
-        WHERE c.id=#{id} AND c.merchant_id=#{merchantId} AND c.region=#{region}
+        WHERE c.id=#{id} AND c.merchant_id=#{merchantId} AND c.region=#{region} AND c.user_id IS NOT NULL
     </select>
 
     <select id="selectUserSessions" resultType="com.tuowei.dazhongdianping.module.consult.model.ConsultSessionRow">
@@ -55,7 +55,7 @@
         FROM consult_session c
         LEFT JOIN shop s ON s.id=c.shop_id
         LEFT JOIN app_user u ON u.id=c.user_id
-        WHERE c.merchant_id=#{merchantId} AND c.region=#{region}
+        WHERE c.merchant_id=#{merchantId} AND c.region=#{region} AND c.user_id IS NOT NULL
         ORDER BY c.updated_at DESC, c.id DESC
     </select>
 

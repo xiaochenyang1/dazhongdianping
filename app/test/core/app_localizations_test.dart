@@ -549,6 +549,18 @@ void main() {
     expect(AppLocalizations.forTag('en').privacyCenter, 'Privacy center');
     expect(AppLocalizations.forTag('en').accountSettings, 'Account settings');
     expect(AppLocalizations.forTag('zh-CN').exportModuleAccount, '账号数据');
+    expect(
+      AppLocalizations.forTag('zh-CN').exportModuleLabel('invoices'),
+      '发票数据',
+    );
+    expect(
+      AppLocalizations.forTag('zh-TW').exportModuleLabel('consult'),
+      '商家諮詢',
+    );
+    expect(
+      AppLocalizations.forTag('en').exportModuleLabel('activities'),
+      'Activity participation',
+    );
     expect(AppLocalizations.forTag('zh-CN').privacyHero, '你的数据，由你说了算');
     expect(AppLocalizations.forTag('en').downloadZip, 'Download ZIP');
     expect(AppLocalizations.forTag('zh-CN').exportTaskTitle(7), '任务 #7');

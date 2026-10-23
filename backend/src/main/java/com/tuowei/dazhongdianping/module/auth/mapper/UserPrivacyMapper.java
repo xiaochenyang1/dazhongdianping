@@ -1,6 +1,7 @@
 package com.tuowei.dazhongdianping.module.auth.mapper;
 
 import com.tuowei.dazhongdianping.module.auth.model.GrowthPointsLogRow;
+import com.tuowei.dazhongdianping.module.auth.model.AppUserRow;
 import com.tuowei.dazhongdianping.module.auth.model.FollowExportRow;
 import com.tuowei.dazhongdianping.module.auth.model.PrivacyDeleteTaskRow;
 import com.tuowei.dazhongdianping.module.auth.model.PrivacyExportTaskRow;
@@ -48,6 +49,8 @@ public interface UserPrivacyMapper {
     PrivacyDeleteTaskRow selectActiveDeleteTaskByUserId(@Param("userId") Long userId);
 
     PrivacyDeleteTaskRow selectDueDeleteTaskByUserIdForUpdate(@Param("userId") Long userId);
+
+    AppUserRow selectAccountForDeletionForUpdate(@Param("userId") Long userId);
 
     int cancelDeleteTask(@Param("taskId") Long taskId, @Param("cancelledAt") LocalDateTime cancelledAt);
 
@@ -110,4 +113,8 @@ public interface UserPrivacyMapper {
     List<Long> selectFollowedTopicIdsByUserId(@Param("userId") Long userId);
     int deleteTopicFollowsByUserId(@Param("userId") Long userId);
     int refreshTopicFollowerCount(@Param("topicId") Long topicId);
+
+    List<Long> selectDueDeleteUserIds(@Param("limit") int limit);
+    List<PrivacyExportTaskRow> selectExpiredOrRevokedExportTasks(@Param("limit") int limit);
+    int clearExportFile(@Param("taskId") Long taskId);
 }

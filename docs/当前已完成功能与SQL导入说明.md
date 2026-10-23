@@ -57,10 +57,12 @@
 ### 1.4 隐私中心当前闭环
 
 - 后端已完成隐私概览、数据导出任务、ZIP 下载、删除申请、冷静期撤销和到期匿名化。
-- 当前真实可导出 `account`、`reviews`、`orders`、`reservations`、`favorites`、`posts`、`browse_history`、`follows`、`messages`、`circles`、`topics`、`check_ins`、`points_exchanges`；积分兑换导出仅暴露已发放兑换码。
+- 当前真实可导出 24 个模块：原有 `account/reviews/orders/reservations/favorites/posts/browse_history/follows/messages/circles/topics/check_ins/points_exchanges`，新增 `invoices/tickets/consult/waitlist/translations/marketing_coupons/complaints/questions/dish_reviews/activities/behavior`。导出覆盖本账号 CN/EU，明确字段排除密码/刷新凭证哈希、推送 token、支付密钥、原始渠道报文和内部风控规则；积分兑换仅暴露已发放兑换码。
 - `web` 与 Flutter 隐私中心均支持创建导出、带登录态下载、验证码/密码校验删除和冷静期撤销，并已接入协议接受留痕、设备登记/列表、Push token 脱敏状态和主动停用设备。
 - 后端自动化已覆盖导出 ZIP 内容、下载、删除撤销、冷静期到期处理、注销到期后的设备停用与登录阻断；Playwright 真实后端 E2E 已覆盖创建导出、下载、创建删除申请和撤销。
 - `topics` 导出包含话题 `id/name/region/followedAt`，`check_ins` 导出包含签到奖励，`points_exchanges` 导出遵循兑换码可用状态；注销删除本人签到记录和话题关注并按真实行数刷新 `follower_count`，帖子话题关联与热榜快照保持不动。
+
+- 到期注销由后台处理，跨模块共享事务，失败回滚并重试；新增域私有数据清除，计数按关系重算，交易/已发权益最小化保留。多账号共享对象注销使用可空关联避免唯一键冲突；文件提交后清除并可重试。旧版已完成且账号已删除的任务按 `domain_cleanup_version` 自动补清理，保留原完成时间，成功后不会重复归还库存。部署前必须应用 `26_privacy_account_unlink_migration.sql`。
 
 ### 1.5 M7 帖子内容第一阶段
 
@@ -291,12 +293,12 @@
 .\scripts\ci\mysql-smoke.ps1 -DbName dazhongdianping_smoke -DropDatabaseAfter
 ```
 
-`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-25 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
+`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-26 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
 
 ### 3.2 初始化与迁移 SQL 的作用
 
 - `sql/mysql/00_all_in_one.sql`: 已退役的安全阻断桩,执行时直接报错,不再串联破坏性建表脚本。
-- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-25 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
+- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-26 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
 - `sql/mysql/02_seed_data.sql`: 浏览数据、公开点评、待审/驳回审核案例、点评图片、点赞/评论演示数据、C 端演示账号、成长规则(含 `check_in`)。
 - `sql/mysql/03_admin_city_scope_migration.sql`: 既有数据库增加管理员城市/门店范围；只用于升级，不参与全新数据库初始化。
 - `sql/mysql/04_admin_import_batch_scope_migration.sql`: 既有数据库增加受限管理员本人导入批次查询索引；在 `03` 后执行一次。
@@ -320,7 +322,9 @@
 - `sql/mysql/22_audit_queue_fifo_migration.sql`: 为审核任务增加区域/类型/状态/提交时间索引，支持最久等待任务优先处理。
 - `sql/mysql/23_admin_audit_sla_alert_migration.sql`: 创建审核 SLA 提醒表。
 
-> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-25 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
+- `sql/mysql/26_privacy_account_unlink_migration.sql`: 可空账号/设备关系，支持多账号连续注销；加入历史注销补清理版本和扫描索引。
+
+> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-26 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
 
 ### 3.3 导入后哪些表会直接有数据
 
