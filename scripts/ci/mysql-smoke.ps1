@@ -351,7 +351,7 @@ if ($DryRun) {
         }
         Write-Output "- Source sql/mysql/01_schema.sql into $DbName."
         Write-Output "- Source sql/mysql/02_seed_data.sql into $DbName."
-        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-25."
+        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-26."
     }
     Write-Output "- Package backend with backend/mvnw.cmd -DskipTests package."
     Write-Output "- Start the packaged backend jar with APP_DB_* environment variables on port $BackendPort."
@@ -511,7 +511,7 @@ VALUES ('$databaseOwnershipToken');
             "--default-character-set=utf8mb4"
         )) -SqlFile $seedSql
 
-        Write-Step "applying MySQL migrations 15-25 from schema baseline 14"
+        Write-Step "applying MySQL migrations 15-26 from schema baseline 14"
         $escapedDbPassword = $DbPassword.Replace('\', '\\').Replace('"', '\"')
         $migrationDefaultsContent = @"
 [client]
@@ -577,7 +577,10 @@ SELECT @smoke_task_id;
         "--spring.profiles.active=local",
         "--server.port=$BackendPort",
         "--management.health.redis.enabled=false",
-        "--app.admin.audit.sla.reminder-interval-ms=1000"
+        "--app.admin.audit.sla.reminder-interval-ms=1000",
+        "--app.privacy.export-base-dir=$runDir/privacy-exports",
+        "--app.privacy.delete-fixed-delay-ms=1000",
+        "--app.privacy.delete-initial-delay-ms=1000"
     ) -WorkingDirectory $backendDir
     $backendStartedByThisRun = $true
 
@@ -732,6 +735,86 @@ FROM points_product WHERE id=$productId;
         )) -WorkingDirectory $repoRoot)
         if ($integrity.Count -ne 1 -or $integrity[0] -ne "1`t0`t0`t0`t0`t0") {
             throw "Blocked cross-region rewards and exchange must preserve stock, balances and records; got: $integrity"
+        }
+
+        Write-Step "smoking account-wide privacy export and consecutive account deletion on MySQL"
+        $otherAccount = "privacy-mysql-" + [guid]::NewGuid().ToString("N") + "@example.invalid"
+        $otherHeaders = @{ "X-Region" = "EU" }
+        Invoke-Json -Method "POST" -Path "/api/c/v1/auth/send-code" -Headers $otherHeaders -Body @{
+            scene = "register"; type = "email"; account = $otherAccount; deviceId = $otherAccount
+        } | Out-Null
+        $otherUser = Invoke-Json -Method "POST" -Path "/api/c/v1/auth/register" -Headers $otherHeaders -Body @{
+            type = "email"; account = $otherAccount; code = "123456"; password = "Passw0rd!"; preferredRegion = "EU"
+        }
+        $otherId = [long]$otherUser.data.user.id
+        $privacyFixtureSql = @"
+INSERT INTO invoice_title(user_id,region,title_type,name,tax_no,email)
+VALUES($userId,'CN',1,'Synthetic privacy person','SYNTHETIC-TAX','privacy-owner@example.invalid'),
+      ($userId,'EU',1,'Synthetic privacy person','SYNTHETIC-TAX','privacy-owner@example.invalid'),
+      ($otherId,'EU',1,'Other privacy person','OTHER-TAX','privacy-other@example.invalid');
+INSERT INTO consult_session(region,user_id,shop_id,merchant_id,last_message)
+VALUES('EU',$userId,20001,2001,'privacy-owner@example.invalid'),('EU',$otherId,20001,2001,'privacy-other@example.invalid');
+INSERT INTO consult_message(session_id,region,sender_type,sender_id,content)
+SELECT id,region,1,user_id,last_message FROM consult_session WHERE user_id IN($userId,$otherId);
+INSERT INTO support_ticket(region,requester_type,requester_id,subject,content)
+VALUES('EU',1,$userId,'Synthetic privacy ticket','privacy-owner@example.invalid'),
+      ('EU',2,$userId,'Same-number merchant fixture','privacy-merchant@example.invalid');
+INSERT INTO ticket_message(ticket_id,sender_type,sender_id,content)
+SELECT id,requester_type,requester_id,content FROM support_ticket WHERE requester_id=$userId;
+INSERT INTO creator_task_claim(task_id,user_id,region,status) VALUES(9102,$userId,'EU',2),(9102,$otherId,'EU',2);
+INSERT INTO user_behavior_event(user_id,region,event_type,keyword) VALUES($userId,'EU',4,'privacy-owner@example.invalid');
+"@
+        Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName", "-e", $privacyFixtureSql
+        )) -WorkingDirectory $repoRoot | Out-Null
+        $privacyHeaders = @{ "X-Region" = "EU"; Authorization = "Bearer $($user.data.accessToken)"; "Idempotency-Key" = "privacy-" + [guid]::NewGuid().ToString("N") }
+        $export = Invoke-Json -Method "POST" -Path "/api/c/v1/privacy/export-tasks" -Headers $privacyHeaders -Body @{ modules = @(); format = "zip" }
+        if ($export.data.status -ne 2 -or $export.data.modules.Count -ne 24) { throw "MySQL privacy export must contain all 24 supported modules" }
+        $archivePath = Join-Path $runDir "privacy-export.zip"
+        Invoke-WebRequest -Uri "$baseUrl$($export.data.downloadUrl)" -Headers $privacyHeaders -OutFile $archivePath -TimeoutSec 10 | Out-Null
+        $archive = [System.IO.Compression.ZipFile]::OpenRead($archivePath)
+        try {
+            $reader = [System.IO.StreamReader]::new($archive.Entries[0].Open())
+            try { $privacyText = $reader.ReadToEnd() } finally { $reader.Dispose() }
+            $payload = $privacyText | ConvertFrom-Json
+            if ($payload.modules.invoices.titles.Count -ne 2 -or $payload.modules.tickets.tickets.Count -ne 1 -or $payload.modules.consult.sessions.Count -ne 1) {
+                throw "MySQL privacy export must include both regions and scope owned user conversations by role"
+            }
+            if ($privacyText.Contains('privacy-other@example.invalid') -or $privacyText.Contains('privacy-merchant@example.invalid') -or $privacyText.Contains('passwordHash') -or $privacyText.Contains('refreshTokenHash') -or $privacyText.Contains('clientSecret')) {
+                throw "MySQL privacy archive included foreign account data or credentials"
+            }
+        } finally { $archive.Dispose() }
+        $dueSql = @"
+INSERT INTO privacy_delete_task(user_id,verify_type,account_snapshot,reason,status,cooling_off_expire_at,completed_at)
+VALUES($userId,'password','privacy-owner@example.invalid','Synthetic smoke',1,DATE_SUB(CURRENT_TIMESTAMP,INTERVAL 1 DAY),NULL),
+      ($otherId,'password','privacy-other@example.invalid','Synthetic historical smoke',3,DATE_SUB(CURRENT_TIMESTAMP,INTERVAL 2 DAY),DATE_SUB(CURRENT_TIMESTAMP,INTERVAL 1 DAY));
+UPDATE app_user SET is_deleted=TRUE,status=2,email=NULL,phone=NULL,password_hash=NULL,nickname='已注销用户1234' WHERE id=$otherId;
+"@
+        Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @("--database=$DbName", "-e", $dueSql)) -WorkingDirectory $repoRoot | Out-Null
+        $privacyDone = $false
+        for ($attempt = 0; $attempt -lt 30; $attempt++) {
+            $completed = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+                "--database=$DbName", "--batch", "--skip-column-names", "-e", "SELECT COUNT(*) FROM privacy_delete_task WHERE user_id IN($userId,$otherId) AND status=3 AND domain_cleanup_version=1;"
+            )) -WorkingDirectory $repoRoot)
+            if ($completed -contains "2") { $privacyDone = $true; break }
+            Start-Sleep -Milliseconds 500
+        }
+        if (-not $privacyDone) { throw "MySQL consecutive privacy deletions did not complete; inspect backend logs" }
+        $privacyIntegritySql = @"
+SELECT
+ (SELECT COUNT(*) FROM invoice_title WHERE user_id=0 AND email='' AND tax_no='' AND name='已注销用户'),
+ (SELECT COUNT(*) FROM consult_session WHERE shop_id=20001 AND user_id IS NULL),
+ (SELECT COUNT(*) FROM creator_task_claim WHERE task_id=9102 AND user_id IS NULL AND status=2),
+ (SELECT COUNT(*) FROM support_ticket WHERE requester_type=2 AND requester_id=$userId AND content='privacy-merchant@example.invalid'),
+ (SELECT COUNT(*) FROM user_behavior_event WHERE user_id=$userId),
+ (SELECT COUNT(*) FROM privacy_delete_task WHERE user_id IN($userId,$otherId) AND account_snapshot='' AND reason='' AND domain_cleanup_version=1),
+ (SELECT COUNT(*) FROM privacy_export_task WHERE id=$($export.data.id) AND status=5);
+"@
+        $privacyIntegrity = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName", "--batch", "--skip-column-names", "-e", $privacyIntegritySql
+        )) -WorkingDirectory $repoRoot)
+        if ($privacyIntegrity.Count -ne 1 -or $privacyIntegrity[0] -ne "3`t2`t2`t1`t0`t2`t1") {
+            throw "MySQL privacy cleanup lost isolation or left private records: $privacyIntegrity"
         }
 
         $auditHeaders = @{

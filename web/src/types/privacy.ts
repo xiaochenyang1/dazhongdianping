@@ -14,6 +14,17 @@ export type PrivacyExportModule =
   | 'topics'
   | 'check_ins'
   | 'points_exchanges'
+  | 'invoices'
+  | 'tickets'
+  | 'consult'
+  | 'waitlist'
+  | 'translations'
+  | 'marketing_coupons'
+  | 'complaints'
+  | 'questions'
+  | 'dish_reviews'
+  | 'activities'
+  | 'behavior'
 
 export interface PrivacyExportRule {
   dailyLimit: number

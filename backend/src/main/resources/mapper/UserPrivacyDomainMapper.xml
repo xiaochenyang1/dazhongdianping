@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.auth.mapper.UserPrivacyDomainMapper">
+    <resultMap id="privacyRecord" type="java.util.LinkedHashMap" autoMapping="true">
+        <result column="acceptedAt" property="acceptedAt"/>
+        <result column="actionType" property="actionType"/>
+        <result column="actorType" property="actorType"/>
+        <result column="answerCount" property="answerCount"/>
+        <result column="appVersion" property="appVersion"/>
+        <result column="auditReason" property="auditReason"/>
+        <result column="auditedAt" property="auditedAt"/>
+        <result column="bizId" property="bizId"/>
+        <result column="blockedUserId" property="blockedUserId"/>
+        <result column="calledAt" property="calledAt"/>
+        <result column="campaignId" property="campaignId"/>
+        <result column="categoryId" property="categoryId"/>
+        <result column="channelStatus" property="channelStatus"/>
+        <result column="completedAt" property="completedAt"/>
+        <result column="createdAt" property="createdAt"/>
+        <result column="deleted" property="deleted"/>
+        <result column="deviceUid" property="deviceUid"/>
+        <result column="discountAmount" property="discountAmount"/>
+        <result column="dishId" property="dishId"/>
+        <result column="disposeStatus" property="disposeStatus"/>
+        <result column="effectiveEndAt" property="effectiveEndAt"/>
+        <result column="effectiveStartAt" property="effectiveStartAt"/>
+        <result column="eventId" property="eventId"/>
+        <result column="eventType" property="eventType"/>
+        <result column="experimentId" property="experimentId"/>
+        <result column="expireAt" property="expireAt"/>
+        <result column="expiresAt" property="expiresAt"/>
+        <result column="fromStatus" property="fromStatus"/>
+        <result column="invoiceNo" property="invoiceNo"/>
+        <result column="isDefault" property="isDefault"/>
+        <result column="lastActiveAt" property="lastActiveAt"/>
+        <result column="lastMessage" property="lastMessage"/>
+        <result column="lastMessageAt" property="lastMessageAt"/>
+        <result column="leader" property="leader"/>
+        <result column="memberCount" property="memberCount"/>
+        <result column="merchantRepliedAt" property="merchantRepliedAt"/>
+        <result column="merchantReply" property="merchantReply"/>
+        <result column="newReserveTime" property="newReserveTime"/>
+        <result column="oldReserveTime" property="oldReserveTime"/>
+        <result column="operatorType" property="operatorType"/>
+        <result column="orderId" property="orderId"/>
+        <result column="partySize" property="partySize"/>
+        <result column="policyType" property="policyType"/>
+        <result column="postId" property="postId"/>
+        <result column="questionId" property="questionId"/>
+        <result column="queueNo" property="queueNo"/>
+        <result column="recordType" property="recordType"/>
+        <result column="rejectReason" property="rejectReason"/>
+        <result column="reservationId" property="reservationId"/>
+        <result column="resolvedAt" property="resolvedAt"/>
+        <result column="reviewId" property="reviewId"/>
+        <result column="rewardPoints" property="rewardPoints"/>
+        <result column="seatedAt" property="seatedAt"/>
+        <result column="senderType" property="senderType"/>
+        <result column="sessionId" property="sessionId"/>
+        <result column="shopId" property="shopId"/>
+        <result column="submittedAt" property="submittedAt"/>
+        <result column="tableType" property="tableType"/>
+        <result column="targetId" property="targetId"/>
+        <result column="targetLang" property="targetLang"/>
+        <result column="targetType" property="targetType"/>
+        <result column="taskId" property="taskId"/>
+        <result column="taxAmount" property="taxAmount"/>
+        <result column="taxNo" property="taxNo"/>
+        <result column="teamId" property="teamId"/>
+        <result column="templateId" property="templateId"/>
+        <result column="thresholdAmount" property="thresholdAmount"/>
+        <result column="ticketId" property="ticketId"/>
+        <result column="ticketNo" property="ticketNo"/>
+        <result column="titleId" property="titleId"/>
+        <result column="titleType" property="titleType"/>
+        <result column="toStatus" property="toStatus"/>
+        <result column="updatedAt" property="updatedAt"/>
+        <result column="usedAt" property="usedAt"/>
+        <result column="usedOrderId" property="usedOrderId"/>
+        <result column="userUnread" property="userUnread"/>
+        <result column="verifyAt" property="verifyAt"/>
+    </resultMap>
+    <!-- Every export is an explicit projection scoped to this account across CN/EU. Never select credentials or raw provider responses. -->
+    <select id="selectInvoiceTitles" resultMap="privacyRecord">
+        SELECT id,region,title_type AS `titleType`,name,tax_no AS `taxNo`,email,is_default AS `isDefault`,
+               created_at AS `createdAt`,updated_at AS `updatedAt`
+        FROM invoice_title WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectInvoices" resultMap="privacyRecord">
+        SELECT id,region,order_id AS `orderId`,title_id AS `titleId`,amount,tax_amount AS `taxAmount`,currency,status,
+               invoice_no AS `invoiceNo`,reject_reason AS `rejectReason`,created_at AS `createdAt`,updated_at AS `updatedAt`
+        FROM invoice_request WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectTickets" resultMap="privacyRecord">
+        SELECT id,region,shop_id AS `shopId`,subject,content,status,created_at AS `createdAt`,updated_at AS `updatedAt`
+        FROM support_ticket WHERE requester_type=1 AND requester_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectTicketMessages" resultMap="privacyRecord">
+        SELECT m.id,t.region,m.ticket_id AS `ticketId`,m.sender_type AS `senderType`,m.content,m.created_at AS `createdAt`
+        FROM ticket_message m JOIN support_ticket t ON t.id=m.ticket_id
+        WHERE t.requester_type=1 AND t.requester_id=#{userId} ORDER BY m.id
+    </select>
+    <select id="selectConsultSessions" resultMap="privacyRecord">
+        SELECT id,region,shop_id AS `shopId`,last_message AS `lastMessage`,last_message_at AS `lastMessageAt`,
+               user_unread AS `userUnread`,created_at AS `createdAt`,updated_at AS `updatedAt`
+        FROM consult_session WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectConsultMessages" resultMap="privacyRecord">
+        SELECT m.id,m.region,m.session_id AS `sessionId`,m.sender_type AS `senderType`,m.content,m.created_at AS `createdAt`
+        FROM consult_message m JOIN consult_session s ON s.id=m.session_id AND s.region=m.region
+        WHERE s.user_id=#{userId} ORDER BY m.id
+    </select>
+    <select id="selectWaitlist" resultMap="privacyRecord">
+        SELECT id,region,shop_id AS `shopId`,table_type AS `tableType`,party_size AS `partySize`,queue_no AS `queueNo`,
+               status,called_at AS `calledAt`,seated_at AS `seatedAt`,created_at AS `createdAt`,updated_at AS `updatedAt`
+        FROM waitlist_entry WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectTranslations" resultMap="privacyRecord">
+        SELECT id,region,review_id AS `reviewId`,target_lang AS `targetLang`,content,created_at AS `createdAt`,updated_at AS `updatedAt`
+        FROM review_translation WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectMarketingCoupons" resultMap="privacyRecord">
+        SELECT id,template_id AS `templateId`,region,type,threshold_amount AS `thresholdAmount`,discount_amount AS `discountAmount`,
+               currency,shop_id AS `shopId`,status,used_order_id AS `usedOrderId`,used_at AS `usedAt`,expire_at AS `expireAt`,created_at AS `createdAt`
+        FROM user_coupon WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectComplaints" resultMap="privacyRecord">
+        SELECT id,region,ticket_no AS `ticketNo`,shop_id AS `shopId`,order_id AS `orderId`,type,title,content,status,
+               merchant_reply AS `merchantReply`,merchant_replied_at AS `merchantRepliedAt`,resolution,
+               resolved_at AS `resolvedAt`,created_at AS `createdAt`,updated_at AS `updatedAt`
+        FROM complaint_ticket WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectComplaintLogs" resultMap="privacyRecord">
+        SELECT l.id,t.region,l.ticket_id AS `ticketId`,l.actor_type AS `actorType`,l.action,l.remark,l.created_at AS `createdAt`
+        FROM complaint_log l JOIN complaint_ticket t ON t.id=l.ticket_id WHERE t.user_id=#{userId} ORDER BY l.id
+    </select>
+    <select id="selectQuestions" resultMap="privacyRecord">
+        SELECT id,region,shop_id AS `shopId`,content,answer_count AS `answerCount`,status,is_deleted AS `deleted`,created_at AS `createdAt`
+        FROM shop_question WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectAnswers" resultMap="privacyRecord">
+        SELECT id,region,question_id AS `questionId`,content,status,is_deleted AS `deleted`,created_at AS `createdAt`
+        FROM shop_answer WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectDishReviews" resultMap="privacyRecord">
+        SELECT id,region,shop_id AS `shopId`,dish_id AS `dishId`,score,content,is_deleted AS `deleted`,created_at AS `createdAt`
+        FROM dish_review WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectCreatorClaims" resultMap="privacyRecord">
+        SELECT c.id,c.region,c.task_id AS `taskId`,t.title,t.reward_points AS `rewardPoints`,c.status,
+               c.created_at AS `createdAt`,c.completed_at AS `completedAt`
+        FROM creator_task_claim c LEFT JOIN creator_task t ON t.id=c.task_id AND t.region=c.region
+        WHERE c.user_id=#{userId} ORDER BY c.id
+    </select>
+    <select id="selectSeckillClaims" resultMap="privacyRecord">
+        SELECT c.id,c.region,c.event_id AS `eventId`,e.title,c.created_at AS `createdAt`
+        FROM seckill_claim c LEFT JOIN seckill_event e ON e.id=c.event_id AND e.region=c.region
+        WHERE c.user_id=#{userId} ORDER BY c.id
+    </select>
+    <select id="selectGroupbuyMemberships" resultMap="privacyRecord">
+        SELECT m.id,t.region,m.team_id AS `teamId`,t.campaign_id AS `campaignId`,t.status,t.member_count AS `memberCount`,
+               CASE WHEN t.leader_user_id=#{userId} THEN TRUE ELSE FALSE END AS `leader`,t.expire_at AS `expireAt`,m.created_at AS `createdAt`
+        FROM groupbuy_member m JOIN groupbuy_team t ON t.id=m.team_id WHERE m.user_id=#{userId} ORDER BY m.id
+    </select>
+    <select id="selectExperimentAssignments" resultMap="privacyRecord">
+        SELECT a.id,e.region,a.experiment_id AS `experimentId`,e.name,a.variant,a.created_at AS `createdAt`
+        FROM experiment_assignment a JOIN experiment e ON e.id=a.experiment_id WHERE a.user_id=#{userId} ORDER BY a.id
+    </select>
+    <select id="selectBehaviorEvents" resultMap="privacyRecord">
+        SELECT id,region,event_type AS `eventType`,shop_id AS `shopId`,category_id AS `categoryId`,keyword,weight,created_at AS `createdAt`
+        FROM user_behavior_event WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectPolicyLogs" resultMap="privacyRecord">
+        SELECT id,policy_type AS `policyType`,version,locale,source,accepted_at AS `acceptedAt`
+        FROM user_policy_accept_log WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectDevices" resultMap="privacyRecord">
+        SELECT id,device_uid AS `deviceUid`,platform,app_version AS `appVersion`,status,last_active_at AS `lastActiveAt`,created_at AS `createdAt`
+        FROM user_device WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectSessions" resultMap="privacyRecord">
+        SELECT id,status,refresh_expire_at AS `expiresAt`,created_at AS `createdAt`,updated_at AS `updatedAt`
+        FROM user_session WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectCertifications" resultMap="privacyRecord">
+        SELECT id,region,reason,status,reject_reason AS `rejectReason`,submitted_at AS `submittedAt`,audited_at AS `auditedAt`,
+               effective_start_at AS `effectiveStartAt`,effective_end_at AS `effectiveEndAt`,created_at AS `createdAt`
+        FROM user_expert_certification WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectAppeals" resultMap="privacyRecord">
+        SELECT id,region,account,reason,status,reject_reason AS `rejectReason`,audited_at AS `auditedAt`,created_at AS `createdAt`
+        FROM user_ban_appeal WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectRiskEvents" resultMap="privacyRecord">
+        SELECT id,region,scene,biz_id AS `bizId`,decision,dispose_status AS `disposeStatus`,created_at AS `createdAt`
+        FROM risk_event WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectReviewInteractions" resultMap="privacyRecord">
+        SELECT id,'comment' AS `recordType`,review_id AS `reviewId`,content,status,created_at AS `createdAt`
+        FROM review_comment WHERE user_id=#{userId}
+        UNION ALL
+        SELECT id,'like',review_id,'',NULL,created_at FROM review_like WHERE user_id=#{userId}
+        UNION ALL
+        SELECT id,'helpful_vote',review_id,'',NULL,created_at FROM review_helpful_vote WHERE user_id=#{userId}
+        UNION ALL
+        SELECT id,'report',review_id,reason,status,created_at FROM review_report WHERE reporter_user_id=#{userId}
+        UNION ALL
+        SELECT id,'comment_report',review_id,reason,status,created_at FROM review_comment_report WHERE reporter_user_id=#{userId}
+    </select>
+    <select id="selectPostInteractions" resultMap="privacyRecord">
+        SELECT id,'comment' AS `recordType`,post_id AS `postId`,content,status,created_at AS `createdAt`
+        FROM post_comment WHERE user_id=#{userId}
+        UNION ALL
+        SELECT id,'like',post_id,'',NULL,created_at FROM post_like WHERE user_id=#{userId}
+        UNION ALL
+        SELECT id,'report',post_id,reason,status,created_at FROM post_report WHERE reporter_user_id=#{userId}
+        UNION ALL
+        SELECT id,'comment_report',post_id,reason,status,created_at FROM post_comment_report WHERE reporter_user_id=#{userId}
+    </select>
+    <select id="selectMessageReports" resultMap="privacyRecord">
+        SELECT id,target_type AS `targetType`,target_id AS `targetId`,reason,status,created_at AS `createdAt`
+        FROM message_report WHERE reporter_user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectMessageBlocks" resultMap="privacyRecord">
+        SELECT id,blocked_user_id AS `blockedUserId`,created_at AS `createdAt`
+        FROM user_block WHERE user_id=#{userId} ORDER BY id
+    </select>
+    <select id="selectPayments" resultMap="privacyRecord">
+        SELECT p.id,p.order_id AS `orderId`,p.channel,p.amount,p.currency,p.status,p.created_at AS `createdAt`,p.updated_at AS `updatedAt`
+        FROM payment p JOIN `order` o ON o.id=p.order_id WHERE o.user_id=#{userId} ORDER BY p.id
+    </select>
+    <select id="selectRefunds" resultMap="privacyRecord">
+        SELECT r.id,r.order_id AS `orderId`,r.amount,r.reason,r.status,r.audit_reason AS `auditReason`,r.channel,
+               r.channel_status AS `channelStatus`,r.audited_at AS `auditedAt`,r.created_at AS `createdAt`,r.updated_at AS `updatedAt`
+        FROM refund r JOIN `order` o ON o.id=r.order_id WHERE o.user_id=#{userId} ORDER BY r.id
+    </select>
+    <select id="selectCoupons" resultMap="privacyRecord">
+        SELECT c.id,c.order_id AS `orderId`,c.code,c.status,c.expire_at AS `expireAt`,c.verify_at AS `verifyAt`,c.created_at AS `createdAt`
+        FROM coupon c JOIN `order` o ON o.id=c.order_id WHERE o.user_id=#{userId} AND c.user_id=#{userId} ORDER BY c.id
+    </select>
+    <select id="selectReservationLogs" resultMap="privacyRecord">
+        SELECT l.id,l.reservation_id AS `reservationId`,l.action_type AS `actionType`,l.operator_type AS `operatorType`,
+               l.from_status AS `fromStatus`,l.to_status AS `toStatus`,l.old_reserve_time AS `oldReserveTime`,
+               l.new_reserve_time AS `newReserveTime`,l.remark,l.created_at AS `createdAt`
+        FROM reservation_change_log l JOIN reservation r ON r.id=l.reservation_id WHERE r.user_id=#{userId} ORDER BY l.id
+    </select>
+
+    <update id="anonymizeInvoiceTitles">
+        UPDATE invoice_title SET user_id=0,name='已注销用户',tax_no='',email='',is_default=FALSE,updated_at=CURRENT_TIMESTAMP
+        WHERE user_id=#{userId}
+    </update>
+    <update id="anonymizeInvoices">
+        UPDATE invoice_request SET reject_reason='',updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}
+    </update>
+    <update id="anonymizeTicketMessages">
+        UPDATE ticket_message SET sender_id=CASE WHEN sender_type=1 AND sender_id=#{userId} THEN 0 ELSE sender_id END,
+               content='内容已因账号注销移除'
+        WHERE (sender_type=1 AND sender_id=#{userId})
+           OR ticket_id IN (SELECT id FROM support_ticket WHERE requester_type=1 AND requester_id=#{userId})
+    </update>
+    <update id="anonymizeTickets">
+        UPDATE support_ticket SET requester_id=0,subject='已注销用户的工单',content='内容已因账号注销移除',updated_at=CURRENT_TIMESTAMP
+        WHERE requester_type=1 AND requester_id=#{userId}
+    </update>
+    <update id="anonymizeConsultMessages">
+        UPDATE consult_message SET sender_id=CASE WHEN sender_type=1 AND sender_id=#{userId} THEN 0 ELSE sender_id END,
+               content='内容已因账号注销移除'
+        WHERE (sender_type=1 AND sender_id=#{userId}) OR session_id IN (SELECT id FROM consult_session WHERE user_id=#{userId})
+    </update>
+    <update id="anonymizeConsultSessions">
+        UPDATE consult_session SET user_id=NULL,last_message='',user_unread=0,merchant_unread=0,updated_at=CURRENT_TIMESTAMP
+        WHERE user_id=#{userId}
+    </update>
+    <update id="anonymizeComplaintLogs">
+        UPDATE complaint_log SET actor_id=CASE WHEN actor_type=1 AND actor_id=#{userId} THEN 0 ELSE actor_id END,remark=''
+        WHERE (actor_type=1 AND actor_id=#{userId}) OR ticket_id IN (SELECT id FROM complaint_ticket WHERE user_id=#{userId})
+    </update>
+    <update id="anonymizeComplaints">
+        UPDATE complaint_ticket SET user_id=0,title='已注销用户的投诉',content='内容已因账号注销移除',merchant_reply='',resolution='',updated_at=CURRENT_TIMESTAMP
+        WHERE user_id=#{userId}
+    </update>
+    <update id="anonymizeWaitlist">
+        UPDATE waitlist_entry SET user_id=0,status=CASE WHEN status IN(1,2) THEN 5 ELSE status END,updated_at=CURRENT_TIMESTAMP
+        WHERE user_id=#{userId}
+    </update>
+    <delete id="deleteTranslations">DELETE FROM review_translation WHERE user_id=#{userId}</delete>
+    <update id="anonymizeQuestions">UPDATE shop_question SET user_id=0 WHERE user_id=#{userId}</update>
+    <update id="anonymizeAnswers">UPDATE shop_answer SET user_id=0 WHERE user_id=#{userId}</update>
+    <update id="anonymizeDishReviews">UPDATE dish_review SET user_id=0 WHERE user_id=#{userId}</update>
+    <delete id="deleteBehaviorEvents">DELETE FROM user_behavior_event WHERE user_id=#{userId}</delete>
+    <delete id="deleteExperimentAssignments">DELETE FROM experiment_assignment WHERE user_id=#{userId}</delete>
+    <delete id="deletePendingCreatorClaims">DELETE FROM creator_task_claim WHERE user_id=#{userId} AND status=1</delete>
+    <update id="anonymizeCreatorClaims">UPDATE creator_task_claim SET user_id=NULL WHERE user_id=#{userId}</update>
+    <update id="anonymizeRiskEvents">
+        UPDATE risk_event SET user_id=NULL,device_fingerprint=NULL,ip=NULL,reason='',dispose_remark='',updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}
+    </update>
+    <select id="lockAffectedFingerprints" resultType="long">
+        SELECT d.id FROM device_fingerprint d WHERE d.last_user_id=#{userId}
+           OR EXISTS(SELECT 1 FROM device_fingerprint_user u WHERE u.region=d.region AND u.fingerprint=d.fingerprint AND u.user_id=#{userId})
+        ORDER BY d.id FOR UPDATE
+    </select>
+    <delete id="deleteFingerprintUsers">DELETE FROM device_fingerprint_user WHERE user_id=#{userId}</delete>
+    <update id="refreshFingerprint">
+        UPDATE device_fingerprint d SET user_count=(SELECT COUNT(*) FROM device_fingerprint_user u WHERE u.region=d.region AND u.fingerprint=d.fingerprint),
+               last_user_id=CASE WHEN last_user_id=#{userId} THEN NULL ELSE last_user_id END WHERE d.id=#{id}
+    </update>
+    <delete id="deleteUnsharedFingerprint">DELETE FROM device_fingerprint WHERE id=#{id} AND user_count=0 AND last_user_id IS NULL</delete>
+    <select id="lockAffectedSeckillEvents" resultType="long">
+        SELECT e.id FROM seckill_event e WHERE EXISTS(SELECT 1 FROM seckill_claim c WHERE c.event_id=e.id AND c.user_id=#{userId}) ORDER BY e.id FOR UPDATE
+    </select>
+    <delete id="deleteSeckillClaims">DELETE FROM seckill_claim WHERE user_id=#{userId}</delete>
+    <update id="refreshSeckillSold">UPDATE seckill_event SET sold=(SELECT COUNT(*) FROM seckill_claim WHERE event_id=#{id}),updated_at=CURRENT_TIMESTAMP WHERE id=#{id}</update>
+    <select id="lockAffectedGroupbuyTeams" resultType="long">
+        SELECT t.id FROM groupbuy_team t WHERE t.leader_user_id=#{userId}
+           OR EXISTS(SELECT 1 FROM groupbuy_member m WHERE m.team_id=t.id AND m.user_id=#{userId}) ORDER BY t.id FOR UPDATE
+    </select>
+    <delete id="deleteGroupbuyMembers">DELETE FROM groupbuy_member WHERE user_id=#{userId}</delete>
+    <update id="refreshGroupbuyTeam">
+        UPDATE groupbuy_team SET
+               leader_user_id=CASE WHEN leader_user_id=#{userId} THEN COALESCE((SELECT MIN(user_id) FROM groupbuy_member WHERE team_id=#{id}),0) ELSE leader_user_id END,
+               member_count=(SELECT COUNT(*) FROM groupbuy_member WHERE team_id=#{id}),
+               status=CASE WHEN status=1 AND (expire_at &lt;= CURRENT_TIMESTAMP OR NOT EXISTS(SELECT 1 FROM groupbuy_member WHERE team_id=#{id})) THEN 3 ELSE status END,
+               updated_at=CURRENT_TIMESTAMP WHERE id=#{id}
+    </update>
+    <select id="lockAffectedReviews" resultType="long">
+        SELECT r.id FROM review r WHERE EXISTS(SELECT 1 FROM review_like l WHERE l.review_id=r.id AND l.user_id=#{userId})
+           OR EXISTS(SELECT 1 FROM review_helpful_vote v WHERE v.review_id=r.id AND v.user_id=#{userId}) ORDER BY r.id FOR UPDATE
+    </select>
+    <delete id="deleteReviewLikes">DELETE FROM review_like WHERE user_id=#{userId}</delete>
+    <delete id="deleteHelpfulVotes">DELETE FROM review_helpful_vote WHERE user_id=#{userId}</delete>
+    <update id="refreshReviewCounts">
+        UPDATE review SET like_count=(SELECT COUNT(*) FROM review_like WHERE review_id=#{id}),helpful_count=(SELECT COUNT(*) FROM review_helpful_vote WHERE review_id=#{id}),updated_at=CURRENT_TIMESTAMP WHERE id=#{id}
+    </update>
+    <select id="lockAffectedPosts" resultType="long">
+        SELECT p.id FROM post p WHERE EXISTS(SELECT 1 FROM post_like l WHERE l.post_id=p.id AND l.user_id=#{userId}) ORDER BY p.id FOR UPDATE
+    </select>
+    <delete id="deletePostLikes">DELETE FROM post_like WHERE user_id=#{userId}</delete>
+    <update id="refreshPostLikes">UPDATE post SET like_count=(SELECT COUNT(*) FROM post_like WHERE post_id=#{id}),updated_at=CURRENT_TIMESTAMP WHERE id=#{id}</update>
+    <delete id="deleteFavorites">DELETE FROM user_favorite WHERE user_id=#{userId}</delete>
+    <update id="anonymizeReviewCommentReports">UPDATE review_comment_report SET reporter_user_id=NULL,reporter_user_name='已注销用户',reason='',updated_at=CURRENT_TIMESTAMP WHERE reporter_user_id=#{userId}</update>
+    <update id="anonymizePostCommentReports">UPDATE post_comment_report SET reporter_user_id=NULL,reporter_user_name='已注销用户',reason='',updated_at=CURRENT_TIMESTAMP WHERE reporter_user_id=#{userId}</update>
+    <update id="anonymizeConversations">
+        UPDATE conversation SET user_a=CASE WHEN user_a=#{userId} THEN NULL ELSE user_a END,
+               user_b=CASE WHEN user_b=#{userId} THEN NULL ELSE user_b END,last_message_preview='',updated_at=CURRENT_TIMESTAMP
+        WHERE user_a=#{userId} OR user_b=#{userId}
+    </update>
+    <update id="anonymizeMessageReportTargets">
+        UPDATE message_report SET reason=''
+        WHERE reporter_user_id=#{userId}
+           OR (target_type=1 AND target_id IN(SELECT id FROM message WHERE from_user_id=#{userId} OR to_user_id=#{userId}))
+           OR (target_type=2 AND target_id IN(SELECT id FROM conversation WHERE user_a=#{userId} OR user_b=#{userId}))
+    </update>
+    <select id="lockReservationSlots" resultType="long">
+        SELECT s.id FROM reservation_slot s WHERE EXISTS(SELECT 1 FROM reservation r WHERE r.slot_id=s.id AND r.user_id=#{userId} AND r.status IN(0,1)) ORDER BY s.id FOR UPDATE
+    </select>
+    <update id="anonymizeReservationLogs">
+        UPDATE reservation_change_log SET operator_id=CASE WHEN operator_type=1 AND operator_id=#{userId} THEN 0 ELSE operator_id END,remark=''
+        WHERE (operator_type=1 AND operator_id=#{userId}) OR reservation_id IN(SELECT id FROM reservation WHERE user_id=#{userId})
+    </update>
+    <update id="anonymizeReservations">
+        UPDATE reservation SET user_id=0,contact_name='已注销用户',contact_phone='',remark='',
+               cancelled_at=CASE WHEN status IN(0,1) THEN CURRENT_TIMESTAMP ELSE cancelled_at END,
+               status=CASE WHEN status IN(0,1) THEN 3 ELSE status END,remind_status=3,updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}
+    </update>
+    <update id="refreshReservationCapacity">
+        UPDATE reservation_slot SET reserved_count=(SELECT COALESCE(SUM(people_count),0) FROM reservation WHERE slot_id=#{id} AND status IN(0,1)),updated_at=CURRENT_TIMESTAMP WHERE id=#{id}
+    </update>
+    <select id="lockPendingPointsProducts" resultType="long">
+        SELECT p.id FROM points_product p WHERE EXISTS(SELECT 1 FROM points_exchange e WHERE e.product_id=p.id AND e.user_id=#{userId} AND e.status=0) ORDER BY p.id FOR UPDATE
+    </select>
+    <update id="restorePendingPointsStock">
+        UPDATE points_product SET stock=stock+(SELECT COUNT(*) FROM points_exchange WHERE product_id=#{id} AND user_id=#{userId} AND status=0),
+               exchange_count=GREATEST(0,exchange_count-(SELECT COUNT(*) FROM points_exchange WHERE product_id=#{id} AND user_id=#{userId} AND status=0)),updated_at=CURRENT_TIMESTAMP WHERE id=#{id}
+    </update>
+    <update id="cancelPendingPointsExchanges">UPDATE points_exchange SET status=2,remark='',updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId} AND status=0</update>
+    <update id="minimizePointsExchanges">UPDATE points_exchange SET remark='',updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}</update>
+    <update id="minimizeMarketingCoupons">
+        UPDATE user_coupon SET status=CASE WHEN status=1 THEN 3 ELSE status END WHERE user_id=#{userId}
+    </update>
+    <update id="minimizePayments">
+        UPDATE payment SET client_secret='',raw_response=NULL,updated_at=CURRENT_TIMESTAMP
+        WHERE order_id IN(SELECT id FROM `order` WHERE user_id=#{userId})
+    </update>
+    <update id="minimizeRefunds">
+        UPDATE refund SET reason='',audit_reason='',channel_failure_reason='',updated_at=CURRENT_TIMESTAMP
+        WHERE order_id IN(SELECT id FROM `order` WHERE user_id=#{userId})
+    </update>
+    <update id="stopCouponReminders">UPDATE coupon SET remind_status=3 WHERE user_id=#{userId}</update>
+    <update id="minimizePolicyLogs">UPDATE user_policy_accept_log SET request_ip='',user_agent='' WHERE user_id=#{userId}</update>
+    <delete id="deleteCertifications">DELETE FROM user_expert_certification WHERE user_id=#{userId}</delete>
+    <update id="minimizeAppeals">UPDATE user_ban_appeal SET account='',reason='',reject_reason='',updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}</update>
+    <update id="minimizeAutomodHits">UPDATE automod_hit SET user_id=0,reason='' WHERE user_id=#{userId}</update>
+    <update id="minimizeAdClicks">UPDATE ad_click_log SET user_id=0 WHERE user_id=#{userId}</update>
+    <update id="minimizeAuditLogs">
+        UPDATE audit_log SET detail=''
+        WHERE target=CONCAT('app_user:',#{userId})
+           OR target IN(SELECT CONCAT('points_exchange:',id) FROM points_exchange WHERE user_id=#{userId})
+           OR target IN(SELECT CONCAT('user_ban_appeal:',id) FROM user_ban_appeal WHERE user_id=#{userId})
+           OR target IN(SELECT CONCAT('user_appeal:',id) FROM user_ban_appeal WHERE user_id=#{userId})
+    </update>
+    <delete id="deleteSessionCredentials">DELETE FROM user_session WHERE user_id=#{userId}</delete>
+    <update id="clearDeviceIdentifiers">
+        UPDATE user_device SET user_id=0,device_uid=NULL,push_channel=0,push_token='',status=2,updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}
+    </update>
+    <update id="minimizeDeleteTasks">UPDATE privacy_delete_task SET account_snapshot='',reason='',updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}</update>
+    <update id="revokeExportTasks">
+        UPDATE privacy_export_task SET status=5,fail_reason='',expire_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}
+    </update>
+</mapper>

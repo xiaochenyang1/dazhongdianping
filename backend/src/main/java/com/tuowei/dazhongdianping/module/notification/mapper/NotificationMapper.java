@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface NotificationMapper {
+    Long lockNonDeletedRecipient(@Param("userId") Long userId);
     long count(@Param("userId") Long userId, @Param("region") String region);
     List<NotificationRow> list(@Param("userId") Long userId, @Param("region") String region,
                                @Param("offset") int offset, @Param("pageSize") int pageSize);

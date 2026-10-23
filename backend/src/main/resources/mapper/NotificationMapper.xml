@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.tuowei.dazhongdianping.module.notification.mapper.NotificationMapper">
+  <select id="lockNonDeletedRecipient" resultType="long">SELECT id FROM app_user WHERE id=#{userId} AND is_deleted=FALSE FOR UPDATE</select>
   <resultMap id="NotificationMap" type="com.tuowei.dazhongdianping.module.notification.model.NotificationRow">
     <id column="id" property="id"/><result column="user_id" property="userId"/><result column="actor_user_id" property="actorUserId"/><result column="actor_name" property="actorName"/><result column="region" property="region"/>
     <result column="type" property="type"/><result column="title" property="title"/><result column="content" property="content"/>

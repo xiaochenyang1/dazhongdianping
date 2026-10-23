@@ -30,6 +30,7 @@ class TradeServiceFailClosedTest {
     private final PaymentChannelResolver resolver = mock(PaymentChannelResolver.class);
     private final TradeService service = new TradeService(
             mapper,
+            mock(com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper.class),
             mock(UserGrowthService.class),
             mock(CouponLifecycleService.class),
             mock(NotificationService.class),

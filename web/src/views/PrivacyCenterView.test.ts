@@ -162,6 +162,17 @@ describe('PrivacyCenterView', () => {
         'topics',
         'check_ins',
         'points_exchanges',
+        'invoices',
+        'tickets',
+        'consult',
+        'waitlist',
+        'translations',
+        'marketing_coupons',
+        'complaints',
+        'questions',
+        'dish_reviews',
+        'activities',
+        'behavior',
       ],
       format: 'zip',
     })
@@ -190,6 +201,33 @@ describe('PrivacyCenterView', () => {
     clickButton(host, '停用设备')
     await flushView()
     expect(privacyMocks.logoutUserDevice).toHaveBeenCalledWith(7)
+    app.unmount()
+  })
+
+  it('lets users select newer modules and refuses an empty selection', async () => {
+    const host = document.createElement('div')
+    const app = createApp(PrivacyCenterView)
+    app.mount(host)
+    await flushView()
+    const checkboxes = Array.from(host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
+    expect(checkboxes).toHaveLength(24)
+    for (const checkbox of checkboxes) {
+      checkbox.checked = false
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+    submitFormForButton(host, '创建导出任务')
+    await flushView()
+    expect(privacyMocks.createPrivacyExportTask).not.toHaveBeenCalled()
+    expect(host.textContent).toContain('至少选择一个导出模块')
+    for (const checkbox of checkboxes) {
+      if (checkbox.closest('label')?.textContent?.includes('发票数据')) {
+        checkbox.checked = true
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }))
+      }
+    }
+    submitFormForButton(host, '创建导出任务')
+    await flushView()
+    expect(privacyMocks.createPrivacyExportTask).toHaveBeenCalledWith({ modules: ['invoices'], format: 'zip' })
     app.unmount()
   })
 
@@ -296,6 +334,9 @@ describe('PrivacyCenterView', () => {
     expect(host.textContent).toContain('Privacy centre')
     expect(host.textContent).toContain('Account data')
     expect(host.textContent).toContain('Direct messages')
+    expect(host.textContent).toContain('Invoices')
+    expect(host.textContent).toContain('Merchant consultations')
+    expect(host.textContent).toContain('Activity participation')
     expect(host.textContent).toContain('Ready to download')
     expect(host.textContent).toContain('13/07/2026 08:00')
     expect(host.textContent).toContain('Active')

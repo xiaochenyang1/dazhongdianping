@@ -18,6 +18,17 @@ const zhModules: Record<PrivacyExportModule, ModuleText> = {
   topics: { label: '话题关系', description: '已关注的话题、关注时间和当前公开状态。' },
   check_ins: { label: '签到记录', description: '每日签到日期、连续天数和获得的成长值与积分。' },
   points_exchanges: { label: '积分兑换', description: '积分兑换单、消耗积分、发放状态和兑换码。' },
+  invoices: { label: '发票数据', description: '抬头、邮箱、开票申请和状态。' },
+  tickets: { label: '客服工单', description: '我提交的工单、沟通记录和处理状态。' },
+  consult: { label: '商家咨询', description: '与商家沟通的会话和消息。' },
+  waitlist: { label: '排队记录', description: '取号、同行人数、叫号和入座状态。' },
+  translations: { label: '点评翻译', description: '我请求的点评翻译、语言和内容。' },
+  marketing_coupons: { label: '优惠券数据', description: '领取的营销券、抵扣金额和使用状态。' },
+  complaints: { label: '投诉记录', description: '投诉内容、处理日志和解决结果。' },
+  questions: { label: '问答数据', description: '我发布的门店问题和回答。' },
+  dish_reviews: { label: '菜品点评', description: '我发布的菜品评分和点评。' },
+  activities: { label: '活动参与', description: '创作者任务、秒杀、拼团和实验分组记录。' },
+  behavior: { label: '行为记录', description: '用于推荐的浏览、收藏、下单和搜索记录。' },
 }
 
 const enModules: Record<PrivacyExportModule, ModuleText> = {
@@ -34,6 +45,17 @@ const enModules: Record<PrivacyExportModule, ModuleText> = {
   topics: { label: 'Followed topics', description: 'Followed topics, follow dates and current public status.' },
   check_ins: { label: 'Check-ins', description: 'Daily check-in dates, streaks and the growth and points earned.' },
   points_exchanges: { label: 'Points redemptions', description: 'Redemption orders, points spent, fulfilment status and redeem codes.' },
+  invoices: { label: 'Invoices', description: 'Invoice titles, email addresses, requests and status.' },
+  tickets: { label: 'Support tickets', description: 'Your support tickets, conversations and status.' },
+  consult: { label: 'Merchant consultations', description: 'Your conversations and messages with merchants.' },
+  waitlist: { label: 'Waitlist entries', description: 'Queue numbers, party size and seating status.' },
+  translations: { label: 'Review translations', description: 'Your requested review translations, languages and content.' },
+  marketing_coupons: { label: 'Discount coupons', description: 'Claimed discount coupons, amounts and usage status.' },
+  complaints: { label: 'Complaints', description: 'Your complaints, handling records and outcomes.' },
+  questions: { label: 'Questions and answers', description: 'Questions and answers you posted about places.' },
+  dish_reviews: { label: 'Dish reviews', description: 'Dish ratings and reviews you posted.' },
+  activities: { label: 'Activity participation', description: 'Creator tasks, flash offers, group purchases and experiment assignments.' },
+  behavior: { label: 'Activity history', description: 'Browsing, saves, orders and searches used for recommendations.' },
 }
 
 const zhCnStrings = {

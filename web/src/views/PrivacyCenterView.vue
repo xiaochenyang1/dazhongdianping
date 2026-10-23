@@ -61,6 +61,17 @@ const exportModules = reactive<Record<PrivacyExportModule, boolean>>({
   topics: true,
   check_ins: true,
   points_exchanges: true,
+  invoices: true,
+  tickets: true,
+  consult: true,
+  waitlist: true,
+  translations: true,
+  marketing_coupons: true,
+  complaints: true,
+  questions: true,
+  dish_reviews: true,
+  activities: true,
+  behavior: true,
 })
 
 const deleteForm = reactive({
