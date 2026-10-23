@@ -2,6 +2,55 @@ import 'dart:typed_data';
 
 import 'package:dazhongdianping_app/core/api_client.dart';
 
+class PostShopLink {
+  const PostShopLink({
+    required this.id,
+    required this.available,
+    required this.name,
+    this.coverUrl = '',
+  });
+  final int id;
+  final bool available;
+  final String name;
+  final String coverUrl;
+
+  factory PostShopLink.fromJson(Map<String, dynamic> json) => PostShopLink(
+    id: (json['id'] as num).toInt(),
+    available: json['available'] == true,
+    name: json['name'] as String? ?? '',
+    coverUrl: json['coverUrl'] as String? ?? '',
+  );
+}
+
+class PostDealLink {
+  const PostDealLink({
+    required this.id,
+    required this.available,
+    required this.title,
+    this.shopId,
+    this.coverImage = '',
+    this.price,
+    this.currency = '',
+  });
+  final int id;
+  final bool available;
+  final int? shopId;
+  final String title;
+  final String coverImage;
+  final num? price;
+  final String currency;
+
+  factory PostDealLink.fromJson(Map<String, dynamic> json) => PostDealLink(
+    id: (json['id'] as num).toInt(),
+    available: json['available'] == true,
+    shopId: (json['shopId'] as num?)?.toInt(),
+    title: json['title'] as String? ?? '',
+    coverImage: json['coverImage'] as String? ?? '',
+    price: json['price'] as num?,
+    currency: json['currency'] as String? ?? '',
+  );
+}
+
 class CommunityPost {
   const CommunityPost({
     required this.id,
@@ -23,6 +72,8 @@ class CommunityPost {
     this.shopId,
     this.dealId,
     this.circleId,
+    this.linkedShop,
+    this.linkedDeal,
   });
 
   final int id;
@@ -34,6 +85,8 @@ class CommunityPost {
   final int? shopId;
   final int? dealId;
   final int? circleId;
+  final PostShopLink? linkedShop;
+  final PostDealLink? linkedDeal;
   final int likeCount;
   final int commentCount;
   final int repostCount;
@@ -55,6 +108,12 @@ class CommunityPost {
     shopId: json['shopId'] as int?,
     dealId: json['dealId'] as int?,
     circleId: json['circleId'] as int?,
+    linkedShop: json['linkedShop'] is Map<String, dynamic>
+        ? PostShopLink.fromJson(json['linkedShop'] as Map<String, dynamic>)
+        : null,
+    linkedDeal: json['linkedDeal'] is Map<String, dynamic>
+        ? PostDealLink.fromJson(json['linkedDeal'] as Map<String, dynamic>)
+        : null,
     likeCount: json['likeCount'] as int? ?? 0,
     commentCount: json['commentCount'] as int? ?? 0,
     repostCount: json['repostCount'] as int? ?? 0,
@@ -82,6 +141,8 @@ class CommunityPost {
     shopId: shopId,
     dealId: dealId,
     circleId: circleId,
+    linkedShop: linkedShop,
+    linkedDeal: linkedDeal,
     likeCount: likeCount ?? this.likeCount,
     commentCount: commentCount ?? this.commentCount,
     repostCount: repostCount ?? this.repostCount,

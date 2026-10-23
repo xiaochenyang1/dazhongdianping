@@ -1073,6 +1073,18 @@ class AppLocalizations {
     'topicsCommaSeparated': '话题，用逗号分隔',
     'submitForAudit': '提交审核',
     'postDetail': '帖子详情',
+    'postRelatedContent': '文中提到的门店与团购',
+    'postLinkedShop': '关联门店',
+    'postLinkedDeal': '关联团购',
+    'postShopUnavailable': '该门店已下架或暂不可查看',
+    'postDealUnavailable': '该团购已下架或暂不可查看',
+    'postChooseShop': '选择关联门店',
+    'postChooseDeal': '选择关联团购',
+    'postChooseShopFirst': '先选择门店，再关联该门店的团购',
+    'postRemoveLink': '移除关联',
+    'postLinksLoadFailed': '加载失败，请重试',
+    'postNoMatchingShops': '没有找到匹配的门店',
+    'postLoadMoreShops': '加载更多门店',
     'postLoadFailed': '帖子加载失败：{error}',
     'reposted': '已转发',
     'unreposted': '已取消转发',
@@ -2183,6 +2195,18 @@ class AppLocalizations {
     'topicsCommaSeparated': '話題，用逗號分隔',
     'submitForAudit': '提交審核',
     'postDetail': '貼文詳情',
+    'postRelatedContent': '文中提到的店家與團購',
+    'postLinkedShop': '關聯店家',
+    'postLinkedDeal': '關聯團購',
+    'postShopUnavailable': '此店家已下架或暫時無法查看',
+    'postDealUnavailable': '此團購已下架或暫時無法查看',
+    'postChooseShop': '選擇關聯店家',
+    'postChooseDeal': '選擇關聯團購',
+    'postChooseShopFirst': '先選擇店家，再關聯該店家的團購',
+    'postRemoveLink': '移除關聯',
+    'postLinksLoadFailed': '載入失敗，請重試',
+    'postNoMatchingShops': '找不到符合的店家',
+    'postLoadMoreShops': '載入更多店家',
     'postLoadFailed': '貼文載入失敗：{error}',
     'reposted': '已轉發',
     'unreposted': '已取消轉發',
@@ -3430,6 +3454,18 @@ class AppLocalizations {
     'topicsCommaSeparated': 'Topics, comma separated',
     'submitForAudit': 'Submit for review',
     'postDetail': 'Post details',
+    'postRelatedContent': 'Places and deals in this post',
+    'postLinkedShop': 'Place',
+    'postLinkedDeal': 'Deal',
+    'postShopUnavailable': 'This place is no longer available',
+    'postDealUnavailable': 'This deal is no longer available',
+    'postChooseShop': 'Choose a place',
+    'postChooseDeal': 'Choose a deal',
+    'postChooseShopFirst': 'Choose a place before linking one of its deals',
+    'postRemoveLink': 'Remove link',
+    'postLinksLoadFailed': 'Could not load. Please try again.',
+    'postNoMatchingShops': 'No matching places',
+    'postLoadMoreShops': 'Load more places',
     'postLoadFailed': 'Could not load post: {error}',
     'reposted': 'Reposted',
     'unreposted': 'Repost removed',
@@ -5666,6 +5702,18 @@ class AppLocalizations {
   String get topicsCommaSeparated => _text('topicsCommaSeparated');
   String get submitForAudit => _text('submitForAudit');
   String get postDetail => _text('postDetail');
+  String get postRelatedContent => _text('postRelatedContent');
+  String get postLinkedShop => _text('postLinkedShop');
+  String get postLinkedDeal => _text('postLinkedDeal');
+  String get postShopUnavailable => _text('postShopUnavailable');
+  String get postDealUnavailable => _text('postDealUnavailable');
+  String get postChooseShop => _text('postChooseShop');
+  String get postChooseDeal => _text('postChooseDeal');
+  String get postChooseShopFirst => _text('postChooseShopFirst');
+  String get postRemoveLink => _text('postRemoveLink');
+  String get postLinksLoadFailed => _text('postLinksLoadFailed');
+  String get postNoMatchingShops => _text('postNoMatchingShops');
+  String get postLoadMoreShops => _text('postLoadMoreShops');
   String postLoadFailed(Object error) => _withError('postLoadFailed', error);
   String get reposted => _text('reposted');
   String get unreposted => _text('unreposted');

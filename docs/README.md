@@ -36,6 +36,7 @@
 - `/api/b/v1` 已完成 M5a/M5b1/M5b2/M5b3/M5b4 后端闭环：数据库商户账号、注册入驻、资质审核、员工 RBAC/门店范围、预订工作台、券核销、经营看板、团购提交审核/上下架、门店订单与整单退款审核、门店基础资料/相册/菜单完整草稿审核，以及点评列表、商家回复、点评申诉和管理端申诉审核均已落地。
 - M5 商户端已补齐：独立 `merchant-web`、管理端商户点评申诉专页、通知 REST + WebSocket 实时推送与断线补偿均已落地。
 - M7 本地达人认证已落地：`web` 资料页支持查询、提交和驳回后重提；管理端新增 `/audit/expert-certifications` 审核页；公开用户主页、点评和帖子作者在“已通过且有效”时显示 `local_expert / 本地达人` 标识。
+- 帖子关联已补齐：Flutter 可搜索并选择门店、选择所属团购、保留/移除关联；Web 与 Flutter 详情显示可跳转的关联卡片。服务端校验区域、公开状态和门店归属，失效关联只显示不可用提示；接口约定见 [接口设计](接口设计.md#91-内容帖子)。
 - 管理端审计日志查询已落地：后端新增 `GET /api/admin/v1/audit/logs`，支持按 `adminId/action/target/keyword` 分页筛选；`admin-web` 新增 `/system/audit-logs` 页面，权限码为 `system:audit_log:read`。
 - 管理端隐私任务查询已落地：后端新增 `GET /api/admin/v1/privacy/tasks`，统一分页查询 `privacy_export_task` 与 `privacy_delete_task`；`admin-web` 新增 `/system/privacy-tasks` 页面，权限码为 `system:privacy_task:read`。
 - 管理端订单/退款/对账已落地：`GET /api/admin/v1/orders` 查询、`POST /api/admin/v1/orders/:id/refund-audit` 平台仲裁、`POST /api/admin/v1/orders/reconcile` 与定时任务补偿超时未支付订单/失败支付流水；`admin-web` `/data/orders` 页面权限码为 `data:order:read/write`。

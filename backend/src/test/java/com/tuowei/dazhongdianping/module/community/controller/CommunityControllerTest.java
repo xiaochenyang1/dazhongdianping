@@ -19,6 +19,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+import org.mybatis.spring.SqlSessionTemplate;
 
 @Transactional
 @SpringBootTest
@@ -33,6 +34,9 @@ class CommunityControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private SqlSessionTemplate sqlSession;
 
     @Test
     void shouldKeepNewPostPrivateUntilAdminPassesAudit() throws Exception {
@@ -1131,6 +1135,126 @@ class CommunityControllerTest {
                 userId,
                 region,
                 "社区公开内容稳定，补一枚达人认证给展示层用。");
+    }
+
+    @Test
+    void shouldPreviewPublicShopAndDealOnlyAfterPostApproval() throws Exception {
+        String token = registerUser();
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content(linkedPayload(20001L, 41001L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.linkedShop.name").value("Maison Sichuan Paris"))
+                .andExpect(jsonPath("$.data.linkedDeal.available").value(true))
+                .andReturn();
+        long id = readLong(created, "/data/id");
+        mockMvc.perform(get("/api/c/v1/posts/{id}", id).header("X-Region", "EU"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/admin/v1/audit/tasks/{id}/pass", pendingTaskId(id))
+                        .header("Authorization", bearer(loginAdmin())).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/c/v1/posts/{id}", id).header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.linkedShop.id").value(20001))
+                .andExpect(jsonPath("$.data.linkedShop.available").value(true))
+                .andExpect(jsonPath("$.data.linkedDeal.id").value(41001))
+                .andExpect(jsonPath("$.data.linkedDeal.shopId").value(20001))
+                .andExpect(jsonPath("$.data.linkedDeal.title").value("Sichuan Dinner for Two"))
+                .andExpect(jsonPath("$.data.linkedDeal.currency").value("EUR"))
+                .andExpect(jsonPath("$.data.linkedDeal.price").value(32.00));
+        mockMvc.perform(get("/api/c/v1/posts/{id}", id).header("X-Region", "CN"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldRejectCrossRegionMissingAndMismatchedAssociationsWithoutSavingPost() throws Exception {
+        String token = registerUser();
+        Long[][] invalid = {{10001L, null}, {null, 40001L}, {20002L, 41001L}, {999999L, null}, {null, 999999L}, {0L, null}};
+        for (Long[] ids : invalid) {
+            mockMvc.perform(post("/api/c/v1/posts")
+                            .header("Authorization", bearer(token)).header("X-Region", "EU")
+                            .contentType(MediaType.APPLICATION_JSON).content(linkedPayload(ids[0], ids[1])))
+                    .andExpect(status().isBadRequest());
+        }
+        jdbcTemplate.update("UPDATE deal SET audit_status=0 WHERE id=41001");
+        sqlSession.clearCache();
+        mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content(linkedPayload(20001L, 41001L)))
+                .andExpect(status().isBadRequest());
+        jdbcTemplate.update("UPDATE shop SET status=0 WHERE id=20001");
+        sqlSession.clearCache();
+        mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content(linkedPayload(20001L, null)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/c/v1/user/posts").header("Authorization", bearer(token)).header("X-Region", "EU"))
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void shouldHideOfflineAssociationDetailsAndPreserveThemAcrossTextEdits() throws Exception {
+        String token = registerUser();
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content(linkedPayload(20001L, 41001L)))
+                .andExpect(status().isOk()).andReturn();
+        long id = readLong(created, "/data/id");
+        jdbcTemplate.update("UPDATE post SET audit_status=1 WHERE id=?", id);
+        jdbcTemplate.update("UPDATE shop SET is_deleted=TRUE WHERE id=20001");
+        sqlSession.clearCache();
+        mockMvc.perform(get("/api/c/v1/posts/{id}", id).header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.linkedShop.available").value(false))
+                .andExpect(jsonPath("$.data.linkedShop.name").value(""))
+                .andExpect(jsonPath("$.data.linkedShop.coverUrl").value(""))
+                .andExpect(jsonPath("$.data.linkedDeal.available").value(false))
+                .andExpect(jsonPath("$.data.linkedDeal.title").value(""))
+                .andExpect(jsonPath("$.data.linkedDeal.price").isEmpty());
+        mockMvc.perform(put("/api/c/v1/posts/{id}", id)
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content(linkedPayload(20001L, 41001L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.shopId").value(20001))
+                .andExpect(jsonPath("$.data.dealId").value(41001));
+        mockMvc.perform(put("/api/c/v1/posts/{id}", id)
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content(linkedPayload(null, null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.shopId").isEmpty())
+                .andExpect(jsonPath("$.data.linkedDeal").isEmpty());
+    }
+
+    @Test
+    void shouldMaskLegacyCrossRegionLinksAndRejectAnInvalidUpdate() throws Exception {
+        String token = registerUser();
+        MvcResult created = mockMvc.perform(post("/api/c/v1/posts")
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content(linkedPayload(20001L, 41001L)))
+                .andExpect(status().isOk()).andReturn();
+        long id = readLong(created, "/data/id");
+        mockMvc.perform(put("/api/c/v1/posts/{id}", id)
+                        .header("Authorization", bearer(token)).header("X-Region", "EU")
+                        .contentType(MediaType.APPLICATION_JSON).content(linkedPayload(10001L, 40001L)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/c/v1/user/posts/{id}", id)
+                        .header("Authorization", bearer(token)).header("X-Region", "EU"))
+                .andExpect(jsonPath("$.data.shopId").value(20001));
+        jdbcTemplate.update("UPDATE post SET shop_id=10001,deal_id=40001,audit_status=1 WHERE id=?", id);
+        sqlSession.clearCache();
+        mockMvc.perform(get("/api/c/v1/posts/{id}", id).header("X-Region", "EU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.linkedShop.available").value(false))
+                .andExpect(jsonPath("$.data.linkedShop.name").value(""))
+                .andExpect(jsonPath("$.data.linkedDeal.available").value(false))
+                .andExpect(jsonPath("$.data.linkedDeal.title").value(""));
+    }
+
+    private String linkedPayload(Long shopId, Long dealId) throws Exception {
+        return objectMapper.writeValueAsString(objectMapper.createObjectNode()
+                .put("title", "巴黎探店记录").put("content", "记录本次探店和门店套餐。")
+                .put("contentType", 1).put("shopId", shopId).put("dealId", dealId));
     }
 
     private String postPayload(String title, String content) {

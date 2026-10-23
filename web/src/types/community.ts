@@ -1,9 +1,18 @@
 import type { UserExpertCertificationBadge } from './auth'
 import type { PageResult } from './browse'
 
+export interface PostShopLink {
+  id: number; available: boolean; name: string; coverUrl: string
+}
+export interface PostDealLink {
+  id: number; available: boolean; shopId: number | null; title: string
+  coverImage: string; price: number | null; currency: string
+}
+
 export interface CommunityPost {
   id: number; userId: number; userName: string; title: string; content: string; contentType: number
   shopId?: number | null; dealId?: number | null; likeCount: number; commentCount: number
+  linkedShop?: PostShopLink | null; linkedDeal?: PostDealLink | null
   authorCertification?: UserExpertCertificationBadge | null
   images: string[]; topics: string[]; createdAt: string
 }

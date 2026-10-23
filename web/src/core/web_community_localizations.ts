@@ -18,6 +18,7 @@ export interface WebCommunityStrings {
     seoTitle: string; seoDescription: string; loadFailed: string; readOnly: string; commentsTitle: string
     likes: (count: number) => string; comments: (count: number) => string
     noComments: string; replyContext: (user: string, content: string) => string
+    related: string; linkedShop: string; linkedDeal: string; shopUnavailable: string; dealUnavailable: string
   }
   topics: {
     loadFailed: string; seoTitle: string; seoDescription: (hot: boolean) => string; schemaDescription: string
@@ -48,6 +49,8 @@ const zhCn: WebCommunityStrings = {
     counts: (members, posts) => `${members} 位成员 · ${posts} 篇帖子`, likes: (count) => `喜欢 ${count}`, comments: (count) => `评论 ${count}`,
   },
   post: {
+    related: '文中提到的门店与团购', linkedShop: '关联门店', linkedDeal: '关联团购',
+    shopUnavailable: '该门店已下架或暂不可查看', dealUnavailable: '该团购已下架或暂不可查看',
     auditApproved: '平台已通过你的帖子，现已公开展示。', auditRejected: '平台未通过你的帖子，可到 APP「我的帖子」查看驳回原因并修改重提。',
     share: '分享', shareReady: '分享链接已准备好', shareFailed: '分享失败，请稍后重试', seoTitle: '社区帖子', seoDescription: '阅读公开社区帖子与评论。', loadFailed: '帖子加载失败', readOnly: 'PC 端现在还是只读；想互动就去 APP，别在这儿硬抠按钮。', commentsTitle: '公开评论', likes: (count) => `喜欢 ${count}`, comments: (count) => `评论 ${count}`, noComments: '这条帖子下面还没人开口。', replyContext: (user, content) => `回复 ${user}：${content}`,
   },
@@ -71,6 +74,8 @@ const en: WebCommunityStrings = {
     counts: (members, posts) => `${members} ${members === 1 ? 'member' : 'members'} · ${posts} ${posts === 1 ? 'post' : 'posts'}`, likes: (count) => `${count} ${count === 1 ? 'like' : 'likes'}`, comments: (count) => `${count} ${count === 1 ? 'comment' : 'comments'}`,
   },
   post: {
+    related: 'Places and deals in this post', linkedShop: 'Place', linkedDeal: 'Deal',
+    shopUnavailable: 'This place is no longer available', dealUnavailable: 'This deal is no longer available',
     auditApproved: 'Your post was approved and is now public.', auditRejected: 'Your post was not approved. Open My posts in the app to see the reason and resubmit.',
     share: 'Share', shareReady: 'Share link is ready', shareFailed: 'Could not share this post. Please try again.', seoTitle: 'Community post', seoDescription: 'Read a public community post and its comments.', loadFailed: 'Could not load the post', readOnly: 'This web page is read-only. Use the app to interact with the community.', commentsTitle: 'Public comments', likes: (count) => `${count} ${count === 1 ? 'like' : 'likes'}`, comments: (count) => `${count} ${count === 1 ? 'comment' : 'comments'}`, noComments: 'No one has commented on this post yet.', replyContext: (user, content) => `Replying to ${user}: ${content}`,
   },

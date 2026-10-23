@@ -11,6 +11,8 @@ String localizeCommunityError(
     error,
     overrides: {
       '帖子不存在': strings.communityErrorPostNotFound,
+      '关联门店不存在或不可用': strings.postShopUnavailable,
+      '关联团购不存在、不可用或不属于所选门店': strings.postDealUnavailable,
       '你已经举报过这条帖子了': strings.communityErrorReportDuplicate,
       '评论不存在': strings.commentErrorUnavailable,
       '评论不存在或无权删除': strings.commentErrorUnavailable,

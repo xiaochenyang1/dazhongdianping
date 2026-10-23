@@ -4,6 +4,14 @@ import 'package:dazhongdianping_app/features/community/community_repository.dart
 import 'package:dazhongdianping_app/features/community/community_error_localizer.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
+import 'package:dazhongdianping_app/features/browse/browse_repository.dart';
+import 'package:dazhongdianping_app/features/browse/shop_detail_screen.dart';
+import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
+import 'package:dazhongdianping_app/features/trade/deal_detail_screen.dart';
+import 'package:dazhongdianping_app/features/reservation/reservation_repository.dart';
+import 'package:dazhongdianping_app/features/review/review_repository.dart';
+import 'package:dazhongdianping_app/features/qa/qa_repository.dart';
+import 'package:dazhongdianping_app/features/waitlist/waitlist_repository.dart';
 import 'package:flutter/material.dart';
 
 enum _PostCommentAction { delete, report }
@@ -44,6 +52,94 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _commentActionDialogOpen = false;
   final Set<int> _commentActionIds = <int>{};
   int _commentRequestId = 0;
+  bool _openingCommerceLink = false;
+
+  Future<void> _openCommerceLink(int id, {required bool shop}) async {
+    if (_openingCommerceLink) return;
+    setState(() => _openingCommerceLink = true);
+    final api = widget.repository.api;
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => shop
+              ? ShopDetailScreen(
+                  repository: ApiBrowseRepository(api),
+                  shopId: id,
+                  tradeRepository: TradeRepository(api),
+                  reservationRepository: ReservationRepository(api),
+                  reviewRepository: ReviewRepository(api),
+                  qaRepository: QaRepository(api),
+                  waitlistRepository: WaitlistRepository(api),
+                  enableFavorite: widget.canInteract,
+                  canInteractReviews: widget.canInteract,
+                )
+              : DealDetailScreen(repository: TradeRepository(api), dealId: id),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _openingCommerceLink = false);
+    }
+  }
+
+  Widget _commerceLinks(CommunityPost post) {
+    final strings = AppLocalizations.of(context);
+    final shop = post.linkedShop;
+    final deal = post.linkedDeal;
+    final shopAvailable =
+        shop != null && shop.available && shop.id == post.shopId;
+    final dealAvailable =
+        deal != null && deal.available && deal.id == post.dealId;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          strings.postRelatedContent,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        if (post.shopId != null)
+          Card(
+            child: ListTile(
+              key: const Key('post-shop-link'),
+              leading: const Icon(Icons.storefront_outlined),
+              title: Text(
+                shopAvailable ? shop.name : strings.postShopUnavailable,
+              ),
+              subtitle: shopAvailable ? Text(strings.postLinkedShop) : null,
+              trailing: shopAvailable ? const Icon(Icons.chevron_right) : null,
+              onTap: shopAvailable && !_openingCommerceLink
+                  ? () => _openCommerceLink(shop.id, shop: true)
+                  : null,
+            ),
+          ),
+        if (post.dealId != null)
+          Card(
+            child: ListTile(
+              key: const Key('post-deal-link'),
+              leading: const Icon(Icons.local_offer_outlined),
+              title: Text(
+                dealAvailable ? deal.title : strings.postDealUnavailable,
+              ),
+              subtitle: dealAvailable
+                  ? Text(
+                      deal.price == null
+                          ? strings.postLinkedDeal
+                          : formatMoney(
+                              deal.price!,
+                              deal.currency,
+                              locale: strings.tag,
+                            ),
+                    )
+                  : null,
+              trailing: dealAvailable ? const Icon(Icons.chevron_right) : null,
+              onTap: dealAvailable && !_openingCommerceLink
+                  ? () => _openCommerceLink(deal.id, shop: false)
+                  : null,
+            ),
+          ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
 
   @override
   void initState() {
@@ -644,6 +740,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               style: const TextStyle(fontSize: 17, height: 1.65),
             ),
             const SizedBox(height: 16),
+            if (post.shopId != null || post.dealId != null)
+              _commerceLinks(post),
             if (post.images.isNotEmpty) ...[
               SizedBox(
                 height: 220,
