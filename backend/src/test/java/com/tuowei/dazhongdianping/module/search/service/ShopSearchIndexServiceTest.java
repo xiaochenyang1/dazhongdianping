@@ -45,6 +45,7 @@ class ShopSearchIndexServiceTest {
         row.setTags("火锅,川味");
         when(mapper.selectActiveShops()).thenReturn(List.of(row));
         when(mapper.selectDishNames(10001L)).thenReturn(List.of("毛肚", "虾滑"));
+        when(mapper.selectDealTitles(10001L, "CN")).thenReturn(List.of("周末双人套餐"));
         ShopSearchIndexService service = new ShopSearchIndexService(
                 properties,
                 mapper,
@@ -60,6 +61,7 @@ class ShopSearchIndexServiceTest {
         assertThat(captor.getValue()).singleElement().satisfies(document -> {
             assertThat(document.getNamePinyin()).isEqualTo("yulihuoguoxuhuidian");
             assertThat(document.getDishNames()).containsExactly("毛肚", "虾滑");
+            assertThat(document.getDealTitles()).containsExactly("周末双人套餐");
             assertThat(document.getTags()).containsExactly("火锅", "川味");
             assertThat(document.getLatitude()).isEqualTo(31.195);
         });

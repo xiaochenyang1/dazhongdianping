@@ -14,6 +14,7 @@ import com.tuowei.dazhongdianping.module.merchant.trade.mapper.MerchantTradeMapp
 import com.tuowei.dazhongdianping.module.merchant.trade.model.request.MerchantDealSaveRequest;
 import com.tuowei.dazhongdianping.module.merchant.trade.model.request.MerchantRefundAuditRequest;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
+import com.tuowei.dazhongdianping.module.search.event.ShopSearchIndexChangedEvent;
 import com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper;
 import com.tuowei.dazhongdianping.module.trade.model.DealItemRow;
 import com.tuowei.dazhongdianping.module.trade.model.DealRow;
@@ -30,6 +31,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,19 +47,22 @@ public class MerchantTradeService {
     private final NotificationService notificationService;
     private final TradeMapper tradeMapper;
     private final PaymentChannelResolver channelResolver;
+    private final ApplicationEventPublisher eventPublisher;
 
     public MerchantTradeService(MerchantTradeMapper mapper,
                                 AdminAuditMapper adminAuditMapper,
                                 MerchantAuthorizationService authorizationService,
                                 NotificationService notificationService,
                                 TradeMapper tradeMapper,
-                                PaymentChannelResolver channelResolver) {
+                                PaymentChannelResolver channelResolver,
+                                ApplicationEventPublisher eventPublisher) {
         this.mapper = mapper;
         this.adminAuditMapper = adminAuditMapper;
         this.authorizationService = authorizationService;
         this.notificationService = notificationService;
         this.tradeMapper = tradeMapper;
         this.channelResolver = channelResolver;
+        this.eventPublisher = eventPublisher;
     }
 
     public PageResult<Map<String, Object>> deals(Long shopId,
@@ -113,6 +118,7 @@ public class MerchantTradeService {
         mapper.insertDeal(row);
         mapper.insertDealItems(row.getId(), request.items());
         createAuditTask(row);
+        eventPublisher.publishEvent(new ShopSearchIndexChangedEvent(row.getShopId()));
         mapper.insertOperationLog(
                 session.merchantId(), session.operatorId(), "deal_create", "deal", row.getId(), request.title().trim()
         );
@@ -140,6 +146,10 @@ public class MerchantTradeService {
         }
         mapper.deleteDealItems(dealId);
         mapper.insertDealItems(dealId, request.items());
+        eventPublisher.publishEvent(new ShopSearchIndexChangedEvent(existing.getShopId()));
+        if (!existing.getShopId().equals(row.getShopId())) {
+            eventPublisher.publishEvent(new ShopSearchIndexChangedEvent(row.getShopId()));
+        }
         adminAuditMapper.invalidatePendingAuditTasksByBiz(DEAL_AUDIT_BIZ_TYPE, dealId, "团购已重新提交");
         createAuditTask(row);
         mapper.insertOperationLog(
@@ -156,6 +166,7 @@ public class MerchantTradeService {
         if (mapper.changeDealStatus(dealId, session.merchantId(), region(), status) == 0) {
             throw new IllegalArgumentException(status == 1 ? "团购未审核通过、已过期或无库存，不能上架" : "团购状态已变化");
         }
+        eventPublisher.publishEvent(new ShopSearchIndexChangedEvent(existing.getShopId()));
         mapper.insertOperationLog(
                 session.merchantId(), session.operatorId(), status == 1 ? "deal_on_shelf" : "deal_off_shelf",
                 "deal", dealId, ""

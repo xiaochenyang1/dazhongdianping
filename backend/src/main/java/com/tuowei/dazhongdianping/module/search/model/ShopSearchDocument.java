@@ -32,4 +32,5 @@ public class ShopSearchDocument {
     private Integer status;
     private List<String> tags;
     private List<String> dishNames;
+    private List<String> dealTitles;
 }
