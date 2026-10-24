@@ -207,12 +207,20 @@ export interface MerchantStrings {
     description: string
     missingPermission: (permission: string) => string
     codeRequired: string
+    codeInvalid: string
     verifyError: string
     verifySuccess: (code: string) => string
     codeLabel: string
     codePlaceholder: string
     verifying: string
     verify: string
+    scan: string
+    stopScan: string
+    cameraStarting: string
+    cameraHint: string
+    scanned: string
+    scanInvalid: string
+    cameraErrors: Record<'secureContext' | 'unsupported' | 'denied' | 'notFound' | 'busy' | 'failed', string>
     latestResultHeading: string
     dealFallback: (dealId: number) => string
     shopFallback: (shopId: number) => string
@@ -915,15 +923,30 @@ const zhCnStrings: MerchantStrings = {
   coupons: {
     eyebrow: 'Coupon verify',
     heading: '到店券码核销',
-    description: '录入顾客出示的券码；成功后券状态变为已使用，重复核销会被拒绝。',
+    description: '扫描顾客的二维码或输入券码，再确认核销；成功后券状态变为已使用，重复核销会被拒绝。',
     missingPermission: (permission) => `当前账号缺少 \`${permission}\` 权限，不能核销券码。`,
     codeRequired: '请输入券码',
+    codeInvalid: '券码只能包含字母、数字、下划线或短横线，最多 64 位。',
     verifyError: '券码核销失败',
     verifySuccess: (code) => `券码 ${code} 已核销成功`,
     codeLabel: '券码',
     codePlaceholder: '例如 VERIFYME001',
     verifying: '核销中...',
     verify: '确认核销',
+    scan: '扫描二维码',
+    stopScan: '关闭摄像头',
+    cameraStarting: '正在打开摄像头…',
+    cameraHint: '将顾客的券码二维码放入画面。识别后请核对券码并确认核销。',
+    scanned: '已识别券码，请确认核销。',
+    scanInvalid: '二维码不是有效券码，请扫描顾客的券码二维码或手动输入。',
+    cameraErrors: {
+      secureContext: '请通过 HTTPS 打开商户工作台以使用摄像头，也可手动输入券码。',
+      unsupported: '当前浏览器不支持摄像头扫码，请手动输入券码。',
+      denied: '摄像头权限被拒绝，请在浏览器中允许摄像头或手动输入券码。',
+      notFound: '没有找到可用摄像头，请手动输入券码。',
+      busy: '摄像头暂时不可用，请关闭其他占用相机的应用后重试，或手动输入券码。',
+      failed: '扫码失败，请重新打开摄像头或手动输入券码。',
+    },
     latestResultHeading: '最近一次核销',
     dealFallback: (dealId) => `deal:${dealId}`,
     shopFallback: (shopId) => `shop:${shopId}`,
@@ -1700,15 +1723,30 @@ const enStrings: MerchantStrings = {
   coupons: {
     eyebrow: 'Coupon verification',
     heading: 'Verify in-store coupon codes',
-    description: 'Enter the code shown by the customer. Successful verification marks the coupon as used, and duplicate verification attempts are rejected.',
+    description: 'Scan the customer’s QR code or enter their coupon code, then confirm verification. Successful verification marks the coupon as used; duplicate attempts are rejected.',
     missingPermission: (permission) => `This account does not have the \`${permission}\` permission and cannot verify coupons.`,
     codeRequired: 'Enter a coupon code.',
+    codeInvalid: 'Use up to 64 letters, digits, underscores or hyphens for the coupon code.',
     verifyError: 'Failed to verify the coupon.',
     verifySuccess: (code) => `Coupon ${code} verified successfully.`,
     codeLabel: 'Coupon code',
     codePlaceholder: 'For example: VERIFYME001',
     verifying: 'Verifying...',
     verify: 'Verify coupon',
+    scan: 'Scan QR code',
+    stopScan: 'Close camera',
+    cameraStarting: 'Opening camera…',
+    cameraHint: 'Point the camera at the customer’s coupon QR code. Check the detected code, then confirm verification.',
+    scanned: 'Coupon code detected. Confirm to verify it.',
+    scanInvalid: 'This QR code is not a valid coupon code. Scan the customer’s coupon or enter the code manually.',
+    cameraErrors: {
+      secureContext: 'Open the merchant console over HTTPS to use the camera, or enter the code manually.',
+      unsupported: 'This browser does not support camera scanning. Enter the code manually.',
+      denied: 'Camera permission was denied. Allow camera access in your browser or enter the code manually.',
+      notFound: 'No camera is available. Enter the code manually.',
+      busy: 'The camera is unavailable. Close other apps using it and retry, or enter the code manually.',
+      failed: 'Scanning failed. Open the camera again or enter the code manually.',
+    },
     latestResultHeading: 'Latest verification',
     dealFallback: (dealId) => `deal:${dealId}`,
     shopFallback: (shopId) => `shop:${shopId}`,

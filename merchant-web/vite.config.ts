@@ -4,5 +4,5 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   resolve: { alias: { '@': new URL('./src', import.meta.url).pathname } },
-  server: { port: 5175, proxy: { '/api': 'http://localhost:8080' } },
+  server: { port: 5175, proxy: { '/api': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080' } },
 })

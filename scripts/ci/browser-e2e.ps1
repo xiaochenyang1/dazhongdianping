@@ -1,6 +1,7 @@
 param(
     [int]$WebPort = 16173,
     [int]$AdminPort = 16174,
+    [int]$MerchantPort = 16175,
     [int]$BackendPort = 18080,
     [string]$BrowserChannel = "chromium",
     [switch]$DryRun
@@ -12,6 +13,7 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $backendDir = Join-Path $repoRoot "backend"
 $webDir = Join-Path $repoRoot "web"
 $adminDir = Join-Path $repoRoot "admin-web"
+$merchantDir = Join-Path $repoRoot "merchant-web"
 $runningOnWindows = [System.Environment]::OSVersion.Platform -eq "Win32NT"
 $mvnw = Join-Path $backendDir $(if ($runningOnWindows) { "mvnw.cmd" } else { "mvnw" })
 $managedProcesses = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
@@ -245,8 +247,9 @@ if ($DryRun) {
     Write-Output "1. Package and start the H2 backend directly with Java on http://127.0.0.1:$BackendPort."
     Write-Output "2. Start web Vite directly with Node on http://127.0.0.1:$WebPort."
     Write-Output "3. Start admin-web Vite directly with Node on http://127.0.0.1:$AdminPort."
-    Write-Output "4. Run the Playwright real backend review submission flow with isolated output."
-    Write-Output "5. Run admin approval and interaction checks, then stop every managed process."
+    Write-Output "4. Start merchant-web Vite directly with Node on http://127.0.0.1:$MerchantPort and verify camera QR decoding with issued coupons."
+    Write-Output "5. Run the Playwright real backend review submission flow with isolated output."
+    Write-Output "6. Run admin approval and interaction checks, then stop every managed process."
     exit 0
 }
 
@@ -255,6 +258,7 @@ $previousExternalServers = $env:PLAYWRIGHT_EXTERNAL_SERVERS
 $previousOutputDir = $env:PLAYWRIGHT_OUTPUT_DIR
 $previousWebPort = $env:PLAYWRIGHT_WEB_PORT
 $previousAdminPort = $env:PLAYWRIGHT_ADMIN_PORT
+$previousMerchantPort = $env:PLAYWRIGHT_MERCHANT_PORT
 $previousBackendPort = $env:PLAYWRIGHT_BACKEND_PORT
 $previousChannel = $env:PLAYWRIGHT_CHANNEL
 $previousProxyTarget = $env:VITE_PROXY_TARGET
@@ -264,10 +268,12 @@ try {
 
     $webPortExplicitlyAssigned = $PSBoundParameters.ContainsKey('WebPort')
     $adminPortExplicitlyAssigned = $PSBoundParameters.ContainsKey('AdminPort')
+    $merchantPortExplicitlyAssigned = $PSBoundParameters.ContainsKey('MerchantPort')
     $backendPortExplicitlyAssigned = $PSBoundParameters.ContainsKey('BackendPort')
 
     $WebPort = Resolve-ManagedPort -Name "web" -Port $WebPort -ExplicitlyAssigned:$webPortExplicitlyAssigned
     $AdminPort = Resolve-ManagedPort -Name "admin-web" -Port $AdminPort -ExplicitlyAssigned:$adminPortExplicitlyAssigned
+    $MerchantPort = Resolve-ManagedPort -Name "merchant-web" -Port $MerchantPort -ExplicitlyAssigned:$merchantPortExplicitlyAssigned
     $BackendPort = Resolve-ManagedPort -Name "backend" -Port $BackendPort -ExplicitlyAssigned:$backendPortExplicitlyAssigned
 
     Write-Step "packaging backend"
@@ -285,8 +291,9 @@ try {
     $nodePath = (Get-Command node -ErrorAction Stop).Source
     $webVitePath = Join-Path $webDir "node_modules\vite\bin\vite.js"
     $adminVitePath = Join-Path $adminDir "node_modules\vite\bin\vite.js"
+    $merchantVitePath = Join-Path $merchantDir "node_modules\vite\bin\vite.js"
     $playwrightCliPath = Join-Path $webDir "node_modules\@playwright\test\cli.js"
-    foreach ($requiredPath in @($webVitePath, $adminVitePath, $playwrightCliPath)) {
+    foreach ($requiredPath in @($webVitePath, $adminVitePath, $merchantVitePath, $playwrightCliPath)) {
         if (-not (Test-Path -LiteralPath $requiredPath)) {
             throw "Required frontend dependency entrypoint is missing: $requiredPath"
         }
@@ -299,6 +306,7 @@ try {
     $env:PLAYWRIGHT_OUTPUT_DIR = Join-Path $runDir "test-results"
     $env:PLAYWRIGHT_WEB_PORT = "$WebPort"
     $env:PLAYWRIGHT_ADMIN_PORT = "$AdminPort"
+    $env:PLAYWRIGHT_MERCHANT_PORT = "$MerchantPort"
     $env:PLAYWRIGHT_BACKEND_PORT = "$BackendPort"
     $env:PLAYWRIGHT_CHANNEL = $BrowserChannel
 
@@ -330,6 +338,15 @@ try {
     ) -WorkingDirectory $adminDir
     Wait-HttpReady -Name "admin-web" -Process $adminProcess -Url "http://127.0.0.1:$AdminPort/login" -TimeoutSeconds 60
 
+    Write-Step "starting merchant-web"
+    $merchantProcess = Start-ManagedProcess -Name "merchant" -FilePath $nodePath -Arguments @(
+        $merchantVitePath,
+        "--host", "127.0.0.1",
+        "--port", "$MerchantPort",
+        "--strictPort"
+    ) -WorkingDirectory $merchantDir
+    Wait-HttpReady -Name "merchant-web" -Process $merchantProcess -Url "http://127.0.0.1:$MerchantPort/login" -TimeoutSeconds 60
+
     Write-Step "running Playwright real backend flow"
     Invoke-Native -FilePath $nodePath -Arguments @(
         $playwrightCliPath,
@@ -349,6 +366,7 @@ finally {
     Restore-EnvironmentVariable -Name "PLAYWRIGHT_OUTPUT_DIR" -Value $previousOutputDir
     Restore-EnvironmentVariable -Name "PLAYWRIGHT_WEB_PORT" -Value $previousWebPort
     Restore-EnvironmentVariable -Name "PLAYWRIGHT_ADMIN_PORT" -Value $previousAdminPort
+    Restore-EnvironmentVariable -Name "PLAYWRIGHT_MERCHANT_PORT" -Value $previousMerchantPort
     Restore-EnvironmentVariable -Name "PLAYWRIGHT_BACKEND_PORT" -Value $previousBackendPort
     Restore-EnvironmentVariable -Name "PLAYWRIGHT_CHANNEL" -Value $previousChannel
     Restore-EnvironmentVariable -Name "VITE_PROXY_TARGET" -Value $previousProxyTarget

@@ -3,6 +3,8 @@ import { expect, test, type APIRequestContext, type APIResponse, type Page, type
 
 const adminPort = Number(process.env.PLAYWRIGHT_ADMIN_PORT ?? 15174)
 const adminBaseURL = `http://127.0.0.1:${adminPort}`
+const merchantPort = Number(process.env.PLAYWRIGHT_MERCHANT_PORT ?? 15175)
+const merchantBaseURL = `http://127.0.0.1:${merchantPort}`
 const backendPort = Number(process.env.PLAYWRIGHT_BACKEND_PORT ?? 18080)
 const backendBaseURL = `http://127.0.0.1:${backendPort}`
 const reviewUploadPng = {
@@ -372,6 +374,96 @@ test('renders a redeemable coupon QR without contacting an external image servic
   await expect(qr).toHaveAttribute('src', /^data:image\/png;base64,/)
   await expect.poll(() => qr.evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBe(240)
   expect(externalImageRequests).toEqual([])
+})
+
+test('scans an issued coupon from video frames, confirms verification and rejects a second redemption', async ({ page, request }) => {
+  const headers = { 'X-Region': 'EU' }
+  const account = `camera-qr-${Date.now()}@example.com`
+  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
+    headers, data: { scene: 'register', type: 'email', account, deviceId: account },
+  }))
+  const session = await expectApiSuccess<{ accessToken: string }>(
+    await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
+      headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
+    }),
+  )
+  const userHeaders = { ...headers, Authorization: `Bearer ${session.accessToken}` }
+  const order = await expectApiSuccess<{ id: number }>(await request.post(`${backendBaseURL}/api/c/v1/orders`, {
+    headers: userHeaders, data: { dealId: 41001, quantity: 1 },
+  }))
+  const paid = await expectApiSuccess<{ coupons: Array<{ code: string }> }>(
+    await request.post(`${backendBaseURL}/api/c/v1/orders/${order.id}/pay/mock-complete`, { headers: userHeaders }),
+  )
+  const code = paid.coupons[0].code
+  const detail = await expectApiSuccess<{ qrImageUrl: string }>(await request.get(
+    `${backendBaseURL}/api/c/v1/coupons/${code}`, { headers: userHeaders },
+  ))
+  const merchant = await expectApiSuccess<{ accessToken: string; merchantId: number }>(
+    await request.post(`${backendBaseURL}/api/b/v1/auth/login`, {
+      headers, data: { account: 'merchant_eu_sichuan@example.com', password: 'merchant123456' },
+    }),
+  )
+  await page.addInitScript((auth) => {
+    localStorage.setItem('dzdp:merchant-token', auth.accessToken)
+    localStorage.setItem('dzdp:merchant-id', String(auth.merchantId))
+    localStorage.setItem('dzdp:merchant-account', 'merchant_eu_sichuan@example.com')
+    localStorage.setItem('dzdp:merchant-region', 'EU')
+  }, merchant)
+  await page.goto(`${merchantBaseURL}/coupons`)
+  await expect(page.getByTestId('coupon-scan-start')).toBeEnabled()
+
+  // Replace the physical camera with a browser MediaStream, keeping video/canvas and QR decoding real.
+  await page.evaluate((source) => {
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+      configurable: true,
+      value: async () => {
+        const image = new Image()
+        image.src = source
+        await image.decode()
+        const canvas = document.createElement('canvas')
+        canvas.width = 320
+        canvas.height = 320
+        const context = canvas.getContext('2d')!
+        const draw = () => {
+          context.fillStyle = '#fff'
+          context.fillRect(0, 0, 320, 320)
+          context.drawImage(image, 40, 40, 240, 240)
+        }
+        draw()
+        const stream = canvas.captureStream(10)
+        const interval = window.setInterval(draw, 100)
+        for (const track of stream.getTracks()) {
+          const stop = track.stop.bind(track)
+          track.stop = () => { window.clearInterval(interval); stop() }
+        }
+        ;(window as unknown as { couponCameraStream: MediaStream }).couponCameraStream = stream
+        return stream
+      },
+    })
+  }, detail.qrImageUrl)
+  const verificationRequests: string[] = []
+  const externalRequests: string[] = []
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes(`/coupons/${code}/verify`)) verificationRequests.push(request.url())
+    if (!['127.0.0.1', 'localhost'].includes(new URL(request.url()).hostname)) externalRequests.push(request.url())
+  })
+  await page.getByTestId('coupon-scan-start').click()
+  await expect(page.getByTestId('coupon-code-input')).toHaveValue(code)
+  await expect(page.getByTestId('coupon-camera-panel')).toHaveCount(0)
+  expect(verificationRequests).toEqual([])
+  expect(await page.evaluate(() => (window as unknown as { couponCameraStream: MediaStream }).couponCameraStream.getTracks().map((track) => track.readyState))).toEqual(['ended'])
+  const verifyResponse = page.waitForResponse((response) => response.url().includes(`/coupons/${code}/verify`))
+  await page.getByTestId('coupon-verify-submit').click()
+  await expectApiSuccess(await verifyResponse)
+  await expect(page.getByTestId('coupon-verify-result')).toContainText('Used')
+  await page.getByTestId('coupon-code-input').fill(code)
+  const duplicate = page.waitForResponse((response) => response.url().includes(`/coupons/${code}/verify`))
+  await page.getByTestId('coupon-verify-submit').click()
+  const duplicateResponse = await duplicate
+  expect(duplicateResponse.status()).toBe(400)
+  await expect(page.getByRole('alert')).toBeVisible()
+  expect(verificationRequests).toHaveLength(2)
+  expect(externalRequests).toEqual([])
 })
 
 test.describe.serial('real backend review flow', () => {
