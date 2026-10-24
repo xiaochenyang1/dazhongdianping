@@ -84,6 +84,8 @@ public interface AdminAuditMapper {
                                      @Param("status") Integer status,
                                      @Param("remark") String remark);
 
+    Long selectDealShopId(@Param("dealId") Long dealId, @Param("region") String region);
+
     int updateDealAuditDecision(@Param("dealId") Long dealId,
                                 @Param("region") String region,
                                 @Param("auditStatus") Integer auditStatus,

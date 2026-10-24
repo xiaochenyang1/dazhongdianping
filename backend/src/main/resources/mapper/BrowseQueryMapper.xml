@@ -97,6 +97,21 @@
         LIMIT #{limit}
     </select>
 
+    <sql id="shopKeywordMatch">
+        (
+            LOWER(s.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            OR LOWER(s.tags) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            OR LOWER(s.address) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            OR EXISTS (
+                SELECT 1 FROM deal search_deal
+                WHERE search_deal.shop_id = s.id AND search_deal.region = s.region
+                  AND search_deal.audit_status = 1 AND search_deal.status = 1
+                  AND search_deal.is_deleted = FALSE
+                  AND LOWER(search_deal.title) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            )
+        )
+    </sql>
+
     <sql id="shopQueryWhere">
         WHERE s.region = #{region}
           AND s.status = 1
@@ -134,11 +149,7 @@
             )
         </if>
         <if test="keyword != null and keyword != ''">
-            AND (
-                LOWER(s.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-                OR LOWER(s.tags) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-                OR LOWER(s.address) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-            )
+            AND <include refid="shopKeywordMatch"/>
         </if>
         <if test="minPrice != null">
             AND s.price_per_capita <![CDATA[>=]]> #{minPrice}
@@ -438,11 +449,7 @@
         WHERE s.region = #{region}
           AND s.status = 1
           AND s.is_deleted = FALSE
-          AND (
-              LOWER(s.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-              OR LOWER(s.tags) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-              OR LOWER(s.address) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-          )
+          AND <include refid="shopKeywordMatch"/>
         ORDER BY s.score DESC, s.id DESC
         LIMIT #{limit}
     </select>

@@ -58,6 +58,7 @@ public class ShopSearchIndexService {
                 .pricePerCapita(row.getPricePerCapita()).currency(row.getCurrency()).address(row.getAddress())
                 .hasDeal(row.getHasDeal()).openNow(row.getOpenNow()).status(row.getStatus())
                 .tags(splitTags(row.getTags())).dishNames(searchIndexMapper.selectDishNames(row.getId()))
+                .dealTitles(searchIndexMapper.selectDealTitles(row.getId(), row.getRegion()))
                 .build();
     }
 

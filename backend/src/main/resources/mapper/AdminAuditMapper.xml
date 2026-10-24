@@ -577,6 +577,10 @@
           AND claim_expires_at &gt; CURRENT_TIMESTAMP
     </update>
 
+    <select id="selectDealShopId" resultType="long">
+        SELECT shop_id FROM deal WHERE id = #{dealId} AND region = #{region} AND is_deleted = FALSE
+    </select>
+
     <update id="updateDealAuditDecision">
         UPDATE deal
         SET audit_status=#{auditStatus},

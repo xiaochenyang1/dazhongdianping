@@ -8,4 +8,5 @@ public interface SearchIndexMapper {
     List<ShopSearchDocumentRow> selectActiveShops();
     ShopSearchDocumentRow selectActiveShop(@Param("shopId") Long shopId);
     List<String> selectDishNames(@Param("shopId") Long shopId);
+    List<String> selectDealTitles(@Param("shopId") Long shopId, @Param("region") String region);
 }

@@ -43,4 +43,10 @@
     <select id="selectDishNames" resultType="string">
         SELECT name FROM dish WHERE shop_id = #{shopId} ORDER BY sort_no ASC, id ASC
     </select>
+    <select id="selectDealTitles" resultType="string">
+        SELECT title FROM deal
+        WHERE shop_id = #{shopId} AND region = #{region}
+          AND audit_status = 1 AND status = 1 AND is_deleted = FALSE
+        ORDER BY id ASC
+    </select>
 </mapper>

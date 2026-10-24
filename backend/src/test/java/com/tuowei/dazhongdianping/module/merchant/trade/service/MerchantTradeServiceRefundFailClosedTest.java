@@ -52,7 +52,8 @@ class MerchantTradeServiceRefundFailClosedTest {
             authorizationService,
             mock(NotificationService.class),
             tradeMapper,
-            channelResolver
+            channelResolver,
+            mock(org.springframework.context.ApplicationEventPublisher.class)
     );
 
     private static final Long ORDER_ID = 7701L;

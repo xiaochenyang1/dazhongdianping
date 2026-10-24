@@ -50,6 +50,8 @@ function Start-Backend([string]$JarPath) {
         "--app.search.provider=elasticsearch",
         "--app.search.base-url=$ElasticsearchBaseUrl",
         "--app.search.index-name=$IndexName",
+        "--app.search.sync-fixed-delay-ms=200",
+        "--app.search.sync-initial-delay-ms=200",
         "--app.search.fallback-on-error=false"
     )
     $parameters = @{
@@ -102,12 +104,43 @@ function Assert-FirstShop([object]$Response, [long]$ExpectedId, [string]$Scenari
     if ([long]$Response.data.list[0].id -ne $ExpectedId) { throw "$Scenario expected shop $ExpectedId but got $($Response.data.list[0].id)" }
 }
 
+function Assert-DealSearch([string]$Keyword, [long]$ExpectedId, [string]$Region = "EU") {
+    # Wait for the durable outbox, then refresh ES before checking absence as well
+    # as presence. A missing event cannot pass a rename/on-shelf assertion.
+    $deadline = [DateTime]::UtcNow.AddSeconds(30)
+    do {
+        $tasks = Invoke-Api GET "/api/admin/v1/search/sync-tasks?pageSize=50" $euAdminHeaders
+        if ([long]$tasks.data.total -eq 0) { break }
+        if ([DateTime]::UtcNow -ge $deadline) { throw "deal search sync did not drain for $Keyword" }
+        Start-Sleep -Milliseconds 250
+    } while ($true)
+    Invoke-RestMethod -Method POST -Uri "$ElasticsearchBaseUrl/$IndexName/_refresh" -TimeoutSec 15 | Out-Null
+    $encoded = [Uri]::EscapeDataString($Keyword)
+    $response = Invoke-Api GET "/api/c/v1/search/shops?keyword=$encoded" @{ "X-Region" = $Region }
+    if ($ExpectedId -eq 0) {
+        if ([long]$response.data.total -ne 0) { throw "non-public deal title leaked: $Keyword ($Region)" }
+    } else {
+        Assert-FirstShop $response $ExpectedId "deal title $Keyword ($Region)"
+        if ([long]$response.data.total -ne 1) { throw "deal title returned duplicate or unrelated shops: $Keyword" }
+    }
+}
+
+function Invoke-DealAudit([long]$DealId, [bool]$Pass) {
+    $tasks = Invoke-Api GET "/api/admin/v1/audit/tasks?bizType=2&status=0&pageSize=50" $euAdminHeaders
+    $task = @($tasks.data.list | Where-Object { [long]$_.bizId -eq $DealId })
+    if ($task.Count -ne 1) { throw "expected one pending audit for deal $DealId" }
+    $action = if ($Pass) { "pass" } else { "reject" }
+    $body = if ($Pass) { @{ remark = "search lifecycle smoke" } } else { @{ reason = "revise the menu" } }
+    Invoke-Api POST "/api/admin/v1/audit/tasks/$($task[0].id)/$action" $euAdminHeaders $body | Out-Null
+}
+
 if ($DryRun) {
     Write-Output "Plan:"
     Write-Output "- Require a real Elasticsearch 8 service at $ElasticsearchBaseUrl."
     Write-Output "- Package and start the backend with isolated H2 data, APP_SEARCH_PROVIDER=elasticsearch, and APP_SEARCH_FALLBACK_ON_ERROR=false."
     Write-Output "- Login as admin and POST /api/admin/v1/search/reindex."
     Write-Output "- Verify Chinese keyword, pinyin keyword, fuzzy correction, category/region filters, Paris-only EU availability, and geo distance sorting through /api/c/v1/search/shops."
+    Write-Output "- Verify Chinese/English deal titles, creation, approval/rejection, renaming, on/off-shelf changes, and region isolation through real ES outbox updates."
     Write-Output "- Delete the temporary Elasticsearch index and stop the managed backend in finally."
     exit 0
 }
@@ -136,6 +169,7 @@ try {
     $login = Invoke-Api -Method POST -Path "/api/admin/v1/auth/login" -Body @{ account = "admin"; password = "admin123456" }
     if (-not $login.data.accessToken) { throw "admin login did not return accessToken" }
     $adminHeaders = @{ Authorization = "Bearer $($login.data.accessToken)"; "X-Region" = "CN" }
+    $euAdminHeaders = @{ Authorization = "Bearer $($login.data.accessToken)"; "X-Region" = "EU" }
 
     Write-Step "rebuilding Elasticsearch index"
     $reindex = Invoke-Api -Method POST -Path "/api/admin/v1/search/reindex" -Headers $adminHeaders
@@ -161,6 +195,48 @@ try {
     $distance = Invoke-Api GET "/api/c/v1/search/shops?sort=distance&lat=31.2297&lng=121.4470" @{ "X-Region" = "CN" }
     Assert-FirstShop $distance 10002 "distance sort"
     if ($null -eq $distance.data.list[0].distanceMeters) { throw "distance sort did not return distanceMeters" }
+
+    Write-Step "verifying deal titles in rebuilt documents and incremental lifecycle"
+    $cnDocument = Invoke-RestMethod -Uri "$ElasticsearchBaseUrl/$IndexName/_doc/10001" -TimeoutSec 15
+    if ($cnDocument._source.dealTitles -notcontains "双人川渝火锅套餐") { throw "Chinese deal title was not preserved in bulk indexing" }
+    Assert-DealSearch "双人" 10001 "CN"
+    Assert-DealSearch "Dinner for Two" 20001
+    $merchant = Invoke-Api POST "/api/b/v1/auth/login" @{ "X-Region" = "EU" } @{
+        account = "merchant_eu_sichuan@example.com"; password = "merchant123456"
+    }
+    $merchantHeaders = @{ Authorization = "Bearer $($merchant.data.accessToken)"; "X-Region" = "EU" }
+    $dealBody = @{
+        shopId = 20001; type = 1; title = "AuroraTasting"; coverImage = "https://files.example/deals/dinner.jpg"
+        price = 49.90; originalPrice = 68.00; currency = "EUR"; stock = 20
+        validStart = [DateTime]::UtcNow.AddDays(-1).ToString("yyyy-MM-dd")
+        validEnd = [DateTime]::UtcNow.AddMonths(1).ToString("yyyy-MM-dd")
+        rules = "Reservation required"; items = @(@{ name = "Main"; quantity = 2; price = 0; sort = 1 })
+    }
+    $created = Invoke-Api POST "/api/b/v1/deals" $merchantHeaders $dealBody
+    $dealId = [long]$created.data.id
+    if ($dealId -le 0) { throw "merchant deal creation did not return an id" }
+    Assert-DealSearch "AuroraTasting" 0
+    Invoke-DealAudit $dealId $true
+    Assert-DealSearch "AuroraTasting" 0
+    Invoke-Api PUT "/api/b/v1/deals/$dealId/status" $merchantHeaders @{ status = 1 } | Out-Null
+    Assert-DealSearch "auroratasting" 20001
+    Assert-DealSearch "auroratasting" 0 "CN"
+
+    $dealBody.title = "松露晚宴"
+    Invoke-Api PUT "/api/b/v1/deals/$dealId" $merchantHeaders $dealBody | Out-Null
+    Assert-DealSearch "AuroraTasting" 0
+    Assert-DealSearch "松露晚宴" 0
+    Invoke-DealAudit $dealId $true
+    Invoke-Api PUT "/api/b/v1/deals/$dealId/status" $merchantHeaders @{ status = 1 } | Out-Null
+    Assert-DealSearch "松露晚宴" 20001
+    Assert-DealSearch "AuroraTasting" 0
+    Invoke-Api PUT "/api/b/v1/deals/$dealId/status" $merchantHeaders @{ status = 0 } | Out-Null
+    Assert-DealSearch "松露晚宴" 0
+
+    $dealBody.title = "RejectedMenu"
+    Invoke-Api PUT "/api/b/v1/deals/$dealId" $merchantHeaders $dealBody | Out-Null
+    Invoke-DealAudit $dealId $false
+    Assert-DealSearch "RejectedMenu" 0
 
     $succeeded = $true
     Write-Step "real Elasticsearch smoke passed"

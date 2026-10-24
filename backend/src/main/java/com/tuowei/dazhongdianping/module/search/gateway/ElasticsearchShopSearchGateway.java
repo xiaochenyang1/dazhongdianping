@@ -94,7 +94,7 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
                                     .path("/_bulk")
                                     .queryParam("refresh", "wait_for")
                                     .build())
-                            .contentType(MediaType.parseMediaType("application/x-ndjson"))
+                            .contentType(MediaType.parseMediaType("application/x-ndjson;charset=UTF-8"))
                             .body(bulkBody(documents))
                             .retrieve()
                             .body(String.class);
@@ -254,6 +254,7 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
         properties.put("currency", Map.of("type", "keyword"));
         properties.put("tags", Map.of("type", "keyword"));
         properties.put("dishNames", Map.of("type", "text"));
+        properties.put("dealTitles", Map.of("type", "text"));
         properties.put("hasDeal", Map.of("type", "boolean"));
         properties.put("openNow", Map.of("type", "boolean"));
         properties.put("status", Map.of("type", "integer"));
@@ -300,6 +301,7 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
         putIfNotNull(source, "status", document.getStatus());
         source.put("tags", document.getTags() == null ? List.of() : document.getTags());
         source.put("dishNames", document.getDishNames() == null ? List.of() : document.getDishNames());
+        source.put("dealTitles", document.getDealTitles() == null ? List.of() : document.getDealTitles());
         return source;
     }
 
@@ -315,7 +317,7 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
             must.add(Map.of(
                     "multi_match", Map.of(
                             "query", query.getKeyword(),
-                            "fields", List.of("name^5", "namePinyin^2", "categoryName^2", "tags^2", "dishNames", "address"),
+                            "fields", List.of("name^5", "namePinyin^2", "categoryName^2", "tags^2", "dealTitles^2", "dishNames", "address"),
                             "type", "best_fields",
                             "fuzziness", "AUTO",
                             "prefix_length", 1

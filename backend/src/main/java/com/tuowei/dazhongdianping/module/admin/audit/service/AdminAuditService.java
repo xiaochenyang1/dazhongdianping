@@ -630,6 +630,7 @@ public class AdminAuditService {
         if (adminAuditMapper.updateDealAuditDecision(task.getBizId(), currentRegion().name(), 1, "") == 0) {
             throw new NotFoundException("团购不存在或已重新提交");
         }
+        publishDealSearchChange(task.getBizId());
         adminAuditMapper.insertAuditLog(
                 currentAdmin().adminId(),
                 "audit_deal_pass",
@@ -1045,6 +1046,7 @@ public class AdminAuditService {
         if (adminAuditMapper.updateDealAuditDecision(task.getBizId(), currentRegion().name(), 2, reason) == 0) {
             throw new NotFoundException("团购不存在或已重新提交");
         }
+        publishDealSearchChange(task.getBizId());
         adminAuditMapper.insertAuditLog(
                 currentAdmin().adminId(),
                 "audit_deal_reject",
@@ -1053,6 +1055,12 @@ public class AdminAuditService {
                 normalizeIp(requestIp)
         );
         return toAuditTaskResponse(adminAuditMapper.selectAuditTaskById(task.getId()));
+    }
+
+    private void publishDealSearchChange(Long dealId) {
+        Long shopId = adminAuditMapper.selectDealShopId(dealId, currentRegion().name());
+        if (shopId == null) throw new NotFoundException("团购不存在");
+        applicationEventPublisher.publishEvent(new ShopSearchIndexChangedEvent(shopId));
     }
 
     private AuditTaskRow requirePendingTask(Long taskId) {

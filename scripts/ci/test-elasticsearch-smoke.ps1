@@ -19,6 +19,7 @@ Assert-True ($dryRunText -match "Chinese") "dry-run must mention Chinese keyword
 Assert-True ($dryRunText -match "pinyin") "dry-run must mention pinyin coverage"
 Assert-True ($dryRunText -match "fuzzy") "dry-run must mention fuzzy correction coverage"
 Assert-True ($dryRunText -match "distance") "dry-run must mention geo distance coverage"
+Assert-True ($dryRunText -match "deal titles") "dry-run must mention public deal title coverage"
 
 $scriptContent = Get-Content -LiteralPath $scriptPath -Raw
 Assert-True ($scriptContent -match 'APP_SEARCH_PROVIDER') "smoke must start backend with Elasticsearch provider"
@@ -26,6 +27,7 @@ Assert-True ($scriptContent -match 'APP_SEARCH_FALLBACK_ON_ERROR') "smoke must d
 Assert-True ($scriptContent -match 'jdbc:h2:mem:') "smoke must use isolated H2 source data"
 Assert-True ($scriptContent -match 'spring\.profiles\.active=local') "smoke must explicitly opt into the local runtime profile"
 Assert-True ($scriptContent -match '/api/c/v1/search/shops') "smoke must call the real public search endpoint"
+Assert-True ($scriptContent -match 'Assert-DealSearch') "smoke must validate title updates and removals after outbox dispatch"
 
 $verifyAllContent = Get-Content -LiteralPath $verifyAllPath -Raw
 Assert-True ($verifyAllContent -match 'IncludeElasticsearchSmoke') "verify-all must expose the Elasticsearch smoke switch"

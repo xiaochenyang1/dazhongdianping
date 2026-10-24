@@ -57,6 +57,7 @@ class ElasticsearchShopSearchGatewayTest {
                 .status(1)
                 .tags(List.of("火锅", "川味"))
                 .dishNames(List.of("毛肚"))
+                .dealTitles(List.of("周末双人套餐"))
                 .build();
 
         server.expect(requestTo("http://elasticsearch.test/shop_index"))
@@ -68,10 +69,12 @@ class ElasticsearchShopSearchGatewayTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("edge_ngram")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("pinyin_prefix_analyzer")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("pinyin_search_analyzer")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"dealTitles\":{\"type\":\"text\"}")))
                 .andRespond(withSuccess("{\"acknowledged\":true}", MediaType.APPLICATION_JSON));
         server.expect(requestTo("http://elasticsearch.test/_bulk?refresh=wait_for"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("yulihuoguoxuhuidian")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"dealTitles\":[\"周末双人套餐\"]")))
                 .andRespond(withSuccess("{\"errors\":false}", MediaType.APPLICATION_JSON));
 
         gateway.rebuildIndex(List.of(document));
@@ -101,6 +104,7 @@ class ElasticsearchShopSearchGatewayTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"fuzziness\":\"AUTO\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("namePinyin^2")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("dealTitles^2")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"region\":\"CN\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"score\":{\"gte\":4.0}")))
                 .andRespond(withSuccess("""
