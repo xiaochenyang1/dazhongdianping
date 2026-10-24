@@ -4,6 +4,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 const webPort = Number(process.env.PLAYWRIGHT_WEB_PORT ?? 15173)
 const adminPort = Number(process.env.PLAYWRIGHT_ADMIN_PORT ?? 15174)
+const merchantPort = Number(process.env.PLAYWRIGHT_MERCHANT_PORT ?? 15175)
 const backendPort = Number(process.env.PLAYWRIGHT_BACKEND_PORT ?? 18080)
 const realBackend = process.env.PLAYWRIGHT_REAL_BACKEND === '1'
 const externalServers = process.env.PLAYWRIGHT_EXTERNAL_SERVERS === '1'
@@ -73,5 +74,13 @@ export default defineConfig({
       timeout: 60_000,
       ...(realBackend ? { env: realBackendEnv } : {}),
     },
+    ...(realBackend ? [{
+      command: `node ${viteCliPath} --host 127.0.0.1 --port ${merchantPort} --strictPort`,
+      cwd: path.join(repoRoot, 'merchant-web'),
+      url: `http://127.0.0.1:${merchantPort}/login`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: realBackendEnv,
+    }] : []),
   ],
 })
