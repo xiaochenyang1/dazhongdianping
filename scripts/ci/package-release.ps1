@@ -1,10 +1,12 @@
 param(
     [string]$Version,
     [string]$OutputDir,
+    [string]$CommitSha,
     [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "release-bundle-preflight.ps1")
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $backendDir = Join-Path $repoRoot "backend"
@@ -15,12 +17,14 @@ $migrationSourceDir = Join-Path $repoRoot "sql\mysql"
 $migrationManifestSource = Join-Path $migrationSourceDir "migrations.sha256"
 $migrationRunnerSource = Join-Path $PSScriptRoot "mysql-migrate.sh"
 $deployEnvironment = $env:DEPLOY_ENVIRONMENT
+if (-not $CommitSha) { $CommitSha = $env:APP_RELEASE_COMMIT_SHA }
 $viteApiBaseUrl = $env:VITE_API_BASE_URL
 $viteWebSocketBaseUrl = $env:VITE_WS_BASE_URL
 $viteStripePublishableKey = $env:VITE_STRIPE_PUBLISHABLE_KEY
 $publicSiteUrl = $env:PUBLIC_SITE_URL
 $prerenderApiBaseUrl = $env:PRERENDER_API_BASE_URL
-$prerenderRegion = if ($env:PRERENDER_REGION) { $env:PRERENDER_REGION } else { "EU" }
+$prerenderRegion = if ($env:PRERENDER_REGION) { $env:PRERENDER_REGION.Trim().ToUpperInvariant() } else { "EU" }
+$deployRegion = if ($env:DEPLOY_REGION) { $env:DEPLOY_REGION } else { $prerenderRegion }
 $prerenderRegionsRaw = $env:PRERENDER_REGIONS
 $originalViteDefaultRegion = $env:VITE_DEFAULT_REGION
 $originalPrerenderRegion = $env:PRERENDER_REGION
@@ -34,19 +38,13 @@ if (-not $Version) {
     if ($env:APP_RELEASE_VERSION) {
         $Version = $env:APP_RELEASE_VERSION
     }
-    elseif ($env:GITHUB_SHA) {
-        $Version = $env:GITHUB_SHA.Substring(0, [Math]::Min(12, $env:GITHUB_SHA.Length))
-    }
-    else {
-        $Version = [System.DateTimeOffset]::UtcNow.ToString("yyyyMMddHHmmss")
-    }
 }
 
 if (-not $OutputDir) {
     $OutputDir = Join-Path $repoRoot "artifacts"
 }
 
-if ($Version -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') {
+if ($Version -and $Version -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') {
     throw "Release version contains unsupported characters: $Version"
 }
 
@@ -125,15 +123,24 @@ function Get-VerifiedMigrationEntries {
     return $entries
 }
 
-function Assert-HttpsBuildUrl {
-    param(
-        [string]$Name,
-        [string]$Value
-    )
-
-    if ([string]::IsNullOrWhiteSpace($Value) -or $Value -notmatch '^https://[^\s]+$') {
-        throw "$Name must be an absolute HTTPS URL for a deployment build"
+function Get-VerifiedReleaseSource {
+    if ($CommitSha -and $CommitSha -notmatch '^[0-9a-fA-F]{40}$') {
+        throw "CommitSha / APP_RELEASE_COMMIT_SHA must be a full 40-character Git SHA"
     }
+    $sourceSha = & git -C $repoRoot rev-parse --verify HEAD 2>$null
+    if ($LASTEXITCODE -ne 0 -or $sourceSha -cnotmatch '^[0-9a-f]{40}$') {
+        throw "Release packaging requires a Git working tree with a source commit"
+    }
+    if ($CommitSha -and $sourceSha -cne $CommitSha.ToLowerInvariant()) {
+        throw "CommitSha / APP_RELEASE_COMMIT_SHA does not match the checked-out source commit"
+    }
+    $trackedChanges = @(& git -C $repoRoot status --porcelain --untracked-files=no)
+    if ($LASTEXITCODE -ne 0) { throw "Unable to check release source changes" }
+    if ($trackedChanges.Count -gt 0) { throw "Release packaging requires clean tracked source files" }
+    $untrackedInputs = @(& git -C $repoRoot ls-files --others --exclude-standard -- backend web admin-web merchant-web scripts sql .github deploy)
+    if ($LASTEXITCODE -ne 0) { throw "Unable to check untracked release inputs" }
+    if ($untrackedInputs.Count -gt 0) { throw "Release packaging requires no untracked release inputs; commit source files before building" }
+    return $sourceSha
 }
 
 function Get-PrerenderRegions {
@@ -179,57 +186,65 @@ $prerenderRegions = @(Get-PrerenderRegions)
 $prerenderConfigurations = @($prerenderRegions | ForEach-Object {
     Get-PrerenderConfiguration -Region $_ -RegionCount $prerenderRegions.Count
 })
+$baseRegion = if ($prerenderRegion -cin $prerenderRegions) { $prerenderRegion } else { $prerenderRegions[0] }
+$viteStripeMode = if ($viteStripePublishableKey -cmatch '^pk_test_[A-Za-z0-9]+$') { 'test' }
+    elseif ($viteStripePublishableKey -cmatch '^pk_live_[A-Za-z0-9]+$') { 'live' }
+    else { '' }
 
 function Assert-ReleaseFrontendConfiguration {
     if ([string]::IsNullOrWhiteSpace($deployEnvironment)) {
         return
     }
-    if ($deployEnvironment -notin @("test", "pre", "prod")) {
+    if ($deployEnvironment -cnotin @("test", "pre", "prod")) {
         throw "DEPLOY_ENVIRONMENT must be test, pre, or prod"
     }
+    if ($deployRegion -cnotin @("CN", "EU") -or $baseRegion -cne $deployRegion) {
+        throw "DEPLOY_REGION must be CN or EU and match the serving PRERENDER_REGION"
+    }
 
-    Assert-HttpsBuildUrl -Name "VITE_API_BASE_URL" -Value $viteApiBaseUrl
+    Assert-DzdpReleaseUrl -Name "VITE_API_BASE_URL" -Value $viteApiBaseUrl
     foreach ($configuration in $prerenderConfigurations) {
-        Assert-HttpsBuildUrl -Name "PUBLIC_SITE_URL_$($configuration.Region)" -Value $configuration.SiteUrl
-        Assert-HttpsBuildUrl -Name "PRERENDER_API_BASE_URL_$($configuration.Region)" -Value $configuration.ApiBaseUrl
+        Assert-DzdpReleaseUrl -Name "PUBLIC_SITE_URL_$($configuration.Region)" -Value $configuration.SiteUrl -OriginOnly
+        Assert-DzdpReleaseUrl -Name "PRERENDER_API_BASE_URL_$($configuration.Region)" -Value $configuration.ApiBaseUrl
     }
-    if ([string]::IsNullOrWhiteSpace($viteWebSocketBaseUrl) -or
-        $viteWebSocketBaseUrl -notmatch '^wss://[^\s]+$') {
-        throw "VITE_WS_BASE_URL must be an absolute WSS URL for a deployment build"
-    }
+    Assert-DzdpReleaseUrl -Name "VITE_WS_BASE_URL" -Value $viteWebSocketBaseUrl -Scheme "wss"
 
-    $stripePrefix = if ($deployEnvironment -eq "prod") { "pk_live_" } else { "pk_test_" }
-    if ([string]::IsNullOrWhiteSpace($viteStripePublishableKey) -or
-        -not $viteStripePublishableKey.StartsWith($stripePrefix, [System.StringComparison]::Ordinal)) {
+    $requiredStripeMode = if ($deployEnvironment -eq "prod") { "live" } else { "test" }
+    if ($viteStripeMode -cne $requiredStripeMode -or $viteStripePublishableKey -match 'CHANGE_ME|xxxxx') {
         throw "VITE_STRIPE_PUBLISHABLE_KEY must match DEPLOY_ENVIRONMENT=$deployEnvironment"
     }
 }
 
 if ($DryRun) {
     Write-Output "Plan:"
-    Write-Output "1. For deployment builds, validate VITE_API_BASE_URL, VITE_WS_BASE_URL, VITE_STRIPE_PUBLISHABLE_KEY, PUBLIC_SITE_URL, and PRERENDER_API_BASE_URL."
-    Write-Output "2. Run backend tests and build the jar with backend/mvnw.cmd package."
-    Write-Output "3. Build web dist with npm run build under web."
-    Write-Output "4. Build admin-web dist with npm run build under admin-web."
-    Write-Output "5. Build merchant-web dist with npm run build under merchant-web."
-    Write-Output "6. If PUBLIC_SITE_URL and PRERENDER_API_BASE_URL (or their per-region forms) are configured, build isolated real SEO snapshots for PRERENDER_REGIONS=$($prerenderRegions -join ',')."
-    Write-Output "7. Verify and package only sql/mysql/03+ incremental migrations with their source-controlled SHA-256 manifest and MySQL runner."
-    Write-Output "8. Assemble backend jar + web dist + admin-web dist + merchant-web dist + database migrations into a release bundle under $OutputDir."
-    Write-Output "9. Write a release manifest for version $Version."
-    Write-Output "10. Generate a SHA-256 checksum beside the release bundle."
+    Write-Output "1. Verify the actual Git HEAD, optional CommitSha / APP_RELEASE_COMMIT_SHA, clean tracked source, and no untracked release inputs before building."
+    Write-Output "2. For deployment builds, validate VITE_API_BASE_URL, VITE_WS_BASE_URL, VITE_STRIPE_PUBLISHABLE_KEY, PUBLIC_SITE_URL, and PRERENDER_API_BASE_URL."
+    Write-Output "3. Run backend tests and build the jar with backend/mvnw.cmd package."
+    Write-Output "4. Build web dist with npm run build under web."
+    Write-Output "5. Build admin-web dist with npm run build under admin-web."
+    Write-Output "6. Build merchant-web dist with npm run build under merchant-web."
+    Write-Output "7. If PUBLIC_SITE_URL and PRERENDER_API_BASE_URL (or their per-region forms) are configured, build isolated real SEO snapshots for PRERENDER_REGIONS=$($prerenderRegions -join ',')."
+    Write-Output "8. Verify and package only sql/mysql/03+ incremental migrations with their source-controlled SHA-256 manifest and MySQL runner."
+    Write-Output "9. Assemble backend jar + web dist + admin-web dist + merchant-web dist + database migrations into a release bundle under $OutputDir."
+    Write-Output "10. Write a release manifest with the actual source SHA, buildEnvironment, and Stripe mode."
+    Write-Output "11. Generate a SHA-256 checksum beside the release bundle and validate the assembled ZIP."
     exit 0
 }
 
+$sourceCommitSha = Get-VerifiedReleaseSource
+if (-not $Version) { $Version = $sourceCommitSha.Substring(0, 12) }
 Assert-ReleaseFrontendConfiguration
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 $stagingDir = Join-Path ([System.IO.Path]::GetTempPath()) ("dazhongdianping-release-" + [System.Guid]::NewGuid().ToString("N"))
 $bundlePath = Join-Path (Resolve-Path $OutputDir) "dazhongdianping-release-$Version.zip"
 $checksumPath = "$bundlePath.sha256"
+if ((Test-Path -LiteralPath $bundlePath) -or (Test-Path -LiteralPath $checksumPath)) {
+    throw "Release output already exists; choose a new version or output directory"
+}
 
 try {
     New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
     $migrationEntries = @(Get-VerifiedMigrationEntries)
-    $baseRegion = if ($prerenderRegion -in $prerenderRegions) { $prerenderRegion } else { $prerenderRegions[0] }
     $baseConfiguration = $prerenderConfigurations | Where-Object { $_.Region -eq $baseRegion } | Select-Object -First 1
     # Build the serving dist for the first region, then retain each additional
     # region under web/seo-snapshots/<region> so they cannot overwrite one another.
@@ -303,7 +318,8 @@ try {
     $manifest = [ordered]@{
         version = $Version
         builtAtUtc = [System.DateTimeOffset]::UtcNow.ToString("o")
-        commitSha = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { "" }
+        commitSha = $sourceCommitSha
+        buildEnvironment = if ($deployEnvironment) { $deployEnvironment } else { "" }
         bundleName = [System.IO.Path]::GetFileName($bundlePath)
         backendJar = $backendJar.Name
         frontends = @("web", "admin-web", "merchant-web")
@@ -320,6 +336,7 @@ try {
             apiBaseUrl = if ($viteApiBaseUrl) { $viteApiBaseUrl } else { "" }
             webSocketBaseUrl = if ($viteWebSocketBaseUrl) { $viteWebSocketBaseUrl } else { "" }
             stripeConfigured = -not [string]::IsNullOrWhiteSpace($viteStripePublishableKey)
+            stripeMode = $viteStripeMode
         }
         seoSnapshot = [ordered]@{
             enabled = $seoSnapshotEntries.Count -gt 0
@@ -334,18 +351,16 @@ try {
     $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
     Set-Content -LiteralPath (Join-Path $stagingDir "release-version.txt") -Value $Version -Encoding ascii
 
-    if (Test-Path -LiteralPath $bundlePath) {
-        Remove-Item -LiteralPath $bundlePath -Force
-    }
-    if (Test-Path -LiteralPath $checksumPath) {
-        Remove-Item -LiteralPath $checksumPath -Force
-    }
+    # Compress-Archive without -Force also rejects a bundle created by another
+    # packager after the initial check; never replace a published version.
     Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath $bundlePath
 
     $bundleSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $bundlePath).Hash.ToLowerInvariant()
     "$bundleSha256  $([System.IO.Path]::GetFileName($bundlePath))" |
         Set-Content -LiteralPath $checksumPath -Encoding ascii
 
+    Test-DzdpReleaseBundle -Path $bundlePath -TargetEnvironment $deployEnvironment -TargetRegion $deployRegion `
+        -ExpectedSha $sourceCommitSha -ArtifactOnly:([string]::IsNullOrWhiteSpace($deployEnvironment)) | Out-Null
     Write-Output $bundlePath
 }
 finally {

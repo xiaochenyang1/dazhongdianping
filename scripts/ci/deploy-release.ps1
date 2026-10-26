@@ -2,6 +2,7 @@ param(
     [string]$ReleaseBundle,
     [string]$Environment,
     [string]$Region,
+    [string]$ExpectedCommitSha,
     [string]$RemoteHost,
     [int]$RemotePort = 22,
     [string]$RemoteUser,
@@ -19,12 +20,14 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "release-bundle-preflight.ps1")
 $remotePortWasExplicitlySupplied = $PSBoundParameters.ContainsKey("RemotePort")
 $rollbackScriptPath = Join-Path $PSScriptRoot "rollback-release.ps1"
 
 if (-not $ReleaseBundle) { $ReleaseBundle = if ($env:APP_RELEASE_BUNDLE) { $env:APP_RELEASE_BUNDLE } else { "" } }
 if (-not $Environment) { $Environment = if ($env:DEPLOY_ENVIRONMENT) { $env:DEPLOY_ENVIRONMENT } else { "" } }
 if (-not $Region) { $Region = if ($env:DEPLOY_REGION) { $env:DEPLOY_REGION } else { "EU" } }
+if (-not $ExpectedCommitSha) { $ExpectedCommitSha = $env:DEPLOY_EXPECTED_COMMIT_SHA }
 if (-not $RemoteHost) { $RemoteHost = if ($env:DEPLOY_SSH_HOST) { $env:DEPLOY_SSH_HOST } else { "" } }
 if (-not $remotePortWasExplicitlySupplied -and $env:DEPLOY_SSH_PORT) { $RemotePort = [int]$env:DEPLOY_SSH_PORT }
 if (-not $RemoteUser) { $RemoteUser = if ($env:DEPLOY_SSH_USER) { $env:DEPLOY_SSH_USER } else { "" } }
@@ -143,15 +146,16 @@ function Invoke-SmokeChecks {
 
 if ($DryRun) {
     Write-Output "Plan:"
-    Write-Output "1. Upload the release bundle over SSH/SCP."
-    Write-Output "2. Verify the remote bundle SHA-256 integrity before extracting it."
-    Write-Output "3. Extract the bundle under a versioned releases directory below the remote root."
-    Write-Output "4. Run database/mysql-migrate.sh with the secret-managed MySQL defaults file before changing current/previous or restarting services."
-    Write-Output "5. Switch the remote current symlink to the new release only after migration apply/strict verification succeeds."
-    Write-Output "6. Restart the backend, web, admin-web, and merchant-web services."
-    Write-Output "7. Run smoke checks against the deployed environment."
-    Write-Output "8. If smoke checks fail, automatically restore the tracked previous release and keep the deployment failed."
-    Write-Output "9. After successful smoke checks, retain current, previous, and $ReleaseRetentionCount older releases and remove stale bundles."
+    Write-Output "1. Validate the local ZIP, SHA-256 sidecar, manifest, ExpectedCommitSha, build environment/region, Web/Stripe/SEO configuration, and migrations before resolving SSH/SCP."
+    Write-Output "2. Upload the release bundle over SSH/SCP."
+    Write-Output "3. Verify the remote bundle SHA-256 integrity before extracting it."
+    Write-Output "4. Extract the bundle under a versioned releases directory below the remote root."
+    Write-Output "5. Run database/mysql-migrate.sh with the secret-managed MySQL defaults file before changing current/previous or restarting services."
+    Write-Output "6. Switch the remote current symlink to the new release only after migration apply/strict verification succeeds."
+    Write-Output "7. Restart the backend, web, admin-web, and merchant-web services."
+    Write-Output "8. Run smoke checks against the deployed environment."
+    Write-Output "9. If smoke checks fail, automatically restore the tracked previous release and keep the deployment failed."
+    Write-Output "10. After successful smoke checks, retain current, previous, and $ReleaseRetentionCount older releases and remove stale bundles."
     exit 0
 }
 
@@ -189,21 +193,14 @@ if (-not [string]::IsNullOrWhiteSpace($DatabaseBaselineVersion) -and
     throw "DatabaseBaselineVersion must contain only digits"
 }
 
-if (-not (Test-Path -LiteralPath $ReleaseBundle)) {
-    throw "Release bundle not found: $ReleaseBundle"
-}
-
-$sshPath = (Get-Command ssh -ErrorAction Stop).Source
-$scpPath = (Get-Command scp -ErrorAction Stop).Source
+$bundleVerification = Test-DzdpReleaseBundle -Path $ReleaseBundle -TargetEnvironment $Environment -TargetRegion $Region -ExpectedSha $ExpectedCommitSha
 $resolvedBundle = (Resolve-Path -LiteralPath $ReleaseBundle).Path
 $bundleName = [System.IO.Path]::GetFileName($resolvedBundle)
-$bundleSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolvedBundle).Hash.ToLowerInvariant()
-$bundleMatch = [regex]::Match($bundleName, '^dazhongdianping-release-([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.zip$')
-if (-not $bundleMatch.Success) {
-    throw "Release bundle name must match dazhongdianping-release-<version>.zip"
-}
-$version = $bundleMatch.Groups[1].Value
+$bundleSha256 = $bundleVerification.Sha256
+$version = $bundleVerification.Version
 Assert-SafeReleaseVersion -Value $version
+$sshPath = (Get-Command ssh -CommandType Application -ErrorAction Stop).Source
+$scpPath = (Get-Command scp -CommandType Application -ErrorAction Stop).Source
 $remoteReleaseRoot = "$RemoteRoot/releases"
 $remoteReleaseDir = "$remoteReleaseRoot/$version"
 $remoteBundlePath = "$RemoteRoot/$bundleName"

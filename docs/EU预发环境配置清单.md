@@ -98,6 +98,8 @@ set +a
 
 ## 3. GitHub `pre` Environment
 
+源码 SHA 由工作流按选定版本自动注入：打包使用 `APP_RELEASE_COMMIT_SHA`，部署使用 `DEPLOY_EXPECTED_COMMIT_SHA`，不要将它们配置成长期固定值。本地执行时分别传入 `package-release.ps1 -CommitSha <40位SHA>` 和 `deploy-release.ps1 -ExpectedCommitSha <同一40位SHA>`；两者必须来自通过 CI 的版本。实际 `test/pre` 包须分别按对应环境构建，不能直接复用未注入配置的技术候选。
+
 2026-10-14 只读核对 GitHub `pre` Environment 后，当前可见的变量名为 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`；没有配置 secret 名称。不得把此清单当作变量值或凭证核验。正式预发前仍需补齐下表中依赖目标环境的变量和 secrets。
 
 Variables：
