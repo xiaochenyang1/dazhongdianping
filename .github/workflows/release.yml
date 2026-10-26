@@ -69,6 +69,8 @@ jobs:
       PUBLIC_SITE_URL_EU: ${{ vars.PUBLIC_SITE_URL_EU }}
       PRERENDER_API_BASE_URL_EU: ${{ vars.PRERENDER_API_BASE_URL_EU }}
       APP_RELEASE_VERSION: ${{ github.event.workflow_run.head_sha }}
+      APP_RELEASE_COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+      DEPLOY_EXPECTED_COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Check test deployment configuration
         id: deployment-config
@@ -198,6 +200,8 @@ jobs:
       PUBLIC_SITE_URL_EU: ${{ vars.PUBLIC_SITE_URL_EU }}
       PRERENDER_API_BASE_URL_EU: ${{ vars.PRERENDER_API_BASE_URL_EU }}
       APP_RELEASE_VERSION: ${{ inputs.release_version }}
+      APP_RELEASE_COMMIT_SHA: ${{ github.sha }}
+      DEPLOY_EXPECTED_COMMIT_SHA: ${{ github.sha }}
     steps:
       - name: Check pre deployment configuration
         shell: bash
@@ -313,6 +317,8 @@ jobs:
       PUBLIC_SITE_URL_EU: ${{ vars.PUBLIC_SITE_URL_EU }}
       PRERENDER_API_BASE_URL_EU: ${{ vars.PRERENDER_API_BASE_URL_EU }}
       APP_RELEASE_VERSION: ${{ inputs.release_version }}
+      APP_RELEASE_COMMIT_SHA: ${{ github.sha }}
+      DEPLOY_EXPECTED_COMMIT_SHA: ${{ github.sha }}
     steps:
       - name: Check prod deployment configuration
         shell: bash
