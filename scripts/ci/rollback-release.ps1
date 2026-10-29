@@ -6,6 +6,8 @@ param(
     [string]$RemoteUser,
     [string]$RemoteRoot,
     [string]$TargetVersion,
+    [string]$ExpectedCurrentVersion,
+    [string]$ExpectedDeploymentId,
     [string]$BackendServiceName,
     [string]$WebServiceName,
     [string]$AdminServiceName,
@@ -36,10 +38,16 @@ if (-not $PSBoundParameters.ContainsKey("ReleaseRetentionCount") -and $env:DEPLO
 function Invoke-Native {
     param(
         [string]$FilePath,
-        [string[]]$Arguments
+        [string[]]$Arguments,
+        [string]$InputScript
     )
 
-    & $FilePath @Arguments
+    if ($PSBoundParameters.ContainsKey('InputScript')) {
+        $InputScript.Replace("`r`n", "`n") | & $FilePath @Arguments
+    }
+    else {
+        & $FilePath @Arguments
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "$FilePath exited with code $LASTEXITCODE"
     }
@@ -125,7 +133,7 @@ function Invoke-SmokeChecks {
 
 if ($DryRun) {
     Write-Output "Plan:"
-    Write-Output "1. Resolve the requested or tracked previous stable release on the remote host, falling back to the newest non-current release."
+    Write-Output "1. Resolve only the requested or tracked previous stable release; never select an arbitrary unverified directory."
     Write-Output "2. Preserve the currently active release as the next previous target."
     Write-Output "3. Point the remote current symlink back to the selected release."
     Write-Output "4. Restart the backend, web, admin-web, and merchant-web services."
@@ -156,17 +164,22 @@ $RemoteRoot = $RemoteRoot.TrimEnd("/")
 if (-not [string]::IsNullOrWhiteSpace($TargetVersion)) {
     Assert-SafeReleaseVersion -Value $TargetVersion
 }
+if ($ExpectedCurrentVersion) { Assert-SafeReleaseVersion -Value $ExpectedCurrentVersion }
+if (($ExpectedCurrentVersion -and $ExpectedDeploymentId -notmatch '^[0-9a-f]{32}$') -or
+    ($ExpectedDeploymentId -and -not $ExpectedCurrentVersion)) {
+    throw 'Automatic recovery requires both ExpectedCurrentVersion and a 32-character ExpectedDeploymentId'
+}
 $validatedSmokeUrls = @(Get-ValidatedSmokeUrls -Value $SmokeUrls)
 
-$sshPath = (Get-Command ssh -ErrorAction Stop).Source
+$sshPath = (Get-Command ssh -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 $remoteAddress = "$RemoteUser@$RemoteHost"
 $systemdServices = @($BackendServiceName, $WebServiceName, $AdminServiceName, $MerchantServiceName) |
     Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
     ForEach-Object { $_.Trim() }
 Assert-SafeServiceNames -Names $systemdServices
 $restartCommand = if ($systemdServices.Count -gt 0) {
-    "sudo systemctl restart " + ($systemdServices -join " ") + "`n" +
-    "sudo systemctl is-active --quiet " + ($systemdServices -join " ")
+    "sudo -n systemctl restart " + ($systemdServices -join " ") + "`n" +
+    "for service in " + ($systemdServices -join " ") + "; do sudo -n systemctl is-active --quiet " + '"$service"' + "; done"
 }
 else {
     ":"
@@ -174,9 +187,11 @@ else {
 
 $targetClause = if ([string]::IsNullOrWhiteSpace($TargetVersion)) {
     @"
-current_release=`$(readlink -f '$RemoteRoot/current' || true)
-previous_release=`$(readlink -f '$RemoteRoot/previous' || true)
-if [ -n "`$previous_release" ]; then
+previous_release=''
+if [ -e '$RemoteRoot/previous' ] || [ -L '$RemoteRoot/previous' ]; then
+  test -L '$RemoteRoot/previous' || { echo 'Previous release must be a symlink' >&2; exit 1; }
+  previous_release=`$(readlink -f '$RemoteRoot/previous')
+  test -d "`$previous_release" || { echo 'Previous release is missing' >&2; exit 1; }
   case "`$previous_release" in
     '$RemoteRoot/releases'/*) ;;
     *)
@@ -188,16 +203,13 @@ fi
 target=''
 if [ -n "`$previous_release" ] && [ "`$previous_release" != "`$current_release" ]; then
   target=`$(basename "`$previous_release")
-else
-  while IFS= read -r candidate; do
-    if [[ "`$candidate" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] &&
-       [ '$RemoteRoot/releases/'"`$candidate" != "`$current_release" ]; then
-      target="`$candidate"
-      break
-    fi
-  done < <(find '$RemoteRoot/releases' -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' | sort -nr | sed 's/^[^ ]* //')
 fi
 if [ -z "`$target" ]; then
+  if [ -n '$ExpectedCurrentVersion' ]; then
+    sudo -n systemctl stop $($systemdServices -join ' ')
+    rm -f '$RemoteRoot/current'
+    echo 'Failed first deployment deactivated; no previous stable release is available' >&2
+  fi
   echo "No previous stable release found" >&2
   exit 1
 fi
@@ -212,39 +224,69 @@ set -euo pipefail
 mkdir -p '$RemoteRoot'
 exec 9>'$RemoteRoot/.deploy.lock'
 flock -w 300 9 || { echo "Another deployment or rollback is active" >&2; exit 1; }
+current_release=''
+if [ -e '$RemoteRoot/current' ] || [ -L '$RemoteRoot/current' ]; then
+  test -L '$RemoteRoot/current' || { echo 'Current release must be a symlink' >&2; exit 1; }
+  current_release=`$(readlink -f '$RemoteRoot/current')
+  test -d "`$current_release" || { echo 'Current release is missing' >&2; exit 1; }
+  case "`$current_release" in
+    '$RemoteRoot/releases'/*) ;;
+    *) echo 'Current release points outside the managed releases directory' >&2; exit 1 ;;
+  esac
+fi
+if [ -n '$ExpectedCurrentVersion' ] && [ "`$current_release" != '$RemoteRoot/releases/$ExpectedCurrentVersion' ]; then
+  echo 'Automatic recovery refused: failed deployment is not current; no release was changed' >&2
+  exit 1
+fi
+if [ -n '$ExpectedDeploymentId' ]; then
+  if [ ! -f "`$current_release/.deployment-attempt" ] || [ "`$(cat "`$current_release/.deployment-attempt")" != '$ExpectedDeploymentId' ]; then
+    echo 'Automatic recovery refused: deployment attempt does not match; no release was changed' >&2
+    exit 1
+  fi
+fi
 $targetClause
 if [[ ! "`$target" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]; then
   echo "Resolved rollback version contains unsupported characters" >&2
   exit 1
 fi
 if [ ! -d '$RemoteRoot/releases/'"`$target" ]; then
-  echo "Target release not found: `"${target}" >&2
+  echo "Target release not found: `$target" >&2
   exit 1
 fi
-current_release=`$(readlink -f '$RemoteRoot/current' || true)
-if [ -n "`$current_release" ]; then
-  case "`$current_release" in
-    '$RemoteRoot/releases'/*) ;;
-    *)
-      echo "Current release points outside the managed releases directory" >&2
-      exit 1
-      ;;
-  esac
-fi
 target_release='$RemoteRoot/releases/'"`$target"
-if [ -n "`$current_release" ] && [ "`$current_release" != "`$target_release" ]; then
+if [ "`$(readlink -f "`$target_release")" != "`$target_release" ]; then
+  echo 'Rollback target must be a managed release directory, not a symlink' >&2
+  exit 1
+fi
+if [ ! -f "`$target_release/release-version.txt" ] || [ "`$(tr -d '\r\n' < "`$target_release/release-version.txt")" != "`$target" ]; then
+  echo 'Rollback target version marker is invalid' >&2
+  exit 1
+fi
+if [ -z '$ExpectedCurrentVersion' ] && [ -n "`$current_release" ] && [ "`$current_release" != "`$target_release" ]; then
   ln -sfn "`$current_release" '$RemoteRoot/previous'
+fi
+if [ -n '$ExpectedDeploymentId' ]; then
+  restored_previous=`$(cat "`$current_release/.deployment-previous")
+  if [ -n "`$restored_previous" ]; then
+    case "`$restored_previous" in
+      '$RemoteRoot/releases'/*) ;;
+      *) echo 'Saved previous release is outside the managed directory' >&2; exit 1 ;;
+    esac
+    test -d "`$restored_previous" || { echo 'Saved previous release is missing' >&2; exit 1; }
+    ln -sfn "`$restored_previous" '$RemoteRoot/previous'
+  else
+    rm -f '$RemoteRoot/previous'
+  fi
 fi
 ln -sfn '$RemoteRoot/releases/'"`$target" '$RemoteRoot/current'
 $restartCommand
-echo `"${target}"
+printf '%s\n' "`$target"
 "@
 
-$rolledBackVersion = Invoke-Native -FilePath $sshPath -Arguments @(
-    "-p", "$RemotePort",
-    $remoteAddress,
-    "bash -lc ""$remoteRollbackScript"""
-)
+$sshArguments = @('-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', '-p', "$RemotePort", '--', $remoteAddress, 'bash', '-s')
+$rolledBackVersion = Invoke-Native -FilePath $sshPath -Arguments $sshArguments -InputScript $remoteRollbackScript
+$restoredVersion = [string](@($rolledBackVersion)[-1])
+Assert-SafeReleaseVersion -Value $restoredVersion
 
 Invoke-SmokeChecks -Urls $validatedSmokeUrls
 
@@ -255,8 +297,13 @@ $remoteRetentionScript = @"
 set -euo pipefail
 exec 9>'$RemoteRoot/.deploy.lock'
 flock -w 300 9 || { echo "Another deployment or rollback is active" >&2; exit 1; }
-current_release=`$(readlink -f '$remoteCurrentPath' || true)
-previous_release=`$(readlink -f '$remotePreviousPath' || true)
+current_release=`$(readlink -f '$remoteCurrentPath')
+if [ "`$current_release" != '$remoteReleaseRoot/$restoredVersion' ]; then
+  echo 'Skipping retention: a different release is now current' >&2
+  exit 0
+fi
+previous_release=''
+if [ -L '$remotePreviousPath' ]; then previous_release=`$(readlink -f '$remotePreviousPath'); fi
 for tracked_release in "`$current_release" "`$previous_release"; do
   if [ -n "`$tracked_release" ]; then
     case "`$tracked_release" in
@@ -278,17 +325,12 @@ while IFS= read -r candidate; do
     rm -rf -- "`$candidate_path"
   fi
 done < <(find '$remoteReleaseRoot' -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' | sort -nr | sed 's/^[^ ]* //')
-find '$RemoteRoot' -maxdepth 1 -type f -name 'dazhongdianping-release-*.zip' -delete
 "@
 try {
-    Invoke-Native -FilePath $sshPath -Arguments @(
-        "-p", "$RemotePort",
-        $remoteAddress,
-        "bash -lc ""$remoteRetentionScript"""
-    )
+    Invoke-Native -FilePath $sshPath -Arguments $sshArguments -InputScript $remoteRetentionScript
 }
 catch {
     Write-Warning "Release retention cleanup failed after a successful rollback: $($_.Exception.Message)"
 }
 
-Write-Output "rolled back to $($rolledBackVersion -join '') in $Environment/$Region"
+Write-Output "rolled back to $restoredVersion in $Environment/$Region"

@@ -47,10 +47,18 @@ if (-not $PSBoundParameters.ContainsKey("ReleaseRetentionCount") -and $env:DEPLO
 function Invoke-Native {
     param(
         [string]$FilePath,
-        [string[]]$Arguments
+        [string[]]$Arguments,
+        [string]$InputScript
     )
 
-    & $FilePath @Arguments
+    if ($PSBoundParameters.ContainsKey('InputScript')) {
+        # Send scripts on stdin; quoting a script inside `bash -lc "..."`
+        # lets the remote login shell expand its variables before bash runs it.
+        $InputScript.Replace("`r`n", "`n") | & $FilePath @Arguments
+    }
+    else {
+        & $FilePath @Arguments
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "$FilePath exited with code $LASTEXITCODE"
     }
@@ -147,14 +155,14 @@ function Invoke-SmokeChecks {
 if ($DryRun) {
     Write-Output "Plan:"
     Write-Output "1. Validate the local ZIP, SHA-256 sidecar, manifest, ExpectedCommitSha, build environment/region, Web/Stripe/SEO configuration, and migrations before resolving SSH/SCP."
-    Write-Output "2. Upload the release bundle over SSH/SCP."
+    Write-Output "2. Prepare the writable remote directory over SSH, then upload the release bundle with SCP."
     Write-Output "3. Verify the remote bundle SHA-256 integrity before extracting it."
     Write-Output "4. Extract the bundle under a versioned releases directory below the remote root."
     Write-Output "5. Run database/mysql-migrate.sh with the secret-managed MySQL defaults file before changing current/previous or restarting services."
     Write-Output "6. Switch the remote current symlink to the new release only after migration apply/strict verification succeeds."
     Write-Output "7. Restart the backend, web, admin-web, and merchant-web services."
     Write-Output "8. Run smoke checks against the deployed environment."
-    Write-Output "9. If smoke checks fail, automatically restore the tracked previous release and keep the deployment failed."
+    Write-Output "9. If activation or smoke checks fail, automatically restore the tracked previous release only while this version is current, and keep the deployment failed."
     Write-Output "10. After successful smoke checks, retain current, previous, and $ReleaseRetentionCount older releases and remove stale bundles."
     exit 0
 }
@@ -199,11 +207,12 @@ $bundleName = [System.IO.Path]::GetFileName($resolvedBundle)
 $bundleSha256 = $bundleVerification.Sha256
 $version = $bundleVerification.Version
 Assert-SafeReleaseVersion -Value $version
-$sshPath = (Get-Command ssh -CommandType Application -ErrorAction Stop).Source
-$scpPath = (Get-Command scp -CommandType Application -ErrorAction Stop).Source
+$sshPath = (Get-Command ssh -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+$scpPath = (Get-Command scp -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 $remoteReleaseRoot = "$RemoteRoot/releases"
 $remoteReleaseDir = "$remoteReleaseRoot/$version"
-$remoteBundlePath = "$RemoteRoot/$bundleName"
+$deploymentId = [Guid]::NewGuid().ToString('N')
+$remoteBundlePath = "$RemoteRoot/.upload-$version-$deploymentId.zip"
 $remoteCurrentPath = "$RemoteRoot/current"
 $remotePreviousPath = "$RemoteRoot/previous"
 $remoteAddress = "$RemoteUser@$RemoteHost"
@@ -212,8 +221,8 @@ $systemdServices = @($BackendServiceName, $WebServiceName, $AdminServiceName, $M
     ForEach-Object { $_.Trim() }
 Assert-SafeServiceNames -Names $systemdServices
 $restartCommand = if ($systemdServices.Count -gt 0) {
-    "sudo systemctl restart " + ($systemdServices -join " ") + "`n" +
-    "sudo systemctl is-active --quiet " + ($systemdServices -join " ")
+    "sudo -n systemctl restart " + ($systemdServices -join " ") + "`n" +
+    "for service in " + ($systemdServices -join " ") + "; do sudo -n systemctl is-active --quiet " + '"$service"' + "; done"
 }
 else {
     ":"
@@ -225,6 +234,18 @@ $migrationBaselineClause = if (-not [string]::IsNullOrWhiteSpace($DatabaseBaseli
 else {
     ""
 }
+
+$sshArguments = @('-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', '-p', "$RemotePort", '--', $remoteAddress, 'bash', '-s')
+$remotePrepareScript = @"
+set -euo pipefail
+mkdir -p '$RemoteRoot'
+test -w '$RemoteRoot' || { echo 'Release root is not writable' >&2; exit 1; }
+test -r '$DatabaseDefaultsFile' || { echo 'Database defaults file is not readable' >&2; exit 1; }
+for tool in flock sha256sum unzip readlink sudo systemctl; do
+  command -v "`$tool" >/dev/null || { echo "Missing deployment tool: `$tool" >&2; exit 1; }
+done
+"@
+Invoke-Native -FilePath $sshPath -Arguments $sshArguments -InputScript $remotePrepareScript
 
 Invoke-Native -FilePath $scpPath -Arguments @(
     "-P", "$RemotePort",
@@ -238,8 +259,11 @@ mkdir -p '$RemoteRoot'
 exec 9>'$RemoteRoot/.deploy.lock'
 flock -w 300 9 || { echo "Another deployment or rollback is active" >&2; exit 1; }
 printf '%s  %s\n' '$bundleSha256' '$remoteBundlePath' | sha256sum --check --status
-active_release=`$(readlink -f '$remoteCurrentPath' || true)
-if [ -n "`$active_release" ]; then
+active_release=''
+if [ -e '$remoteCurrentPath' ] || [ -L '$remoteCurrentPath' ]; then
+  test -L '$remoteCurrentPath' || { echo 'Current release must be a symlink' >&2; exit 1; }
+  active_release=`$(readlink -f '$remoteCurrentPath')
+  test -d "`$active_release" || { echo 'Current release is missing' >&2; exit 1; }
   case "`$active_release" in
     '$remoteReleaseRoot'/*) ;;
     *)
@@ -248,18 +272,31 @@ if [ -n "`$active_release" ]; then
       ;;
   esac
 fi
+previous_release=''
+if [ -e '$remotePreviousPath' ] || [ -L '$remotePreviousPath' ]; then
+  test -L '$remotePreviousPath' || { echo 'Previous release must be a symlink' >&2; exit 1; }
+  previous_release=`$(readlink -f '$remotePreviousPath')
+  test -d "`$previous_release" || { echo 'Previous release is missing' >&2; exit 1; }
+  case "`$previous_release" in
+    '$remoteReleaseRoot'/*) ;;
+    *) echo 'Previous release points outside the managed releases directory' >&2; exit 1 ;;
+  esac
+fi
 mkdir -p '$remoteReleaseRoot'
 if [ -n "`$active_release" ] && [ "`$active_release" = '$remoteReleaseDir' ]; then
   echo "Refusing to replace the currently active release directory" >&2
   exit 1
 fi
-rm -rf '$remoteReleaseDir'
+if [ -e '$remoteReleaseDir' ] || [ -L '$remoteReleaseDir' ]; then
+  echo 'Release version already exists; build a new version instead of replacing it' >&2
+  exit 1
+fi
 mkdir -p '$remoteReleaseDir'
 unzip -oq '$remoteBundlePath' -d '$remoteReleaseDir'
 if [ ! -x '$remoteReleaseDir/database/mysql-migrate.sh' ]; then
   chmod 755 '$remoteReleaseDir/database/mysql-migrate.sh'
 fi
-if [ ! -f '$remoteReleaseDir/release-version.txt' ] || [ "`$(tr -d '\\r\\n' < '$remoteReleaseDir/release-version.txt')" != '$version' ]; then
+if [ ! -f '$remoteReleaseDir/release-version.txt' ] || [ "`$(tr -d '\r\n' < '$remoteReleaseDir/release-version.txt')" != '$version' ]; then
   echo "Release version marker does not match the requested version" >&2
   exit 1
 fi
@@ -268,6 +305,8 @@ bash '$remoteReleaseDir/database/mysql-migrate.sh' \
   --mode '$DatabaseMigrationMode' \
   --release-version '$version' \
   --lock-file '$RemoteRoot/.database-migration.lock'$migrationBaselineClause
+printf '%s\n' "`$previous_release" > '$remoteReleaseDir/.deployment-previous'
+printf '%s\n' '$deploymentId' > '$remoteReleaseDir/.deployment-attempt'
 if [ -n "`$active_release" ] && [ "`$active_release" != '$remoteReleaseDir' ]; then
   ln -sfn "`$active_release" '$remotePreviousPath'
 fi
@@ -275,13 +314,8 @@ ln -sfn '$remoteReleaseDir' '$remoteCurrentPath'
 $restartCommand
 "@
 
-Invoke-Native -FilePath $sshPath -Arguments @(
-    "-p", "$RemotePort",
-    $remoteAddress,
-    "bash -lc ""$remoteDeployScript"""
-)
-
 try {
+    Invoke-Native -FilePath $sshPath -Arguments $sshArguments -InputScript $remoteDeployScript
     Invoke-SmokeChecks -Urls $validatedSmokeUrls
 }
 catch {
@@ -294,25 +328,33 @@ catch {
             -RemotePort $RemotePort `
             -RemoteUser $RemoteUser `
             -RemoteRoot $RemoteRoot `
+            -ExpectedCurrentVersion $version `
+            -ExpectedDeploymentId $deploymentId `
             -BackendServiceName $BackendServiceName `
             -WebServiceName $WebServiceName `
             -AdminServiceName $AdminServiceName `
             -MerchantServiceName $MerchantServiceName `
+            -ReleaseRetentionCount $ReleaseRetentionCount `
             -SmokeUrls $SmokeUrls |
             ForEach-Object { Write-Host $_ }
     }
     catch {
-        throw "Deployment smoke checks failed: $smokeFailure. Automatic rollback also failed: $($_.Exception.Message)"
+        throw "Deployment activation or smoke checks failed: $smokeFailure. Automatic rollback also failed or was refused: $($_.Exception.Message)"
     }
-    throw "Deployment smoke checks failed and the previous release was automatically restored: $smokeFailure"
+    throw "Deployment activation or smoke checks failed and the previous release was automatically restored: $smokeFailure"
 }
 
 $remoteRetentionScript = @"
 set -euo pipefail
 exec 9>'$RemoteRoot/.deploy.lock'
 flock -w 300 9 || { echo "Another deployment or rollback is active" >&2; exit 1; }
-current_release=`$(readlink -f '$remoteCurrentPath' || true)
-previous_release=`$(readlink -f '$remotePreviousPath' || true)
+current_release=`$(readlink -f '$remoteCurrentPath')
+if [ "`$current_release" != '$remoteReleaseDir' ]; then
+  echo 'Skipping retention: a different release is now current' >&2
+  exit 0
+fi
+previous_release=''
+if [ -L '$remotePreviousPath' ]; then previous_release=`$(readlink -f '$remotePreviousPath'); fi
 for tracked_release in "`$current_release" "`$previous_release"; do
   if [ -n "`$tracked_release" ]; then
     case "`$tracked_release" in
@@ -334,14 +376,10 @@ while IFS= read -r candidate; do
     rm -rf -- "`$candidate_path"
   fi
 done < <(find '$remoteReleaseRoot' -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' | sort -nr | sed 's/^[^ ]* //')
-find '$RemoteRoot' -maxdepth 1 -type f -name 'dazhongdianping-release-*.zip' -delete
+rm -f -- '$remoteBundlePath'
 "@
 try {
-    Invoke-Native -FilePath $sshPath -Arguments @(
-        "-p", "$RemotePort",
-        $remoteAddress,
-        "bash -lc ""$remoteRetentionScript"""
-    )
+    Invoke-Native -FilePath $sshPath -Arguments $sshArguments -InputScript $remoteRetentionScript
 }
 catch {
     Write-Warning "Release retention cleanup failed after a successful deployment: $($_.Exception.Message)"
