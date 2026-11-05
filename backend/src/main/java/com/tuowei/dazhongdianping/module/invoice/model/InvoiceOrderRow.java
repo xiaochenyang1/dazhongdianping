@@ -8,6 +8,9 @@ import lombok.Data;
 public class InvoiceOrderRow {
 
     private Long id;
+    private String orderNo;
+    private String dealTitle;
+    private String shopName;
     private Long userId;
     private String region;
     private BigDecimal amount;

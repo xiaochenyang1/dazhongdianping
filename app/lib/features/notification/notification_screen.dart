@@ -13,6 +13,7 @@ class NotificationScreen extends StatefulWidget {
     this.onConversationTap,
     this.onOrderTap,
     this.onReservationTap,
+    this.onConsultTap,
     this.onReviewTap,
     this.onCouponListTap,
     this.onCouponDetailTap,
@@ -26,6 +27,7 @@ class NotificationScreen extends StatefulWidget {
   onConversationTap;
   final ValueChanged<int>? onOrderTap;
   final ValueChanged<int>? onReservationTap;
+  final ValueChanged<int>? onConsultTap;
   final void Function(int reviewId, {required bool owned})? onReviewTap;
   final void Function({int? status, String? code})? onCouponListTap;
   final ValueChanged<String>? onCouponDetailTap;
@@ -313,6 +315,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
         widget.onReservationTap?.call(reservationId);
         return;
       }
+      final consultMatch = RegExp(
+        r'^/user/consult/(\d+)(?:\?.*)?$',
+      ).firstMatch(notification.linkUrl);
+      final consultId = consultMatch == null
+          ? null
+          : int.tryParse(consultMatch.group(1)!);
+      if (notification.type == 'consult.reply' && consultId != null) {
+        widget.onConsultTap?.call(consultId);
+        return;
+      }
       final conversationMatch = RegExp(
         r'^/messages/conversations/(\d+)$',
       ).firstMatch(notification.linkUrl);
@@ -342,6 +354,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return strings.notificationTitleSocialFollow;
       case 'message.direct':
         return strings.notificationTitleDirectMessage;
+      case 'consult.reply':
+        return strings.notificationTitleConsultReply;
       case 'social.mention':
         return strings.notificationTitleMention;
       case 'post.audit.result':

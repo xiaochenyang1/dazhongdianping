@@ -46,6 +46,7 @@ class AppLocalizations {
     'qaAnswer': '回答',
     'qaAnswerFailed': '回答失败：{error}',
     'consultEntry': '咨询商家',
+    'notificationTitleConsultReply': '商家回复了咨询',
     'myConsultTitle': '在线咨询',
     'consultSessionsEmpty': '还没有咨询会话，去商户页发起咨询吧。',
     'consultLoadFailed': '咨询加载失败：{error}',
@@ -64,6 +65,16 @@ class AppLocalizations {
     'ticketSubmit': '提交工单',
     'ticketReply': '回复',
     'ticketSend': '发送',
+    'ticketSubjectRequired': '请填写工单主题。',
+    'ticketContentRequired': '请填写内容。',
+    'ticketReplyUnavailable': '该工单已解决或关闭，不能继续回复。',
+    'ticketNotFound': '工单不存在或无权查看。',
+    'ticketPending': '待处理',
+    'ticketInProgress': '处理中',
+    'ticketResolved': '已解决',
+    'ticketClosed': '已关闭',
+    'ticketSupport': '客服',
+    'ticketUnavailable': '状态不可用',
     'guidesTitle': '探店攻略',
     'guidesEmpty': '暂时没有攻略。',
     'guidesLoadFailed': '攻略加载失败：{error}',
@@ -75,6 +86,32 @@ class AppLocalizations {
     'invoiceRequest': '申请开票',
     'invoiceName': '抬头名称',
     'invoiceTaxNo': '税号',
+    'invoiceOrders': '可开票订单',
+    'invoiceChooseOrder': '请选择订单',
+    'invoiceNoOrders': '没有可开票订单。订单需已支付且尚未申请开票。',
+    'invoiceOtherOrders': '选择其他订单',
+    'invoiceChooseTitle': '请选择抬头',
+    'invoiceNewTitle': '新增抬头',
+    'invoicePersonal': '个人',
+    'invoiceCompany': '企业',
+    'invoiceEmail': '收票邮箱（选填）',
+    'invoiceSaveTitle': '保存抬头',
+    'invoiceNameRequired': '请填写抬头名称。',
+    'invoiceTaxRequired': '企业抬头需填写税号。',
+    'invoiceEmailInvalid': '请填写有效邮箱。',
+    'invoiceRequested': '开票申请已提交。',
+    'invoiceTitleSaved': '抬头已保存。',
+    'invoiceHistory': '申请记录',
+    'invoiceHistoryEmpty': '还没有开票申请。',
+    'invoicePending': '待开票',
+    'invoiceIssued': '已登记开票',
+    'invoiceRejected': '已驳回',
+    'invoiceUnavailable': '状态不可用',
+    'invoiceAlreadyRequested': '该订单已申请开票，请查看申请记录。',
+    'invoiceOrderUnavailable': '订单不可开票或无权查看。',
+    'invoiceTaxUnavailable': '当前区域暂不能申请开票，请联系客服。',
+    'invoiceNumber': '发票号码',
+    'invoiceTaxAmount': '税额',
     'seckillTitle': '秒杀',
     'seckillClaim': '抢购',
     'seckillEmpty': '暂时没有秒杀。',
@@ -1179,6 +1216,7 @@ class AppLocalizations {
     'qaAnswer': '回答',
     'qaAnswerFailed': '回答失敗：{error}',
     'consultEntry': '諮詢商家',
+    'notificationTitleConsultReply': '商家回覆了諮詢',
     'myConsultTitle': '線上諮詢',
     'consultSessionsEmpty': '還沒有諮詢會話，去商戶頁發起諮詢吧。',
     'consultLoadFailed': '諮詢載入失敗：{error}',
@@ -1197,6 +1235,16 @@ class AppLocalizations {
     'ticketSubmit': '提交工單',
     'ticketReply': '回覆',
     'ticketSend': '發送',
+    'ticketSubjectRequired': '請填寫工單主題。',
+    'ticketContentRequired': '請填寫內容。',
+    'ticketReplyUnavailable': '此工單已解決或關閉，無法繼續回覆。',
+    'ticketNotFound': '工單不存在或無權查看。',
+    'ticketPending': '待處理',
+    'ticketInProgress': '處理中',
+    'ticketResolved': '已解決',
+    'ticketClosed': '已關閉',
+    'ticketSupport': '客服',
+    'ticketUnavailable': '狀態不可用',
     'guidesTitle': '探店攻略',
     'guidesEmpty': '暫時沒有攻略。',
     'guidesLoadFailed': '攻略載入失敗：{error}',
@@ -1208,6 +1256,32 @@ class AppLocalizations {
     'invoiceRequest': '申請開票',
     'invoiceName': '抬頭名稱',
     'invoiceTaxNo': '稅號',
+    'invoiceOrders': '可開票訂單',
+    'invoiceChooseOrder': '請選擇訂單',
+    'invoiceNoOrders': '沒有可開票訂單。訂單需已支付且尚未申請開票。',
+    'invoiceOtherOrders': '選擇其他訂單',
+    'invoiceChooseTitle': '請選擇抬頭',
+    'invoiceNewTitle': '新增抬頭',
+    'invoicePersonal': '個人',
+    'invoiceCompany': '企業',
+    'invoiceEmail': '收票郵箱（選填）',
+    'invoiceSaveTitle': '儲存抬頭',
+    'invoiceNameRequired': '請填寫抬頭名稱。',
+    'invoiceTaxRequired': '企業抬頭需填寫稅號。',
+    'invoiceEmailInvalid': '請填寫有效郵箱。',
+    'invoiceRequested': '開票申請已提交。',
+    'invoiceTitleSaved': '抬頭已儲存。',
+    'invoiceHistory': '申請紀錄',
+    'invoiceHistoryEmpty': '還沒有開票申請。',
+    'invoicePending': '待開票',
+    'invoiceIssued': '已登記開票',
+    'invoiceRejected': '已駁回',
+    'invoiceUnavailable': '狀態不可用',
+    'invoiceAlreadyRequested': '該訂單已申請開票，請查看申請紀錄。',
+    'invoiceOrderUnavailable': '訂單不可開票或無權查看。',
+    'invoiceTaxUnavailable': '目前區域暫不能申請開票，請聯絡客服。',
+    'invoiceNumber': '發票號碼',
+    'invoiceTaxAmount': '稅額',
     'seckillTitle': '秒殺',
     'seckillClaim': '搶購',
     'seckillEmpty': '暫時沒有秒殺。',
@@ -2312,6 +2386,7 @@ class AppLocalizations {
     'qaAnswer': 'Answer',
     'qaAnswerFailed': 'Failed to post the answer: {error}',
     'consultEntry': 'Chat with merchant',
+    'notificationTitleConsultReply': 'Merchant replied to your chat',
     'myConsultTitle': 'Live Chat',
     'consultSessionsEmpty': 'No chats yet — start one from a shop page.',
     'consultLoadFailed': 'Failed to load chat: {error}',
@@ -2330,6 +2405,17 @@ class AppLocalizations {
     'ticketSubmit': 'Submit ticket',
     'ticketReply': 'Reply',
     'ticketSend': 'Send',
+    'ticketSubjectRequired': 'Enter a subject.',
+    'ticketContentRequired': 'Enter your message.',
+    'ticketReplyUnavailable':
+        'This ticket is resolved or closed and no longer accepts replies.',
+    'ticketNotFound': 'This ticket is unavailable.',
+    'ticketPending': 'Pending',
+    'ticketInProgress': 'In progress',
+    'ticketResolved': 'Resolved',
+    'ticketClosed': 'Closed',
+    'ticketSupport': 'Support',
+    'ticketUnavailable': 'Status unavailable',
     'guidesTitle': 'Guides',
     'guidesEmpty': 'No guides yet.',
     'guidesLoadFailed': 'Failed to load guides: {error}',
@@ -2341,6 +2427,32 @@ class AppLocalizations {
     'invoiceRequest': 'Request invoice',
     'invoiceName': 'Title name',
     'invoiceTaxNo': 'Tax number',
+    'invoiceOrders': 'Eligible orders',
+    'invoiceChooseOrder': 'Choose an order',
+    'invoiceNoOrders': 'No eligible orders. Orders must be paid and not already requested.',
+    'invoiceOtherOrders': 'Choose another order',
+    'invoiceChooseTitle': 'Choose an invoice title',
+    'invoiceNewTitle': 'New invoice title',
+    'invoicePersonal': 'Personal',
+    'invoiceCompany': 'Company',
+    'invoiceEmail': 'Invoice email (optional)',
+    'invoiceSaveTitle': 'Save title',
+    'invoiceNameRequired': 'Enter the invoice title name.',
+    'invoiceTaxRequired': 'A tax number is required for a company.',
+    'invoiceEmailInvalid': 'Enter a valid email address.',
+    'invoiceRequested': 'Invoice request submitted.',
+    'invoiceTitleSaved': 'Invoice title saved.',
+    'invoiceHistory': 'Invoice requests',
+    'invoiceHistoryEmpty': 'No invoice requests yet.',
+    'invoicePending': 'Pending',
+    'invoiceIssued': 'Invoice registered',
+    'invoiceRejected': 'Rejected',
+    'invoiceUnavailable': 'Status unavailable',
+    'invoiceAlreadyRequested': 'This order already has an invoice request. Check your requests.',
+    'invoiceOrderUnavailable': 'This order is not eligible or is unavailable.',
+    'invoiceTaxUnavailable': 'Invoicing is unavailable in this region. Contact support.',
+    'invoiceNumber': 'Invoice number',
+    'invoiceTaxAmount': 'Tax amount',
     'seckillTitle': 'Flash sale',
     'seckillClaim': 'Claim',
     'seckillEmpty': 'No flash sales right now.',
@@ -3684,6 +3796,8 @@ class AppLocalizations {
   String get qaAnswer => _text('qaAnswer');
   String qaAnswerFailed(Object error) => _withError('qaAnswerFailed', error);
   String get consultEntry => _text('consultEntry');
+  String get notificationTitleConsultReply =>
+      _text('notificationTitleConsultReply');
   String get myConsultTitle => _text('myConsultTitle');
   String get consultSessionsEmpty => _text('consultSessionsEmpty');
   String consultLoadFailed(Object error) =>
@@ -3705,6 +3819,23 @@ class AppLocalizations {
   String get ticketSubmit => _text('ticketSubmit');
   String get ticketReply => _text('ticketReply');
   String get ticketSend => _text('ticketSend');
+  String get ticketSubjectRequired => _text('ticketSubjectRequired');
+  String get ticketContentRequired => _text('ticketContentRequired');
+  String get ticketReplyUnavailable => _text('ticketReplyUnavailable');
+  String get ticketNotFound => _text('ticketNotFound');
+  String ticketStatusLabel(int status) => _text(switch (status) {
+    1 => 'ticketPending',
+    2 => 'ticketInProgress',
+    3 => 'ticketResolved',
+    4 => 'ticketClosed',
+    _ => 'ticketUnavailable',
+  });
+  String ticketSenderLabel(int senderType) => switch (senderType) {
+    1 => consultYou,
+    2 => consultMerchant,
+    _ => _text('ticketSupport'),
+  };
+
   String get guidesTitle => _text('guidesTitle');
   String get guidesEmpty => _text('guidesEmpty');
   String guidesLoadFailed(Object error) =>
@@ -3717,6 +3848,32 @@ class AppLocalizations {
   String get invoiceRequest => _text('invoiceRequest');
   String get invoiceName => _text('invoiceName');
   String get invoiceTaxNo => _text('invoiceTaxNo');
+  String get invoiceOrders => _text('invoiceOrders');
+  String get invoiceChooseOrder => _text('invoiceChooseOrder');
+  String get invoiceNoOrders => _text('invoiceNoOrders');
+  String get invoiceOtherOrders => _text('invoiceOtherOrders');
+  String get invoiceChooseTitle => _text('invoiceChooseTitle');
+  String get invoiceNewTitle => _text('invoiceNewTitle');
+  String get invoicePersonal => _text('invoicePersonal');
+  String get invoiceCompany => _text('invoiceCompany');
+  String get invoiceEmail => _text('invoiceEmail');
+  String get invoiceSaveTitle => _text('invoiceSaveTitle');
+  String get invoiceNameRequired => _text('invoiceNameRequired');
+  String get invoiceTaxRequired => _text('invoiceTaxRequired');
+  String get invoiceEmailInvalid => _text('invoiceEmailInvalid');
+  String get invoiceRequested => _text('invoiceRequested');
+  String get invoiceTitleSaved => _text('invoiceTitleSaved');
+  String get invoiceHistory => _text('invoiceHistory');
+  String get invoiceHistoryEmpty => _text('invoiceHistoryEmpty');
+  String get invoicePending => _text('invoicePending');
+  String get invoiceIssued => _text('invoiceIssued');
+  String get invoiceRejected => _text('invoiceRejected');
+  String get invoiceUnavailable => _text('invoiceUnavailable');
+  String get invoiceAlreadyRequested => _text('invoiceAlreadyRequested');
+  String get invoiceOrderUnavailable => _text('invoiceOrderUnavailable');
+  String get invoiceTaxUnavailable => _text('invoiceTaxUnavailable');
+  String get invoiceNumber => _text('invoiceNumber');
+  String get invoiceTaxAmount => _text('invoiceTaxAmount');
   String get seckillTitle => _text('seckillTitle');
   String get seckillClaim => _text('seckillClaim');
   String get seckillEmpty => _text('seckillEmpty');

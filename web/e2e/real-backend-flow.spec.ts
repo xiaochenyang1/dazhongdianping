@@ -1292,3 +1292,84 @@ test.describe.serial('real backend review flow', () => {
     }
   })
 })
+
+test('customer and merchant exchange live consultation replies and support closes a ticket', async ({ page, context, browser, request }) => {
+  test.setTimeout(60_000)
+  const headers = { 'X-Region': 'EU' }
+  const account = `support-flow-${Date.now()}@example.com`
+  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
+    headers, data: { scene: 'register', type: 'email', account, deviceId: account },
+  }))
+  const auth = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
+    await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
+      headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
+    }),
+  )
+  const userHeaders = { ...headers, Authorization: `Bearer ${auth.accessToken}` }
+  await context.addInitScript((session) => {
+    localStorage.setItem('dzdp:region', 'EU')
+    localStorage.setItem('dzdp:user-access-token', session.accessToken)
+    localStorage.setItem('dzdp:user-refresh-token', session.refreshToken)
+    localStorage.setItem('dzdp:user-profile', JSON.stringify(session.user))
+  }, auth)
+  const consultation = await expectApiSuccess<{ id: number }>(
+    await request.post(`${backendBaseURL}/api/c/v1/consult/sessions`, {
+      headers: userHeaders, data: { shopId: 20001 },
+    }),
+  )
+  const merchantContext = await browser.newContext()
+  const merchantPage = await merchantContext.newPage()
+  const userDiagnostics = collectBrowserErrors(page)
+  const merchantDiagnostics = collectBrowserErrors(merchantPage)
+  try {
+    await page.goto(`/user/consult/${consultation.id}`)
+    await page.getByTestId('consult-input').fill('Is a table available tonight?')
+    await page.getByTestId('consult-send').click()
+    await merchantPage.goto(`${merchantBaseURL}/login`)
+    await merchantPage.locator('input[autocomplete="username"]').fill('merchant_eu_sichuan@example.com')
+    await merchantPage.locator('input[autocomplete="current-password"]').fill('merchant123456')
+    await merchantPage.locator('form button').click()
+    await expect(merchantPage).toHaveURL(`${merchantBaseURL}/dashboard`)
+    await merchantPage.goto(`${merchantBaseURL}/consult`)
+    await merchantPage.getByTestId(`session-${consultation.id}`).click()
+    await expect(merchantPage.locator('.messages')).toContainText('Is a table available tonight?')
+    await merchantPage.getByTestId('consult-input').fill('Yes, we have a table at seven.')
+    await merchantPage.getByTestId('consult-send').click()
+    await expect(page.locator('.chat-messages')).toContainText('Yes, we have a table at seven.')
+    await page.getByTestId('consult-input').fill('Thank you, see you then.')
+    await page.getByTestId('consult-send').click()
+    await expect(merchantPage.locator('.messages')).toContainText('Thank you, see you then.')
+
+    await page.goto('/user/tickets')
+    await page.getByTestId('ticket-subject').fill('Invoice delivery question')
+    await page.getByTestId('ticket-content').fill('Please check my invoice delivery.')
+    const createdResponse = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/api/c/v1/tickets')
+    await page.getByTestId('ticket-submit').click()
+    const ticket = await expectApiSuccess<{ id: number }>(await createdResponse)
+    const detail = page.getByTestId(`ticket-detail-${ticket.id}`)
+    await expect(detail).toBeVisible()
+    const admin = await expectApiSuccess<{ accessToken: string }>(await request.post(`${backendBaseURL}/api/admin/v1/auth/login`, {
+      data: { account: 'admin', password: 'admin123456' },
+    }))
+    await expectApiSuccess(await request.post(`${backendBaseURL}/api/admin/v1/tickets/${ticket.id}/reply`, {
+      headers: adminHeaders(admin.accessToken, 'EU'), data: { content: 'Please confirm your invoice title.' },
+    }))
+    await page.getByTestId(`ticket-${ticket.id}`).click()
+    await expect(detail).toContainText('Please confirm your invoice title.')
+    await page.getByTestId('ticket-reply').fill('The title is correct.')
+    await detail.locator('form button').click()
+    await expect(detail).toContainText('The title is correct.')
+    await expectApiSuccess(await request.post(`${backendBaseURL}/api/admin/v1/tickets/${ticket.id}/status`, {
+      headers: adminHeaders(admin.accessToken, 'EU'), data: { status: 4 },
+    }))
+    await page.getByTestId(`ticket-${ticket.id}`).click()
+    await expect(page.getByTestId('ticket-reply')).toHaveCount(0)
+    await expectApiFailure(await request.post(`${backendBaseURL}/api/c/v1/tickets/${ticket.id}/messages`, {
+      headers: userHeaders, data: { content: 'Not allowed after close' },
+    }), 409)
+    expectNoBrowserFailures(userDiagnostics)
+    expectNoBrowserFailures(merchantDiagnostics)
+  } finally {
+    await merchantContext.close()
+  }
+})

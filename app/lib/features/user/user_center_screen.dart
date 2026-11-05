@@ -19,6 +19,7 @@ import 'package:dazhongdianping_app/features/creator/creator_tasks_screen.dart';
 import 'package:dazhongdianping_app/features/guide/guide_repository.dart';
 import 'package:dazhongdianping_app/features/guide/guides_screen.dart';
 import 'package:dazhongdianping_app/features/invoice/invoices_screen.dart';
+import 'package:dazhongdianping_app/features/invoice/invoice_repository.dart';
 import 'package:dazhongdianping_app/features/ticket/ticket_repository.dart';
 import 'package:dazhongdianping_app/features/ticket/tickets_screen.dart';
 import 'package:dazhongdianping_app/features/consult/consult_repository.dart';

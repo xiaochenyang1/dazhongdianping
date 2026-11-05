@@ -41,6 +41,29 @@ public class InvoiceService {
         return mapper.selectTitles(user.userId(), region()).stream().map(this::titleMap).toList();
     }
 
+    public PageResult<Map<String, Object>> eligibleOrders(Long orderId, Integer page, Integer pageSize) {
+        UserSession user = requireUser();
+        if (orderId != null && orderId <= 0) {
+            throw new IllegalArgumentException("订单参数无效");
+        }
+        String region = region();
+        int p = page == null ? 1 : Math.max(1, page);
+        int s = pageSize == null ? 12 : Math.min(50, Math.max(1, pageSize));
+        long total = mapper.countEligibleOrders(user.userId(), region, orderId);
+        List<Map<String, Object>> list = mapper.selectEligibleOrders(user.userId(), region, orderId, s, (p - 1) * s)
+                .stream().map(row -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", row.getId());
+                    item.put("orderNo", row.getOrderNo());
+                    item.put("dealTitle", row.getDealTitle() == null ? "" : row.getDealTitle());
+                    item.put("shopName", row.getShopName() == null ? "" : row.getShopName());
+                    item.put("amount", row.getAmount());
+                    item.put("currency", row.getCurrency());
+                    return item;
+                }).toList();
+        return new PageResult<>(list, total, p, s, (p - 1) * s + list.size() < total);
+    }
+
     @Transactional
     public Map<String, Object> createTitle(InvoiceTitleSaveRequest request) {
         UserSession user = requireUser();

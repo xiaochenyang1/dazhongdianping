@@ -22,6 +22,12 @@ public interface InvoiceMapper {
 
     InvoiceOrderRow selectOrder(@Param("id") Long id);
 
+    long countEligibleOrders(@Param("userId") Long userId, @Param("region") String region,
+            @Param("orderId") Long orderId);
+
+    List<InvoiceOrderRow> selectEligibleOrders(@Param("userId") Long userId, @Param("region") String region,
+            @Param("orderId") Long orderId, @Param("limit") int limit, @Param("offset") int offset);
+
     int countByOrder(@Param("orderId") Long orderId);
 
     TaxRateRow selectEnabledTaxRate(@Param("region") String region);
