@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dazhongdianping_app/core/api_client.dart';
 
 class InvoiceTitle {
@@ -60,6 +61,9 @@ class InvoiceRequestItem {
     required this.currency,
     this.invoiceNo = '',
     this.rejectReason = '',
+    this.documentAvailable = false,
+    this.documentSha256 = '',
+    this.receivedAt = '',
   });
   final int id;
   final int orderId;
@@ -69,6 +73,9 @@ class InvoiceRequestItem {
   final String currency;
   final String invoiceNo;
   final String rejectReason;
+  final bool documentAvailable;
+  final String documentSha256;
+  final String receivedAt;
   factory InvoiceRequestItem.fromJson(Map<String, dynamic> json) =>
       InvoiceRequestItem(
         id: (json['id'] as num).toInt(),
@@ -79,6 +86,9 @@ class InvoiceRequestItem {
         currency: json['currency'] as String? ?? '',
         invoiceNo: json['invoiceNo'] as String? ?? '',
         rejectReason: json['rejectReason'] as String? ?? '',
+        documentAvailable: json['documentAvailable'] == true,
+        documentSha256: json['documentSha256'] as String? ?? '',
+        receivedAt: json['receivedAt'] as String? ?? '',
       );
 }
 
@@ -107,6 +117,17 @@ class InvoicePage<T> {
 class InvoiceRepository {
   InvoiceRepository(this.api);
   final JsonApi api;
+
+  Future<Uint8List> download(int id) =>
+      (api as BinaryApi).getBytes('/api/c/v1/invoices/$id/document');
+
+  Future<InvoiceRequestItem> confirmReceipt(int id, String sha256) async =>
+      InvoiceRequestItem.fromJson(
+        await api.postJson(
+          '/api/c/v1/invoices/$id/receipt',
+          body: {'sha256': sha256},
+        ),
+      );
 
   Future<List<InvoiceTitle>> titles() async {
     final result = await api.getJson('/api/c/v1/invoices/titles');

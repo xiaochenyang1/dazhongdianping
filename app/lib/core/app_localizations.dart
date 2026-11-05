@@ -105,6 +105,14 @@ class AppLocalizations {
     'invoiceHistoryEmpty': '还没有开票申请。',
     'invoicePending': '待开票',
     'invoiceIssued': '已登记开票',
+    'invoiceDownload': '下载 PDF',
+    'invoiceConfirmReceipt': '确认收到',
+    'invoiceReceiptHelp': '请打开并核对下载的发票，再确认收到。',
+    'invoiceReceived': '已确认收到',
+    'invoiceAwaitingPdf': '待上传 PDF',
+    'invoiceDownloadReady': '下载已处理，请打开文件核对后确认收到。',
+    'invoiceDocumentChanged': '发票文件已变化，请刷新后确认。',
+
     'invoiceRejected': '已驳回',
     'invoiceUnavailable': '状态不可用',
     'invoiceAlreadyRequested': '该订单已申请开票，请查看申请记录。',
@@ -1275,6 +1283,14 @@ class AppLocalizations {
     'invoiceHistoryEmpty': '還沒有開票申請。',
     'invoicePending': '待開票',
     'invoiceIssued': '已登記開票',
+    'invoiceDownload': '下載 PDF',
+    'invoiceConfirmReceipt': '確認收到',
+    'invoiceReceiptHelp': '請開啟並核對下載的發票，再確認收到。',
+    'invoiceReceived': '已確認收到',
+    'invoiceAwaitingPdf': '待上傳 PDF',
+    'invoiceDownloadReady': '下載已處理，請開啟檔案核對後確認收到。',
+    'invoiceDocumentChanged': '發票檔案已變更，請重新整理後確認。',
+
     'invoiceRejected': '已駁回',
     'invoiceUnavailable': '狀態不可用',
     'invoiceAlreadyRequested': '該訂單已申請開票，請查看申請紀錄。',
@@ -2446,6 +2462,14 @@ class AppLocalizations {
     'invoiceHistoryEmpty': 'No invoice requests yet.',
     'invoicePending': 'Pending',
     'invoiceIssued': 'Invoice registered',
+    'invoiceDownload': 'Download PDF',
+    'invoiceConfirmReceipt': 'Confirm receipt',
+    'invoiceReceiptHelp': 'Open and review the downloaded invoice before confirming receipt.',
+    'invoiceReceived': 'Receipt confirmed',
+    'invoiceAwaitingPdf': 'Awaiting PDF',
+    'invoiceDownloadReady': 'Download processed. Open and review the file before confirming receipt.',
+    'invoiceDocumentChanged': 'The invoice document has changed. Refresh before confirming.',
+
     'invoiceRejected': 'Rejected',
     'invoiceUnavailable': 'Status unavailable',
     'invoiceAlreadyRequested': 'This order already has an invoice request. Check your requests.',
@@ -3867,6 +3891,14 @@ class AppLocalizations {
   String get invoiceHistoryEmpty => _text('invoiceHistoryEmpty');
   String get invoicePending => _text('invoicePending');
   String get invoiceIssued => _text('invoiceIssued');
+  String get invoiceDownload => _text('invoiceDownload');
+  String get invoiceConfirmReceipt => _text('invoiceConfirmReceipt');
+  String get invoiceReceiptHelp => _text('invoiceReceiptHelp');
+  String get invoiceReceived => _text('invoiceReceived');
+  String get invoiceAwaitingPdf => _text('invoiceAwaitingPdf');
+  String get invoiceDownloadReady => _text('invoiceDownloadReady');
+  String get invoiceDocumentChanged => _text('invoiceDocumentChanged');
+
   String get invoiceRejected => _text('invoiceRejected');
   String get invoiceUnavailable => _text('invoiceUnavailable');
   String get invoiceAlreadyRequested => _text('invoiceAlreadyRequested');

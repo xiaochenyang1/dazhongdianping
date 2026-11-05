@@ -3,7 +3,16 @@
 <mapper namespace="com.tuowei.dazhongdianping.module.invoice.mapper.InvoiceMapper">
 
     <sql id="titleCols">id,user_id,region,title_type,name,tax_no,email,is_default,created_at</sql>
-    <sql id="requestCols">id,region,user_id,order_id,title_id,amount,tax_amount,currency,status,invoice_no,reject_reason,created_at</sql>
+    <sql id="requestCols">
+        r.id,r.region,r.user_id,r.order_id,r.title_id,r.amount,r.tax_amount,r.currency,r.status,r.invoice_no,r.reject_reason,r.created_at,
+        o.order_no,t.name AS title_name,t.title_type,t.tax_no,t.email,
+        d.sha256 AS document_sha256,d.size_bytes AS document_size,d.uploaded_at AS document_uploaded_at,d.received_at
+    </sql>
+    <sql id="requestFrom">invoice_request r
+        LEFT JOIN invoice_title t ON t.id=r.title_id AND t.user_id=r.user_id AND t.region=r.region
+        LEFT JOIN `order` o ON o.id=r.order_id AND o.user_id=r.user_id AND o.region=r.region
+        LEFT JOIN invoice_document d ON d.invoice_id=r.id
+    </sql>
 
     <select id="selectTitles" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceTitleRow">
         SELECT <include refid="titleCols"/> FROM invoice_title
@@ -66,9 +75,9 @@
     </insert>
 
     <select id="selectUserRequests" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
-        SELECT <include refid="requestCols"/> FROM invoice_request
-        WHERE user_id=#{userId} AND region=#{region}
-        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+        SELECT <include refid="requestCols"/> FROM <include refid="requestFrom"/>
+        WHERE r.user_id=#{userId} AND r.region=#{region}
+        ORDER BY r.id DESC LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="countUserRequests" resultType="long">
@@ -76,14 +85,22 @@
     </select>
 
     <select id="selectRequest" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
-        SELECT <include refid="requestCols"/> FROM invoice_request WHERE id=#{id} AND region=#{region}
+        SELECT <include refid="requestCols"/> FROM <include refid="requestFrom"/> WHERE r.id=#{id} AND r.region=#{region}
+    </select>
+
+    <select id="selectCurrentRequest" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
+        SELECT <include refid="requestCols"/> FROM <include refid="requestFrom"/> WHERE r.id=#{id} AND r.region=#{region} FOR UPDATE
+    </select>
+
+    <select id="lockRequest" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
+        SELECT id,user_id,region,status,invoice_no FROM invoice_request WHERE id=#{id} AND region=#{region} FOR UPDATE
     </select>
 
     <select id="selectAdminRequests" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
-        SELECT <include refid="requestCols"/> FROM invoice_request
-        WHERE region=#{region}
-        <if test="status != null">AND status=#{status}</if>
-        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+        SELECT <include refid="requestCols"/> FROM <include refid="requestFrom"/>
+        WHERE r.region=#{region}
+        <if test="status != null">AND r.status=#{status}</if>
+        ORDER BY r.id DESC LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="countAdminRequests" resultType="long">

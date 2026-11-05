@@ -1,6 +1,10 @@
 package com.tuowei.dazhongdianping.module.auth.service;
 
 import com.tuowei.dazhongdianping.module.auth.mapper.UserPrivacyDomainMapper;
+import com.tuowei.dazhongdianping.module.invoice.mapper.InvoiceDocumentMapper;
+import java.io.IOException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -11,13 +15,26 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserPrivacyDomainService {
     private final UserPrivacyDomainMapper mapper;
 
-    public UserPrivacyDomainService(UserPrivacyDomainMapper mapper) {
+    private final InvoiceDocumentMapper documents;
+
+    public UserPrivacyDomainService(UserPrivacyDomainMapper mapper, InvoiceDocumentMapper documents) {
         this.mapper = mapper;
+        this.documents = documents;
+    }
+
+    public void writeInvoiceDocuments(Long userId, ZipOutputStream zip) throws IOException {
+        for (var metadata : documents.selectUserMetadata(userId)) {
+            var document = documents.selectDocument(metadata.getInvoiceId());
+            zip.putNextEntry(new ZipEntry("invoices/" + document.getFileName()));
+            zip.write(document.getContent());
+            zip.closeEntry();
+        }
     }
 
     public Object exportModule(String module, Long userId) {
         return switch (module) {
-            case "invoices" -> Map.of("titles", mapper.selectInvoiceTitles(userId), "requests", mapper.selectInvoices(userId));
+            case "invoices" -> Map.of("titles", mapper.selectInvoiceTitles(userId), "requests", mapper.selectInvoices(userId),
+                    "documents", documents.selectUserMetadata(userId));
             case "tickets" -> Map.of("tickets", mapper.selectTickets(userId), "messages", mapper.selectTicketMessages(userId));
             case "consult" -> Map.of("sessions", mapper.selectConsultSessions(userId), "messages", mapper.selectConsultMessages(userId));
             case "waitlist" -> mapper.selectWaitlist(userId);
@@ -53,6 +70,7 @@ public class UserPrivacyDomainService {
     /** Must share the task/account lock and transaction; any domain failure rolls back the deletion. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void deleteAccountData(Long userId) {
+        documents.deleteUserDocuments(userId);
         mapper.anonymizeInvoiceTitles(userId);
         mapper.anonymizeInvoices(userId);
         // Child queries run before the parent's owner is removed. Role checks distinguish same-number merchant/admin IDs.

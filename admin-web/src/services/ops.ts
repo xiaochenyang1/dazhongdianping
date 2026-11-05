@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from '@/lib/http'
+import { apiDownload, apiGet, apiPost, apiPostForm, apiPut } from '@/lib/http'
 import type { PageResult } from '@/types/admin'
 
 export interface OpsTicket {
@@ -52,6 +52,18 @@ export interface OpsExperiment {
 }
 
 export interface OpsInvoice {
+  orderNo?: string
+  titleName?: string
+  titleType?: number
+  taxNo?: string
+  email?: string
+  documentAvailable?: boolean
+  documentFileName?: string
+  documentSha256?: string
+  documentSize?: number
+  documentUploadedAt?: string
+  receivedAt?: string
+
   id: number
   userId: number
   orderId: number
@@ -242,4 +254,15 @@ export function auditSeckill(id: number, approve: boolean, reason: string) {
 
 export function auditGroupBuy(id: number, approve: boolean, reason: string) {
   return apiPost<Record<string, unknown>>(`/api/admin/v1/marketing/groupbuy/${id}/audit`, { approve, reason })
+}
+
+export function uploadAdminInvoice(id: number, invoiceNo: string, file: File) {
+  const data = new FormData()
+  data.append('invoiceNo', invoiceNo)
+  data.append('file', file)
+  return apiPostForm<OpsInvoice>(`/api/admin/v1/invoices/${id}/document`, data)
+}
+
+export function downloadAdminInvoice(id: number) {
+  return apiDownload(`/api/admin/v1/invoices/${id}/document`)
 }

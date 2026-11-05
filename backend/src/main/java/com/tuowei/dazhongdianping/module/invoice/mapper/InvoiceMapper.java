@@ -42,6 +42,10 @@ public interface InvoiceMapper {
 
     long countUserRequests(@Param("userId") Long userId, @Param("region") String region);
 
+    InvoiceRequestRow selectCurrentRequest(@Param("id") Long id, @Param("region") String region);
+
+    InvoiceRequestRow lockRequest(@Param("id") Long id, @Param("region") String region);
+
     InvoiceRequestRow selectRequest(@Param("id") Long id, @Param("region") String region);
 
     List<InvoiceRequestRow> selectAdminRequests(

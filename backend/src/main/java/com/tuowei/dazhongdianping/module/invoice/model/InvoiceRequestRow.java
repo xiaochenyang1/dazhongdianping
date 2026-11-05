@@ -20,4 +20,13 @@ public class InvoiceRequestRow {
     private String invoiceNo;
     private String rejectReason;
     private LocalDateTime createdAt;
+    private String orderNo;
+    private String titleName;
+    private Integer titleType;
+    private String taxNo;
+    private String email;
+    private String documentSha256;
+    private Integer documentSize;
+    private LocalDateTime documentUploadedAt;
+    private LocalDateTime receivedAt;
 }

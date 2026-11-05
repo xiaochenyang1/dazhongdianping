@@ -153,30 +153,8 @@ public class InvoiceService {
     }
 
     private Map<String, Object> requestMap(InvoiceRequestRow row) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("id", row.getId());
-        body.put("orderId", row.getOrderId());
-        body.put("titleId", row.getTitleId());
-        body.put("amount", row.getAmount());
-        body.put("taxAmount", row.getTaxAmount());
-        body.put("currency", row.getCurrency());
-        body.put("status", row.getStatus());
-        body.put("statusText", statusText(row.getStatus()));
-        body.put("invoiceNo", row.getInvoiceNo() == null ? "" : row.getInvoiceNo());
-        body.put("rejectReason", row.getRejectReason() == null ? "" : row.getRejectReason());
-        body.put("createdAt", row.getCreatedAt());
+        Map<String, Object> body = InvoiceProjection.request(row);
         return body;
-    }
-
-    private String statusText(Integer status) {
-        if (status == null) {
-            return "待开票";
-        }
-        return switch (status) {
-            case 2 -> "已开票";
-            case 3 -> "已驳回";
-            default -> "待开票";
-        };
     }
 
     private UserSession requireUser() {

@@ -1373,3 +1373,70 @@ test('customer and merchant exchange live consultation replies and support close
     await merchantContext.close()
   }
 })
+
+test('admin delivers a private invoice PDF and customer explicitly confirms receipt', async ({ page, context, browser, request }) => {
+  const headers = { 'X-Region': 'EU' }
+  const account = `invoice-delivery-${Date.now()}@example.com`
+  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
+    headers, data: { scene: 'register', type: 'email', account, deviceId: account },
+  }))
+  const auth = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
+    await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
+      headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
+    }),
+  )
+  const userHeaders = { ...headers, Authorization: `Bearer ${auth.accessToken}` }
+  const order = await expectApiSuccess<{ id: number }>(await request.post(`${backendBaseURL}/api/c/v1/orders`, {
+    headers: userHeaders, data: { dealId: 41001, quantity: 1 },
+  }))
+  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/orders/${order.id}/pay/mock-complete`, { headers: userHeaders }))
+  const title = await expectApiSuccess<{ id: number }>(await request.post(`${backendBaseURL}/api/c/v1/invoices/titles`, {
+    headers: userHeaders, data: { titleType: 2, name: 'Synthetic test company', taxNo: 'SYNTHETIC-TAX', email: account },
+  }))
+  await context.addInitScript((session) => {
+    localStorage.setItem('dzdp:region', 'EU')
+    localStorage.setItem('dzdp:user-access-token', session.accessToken)
+    localStorage.setItem('dzdp:user-refresh-token', session.refreshToken)
+    localStorage.setItem('dzdp:user-profile', JSON.stringify(session.user))
+  }, auth)
+  await page.goto(`/user/invoices?orderId=${order.id}`)
+  await page.getByTestId('invoice-title').selectOption(String(title.id))
+  const applied = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/api/c/v1/invoices')
+  await page.getByTestId('invoice-request').click()
+  const invoice = await expectApiSuccess<{ id: number }>(await applied)
+  const adminContext = await browser.newContext()
+  const adminPage = await adminContext.newPage()
+  const userDiagnostics = collectBrowserErrors(page)
+  const adminDiagnostics = collectBrowserErrors(adminPage)
+  try {
+    await loginToAdminConsole(adminPage)
+    await adminPage.locator('.admin-topbar select').selectOption('EU')
+    await adminPage.goto(`${adminBaseURL}/data/invoices`)
+    const row = adminPage.getByTestId(`admin-invoice-${invoice.id}`)
+    await expect(row).toContainText('Synthetic test company')
+    await adminPage.getByTestId(`invoice-number-${invoice.id}`).fill(`TEST-PDF-${invoice.id}`)
+    await adminPage.getByTestId(`invoice-file-${invoice.id}`).setInputFiles('../scripts/ci/fixtures/invoice.pdf')
+    await adminPage.getByTestId(`invoice-upload-${invoice.id}`).click()
+    await expect(row).toContainText('Delivered, awaiting confirmation')
+    await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+    const downloadEvent = page.waitForEvent('download')
+    await page.getByTestId(`invoice-download-${invoice.id}`).click()
+    const download = await downloadEvent
+    expect(download.suggestedFilename()).toBe(`invoice-${invoice.id}.pdf`)
+    const stream = await download.createReadStream()
+    const chunks: Buffer[] = []
+    for await (const chunk of stream!) chunks.push(Buffer.from(chunk))
+    expect(Buffer.concat(chunks).toString()).toContain('Synthetic test invoice')
+    const before = await expectApiSuccess<{ list: Array<{ id: number; receivedAt?: string }> }>(await request.get(`${backendBaseURL}/api/c/v1/invoices`, { headers: userHeaders }))
+    expect(before.list.find(i => i.id === invoice.id)?.receivedAt).toBeFalsy()
+    await page.getByTestId(`invoice-receipt-${invoice.id}`).click()
+    await expect(page.getByTestId(`invoice-${invoice.id}`)).toContainText('Receipt confirmed')
+    await adminPage.getByRole('button', { name: 'Refresh', exact: true }).click()
+    await expect(row).toContainText('Customer confirmed receipt')
+    await page.screenshot({ path: test.info().outputPath('invoice-customer.png'), fullPage: true })
+    await adminPage.screenshot({ path: test.info().outputPath('invoice-admin.png'), fullPage: true })
+    expectNoBrowserFailures(userDiagnostics)
+    expectNoBrowserFailures(adminDiagnostics)
+  } finally { await adminContext.close() }
+  await expectApiFailure(await request.get(`${backendBaseURL}/api/c/v1/invoices/${invoice.id}/document`), 401)
+})

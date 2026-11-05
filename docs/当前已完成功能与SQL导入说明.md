@@ -206,7 +206,7 @@
 本地口径已补齐、且明确不做外卖、电影票、酒店全日房、KTV、会员黑卡、直播和多门店连锁：
 
 - 商户自助优惠券、秒杀、拼团：商户创建后待审，管理端审核；C 端公开列表，领取/开团/参团需登录。优惠券中心只展示 `audit_status=2`。
-- 发票：抬头、已支付订单申请、税率（CN 6% / EU 20%）、管理端开具或驳回。同一订单重复申请返回 409。
+- 发票：抬头、已支付订单申请、税率（CN 6% / EU 20%）、管理端开具或驳回，同一订单重复申请返回 409。管理端可上传已开具 PDF（最大 5 MiB），Web/APP 用户鉴权下载并显式确认收到；私有文件、SHA-256 与回执存储于 27 号迁移新增表，发票隐私导出包含 PDF，注销清理文件。
 - 点评信任：有用投票与按有用排序、菜品点评、社区译文、关键词自动拦截命中记录。
 - 客服工单：用户创建/回复，商户按门店回复，管理端回复并把待处理改为处理中，状态只允许 2/3/4。
 - 结构化探店攻略、创作者任务（完成后写积分流水 `action=creator_task`）、等级权益 `GET /api/c/v1/user/level-privileges`。
@@ -294,12 +294,12 @@
 .\scripts\ci\mysql-smoke.ps1 -DbName dazhongdianping_smoke -DropDatabaseAfter
 ```
 
-`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-26 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
+`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-27 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
 
 ### 3.2 初始化与迁移 SQL 的作用
 
 - `sql/mysql/00_all_in_one.sql`: 已退役的安全阻断桩,执行时直接报错,不再串联破坏性建表脚本。
-- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-26 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
+- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-27 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
 - `sql/mysql/02_seed_data.sql`: 浏览数据、公开点评、待审/驳回审核案例、点评图片、点赞/评论演示数据、C 端演示账号、成长规则(含 `check_in`)。
 - `sql/mysql/03_admin_city_scope_migration.sql`: 既有数据库增加管理员城市/门店范围；只用于升级，不参与全新数据库初始化。
 - `sql/mysql/04_admin_import_batch_scope_migration.sql`: 既有数据库增加受限管理员本人导入批次查询索引；在 `03` 后执行一次。
@@ -325,7 +325,7 @@
 
 - `sql/mysql/26_privacy_account_unlink_migration.sql`: 可空账号/设备关系，支持多账号连续注销；加入历史注销补清理版本和扫描索引。
 
-> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-26 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
+> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-27 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
 
 ### 3.3 导入后哪些表会直接有数据
 

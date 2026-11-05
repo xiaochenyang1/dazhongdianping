@@ -81,23 +81,8 @@ public class AdminInvoiceService {
     }
 
     private Map<String, Object> requestMap(InvoiceRequestRow row) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("id", row.getId());
+        Map<String, Object> body = InvoiceProjection.request(row);
         body.put("userId", row.getUserId());
-        body.put("orderId", row.getOrderId());
-        body.put("titleId", row.getTitleId());
-        body.put("amount", row.getAmount());
-        body.put("taxAmount", row.getTaxAmount());
-        body.put("currency", row.getCurrency());
-        body.put("status", row.getStatus());
-        body.put("statusText", switch (row.getStatus() == null ? 1 : row.getStatus()) {
-            case 2 -> "已开票";
-            case 3 -> "已驳回";
-            default -> "待开票";
-        });
-        body.put("invoiceNo", row.getInvoiceNo() == null ? "" : row.getInvoiceNo());
-        body.put("rejectReason", row.getRejectReason() == null ? "" : row.getRejectReason());
-        body.put("createdAt", row.getCreatedAt());
         return body;
     }
 

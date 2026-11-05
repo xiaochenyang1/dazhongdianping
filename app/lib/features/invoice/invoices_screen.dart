@@ -3,12 +3,19 @@ import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/features/auth/auth_error_localizer.dart';
 import 'package:dazhongdianping_app/features/invoice/invoice_repository.dart';
+import 'package:dazhongdianping_app/features/invoice/invoice_document_saver.dart';
 import 'package:flutter/material.dart';
 
 class InvoicesScreen extends StatefulWidget {
-  const InvoicesScreen({super.key, required this.repository, this.orderId});
+  const InvoicesScreen({
+    super.key,
+    required this.repository,
+    this.orderId,
+    this.documentSaver,
+  });
   final InvoiceRepository repository;
   final int? orderId;
+  final InvoiceDocumentSaver? documentSaver;
   @override
   State<InvoicesScreen> createState() => _InvoicesScreenState();
 }
@@ -220,6 +227,55 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
   }
 
+  Future<void> _documentAction(
+    InvoiceRequestItem item, {
+    required bool confirm,
+  }) async {
+    if (_busy || !item.documentAvailable) return;
+    setState(() {
+      _writing = true;
+      _actionError = null;
+      _success = null;
+    });
+    try {
+      if (confirm) {
+        final updated = await widget.repository.confirmReceipt(
+          item.id,
+          item.documentSha256,
+        );
+        if (!mounted) return;
+        setState(() {
+          _invoices = _invoices
+              .map((i) => i.id == item.id ? updated : i)
+              .toList();
+          _success = AppLocalizations.of(context).invoiceReceived;
+        });
+      } else {
+        final bytes = await widget.repository.download(item.id);
+        if (!mounted) return;
+        await (widget.documentSaver ?? InvoiceDocumentSaver()).save(
+          item.id,
+          bytes,
+        );
+        if (!mounted) return;
+        setState(
+          () => _success = AppLocalizations.of(context).invoiceDownloadReady,
+        );
+      }
+      _showFeedback(_success!);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _actionError = error);
+      _showFeedback(
+        AppLocalizations.of(
+          context,
+        ).actionFailed(_error(AppLocalizations.of(context), error)),
+      );
+    } finally {
+      if (mounted) setState(() => _writing = false);
+    }
+  }
+
   void _showFeedback(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -237,6 +293,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       '发票抬头不存在': s.invoiceChooseTitle,
       '企业抬头需填写税号': s.invoiceTaxRequired,
       '当前区域未配置税率': s.invoiceTaxUnavailable,
+      '发票文件尚未交付': s.invoiceAwaitingPdf,
+      '发票文件已变化，请刷新后确认': s.invoiceDocumentChanged,
+      '开票申请不存在': s.invoiceOrderUnavailable,
+      '账户已停用，无法交付发票': s.invoiceOrderUnavailable,
     },
   );
 
@@ -452,6 +512,29 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       if (item.invoiceNo.isNotEmpty)
                         SelectableText('${s.invoiceNumber}: ${item.invoiceNo}'),
                       if (item.rejectReason.isNotEmpty) Text(item.rejectReason),
+                      if (item.documentAvailable) ...[
+                        TextButton.icon(
+                          key: Key('invoice-download-${item.id}'),
+                          onPressed: _busy
+                              ? null
+                              : () => _documentAction(item, confirm: false),
+                          icon: const Icon(Icons.download),
+                          label: Text(s.invoiceDownload),
+                        ),
+                        if (item.receivedAt.isNotEmpty)
+                          Text(s.invoiceReceived)
+                        else ...[
+                          Text(s.invoiceReceiptHelp),
+                          OutlinedButton(
+                            key: Key('invoice-receipt-${item.id}'),
+                            onPressed: _busy
+                                ? null
+                                : () => _documentAction(item, confirm: true),
+                            child: Text(s.invoiceConfirmReceipt),
+                          ),
+                        ],
+                      ] else if (item.status == 2)
+                        Text(s.invoiceAwaitingPdf),
                     ],
                   ),
                 ),

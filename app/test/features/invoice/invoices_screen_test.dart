@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'package:dazhongdianping_app/features/invoice/invoice_document_saver.dart';
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/invoice/invoice_repository.dart';
@@ -9,7 +11,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class InvoiceApi implements JsonApi {
+class InvoiceApi implements JsonApi, BinaryApi {
+  bool failDownload = false;
+  bool failReceipt = false;
+  int downloads = 0;
+  int receipts = 0;
+  Object? receiptBody;
+  Completer<Uint8List>? downloadGate;
+  @override
+  Future<Uint8List> getBytes(String path) async {
+    downloads++;
+    if (failDownload) throw const ApiException('download offline');
+    return downloadGate == null
+        ? Uint8List.fromList([37, 80, 68, 70])
+        : await downloadGate!.future;
+  }
+
   List<Map<String, dynamic>> titles = [
     {'id': 8, 'name': 'First title', 'titleType': 1},
     {
@@ -94,6 +111,12 @@ class InvoiceApi implements JsonApi {
   };
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    if (path.endsWith('/receipt')) {
+      receipts++;
+      receiptBody = body;
+      if (failReceipt) throw const ApiException('receipt offline');
+      return {...history.first, 'receivedAt': '2026-11-05T18:00:00'};
+    }
     if (path.endsWith('/titles')) {
       saves++;
       titleBody = Map<String, dynamic>.from(body as Map);
@@ -124,6 +147,7 @@ Future<void> mount(
   int? orderId,
   bool fromOrder = false,
   String locale = 'en',
+  InvoiceDocumentSaver? saver,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -140,6 +164,7 @@ Future<void> mount(
           : InvoicesScreen(
               repository: InvoiceRepository(api),
               orderId: orderId,
+              documentSaver: saver,
             ),
     ),
   );
@@ -147,12 +172,123 @@ Future<void> mount(
 }
 
 Future<void> tap(WidgetTester tester, String key) async {
+  // Let transient snackbars leave the bottom action area before the next tap.
+  await tester.pump(const Duration(seconds: 4));
+  await tester.pumpAndSettle();
   await tester.ensureVisible(find.byKey(Key(key)));
   await tester.tap(find.byKey(Key(key)));
   await tester.pumpAndSettle();
 }
 
 void main() {
+  Map<String, dynamic> delivered() => {
+    ...InvoiceApi().invoice(100, 42, 2),
+    'documentAvailable': true,
+    'documentSha256': 'abc123',
+  };
+
+  testWidgets(
+    'PDF save is separate from explicit, retryable receipt confirmation',
+    (tester) async {
+      final api = InvoiceApi()..history = [delivered()];
+      String? savedName;
+      Uint8List? savedBytes;
+      await mount(
+        tester,
+        api,
+        saver: InvoiceDocumentSaver(
+          saveFile: (name, bytes) async {
+            savedName = name;
+            savedBytes = bytes;
+            return 'saved.pdf';
+          },
+        ),
+      );
+      await tap(tester, 'invoice-download-100');
+      expect(savedName, 'invoice-100');
+      expect(savedBytes, [37, 80, 68, 70]);
+      expect(api.receipts, 0);
+      api.failReceipt = true;
+      await tap(tester, 'invoice-receipt-100');
+      expect(find.textContaining('receipt offline'), findsWidgets);
+      expect(find.byKey(const Key('invoice-receipt-100')), findsOneWidget);
+      api.failReceipt = false;
+      await tap(tester, 'invoice-receipt-100');
+      expect(api.receiptBody, {'sha256': 'abc123'});
+      expect(find.text('Receipt confirmed'), findsWidgets);
+      expect(find.byKey(const Key('invoice-receipt-100')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'download and device save failures are retryable and never imply receipt',
+    (tester) async {
+      final api = InvoiceApi()
+        ..history = [delivered()]
+        ..failDownload = true;
+      bool failSave = true;
+      int saves = 0;
+      await mount(
+        tester,
+        api,
+        saver: InvoiceDocumentSaver(
+          saveFile: (name, bytes) async {
+            saves++;
+            if (failSave) throw StateError('disk full');
+            return 'saved.pdf';
+          },
+        ),
+      );
+      await tap(tester, 'invoice-download-100');
+      expect(saves, 0);
+      expect(find.textContaining('download offline'), findsWidgets);
+      api.failDownload = false;
+      await tap(tester, 'invoice-download-100');
+      expect(saves, 1);
+      expect(find.textContaining('disk full'), findsWidgets);
+      expect(find.textContaining('Download processed'), findsNothing);
+      failSave = false;
+      await tap(tester, 'invoice-download-100');
+      expect(find.textContaining('Download processed'), findsWidgets);
+      expect(api.receipts, 0);
+    },
+  );
+
+  testWidgets(
+    'duplicate downloads are guarded and leaving the screen skips saving private bytes',
+    (tester) async {
+      final gate = Completer<Uint8List>();
+      final api = InvoiceApi()
+        ..history = [delivered()]
+        ..downloadGate = gate;
+      int saves = 0;
+      await mount(
+        tester,
+        api,
+        saver: InvoiceDocumentSaver(
+          saveFile: (_, _) async {
+            saves++;
+            return 'saved';
+          },
+        ),
+      );
+      await tester.ensureVisible(find.byKey(const Key('invoice-download-100')));
+      final download = tester
+          .widget<TextButton>(find.byKey(const Key('invoice-download-100')))
+          .onPressed!;
+      download();
+      download();
+      await tester.pump();
+      expect(api.downloads, 1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      gate.complete(Uint8List(1));
+      await tester.pumpAndSettle();
+      expect(saves, 0);
+      expect(api.receipts, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'paid order opens its eligible order without asking for an internal ID',
     (tester) async {
