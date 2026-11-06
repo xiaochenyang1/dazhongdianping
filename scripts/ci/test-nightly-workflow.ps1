@@ -36,4 +36,16 @@ Assert-True ($workflow -match "elasticsearch:8") "nightly workflow must provisio
 Assert-True ($workflow -match "merchant-web/package-lock\.json") "nightly workflow must cache merchant-web dependencies"
 Assert-True ($workflow -match "npm ci --prefix merchant-web") "nightly workflow must install merchant-web dependencies"
 
+$creatorStep = [regex]::Match($workflow, '(?ms)^      - name: Verify creator review browser flow\r?\n(?:(?!^      - ).)*').Value
+Assert-True (-not [string]::IsNullOrWhiteSpace($creatorStep)) "nightly must run the creator workflow separately from closed-launch regression"
+Assert-True ($creatorStep -match 'run: npx playwright test e2e/creator-review\.spec\.ts') "nightly creator step must select only the creator browser scenarios"
+Assert-True ($creatorStep -match 'PLAYWRIGHT_REAL_BACKEND: "1"' -and $creatorStep -match 'PLAYWRIGHT_CREATOR_REVIEW: "1"') "nightly creator step must use a real test backend"
+Assert-True ($creatorStep -match 'APP_STATE_STORE_KEY_PREFIX: dzdp:nightly:creator') "nightly creator step must isolate its state store"
+foreach ($flag in @('APP_LAUNCH_DEFERRED_FEATURES_ENABLED', 'APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED')) {
+    Assert-True ($creatorStep -match "(?m)^          ${flag}: `"true`"\s*$") "nightly creator test flags must be scoped to this step"
+    Assert-True ([regex]::Matches($workflow, "${flag}:").Count -eq 1) "creator flags must not leak into the ordinary nightly regression"
+}
+Assert-True ($creatorStep -notmatch 'continue-on-error') "creator browser failures must fail nightly regression"
+Assert-True ($workflow -match 'path: web/test-results/creator-review/') "nightly must preserve creator browser evidence"
+
 Write-Output "nightly workflow contract passed"

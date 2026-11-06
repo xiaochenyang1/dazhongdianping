@@ -13,7 +13,7 @@ public interface CreatorMapper {
             @Param("region") String region, @Param("userId") Long userId,
             @Param("limit") int limit, @Param("offset") int offset);
 
-    long countOpen(@Param("region") String region);
+    long countOpen(@Param("region") String region, @Param("userId") Long userId);
 
     List<CreatorTaskRow> selectAdmin(
             @Param("region") String region, @Param("limit") int limit, @Param("offset") int offset);
@@ -26,7 +26,20 @@ public interface CreatorMapper {
 
     void insertClaim(CreatorClaimRow row);
 
-    int completeClaim(@Param("id") Long id, @Param("userId") Long userId);
+    CreatorTaskRow lockTask(@Param("id") Long id, @Param("region") String region);
+    CreatorClaimRow selectClaimById(@Param("id") Long id, @Param("region") String region);
+    CreatorClaimRow lockClaim(@Param("id") Long id, @Param("region") String region);
+    int submitClaim(CreatorClaimRow row);
+    int reviewClaim(CreatorClaimRow row);
+    List<CreatorClaimRow> selectClaims(@Param("region") String region, @Param("status") Integer status,
+            @Param("limit") int limit, @Param("offset") int offset);
+    long countClaims(@Param("region") String region, @Param("status") Integer status);
+    List<java.util.Map<String, Object>> selectEligibleEvidence(@Param("type") String type, @Param("userId") Long userId,
+            @Param("region") String region, @Param("limit") int limit, @Param("offset") int offset);
+    long countEligibleEvidence(@Param("type") String type, @Param("userId") Long userId, @Param("region") String region);
+    java.util.Map<String, Object> selectEvidence(@Param("type") String type, @Param("id") Long id,
+            @Param("userId") Long userId, @Param("region") String region, @Param("lock") boolean lock);
+    List<String> selectEvidenceImages(@Param("type") String type, @Param("id") Long id);
 
     int addUserPoints(@Param("userId") Long userId, @Param("points") int points);
 

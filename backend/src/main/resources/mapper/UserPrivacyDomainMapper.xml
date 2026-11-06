@@ -26,6 +26,8 @@
         <result column="effectiveStartAt" property="effectiveStartAt"/>
         <result column="eventId" property="eventId"/>
         <result column="eventType" property="eventType"/>
+        <result column="evidenceId" property="evidenceId"/>
+        <result column="evidenceType" property="evidenceType"/>
         <result column="experimentId" property="experimentId"/>
         <result column="expireAt" property="expireAt"/>
         <result column="expiresAt" property="expiresAt"/>
@@ -53,17 +55,22 @@
         <result column="reservationId" property="reservationId"/>
         <result column="resolvedAt" property="resolvedAt"/>
         <result column="reviewId" property="reviewId"/>
+        <result column="reviewNote" property="reviewNote"/>
+        <result column="reviewedAt" property="reviewedAt"/>
         <result column="rewardPoints" property="rewardPoints"/>
         <result column="seatedAt" property="seatedAt"/>
         <result column="senderType" property="senderType"/>
         <result column="sessionId" property="sessionId"/>
         <result column="shopId" property="shopId"/>
         <result column="submittedAt" property="submittedAt"/>
+        <result column="submissionNote" property="submissionNote"/>
+        <result column="submissionVersion" property="submissionVersion"/>
         <result column="tableType" property="tableType"/>
         <result column="targetId" property="targetId"/>
         <result column="targetLang" property="targetLang"/>
         <result column="targetType" property="targetType"/>
         <result column="taskId" property="taskId"/>
+        <result column="taskDescription" property="taskDescription"/>
         <result column="taxAmount" property="taxAmount"/>
         <result column="taxNo" property="taxNo"/>
         <result column="teamId" property="teamId"/>
@@ -147,7 +154,11 @@
         FROM dish_review WHERE user_id=#{userId} ORDER BY id
     </select>
     <select id="selectCreatorClaims" resultMap="privacyRecord">
-        SELECT c.id,c.region,c.task_id AS `taskId`,t.title,t.reward_points AS `rewardPoints`,c.status,
+        SELECT c.id,c.region,c.task_id AS `taskId`,COALESCE(c.task_title,t.title) AS title,
+               COALESCE(c.reward_points,t.reward_points) AS `rewardPoints`,c.status,
+               c.task_description AS `taskDescription`,c.evidence_type AS `evidenceType`,c.evidence_id AS `evidenceId`,
+               c.submission_note AS `submissionNote`,c.submission_version AS `submissionVersion`,
+               c.submitted_at AS `submittedAt`,c.review_note AS `reviewNote`,c.reviewed_at AS `reviewedAt`,
                c.created_at AS `createdAt`,c.completed_at AS `completedAt`
         FROM creator_task_claim c LEFT JOIN creator_task t ON t.id=c.task_id AND t.region=c.region
         WHERE c.user_id=#{userId} ORDER BY c.id
@@ -289,8 +300,9 @@
     <update id="anonymizeDishReviews">UPDATE dish_review SET user_id=0 WHERE user_id=#{userId}</update>
     <delete id="deleteBehaviorEvents">DELETE FROM user_behavior_event WHERE user_id=#{userId}</delete>
     <delete id="deleteExperimentAssignments">DELETE FROM experiment_assignment WHERE user_id=#{userId}</delete>
-    <delete id="deletePendingCreatorClaims">DELETE FROM creator_task_claim WHERE user_id=#{userId} AND status=1</delete>
-    <update id="anonymizeCreatorClaims">UPDATE creator_task_claim SET user_id=NULL WHERE user_id=#{userId}</update>
+    <delete id="deletePendingCreatorClaims">DELETE FROM creator_task_claim WHERE user_id=#{userId} AND status&lt;&gt;2</delete>
+    <update id="anonymizeCreatorClaims">UPDATE creator_task_claim SET user_id=NULL,evidence_type=NULL,evidence_id=NULL,
+        submission_note='',review_note='' WHERE user_id=#{userId}</update>
     <update id="anonymizeRiskEvents">
         UPDATE risk_event SET user_id=NULL,device_fingerprint=NULL,ip=NULL,reason='',dispose_remark='',updated_at=CURRENT_TIMESTAMP WHERE user_id=#{userId}
     </update>

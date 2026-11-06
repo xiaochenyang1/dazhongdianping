@@ -43,6 +43,31 @@ class LaunchPolicyControllerTest {
         }
     }
 
+    @Test
+    void closedRewardsBlockAdminApprovalButAllowInspectionAndRejection() throws Exception {
+        var login = mvc.perform(post("/api/admin/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"account\":\"admin\",\"password\":\"admin123456\"}"))
+                .andExpect(status().isOk()).andReturn();
+        String token = "Bearer " + json.readTree(login.getResponse().getContentAsString()).at("/data/accessToken").asText();
+        for (String region : new String[]{"CN", "EU"}) {
+            long taskId = region.equals("CN") ? 9101 : 9102;
+            jdbc.update("INSERT INTO creator_task_claim(task_id,user_id,region,status,submission_version) VALUES(?,9001,?,3,1)", taskId, region);
+            Long id = jdbc.queryForObject("SELECT id FROM creator_task_claim WHERE task_id=? AND user_id=9001", Long.class, taskId);
+            mvc.perform(get("/api/admin/v1/creator/claims").header("X-Region", region).header("Authorization", token))
+                    .andExpect(status().isOk());
+            mvc.perform(post("/api/admin/v1/creator/claims/{id}/review", id)
+                            .header("X-Region", region).header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"approved\":true,\"submissionVersion\":1,\"evidenceHash\":\"" + "a".repeat(64) + "\"}"))
+                    .andExpect(status().isForbidden());
+            assertThat(jdbc.queryForObject("SELECT status FROM creator_task_claim WHERE id=?", Integer.class, id)).isEqualTo(3);
+            mvc.perform(post("/api/admin/v1/creator/claims/{id}/review", id)
+                            .header("X-Region", region).header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"approved\":false,\"submissionVersion\":1,\"note\":\"The work is unavailable\"}"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.claimStatus").value(4));
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM growth_points_log WHERE action='creator_task' AND biz_id=?", Integer.class, id)).isZero();
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"EU", "CN", " cn ", ""})
     void euUserCannotReenableRewardsOrCampaignsByChangingOrOmittingRegion(String regionHeader) throws Exception {
@@ -81,7 +106,7 @@ class LaunchPolicyControllerTest {
                 VALUES(66003,66002,?,9001,'2030-01-01')
                 """, region);
 
-        for (String path : new String[]{"/creator/tasks", "/marketing/seckill", "/marketing/groupbuy"}) {
+        for (String path : new String[]{"/creator/tasks", "/creator/evidence?type=review", "/marketing/seckill", "/marketing/groupbuy"}) {
             mvc.perform(asUser(get("/api/c/v1" + path), authorization, regionHeader))
                     .andExpect(status().isForbidden());
         }
@@ -90,6 +115,10 @@ class LaunchPolicyControllerTest {
             mvc.perform(asUser(post("/api/c/v1" + path), authorization, regionHeader))
                     .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value("该功能暂未在当前区域开放"));
         }
+        mvc.perform(asUser(post("/api/c/v1/creator/tasks/{id}/submit", taskId), authorization, regionHeader)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"evidenceType\":\"review\",\"evidenceId\":1,\"note\":\"work\"}"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value("该功能暂未在当前区域开放"));
 
         assertThat(jdbc.queryForObject("SELECT points FROM app_user WHERE id=?", Integer.class, userId)).isZero();
         assertThat(jdbc.queryForObject("SELECT status FROM creator_task_claim WHERE user_id=?", Integer.class, userId)).isEqualTo(1);

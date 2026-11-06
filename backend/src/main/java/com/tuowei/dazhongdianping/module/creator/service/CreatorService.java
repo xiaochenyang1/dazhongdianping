@@ -1,6 +1,7 @@
 package com.tuowei.dazhongdianping.module.creator.service;
 
 import com.tuowei.dazhongdianping.common.api.NotFoundException;
+import com.tuowei.dazhongdianping.common.api.ConflictException;
 import com.tuowei.dazhongdianping.module.launch.LaunchPolicy;
 import com.tuowei.dazhongdianping.module.launch.LaunchPolicy.Feature;
 import com.tuowei.dazhongdianping.common.api.PageResult;
@@ -12,6 +13,7 @@ import com.tuowei.dazhongdianping.module.creator.mapper.CreatorMapper;
 import com.tuowei.dazhongdianping.module.creator.model.CreatorClaimRow;
 import com.tuowei.dazhongdianping.module.creator.model.CreatorTaskRow;
 import com.tuowei.dazhongdianping.module.creator.model.request.CreatorTaskSaveRequest;
+import com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,14 +21,16 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 创作者任务：领取、完成并发放一次性积分。 */
+/** 创作者任务：领取时冻结任务要求和奖励，发奖由成果审核完成。 */
 @Service
 public class CreatorService {
 
     private final CreatorMapper mapper;
     private final LaunchPolicy launch;
+    private final AuthCommandMapper accounts;
 
-    public CreatorService(CreatorMapper mapper, LaunchPolicy launch) {
+    public CreatorService(CreatorMapper mapper, LaunchPolicy launch, AuthCommandMapper accounts) {
+        this.accounts = accounts;
         this.mapper = mapper;
         this.launch = launch;
     }
@@ -37,7 +41,7 @@ public class CreatorService {
         String region = region();
         int p = page(page);
         int s = pageSize(pageSize);
-        long total = mapper.countOpen(region);
+        long total = mapper.countOpen(region, user.userId());
         List<Map<String, Object>> list = mapper.selectOpen(region, user.userId(), s, (p - 1) * s)
                 .stream().map(this::openMap).toList();
         return new PageResult<>(list, total, p, s, (p - 1) * s + list.size() < total);
@@ -48,7 +52,10 @@ public class CreatorService {
         launch.require(Feature.CREATOR_REWARDS);
         UserSession user = requireUser();
         String region = region();
-        CreatorTaskRow task = requireOpenTask(taskId, region);
+        var owner = accounts.selectUserByIdForUpdate(user.userId());
+        if (owner == null || owner.getStatus() != 1) throw new NotFoundException("用户不可用");
+        CreatorTaskRow task = mapper.lockTask(taskId, region);
+        if (task == null || task.getStatus() != 1) throw new NotFoundException("任务不存在");
         CreatorClaimRow existing = mapper.selectClaim(taskId, user.userId());
         if (existing != null) {
             throw new IllegalArgumentException("任务已领取");
@@ -58,6 +65,9 @@ public class CreatorService {
         claim.setUserId(user.userId());
         claim.setRegion(region);
         claim.setStatus(1);
+        claim.setTaskTitle(task.getTitle());
+        claim.setTaskDescription(task.getDescription());
+        claim.setRewardPoints(task.getRewardPoints());
         try {
             mapper.insertClaim(claim);
         } catch (DuplicateKeyException exception) {
@@ -66,32 +76,10 @@ public class CreatorService {
         return claimMap(task.getId(), claim.getId(), 1, null, null);
     }
 
-    @Transactional
     public Map<String, Object> complete(Long taskId) {
         launch.require(Feature.CREATOR_REWARDS);
-        UserSession user = requireUser();
-        CreatorTaskRow task = requireTask(taskId, region());
-        CreatorClaimRow claim = mapper.selectClaim(taskId, user.userId());
-        if (claim == null) {
-            throw new IllegalArgumentException("请先领取任务");
-        }
-        if (claim.getStatus() != null && claim.getStatus() == 2) {
-            throw new IllegalArgumentException("任务已完成");
-        }
-        if (claim.getStatus() == null || claim.getStatus() != 1) {
-            throw new IllegalArgumentException("请先领取任务");
-        }
-        if (mapper.completeClaim(claim.getId(), user.userId()) == 0) {
-            throw new IllegalArgumentException("任务已完成");
-        }
-        int reward = task.getRewardPoints() == null ? 0 : task.getRewardPoints();
-        if (mapper.addUserPoints(user.userId(), reward) == 0) {
-            throw new NotFoundException("用户不存在");
-        }
-        Integer balance = mapper.selectUserPoints(user.userId());
-        int balanceAfter = balance == null ? reward : balance;
-        mapper.insertPointsLog(user.userId(), claim.getId(), reward, balanceAfter, "创作者任务");
-        return claimMap(task.getId(), claim.getId(), 2, reward, balanceAfter);
+        requireUser();
+        throw new ConflictException("请提交成果，审核通过后发放积分");
     }
 
     public PageResult<Map<String, Object>> adminList(Integer page, Integer pageSize) {
@@ -130,14 +118,6 @@ public class CreatorService {
         row.setStatus(taskStatus(request.status()));
     }
 
-    private CreatorTaskRow requireOpenTask(Long id, String region) {
-        CreatorTaskRow task = requireTask(id, region);
-        if (task.getStatus() == null || task.getStatus() != 1) {
-            throw new NotFoundException("任务不存在");
-        }
-        return task;
-    }
-
     private CreatorTaskRow requireTask(Long id, String region) {
         CreatorTaskRow task = mapper.selectTask(id, region);
         if (task == null) {
@@ -150,6 +130,11 @@ public class CreatorService {
         Map<String, Object> map = adminMap(row);
         map.put("claimStatus", row.getClaimStatus() == null ? 0 : row.getClaimStatus());
         map.put("claimId", row.getClaimId());
+        map.put("reviewNote", row.getReviewNote());
+        map.put("evidenceType", row.getEvidenceType());
+        map.put("evidenceId", row.getEvidenceId());
+        map.put("submissionNote", row.getSubmissionNote());
+        map.put("submissionVersion", row.getSubmissionVersion());
         return map;
     }
 

@@ -118,6 +118,30 @@ jobs:
         shell: pwsh
         run: ./scripts/ci/verify-all.ps1 -IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeBrowserE2E -IncludeElasticsearchSmoke
 
+      - name: Verify creator review browser flow
+        working-directory: web
+        env:
+          PLAYWRIGHT_REAL_BACKEND: "1"
+          PLAYWRIGHT_CREATOR_REVIEW: "1"
+          PLAYWRIGHT_BACKEND_PORT: "18090"
+          PLAYWRIGHT_WEB_PORT: "15183"
+          PLAYWRIGHT_ADMIN_PORT: "15184"
+          PLAYWRIGHT_MERCHANT_PORT: "15185"
+          PLAYWRIGHT_OUTPUT_DIR: test-results/creator-review
+          APP_STATE_STORE_KEY_PREFIX: dzdp:nightly:creator
+          APP_LAUNCH_DEFERRED_FEATURES_ENABLED: "true"
+          APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED: "true"
+        run: npx playwright test e2e/creator-review.spec.ts
+
+      - name: Preserve creator review browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-creator-review-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: web/test-results/creator-review/
+
       - name: Preserve browser failure evidence
         if: failure()
         uses: actions/upload-artifact@v4

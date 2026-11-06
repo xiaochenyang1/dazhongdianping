@@ -1,10 +1,12 @@
 # 当前已完成功能与 SQL 导入说明
 
-> 最后更新:2026-10-14
+> 最后更新:2026-11-06
 > M7 补充：已完成帖子与转发、评论盖楼、帖子正文/评论 `@提醒`、本地达人认证、关注流、私信、官方圈子、区域化话题广场、7 天热榜、三端页面、管理端治理和话题隐私治理。
 > 适用范围:当前仓库真实已落地的 `M1` 至 `M7` 本地闭环；FCM/APNs 服务端适配器已落地，但真实凭证、真机 smoke、真实欧洲支付、Google Maps 和目标环境凭证联调仍未完成
 
 ## 1. 现在已经做完了什么
+
+- `2026-11-06` 创作者任务补齐“领取 → 提交本人已发布作品 → 后台审核 → 发奖”，支持驳回重提、领取条款冻结、审核版本与内容摘要校验、并发防重复奖励及隐私清理。Web、后台和 Flutter 已配套接入，28 号迁移保留历史发奖金额；默认上线开关继续关闭。详见 [接口契约](integration/growth-ops.md#创作者任务) 与 [交付记录](创作者任务提交审核与发奖-2026-11-06.md)。
 
 - `2026-11-06` 在线咨询已在用户 Web、商户端与 Flutter 接入最近 50 条消息、历史翻页与增量补收，以及每页默认 20 条的会话列表分页和未读筛选；商户翻页或筛选时保留选中会话与回复草稿。修正员工门店范围校验，发送和轮询交错不跳过中间回复，标记已读不改变会话活动排序。查询使用既有索引，无新增迁移。接口边界与隔离 MySQL 容量基线见 [咨询契约](integration/consult.md) 和 [本轮开发记录](咨询会话列表分页与未读筛选-2026-11-06.md)，后端与三个客户端须配套发布，实际目标环境容量仍待验收。
 
@@ -211,7 +213,7 @@
 - 发票：抬头、已支付订单申请、税率（CN 6% / EU 20%）、管理端开具或驳回，同一订单重复申请返回 409。管理端可上传已开具 PDF（最大 5 MiB），Web/APP 用户鉴权下载并显式确认收到；私有文件、SHA-256 与回执存储于 27 号迁移新增表，发票隐私导出包含 PDF，注销清理文件。
 - 点评信任：有用投票与按有用排序、菜品点评、社区译文、关键词自动拦截命中记录。
 - 客服工单：用户创建/回复，商户按门店回复，管理端回复并把待处理改为处理中，状态只允许 2/3/4。
-- 结构化探店攻略、创作者任务（完成后写积分流水 `action=creator_task`）、等级权益 `GET /api/c/v1/user/level-privileges`。
+- 结构化探店攻略、创作者任务（提交作品并经后台审核通过后写一次积分流水 `action=creator_task`，旧自助完成入口关闭）、等级权益 `GET /api/c/v1/user/level-privileges`。
 - 商户经营趋势与 CSV 导出、广告投放报表。
 - 广告点击同一登录用户或匿名客户端在 30 分钟窗口内只计费一次；匿名 IP 由 Tomcat 在可信代理配置后提供，只在请求内存中使用，再以服务密钥派生的 HMAC 指纹放入带 TTL 的 EU Redis 去重键；原始 IP 不写入 Redis 键、点击数据库或去重业务日志。Redis claim 使用随机令牌，只有广告扣费事务提交后才保留；事务回滚时按令牌 compare-and-delete 释放，避免失败请求占住去重窗口。点击计费明细不再保留用户 ID，新日志省略该列，`sql/mysql/20_ad_click_log_anonymization_migration.sql` 将已有点击明细中的用户 ID 匿名化为 `0`；商户报表仍按广告/门店汇总。EU 预发仍须填入实际代理 IP 正则、限制后端直连，并在隐私告知中说明短时反刷处理；详情见 `docs/EU预发环境配置清单.md` 的“EU 入口代理与广告点击 IP”。
 - 进程内消息 outbox（`message_outbox`，不是外部消息队列）、实验/功能开关、开放接口 HMAC（密钥只在创建时返回；签名原文为 `keyId\n时间戳\n方法\n路径`）。
@@ -296,12 +298,12 @@
 .\scripts\ci\mysql-smoke.ps1 -DbName dazhongdianping_smoke -DropDatabaseAfter
 ```
 
-`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-27 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
+`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-28 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
 
 ### 3.2 初始化与迁移 SQL 的作用
 
 - `sql/mysql/00_all_in_one.sql`: 已退役的安全阻断桩,执行时直接报错,不再串联破坏性建表脚本。
-- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-27 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
+- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-28 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
 - `sql/mysql/02_seed_data.sql`: 浏览数据、公开点评、待审/驳回审核案例、点评图片、点赞/评论演示数据、C 端演示账号、成长规则(含 `check_in`)。
 - `sql/mysql/03_admin_city_scope_migration.sql`: 既有数据库增加管理员城市/门店范围；只用于升级，不参与全新数据库初始化。
 - `sql/mysql/04_admin_import_batch_scope_migration.sql`: 既有数据库增加受限管理员本人导入批次查询索引；在 `03` 后执行一次。
@@ -326,8 +328,10 @@
 - `sql/mysql/23_admin_audit_sla_alert_migration.sql`: 创建审核 SLA 提醒表。
 
 - `sql/mysql/26_privacy_account_unlink_migration.sql`: 可空账号/设备关系，支持多账号连续注销；加入历史注销补清理版本和扫描索引。
+- `sql/mysql/27_invoice_document_delivery_migration.sql`: 发票 PDF 文档、文件校验与用户收件确认。
+- `sql/mysql/28_creator_task_review_migration.sql`: 冻结领取时条款和奖励，增加成果引用、提交版本、审核字段及待审索引；历史已发奖金额优先读取原积分流水，状态保持终态。
 
-> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-27 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
+> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-28 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
 
 ### 3.3 导入后哪些表会直接有数据
 

@@ -31,7 +31,7 @@ class CreatorControllerTest {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
-    void claimOnceThenCompleteAwardsPointsOnce() throws Exception {
+    void claimOnceAndLegacyCompleteCannotAwardPoints() throws Exception {
         Session user = registerUser();
 
         mockMvc.perform(get("/api/c/v1/creator/tasks").header("X-Region", "CN"))
@@ -69,15 +69,11 @@ class CreatorControllerTest {
 
         mockMvc.perform(post("/api/c/v1/creator/tasks/{id}/complete", 9101)
                         .header("Authorization", bearer(user.token())).header("X-Region", "CN"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.messageKey").value("creator.completed"))
-                .andExpect(jsonPath("$.data.claimStatus").value(2))
-                .andExpect(jsonPath("$.data.rewardPoints").value(20))
-                .andExpect(jsonPath("$.data.points").value(20));
+                .andExpect(status().isConflict());
 
         Integer points = jdbcTemplate.queryForObject(
                 "SELECT points FROM app_user WHERE id = ?", Integer.class, user.userId());
-        assertEquals(20, points);
+        assertEquals(0, points);
         Number logs = jdbcTemplate.queryForObject(
                 """
                 SELECT COUNT(*) FROM growth_points_log
@@ -85,26 +81,26 @@ class CreatorControllerTest {
                   AND biz_id = ? AND change_amount = 20 AND balance_after = 20
                 """,
                 Number.class, user.userId(), claimId);
-        assertEquals(1, logs.intValue());
+        assertEquals(0, logs.intValue());
 
         mockMvc.perform(post("/api/c/v1/creator/tasks/{id}/complete", 9101)
                         .header("Authorization", bearer(user.token())).header("X-Region", "CN"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
         Number logsAfter = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM growth_points_log WHERE user_id = ? AND action = 'creator_task'",
                 Number.class, user.userId());
-        assertEquals(1, logsAfter.intValue());
+        assertEquals(0, logsAfter.intValue());
         mockMvc.perform(get("/api/c/v1/creator/tasks")
                         .header("Authorization", bearer(user.token())).header("X-Region", "CN"))
-                .andExpect(jsonPath("$.data.list[?(@.id==9101)].claimStatus", hasItem(2)));
+                .andExpect(jsonPath("$.data.list[?(@.id==9101)].claimStatus", hasItem(1)));
     }
 
     @Test
-    void completeRequiresClaimAndAdminCanSaveTask() throws Exception {
+    void legacyCompleteStaysClosedAndAdminCanSaveTask() throws Exception {
         Session user = registerUser();
         mockMvc.perform(post("/api/c/v1/creator/tasks/{id}/complete", 9101)
                         .header("Authorization", bearer(user.token())).header("X-Region", "CN"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
 
         String admin = adminLogin();
         MvcResult created = mockMvc.perform(post("/api/admin/v1/creator/tasks")
@@ -141,8 +137,8 @@ class CreatorControllerTest {
                 .andExpect(jsonPath("$.messageKey").value("creator.claimed"));
         mockMvc.perform(post("/api/c/v1/creator/tasks/{id}/complete", taskId)
                         .header("Authorization", bearer(user.token())).header("X-Region", "CN"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.points").value(8));
+                .andExpect(status().isConflict());
+        assertEquals(0, jdbcTemplate.queryForObject("SELECT points FROM app_user WHERE id=?", Integer.class, user.userId()));
     }
 
     private Session registerUser() throws Exception {

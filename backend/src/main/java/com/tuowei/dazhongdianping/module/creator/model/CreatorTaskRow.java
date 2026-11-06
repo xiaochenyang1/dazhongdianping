@@ -32,4 +32,20 @@ public class CreatorTaskRow {
     public void setClaimStatus(Integer claimStatus) { this.claimStatus = claimStatus; }
     public Long getClaimId() { return claimId; }
     public void setClaimId(Long claimId) { this.claimId = claimId; }
+
+    private String reviewNote;
+    public String getReviewNote() { return reviewNote; }
+    public void setReviewNote(String value) { this.reviewNote = value; }
+    private String evidenceType;
+    public String getEvidenceType() { return evidenceType; }
+    public void setEvidenceType(String value) { this.evidenceType = value; }
+    private Long evidenceId;
+    public Long getEvidenceId() { return evidenceId; }
+    public void setEvidenceId(Long value) { this.evidenceId = value; }
+    private String submissionNote;
+    public String getSubmissionNote() { return submissionNote; }
+    public void setSubmissionNote(String value) { this.submissionNote = value; }
+    private Integer submissionVersion;
+    public Integer getSubmissionVersion() { return submissionVersion; }
+    public void setSubmissionVersion(Integer value) { this.submissionVersion = value; }
 }
