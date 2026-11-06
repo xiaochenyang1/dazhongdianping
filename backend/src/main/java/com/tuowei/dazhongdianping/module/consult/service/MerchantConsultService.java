@@ -12,7 +12,6 @@ import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSessionContext;
 import com.tuowei.dazhongdianping.module.merchant.identity.service.MerchantAuthorizationService;
 import com.tuowei.dazhongdianping.module.notification.service.NotificationService;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,10 +39,11 @@ public class MerchantConsultService {
         this.notificationService = notificationService;
     }
 
-    public List<Map<String, Object>> sessions() {
+    public Map<String, Object> sessions(LocalDateTime beforeUpdatedAt, Long beforeId, Integer pageSize, boolean unreadOnly) {
+        int size = ConsultSessionPage.validate(beforeUpdatedAt, beforeId, pageSize);
         MerchantSession session = requireSession();
         authorizationService.requirePermission(session, "consult:view");
-        return presenter.sessions(mapper.selectMerchantSessions(session.merchantId(), region(), authorizationService.scopedShopIds(session)), 2);
+        return ConsultSessionPage.present(mapper.selectMerchantSessions(session.merchantId(), region(), authorizationService.scopedShopIds(session), beforeUpdatedAt, beforeId, unreadOnly, size + 1), size, 2, presenter);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

@@ -47,7 +47,7 @@ describe('ConsultView', () => {
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
     Object.values(mocks).forEach((mock) => mock.mockReset())
     sessionState.region = 'CN'
-    mocks.fetchConsultSessions.mockResolvedValue([session()])
+    mocks.fetchConsultSessions.mockResolvedValue({ list: [session()], hasMore: false, nextBeforeId: null, nextBeforeUpdatedAt: null })
     mocks.fetchConsultMessages.mockResolvedValue({
       session: session({ unread: 0 }),
       messages: [{ id: 1, sessionId: 1, senderType: 1, senderId: 9001, content: '还有位置吗？' }],
@@ -119,7 +119,7 @@ describe('ConsultView', () => {
   })
 
   it('rejects stale messages from the previously selected session', async () => {
-    mocks.fetchConsultSessions.mockResolvedValue([session(), session({ id: 2 })])
+    mocks.fetchConsultSessions.mockResolvedValue({ list: [session(), session({ id: 2 })], hasMore: false })
     const { host } = mountView()
     await flushView()
     let resolveOld!: (value: unknown) => void
@@ -184,6 +184,39 @@ describe('ConsultView', () => {
     expect(mocks.fetchConsultMessages).toHaveBeenLastCalledWith(1, { afterId: 5 })
     expect(host.textContent).toContain('unseen customer message')
     expect(host.querySelectorAll('.messages li')).toHaveLength(4)
+  })
+
+  it('keeps the selected conversation and draft across pages, filtering and background list refresh', async () => {
+    mocks.fetchConsultSessions.mockResolvedValueOnce({ list: [session()], hasMore: true, nextBeforeId: 1, nextBeforeUpdatedAt: '2026-11-06T10:00:00' })
+    const { host } = mountView(); await flushView()
+    host.querySelector<HTMLButtonElement>('[data-testid="session-1"]')!.click(); await flushView()
+    const input = host.querySelector<HTMLTextAreaElement>('[data-testid="consult-input"]')!
+    input.value = 'Keep this draft'; input.dispatchEvent(new Event('input')); await flushView()
+    mocks.fetchConsultSessions.mockResolvedValue({ list: [session({ id: 2 })], hasMore: false })
+    host.querySelector<HTMLButtonElement>('[data-testid="sessions-next"]')!.click(); await flushView()
+    expect(mocks.fetchConsultSessions).toHaveBeenLastCalledWith({ beforeId: 1, beforeUpdatedAt: '2026-11-06T10:00:00', unreadOnly: false })
+    await vi.advanceTimersByTimeAsync(3000); await flushView()
+    expect(host.querySelector<HTMLTextAreaElement>('[data-testid="consult-input"]')!.value).toBe('Keep this draft')
+    expect(host.querySelector('[data-testid="session-1"]')).toBeNull()
+    const filter = host.querySelector<HTMLInputElement>('[data-testid="sessions-unread"]')!
+    mocks.fetchConsultSessions.mockResolvedValue({ list: [], hasMore: false })
+    filter.checked = true; filter.dispatchEvent(new Event('change')); await flushView()
+    expect(mocks.fetchConsultSessions).toHaveBeenLastCalledWith({ unreadOnly: true })
+    expect(host.querySelector<HTMLTextAreaElement>('[data-testid="consult-input"]')!.value).toBe('Keep this draft')
+    host.querySelector<HTMLButtonElement>('[data-testid="consult-send"]')!.click(); await flushView()
+    expect(mocks.sendConsultMessage).toHaveBeenCalledWith(1, 'Keep this draft')
+  })
+
+  it('ignores a late page after switching the unread filter', async () => {
+    let finish!: (value: unknown) => void
+    mocks.fetchConsultSessions.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+    const { host } = mountView(); await flushView()
+    mocks.fetchConsultSessions.mockResolvedValue({ list: [session({ id: 2 })], hasMore: false })
+    const filter = host.querySelector<HTMLInputElement>('[data-testid="sessions-unread"]')!
+    filter.checked = true; filter.dispatchEvent(new Event('change')); await flushView()
+    finish({ list: [session()], hasMore: true, nextBeforeId: 1, nextBeforeUpdatedAt: '2026-11-06T10:00:00' }); await flushView()
+    expect(host.querySelector('[data-testid="session-1"]')).toBeNull()
+    expect(host.querySelector('[data-testid="session-2"]')).not.toBeNull()
   })
 
 })

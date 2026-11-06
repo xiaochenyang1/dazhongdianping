@@ -5,7 +5,8 @@ import com.tuowei.dazhongdianping.module.consult.model.request.ConsultMessageReq
 import com.tuowei.dazhongdianping.module.consult.model.request.ConsultStartRequest;
 import com.tuowei.dazhongdianping.module.consult.service.ConsultService;
 import jakarta.validation.Valid;
-import java.util.List;
+import java.time.LocalDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,8 +32,12 @@ public class ConsultController {
     }
 
     @GetMapping("/sessions")
-    public ApiResponse<List<Map<String, Object>>> sessions() {
-        return ApiResponse.success(service.mySessions());
+    public ApiResponse<Map<String, Object>> sessions(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime beforeUpdatedAt,
+            @RequestParam(required = false) Long beforeId,
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(defaultValue = "false") boolean unreadOnly) {
+        return ApiResponse.success(service.mySessions(beforeUpdatedAt, beforeId, pageSize, unreadOnly));
     }
 
     @GetMapping("/sessions/{id}/messages")

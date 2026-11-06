@@ -1312,6 +1312,11 @@ test('customer and merchant exchange live consultation replies and support close
     localStorage.setItem('dzdp:user-refresh-token', session.refreshToken)
     localStorage.setItem('dzdp:user-profile', JSON.stringify(session.user))
   }, auth)
+  const otherConsultation = await expectApiSuccess<{ id: number }>(
+    await request.post(`${backendBaseURL}/api/c/v1/consult/sessions`, {
+      headers: userHeaders, data: { shopId: 20002 },
+    }),
+  )
   const consultation = await expectApiSuccess<{ id: number }>(
     await request.post(`${backendBaseURL}/api/c/v1/consult/sessions`, {
       headers: userHeaders, data: { shopId: 20001 },
@@ -1327,7 +1332,22 @@ test('customer and merchant exchange live consultation replies and support close
         headers: userHeaders, data: { content: `Earlier question ${i}` },
       }))
     }
-    await page.goto(`/user/consult/${consultation.id}`)
+    // Smaller real API pages exercise navigation with two real shops; response data is never mocked.
+    await page.route('**/api/c/v1/consult/sessions?*', async (route) => {
+      const url = new URL(route.request().url())
+      url.searchParams.set('pageSize', '1')
+      await route.continue({ url: url.toString() })
+    })
+    await page.goto('/user/consult')
+    await expect(page.locator(`.session-list a[href="/user/consult/${consultation.id}"]`)).toBeVisible()
+    await page.getByTestId('sessions-next').click()
+    await expect(page.locator(`.session-list a[href="/user/consult/${otherConsultation.id}"]`)).toBeVisible()
+    await expect(page.getByTestId('sessions-next')).toBeDisabled()
+    await page.getByTestId('sessions-unread').check()
+    await expect(page.getByText('No unread chats.', { exact: true })).toBeVisible()
+    await page.getByTestId('sessions-unread').uncheck()
+    await page.screenshot({ path: test.info().outputPath('consult-session-list.png'), fullPage: true })
+    await page.locator(`.session-list a[href="/user/consult/${consultation.id}"]`).click()
     await expect(page.getByText('Earlier question 54', { exact: true })).toBeVisible()
     await expect(page.getByText('Earlier question 0', { exact: true })).toHaveCount(0)
     await page.getByTestId('consult-load-older').click()
@@ -1355,6 +1375,9 @@ test('customer and merchant exchange live consultation replies and support close
     await merchantPage.screenshot({ path: test.info().outputPath('consult-merchant-history.png'), fullPage: true })
     await expect(merchantPage.locator('.messages')).toContainText('Is a table available tonight?')
     await merchantPage.getByTestId('consult-input').fill('Yes, we have a table at seven.')
+    await merchantPage.getByTestId('sessions-unread').check()
+    await expect(merchantPage.getByTestId(`session-${consultation.id}`)).toHaveCount(0)
+    await expect(merchantPage.getByTestId('consult-input')).toHaveValue('Yes, we have a table at seven.')
     await merchantPage.getByTestId('consult-send').click()
     await expect(merchantPage.getByText('Yes, we have a table at seven.', { exact: true })).toBeInViewport()
     await expect(page.locator('.chat-messages')).toContainText('Yes, we have a table at seven.')

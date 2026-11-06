@@ -10,7 +10,6 @@ import com.tuowei.dazhongdianping.module.consult.model.ConsultMessageRow;
 import com.tuowei.dazhongdianping.module.consult.model.ConsultSessionRow;
 import com.tuowei.dazhongdianping.module.consult.model.request.ConsultMessageRequest;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,9 +51,10 @@ public class ConsultService {
         return presenter.session(mapper.selectUserSession(row.getId(), u.userId(), region), 1);
     }
 
-    public List<Map<String, Object>> mySessions() {
+    public Map<String, Object> mySessions(LocalDateTime beforeUpdatedAt, Long beforeId, Integer pageSize, boolean unreadOnly) {
+        int size = ConsultSessionPage.validate(beforeUpdatedAt, beforeId, pageSize);
         UserSession u = requireUser();
-        return presenter.sessions(mapper.selectUserSessions(u.userId(), region()), 1);
+        return ConsultSessionPage.present(mapper.selectUserSessions(u.userId(), region(), beforeUpdatedAt, beforeId, unreadOnly, size + 1), size, 1, presenter);
     }
 
     /** 最近一页、历史分页或增量补收；仅读到末尾才确认未读。 */

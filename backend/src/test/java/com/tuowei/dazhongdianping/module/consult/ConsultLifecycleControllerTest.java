@@ -27,6 +27,7 @@ class ConsultLifecycleControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private org.mybatis.spring.SqlSessionTemplate sqlSession;
     @Autowired private org.springframework.transaction.PlatformTransactionManager transactionManager;
     @Autowired private com.tuowei.dazhongdianping.module.consult.mapper.ConsultMapper consultMapper;
 
@@ -64,7 +65,7 @@ class ConsultLifecycleControllerTest {
         mockMvc.perform(get("/api/b/v1/consult/sessions")
                         .header("Authorization", bearer(merchant)).header("X-Region", "CN"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[?(@.id==" + sessionId + ")].unread").value(org.hamcrest.Matchers.hasItem(1)));
+                .andExpect(jsonPath("$.data.list[?(@.id==" + sessionId + ")].unread").value(org.hamcrest.Matchers.hasItem(1)));
 
         mockMvc.perform(get("/api/b/v1/consult/sessions/{id}/messages", sessionId)
                         .header("Authorization", bearer(merchant)).header("X-Region", "CN"))
@@ -84,7 +85,7 @@ class ConsultLifecycleControllerTest {
         mockMvc.perform(get("/api/c/v1/consult/sessions")
                         .header("Authorization", bearer(user)).header("X-Region", "CN"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[?(@.id==" + sessionId + ")].unread").value(org.hamcrest.Matchers.hasItem(1)));
+                .andExpect(jsonPath("$.data.list[?(@.id==" + sessionId + ")].unread").value(org.hamcrest.Matchers.hasItem(1)));
 
         mockMvc.perform(get("/api/c/v1/consult/sessions/{id}/messages", sessionId)
                         .header("Authorization", bearer(user)).header("X-Region", "CN"))
@@ -183,7 +184,7 @@ class ConsultLifecycleControllerTest {
         // Re-scope an existing merchant operator: list, reads and writes must all respect it.
         jdbc.update("UPDATE merchant_operator SET shop_scope_type=2 WHERE id=11001");
         mockMvc.perform(get("/api/b/v1/consult/sessions").header("Authorization", bearer(merchant)).header("X-Region", "CN"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(0));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.list.length()").value(0));
         mockMvc.perform(get("/api/b/v1/consult/sessions/" + id + "/messages?afterId=0")
                 .header("Authorization", bearer(merchant)).header("X-Region", "CN"))
                 .andExpect(status().isNotFound());
@@ -238,6 +239,75 @@ class ConsultLifecycleControllerTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"shopId\":10001}"))
                 .andExpect(status().isOk()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).at("/data/id").asLong();
+    }
+
+    @Test
+    void sessionPagesAreBoundedStableAcrossTimestampTiesAndFilteredForEachViewer() throws Exception {
+        String user = registerUser();
+        long firstId = start(user);
+        long userId = jdbc.queryForObject("SELECT user_id FROM consult_session WHERE id=?", Long.class, firstId);
+        long merchantId = jdbc.queryForObject("SELECT merchant_id FROM consult_session WHERE id=?", Long.class, firstId);
+        jdbc.update("UPDATE consult_session SET merchant_unread=0 WHERE merchant_id=? AND user_id<>?", merchantId, userId);
+        jdbc.update("UPDATE consult_session SET updated_at='2026-01-01 10:00:00', user_unread=1,merchant_unread=0 WHERE id=?", firstId);
+        for (int i = 0; i < 44; i++) {
+            jdbc.update("INSERT INTO consult_session(region,user_id,shop_id,merchant_id,updated_at,user_unread,merchant_unread) VALUES('CN',?,?,?,'2026-01-01 10:00:00',?,?)",
+                    userId, 900000 + i, merchantId, i % 2, (i + 1) % 2);
+        }
+        JsonNode page = sessionPage("c", user, "");
+        assertThat(page.path("list").size()).isEqualTo(20);
+        var ids = new java.util.ArrayList<Long>();
+        while (true) {
+            page.path("list").forEach(row -> ids.add(row.path("id").asLong()));
+            if (!page.path("hasMore").asBoolean()) break;
+            page = sessionPage("c", user, "?beforeId=" + page.path("nextBeforeId").asLong()
+                    + "&beforeUpdatedAt=" + page.path("nextBeforeUpdatedAt").asText());
+        }
+        assertThat(ids).hasSize(45).doesNotHaveDuplicates().isSortedAccordingTo(java.util.Comparator.reverseOrder());
+        assertThat(page.path("nextBeforeId").isNull()).isTrue();
+        assertThat(page.path("nextBeforeUpdatedAt").isNull()).isTrue();
+        assertThat(sessionPage("c", user, "?pageSize=100").path("list").size()).isEqualTo(45);
+        JsonNode userUnread = sessionPage("c", user, "?unreadOnly=true&pageSize=100");
+        assertThat(userUnread.path("list").size()).isEqualTo(23);
+        for (JsonNode row : userUnread.path("list")) assertThat(row.path("unread").asInt()).isPositive();
+        String merchant = loginMerchant("merchant_cn_hotpot@example.com", "merchant123456");
+        JsonNode merchantUnread = sessionPage("b", merchant, "?unreadOnly=true&pageSize=100");
+        assertThat(merchantUnread.path("list").size()).isEqualTo(22);
+        for (JsonNode row : merchantUnread.path("list")) assertThat(row.path("unread").asInt()).isPositive();
+        var timestamp = jdbc.queryForObject("SELECT updated_at FROM consult_session WHERE id=?", java.sql.Timestamp.class, firstId);
+        read("c", user, firstId, "");
+        assertThat(jdbc.queryForObject("SELECT updated_at FROM consult_session WHERE id=?", java.sql.Timestamp.class, firstId)).isEqualTo(timestamp);
+        assertThat(sessionPage("c", user, "?unreadOnly=true&pageSize=100").path("list").size()).isEqualTo(22);
+        assertThat(sessionPage("c", registerUser(), "").path("list").size()).isZero();
+    }
+
+    @Test
+    void sessionPaginationRejectsInvalidBoundariesAndPreservesShopAndRegionScopes() throws Exception {
+        String user = registerUser();
+        long id = start(user);
+        String merchant = loginMerchant("merchant_cn_hotpot@example.com", "merchant123456");
+        for (String side : new String[]{"c", "b"}) {
+            String token = side.equals("c") ? user : merchant;
+            for (String query : new String[]{"?beforeId=1", "?beforeUpdatedAt=2026-01-01T00:00:00", "?beforeId=0&beforeUpdatedAt=2026-01-01T00:00:00", "?beforeId=1&beforeUpdatedAt=invalid", "?pageSize=0", "?pageSize=101"}) {
+                mockMvc.perform(get("/api/" + side + "/v1/consult/sessions" + query)
+                        .header("Authorization", bearer(token)).header("X-Region", "CN")).andExpect(status().isBadRequest());
+            }
+        }
+        mockMvc.perform(get("/api/c/v1/consult/sessions?unreadOnly=true")
+                .header("Authorization", bearer(user)).header("X-Region", "EU"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.list.length()").value(0));
+        jdbc.update("UPDATE merchant_operator SET shop_scope_type=2 WHERE id=11001");
+        assertThat(sessionPage("b", merchant, "?unreadOnly=true").path("list").size()).isZero();
+        jdbc.update("INSERT INTO merchant_operator_shop(operator_id,shop_id) VALUES(11001,10001)");
+        jdbc.update("UPDATE consult_session SET merchant_unread=1 WHERE id=?", id);
+        sqlSession.clearCache(); // Direct JDBC fixture edits bypass MyBatis cache invalidation.
+        assertThat(sessionPage("b", merchant, "?unreadOnly=true").path("list").get(0).path("id").asLong()).isEqualTo(id);
+    }
+
+    private JsonNode sessionPage(String side, String token, String query) throws Exception {
+        var result = mockMvc.perform(get("/api/" + side + "/v1/consult/sessions" + query)
+                .header("Authorization", bearer(token)).header("X-Region", "CN"))
+                .andExpect(status().isOk()).andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
     }
 
     private JsonNode read(String side, String token, long id, String query) throws Exception {

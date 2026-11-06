@@ -810,6 +810,39 @@ UPDATE consult_session SET user_unread=10000 WHERE id=$consultId;
         $delta = Invoke-Json -Method "GET" -Path "/api/c/v1/consult/sessions/$consultId/messages?afterId=$consultNewest" -Headers $euHeaders
         if ($delta.data.messages.Count -ne 2 -or $delta.data.hasMore -or $delta.data.messages[0].id -ge $delta.data.messages[1].id) { throw "MySQL consultation incremental read lost or reordered concurrent replies" }
 
+        Write-Step "smoking paged consultation lists with 10000 customers and 100 shops"
+        $sessionFixtureSql = @"
+INSERT INTO app_user(nickname,preferred_region)
+SELECT CONCAT('consult-capacity-',a.n+10*b.n+100*c.n+1000*d.n),'EU'
+FROM ($digitsSql) a CROSS JOIN ($digitsSql) b CROSS JOIN ($digitsSql) c CROSS JOIN ($digitsSql) d;
+INSERT INTO shop(id,merchant_id,category_id,city_id,area_id,region,name,cover_url,score,taste_score,env_score,service_score,price_per_capita,currency,address,business_hours,summary)
+SELECT 950000000+a.n+10*b.n,merchant_id,category_id,city_id,area_id,region,CONCAT('Capacity shop ',a.n+10*b.n),cover_url,score,taste_score,env_score,service_score,price_per_capita,currency,address,business_hours,summary
+FROM shop CROSS JOIN ($digitsSql) a CROSS JOIN ($digitsSql) b WHERE shop.id=20001;
+INSERT INTO consult_session(region,user_id,shop_id,merchant_id,last_message,user_unread,merchant_unread,updated_at)
+SELECT 'EU',id,20001,2001,'Capacity customer',0,MOD(CAST(SUBSTRING(nickname,18) AS UNSIGNED),1000)=0,'2026-01-01 10:00:00'
+FROM app_user WHERE nickname LIKE 'consult-capacity-%';
+INSERT INTO consult_session(region,user_id,shop_id,merchant_id,last_message,user_unread,merchant_unread,updated_at)
+SELECT 'EU',$userId,id,2001,'Capacity shop',MOD(id,3)=0,0,'2026-01-02 10:00:00'
+FROM shop WHERE id BETWEEN 950000000 AND 950000099;
+UPDATE consult_session SET updated_at='2026-01-03 10:00:00',user_unread=1 WHERE id=$consultId;
+"@
+        Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @("--database=$DbName", "-e", $sessionFixtureSql)) -WorkingDirectory $repoRoot | Out-Null
+        # A read must not advance MySQL's ON UPDATE timestamp or reorder the list.
+        Invoke-Json -Method "GET" -Path "/api/c/v1/consult/sessions/$consultId/messages" -Headers $euHeaders | Out-Null
+        $activityTime = & $mysqlCommand.Source @mysqlConnectionArgs --database=$DbName --batch --skip-column-names -e "SELECT updated_at FROM consult_session WHERE id=$consultId"
+        if ($LASTEXITCODE -ne 0 -or "$activityTime".Trim() -ne "2026-01-03 10:00:00") { throw "Marking read changed session activity order" }
+        $customerCount = & $mysqlCommand.Source @mysqlConnectionArgs --database=$DbName --batch --skip-column-names -e "SELECT COUNT(*) FROM consult_session WHERE user_id=$userId AND region='EU'"
+        if ($LASTEXITCODE -ne 0) { throw "Could not count isolated customer fixture" }
+        $merchantCount = & $mysqlCommand.Source @mysqlConnectionArgs --database=$DbName --batch --skip-column-names -e "SELECT COUNT(*) FROM consult_session WHERE merchant_id=2001 AND region='EU' AND user_id IS NOT NULL"
+        if ($LASTEXITCODE -ne 0) { throw "Could not count isolated merchant fixture" }
+        & (Join-Path $PSScriptRoot "consult-session-capacity-smoke.ps1") -BaseUrl $baseUrl -CustomerToken $user.data.accessToken -MerchantToken $merchantConsultLogin.data.accessToken -ExpectedCustomerCount ([int]$customerCount) -ExpectedMerchantCount ([int]$merchantCount) -OutputPath (Join-Path $runDir "consult-session-capacity.json")
+        $sessionCleanupSql = @"
+DELETE FROM consult_session WHERE shop_id BETWEEN 950000000 AND 950000099 OR user_id IN(SELECT id FROM app_user WHERE nickname LIKE 'consult-capacity-%');
+DELETE FROM shop WHERE id BETWEEN 950000000 AND 950000099;
+DELETE FROM app_user WHERE nickname LIKE 'consult-capacity-%';
+"@
+        Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @("--database=$DbName", "-e", $sessionCleanupSql)) -WorkingDirectory $repoRoot | Out-Null
+
         Write-Step "smoking private invoice PDF delivery, concurrent retry and explicit receipt on MySQL"
         $invoiceOrder = Invoke-Json -Method "POST" -Path "/api/c/v1/orders" -Headers $euHeaders -Body @{ dealId = 41001; quantity = 1 }
         Invoke-Json -Method "POST" -Path "/api/c/v1/orders/$($invoiceOrder.data.id)/pay/mock-complete" -Headers $euHeaders | Out-Null

@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useMerchantSession } from '@/composables/useMerchantSession'
 import { merchantStringsForRegion } from '@/core/merchant_localizations'
-import { fetchConsultMessages, fetchConsultSessions, sendConsultMessage, type ConsultMessage, type ConsultSession } from '@/services/merchant'
+import { fetchConsultMessages, fetchConsultSessions, sendConsultMessage, type ConsultMessage, type ConsultSession, type ConsultSessionQuery } from '@/services/merchant'
 
 const props = withDefaults(defineProps<{ permissions?: string[] }>(), { permissions: () => [] })
 const { state } = useMerchantSession()
@@ -15,6 +15,11 @@ const threadError = ref('')
 const sendError = ref('')
 const sessions = ref<ConsultSession[]>([])
 const activeId = ref<number | null>(null)
+const activeSession = ref<ConsultSession | null>(null)
+const unreadOnly = ref(false)
+const pageIndex = ref(0)
+const hasMore = ref(false)
+let cursors: ConsultSessionQuery[] = [{}]
 const messages = ref<ConsultMessage[]>([])
 const draft = ref('')
 const sending = ref(false)
@@ -41,6 +46,7 @@ function clearThread() {
   threadRevision++
   threadPending = false
   activeId.value = null
+  activeSession.value = null
   messages.value = []
   draft.value = ''
   sending.value = false
@@ -54,17 +60,23 @@ function clearThread() {
   nextAfterId = 0
 }
 
-async function loadSessions() {
+async function loadSessions(index = pageIndex.value) {
   if (listPending) return
   const current = scope
   listPending = true
   loading.value = true
   try {
-    const result = await fetchConsultSessions()
+    const result = await fetchConsultSessions({ ...cursors[index], unreadOnly: unreadOnly.value })
     if (current !== scope) return
-    sessions.value = result
+    sessions.value = result.list
+    pageIndex.value = index
+    hasMore.value = result.hasMore
+    cursors = cursors.slice(0, index + 1)
+    if (result.hasMore && result.nextBeforeId != null && result.nextBeforeUpdatedAt != null) {
+      cursors.push({ beforeId: result.nextBeforeId, beforeUpdatedAt: result.nextBeforeUpdatedAt })
+    }
     error.value = ''
-    if (activeId.value !== null && !result.some((item) => item.id === activeId.value)) clearThread()
+    // A paged/filtered list cannot prove that the selected thread was deleted or revoked.
   } catch (cause) {
     if (current === scope) error.value = cause instanceof Error ? cause.message : copy.value.loadError
   } finally {
@@ -92,6 +104,7 @@ async function loadMessages() {
       nextAfterId = thread.nextAfterId ?? thread.messages[thread.messages.length - 1]?.id ?? nextAfterId
       threadReady.value = true
       threadError.value = ''
+      activeSession.value = thread.session
       const target = sessions.value.find((item) => item.id === id)
       if (target) target.unread = thread.session.unread
       await nextTick()
@@ -133,12 +146,13 @@ async function openSession(session: ConsultSession) {
   if (activeId.value !== session.id) {
     clearThread()
     activeId.value = session.id
+    activeSession.value = session
   }
   await loadMessages()
 }
 
 async function send() {
-  if (!canReply.value || activeId.value === null || sending.value || !threadReady.value) return
+  if (!canReply.value || activeId.value === null || sending.value || !threadReady.value || threadError.value) return
   const content = draft.value.trim()
   if (!content) { sendError.value = copy.value.sendRequired; return }
   const current = threadRevision
@@ -165,13 +179,21 @@ function poll() {
   void loadMessages()
 }
 
-watch(() => state.region, () => {
+function resetList() {
   scope++
   listPending = false
   sessions.value = []
+  cursors = [{}]
+  pageIndex.value = 0
+  hasMore.value = false
   error.value = ''
+  void loadSessions(0)
+}
+
+watch(unreadOnly, resetList)
+watch(() => state.region, () => {
   clearThread()
-  void loadSessions()
+  resetList()
 }, { immediate: true })
 
 onMounted(() => {
@@ -192,14 +214,15 @@ onUnmounted(() => {
   <section>
     <div class="toolbar">
       <span class="muted">{{ copy.summary }}</span>
-      <button type="button" :disabled="loading" @click="poll">{{ strings.common.refresh }}</button>
+      <button type="button" :disabled="loading" @click="loadSessions(0); loadMessages()">{{ strings.common.refresh }}</button>
     </div>
+    <label class="unread-filter"><input v-model="unreadOnly" type="checkbox" data-testid="sessions-unread" />{{ copy.unreadOnly }}</label>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="loading && sessions.length === 0" class="muted">{{ strings.common.loading }}</p>
 
-    <div v-else class="consult-layout">
+    <div class="consult-layout">
       <ul class="consult-sessions">
-        <li v-if="sessions.length === 0" class="muted">{{ copy.sessionsEmpty }}</li>
+        <li v-if="!loading && !error && sessions.length === 0" class="muted">{{ unreadOnly ? copy.noUnread : copy.sessionsEmpty }}</li>
         <li
           v-for="session in sessions"
           :key="session.id"
@@ -212,11 +235,17 @@ onUnmounted(() => {
             <span v-if="session.unread > 0" class="badge">{{ copy.unreadBadge(session.unread) }}</span>
           </button>
         </li>
+        <li class="session-pager">
+          <button type="button" :disabled="loading || pageIndex === 0" data-testid="sessions-previous" @click="loadSessions(pageIndex - 1)">{{ copy.previous }}</button>
+          <span>{{ pageIndex + 1 }}</span>
+          <button type="button" :disabled="loading || !hasMore" data-testid="sessions-next" @click="loadSessions(pageIndex + 1)">{{ copy.next }}</button>
+        </li>
       </ul>
 
       <div class="consult-thread">
         <p v-if="activeId == null" class="muted">{{ copy.selectHint }}</p>
         <template v-else>
+          <header v-if="activeSession" class="thread-heading"><strong>{{ activeSession.userNickname }}</strong><span class="muted">{{ activeSession.shopName }}</span></header>
           <p v-if="threadError" class="error" role="alert">{{ threadError }}
             <button type="button" data-testid="consult-retry" @click="loadMessages">{{ strings.common.refresh }}</button>
           </p>
@@ -232,7 +261,7 @@ onUnmounted(() => {
           </ul>
           <div v-if="canReply" class="composer">
             <textarea v-model="draft" rows="2" maxlength="2000" :disabled="sending || !threadReady" :aria-label="copy.inputPlaceholder" :placeholder="copy.inputPlaceholder" data-testid="consult-input" />
-            <button type="button" class="primary-action" :disabled="sending || !threadReady" data-testid="consult-send" @click="send">{{ sending ? strings.common.loading : copy.send }}</button>
+            <button type="button" class="primary-action" :disabled="sending || !threadReady || !!threadError" data-testid="consult-send" @click="send">{{ sending ? strings.common.loading : copy.send }}</button>
           </div>
           <p v-else class="muted">{{ copy.readOnly }}</p>
         </template>
@@ -242,6 +271,10 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.unread-filter { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.session-pager { display: flex; align-items: center; gap: 4px; margin-top: 12px; }
+.session-pager button { padding: 8px; text-align: center; }
+.thread-heading { display: grid; gap: 4px; margin-bottom: 16px; }
 .consult-layout { display: grid; grid-template-columns: minmax(180px, 28%) minmax(0, 1fr); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--paper); }
 .consult-sessions { list-style: none; margin: 0; padding: 12px; border-right: 1px solid var(--line); max-height: 75vh; overflow-y: auto; }
 .consult-sessions button { display: grid; gap: 6px; width: 100%; padding: 14px; text-align: left; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--ink); cursor: pointer; }
