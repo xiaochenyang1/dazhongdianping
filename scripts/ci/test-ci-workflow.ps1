@@ -58,4 +58,16 @@ Assert-True ($migrationJob -match "chmod \+x scripts/ci/mysql-migrate\.sh script
 Assert-True ($migrationJob -match "run:\s*\./scripts/ci/test-mysql-migration-integration\.sh") "migration integration job must run the real MySQL migration suite"
 Assert-True ($migrationJob -notmatch "continue-on-error") "migration integration failures must block CI"
 
+$creatorStep = [regex]::Match($workflow, '(?ms)^      - name: Verify creator review browser flow\r?\n(?:(?!^      - ).)*').Value
+Assert-True (-not [string]::IsNullOrWhiteSpace($creatorStep)) "CI must run the creator workflow separately from closed-launch regression"
+Assert-True ($creatorStep -match 'run: npx playwright test e2e/creator-review\.spec\.ts') "creator CI must run only the creator browser scenarios"
+Assert-True ($creatorStep -match 'PLAYWRIGHT_REAL_BACKEND: "1"' -and $creatorStep -match 'PLAYWRIGHT_CREATOR_REVIEW: "1"') "creator CI must use a real feature-enabled test backend"
+Assert-True ($creatorStep -match 'APP_STATE_STORE_KEY_PREFIX: dzdp:ci:creator') "creator CI must isolate verification-code and idempotency state"
+foreach ($flag in @('APP_LAUNCH_DEFERRED_FEATURES_ENABLED', 'APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED')) {
+    Assert-True ($creatorStep -match "(?m)^          ${flag}: `"true`"\s*$") "creator test flags must be scoped to this step"
+    Assert-True ([regex]::Matches($workflow, "${flag}:").Count -eq 1) "creator flags must not leak into other CI steps"
+}
+Assert-True ($creatorStep -notmatch 'continue-on-error') "creator browser failures must block CI"
+Assert-True ($workflow -match 'path: web/test-results/creator-review/') "CI must preserve creator screenshots and failure traces"
+
 Write-Output "ci workflow contract passed"

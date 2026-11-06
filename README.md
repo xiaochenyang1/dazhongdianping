@@ -23,6 +23,8 @@
 
 创作者奖励、秒杀和拼团现由部署总开关 `APP_LAUNCH_DEFERRED_FEATURES_ENABLED` 控制，默认在 CN/EU 均关闭，省略区域头也不能开启。仅在独立功能开发环境中显式设为 `true` 可恢复 CN 演示；EU 仍受三个区域功能开关约束。巴黎预发须保持四个开关均为 `false`，普通团购和预订不受影响。
 
+`2026-11-06` 创作者任务已补齐 Web / Flutter 成果提交、后台人工审核、驳回重提和一次性发奖；领取时冻结要求与奖励，旧 `/complete` 自助发奖入口返回 409。部署须应用 28 号迁移，默认上线开关保持关闭。接口与运行方法见 [创作者任务契约](docs/integration/growth-ops.md#创作者任务)，本地验证见 [交付记录](docs/创作者任务提交审核与发奖-2026-11-06.md)。
+
 - `M1` 本地已完成：首页 / 列表 / 详情浏览，`CN / EU` 区域隔离，头部关键词搜索到商户列表(MySQL fallback,不是 ES 终态)，并已补公开搜索建议 / 热词 fallback 接口、登录用户搜索历史、历史清空入口和头部联想面板；管理端登录、门店 CRUD、种子导入、导入批次查询。
 - `M2` 已完成后端认证 + 点评/审核/互动最小闭环，`web` 已接登录弹层、游客拦截恢复、写点评 / 改点评、我的点评、点评详情互动区、我的资料 / 账号绑定 / 改密码、成长值流水页、公开用户主页：验证码发送、注册、验证码/密码登录、重置密码、`refresh`、`logout`、`/user/me`、`PUT /user/profile`、`POST /user/bind`、`PUT /user/password`、`GET /user/:id`、`GET /user/growth/records`、写点评 / 改点评 / 删点评 / 看点评详情 / 我的点评、点赞 / 评论 / 举报、本地图片上传、审核任务通过 / 驳回、门店评分聚合回写；游客在点赞 / 评论 / 举报时触发登录，登录后会自动续执行原动作。
 - `M3` 搜索、榜单、收藏与轻积分已落代码：`/api/c/v1/search/shops` 支持 MySQL/Elasticsearch provider、拼音/纠错/筛选/距离排序、管理端索引重建与事务 outbox 增量同步（失败退避、超时恢复、门店版本防竞态）；管理端 `/data/search-sync` 可按区域及数据范围查看积压、错误和超时任务，并支持单条/批量重试与全量重建，操作写审计日志。CI 会启动 Elasticsearch 8 跑真实 smoke；榜单支持版本化发布/回滚，Web 已接榜单和门店收藏。
@@ -44,7 +46,7 @@
 - 管理端种子导入失败时会生成真实本地错误明细文件，批次查询返回同一条 `errorFile` 路径。
 - 当前后端默认运行配置已指向 `MySQL`；可直接导入 MySQL 的脚本已补到 `sql/mysql/`，并带公开点评、点评图片、点赞/评论演示数据、审核演示数据、`user_expert_certification` 表与 `audit:expert_certification:*` 权限种子，以及可直接密码登录的 C 端演示账号。`H2` 仍保留为 `h2` profile 和测试环境使用。
 - 文件上传默认仍可本地落盘，也已接入 S3 兼容对象存储上传入口：配置 `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_*` 后，`POST /api/c/v1/files/upload` 会上传到对象存储并返回公开 URL。
-- `CI/CD` 已补本地复用脚本和 GitHub Actions:`scripts/ci/verify-all.ps1` 负责后端测试、Web/管理端/商户端测试与构建，以及可选 Flutter、MySQL、S3 兼容对象存储、Elasticsearch、浏览器冒烟 / E2E；`ci.yml` 当前同时起 MySQL 8、Redis 7、MinIO、Elasticsearch 8 服务,执行 `-IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeBrowserE2E -IncludeElasticsearchSmoke -IncludeFlutter`，并用独立 MySQL 8.4 job 验证 `03-25` 真实增量迁移；`.github/workflows/nightly.yml` 已补定时夜跑和手工触发,复用同一套浏览器 E2E 回归;`.github/workflows/release.yml` 已补测试环境自动部署和 `pre/prod` 手工发版入口,`.github/workflows/rollback.yml` 已补手工回滚入口,配套 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已落库，发布包和部署 / 回滚服务均覆盖 `web`、`admin-web`、`merchant-web`。
+- `CI/CD` 已补本地复用脚本和 GitHub Actions:`scripts/ci/verify-all.ps1` 负责后端测试、Web/管理端/商户端测试与构建，以及可选 Flutter、MySQL、S3 兼容对象存储、Elasticsearch、浏览器冒烟 / E2E；`ci.yml` 当前同时起 MySQL 8、Redis 7、MinIO、Elasticsearch 8 服务,执行 `-IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeBrowserE2E -IncludeElasticsearchSmoke -IncludeFlutter`，并用独立 MySQL 8.4 job 验证 `03-28` 真实增量迁移；`.github/workflows/nightly.yml` 已补定时夜跑和手工触发,复用同一套浏览器 E2E 回归;`.github/workflows/release.yml` 已补测试环境自动部署和 `pre/prod` 手工发版入口,`.github/workflows/rollback.yml` 已补手工回滚入口,配套 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已落库，发布包和部署 / 回滚服务均覆盖 `web`、`admin-web`、`merchant-web`。
 
 完整的“已完成 / 部分完成 / 外部待验收”证据请看 `docs/当前已完成功能与SQL导入说明.md` 的“全局功能完成矩阵”；根 README 只保留启动入口和阶段摘要，不再重复维护第二套完成判断。
 

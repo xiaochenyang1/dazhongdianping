@@ -9,9 +9,11 @@ source_dir="$repo_root/sql/mysql"
 manifest="$source_dir/migrations.sha256"
 container_name="dzdp-migration-$RANDOM-$$"
 container_image="${MYSQL_MIGRATION_TEST_IMAGE:-mysql:8.4}"
-run_dir="$(mktemp -d "${TMPDIR:-/tmp}/dzdp-migration-integration.XXXXXX")"
+server_kind="${MYSQL_MIGRATION_TEST_SERVER:-docker}"
+run_dir="$(mktemp -d /tmp/dzdp-migration-integration.XXXXXX)"
 db_password="migration-test-$RANDOM-$RANDOM"
 holder_pid=""
+local_pid=""
 
 fail() {
   printf '[mysql-migration-integration] ERROR: %s\n' "$*" >&2
@@ -25,36 +27,47 @@ cleanup() {
   if [[ -n "$holder_pid" ]]; then
     wait "$holder_pid" 2>/dev/null
   fi
-  docker rm -f "$container_name" >/dev/null 2>&1
+  if [[ -n "$local_pid" ]]; then
+    mysqladmin --defaults-extra-file="$server_defaults" shutdown >/dev/null 2>&1 || kill "$local_pid" 2>/dev/null
+    wait "$local_pid" 2>/dev/null
+  elif [[ "$server_kind" == docker ]]; then
+    docker rm -f "$container_name" >/dev/null 2>&1
+  fi
   rm -rf "$run_dir"
   exit "$exit_status"
 }
 trap cleanup EXIT
 
-command -v docker >/dev/null 2>&1 || fail "docker is required"
 command -v mysql >/dev/null 2>&1 || fail "mysql client is required"
-docker info >/dev/null 2>&1 || fail "Docker daemon is not available"
-
-docker run --detach --rm \
-  --name "$container_name" \
-  --env "MYSQL_ROOT_PASSWORD=$db_password" \
-  --publish 127.0.0.1::3306 \
-  "$container_image" >/dev/null
-
-port_mapping="$(docker port "$container_name" 3306/tcp | head -n 1)"
-db_port="${port_mapping##*:}"
-[[ "$db_port" =~ ^[0-9]+$ ]] || fail "unable to resolve the mapped MySQL port"
-
+command -v mysqladmin >/dev/null 2>&1 || fail "mysqladmin is required"
 server_defaults="$run_dir/server.cnf"
 database_defaults="$run_dir/database.cnf"
-{
-  printf '[client]\n'
-  printf 'protocol=tcp\n'
-  printf 'host=127.0.0.1\n'
-  printf 'port=%s\n' "$db_port"
-  printf 'user=root\n'
-  printf 'password=%s\n' "$db_password"
-} > "$server_defaults"
+case "$server_kind" in
+  docker)
+    command -v docker >/dev/null 2>&1 || fail "docker is required (or use MYSQL_MIGRATION_TEST_SERVER=local for an isolated local mysqld)"
+    docker info >/dev/null 2>&1 || fail "Docker daemon is not available"
+    docker run --detach --rm \
+      --name "$container_name" \
+      --env "MYSQL_ROOT_PASSWORD=$db_password" \
+      --publish 127.0.0.1::3306 \
+      "$container_image" >/dev/null
+    port_mapping="$(docker port "$container_name" 3306/tcp | head -n 1)"
+    db_port="${port_mapping##*:}"
+    [[ "$db_port" =~ ^[0-9]+$ ]] || fail "unable to resolve the mapped MySQL port"
+    printf '[client]\nprotocol=tcp\nhost=127.0.0.1\nport=%s\nuser=root\npassword=%s\n' "$db_port" "$db_password" > "$server_defaults"
+    ;;
+  local)
+    command -v mysqld >/dev/null 2>&1 || fail "mysqld is required for the isolated local server"
+    mkdir "$run_dir/data"
+    mysqld --no-defaults --initialize-insecure --datadir="$run_dir/data" --log-error="$run_dir/mysql.log"
+    printf '[client]\nprotocol=socket\nsocket=%s/mysql.sock\nuser=root\n' "$run_dir" > "$server_defaults"
+    # A private data directory and socket only: never connect to an existing database server.
+    mysqld --no-defaults --datadir="$run_dir/data" --socket="$run_dir/mysql.sock" \
+      --pid-file="$run_dir/mysql.pid" --log-error="$run_dir/mysql.log" --skip-networking --mysqlx=OFF &
+    local_pid=$!
+    ;;
+  *) fail "MYSQL_MIGRATION_TEST_SERVER must be docker or local" ;;
+esac
 cp "$server_defaults" "$database_defaults"
 printf 'database=dzdp_migration_test\n' >> "$database_defaults"
 chmod 600 "$server_defaults" "$database_defaults"
@@ -75,6 +88,7 @@ mysql --defaults-extra-file="$server_defaults" \
 
 mysql --defaults-extra-file="$database_defaults" <<'SQL'
 CREATE TABLE app_user (id BIGINT NOT NULL PRIMARY KEY);
+CREATE TABLE growth_points_log (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,user_id BIGINT NOT NULL,type TINYINT NOT NULL,action VARCHAR(64) NOT NULL,biz_id BIGINT NOT NULL,change_amount INT NOT NULL,balance_after INT NOT NULL DEFAULT 0);
 CREATE TABLE privacy_delete_task (id BIGINT NOT NULL PRIMARY KEY,user_id BIGINT NOT NULL,status TINYINT NOT NULL DEFAULT 1);
 CREATE TABLE user_device (id BIGINT NOT NULL PRIMARY KEY,device_uid VARCHAR(128) NOT NULL);
 CREATE TABLE conversation (id BIGINT NOT NULL PRIMARY KEY,user_a BIGINT NOT NULL,user_b BIGINT NOT NULL,UNIQUE KEY uk_conversation_users(user_a,user_b));
@@ -185,15 +199,46 @@ fi
 grep -q 'explicit --baseline-version' "$run_dir/no-baseline.log" ||
   fail "missing-baseline failure was not explicit"
 
+# First reach the historical schema, then seed real legacy claims before migration 28.
+before_review_root="$run_dir/before-review"
+mkdir -p "$before_review_root/migrations"
+while read -r checksum filename; do
+  version="${filename%%_*}"
+  if ((10#$version < 28)); then
+    cp "$source_dir/$filename" "$before_review_root/migrations/$filename"
+    printf '%s  %s\n' "$checksum" "$filename" >> "$before_review_root/migrations.sha256"
+  fi
+done < "$manifest"
 "$runner" \
   --defaults-extra-file "$database_defaults" \
+  --migrations-dir "$before_review_root/migrations" \
+  --manifest "$before_review_root/migrations.sha256" \
   --baseline-version 2 \
+  --release-version integration-before-review \
+  --lock-file "$run_dir/before-review.lock"
+mysql --defaults-extra-file="$database_defaults" <<'SQL'
+INSERT INTO creator_task(id,region,title,description,reward_points) VALUES(90010,'CN','Legacy terms','Original requirements',50);
+INSERT INTO creator_task_claim(id,task_id,user_id,region,status,completed_at) VALUES
+  (90011,90010,7,'CN',1,NULL),(90012,90010,8,'CN',2,'2026-10-01 12:00:00');
+INSERT INTO growth_points_log(user_id,type,action,biz_id,change_amount) VALUES
+  (8,2,'creator_task',90012,20),(8,1,'creator_task',90012,999),(8,2,'other',90012,888);
+SQL
+"$runner" \
+  --defaults-extra-file "$database_defaults" \
   --release-version integration-first \
   --lock-file "$run_dir/apply.lock"
 
+legacy_probe="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e "
+SELECT COUNT(*) FROM creator_task_claim WHERE task_title='Legacy terms' AND task_description='Original requirements'
+  AND submission_version=0 AND evidence_id IS NULL
+  AND ((id=90011 AND status=1 AND reward_points=50 AND completed_at IS NULL)
+       OR (id=90012 AND status=2 AND reward_points=20 AND completed_at='2026-10-01 12:00:00'));")"
+[[ "$legacy_probe" == "2" ]] || fail "migration 28 did not freeze historical terms and the actual awarded ledger amount"
+mysql --defaults-extra-file="$database_defaults" -e "UPDATE creator_task SET title='Changed later',reward_points=777 WHERE id=90010;"
+
 history_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$history_count" == "25" ]] || fail "expected 25 migration history rows, found $history_count"
+[[ "$history_count" == "26" ]] || fail "expected 26 migration history rows, found $history_count"
 cleanup_marker_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e \
   "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='privacy_delete_task' AND column_name='domain_cleanup_version' AND column_default='0';")"
 [[ "$cleanup_marker_count" == "1" ]] || fail "historical deletions must receive a pending cleanup marker"
@@ -228,8 +273,10 @@ SELECT
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='PAR' AND status=1 AND time_zone='Europe/Paris') +
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='BER' AND status=0 AND time_zone='Europe/Berlin') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone') +
-  (SELECT COUNT(*) FROM reservation WHERE id=1 AND time_zone='Europe/Paris');")"
-[[ "$schema_probe" == "22" ]] || fail "migrations 03-27 schema/data probe expected 22, found $schema_probe"
+  (SELECT COUNT(*) FROM reservation WHERE id=1 AND time_zone='Europe/Paris') +
+  (SELECT IF(COUNT(*)=11,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND column_name IN ('task_title','task_description','reward_points','evidence_type','evidence_id','submission_note','submission_version','submitted_at','review_note','reviewed_by','reviewed_at')) +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND index_name='idx_creator_claim_review');")"
+[[ "$schema_probe" == "24" ]] || fail "migrations 03-28 schema/data probe expected 24, found $schema_probe"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -237,7 +284,9 @@ SELECT
   --lock-file "$run_dir/repeat.lock"
 repeat_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$repeat_count" == "25" ]] || fail "repeat apply changed migration history"
+[[ "$repeat_count" == "26" ]] || fail "repeat apply changed migration history"
+repeat_legacy="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e "SELECT GROUP_CONCAT(CONCAT(status,':',reward_points,':',task_title) ORDER BY id) FROM creator_task_claim WHERE id IN(90011,90012);")"
+[[ "$repeat_legacy" == "1:50:Legacy terms,2:20:Legacy terms" ]] || fail "repeat apply rewrote frozen historical claims"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -364,8 +413,8 @@ mysql --defaults-extra-file="$fresh_defaults" < "$source_dir/02_seed_data.sql"
 
 fresh_history_counts="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e \
   "SELECT SUM(state='BASELINED' AND version<=14), SUM(state='APPLIED' AND version>14) FROM dzdp_schema_migration;")"
-[[ "$fresh_history_counts" == $'12\t13' ]] ||
-  fail "fresh schema must baseline versions 03-14 and apply 15-27; found $fresh_history_counts"
+[[ "$fresh_history_counts" == $'12\t14' ]] ||
+  fail "fresh schema must baseline versions 03-14 and apply 15-28; found $fresh_history_counts"
 
 fresh_schema_probe="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e "
 SELECT
@@ -387,8 +436,10 @@ SELECT
   (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='audit_task' AND column_name IN ('claimed_by_admin_id','claimed_at','claim_expires_at')) +
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='PAR' AND status=1 AND time_zone='Europe/Paris') +
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='BER' AND status=0 AND time_zone='Europe/Berlin') +
-  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone');")"
-[[ "$fresh_schema_probe" == "17" ]] ||
-  fail "fresh schema plus migrations 15-27 probe expected 17, found $fresh_schema_probe"
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone') +
+  (SELECT IF(COUNT(*)=11,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND column_name IN ('task_title','task_description','reward_points','evidence_type','evidence_id','submission_note','submission_version','submitted_at','review_note','reviewed_by','reviewed_at')) +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND index_name='idx_creator_claim_review');")"
+[[ "$fresh_schema_probe" == "19" ]] ||
+  fail "fresh schema plus migrations 15-28 probe expected 19, found $fresh_schema_probe"
 
-printf '[mysql-migration-integration] old baseline, fresh baseline 14, repeat, verify, DB lock, checksum drift, and failure blocking passed.\n'
+printf '[mysql-migration-integration] old baseline, creator legacy claims, fresh baseline 14, repeat, verify, DB lock, checksum drift, and failure blocking passed.\n'

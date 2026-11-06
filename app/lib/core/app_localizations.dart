@@ -87,6 +87,24 @@ class AppLocalizations {
     'creatorClaim': '领取',
     'creatorComplete': '完成',
     'creatorEmpty': '暂时没有任务。',
+    'creatorSummary': '领取任务，提交本人已发布的点评或帖子，审核通过后发放积分。',
+    'creatorSubmit': '提交成果',
+    'creatorClaimed': '已领取',
+    'creatorPending': '待审核',
+    'creatorAwarded': '已发放积分',
+    'creatorRejected': '已驳回，可修改后重新提交',
+    'creatorPoints': '积分',
+    'creatorRefresh': '刷新',
+    'creatorPrevious': '上一页',
+    'creatorNext': '下一页',
+    'creatorWorkType': '成果类型',
+    'creatorReview': '点评',
+    'creatorPost': '帖子',
+    'creatorChooseWork': '选择已发布的作品',
+    'creatorNoWork': '没有可提交的已发布作品，请先发布点评或帖子并等待内容审核通过。',
+    'creatorMoreWork': '加载更多作品',
+    'creatorNote': '成果说明（选填）',
+    'creatorFailed': '操作失败，请重试。',
     'invoicesTitle': '发票',
     'invoiceRequest': '申请开票',
     'invoiceName': '抬头名称',
@@ -1270,6 +1288,24 @@ class AppLocalizations {
     'creatorClaim': '領取',
     'creatorComplete': '完成',
     'creatorEmpty': '暫時沒有任務。',
+    'creatorSummary': '領取任務，提交本人已發布的點評或帖子，審核通過後發放積分。',
+    'creatorSubmit': '提交成果',
+    'creatorClaimed': '已領取',
+    'creatorPending': '待審核',
+    'creatorAwarded': '已發放積分',
+    'creatorRejected': '已駁回，可修改後重新提交',
+    'creatorPoints': '積分',
+    'creatorRefresh': '重新整理',
+    'creatorPrevious': '上一頁',
+    'creatorNext': '下一頁',
+    'creatorWorkType': '成果類型',
+    'creatorReview': '點評',
+    'creatorPost': '帖子',
+    'creatorChooseWork': '選擇已發布的作品',
+    'creatorNoWork': '沒有可提交的已發布作品，請先發布點評或帖子並等待內容審核通過。',
+    'creatorMoreWork': '載入更多作品',
+    'creatorNote': '成果說明（選填）',
+    'creatorFailed': '操作失敗，請重試。',
     'invoicesTitle': '發票',
     'invoiceRequest': '申請開票',
     'invoiceName': '抬頭名稱',
@@ -2454,13 +2490,34 @@ class AppLocalizations {
     'creatorClaim': 'Claim',
     'creatorComplete': 'Complete',
     'creatorEmpty': 'No tasks yet.',
+    'creatorSummary':
+        'Claim a task and submit your published review or post. Points are awarded after approval.',
+    'creatorSubmit': 'Submit work',
+    'creatorClaimed': 'Claimed',
+    'creatorPending': 'Awaiting review',
+    'creatorAwarded': 'Points awarded',
+    'creatorRejected': 'Rejected — you can revise and resubmit',
+    'creatorPoints': 'points',
+    'creatorRefresh': 'Refresh',
+    'creatorPrevious': 'Previous',
+    'creatorNext': 'Next',
+    'creatorWorkType': 'Work type',
+    'creatorReview': 'Review',
+    'creatorPost': 'Post',
+    'creatorChooseWork': 'Choose your published work',
+    'creatorNoWork':
+        'No published work is available. Publish a review or post and wait for content approval first.',
+    'creatorMoreWork': 'Load more work',
+    'creatorNote': 'Submission note (optional)',
+    'creatorFailed': 'Could not complete the request. Please retry.',
     'invoicesTitle': 'Invoices',
     'invoiceRequest': 'Request invoice',
     'invoiceName': 'Title name',
     'invoiceTaxNo': 'Tax number',
     'invoiceOrders': 'Eligible orders',
     'invoiceChooseOrder': 'Choose an order',
-    'invoiceNoOrders': 'No eligible orders. Orders must be paid and not already requested.',
+    'invoiceNoOrders':
+        'No eligible orders. Orders must be paid and not already requested.',
     'invoiceOtherOrders': 'Choose another order',
     'invoiceChooseTitle': 'Choose an invoice title',
     'invoiceNewTitle': 'New invoice title',
@@ -2479,17 +2536,22 @@ class AppLocalizations {
     'invoiceIssued': 'Invoice registered',
     'invoiceDownload': 'Download PDF',
     'invoiceConfirmReceipt': 'Confirm receipt',
-    'invoiceReceiptHelp': 'Open and review the downloaded invoice before confirming receipt.',
+    'invoiceReceiptHelp':
+        'Open and review the downloaded invoice before confirming receipt.',
     'invoiceReceived': 'Receipt confirmed',
     'invoiceAwaitingPdf': 'Awaiting PDF',
-    'invoiceDownloadReady': 'Download processed. Open and review the file before confirming receipt.',
-    'invoiceDocumentChanged': 'The invoice document has changed. Refresh before confirming.',
+    'invoiceDownloadReady':
+        'Download processed. Open and review the file before confirming receipt.',
+    'invoiceDocumentChanged':
+        'The invoice document has changed. Refresh before confirming.',
 
     'invoiceRejected': 'Rejected',
     'invoiceUnavailable': 'Status unavailable',
-    'invoiceAlreadyRequested': 'This order already has an invoice request. Check your requests.',
+    'invoiceAlreadyRequested':
+        'This order already has an invoice request. Check your requests.',
     'invoiceOrderUnavailable': 'This order is not eligible or is unavailable.',
-    'invoiceTaxUnavailable': 'Invoicing is unavailable in this region. Contact support.',
+    'invoiceTaxUnavailable':
+        'Invoicing is unavailable in this region. Contact support.',
     'invoiceNumber': 'Invoice number',
     'invoiceTaxAmount': 'Tax amount',
     'seckillTitle': 'Flash sale',
@@ -3888,6 +3950,24 @@ class AppLocalizations {
   String get creatorClaim => _text('creatorClaim');
   String get creatorComplete => _text('creatorComplete');
   String get creatorEmpty => _text('creatorEmpty');
+  String get creatorSummary => _text('creatorSummary');
+  String get creatorSubmit => _text('creatorSubmit');
+  String get creatorClaimed => _text('creatorClaimed');
+  String get creatorPending => _text('creatorPending');
+  String get creatorAwarded => _text('creatorAwarded');
+  String get creatorRejected => _text('creatorRejected');
+  String get creatorPoints => _text('creatorPoints');
+  String get creatorRefresh => _text('creatorRefresh');
+  String get creatorPrevious => _text('creatorPrevious');
+  String get creatorNext => _text('creatorNext');
+  String get creatorWorkType => _text('creatorWorkType');
+  String get creatorReview => _text('creatorReview');
+  String get creatorPost => _text('creatorPost');
+  String get creatorChooseWork => _text('creatorChooseWork');
+  String get creatorNoWork => _text('creatorNoWork');
+  String get creatorMoreWork => _text('creatorMoreWork');
+  String get creatorNote => _text('creatorNote');
+  String get creatorFailed => _text('creatorFailed');
   String get invoicesTitle => _text('invoicesTitle');
   String get invoiceRequest => _text('invoiceRequest');
   String get invoiceName => _text('invoiceName');

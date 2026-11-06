@@ -1839,9 +1839,21 @@ CREATE TABLE IF NOT EXISTS creator_task_claim (
     region VARCHAR(8) NOT NULL DEFAULT 'CN',
     status TINYINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    task_title VARCHAR(128),
+    task_description VARCHAR(1000),
+    reward_points INT,
+    evidence_type VARCHAR(8),
+    evidence_id BIGINT,
+    submission_note VARCHAR(1000) NOT NULL DEFAULT '',
+    submission_version INT NOT NULL DEFAULT 0,
+    submitted_at TIMESTAMP NULL,
+    review_note VARCHAR(1000) NOT NULL DEFAULT '',
+    reviewed_by BIGINT,
+    reviewed_at TIMESTAMP NULL,
     completed_at TIMESTAMP NULL,
     CONSTRAINT uk_creator_task_claim UNIQUE(task_id, user_id)
 );
+CREATE INDEX IF NOT EXISTS idx_creator_claim_review ON creator_task_claim(region, status, id);
 
 CREATE TABLE IF NOT EXISTS feature_flag (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
