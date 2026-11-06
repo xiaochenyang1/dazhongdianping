@@ -150,6 +150,8 @@ async function send() {
     if (current !== threadRevision) return
     merge([message])
     draft.value = ''
+    await nextTick()
+    if (current === threadRevision && messageList.value) messageList.value.scrollTop = messageList.value.scrollHeight
   } catch (cause) {
     if (current === threadRevision) sendError.value = cause instanceof Error ? cause.message : copy.value.sendError
   } finally {
@@ -203,7 +205,7 @@ onUnmounted(() => {
           :key="session.id"
           :class="{ active: session.id === activeId }"
         >
-          <button type="button" :data-testid="`session-${session.id}`" @click="openSession(session)">
+          <button type="button" :aria-pressed="session.id === activeId" :data-testid="`session-${session.id}`" @click="openSession(session)">
             <strong>{{ session.userNickname }}</strong>
             <span class="muted">{{ session.shopName }}</span>
             <span class="preview">{{ session.lastMessage }}</span>
@@ -220,7 +222,7 @@ onUnmounted(() => {
           </p>
           <p v-if="sendError" class="error" role="alert">{{ sendError }}</p>
           <p v-if="messages.length === 0" class="muted">{{ copy.messagesEmpty }}</p>
-          <button v-if="hasOlder" type="button" :disabled="historyLoading" data-testid="consult-load-older" @click="loadOlder">{{ historyLoading ? strings.common.loading : copy.loadOlder }}</button>
+          <button v-if="hasOlder" type="button" class="history-button" :disabled="historyLoading" data-testid="consult-load-older" @click="loadOlder">{{ historyLoading ? strings.common.loading : copy.loadOlder }}</button>
           <p v-if="historyError" class="error" role="alert">{{ historyError }}</p>
           <ul ref="messageList" class="messages">
             <li v-for="m in messages" :key="m.id" :class="m.senderType === 2 ? 'mine' : 'theirs'">
@@ -229,8 +231,8 @@ onUnmounted(() => {
             </li>
           </ul>
           <div v-if="canReply" class="composer">
-            <textarea v-model="draft" rows="2" maxlength="2000" :disabled="sending || !threadReady" :placeholder="copy.inputPlaceholder" data-testid="consult-input" />
-            <button type="button" :disabled="sending || !threadReady" data-testid="consult-send" @click="send">{{ sending ? strings.common.loading : copy.send }}</button>
+            <textarea v-model="draft" rows="2" maxlength="2000" :disabled="sending || !threadReady" :aria-label="copy.inputPlaceholder" :placeholder="copy.inputPlaceholder" data-testid="consult-input" />
+            <button type="button" class="primary-action" :disabled="sending || !threadReady" data-testid="consult-send" @click="send">{{ sending ? strings.common.loading : copy.send }}</button>
           </div>
           <p v-else class="muted">{{ copy.readOnly }}</p>
         </template>
@@ -240,5 +242,32 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.messages { max-height: 55vh; overflow-y: auto; overflow-anchor: none; }
+.consult-layout { display: grid; grid-template-columns: minmax(180px, 28%) minmax(0, 1fr); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--paper); }
+.consult-sessions { list-style: none; margin: 0; padding: 12px; border-right: 1px solid var(--line); max-height: 75vh; overflow-y: auto; }
+.consult-sessions button { display: grid; gap: 6px; width: 100%; padding: 14px; text-align: left; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--ink); cursor: pointer; }
+.consult-sessions button:hover, .consult-sessions .active button { background: var(--accent-soft); border-color: var(--line); }
+.consult-sessions strong, .preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.consult-sessions .muted { font-size: 0.8rem; }
+.preview { font-size: 0.875rem; }
+.badge { justify-self: start; border-radius: 20px; padding: 3px 8px; background: var(--accent); color: #fff; font-size: 0.75rem; }
+.consult-thread { min-width: 0; padding: 20px; }
+.history-button { display: block; margin: 0 auto 12px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 11px; color: var(--accent-dark); background: #fff; cursor: pointer; }
+.messages { height: 50vh; overflow-y: auto; overflow-anchor: none; list-style: none; margin: 0; padding: 12px; border-radius: 12px; background: #f5f1ea; }
+.messages li { width: fit-content; max-width: 85%; margin-bottom: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.messages .mine { margin-left: auto; background: var(--accent-soft); }
+.who { display: block; margin-bottom: 4px; font-size: 0.75rem; color: var(--muted); font-weight: 700; }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.composer { display: flex; align-items: flex-end; gap: 12px; margin-top: 16px; }
+.composer textarea { flex: 1; min-width: 0; resize: vertical; padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--ink); }
+.composer textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 1000px) {
+  .consult-layout { grid-template-columns: 1fr; }
+  .consult-sessions { max-height: 180px; border-right: 0; border-bottom: 1px solid var(--line); }
+}
+@media (max-width: 500px) {
+  .consult-thread { padding: 12px; }
+  .composer { flex-wrap: wrap; }
+  .composer textarea { flex-basis: 100%; }
+  .composer button { margin-left: auto; }
+}
 </style>
