@@ -351,7 +351,7 @@ if ($DryRun) {
         }
         Write-Output "- Source sql/mysql/01_schema.sql into $DbName."
         Write-Output "- Source sql/mysql/02_seed_data.sql into $DbName."
-        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-26."
+        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-27."
     }
     Write-Output "- Package backend with backend/mvnw.cmd -DskipTests package."
     Write-Output "- Start the packaged backend jar with APP_DB_* environment variables on port $BackendPort."
@@ -511,7 +511,7 @@ VALUES ('$databaseOwnershipToken');
             "--default-character-set=utf8mb4"
         )) -SqlFile $seedSql
 
-        Write-Step "applying MySQL migrations 15-26 from schema baseline 14"
+        Write-Step "applying MySQL migrations 15-27 from schema baseline 14"
         $escapedDbPassword = $DbPassword.Replace('\', '\\').Replace('"', '\"')
         $migrationDefaultsContent = @"
 [client]
@@ -767,6 +767,52 @@ INSERT INTO user_behavior_event(user_id,region,event_type,keyword) VALUES($userI
         Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
             "--database=$DbName", "-e", $privacyFixtureSql
         )) -WorkingDirectory $repoRoot | Out-Null
+        Write-Step "smoking private invoice PDF delivery, concurrent retry and explicit receipt on MySQL"
+        $invoiceOrder = Invoke-Json -Method "POST" -Path "/api/c/v1/orders" -Headers $euHeaders -Body @{ dealId = 41001; quantity = 1 }
+        Invoke-Json -Method "POST" -Path "/api/c/v1/orders/$($invoiceOrder.data.id)/pay/mock-complete" -Headers $euHeaders | Out-Null
+        $invoiceTitles = Invoke-Json -Method "GET" -Path "/api/c/v1/invoices/titles" -Headers $euHeaders
+        $invoice = Invoke-Json -Method "POST" -Path "/api/c/v1/invoices" -Headers $euHeaders -Body @{ orderId = $invoiceOrder.data.id; titleId = $invoiceTitles.data[0].id }
+        $invoiceId = [long]$invoice.data.id
+        $pdfPath = Join-Path $repoRoot "scripts/ci/fixtures/invoice.pdf"
+        $pdfBytes = [System.IO.File]::ReadAllBytes($pdfPath)
+        $pdfHash = (Get-FileHash -LiteralPath $pdfPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        $invoiceClient = [System.Net.Http.HttpClient]::new()
+        $invoiceForms = @()
+        try {
+            $invoiceClient.Timeout = [TimeSpan]::FromSeconds(20)
+            $invoiceClient.DefaultRequestHeaders.Add("Authorization", "Bearer $($adminLogin.data.accessToken)")
+            $invoiceClient.DefaultRequestHeaders.Add("X-Region", "EU")
+            $invoiceCalls = @(1..2 | ForEach-Object {
+                $form = [System.Net.Http.MultipartFormDataContent]::new()
+                $form.Add([System.Net.Http.StringContent]::new("MYSQL-PDF-$invoiceId"), "invoiceNo")
+                $fileContent = [System.Net.Http.ByteArrayContent]::new($pdfBytes)
+                $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::new("application/pdf")
+                $form.Add($fileContent, "file", "invoice.pdf")
+                $invoiceForms += $form
+                $invoiceClient.PostAsync("$baseUrl/api/admin/v1/invoices/$invoiceId/document", $form)
+            })
+            foreach ($call in $invoiceCalls) {
+                $response = $call.GetAwaiter().GetResult()
+                try {
+                    $delivery = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult() | ConvertFrom-Json
+                    if (-not $response.IsSuccessStatusCode -or $delivery.data.documentSha256 -ne $pdfHash -or $delivery.data.status -ne 2) {
+                        throw "MySQL concurrent PDF publication must return the same delivered document"
+                    }
+                } finally { $response.Dispose() }
+            }
+        } finally {
+            foreach ($form in $invoiceForms) { $form.Dispose() }
+            $invoiceClient.Dispose()
+        }
+        $downloadPath = Join-Path $runDir "invoice-download.pdf"
+        $pdfResponse = Invoke-WebRequest -Uri "$baseUrl/api/c/v1/invoices/$invoiceId/document" -Headers $euHeaders -OutFile $downloadPath -PassThru -TimeoutSec 10
+        if ((Get-FileHash -LiteralPath $downloadPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $pdfHash -or $pdfResponse.Headers['Cache-Control'] -notcontains 'no-store') {
+            throw "MySQL private invoice download changed bytes or allowed caching"
+        }
+        $history = Invoke-Json -Method "GET" -Path "/api/c/v1/invoices" -Headers $euHeaders
+        if ($history.data.list[0].receivedAt) { throw "Downloading an invoice must not mark receipt" }
+        $receipt = Invoke-Json -Method "POST" -Path "/api/c/v1/invoices/$invoiceId/receipt" -Headers $euHeaders -Body @{ sha256 = $pdfHash }
+        if (-not $receipt.data.receivedAt) { throw "Explicit invoice receipt was not recorded" }
         $privacyHeaders = @{ "X-Region" = "EU"; Authorization = "Bearer $($user.data.accessToken)"; "Idempotency-Key" = "privacy-" + [guid]::NewGuid().ToString("N") }
         $export = Invoke-Json -Method "POST" -Path "/api/c/v1/privacy/export-tasks" -Headers $privacyHeaders -Body @{ modules = @(); format = "zip" }
         if ($export.data.status -ne 2 -or $export.data.modules.Count -ne 24) { throw "MySQL privacy export must contain all 24 supported modules" }
@@ -777,6 +823,16 @@ INSERT INTO user_behavior_event(user_id,region,event_type,keyword) VALUES($userI
             $reader = [System.IO.StreamReader]::new($archive.Entries[0].Open())
             try { $privacyText = $reader.ReadToEnd() } finally { $reader.Dispose() }
             $payload = $privacyText | ConvertFrom-Json
+            $pdfEntry = $archive.GetEntry("invoices/invoice-$invoiceId.pdf")
+            if ($null -eq $pdfEntry -or $payload.modules.invoices.documents.Count -ne 1 -or $payload.modules.invoices.documents[0].sha256 -ne $pdfHash) {
+                throw "MySQL invoice privacy export omitted its private PDF or metadata"
+            }
+            $pdfStream = $pdfEntry.Open()
+            try {
+                $archivePdfHash = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($pdfStream)).ToLowerInvariant()
+                if ($archivePdfHash -ne $pdfHash) { throw "MySQL privacy archive changed invoice bytes" }
+            } finally { $pdfStream.Dispose() }
+
             if ($payload.modules.invoices.titles.Count -ne 2 -or $payload.modules.tickets.tickets.Count -ne 1 -or $payload.modules.consult.sessions.Count -ne 1) {
                 throw "MySQL privacy export must include both regions and scope owned user conversations by role"
             }
@@ -808,12 +864,13 @@ SELECT
  (SELECT COUNT(*) FROM support_ticket WHERE requester_type=2 AND requester_id=$userId AND content='privacy-merchant@example.invalid'),
  (SELECT COUNT(*) FROM user_behavior_event WHERE user_id=$userId),
  (SELECT COUNT(*) FROM privacy_delete_task WHERE user_id IN($userId,$otherId) AND account_snapshot='' AND reason='' AND domain_cleanup_version=1),
- (SELECT COUNT(*) FROM privacy_export_task WHERE id=$($export.data.id) AND status=5);
+ (SELECT COUNT(*) FROM privacy_export_task WHERE id=$($export.data.id) AND status=5),
+ (SELECT COUNT(*) FROM invoice_document WHERE invoice_id=$invoiceId);
 "@
         $privacyIntegrity = @(Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
             "--database=$DbName", "--batch", "--skip-column-names", "-e", $privacyIntegritySql
         )) -WorkingDirectory $repoRoot)
-        if ($privacyIntegrity.Count -ne 1 -or $privacyIntegrity[0] -ne "3`t2`t2`t1`t0`t2`t1") {
+        if ($privacyIntegrity.Count -ne 1 -or $privacyIntegrity[0] -ne "3`t2`t2`t1`t0`t2`t1`t0") {
             throw "MySQL privacy cleanup lost isolation or left private records: $privacyIntegrity"
         }
 

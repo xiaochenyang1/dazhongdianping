@@ -30,6 +30,14 @@ public class InvoiceController {
         return ApiResponse.success(service.titles());
     }
 
+    @GetMapping("/orders")
+    public ApiResponse<PageResult<Map<String, Object>>> eligibleOrders(
+            @RequestParam(required = false) Long orderId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "12") Integer pageSize) {
+        return ApiResponse.success(service.eligibleOrders(orderId, page, pageSize));
+    }
+
     @PostMapping("/titles")
     public ApiResponse<Map<String, Object>> createTitle(@Valid @RequestBody InvoiceTitleSaveRequest request) {
         return ApiResponse.success("抬头已保存", "invoice.title_saved", service.createTitle(request));

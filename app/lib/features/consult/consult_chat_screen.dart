@@ -1,71 +1,145 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/features/consult/consult_repository.dart';
 import 'package:flutter/material.dart';
 
-/// 咨询聊天界面。
 class ConsultChatScreen extends StatefulWidget {
   const ConsultChatScreen({
     super.key,
     required this.repository,
     required this.sessionId,
     this.title = '',
+    this.pollInterval = const Duration(seconds: 3),
   });
-
   final ConsultRepository repository;
   final int sessionId;
   final String title;
-
+  final Duration pollInterval;
   @override
   State<ConsultChatScreen> createState() => _ConsultChatScreenState();
 }
 
-class _ConsultChatScreenState extends State<ConsultChatScreen> {
-  late Future<ConsultThread> _thread;
+class _ConsultChatScreenState extends State<ConsultChatScreen>
+    with WidgetsBindingObserver {
   final _input = TextEditingController();
-  List<ConsultMessage> _messages = const [];
+  List<ConsultMessage> _messages = [];
+  Timer? _poller;
+  bool _foreground = true;
+  bool _loading = false;
+  bool _loaded = false;
   bool _sending = false;
+  int _revision = 0;
   String _title = '';
+  Object? _loadError;
+  Object? _sendError;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _title = widget.title;
-    _thread = _load();
+    _foreground =
+        WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    _load();
+    _startPolling();
+  }
+
+  @override
+  void didUpdateWidget(covariant ConsultChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sessionId != widget.sessionId ||
+        oldWidget.repository != widget.repository) {
+      ++_revision;
+      _messages = [];
+      _loaded = false;
+      _loading = false;
+      _sending = false;
+      _loadError = null;
+      _sendError = null;
+      _input.clear();
+      _title = widget.title;
+      _load();
+    }
+    if (oldWidget.pollInterval != widget.pollInterval) _startPolling();
+  }
+
+  void _startPolling() {
+    _poller?.cancel();
+    if (!_foreground) return;
+    _poller = Timer.periodic(widget.pollInterval, (_) {
+      if (mounted && (ModalRoute.of(context)?.isCurrent ?? true)) _load();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    _startPolling();
+    if (_foreground && (ModalRoute.of(context)?.isCurrent ?? true)) _load();
   }
 
   @override
   void dispose() {
+    ++_revision;
+    _poller?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _input.dispose();
     super.dispose();
   }
 
-  Future<ConsultThread> _load() async {
-    final thread = await widget.repository.loadThread(widget.sessionId);
-    _messages = thread.messages;
-    if (thread.session.shopName.isNotEmpty) _title = thread.session.shopName;
-    return thread;
+  List<ConsultMessage> _merge(List<ConsultMessage> incoming) {
+    // Polls and sends may finish in either order; an older snapshot cannot erase a sent message.
+    final byId = {
+      for (final message in _messages) message.id: message,
+      for (final message in incoming) message.id: message,
+    };
+    return byId.values.toList()..sort((a, b) => a.id.compareTo(b.id));
+  }
+
+  Future<void> _load() async {
+    if (_loading || !_foreground) return;
+    final revision = _revision;
+    setState(() => _loading = true);
+    try {
+      final thread = await widget.repository.loadThread(widget.sessionId);
+      if (!mounted || revision != _revision) return;
+      setState(() {
+        _messages = _merge(thread.messages);
+        _loaded = true;
+        _loadError = null;
+        if (thread.session.shopName.isNotEmpty) {
+          _title = thread.session.shopName;
+        }
+      });
+    } catch (error) {
+      if (mounted && revision == _revision) setState(() => _loadError = error);
+    } finally {
+      if (mounted && revision == _revision) setState(() => _loading = false);
+    }
   }
 
   Future<void> _send() async {
-    if (_sending) return;
     final content = _input.text.trim();
-    if (content.isEmpty) return;
-    setState(() => _sending = true);
-    final strings = AppLocalizations.of(context);
+    if (_sending || !_loaded || content.isEmpty) return;
+    final revision = _revision;
+    final sessionId = widget.sessionId;
+    setState(() {
+      _sending = true;
+      _sendError = null;
+    });
     try {
-      final message = await widget.repository.sendMessage(widget.sessionId, content);
-      if (!mounted) return;
+      final message = await widget.repository.sendMessage(sessionId, content);
+      if (!mounted || revision != _revision) return;
       setState(() {
-        _messages = [..._messages, message];
+        _messages = _merge([message]);
         _input.clear();
       });
     } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.consultSendFailed(error))),
-      );
+      if (mounted && revision == _revision) setState(() => _sendError = error);
     } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted && revision == _revision) setState(() => _sending = false);
     }
   }
 
@@ -73,54 +147,91 @@ class _ConsultChatScreenState extends State<ConsultChatScreen> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(_title.isEmpty ? strings.myConsultTitle : _title)),
+      appBar: AppBar(
+        title: Text(_title.isEmpty ? strings.myConsultTitle : _title),
+        actions: [
+          IconButton(
+            key: const Key('consult-refresh'),
+            tooltip: strings.refresh,
+            onPressed: _loading ? null : _load,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: Column(
         children: [
+          if (_loadError != null)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      strings.consultLoadFailed(_loadError!),
+                      key: const Key('consult-chat-error'),
+                    ),
+                  ),
+                  TextButton(
+                    key: const Key('consult-retry'),
+                    onPressed: _loading ? null : _load,
+                    child: Text(strings.retry),
+                  ),
+                ],
+              ),
+            ),
+          if (_sendError != null)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                strings.consultSendFailed(_sendError!),
+                key: const Key('consult-send-error'),
+              ),
+            ),
           Expanded(
-            child: FutureBuilder<ConsultThread>(
-              future: _thread,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(strings.consultLoadFailed(snapshot.error!),
-                        key: const Key('consult-chat-error')),
-                  );
-                }
-                if (_messages.isEmpty) {
-                  return Center(child: Text(strings.consultMessagesEmpty));
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final m = _messages[index];
-                    final mine = m.senderType == 1;
-                    return Align(
-                      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Card(
-                        key: Key('consult-msg-${m.id}'),
-                        color: mine ? Theme.of(context).colorScheme.primaryContainer : null,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(mine ? strings.consultYou : strings.consultMerchant,
-                                  style: Theme.of(context).textTheme.labelSmall),
-                              Text(m.content),
-                            ],
+            child: !_loaded && _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _messages.isEmpty
+                ? Center(
+                    child: Text(_loaded ? strings.consultMessagesEmpty : ''),
+                  )
+                : ListView.builder(
+                    reverse: true,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[_messages.length - 1 - index];
+                      final mine = message.senderType == 1;
+                      return Align(
+                        alignment: mine
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Card(
+                          key: Key('consult-msg-${message.id}'),
+                          color: mine
+                              ? Theme.of(context).colorScheme.primaryContainer
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  mine
+                                      ? strings.consultYou
+                                      : strings.consultMerchant,
+                                  style: Theme.of(context).textTheme.labelSmall,
+                                ),
+                                Text(message.content),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                      );
+                    },
+                  ),
           ),
           SafeArea(
             top: false,
@@ -132,14 +243,20 @@ class _ConsultChatScreenState extends State<ConsultChatScreen> {
                     child: TextField(
                       key: const Key('consult-input'),
                       controller: _input,
-                      decoration: InputDecoration(hintText: strings.consultInputHint),
+                      enabled: _loaded && !_sending,
+                      maxLength: 2000,
+                      decoration: InputDecoration(
+                        hintText: strings.consultInputHint,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
                     key: const Key('consult-send'),
-                    onPressed: _sending ? null : _send,
-                    child: Text(strings.consultSend),
+                    onPressed: !_loaded || _sending ? null : _send,
+                    child: Text(
+                      _sending ? strings.submitting : strings.consultSend,
+                    ),
                   ),
                 ],
               ),

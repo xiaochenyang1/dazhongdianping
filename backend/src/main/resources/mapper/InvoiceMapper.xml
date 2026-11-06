@@ -3,7 +3,16 @@
 <mapper namespace="com.tuowei.dazhongdianping.module.invoice.mapper.InvoiceMapper">
 
     <sql id="titleCols">id,user_id,region,title_type,name,tax_no,email,is_default,created_at</sql>
-    <sql id="requestCols">id,region,user_id,order_id,title_id,amount,tax_amount,currency,status,invoice_no,reject_reason,created_at</sql>
+    <sql id="requestCols">
+        r.id,r.region,r.user_id,r.order_id,r.title_id,r.amount,r.tax_amount,r.currency,r.status,r.invoice_no,r.reject_reason,r.created_at,
+        o.order_no,t.name AS title_name,t.title_type,t.tax_no,t.email,
+        d.sha256 AS document_sha256,d.size_bytes AS document_size,d.uploaded_at AS document_uploaded_at,d.received_at
+    </sql>
+    <sql id="requestFrom">invoice_request r
+        LEFT JOIN invoice_title t ON t.id=r.title_id AND t.user_id=r.user_id AND t.region=r.region
+        LEFT JOIN `order` o ON o.id=r.order_id AND o.user_id=r.user_id AND o.region=r.region
+        LEFT JOIN invoice_document d ON d.invoice_id=r.id
+    </sql>
 
     <select id="selectTitles" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceTitleRow">
         SELECT <include refid="titleCols"/> FROM invoice_title
@@ -34,6 +43,25 @@
         SELECT COUNT(*) FROM invoice_request WHERE order_id=#{orderId}
     </select>
 
+    <sql id="eligibleOrdersWhere">
+        WHERE o.user_id=#{userId} AND o.region=#{region} AND o.pay_status=1
+        AND NOT EXISTS (SELECT 1 FROM invoice_request i WHERE i.order_id=o.id)
+        <if test="orderId != null">AND o.id=#{orderId}</if>
+    </sql>
+
+    <select id="countEligibleOrders" resultType="long">
+        SELECT COUNT(*) FROM `order` o <include refid="eligibleOrdersWhere"/>
+    </select>
+
+    <select id="selectEligibleOrders" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceOrderRow">
+        SELECT o.id,o.order_no,o.amount,o.currency,d.title AS deal_title,s.name AS shop_name
+        FROM `order` o
+        LEFT JOIN deal d ON d.id=o.deal_id AND d.region=o.region
+        LEFT JOIN shop s ON s.id=o.shop_id AND s.region=o.region
+        <include refid="eligibleOrdersWhere"/>
+        ORDER BY o.id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+
     <select id="selectEnabledTaxRate" resultType="com.tuowei.dazhongdianping.module.invoice.model.TaxRateRow">
         SELECT id,region,name,rate_bp,status FROM tax_rate
         WHERE region=#{region} AND status=1
@@ -47,9 +75,9 @@
     </insert>
 
     <select id="selectUserRequests" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
-        SELECT <include refid="requestCols"/> FROM invoice_request
-        WHERE user_id=#{userId} AND region=#{region}
-        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+        SELECT <include refid="requestCols"/> FROM <include refid="requestFrom"/>
+        WHERE r.user_id=#{userId} AND r.region=#{region}
+        ORDER BY r.id DESC LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="countUserRequests" resultType="long">
@@ -57,14 +85,22 @@
     </select>
 
     <select id="selectRequest" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
-        SELECT <include refid="requestCols"/> FROM invoice_request WHERE id=#{id} AND region=#{region}
+        SELECT <include refid="requestCols"/> FROM <include refid="requestFrom"/> WHERE r.id=#{id} AND r.region=#{region}
+    </select>
+
+    <select id="selectCurrentRequest" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
+        SELECT <include refid="requestCols"/> FROM <include refid="requestFrom"/> WHERE r.id=#{id} AND r.region=#{region} FOR UPDATE
+    </select>
+
+    <select id="lockRequest" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
+        SELECT id,user_id,region,status,invoice_no FROM invoice_request WHERE id=#{id} AND region=#{region} FOR UPDATE
     </select>
 
     <select id="selectAdminRequests" resultType="com.tuowei.dazhongdianping.module.invoice.model.InvoiceRequestRow">
-        SELECT <include refid="requestCols"/> FROM invoice_request
-        WHERE region=#{region}
-        <if test="status != null">AND status=#{status}</if>
-        ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}
+        SELECT <include refid="requestCols"/> FROM <include refid="requestFrom"/>
+        WHERE r.region=#{region}
+        <if test="status != null">AND r.status=#{status}</if>
+        ORDER BY r.id DESC LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="countAdminRequests" resultType="long">

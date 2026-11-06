@@ -39,6 +39,7 @@ function buildHeaders() {
 async function request<T>(config: AxiosRequestConfig) {
   const { state } = useAdminSession()
   const strings = adminStringsForRegion(state.region)
+  const sentToken = state.token
   try {
     const response = await http.request<ApiEnvelope<T>>({
       ...config,
@@ -63,7 +64,7 @@ async function request<T>(config: AxiosRequestConfig) {
       const status = error.response?.status
       const envelope = error.response?.data as Partial<ApiEnvelope<unknown>> | undefined
 
-      if (status === 401) {
+      if (status === 401 && state.token === sentToken) {
         clearSession()
       }
 
@@ -94,4 +95,24 @@ export function apiPut<T>(url: string, data?: object) {
 
 export function apiDelete<T>(url: string) {
   return request<T>({ url, method: 'DELETE' })
+}
+
+export async function apiDownload(url: string): Promise<Blob> {
+  const { state, clearSession } = useAdminSession()
+  const token = state.token
+  try {
+    const response = await http.request<Blob>({ url, method: 'GET', headers: buildHeaders(), responseType: 'blob', timeout: 60_000 })
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401 && state.token === token) clearSession()
+      const data = error.response?.data
+      if (data instanceof Blob) {
+        let envelope: Partial<ApiEnvelope<unknown>> = {}
+        try { envelope = JSON.parse(await data.text()) } catch { /* non-JSON response */ }
+        if (typeof envelope.message === 'string') throw new Error(enrichMessage(envelope.message, envelope.traceId))
+      }
+    }
+    throw new Error(adminStringsForRegion(state.region).common.requestFailed)
+  }
 }

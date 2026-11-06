@@ -71,6 +71,8 @@ import org.springframework.util.StringUtils;
 @Service
 public class UserPrivacyService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UserPrivacyService.class);
+
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<>() {
     };
@@ -177,7 +179,7 @@ public class UserPrivacyService {
 
         try {
             byte[] payload = buildExportPayload(currentUser, row.getId(), modules, format);
-            Path archivePath = writeExportArchive(row.getId(), payload);
+            Path archivePath = writeExportArchive(row.getId(), payload, currentUser.getId(), modules.contains("invoices"));
             row.setStatus(2);
             row.setFileName(archivePath.getFileName().toString());
             row.setFilePath(archivePath.toString());
@@ -826,7 +828,7 @@ public class UserPrivacyService {
         return item;
     }
 
-    private Path writeExportArchive(Long taskId, byte[] payload) {
+    private Path writeExportArchive(Long taskId, byte[] payload, Long userId, boolean includeInvoices) {
         String archiveFileName = "privacy-export-%d-%s.zip".formatted(taskId, UUID.randomUUID().toString().replace("-", ""));
         Path target = exportBaseDir.resolve(archiveFileName).normalize();
         ensureInsideExportDir(target);
@@ -838,8 +840,21 @@ public class UserPrivacyService {
             zipOutputStream.putNextEntry(entry);
             zipOutputStream.write(payload);
             zipOutputStream.closeEntry();
+            if (includeInvoices) privacyDomainService.writeInvoiceDocuments(userId, zipOutputStream);
+            // Remove an archive if the surrounding transaction cannot commit its task record.
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override public void afterCompletion(int status) {
+                    if (status != STATUS_COMMITTED) {
+                        try { Files.deleteIfExists(target); }
+                        catch (IOException exception) {
+                            log.warn("Unable to remove rolled-back privacy archive for task {} ({})", taskId, exception.getClass().getSimpleName());
+                        }
+                    }
+                }
+            });
             return target;
-        } catch (IOException exception) {
+        } catch (IOException | RuntimeException exception) {
+            try { Files.deleteIfExists(target); } catch (IOException cleanup) { exception.addSuppressed(cleanup); }
             throw new IllegalStateException("写入隐私导出文件失败", exception);
         }
     }

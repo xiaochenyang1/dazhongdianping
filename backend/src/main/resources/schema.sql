@@ -1688,6 +1688,18 @@ CREATE TABLE IF NOT EXISTS invoice_request (
 CREATE INDEX IF NOT EXISTS idx_invoice_request_user ON invoice_request(user_id, region, status, id);
 CREATE INDEX IF NOT EXISTS idx_invoice_request_admin ON invoice_request(region, status, id);
 
+CREATE TABLE IF NOT EXISTS invoice_document (
+    invoice_id BIGINT PRIMARY KEY,
+    content BLOB NOT NULL,
+    sha256 CHAR(64) NOT NULL,
+    size_bytes INT NOT NULL,
+    uploaded_by BIGINT NOT NULL,
+    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    received_at TIMESTAMP NULL,
+    CONSTRAINT fk_invoice_document_request FOREIGN KEY (invoice_id) REFERENCES invoice_request(id),
+    CONSTRAINT ck_invoice_document_size CHECK (size_bytes BETWEEN 1 AND 5242880 AND OCTET_LENGTH(content)=size_bytes)
+);
+
 -- ============================================================
 -- 内容机审命中
 -- ============================================================

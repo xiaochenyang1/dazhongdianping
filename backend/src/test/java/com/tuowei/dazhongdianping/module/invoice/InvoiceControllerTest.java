@@ -31,6 +31,53 @@ class InvoiceControllerTest {
     @Autowired private JdbcTemplate jdbc;
 
     @Test
+    void eligibleOrdersArePagedAndExcludeOtherUsersRegionsUnpaidRefundedAndRequested() throws Exception {
+        Registered user = register();
+        long first = insertOrder(user.userId(), 1, "25.00");
+        long second = insertOrder(user.userId(), 1, "35.00");
+        insertOrder(user.userId(), 0, "45.00");
+        insertOrder(user.userId(), 2, "55.00");
+        long otherRegion = insertOrder(user.userId(), 1, "65.00");
+        jdbc.update("UPDATE `order` SET region='EU' WHERE id=?", otherRegion);
+        long otherUser = insertOrder(register().userId(), 1, "75.00");
+
+        mockMvc.perform(get("/api/c/v1/invoices/orders")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/c/v1/invoices/orders").header("Authorization", bearer(user.token()))
+                        .header("X-Region", "CN").param("pageSize", "1"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.list[0].id").value(second))
+                .andExpect(jsonPath("$.data.list[0].amount").value(35))
+                .andExpect(jsonPath("$.data.list[0].orderNo").isNotEmpty())
+                .andExpect(jsonPath("$.data.list[0].shopName").isNotEmpty())
+                .andExpect(jsonPath("$.data.list[0].userId").doesNotExist())
+                .andExpect(jsonPath("$.data.hasMore").value(true));
+        mockMvc.perform(get("/api/c/v1/invoices/orders").header("Authorization", bearer(user.token()))
+                        .header("X-Region", "CN").param("pageSize", "1").param("page", "2"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.list[0].id").value(first))
+                .andExpect(jsonPath("$.data.hasMore").value(false));
+        for (long hidden : new long[] {otherUser, otherRegion}) {
+            mockMvc.perform(get("/api/c/v1/invoices/orders").header("Authorization", bearer(user.token()))
+                            .header("X-Region", "CN").param("orderId", String.valueOf(hidden)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+        }
+        MvcResult title = mockMvc.perform(post("/api/c/v1/invoices/titles")
+                        .header("Authorization", bearer(user.token())).header("X-Region", "CN")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"titleType\":1,\"name\":\"个人\"}"))
+                .andExpect(status().isOk()).andReturn();
+        long titleId = objectMapper.readTree(title.getResponse().getContentAsString()).at("/data/id").asLong();
+        mockMvc.perform(post("/api/c/v1/invoices").header("Authorization", bearer(user.token()))
+                        .header("X-Region", "CN").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":" + first + ",\"titleId\":" + titleId + "}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/c/v1/invoices/orders").header("Authorization", bearer(user.token()))
+                        .header("X-Region", "CN").param("orderId", String.valueOf(first)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/c/v1/invoices/orders").header("Authorization", bearer(user.token()))
+                        .header("X-Region", "CN").param("orderId", String.valueOf(second)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.list[0].id").value(second));
+    }
+
+    @Test
     void requestInvoiceFromPaidOrderThenIssueOrReject() throws Exception {
         Registered user = register();
         long paid = insertOrder(user.userId(), 1, "88.00");

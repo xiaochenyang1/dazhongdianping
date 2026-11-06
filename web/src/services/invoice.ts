@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '@/lib/http'
+import { apiDownload, apiGet, apiPost } from '@/lib/http'
 import type { PageResult } from '@/types/browse'
 import type { InvoiceRequest, InvoiceTitle } from '@/types/invoice'
 
@@ -22,4 +22,12 @@ export function fetchInvoices(page = 1, pageSize = 12) {
 
 export function requestInvoice(payload: { orderId: number; titleId: number }) {
   return apiPost<InvoiceRequest>('/api/c/v1/invoices', payload)
+}
+
+export function downloadInvoice(id: number) {
+  return apiDownload(`/api/c/v1/invoices/${id}/document`)
+}
+
+export function confirmInvoiceReceipt(id: number, sha256: string) {
+  return apiPost<InvoiceRequest>(`/api/c/v1/invoices/${id}/receipt`, { sha256 })
 }

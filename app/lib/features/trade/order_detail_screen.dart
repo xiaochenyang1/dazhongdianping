@@ -1,3 +1,5 @@
+import 'package:dazhongdianping_app/features/invoice/invoice_repository.dart';
+import 'package:dazhongdianping_app/features/invoice/invoices_screen.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
 import 'package:dazhongdianping_app/core/regional_formatters.dart';
 import 'package:dazhongdianping_app/core/third_party_config.dart';
@@ -355,6 +357,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
           ),
         ),
+        if (order.payStatus == 1)
+          OutlinedButton.icon(
+            key: const Key('order-invoice-button'),
+            onPressed: _acting
+                ? null
+                : () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => InvoicesScreen(
+                        repository: InvoiceRepository(widget.repository.api),
+                        orderId: order.id,
+                      ),
+                    ),
+                  ),
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: Text(strings.invoiceRequest),
+          ),
         if (order.payStatus == 0 && order.status == 1) ...[
           const SizedBox(height: 14),
           if (paymentReason.isNotEmpty)

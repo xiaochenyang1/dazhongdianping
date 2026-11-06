@@ -1,3 +1,5 @@
+import 'package:dazhongdianping_app/features/consult/consult_chat_screen.dart';
+import 'package:dazhongdianping_app/features/consult/consult_repository.dart';
 import 'package:dazhongdianping_app/core/api_client.dart';
 import 'package:dazhongdianping_app/core/app_config.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
@@ -297,6 +299,16 @@ class _DazhongDianpingAppState extends State<DazhongDianpingApp> {
                                 ),
                               );
                             },
+                          ),
+                        ),
+                      );
+                    },
+                    onConsultTap: (sessionId) {
+                      Navigator.of(screenContext).push(
+                        MaterialPageRoute(
+                          builder: (_) => ConsultChatScreen(
+                            repository: ConsultRepository(apiClient),
+                            sessionId: sessionId,
                           ),
                         ),
                       );

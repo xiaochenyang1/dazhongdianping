@@ -8,6 +8,13 @@ export interface InvoiceTitle {
 }
 
 export interface InvoiceRequest {
+  documentAvailable?: boolean
+  documentFileName?: string
+  documentSha256?: string
+  documentSize?: number
+  documentUploadedAt?: string
+  receivedAt?: string
+
   id: number
   orderId: number
   titleId: number

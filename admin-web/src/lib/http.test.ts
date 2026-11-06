@@ -79,4 +79,30 @@ describe('admin HTTP localization', () => {
       'X-Region': 'CN',
     })
   })
+  it('downloads invoice bytes with authentication and region headers', async () => {
+    const blob = new Blob(['%PDF-test'], { type: 'application/pdf' })
+    axiosMock.request.mockResolvedValue({ data: blob })
+    const { session, http } = await loadModules()
+    session.setSession('finance-token', { id: 7, account: 'finance', name: 'Finance' }, ['finance:invoice:read'], ['EU'])
+    await expect(http.apiDownload('/api/admin/v1/invoices/7/document')).resolves.toBe(blob)
+    expect(axiosMock.request.mock.calls[0][0]).toMatchObject({
+      responseType: 'blob', headers: { Authorization: 'Bearer finance-token', 'X-Region': 'EU' },
+    })
+  })
+
+  it('a late unauthorized response cannot clear a newer administrator session', async () => {
+    const { session, http } = await loadModules()
+    for (const binary of [false, true]) {
+      session.setSession('old-token', { id: 7, account: 'old', name: 'Old' }, [], ['CN'])
+      let reject!: (error: object) => void
+      axiosMock.request.mockReturnValueOnce(new Promise((_, fail) => { reject = fail }))
+      const pending = binary ? http.apiDownload('/api/admin/v1/invoices/7/document') : http.apiGet('/api/admin/v1/auth/me')
+      session.setSession('new-token', { id: 8, account: 'new', name: 'New' }, [], ['EU'])
+      const failed = expect(pending).rejects.toThrow()
+      reject(unauthorizedError())
+      await failed
+      expect(session.state.token).toBe('new-token')
+    }
+  })
+
 })

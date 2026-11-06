@@ -193,7 +193,7 @@ grep -q 'explicit --baseline-version' "$run_dir/no-baseline.log" ||
 
 history_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$history_count" == "24" ]] || fail "expected 24 migration history rows, found $history_count"
+[[ "$history_count" == "25" ]] || fail "expected 25 migration history rows, found $history_count"
 cleanup_marker_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e \
   "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='privacy_delete_task' AND column_name='domain_cleanup_version' AND column_default='0';")"
 [[ "$cleanup_marker_count" == "1" ]] || fail "historical deletions must receive a pending cleanup marker"
@@ -203,6 +203,9 @@ non_applied_count="$(mysql --defaults-extra-file="$database_defaults" --batch --
 
 schema_probe="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e "
 SELECT
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='invoice_document' AND column_name='content' AND data_type='mediumblob') +
+  (SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_schema=DATABASE() AND table_name='invoice_document' AND constraint_name='fk_invoice_document_request' AND constraint_type='FOREIGN KEY') +
+  (SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_schema=DATABASE() AND table_name='invoice_document' AND constraint_name='ck_invoice_document_size' AND constraint_type='CHECK') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='refund' AND column_name='channel_status') +
   (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='channel_statement_batch') +
   (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='shop_search_sync_task') +
@@ -226,7 +229,7 @@ SELECT
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='BER' AND status=0 AND time_zone='Europe/Berlin') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone') +
   (SELECT COUNT(*) FROM reservation WHERE id=1 AND time_zone='Europe/Paris');")"
-[[ "$schema_probe" == "19" ]] || fail "migrations 03-26 schema/data probe expected 19, found $schema_probe"
+[[ "$schema_probe" == "22" ]] || fail "migrations 03-27 schema/data probe expected 22, found $schema_probe"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -234,7 +237,7 @@ SELECT
   --lock-file "$run_dir/repeat.lock"
 repeat_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$repeat_count" == "24" ]] || fail "repeat apply changed migration history"
+[[ "$repeat_count" == "25" ]] || fail "repeat apply changed migration history"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -361,11 +364,14 @@ mysql --defaults-extra-file="$fresh_defaults" < "$source_dir/02_seed_data.sql"
 
 fresh_history_counts="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e \
   "SELECT SUM(state='BASELINED' AND version<=14), SUM(state='APPLIED' AND version>14) FROM dzdp_schema_migration;")"
-[[ "$fresh_history_counts" == $'12\t12' ]] ||
-  fail "fresh schema must baseline versions 03-14 and apply 15-26; found $fresh_history_counts"
+[[ "$fresh_history_counts" == $'12\t13' ]] ||
+  fail "fresh schema must baseline versions 03-14 and apply 15-27; found $fresh_history_counts"
 
 fresh_schema_probe="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e "
 SELECT
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='invoice_document' AND column_name='content' AND data_type='mediumblob') +
+  (SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_schema=DATABASE() AND table_name='invoice_document' AND constraint_name='fk_invoice_document_request' AND constraint_type='FOREIGN KEY') +
+  (SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_schema=DATABASE() AND table_name='invoice_document' AND constraint_name='ck_invoice_document_size' AND constraint_type='CHECK') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='shop' AND column_name='chinese_service') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='review' AND column_name='helpful_count') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name='original_amount') +
@@ -382,7 +388,7 @@ SELECT
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='PAR' AND status=1 AND time_zone='Europe/Paris') +
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='BER' AND status=0 AND time_zone='Europe/Berlin') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone');")"
-[[ "$fresh_schema_probe" == "14" ]] ||
-  fail "fresh schema plus migrations 15-26 probe expected 14, found $fresh_schema_probe"
+[[ "$fresh_schema_probe" == "17" ]] ||
+  fail "fresh schema plus migrations 15-27 probe expected 17, found $fresh_schema_probe"
 
 printf '[mysql-migration-integration] old baseline, fresh baseline 14, repeat, verify, DB lock, checksum drift, and failure blocking passed.\n'

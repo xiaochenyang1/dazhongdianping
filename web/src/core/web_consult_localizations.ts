@@ -23,6 +23,10 @@ export interface WebConsultStrings {
     placeholder: string
     send: string
     back: string
+    refresh: string
+    retry: string
+    loading: string
+    sending: string
   }
 }
 
@@ -48,6 +52,10 @@ const zhCnStrings: WebConsultStrings = {
     placeholder: '输入消息...',
     send: '发送',
     back: '返回',
+    refresh: '刷新消息',
+    retry: '重试',
+    loading: '加载中...',
+    sending: '发送中...',
   },
 }
 
@@ -73,6 +81,10 @@ const enStrings: WebConsultStrings = {
     placeholder: 'Type a message...',
     send: 'Send',
     back: 'Back',
+    refresh: 'Refresh messages',
+    retry: 'Retry',
+    loading: 'Loading...',
+    sending: 'Sending...',
   },
 }
 
