@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
@@ -18,6 +19,7 @@ import javax.imageio.ImageIO;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,7 +109,11 @@ class TradeControllerTest {
         assertThat(png.getWidth()).isEqualTo(240);
         assertThat(png.getHeight()).isEqualTo(240);
         var bitmap = new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(png)));
-        String scannedCode = new MultiFormatReader().decode(bitmap).getText();
+        // This is the pristine generated PNG, not a camera frame. ZXing's finder-pattern
+        // heuristic can miss valid payloads (CI example: CP03DD21935E714FC89E14).
+        // Camera detection stays covered separately by the merchant jsQR browser E2E.
+        String scannedCode = new MultiFormatReader().decode(bitmap,
+                Map.of(DecodeHintType.PURE_BARCODE, true)).getText();
         assertThat(scannedCode).isEqualTo(code);
 
         mockMvc.perform(get("/api/c/v1/coupons/{code}", code).header("X-Region", "EU"))
