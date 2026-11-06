@@ -1322,7 +1322,18 @@ test('customer and merchant exchange live consultation replies and support close
   const userDiagnostics = collectBrowserErrors(page)
   const merchantDiagnostics = collectBrowserErrors(merchantPage)
   try {
+    for (let i = 0; i < 55; i++) {
+      await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/consult/sessions/${consultation.id}/messages`, {
+        headers: userHeaders, data: { content: `Earlier question ${i}` },
+      }))
+    }
     await page.goto(`/user/consult/${consultation.id}`)
+    await expect(page.getByText('Earlier question 54', { exact: true })).toBeVisible()
+    await expect(page.getByText('Earlier question 0', { exact: true })).toHaveCount(0)
+    await page.getByTestId('consult-load-older').click()
+    await expect(page.getByText('Earlier question 0', { exact: true })).toHaveCount(1)
+    await expect(page.getByTestId('consult-load-older')).toHaveCount(0)
+    await page.screenshot({ path: test.info().outputPath('consult-customer-history.png'), fullPage: true })
     await page.getByTestId('consult-input').fill('Is a table available tonight?')
     await page.getByTestId('consult-send').click()
     await merchantPage.goto(`${merchantBaseURL}/login`)
@@ -1332,6 +1343,11 @@ test('customer and merchant exchange live consultation replies and support close
     await expect(merchantPage).toHaveURL(`${merchantBaseURL}/dashboard`)
     await merchantPage.goto(`${merchantBaseURL}/consult`)
     await merchantPage.getByTestId(`session-${consultation.id}`).click()
+    await expect(merchantPage.getByTestId('consult-load-older')).toBeVisible()
+    await merchantPage.getByTestId('consult-load-older').click()
+    await expect(merchantPage.getByText('Earlier question 0', { exact: true })).toHaveCount(1)
+    await expect(merchantPage.getByTestId('consult-load-older')).toHaveCount(0)
+    await merchantPage.screenshot({ path: test.info().outputPath('consult-merchant-history.png'), fullPage: true })
     await expect(merchantPage.locator('.messages')).toContainText('Is a table available tonight?')
     await merchantPage.getByTestId('consult-input').fill('Yes, we have a table at seven.')
     await merchantPage.getByTestId('consult-send').click()

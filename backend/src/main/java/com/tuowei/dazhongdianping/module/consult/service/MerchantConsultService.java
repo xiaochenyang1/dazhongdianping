@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 /** 商家端在线咨询：客服会话列表、消息收发。 */
 @Service
@@ -25,14 +26,16 @@ public class MerchantConsultService {
 
     private final ConsultMapper mapper;
     private final ConsultPresenter presenter;
+    private final ConsultMessageReader reader;
     private final MerchantAuthorizationService authorizationService;
     private final NotificationService notificationService;
 
     public MerchantConsultService(ConsultMapper mapper, ConsultPresenter presenter,
                                   MerchantAuthorizationService authorizationService,
-                                  NotificationService notificationService) {
+                                  NotificationService notificationService, ConsultMessageReader reader) {
         this.mapper = mapper;
         this.presenter = presenter;
+        this.reader = reader;
         this.authorizationService = authorizationService;
         this.notificationService = notificationService;
     }
@@ -40,33 +43,34 @@ public class MerchantConsultService {
     public List<Map<String, Object>> sessions() {
         MerchantSession session = requireSession();
         authorizationService.requirePermission(session, "consult:view");
-        return presenter.sessions(mapper.selectMerchantSessions(session.merchantId(), region()), 2);
+        return presenter.sessions(mapper.selectMerchantSessions(session.merchantId(), region(), authorizationService.scopedShopIds(session)), 2);
     }
 
-    @Transactional
-    public Map<String, Object> messages(Long sessionId) {
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public Map<String, Object> messages(Long sessionId, Long beforeId, Long afterId, Integer pageSize) {
+        int size = ConsultMessageReader.pageSize(beforeId, afterId, pageSize);
         MerchantSession session = requireSession();
         authorizationService.requirePermission(session, "consult:view");
+        mapper.lockSession(sessionId);
         ConsultSessionRow s = mapper.selectMerchantSession(sessionId, session.merchantId(), region());
         if (s == null) {
             throw new NotFoundException("会话不存在");
         }
-        mapper.markMerchantRead(sessionId);
-        s.setMerchantUnread(0);
-        return Map.of(
-                "session", presenter.session(s, 2),
-                "messages", presenter.messages(mapper.selectMessages(sessionId)));
+        authorizationService.requireShop(session, "consult:view", s.getShopId());
+        return reader.read(s, 2, beforeId, afterId, size);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Map<String, Object> send(Long sessionId, ConsultMessageRequest req) {
         MerchantSession session = requireSession();
         authorizationService.requirePermission(session, "consult:reply");
         String region = region();
+        mapper.lockSession(sessionId);
         ConsultSessionRow s = mapper.selectMerchantSession(sessionId, session.merchantId(), region);
         if (s == null) {
             throw new NotFoundException("会话不存在");
         }
+        authorizationService.requireShop(session, "consult:reply", s.getShopId());
         String content = req.content().trim();
         ConsultMessageRow msg = new ConsultMessageRow();
         msg.setSessionId(sessionId);

@@ -26,11 +26,15 @@ public interface ConsultMapper {
     List<ConsultSessionRow> selectUserSessions(@Param("userId") Long userId, @Param("region") String region);
 
     List<ConsultSessionRow> selectMerchantSessions(
-            @Param("merchantId") Long merchantId, @Param("region") String region);
+            @Param("merchantId") Long merchantId, @Param("region") String region,
+            @Param("shopIds") List<Long> shopIds);
 
     void insertMessage(ConsultMessageRow row);
 
-    List<ConsultMessageRow> selectMessages(@Param("sessionId") Long sessionId);
+    Long lockSession(@Param("id") Long id);
+
+    List<ConsultMessageRow> selectMessages(@Param("sessionId") Long sessionId,
+            @Param("beforeId") Long beforeId, @Param("afterId") Long afterId, @Param("limit") int limit);
 
     /** 发消息后刷新会话：写入最近消息并按发送方给对端未读 +1。 */
     int updateSessionOnMessage(

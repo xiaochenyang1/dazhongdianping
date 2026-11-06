@@ -19,7 +19,16 @@ export interface ConsultMessage {
   createdAt?: string
 }
 
+export interface ConsultMessageQuery {
+  beforeId?: number
+  afterId?: number
+  pageSize?: number
+}
+
 export interface ConsultThread {
+  hasMore: boolean
+  nextBeforeId: number | null
+  nextAfterId: number
   session: ConsultSession
   messages: ConsultMessage[]
 }

@@ -337,6 +337,7 @@ export interface MerchantStrings {
     sessionsEmpty: string
     messagesEmpty: string
     selectHint: string
+    loadOlder: string
     unreadBadge: (count: number) => string
     you: string
     customer: string
@@ -1099,6 +1100,7 @@ const zhCnStrings: MerchantStrings = {
     sessionsEmpty: '暂无咨询会话。',
     messagesEmpty: '暂无消息。',
     selectHint: '选择左侧会话查看聊天记录。',
+    loadOlder: '查看更早消息',
     unreadBadge: (count) => `${count} 条未读`,
     you: '商家',
     customer: '顾客',
@@ -1899,6 +1901,7 @@ const enStrings: MerchantStrings = {
     sessionsEmpty: 'No chat sessions yet.',
     messagesEmpty: 'No messages yet.',
     selectHint: 'Select a session on the left to view the chat.',
+    loadOlder: 'Load earlier messages',
     unreadBadge: (count) => `${count} unread`,
     you: 'Merchant',
     customer: 'Customer',

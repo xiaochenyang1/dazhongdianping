@@ -767,6 +767,49 @@ INSERT INTO user_behavior_event(user_id,region,event_type,keyword) VALUES($userI
         Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
             "--database=$DbName", "-e", $privacyFixtureSql
         )) -WorkingDirectory $repoRoot | Out-Null
+        Write-Step "smoking bounded consultation history and incremental reads with 10000 messages"
+        $consultSession = Invoke-Json -Method "POST" -Path "/api/c/v1/consult/sessions" -Headers $euHeaders -Body @{ shopId = 20001 }
+        $consultId = [long]$consultSession.data.id
+        $digitsSql = "SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9"
+        $consultFixtureSql = @"
+INSERT INTO consult_message(session_id,region,sender_type,sender_id,content)
+SELECT $consultId,'EU',2,12001,'Synthetic capacity message'
+FROM ($digitsSql) a CROSS JOIN ($digitsSql) b CROSS JOIN ($digitsSql) c CROSS JOIN ($digitsSql) d;
+UPDATE consult_session SET user_unread=10000 WHERE id=$consultId;
+"@
+        Invoke-Native -FilePath $mysqlCommand.Source -Arguments ($mysqlConnectionArgs + @(
+            "--database=$DbName", "-e", $consultFixtureSql
+        )) -WorkingDirectory $repoRoot | Out-Null
+        $latestMessages = Invoke-Json -Method "GET" -Path "/api/c/v1/consult/sessions/$consultId/messages" -Headers $euHeaders
+        if ($latestMessages.data.messages.Count -ne 50 -or -not $latestMessages.data.hasMore) { throw "MySQL consultation must return only the latest page" }
+        $consultNewest = [long]$latestMessages.data.nextAfterId
+        $consultBefore = [long]$latestMessages.data.nextBeforeId
+        $merchantConsultLogin = Invoke-Json -Method "POST" -Path "/api/b/v1/auth/login" -Body @{ account = "merchant_eu_sichuan@example.com"; password = "merchant123456" }
+        & (Join-Path $PSScriptRoot "consult-capacity-smoke.ps1") -BaseUrl $baseUrl -CustomerToken $user.data.accessToken -MerchantToken $merchantConsultLogin.data.accessToken -SessionId $consultId -NewestId $consultNewest -BeforeId $consultBefore -OutputPath (Join-Path $runDir "consult-capacity.json")
+        # Both senders race under the same session lock, and the next cursor read must contain both.
+        $consultClient = [System.Net.Http.HttpClient]::new()
+        $consultRequests = @()
+        $consultCalls = @()
+        try {
+            foreach ($sender in @(@{ Side = "c"; Token = $user.data.accessToken }, @{ Side = "b"; Token = $merchantConsultLogin.data.accessToken })) {
+                $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Post, "$baseUrl/api/$($sender.Side)/v1/consult/sessions/$consultId/messages")
+                $request.Headers.Add("Authorization", "Bearer $($sender.Token)")
+                $request.Headers.Add("X-Region", "EU")
+                $request.Content = [System.Net.Http.StringContent]::new('{"content":"Concurrent capacity reply"}', [System.Text.Encoding]::UTF8, "application/json")
+                $consultRequests += $request
+                $consultCalls += $consultClient.SendAsync($request)
+            }
+            foreach ($call in $consultCalls) {
+                $response = $call.GetAwaiter().GetResult()
+                try { $response.EnsureSuccessStatusCode() | Out-Null } finally { $response.Dispose() }
+            }
+        } finally {
+            foreach ($request in $consultRequests) { $request.Dispose() }
+            $consultClient.Dispose()
+        }
+        $delta = Invoke-Json -Method "GET" -Path "/api/c/v1/consult/sessions/$consultId/messages?afterId=$consultNewest" -Headers $euHeaders
+        if ($delta.data.messages.Count -ne 2 -or $delta.data.hasMore -or $delta.data.messages[0].id -ge $delta.data.messages[1].id) { throw "MySQL consultation incremental read lost or reordered concurrent replies" }
+
         Write-Step "smoking private invoice PDF delivery, concurrent retry and explicit receipt on MySQL"
         $invoiceOrder = Invoke-Json -Method "POST" -Path "/api/c/v1/orders" -Headers $euHeaders -Body @{ dealId = 41001; quantity = 1 }
         Invoke-Json -Method "POST" -Path "/api/c/v1/orders/$($invoiceOrder.data.id)/pay/mock-complete" -Headers $euHeaders | Out-Null

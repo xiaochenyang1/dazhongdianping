@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
 import { consultStringsForRegion } from '@/core/web_consult_localizations'
@@ -18,6 +18,12 @@ const loading = ref(false)
 const errorMessage = ref('')
 const sendError = ref('')
 const sending = ref(false)
+const hasOlder = ref(false)
+const historyLoading = ref(false)
+const historyError = ref('')
+const messageList = ref<HTMLElement | null>(null)
+let nextBeforeId: number | null = null
+let nextAfterId = 0
 let revision = 0
 let fetching = false
 let timer: number | undefined
@@ -34,16 +40,57 @@ async function load() {
   fetching = true
   loading.value = true
   try {
-    const thread = await fetchConsultThread(props.sessionId)
-    if (current !== revision) return
-    session.value = thread.session
-    merge(thread.messages)
-    errorMessage.value = ''
+    // Keep the server read cursor separate from locally sent messages. Advancing it on send
+    // could skip a merchant reply committed between the last poll and that send.
+    for (let batch = 0; batch < 5; batch++) {
+      const initial = session.value === null
+      const thread = initial
+        ? await fetchConsultThread(props.sessionId)
+        : await fetchConsultThread(props.sessionId, { afterId: nextAfterId })
+      if (current !== revision) return
+      const list = messageList.value
+      const atBottom = !list || list.scrollHeight - list.scrollTop - list.clientHeight < 48
+      session.value = thread.session
+      merge(thread.messages)
+      if (initial) {
+        hasOlder.value = thread.hasMore ?? false
+        nextBeforeId = thread.nextBeforeId ?? thread.messages[0]?.id ?? null
+      }
+      nextAfterId = thread.nextAfterId ?? thread.messages[thread.messages.length - 1]?.id ?? nextAfterId
+      errorMessage.value = ''
+      await nextTick()
+      if (current !== revision) return
+      if (atBottom && messageList.value) messageList.value.scrollTop = messageList.value.scrollHeight
+      if (initial || !thread.hasMore || document.visibilityState === 'hidden') break
+    }
   } catch (error) {
     if (current !== revision) return
     errorMessage.value = error instanceof Error ? error.message : copy.value.loadFailed
   } finally {
     if (current === revision) { loading.value = false; fetching = false }
+  }
+}
+
+async function loadOlder() {
+  if (historyLoading.value || !hasOlder.value || nextBeforeId === null) return
+  const current = revision
+  historyLoading.value = true
+  historyError.value = ''
+  try {
+    const thread = await fetchConsultThread(props.sessionId, { beforeId: nextBeforeId })
+    if (current !== revision) return
+    const list = messageList.value
+    const height = list?.scrollHeight ?? 0
+    const top = list?.scrollTop ?? 0
+    merge(thread.messages)
+    hasOlder.value = thread.hasMore
+    nextBeforeId = thread.nextBeforeId
+    await nextTick()
+    if (current === revision && list) list.scrollTop = top + list.scrollHeight - height
+  } catch (error) {
+    if (current === revision) historyError.value = error instanceof Error ? error.message : copy.value.loadFailed
+  } finally {
+    if (current === revision) historyLoading.value = false
   }
 }
 
@@ -78,6 +125,11 @@ watch([() => appState.region, () => props.sessionId], () => {
   session.value = null
   messages.value = []
   draft.value = ''
+  hasOlder.value = false
+  historyLoading.value = false
+  historyError.value = ''
+  nextBeforeId = null
+  nextAfterId = 0
   errorMessage.value = ''
   sendError.value = ''
   void load()
@@ -111,7 +163,9 @@ onUnmounted(() => {
     <p v-if="loading && !session" class="feedback">{{ copy.loading }}</p>
     <p v-if="session && messages.length === 0" class="feedback">{{ copy.empty }}</p>
 
-    <ul class="chat-messages">
+    <button v-if="hasOlder" type="button" :disabled="historyLoading" data-testid="consult-load-older" @click="loadOlder">{{ historyLoading ? copy.loading : copy.loadOlder }}</button>
+    <p v-if="historyError" class="feedback is-error" role="alert">{{ historyError }}</p>
+    <ul ref="messageList" class="chat-messages">
       <li v-for="m in messages" :key="m.id" :class="m.senderType === 1 ? 'mine' : 'theirs'">
         <span class="who">{{ m.senderType === 1 ? copy.you : copy.merchant }}</span>
         <span class="text">{{ m.content }}</span>
@@ -124,3 +178,7 @@ onUnmounted(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.chat-messages { max-height: 55vh; overflow-y: auto; overflow-anchor: none; }
+</style>

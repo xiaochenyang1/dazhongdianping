@@ -141,4 +141,77 @@ describe('ConsultChatView', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
+  it('loads older pages independently and never skips an unseen reply when sending', async () => {
+    consultMocks.fetchConsultThread.mockResolvedValueOnce({ session: { id: 5, shopName: '店铺' },
+      messages: [{ id: 3, content: 'third' }, { id: 4, content: 'fourth' }],
+      hasMore: true, nextBeforeId: 3, nextAfterId: 4 })
+    const { host } = mount({ sessionId: 5 })
+    await flush()
+    const older = () => host.querySelector<HTMLButtonElement>('[data-testid="consult-load-older"]')!
+    consultMocks.fetchConsultThread.mockRejectedValueOnce(new Error('history offline'))
+    older().click()
+    await flush()
+    expect(host.textContent).toContain('history offline')
+    expect(host.textContent).toContain('fourth')
+    consultMocks.fetchConsultThread.mockResolvedValueOnce({ session: { id: 5 },
+      messages: [{ id: 1, content: 'first' }, { id: 2, content: 'second' }],
+      hasMore: false, nextBeforeId: 1, nextAfterId: 2 })
+    older().click()
+    await flush()
+    expect(consultMocks.fetchConsultThread).toHaveBeenLastCalledWith(5, { beforeId: 3 })
+    expect(host.querySelector('[data-testid="consult-load-older"]')).toBeNull()
+    expect([...host.querySelectorAll('.chat-messages .text')].map(el => el.textContent)).toEqual(['first', 'second', 'third', 'fourth'])
+    consultMocks.sendConsultMessage.mockResolvedValueOnce({ id: 6, content: 'sent' })
+    const input = host.querySelector<HTMLTextAreaElement>('[data-testid="consult-input"]')!
+    input.value = 'sent'; input.dispatchEvent(new Event('input'))
+    host.querySelector<HTMLButtonElement>('[data-testid="consult-send"]')!.click()
+    await flush()
+    consultMocks.fetchConsultThread.mockResolvedValueOnce({ session: { id: 5 },
+      messages: [{ id: 5, content: 'unseen reply' }, { id: 6, content: 'sent' }],
+      hasMore: false, nextBeforeId: 5, nextAfterId: 6 })
+    await vi.advanceTimersByTimeAsync(3000)
+    await flush()
+    expect(consultMocks.fetchConsultThread).toHaveBeenLastCalledWith(5, { afterId: 4 })
+    expect(host.textContent).toContain('unseen reply')
+    expect(host.querySelectorAll('.chat-messages li')).toHaveLength(6)
+  })
+
+  it('drains multiple incremental pages and retains the last successful cursor after failure', async () => {
+    const { host } = mount({ sessionId: 5 })
+    await flush()
+    consultMocks.fetchConsultThread.mockResolvedValueOnce({ session: { id: 5 },
+      messages: [{ id: 2, content: 'batch one' }], hasMore: true, nextBeforeId: 2, nextAfterId: 2 })
+      .mockRejectedValueOnce(new Error('catch-up interrupted'))
+    await vi.advanceTimersByTimeAsync(3000)
+    await flush()
+    expect(consultMocks.fetchConsultThread).toHaveBeenLastCalledWith(5, { afterId: 2 })
+    expect(host.textContent).toContain('batch one')
+    consultMocks.fetchConsultThread.mockResolvedValueOnce({ session: { id: 5 },
+      messages: [{ id: 3, content: 'batch two' }], hasMore: false, nextBeforeId: 3, nextAfterId: 3 })
+    window.dispatchEvent(new Event('online'))
+    await flush()
+    expect(consultMocks.fetchConsultThread).toHaveBeenLastCalledWith(5, { afterId: 2 })
+    expect(host.textContent).toContain('batch two')
+  })
+
+  it('ignores a historical page returned after switching conversations', async () => {
+    consultMocks.fetchConsultThread.mockResolvedValueOnce({ session: { id: 5 },
+      messages: [{ id: 4, content: 'fourth' }], hasMore: true, nextBeforeId: 4, nextAfterId: 4 })
+    const { host, props } = mount({ sessionId: 5 })
+    await flush()
+    let finish!: (value: unknown) => void
+    consultMocks.fetchConsultThread.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+    host.querySelector<HTMLButtonElement>('[data-testid="consult-load-older"]')!.click()
+    await flush()
+    consultMocks.fetchConsultThread.mockResolvedValueOnce({ session: { id: 6 },
+      messages: [{ id: 10, content: 'new conversation' }], hasMore: false, nextBeforeId: 10, nextAfterId: 10 })
+    props.sessionId = 6
+    await flush()
+    finish({ session: { id: 5 }, messages: [{ id: 1, content: 'old history' }], hasMore: true, nextBeforeId: 1, nextAfterId: 1 })
+    await flush()
+    expect(host.textContent).toContain('new conversation')
+    expect(host.textContent).not.toContain('old history')
+    expect(host.querySelector('[data-testid="consult-load-older"]')).toBeNull()
+  })
+
 })

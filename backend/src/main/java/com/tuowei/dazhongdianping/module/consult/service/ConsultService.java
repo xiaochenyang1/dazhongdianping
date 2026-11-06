@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 /** C端在线咨询：发起会话、我的会话、消息收发。 */
 @Service
@@ -21,10 +22,12 @@ public class ConsultService {
 
     private final ConsultMapper mapper;
     private final ConsultPresenter presenter;
+    private final ConsultMessageReader reader;
 
-    public ConsultService(ConsultMapper mapper, ConsultPresenter presenter) {
+    public ConsultService(ConsultMapper mapper, ConsultPresenter presenter, ConsultMessageReader reader) {
         this.mapper = mapper;
         this.presenter = presenter;
+        this.reader = reader;
     }
 
     /** 发起或复用与门店的会话。 */
@@ -54,25 +57,25 @@ public class ConsultService {
         return presenter.sessions(mapper.selectUserSessions(u.userId(), region()), 1);
     }
 
-    /** 读取会话消息并把用户侧未读清零。 */
-    @Transactional
-    public Map<String, Object> messages(Long sessionId) {
+    /** 最近一页、历史分页或增量补收；仅读到末尾才确认未读。 */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public Map<String, Object> messages(Long sessionId, Long beforeId, Long afterId, Integer pageSize) {
+        int size = ConsultMessageReader.pageSize(beforeId, afterId, pageSize);
         UserSession u = requireUser();
+        mapper.lockSession(sessionId);
         ConsultSessionRow s = mapper.selectUserSession(sessionId, u.userId(), region());
         if (s == null) {
             throw new NotFoundException("会话不存在");
         }
-        mapper.markUserRead(sessionId);
-        s.setUserUnread(0);
-        return Map.of(
-                "session", presenter.session(s, 1),
-                "messages", presenter.messages(mapper.selectMessages(sessionId)));
+        return reader.read(s, 1, beforeId, afterId, size);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Map<String, Object> send(Long sessionId, ConsultMessageRequest req) {
         UserSession u = requireUser();
         String region = region();
+        // Serialize before allocating message IDs: committed cursors cannot skip a slower sender.
+        mapper.lockSession(sessionId);
         ConsultSessionRow s = mapper.selectUserSession(sessionId, u.userId(), region);
         if (s == null) {
             throw new NotFoundException("会话不存在");

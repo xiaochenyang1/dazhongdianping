@@ -27,6 +27,7 @@ export interface WebConsultStrings {
     retry: string
     loading: string
     sending: string
+    loadOlder: string
   }
 }
 
@@ -56,6 +57,7 @@ const zhCnStrings: WebConsultStrings = {
     retry: '重试',
     loading: '加载中...',
     sending: '发送中...',
+    loadOlder: '查看更早消息',
   },
 }
 
@@ -85,6 +87,7 @@ const enStrings: WebConsultStrings = {
     retry: 'Retry',
     loading: 'Loading...',
     sending: 'Sending...',
+    loadOlder: 'Load earlier messages',
   },
 }
 
