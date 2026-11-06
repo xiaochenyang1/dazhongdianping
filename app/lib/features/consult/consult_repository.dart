@@ -66,6 +66,23 @@ class ConsultThread {
   final int nextAfterId;
 }
 
+class ConsultSessionCursor {
+  const ConsultSessionCursor({required this.id, required this.updatedAt});
+  final int id;
+  final String updatedAt;
+}
+
+class ConsultSessionPage {
+  const ConsultSessionPage({
+    required this.sessions,
+    this.hasMore = false,
+    this.nextCursor,
+  });
+  final List<ConsultSession> sessions;
+  final bool hasMore;
+  final ConsultSessionCursor? nextCursor;
+}
+
 /// C端在线咨询仓库。
 class ConsultRepository {
   ConsultRepository(this.api);
@@ -80,14 +97,35 @@ class ConsultRepository {
     return ConsultSession.fromJson(result);
   }
 
-  Future<List<ConsultSession>> loadSessions() async {
-    final result = await api.getJson('/api/c/v1/consult/sessions');
-    final raw = result['value'] ?? result['list'];
-    if (raw is! List) return const [];
-    return raw
-        .whereType<Map<String, dynamic>>()
-        .map(ConsultSession.fromJson)
-        .toList();
+  Future<ConsultSessionPage> loadSessions({
+    ConsultSessionCursor? cursor,
+    bool unreadOnly = false,
+    int? pageSize,
+  }) async {
+    final result = await api.getJson(
+      '/api/c/v1/consult/sessions',
+      query: {
+        if (cursor != null) 'beforeId': cursor.id,
+        if (cursor != null) 'beforeUpdatedAt': cursor.updatedAt,
+        'unreadOnly': unreadOnly,
+        if (pageSize != null) 'pageSize': pageSize,
+      },
+    );
+    final raw = result['list'];
+    final nextId = (result['nextBeforeId'] as num?)?.toInt();
+    final nextTime = result['nextBeforeUpdatedAt'] as String?;
+    return ConsultSessionPage(
+      sessions: raw is List
+          ? raw
+                .whereType<Map<String, dynamic>>()
+                .map(ConsultSession.fromJson)
+                .toList()
+          : const [],
+      hasMore: result['hasMore'] as bool? ?? false,
+      nextCursor: nextId != null && nextTime != null
+          ? ConsultSessionCursor(id: nextId, updatedAt: nextTime)
+          : null,
+    );
   }
 
   Future<ConsultThread> loadThread(

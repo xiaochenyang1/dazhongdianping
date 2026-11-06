@@ -460,7 +460,21 @@ export function callWaitlist(id: number) { return apiPost<WaitlistEntry>(`/api/b
 export function seatWaitlist(id: number) { return apiPost<WaitlistEntry>(`/api/b/v1/waitlist/${id}/seat`) }
 export function passWaitlist(id: number) { return apiPost<WaitlistEntry>(`/api/b/v1/waitlist/${id}/pass`) }
 
-export function fetchConsultSessions() { return apiGet<ConsultSession[]>('/api/b/v1/consult/sessions') }
+export interface ConsultSessionQuery {
+  beforeUpdatedAt?: string
+  beforeId?: number
+  unreadOnly?: boolean
+  pageSize?: number
+}
+
+export interface ConsultSessionPage {
+  list: ConsultSession[]
+  hasMore: boolean
+  nextBeforeId: number | null
+  nextBeforeUpdatedAt: string | null
+}
+
+export function fetchConsultSessions(query?: ConsultSessionQuery) { return apiGet<ConsultSessionPage>('/api/b/v1/consult/sessions', query) }
 export function fetchConsultMessages(id: number, query?: ConsultMessageQuery) { return apiGet<ConsultThread>(`/api/b/v1/consult/sessions/${id}/messages`, query) }
 export function sendConsultMessage(id: number, content: string) { return apiPost<ConsultMessage>(`/api/b/v1/consult/sessions/${id}/messages`, { content }) }
 

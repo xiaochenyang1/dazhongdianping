@@ -12,6 +12,11 @@ export interface WebConsultStrings {
     loading: string
     empty: string
     open: string
+    unreadOnly: string
+    noUnread: string
+    previous: string
+    next: string
+    refresh: string
     unread: (count: number) => string
   }
   chat: {
@@ -42,6 +47,11 @@ const zhCnStrings: WebConsultStrings = {
     loading: '加载中...',
     empty: '还没有咨询会话，去商户页发起咨询吧。',
     open: '进入会话',
+    unreadOnly: '只看未读',
+    noUnread: '暂无未读会话。',
+    previous: '上一页',
+    next: '下一页',
+    refresh: '刷新列表',
     unread: (count) => `${count} 条未读`,
   },
   chat: {
@@ -72,6 +82,11 @@ const enStrings: WebConsultStrings = {
     loading: 'Loading...',
     empty: 'No chats yet — start one from a shop page.',
     open: 'Open chat',
+    unreadOnly: 'Unread only',
+    noUnread: 'No unread chats.',
+    previous: 'Previous',
+    next: 'Next',
+    refresh: 'Refresh chats',
     unread: (count) => `${count} unread`,
   },
   chat: {

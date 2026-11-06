@@ -1,3 +1,17 @@
+export interface ConsultSessionQuery {
+  beforeUpdatedAt?: string
+  beforeId?: number
+  unreadOnly?: boolean
+  pageSize?: number
+}
+
+export interface ConsultSessionPage {
+  list: ConsultSession[]
+  hasMore: boolean
+  nextBeforeId: number | null
+  nextBeforeUpdatedAt: string | null
+}
+
 export interface ConsultSession {
   id: number
   shopId: number

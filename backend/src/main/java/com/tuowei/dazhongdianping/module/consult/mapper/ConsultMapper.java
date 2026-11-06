@@ -23,11 +23,15 @@ public interface ConsultMapper {
     ConsultSessionRow selectMerchantSession(
             @Param("id") Long id, @Param("merchantId") Long merchantId, @Param("region") String region);
 
-    List<ConsultSessionRow> selectUserSessions(@Param("userId") Long userId, @Param("region") String region);
+    List<ConsultSessionRow> selectUserSessions(@Param("userId") Long userId, @Param("region") String region,
+            @Param("beforeUpdatedAt") LocalDateTime beforeUpdatedAt, @Param("beforeId") Long beforeId,
+            @Param("unreadOnly") boolean unreadOnly, @Param("limit") int limit);
 
     List<ConsultSessionRow> selectMerchantSessions(
             @Param("merchantId") Long merchantId, @Param("region") String region,
-            @Param("shopIds") List<Long> shopIds);
+            @Param("shopIds") List<Long> shopIds,
+            @Param("beforeUpdatedAt") LocalDateTime beforeUpdatedAt, @Param("beforeId") Long beforeId,
+            @Param("unreadOnly") boolean unreadOnly, @Param("limit") int limit);
 
     void insertMessage(ConsultMessageRow row);
 

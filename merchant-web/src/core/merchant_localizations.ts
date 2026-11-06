@@ -334,6 +334,10 @@ export interface MerchantStrings {
     loadError: string
     sendError: string
     sendRequired: string
+    unreadOnly: string
+    noUnread: string
+    previous: string
+    next: string
     sessionsEmpty: string
     messagesEmpty: string
     selectHint: string
@@ -1097,6 +1101,10 @@ const zhCnStrings: MerchantStrings = {
     loadError: '咨询加载失败',
     sendError: '发送失败',
     sendRequired: '请输入回复内容',
+    unreadOnly: '只看未读',
+    noUnread: '暂无未读会话。',
+    previous: '上一页',
+    next: '下一页',
     sessionsEmpty: '暂无咨询会话。',
     messagesEmpty: '暂无消息。',
     selectHint: '选择左侧会话查看聊天记录。',
@@ -1898,6 +1906,10 @@ const enStrings: MerchantStrings = {
     loadError: 'Failed to load chats',
     sendError: 'Failed to send',
     sendRequired: 'Please enter a reply',
+    unreadOnly: 'Unread only',
+    noUnread: 'No unread chats.',
+    previous: 'Previous',
+    next: 'Next',
     sessionsEmpty: 'No chat sessions yet.',
     messagesEmpty: 'No messages yet.',
     selectHint: 'Select a session on the left to view the chat.',

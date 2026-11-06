@@ -20,7 +20,7 @@ describe('consult service', () => {
 
   it('lists my sessions', () => {
     fetchConsultSessions()
-    expect(apiGet).toHaveBeenCalledWith('/api/c/v1/consult/sessions')
+    expect(apiGet).toHaveBeenCalledWith('/api/c/v1/consult/sessions', undefined)
   })
 
   it('sends history and incremental cursors separately', () => {

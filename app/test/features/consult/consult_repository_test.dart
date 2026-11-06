@@ -129,25 +129,41 @@ void main() {
     expect(message.id, 3);
   });
 
-  test('loadSessions reads the value list envelope', () async {
-    final api = ConsultFakeApi(
-      getResponse: {
-        'value': [
-          {
-            'id': 5,
-            'shopId': 10001,
-            'shopName': '沪上渝里',
-            'lastMessage': '你好',
-            'unread': 2,
-          },
-        ],
-      },
-    );
-    final repository = ConsultRepository(api);
+  test(
+    'loadSessions reads bounded pages and forwards the cursor and filter',
+    () async {
+      final api = ConsultFakeApi(
+        getResponse: {
+          'list': [
+            {
+              'id': 5,
+              'shopId': 10001,
+              'shopName': '沪上渝里',
+              'lastMessage': '你好',
+              'unread': 2,
+            },
+          ],
+        },
+      );
+      final repository = ConsultRepository(api);
 
-    final sessions = await repository.loadSessions();
+      final page = await repository.loadSessions(
+        cursor: const ConsultSessionCursor(
+          id: 9,
+          updatedAt: '2026-11-06T10:00:00',
+        ),
+        unreadOnly: true,
+        pageSize: 5,
+      );
 
-    expect(api.getPath, '/api/c/v1/consult/sessions');
-    expect(sessions.single.unread, 2);
-  });
+      expect(api.getPath, '/api/c/v1/consult/sessions');
+      expect(page.sessions.single.unread, 2);
+      expect(api.getQuery, {
+        'beforeId': 9,
+        'beforeUpdatedAt': '2026-11-06T10:00:00',
+        'unreadOnly': true,
+        'pageSize': 5,
+      });
+    },
+  );
 }

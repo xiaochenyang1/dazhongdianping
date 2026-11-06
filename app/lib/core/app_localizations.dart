@@ -49,6 +49,10 @@ class AppLocalizations {
     'notificationTitleConsultReply': '商家回复了咨询',
     'myConsultTitle': '在线咨询',
     'consultSessionsEmpty': '还没有咨询会话，去商户页发起咨询吧。',
+    'consultUnreadOnly': '只看未读',
+    'consultNoUnread': '暂无未读会话。',
+    'consultPreviousPage': '上一页',
+    'consultNextPage': '下一页',
     'consultLoadFailed': '咨询加载失败：{error}',
     'consultSendFailed': '发送失败：{error}',
     'consultLoadOlder': '查看更早消息',
@@ -1228,6 +1232,10 @@ class AppLocalizations {
     'notificationTitleConsultReply': '商家回覆了諮詢',
     'myConsultTitle': '線上諮詢',
     'consultSessionsEmpty': '還沒有諮詢會話，去商戶頁發起諮詢吧。',
+    'consultUnreadOnly': '只看未讀',
+    'consultNoUnread': '暫無未讀會話。',
+    'consultPreviousPage': '上一頁',
+    'consultNextPage': '下一頁',
     'consultLoadFailed': '諮詢載入失敗：{error}',
     'consultSendFailed': '發送失敗：{error}',
     'consultLoadOlder': '查看更早訊息',
@@ -2407,6 +2415,10 @@ class AppLocalizations {
     'notificationTitleConsultReply': 'Merchant replied to your chat',
     'myConsultTitle': 'Live Chat',
     'consultSessionsEmpty': 'No chats yet — start one from a shop page.',
+    'consultUnreadOnly': 'Unread only',
+    'consultNoUnread': 'No unread chats.',
+    'consultPreviousPage': 'Previous',
+    'consultNextPage': 'Next',
     'consultLoadFailed': 'Failed to load chat: {error}',
     'consultSendFailed': 'Failed to send: {error}',
     'consultLoadOlder': 'Load earlier messages',
@@ -3827,6 +3839,10 @@ class AppLocalizations {
       _text('notificationTitleConsultReply');
   String get myConsultTitle => _text('myConsultTitle');
   String get consultSessionsEmpty => _text('consultSessionsEmpty');
+  String get consultUnreadOnly => _text('consultUnreadOnly');
+  String get consultNoUnread => _text('consultNoUnread');
+  String get consultPreviousPage => _text('consultPreviousPage');
+  String get consultNextPage => _text('consultNextPage');
   String consultLoadFailed(Object error) =>
       _withError('consultLoadFailed', error);
   String consultSendFailed(Object error) =>
