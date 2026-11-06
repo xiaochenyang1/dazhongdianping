@@ -8,12 +8,17 @@ class ConsultFakeApi implements JsonApi {
   Map<String, dynamic> getResponse;
   Map<String, dynamic> postResponse;
   String? getPath;
+  Map<String, Object?>? getQuery;
   String? postPath;
   Object? postBody;
 
   @override
-  Future<Map<String, dynamic>> getJson(String path, {Map<String, Object?>? query}) async {
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, Object?>? query,
+  }) async {
     getPath = path;
+    getQuery = query;
     return getResponse;
   }
 
@@ -27,9 +32,15 @@ class ConsultFakeApi implements JsonApi {
 
 void main() {
   test('startSession posts shopId and parses the session', () async {
-    final api = ConsultFakeApi(postResponse: {
-      'id': 5, 'shopId': 10001, 'shopName': '沪上渝里', 'lastMessage': '', 'unread': 0,
-    });
+    final api = ConsultFakeApi(
+      postResponse: {
+        'id': 5,
+        'shopId': 10001,
+        'shopName': '沪上渝里',
+        'lastMessage': '',
+        'unread': 0,
+      },
+    );
     final repository = ConsultRepository(api);
 
     final session = await repository.startSession(10001);
@@ -41,13 +52,21 @@ void main() {
   });
 
   test('loadThread parses session and messages', () async {
-    final api = ConsultFakeApi(getResponse: {
-      'session': {'id': 5, 'shopId': 10001, 'shopName': '沪上渝里', 'lastMessage': '你好', 'unread': 0},
-      'messages': [
-        {'id': 1, 'senderType': 1, 'senderId': 9001, 'content': '在吗'},
-        {'id': 2, 'senderType': 2, 'senderId': 11001, 'content': '在的'},
-      ],
-    });
+    final api = ConsultFakeApi(
+      getResponse: {
+        'session': {
+          'id': 5,
+          'shopId': 10001,
+          'shopName': '沪上渝里',
+          'lastMessage': '你好',
+          'unread': 0,
+        },
+        'messages': [
+          {'id': 1, 'senderType': 1, 'senderId': 9001, 'content': '在吗'},
+          {'id': 2, 'senderType': 2, 'senderId': 11001, 'content': '在的'},
+        ],
+      },
+    );
     final repository = ConsultRepository(api);
 
     final thread = await repository.loadThread(5);
@@ -58,10 +77,49 @@ void main() {
     expect(thread.messages.last.senderType, 2);
   });
 
+  test(
+    'uses history and incremental cursors and parses paging metadata',
+    () async {
+      final api = ConsultFakeApi(
+        getResponse: {
+          'session': {'id': 5},
+          'messages': [
+            {'id': 41, 'content': 'earlier'},
+          ],
+          'hasMore': true,
+          'nextBeforeId': 41,
+          'nextAfterId': 41,
+        },
+      );
+      final repository = ConsultRepository(api);
+      final page = await repository.loadThread(5, beforeId: 60, pageSize: 20);
+      expect(api.getQuery, {'beforeId': 60, 'pageSize': 20});
+      expect(page.hasMore, isTrue);
+      expect(page.nextBeforeId, 41);
+      expect(page.nextAfterId, 41);
+      api.getResponse = {
+        'session': {'id': 5},
+        'messages': [],
+        'hasMore': false,
+        'nextBeforeId': null,
+        'nextAfterId': 60,
+      };
+      final idle = await repository.loadThread(5, afterId: 60);
+      expect(api.getQuery, {'afterId': 60});
+      expect(idle.nextAfterId, 60);
+      expect(idle.nextBeforeId, isNull);
+    },
+  );
+
   test('sendMessage posts content and parses the reply', () async {
-    final api = ConsultFakeApi(postResponse: {
-      'id': 3, 'senderType': 1, 'senderId': 9001, 'content': '谢谢',
-    });
+    final api = ConsultFakeApi(
+      postResponse: {
+        'id': 3,
+        'senderType': 1,
+        'senderId': 9001,
+        'content': '谢谢',
+      },
+    );
     final repository = ConsultRepository(api);
 
     final message = await repository.sendMessage(5, '谢谢');
@@ -72,11 +130,19 @@ void main() {
   });
 
   test('loadSessions reads the value list envelope', () async {
-    final api = ConsultFakeApi(getResponse: {
-      'value': [
-        {'id': 5, 'shopId': 10001, 'shopName': '沪上渝里', 'lastMessage': '你好', 'unread': 2},
-      ],
-    });
+    final api = ConsultFakeApi(
+      getResponse: {
+        'value': [
+          {
+            'id': 5,
+            'shopId': 10001,
+            'shopName': '沪上渝里',
+            'lastMessage': '你好',
+            'unread': 2,
+          },
+        ],
+      },
+    );
     final repository = ConsultRepository(api);
 
     final sessions = await repository.loadSessions();

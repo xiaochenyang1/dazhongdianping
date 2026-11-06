@@ -29,6 +29,11 @@ class _ConsultChatScreenState extends State<ConsultChatScreen>
   bool _loading = false;
   bool _loaded = false;
   bool _sending = false;
+  bool _hasOlder = false;
+  bool _historyLoading = false;
+  int? _nextBeforeId;
+  int _nextAfterId = 0;
+  Object? _historyError;
   int _revision = 0;
   String _title = '';
   Object? _loadError;
@@ -56,6 +61,11 @@ class _ConsultChatScreenState extends State<ConsultChatScreen>
       _loaded = false;
       _loading = false;
       _sending = false;
+      _hasOlder = false;
+      _historyLoading = false;
+      _historyError = null;
+      _nextBeforeId = null;
+      _nextAfterId = 0;
       _loadError = null;
       _sendError = null;
       _input.clear();
@@ -103,20 +113,68 @@ class _ConsultChatScreenState extends State<ConsultChatScreen>
     final revision = _revision;
     setState(() => _loading = true);
     try {
-      final thread = await widget.repository.loadThread(widget.sessionId);
-      if (!mounted || revision != _revision) return;
-      setState(() {
-        _messages = _merge(thread.messages);
-        _loaded = true;
-        _loadError = null;
-        if (thread.session.shopName.isNotEmpty) {
-          _title = thread.session.shopName;
+      // A send response must not advance this read cursor: earlier incoming replies may
+      // still be waiting between the previous poll and the newly sent message.
+      for (var batch = 0; batch < 5; batch++) {
+        final initial = !_loaded;
+        final thread = await widget.repository.loadThread(
+          widget.sessionId,
+          afterId: initial ? null : _nextAfterId,
+        );
+        if (!mounted || revision != _revision) return;
+        setState(() {
+          _messages = _merge(thread.messages);
+          if (initial) {
+            _hasOlder = thread.hasMore;
+            _nextBeforeId = thread.nextBeforeId;
+          }
+          _nextAfterId = thread.nextAfterId;
+          _loaded = true;
+          _loadError = null;
+          if (thread.session.shopName.isNotEmpty) {
+            _title = thread.session.shopName;
+          }
+        });
+        if (initial ||
+            !thread.hasMore ||
+            !_foreground ||
+            !(ModalRoute.of(context)?.isCurrent ?? true)) {
+          break;
         }
-      });
+      }
     } catch (error) {
       if (mounted && revision == _revision) setState(() => _loadError = error);
     } finally {
       if (mounted && revision == _revision) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadOlder() async {
+    if (_historyLoading || !_hasOlder || _nextBeforeId == null) return;
+    final revision = _revision;
+    setState(() {
+      _historyLoading = true;
+      _historyError = null;
+    });
+    try {
+      final thread = await widget.repository.loadThread(
+        widget.sessionId,
+        beforeId: _nextBeforeId,
+      );
+      if (!mounted || revision != _revision) return;
+      setState(() {
+        _messages = _merge(thread.messages);
+        _hasOlder = thread.hasMore;
+        _nextBeforeId = thread.nextBeforeId;
+      });
+    } catch (error) {
+      if (mounted && revision == _revision) {
+        setState(() => _historyError = error);
+      }
+    } finally {
+      if (mounted && revision == _revision) {
+        setState(() => _historyLoading = false);
+      }
     }
   }
 
@@ -185,6 +243,22 @@ class _ConsultChatScreenState extends State<ConsultChatScreen>
               child: Text(
                 strings.consultSendFailed(_sendError!),
                 key: const Key('consult-send-error'),
+              ),
+            ),
+          if (_hasOlder)
+            TextButton(
+              key: const Key('consult-load-older'),
+              onPressed: _historyLoading ? null : _loadOlder,
+              child: Text(
+                _historyLoading ? strings.loading : strings.consultLoadOlder,
+              ),
+            ),
+          if (_historyError != null)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                strings.loadMoreFailed(_historyError!),
+                key: const Key('consult-history-error'),
               ),
             ),
           Expanded(

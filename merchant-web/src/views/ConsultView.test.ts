@@ -151,4 +151,39 @@ describe('ConsultView', () => {
     expect(host.textContent).toContain('补收回复')
   })
 
+  it('paginates history, preserves failed history and polls from the read cursor rather than a sent ID', async () => {
+    mocks.fetchConsultMessages.mockResolvedValueOnce({ session: session(), messages: [{ id: 4, content: 'latest' }],
+      hasMore: true, nextBeforeId: 4, nextAfterId: 4 })
+    const { host } = mountView()
+    await flushView()
+    host.querySelector<HTMLButtonElement>('[data-testid="session-1"]')!.click()
+    await flushView()
+    mocks.fetchConsultMessages.mockRejectedValueOnce(new Error('history failed'))
+    host.querySelector<HTMLButtonElement>('[data-testid="consult-load-older"]')!.click()
+    await flushView()
+    expect(host.textContent).toContain('history failed')
+    mocks.fetchConsultMessages.mockResolvedValueOnce({ session: session(), messages: [{ id: 1, content: 'earlier' }],
+      hasMore: false, nextBeforeId: 1, nextAfterId: 1 })
+    host.querySelector<HTMLButtonElement>('[data-testid="consult-load-older"]')!.click()
+    await flushView()
+    expect(mocks.fetchConsultMessages).toHaveBeenLastCalledWith(1, { beforeId: 4 })
+    expect(host.textContent).toContain('earlier')
+    expect(host.querySelector('[data-testid="consult-load-older"]')).toBeNull()
+    mocks.sendConsultMessage.mockResolvedValueOnce({ id: 6, content: 'sent reply' })
+    const input = host.querySelector<HTMLTextAreaElement>('[data-testid="consult-input"]')!
+    input.value = 'sent reply'; input.dispatchEvent(new Event('input'))
+    host.querySelector<HTMLButtonElement>('[data-testid="consult-send"]')!.click()
+    await flushView()
+    mocks.fetchConsultMessages.mockResolvedValueOnce({ session: session({ unread: 1 }), messages: [{ id: 5, content: 'unseen customer message' }],
+      hasMore: true, nextBeforeId: 5, nextAfterId: 5 })
+      .mockResolvedValueOnce({ session: session({ unread: 0 }), messages: [{ id: 6, content: 'sent reply' }],
+        hasMore: false, nextBeforeId: 6, nextAfterId: 6 })
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushView()
+    expect(mocks.fetchConsultMessages).toHaveBeenCalledWith(1, { afterId: 4 })
+    expect(mocks.fetchConsultMessages).toHaveBeenLastCalledWith(1, { afterId: 5 })
+    expect(host.textContent).toContain('unseen customer message')
+    expect(host.querySelectorAll('.messages li')).toHaveLength(4)
+  })
+
 })

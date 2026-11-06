@@ -56,6 +56,14 @@
         LEFT JOIN shop s ON s.id=c.shop_id
         LEFT JOIN app_user u ON u.id=c.user_id
         WHERE c.merchant_id=#{merchantId} AND c.region=#{region} AND c.user_id IS NOT NULL
+        <if test="shopIds != null">
+            <choose>
+                <when test="shopIds.size() > 0">
+                    AND c.shop_id IN <foreach collection="shopIds" item="shopId" open="(" separator="," close=")">#{shopId}</foreach>
+                </when>
+                <otherwise>AND 1=0</otherwise>
+            </choose>
+        </if>
         ORDER BY c.updated_at DESC, c.id DESC
     </select>
 
@@ -64,9 +72,17 @@
         VALUES(#{sessionId},#{region},#{senderType},#{senderId},#{content})
     </insert>
 
+    <select id="lockSession" resultType="java.lang.Long">
+        SELECT id FROM consult_session WHERE id=#{id} FOR UPDATE
+    </select>
+
     <select id="selectMessages" resultType="com.tuowei.dazhongdianping.module.consult.model.ConsultMessageRow">
         SELECT id,session_id,region,sender_type,sender_id,content,created_at
-        FROM consult_message WHERE session_id=#{sessionId} ORDER BY id
+        FROM consult_message WHERE session_id=#{sessionId}
+        <if test="beforeId != null">AND id &lt; #{beforeId}</if>
+        <if test="afterId != null">AND id &gt; #{afterId}</if>
+        ORDER BY id <choose><when test="afterId != null">ASC</when><otherwise>DESC</otherwise></choose>
+        LIMIT #{limit}
     </select>
 
     <update id="updateSessionOnMessage">

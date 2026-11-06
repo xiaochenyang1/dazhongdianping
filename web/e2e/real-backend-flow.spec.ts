@@ -42,7 +42,7 @@ async function loginToAdminConsole(page: Page, account = 'admin', password = 'ad
 
 async function navigateAdmin(page: Page, path: string) {
   // Keep pending requests alive by navigating through the app instead of reloading the document.
-  const menu = page.getByRole('navigation', { name: '后台菜单' })
+  const menu = page.getByRole('navigation', { name: /^(后台菜单|Admin navigation)$/ })
   const link = menu.locator(`a[href="${path}"]`)
   await expect(link).toBeVisible()
   await link.click()
@@ -1322,9 +1322,23 @@ test('customer and merchant exchange live consultation replies and support close
   const userDiagnostics = collectBrowserErrors(page)
   const merchantDiagnostics = collectBrowserErrors(merchantPage)
   try {
+    for (let i = 0; i < 55; i++) {
+      await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/consult/sessions/${consultation.id}/messages`, {
+        headers: userHeaders, data: { content: `Earlier question ${i}` },
+      }))
+    }
     await page.goto(`/user/consult/${consultation.id}`)
+    await expect(page.getByText('Earlier question 54', { exact: true })).toBeVisible()
+    await expect(page.getByText('Earlier question 0', { exact: true })).toHaveCount(0)
+    await page.getByTestId('consult-load-older').click()
+    await expect(page.getByText('Earlier question 0', { exact: true })).toHaveCount(1)
+    await expect(page.getByTestId('consult-load-older')).toHaveCount(0)
+    await page.locator('.chat-messages').evaluate((list) => { list.scrollTop = 0 })
+    await expect(page.getByText('Earlier question 0', { exact: true })).toBeInViewport()
+    await page.screenshot({ path: test.info().outputPath('consult-customer-history.png'), fullPage: true })
     await page.getByTestId('consult-input').fill('Is a table available tonight?')
     await page.getByTestId('consult-send').click()
+    await expect(page.getByText('Is a table available tonight?', { exact: true })).toBeInViewport()
     await merchantPage.goto(`${merchantBaseURL}/login`)
     await merchantPage.locator('input[autocomplete="username"]').fill('merchant_eu_sichuan@example.com')
     await merchantPage.locator('input[autocomplete="current-password"]').fill('merchant123456')
@@ -1332,9 +1346,17 @@ test('customer and merchant exchange live consultation replies and support close
     await expect(merchantPage).toHaveURL(`${merchantBaseURL}/dashboard`)
     await merchantPage.goto(`${merchantBaseURL}/consult`)
     await merchantPage.getByTestId(`session-${consultation.id}`).click()
+    await expect(merchantPage.getByTestId('consult-load-older')).toBeVisible()
+    await merchantPage.getByTestId('consult-load-older').click()
+    await expect(merchantPage.getByText('Earlier question 0', { exact: true })).toHaveCount(1)
+    await expect(merchantPage.getByTestId('consult-load-older')).toHaveCount(0)
+    await merchantPage.locator('.messages').evaluate((list) => { list.scrollTop = 0 })
+    await expect(merchantPage.getByText('Earlier question 0', { exact: true })).toBeInViewport()
+    await merchantPage.screenshot({ path: test.info().outputPath('consult-merchant-history.png'), fullPage: true })
     await expect(merchantPage.locator('.messages')).toContainText('Is a table available tonight?')
     await merchantPage.getByTestId('consult-input').fill('Yes, we have a table at seven.')
     await merchantPage.getByTestId('consult-send').click()
+    await expect(merchantPage.getByText('Yes, we have a table at seven.', { exact: true })).toBeInViewport()
     await expect(page.locator('.chat-messages')).toContainText('Yes, we have a table at seven.')
     await page.getByTestId('consult-input').fill('Thank you, see you then.')
     await page.getByTestId('consult-send').click()
@@ -1411,7 +1433,7 @@ test('admin delivers a private invoice PDF and customer explicitly confirms rece
   try {
     await loginToAdminConsole(adminPage)
     await adminPage.locator('.admin-topbar select').selectOption('EU')
-    await adminPage.goto(`${adminBaseURL}/data/invoices`)
+    await navigateAdmin(adminPage, '/data/invoices')
     const row = adminPage.getByTestId(`admin-invoice-${invoice.id}`)
     await expect(row).toContainText('Synthetic test company')
     await adminPage.getByTestId(`invoice-number-${invoice.id}`).fill(`TEST-PDF-${invoice.id}`)

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/b/v1/consult")
@@ -29,8 +30,11 @@ public class MerchantConsultController {
     }
 
     @GetMapping("/sessions/{id}/messages")
-    public ApiResponse<Map<String, Object>> messages(@PathVariable Long id) {
-        return ApiResponse.success(service.messages(id));
+    public ApiResponse<Map<String, Object>> messages(@PathVariable Long id,
+            @RequestParam(required = false) Long beforeId,
+            @RequestParam(required = false) Long afterId,
+            @RequestParam(required = false) Integer pageSize) {
+        return ApiResponse.success(service.messages(id, beforeId, afterId, pageSize));
     }
 
     @PostMapping("/sessions/{id}/messages")

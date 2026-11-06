@@ -48,14 +48,40 @@ class FakeConsult extends ConsultRepository {
   Object? sendError;
   Completer<void>? loadGate;
   Completer<void>? sendGate;
+  int pageLimit = 50;
+  int sendId = 2;
+  Object? historyError;
+  final queries = <Map<String, int?>>[];
   int loads = 0;
   int sends = 0;
   @override
-  Future<ConsultThread> loadThread(int sessionId) async {
+  Future<ConsultThread> loadThread(
+    int sessionId, {
+    int? beforeId,
+    int? afterId,
+    int? pageSize,
+  }) async {
     loads++;
-    final snapshot = [...messages];
+    queries.add({'beforeId': beforeId, 'afterId': afterId});
+    final size = pageSize ?? pageLimit;
+    var snapshot =
+        messages
+            .where(
+              (m) =>
+                  (beforeId == null || m.id < beforeId) &&
+                  (afterId == null || m.id > afterId),
+            )
+            .toList()
+          ..sort((a, b) => a.id.compareTo(b.id));
+    final hasMore = snapshot.length > size;
+    snapshot = afterId == null
+        ? snapshot
+              .skip((snapshot.length - size).clamp(0, snapshot.length))
+              .toList()
+        : snapshot.take(size).toList();
     await loadGate?.future;
     if (loadError != null) throw loadError!;
+    if (beforeId != null && historyError != null) throw historyError!;
     return ConsultThread(
       session: ConsultSession(
         id: sessionId,
@@ -65,6 +91,9 @@ class FakeConsult extends ConsultRepository {
         unread: 0,
       ),
       messages: snapshot,
+      hasMore: hasMore,
+      nextBeforeId: snapshot.isEmpty ? null : snapshot.first.id,
+      nextAfterId: snapshot.isEmpty ? afterId ?? 0 : snapshot.last.id,
     );
   }
 
@@ -73,7 +102,7 @@ class FakeConsult extends ConsultRepository {
     sends++;
     await sendGate?.future;
     if (sendError != null) throw sendError!;
-    final message = ConsultMessage(id: 2, senderType: 1, content: content);
+    final message = ConsultMessage(id: sendId, senderType: 1, content: content);
     messages = [...messages, message];
     return message;
   }
@@ -237,6 +266,70 @@ void main() {
     expect(find.text('Different conversation'), findsOneWidget);
     expect(find.text('Welcome'), findsNothing);
   });
+
+  testWidgets(
+    'loads history with retry without moving the incremental read cursor',
+    (tester) async {
+      final repo = FakeConsult()..pageLimit = 2;
+      repo.messages = List.generate(
+        4,
+        (i) => ConsultMessage(
+          id: i + 1,
+          senderType: 2,
+          content: 'Message ${i + 1}',
+        ),
+      );
+      await mountChat(tester, repo);
+      expect(find.text('Message 1'), findsNothing);
+      expect(find.text('Message 4'), findsOneWidget);
+      repo.historyError = StateError('history offline');
+      await tester.tap(find.byKey(const Key('consult-load-older')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('consult-history-error')), findsOneWidget);
+      expect(find.text('Message 4'), findsOneWidget);
+      repo.historyError = null;
+      await tester.tap(find.byKey(const Key('consult-load-older')));
+      await tester.pumpAndSettle();
+      expect(repo.queries.last, {'beforeId': 3, 'afterId': null});
+      expect(find.byKey(const Key('consult-load-older')), findsNothing);
+      expect(find.text('Message 1'), findsOneWidget);
+      repo.messages.add(
+        const ConsultMessage(id: 5, senderType: 2, content: 'Unseen reply'),
+      );
+      repo.sendId = 6;
+      await tester.enterText(
+        find.byKey(const Key('consult-input')),
+        'Sent after reply',
+      );
+      await tester.tap(find.byKey(const Key('consult-send')));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(repo.queries.last, {'beforeId': null, 'afterId': 4});
+      expect(find.text('Unseen reply'), findsOneWidget);
+      expect(find.text('Sent after reply'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'catches up multiple pages after suspension and handles initially empty chats',
+    (tester) async {
+      final repo = FakeConsult()..pageLimit = 2;
+      repo.messages = [];
+      await mountChat(tester, repo);
+      repo.messages = List.generate(
+        5,
+        (i) =>
+            ConsultMessage(id: i + 1, senderType: 2, content: 'Reply ${i + 1}'),
+      );
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(repo.queries.skip(1).map((q) => q['afterId']), [0, 2, 4]);
+      expect(find.text('Reply 5'), findsOneWidget);
+      expect(find.text('Reply 3'), findsOneWidget);
+      expect(find.byKey(const Key('consult-load-older')), findsNothing);
+    },
+  );
 
   testWidgets('consult notification acknowledges and opens its session', (
     tester,

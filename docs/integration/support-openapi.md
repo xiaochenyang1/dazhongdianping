@@ -2,6 +2,8 @@
 
 区域取请求头 `X-Region`（缺省 CN）。开放读接口除外：验签通过后使用 `open_app.region`，不信任客户端 `X-Region`。
 
+商户与用户在线咨询的消息分页、增量补收及门店权限见 [在线咨询契约](consult.md)。
+
 ## 客服工单
 
 表：`support_ticket`、`ticket_message`。

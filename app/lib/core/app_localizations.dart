@@ -51,6 +51,7 @@ class AppLocalizations {
     'consultSessionsEmpty': '还没有咨询会话，去商户页发起咨询吧。',
     'consultLoadFailed': '咨询加载失败：{error}',
     'consultSendFailed': '发送失败：{error}',
+    'consultLoadOlder': '查看更早消息',
     'consultMessagesEmpty': '还没有消息，发条消息开始咨询吧。',
     'consultInputHint': '输入消息...',
     'consultSend': '发送',
@@ -1229,6 +1230,7 @@ class AppLocalizations {
     'consultSessionsEmpty': '還沒有諮詢會話，去商戶頁發起諮詢吧。',
     'consultLoadFailed': '諮詢載入失敗：{error}',
     'consultSendFailed': '發送失敗：{error}',
+    'consultLoadOlder': '查看更早訊息',
     'consultMessagesEmpty': '還沒有訊息，發條訊息開始諮詢吧。',
     'consultInputHint': '輸入訊息...',
     'consultSend': '發送',
@@ -2407,6 +2409,7 @@ class AppLocalizations {
     'consultSessionsEmpty': 'No chats yet — start one from a shop page.',
     'consultLoadFailed': 'Failed to load chat: {error}',
     'consultSendFailed': 'Failed to send: {error}',
+    'consultLoadOlder': 'Load earlier messages',
     'consultMessagesEmpty': 'No messages yet — say hello to start.',
     'consultInputHint': 'Type a message...',
     'consultSend': 'Send',
@@ -3828,6 +3831,7 @@ class AppLocalizations {
       _withError('consultLoadFailed', error);
   String consultSendFailed(Object error) =>
       _withError('consultSendFailed', error);
+  String get consultLoadOlder => _text('consultLoadOlder');
   String get consultMessagesEmpty => _text('consultMessagesEmpty');
   String get consultInputHint => _text('consultInputHint');
   String get consultSend => _text('consultSend');

@@ -19,13 +19,13 @@ class ConsultSession {
   final String? lastMessageAt;
 
   factory ConsultSession.fromJson(Map<String, dynamic> json) => ConsultSession(
-        id: (json['id'] as num?)?.toInt() ?? 0,
-        shopId: (json['shopId'] as num?)?.toInt() ?? 0,
-        shopName: json['shopName'] as String? ?? '',
-        lastMessage: json['lastMessage'] as String? ?? '',
-        unread: (json['unread'] as num?)?.toInt() ?? 0,
-        lastMessageAt: json['lastMessageAt'] as String?,
-      );
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    shopId: (json['shopId'] as num?)?.toInt() ?? 0,
+    shopName: json['shopName'] as String? ?? '',
+    lastMessage: json['lastMessage'] as String? ?? '',
+    unread: (json['unread'] as num?)?.toInt() ?? 0,
+    lastMessageAt: json['lastMessageAt'] as String?,
+  );
 }
 
 /// 咨询消息。senderType：1=用户 2=商家。
@@ -43,18 +43,27 @@ class ConsultMessage {
   final String? createdAt;
 
   factory ConsultMessage.fromJson(Map<String, dynamic> json) => ConsultMessage(
-        id: (json['id'] as num?)?.toInt() ?? 0,
-        senderType: (json['senderType'] as num?)?.toInt() ?? 1,
-        content: json['content'] as String? ?? '',
-        createdAt: json['createdAt'] as String?,
-      );
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    senderType: (json['senderType'] as num?)?.toInt() ?? 1,
+    content: json['content'] as String? ?? '',
+    createdAt: json['createdAt'] as String?,
+  );
 }
 
 /// 会话消息线程。
 class ConsultThread {
-  const ConsultThread({required this.session, required this.messages});
+  const ConsultThread({
+    required this.session,
+    required this.messages,
+    this.hasMore = false,
+    this.nextBeforeId,
+    this.nextAfterId = 0,
+  });
   final ConsultSession session;
   final List<ConsultMessage> messages;
+  final bool hasMore;
+  final int? nextBeforeId;
+  final int nextAfterId;
 }
 
 /// C端在线咨询仓库。
@@ -64,7 +73,10 @@ class ConsultRepository {
   final JsonApi api;
 
   Future<ConsultSession> startSession(int shopId) async {
-    final result = await api.postJson('/api/c/v1/consult/sessions', body: {'shopId': shopId});
+    final result = await api.postJson(
+      '/api/c/v1/consult/sessions',
+      body: {'shopId': shopId},
+    );
     return ConsultSession.fromJson(result);
   }
 
@@ -72,18 +84,47 @@ class ConsultRepository {
     final result = await api.getJson('/api/c/v1/consult/sessions');
     final raw = result['value'] ?? result['list'];
     if (raw is! List) return const [];
-    return raw.whereType<Map<String, dynamic>>().map(ConsultSession.fromJson).toList();
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(ConsultSession.fromJson)
+        .toList();
   }
 
-  Future<ConsultThread> loadThread(int sessionId) async {
-    final result = await api.getJson('/api/c/v1/consult/sessions/$sessionId/messages');
+  Future<ConsultThread> loadThread(
+    int sessionId, {
+    int? beforeId,
+    int? afterId,
+    int? pageSize,
+  }) async {
+    final result = await api.getJson(
+      '/api/c/v1/consult/sessions/$sessionId/messages',
+      query: {
+        if (beforeId != null) 'beforeId': beforeId,
+        if (afterId != null) 'afterId': afterId,
+        if (pageSize != null) 'pageSize': pageSize,
+      },
+    );
     final session = ConsultSession.fromJson(
-        (result['session'] as Map<String, dynamic>?) ?? const {});
+      (result['session'] as Map<String, dynamic>?) ?? const {},
+    );
     final rawMessages = result['messages'];
     final messages = rawMessages is List
-        ? rawMessages.whereType<Map<String, dynamic>>().map(ConsultMessage.fromJson).toList()
+        ? rawMessages
+              .whereType<Map<String, dynamic>>()
+              .map(ConsultMessage.fromJson)
+              .toList()
         : <ConsultMessage>[];
-    return ConsultThread(session: session, messages: messages);
+    return ConsultThread(
+      session: session,
+      messages: messages,
+      hasMore: result['hasMore'] as bool? ?? false,
+      nextBeforeId:
+          (result['nextBeforeId'] as num?)?.toInt() ??
+          (messages.isEmpty ? null : messages.first.id),
+      nextAfterId:
+          (result['nextAfterId'] as num?)?.toInt() ??
+          (messages.isEmpty ? afterId ?? 0 : messages.last.id),
+    );
   }
 
   Future<ConsultMessage> sendMessage(int sessionId, String content) async {

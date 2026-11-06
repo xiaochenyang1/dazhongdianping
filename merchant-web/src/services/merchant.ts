@@ -426,7 +426,15 @@ export interface ConsultMessage {
   content: string
   createdAt?: string
 }
+export interface ConsultMessageQuery {
+  beforeId?: number
+  afterId?: number
+  pageSize?: number
+}
 export interface ConsultThread {
+  hasMore: boolean
+  nextBeforeId: number | null
+  nextAfterId: number
   session: ConsultSession
   messages: ConsultMessage[]
 }
@@ -453,7 +461,7 @@ export function seatWaitlist(id: number) { return apiPost<WaitlistEntry>(`/api/b
 export function passWaitlist(id: number) { return apiPost<WaitlistEntry>(`/api/b/v1/waitlist/${id}/pass`) }
 
 export function fetchConsultSessions() { return apiGet<ConsultSession[]>('/api/b/v1/consult/sessions') }
-export function fetchConsultMessages(id: number) { return apiGet<ConsultThread>(`/api/b/v1/consult/sessions/${id}/messages`) }
+export function fetchConsultMessages(id: number, query?: ConsultMessageQuery) { return apiGet<ConsultThread>(`/api/b/v1/consult/sessions/${id}/messages`, query) }
 export function sendConsultMessage(id: number, content: string) { return apiPost<ConsultMessage>(`/api/b/v1/consult/sessions/${id}/messages`, { content }) }
 
 export function fetchAds(params?: object) { return apiGet<PageResult<MerchantAdCampaign>>('/api/b/v1/ads', params) }

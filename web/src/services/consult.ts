@@ -1,5 +1,5 @@
 import { apiGet, apiPost } from '@/lib/http'
-import type { ConsultMessage, ConsultSession, ConsultThread } from '@/types/consult'
+import type { ConsultMessage, ConsultMessageQuery, ConsultSession, ConsultThread } from '@/types/consult'
 
 /** 发起或复用与门店的咨询会话（需登录）。 */
 export function startConsult(shopId: number) {
@@ -11,9 +11,9 @@ export function fetchConsultSessions() {
   return apiGet<ConsultSession[]>('/api/c/v1/consult/sessions')
 }
 
-/** 会话消息（读取后未读清零）。 */
-export function fetchConsultThread(sessionId: number) {
-  return apiGet<ConsultThread>(`/api/c/v1/consult/sessions/${sessionId}/messages`)
+/** 最近消息、历史分页或增量补收。 */
+export function fetchConsultThread(sessionId: number, query?: ConsultMessageQuery) {
+  return apiGet<ConsultThread>(`/api/c/v1/consult/sessions/${sessionId}/messages`, query)
 }
 
 /** 发送咨询消息。 */
