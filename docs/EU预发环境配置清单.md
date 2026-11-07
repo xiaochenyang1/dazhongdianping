@@ -141,6 +141,11 @@ Secrets：
 | `DEPLOY_SSH_PRIVATE_KEY` | GitHub Actions 发布用 SSH 私钥 |
 | `DEPLOY_KNOWN_HOSTS` | 目标机 known_hosts 内容 |
 
+Environment protection：
+
+- `pre` 至少配置一条 `required_reviewers` 规则并指定真实审批人；仅有 `environment: pre` 声明而没有 protection rule 不构成人工审批闸门。
+- 建议启用 `prevent_self_review`，关闭管理员绕过，并用 deployment branch/tag policy 限制允许发版的主干或不可变候选标签。审计脚本把缺少审批人视为阻塞，把后三项作为明确警告输出。
+
 ## 4. 最小验收顺序
 
 1. 隐私告知覆盖 30 分钟以内的广告反刷 IP 临时处理；完成可信代理配置，并从代理入口验证真实地址恢复、伪造转发头拒绝和后端不可绕过代理直连。
@@ -159,7 +164,7 @@ Secrets：
 - Stripe CLI 1.50.1 已安装，但没有真实 Stripe test 凭证与 Stripe CLI 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
-- 2026-11-07 运行 `github-environment-preflight.ps1` 的只读审计仍显示 GitHub `pre` Environment 只有 6 个固定变量名，缺少 10 个发布变量和 `DEPLOY_KNOWN_HOSTS`、`DEPLOY_SSH_PRIVATE_KEY` 两个 secret；目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证均未齐备。`prod` Environment 尚未创建。
+- 2026-11-07 运行 `github-environment-preflight.ps1` 的只读审计仍显示 GitHub `pre` Environment 只有 6 个固定变量名，缺少 10 个发布变量、`DEPLOY_KNOWN_HOSTS` / `DEPLOY_SSH_PRIVATE_KEY` 两个 secret 和 `required_reviewers` 审批规则；管理员仍可绕过，且未限制部署分支或标签。目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证均未齐备；`prod` Environment 尚未创建。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
 ## 6. 已完成的仓库侧准备
