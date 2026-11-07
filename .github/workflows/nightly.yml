@@ -142,6 +142,19 @@ jobs:
           if-no-files-found: ignore
           path: web/test-results/creator-review/
 
+      - name: Verify flash-sale orders on MySQL
+        timeout-minutes: 15
+        run: python3 scripts/ci/seckill-order-integration.py --server docker
+
+      - name: Preserve flash-sale order evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-seckill-orders-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: reports/seckill-order-integration/
+
       - name: Preserve browser failure evidence
         if: failure()
         uses: actions/upload-artifact@v4

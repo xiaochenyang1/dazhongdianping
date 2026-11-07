@@ -43,13 +43,13 @@ public class TradeCompensationService {
 
         List<OrderRow> expiredOrders = mapper.selectExpiredUnpaidOrders(BATCH_SIZE);
         for (OrderRow order : expiredOrders) {
-            if (mapper.closeExpiredUnpaidOrder(order.getId()) == 1) {
-                closedOrders++;
-                if (mapper.restoreDealStock(order.getDealId(), order.getQuantity()) == 1) {
+            try {
+                if (tradeService.closeExpiredOrder(order.getId())) {
+                    closedOrders++;
                     restoredStockOrders++;
                 }
-                // 超时关单释放已锁定的营销券，避免券被永久占用。
-                marketingCouponService.releaseForOrder(order.getId());
+            } catch (RuntimeException failure) {
+                log.warn("expired order close failed: orderId={}", order.getId(), failure);
             }
         }
 
@@ -63,6 +63,13 @@ public class TradeCompensationService {
         }
 
         int reconciledRefunds = 0;
+        for (RefundRow refund : mapper.selectUnsubmittedAutoRefunds(BATCH_SIZE)) {
+            try {
+                if (tradeService.processAutomaticRefund(refund.getOrderId())) reconciledRefunds++;
+            } catch (RuntimeException failure) {
+                log.warn("automatic refund submission failed: refundId={}", refund.getId(), failure);
+            }
+        }
         List<RefundRow> processingRefunds = mapper.selectProcessingRefunds(BATCH_SIZE);
         for (RefundRow refund : processingRefunds) {
             try {

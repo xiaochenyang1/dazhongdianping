@@ -25,9 +25,9 @@ public class MarketingCampaignController {
         return ApiResponse.success(service.seckills());
     }
 
-    @PostMapping("/seckill/{id}/claim")
+    @PostMapping({"/seckill/{id}/claim", "/seckill/{id}/orders"})
     public ApiResponse<Map<String, Object>> claimSeckill(@PathVariable Long id) {
-        return ApiResponse.success("秒杀已领取", "marketing.seckill_claimed", service.claimSeckill(id));
+        return ApiResponse.success("秒杀订单已创建", "marketing.seckill_claimed", service.claimSeckill(id));
     }
 
     @GetMapping("/groupbuy")

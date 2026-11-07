@@ -178,7 +178,10 @@ CREATE TABLE review (
 );
 CREATE TABLE `order` (
   id BIGINT NOT NULL PRIMARY KEY,
-  unit_price DECIMAL(10,2) NOT NULL DEFAULT 0
+  unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+  status TINYINT NOT NULL DEFAULT 1,
+  pay_status TINYINT NOT NULL DEFAULT 0,
+  expire_at DATETIME NULL
 );
 CREATE TABLE merchant_role (
   id BIGINT NOT NULL PRIMARY KEY,
@@ -222,6 +225,10 @@ INSERT INTO creator_task_claim(id,task_id,user_id,region,status,completed_at) VA
   (90011,90010,7,'CN',1,NULL),(90012,90010,8,'CN',2,'2026-10-01 12:00:00');
 INSERT INTO growth_points_log(user_id,type,action,biz_id,change_amount) VALUES
   (8,2,'creator_task',90012,20),(8,1,'creator_task',90012,999),(8,2,'other',90012,888);
+INSERT INTO `order`(id,status,pay_status) VALUES(90020,1,0),(90021,2,0),(90022,1,1),(90023,1,2);
+INSERT INTO seckill_event(id,region,shop_id,merchant_id,deal_id,title,seckill_price,stock,sold,start_at,end_at)
+  VALUES(90030,'CN',1,1,1,'Legacy flash sale',9.90,2,1,'2026-01-01','2027-01-01');
+INSERT INTO seckill_claim(event_id,user_id,region) VALUES(90030,7,'CN');
 SQL
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -235,10 +242,18 @@ SELECT COUNT(*) FROM creator_task_claim WHERE task_title='Legacy terms' AND task
        OR (id=90012 AND status=2 AND reward_points=20 AND completed_at='2026-10-01 12:00:00'));")"
 [[ "$legacy_probe" == "2" ]] || fail "migration 28 did not freeze historical terms and the actual awarded ledger amount"
 mysql --defaults-extra-file="$database_defaults" -e "UPDATE creator_task SET title='Changed later',reward_points=777 WHERE id=90010;"
+seckill_legacy="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e "
+SELECT
+  (SELECT COUNT(*) FROM \`order\` WHERE id IN (90020,90022) AND inventory_released=FALSE AND order_source='deal' AND campaign_id IS NULL) +
+  (SELECT COUNT(*) FROM \`order\` WHERE id IN (90021,90023) AND inventory_released=TRUE) +
+  (SELECT COUNT(*) FROM seckill_claim WHERE event_id=90030 AND order_id IS NULL AND status=0) +
+  (SELECT COUNT(*) FROM seckill_event WHERE id=90030 AND sold=1);")"
+[[ "$seckill_legacy" == "6" ]] || fail "migration 29 did not preserve legacy participation and released inventory"
+
 
 history_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$history_count" == "26" ]] || fail "expected 26 migration history rows, found $history_count"
+[[ "$history_count" == "27" ]] || fail "expected 27 migration history rows, found $history_count"
 cleanup_marker_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e \
   "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='privacy_delete_task' AND column_name='domain_cleanup_version' AND column_default='0';")"
 [[ "$cleanup_marker_count" == "1" ]] || fail "historical deletions must receive a pending cleanup marker"
@@ -275,8 +290,12 @@ SELECT
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone') +
   (SELECT COUNT(*) FROM reservation WHERE id=1 AND time_zone='Europe/Paris') +
   (SELECT IF(COUNT(*)=11,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND column_name IN ('task_title','task_description','reward_points','evidence_type','evidence_id','submission_note','submission_version','submitted_at','review_note','reviewed_by','reviewed_at')) +
-  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND index_name='idx_creator_claim_review');")"
-[[ "$schema_probe" == "24" ]] || fail "migrations 03-28 schema/data probe expected 24, found $schema_probe"
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND index_name='idx_creator_claim_review') +
+  (SELECT IF(COUNT(*)=6,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name IN ('order_source','campaign_id','campaign_title','deal_title_snapshot','coupon_valid_end','inventory_released')) +
+  (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='seckill_claim' AND column_name IN ('order_id','status','updated_at')) +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='seckill_claim' AND index_name='uk_seckill_claim_order') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='refund' AND column_name='refund_type');")"
+[[ "$schema_probe" == "28" ]] || fail "migrations 03-29 schema/data probe expected 28, found $schema_probe"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -284,7 +303,7 @@ SELECT
   --lock-file "$run_dir/repeat.lock"
 repeat_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$repeat_count" == "26" ]] || fail "repeat apply changed migration history"
+[[ "$repeat_count" == "27" ]] || fail "repeat apply changed migration history"
 repeat_legacy="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e "SELECT GROUP_CONCAT(CONCAT(status,':',reward_points,':',task_title) ORDER BY id) FROM creator_task_claim WHERE id IN(90011,90012);")"
 [[ "$repeat_legacy" == "1:50:Legacy terms,2:20:Legacy terms" ]] || fail "repeat apply rewrote frozen historical claims"
 
@@ -413,8 +432,8 @@ mysql --defaults-extra-file="$fresh_defaults" < "$source_dir/02_seed_data.sql"
 
 fresh_history_counts="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e \
   "SELECT SUM(state='BASELINED' AND version<=14), SUM(state='APPLIED' AND version>14) FROM dzdp_schema_migration;")"
-[[ "$fresh_history_counts" == $'12\t14' ]] ||
-  fail "fresh schema must baseline versions 03-14 and apply 15-28; found $fresh_history_counts"
+[[ "$fresh_history_counts" == $'12\t15' ]] ||
+  fail "fresh schema must baseline versions 03-14 and apply 15-29; found $fresh_history_counts"
 
 fresh_schema_probe="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e "
 SELECT
@@ -438,8 +457,12 @@ SELECT
   (SELECT COUNT(*) FROM city WHERE region='EU' AND code='BER' AND status=0 AND time_zone='Europe/Berlin') +
   (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='reservation' AND column_name='time_zone') +
   (SELECT IF(COUNT(*)=11,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND column_name IN ('task_title','task_description','reward_points','evidence_type','evidence_id','submission_note','submission_version','submitted_at','review_note','reviewed_by','reviewed_at')) +
-  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND index_name='idx_creator_claim_review');")"
-[[ "$fresh_schema_probe" == "19" ]] ||
-  fail "fresh schema plus migrations 15-28 probe expected 19, found $fresh_schema_probe"
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='creator_task_claim' AND index_name='idx_creator_claim_review') +
+  (SELECT IF(COUNT(*)=6,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name IN ('order_source','campaign_id','campaign_title','deal_title_snapshot','coupon_valid_end','inventory_released')) +
+  (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='seckill_claim' AND column_name IN ('order_id','status','updated_at')) +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='seckill_claim' AND index_name='uk_seckill_claim_order') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='refund' AND column_name='refund_type');")"
+[[ "$fresh_schema_probe" == "23" ]] ||
+  fail "fresh schema plus migrations 15-29 probe expected 23, found $fresh_schema_probe"
 
 printf '[mysql-migration-integration] old baseline, creator legacy claims, fresh baseline 14, repeat, verify, DB lock, checksum drift, and failure blocking passed.\n'

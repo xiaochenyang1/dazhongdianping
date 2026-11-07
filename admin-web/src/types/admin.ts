@@ -132,6 +132,9 @@ export interface AdminPrivacyTask {
 }
 
 export interface AdminOrder {
+  orderSource?: string
+  campaignId?: number | null
+  campaignTitle?: string
   id: number
   orderNo: string
   merchantId: number

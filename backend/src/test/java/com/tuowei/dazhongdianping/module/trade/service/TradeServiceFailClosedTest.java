@@ -28,6 +28,7 @@ class TradeServiceFailClosedTest {
 
     private final TradeMapper mapper = mock(TradeMapper.class);
     private final PaymentChannelResolver resolver = mock(PaymentChannelResolver.class);
+    private final OrderInventoryService inventory = mock(OrderInventoryService.class);
     private final TradeService service = new TradeService(
             mapper,
             mock(com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper.class),
@@ -36,7 +37,8 @@ class TradeServiceFailClosedTest {
             mock(NotificationService.class),
             "payment-secret-for-runtime-safety-tests-001",
             resolver,
-            mock(com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService.class)
+            mock(com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService.class),
+            inventory
     );
 
     @BeforeEach
@@ -82,6 +84,7 @@ class TradeServiceFailClosedTest {
         order.setAmount(new BigDecimal("12.50"));
         order.setCurrency("EUR");
         when(mapper.selectUserOrder(2L, 1L, "EU")).thenReturn(order);
+        when(inventory.lockOrder(2L)).thenReturn(order);
 
         PaymentChannel channel = mock(PaymentChannel.class);
         reset(resolver);
@@ -93,7 +96,7 @@ class TradeServiceFailClosedTest {
         payment.setClientSecret("pi_existing_secret");
         payment.setAmount(order.getAmount());
         payment.setCurrency(order.getCurrency());
-        when(mapper.selectPayment(2L)).thenReturn(payment);
+        when(mapper.selectPaymentForUpdate(2L)).thenReturn(payment);
 
         Map<String, Object> result = service.pay(2L);
 
@@ -106,7 +109,7 @@ class TradeServiceFailClosedTest {
 
     private void verifyNoMoreInteractionsOnPaymentPaths() {
         org.mockito.Mockito.verify(mapper, org.mockito.Mockito.never())
-            .selectPayment(org.mockito.ArgumentMatchers.anyLong());
+            .selectPaymentForUpdate(org.mockito.ArgumentMatchers.anyLong());
         org.mockito.Mockito.verify(mapper, org.mockito.Mockito.never())
             .insertPayment(org.mockito.ArgumentMatchers.any());
     }

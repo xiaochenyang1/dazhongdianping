@@ -146,6 +146,19 @@ class AppLocalizations {
     'seckillTitle': '秒杀',
     'seckillClaim': '抢购',
     'seckillEmpty': '暂时没有秒杀。',
+    'seckillRules': '每人每场限购一件，不叠加优惠券。请在订单截止时间前付款，最多保留 15 分钟。成功购买后退款仍计入限购。',
+    'seckillSoldOut': '已售罄',
+    'seckillLimitReached': '已参与',
+    'seckillViewOrder': '查看订单',
+    'seckillLoadFailed': '秒杀活动加载失败，请重试。',
+    'seckillUnavailable': '秒杀活动或套餐已失效。',
+    'seckillBuying': '下单中…',
+    'seckillStock': '剩余',
+    'flashSaleOrder': '秒杀订单',
+    'orderPayDeadline': '支付截止',
+    'orderPaymentExpired': '订单支付时间已过，请取消后重新下单。',
+    'orderClosed': '已关闭',
+    'orderAutomaticRefund': '订单关闭后收到付款，款项将原路退回。',
     'groupBuyTitle': '拼团',
     'groupBuyOpen': '开团',
     'groupBuyJoin': '参团',
@@ -1347,6 +1360,19 @@ class AppLocalizations {
     'seckillTitle': '秒殺',
     'seckillClaim': '搶購',
     'seckillEmpty': '暫時沒有秒殺。',
+    'seckillRules': '每人每場限購一件，不疊加優惠券。請在訂單截止時間前付款，最多保留 15 分鐘。成功購買後退款仍計入限購。',
+    'seckillSoldOut': '已售罄',
+    'seckillLimitReached': '已參與',
+    'seckillViewOrder': '查看訂單',
+    'seckillLoadFailed': '秒殺活動載入失敗，請重試。',
+    'seckillUnavailable': '秒殺活動或套餐已失效。',
+    'seckillBuying': '下單中…',
+    'seckillStock': '剩餘',
+    'flashSaleOrder': '秒殺訂單',
+    'orderPayDeadline': '付款截止',
+    'orderPaymentExpired': '訂單付款時間已過，請取消後重新下單。',
+    'orderClosed': '已關閉',
+    'orderAutomaticRefund': '訂單關閉後收到付款，款項將原路退回。',
     'groupBuyTitle': '拼團',
     'groupBuyOpen': '開團',
     'groupBuyJoin': '參團',
@@ -2555,8 +2581,21 @@ class AppLocalizations {
     'invoiceNumber': 'Invoice number',
     'invoiceTaxAmount': 'Tax amount',
     'seckillTitle': 'Flash sale',
-    'seckillClaim': 'Claim',
+    'seckillClaim': 'Buy now',
     'seckillEmpty': 'No flash sales right now.',
+    'seckillRules': 'One purchase per person per event, including refunded purchases. No additional coupons. Pay before your order deadline, within 15 minutes.',
+    'seckillSoldOut': 'Sold out',
+    'seckillLimitReached': 'Already participated',
+    'seckillViewOrder': 'View order',
+    'seckillLoadFailed': 'Could not load flash sales. Please retry.',
+    'seckillUnavailable': 'This flash sale or offer is no longer available.',
+    'seckillBuying': 'Creating order…',
+    'seckillStock': 'Left',
+    'flashSaleOrder': 'Flash-sale order',
+    'orderPayDeadline': 'Pay before',
+    'orderPaymentExpired': 'The payment deadline has passed. Cancel this order to purchase again.',
+    'orderClosed': 'Closed',
+    'orderAutomaticRefund': 'Payment arrived after the order closed. It will be refunded to the original payment method.',
     'groupBuyTitle': 'Group buy',
     'groupBuyOpen': 'Start a group',
     'groupBuyJoin': 'Join',
@@ -4009,6 +4048,19 @@ class AppLocalizations {
   String get seckillTitle => _text('seckillTitle');
   String get seckillClaim => _text('seckillClaim');
   String get seckillEmpty => _text('seckillEmpty');
+  String get seckillRules => _text('seckillRules');
+  String get seckillSoldOut => _text('seckillSoldOut');
+  String get seckillLimitReached => _text('seckillLimitReached');
+  String get seckillViewOrder => _text('seckillViewOrder');
+  String get seckillLoadFailed => _text('seckillLoadFailed');
+  String get seckillUnavailable => _text('seckillUnavailable');
+  String get seckillBuying => _text('seckillBuying');
+  String get seckillStock => _text('seckillStock');
+  String get flashSaleOrder => _text('flashSaleOrder');
+  String get orderPayDeadline => _text('orderPayDeadline');
+  String get orderPaymentExpired => _text('orderPaymentExpired');
+  String get orderClosed => _text('orderClosed');
+  String get orderAutomaticRefund => _text('orderAutomaticRefund');
   String get groupBuyTitle => _text('groupBuyTitle');
   String get groupBuyOpen => _text('groupBuyOpen');
   String get groupBuyJoin => _text('groupBuyJoin');

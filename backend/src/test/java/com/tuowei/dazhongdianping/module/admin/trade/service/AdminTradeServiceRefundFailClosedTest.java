@@ -50,13 +50,16 @@ class AdminTradeServiceRefundFailClosedTest {
     private final TradeMapper tradeMapper = mock(TradeMapper.class);
     private final PaymentChannelResolver channelResolver = mock(PaymentChannelResolver.class);
 
+    private final com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService inventory =
+            mock(com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService.class);
+
     private final AdminTradeService service = new AdminTradeService(
             mapper,
             adminAuditMapper,
             mock(TradeCompensationService.class),
             mock(NotificationService.class),
             tradeMapper,
-            channelResolver
+            channelResolver, inventory
     );
 
     private static final Long ORDER_ID = 9302L;
@@ -86,7 +89,7 @@ class AdminTradeServiceRefundFailClosedTest {
         refund.setOrderId(ORDER_ID);
         refund.setStatus(0);
         refund.setAmount(new BigDecimal("88.00"));
-        when(mapper.selectRefundByOrder(ORDER_ID)).thenReturn(refund);
+        when(tradeMapper.selectRefundForUpdate(ORDER_ID)).thenReturn(refund);
 
         when(mapper.approveRefund(anyLong(), anyLong(), anyString())).thenReturn(1);
         when(mapper.markOrderRefunded(anyLong())).thenReturn(1);
@@ -95,7 +98,7 @@ class AdminTradeServiceRefundFailClosedTest {
         PaymentRow payment = new PaymentRow();
         payment.setChannel("alipay_mock");
         payment.setChannelTxn("TX-ADMIN-002");
-        when(tradeMapper.selectPayment(ORDER_ID)).thenReturn(payment);
+        when(tradeMapper.selectPaymentForUpdate(ORDER_ID)).thenReturn(payment);
         when(tradeMapper.recordRefundChannelResult(anyLong(), anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(1);
     }
@@ -118,7 +121,7 @@ class AdminTradeServiceRefundFailClosedTest {
         // Channel resolution happens before any local refund/order/stock transition.
         verify(channelResolver).resolveByChannel("alipay_mock");
         verify(mapper, never()).approveRefund(anyLong(), anyLong(), anyString());
-        verify(mapper, never()).restoreDealStock(anyLong(), anyInt());
+        verify(inventory, never()).release(any());
         verify(adminAuditMapper, never()).insertAuditLog(
                 anyLong(), anyString(), anyString(), anyString(), anyString());
     }
@@ -140,7 +143,7 @@ class AdminTradeServiceRefundFailClosedTest {
 
     @Test
     void shouldFailClosedWhenPaymentRecordMissing() {
-        when(tradeMapper.selectPayment(ORDER_ID)).thenReturn(null);
+        when(tradeMapper.selectPaymentForUpdate(ORDER_ID)).thenReturn(null);
 
         assertThrows(ServiceUnavailableException.class, () ->
                 service.auditRefund(ORDER_ID,

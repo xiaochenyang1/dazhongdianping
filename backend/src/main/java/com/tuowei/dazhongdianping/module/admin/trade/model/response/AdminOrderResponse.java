@@ -41,6 +41,9 @@ public record AdminOrderResponse(
         String refundChannelFailureReason,
         String refundAuditReason,
         String refundAuditedAt,
-        String refundCreatedAt
+        String refundCreatedAt,
+        String orderSource,
+        Long campaignId,
+        String campaignTitle
 ) {
 }

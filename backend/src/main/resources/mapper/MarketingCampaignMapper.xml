@@ -30,9 +30,15 @@
     </select>
 
     <select id="selectActiveSeckills" resultType="com.tuowei.dazhongdianping.module.marketing.model.SeckillEventRow">
-        SELECT <include refid="seckillCols"/> FROM seckill_event
+        SELECT <include refid="seckillCols"/>,
+               GREATEST(0, LEAST(stock-sold, COALESCE((SELECT CASE WHEN d.stock=-1 THEN seckill_event.stock-seckill_event.sold ELSE d.stock END
+                   FROM deal d WHERE d.id=seckill_event.deal_id AND d.shop_id=seckill_event.shop_id
+                     AND d.region=seckill_event.region AND d.currency=seckill_event.currency
+                     AND d.audit_status=1 AND d.status=1 AND d.is_deleted=FALSE
+                     AND (d.valid_end IS NULL OR d.valid_end&gt;=CURRENT_DATE)),0))) AS available_stock
+        FROM seckill_event
         WHERE region=#{region} AND is_deleted=FALSE AND audit_status=2 AND status=1
-          AND start_at &lt;= #{now} AND end_at &gt;= #{now}
+          AND start_at &lt;= #{now} AND end_at &gt; #{now}
         ORDER BY id DESC
     </select>
 
@@ -47,6 +53,11 @@
         WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
     </select>
 
+    <select id="selectSeckillForUpdate" resultType="com.tuowei.dazhongdianping.module.marketing.model.SeckillEventRow">
+        SELECT <include refid="seckillCols"/> FROM seckill_event
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE FOR UPDATE
+    </select>
+
     <update id="updateSeckillAudit">
         UPDATE seckill_event
         SET audit_status=#{auditStatus},reject_reason=#{rejectReason},updated_at=CURRENT_TIMESTAMP
@@ -58,7 +69,7 @@
         SET sold=sold+1,updated_at=CURRENT_TIMESTAMP
         WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
           AND audit_status=2 AND status=1 AND sold &lt; stock
-          AND start_at &lt;= #{now} AND end_at &gt;= #{now}
+          AND start_at &lt;= #{now} AND end_at &gt; #{now}
     </update>
 
     <select id="countSeckillClaim" resultType="int">
@@ -66,8 +77,38 @@
     </select>
 
     <insert id="insertSeckillClaim" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO seckill_claim(event_id,user_id,region) VALUES(#{eventId},#{userId},#{region})
+        INSERT INTO seckill_claim(event_id,user_id,region,order_id,status)
+        VALUES(#{eventId},#{userId},#{region},#{orderId},1)
     </insert>
+
+    <select id="selectSeckillClaim" resultType="com.tuowei.dazhongdianping.module.marketing.model.SeckillClaimRow">
+        SELECT id,event_id,user_id,region,order_id,status FROM seckill_claim
+        WHERE event_id=#{eventId} AND user_id=#{userId}
+    </select>
+
+    <select id="selectSeckillClaimsForUser" resultType="com.tuowei.dazhongdianping.module.marketing.model.SeckillClaimRow">
+        SELECT id,event_id,user_id,region,order_id,status FROM seckill_claim
+        WHERE user_id=#{userId} AND region=#{region}
+    </select>
+
+    <update id="reserveSeckillClaim">
+        UPDATE seckill_claim SET order_id=#{orderId},status=1,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND user_id=#{userId} AND region=#{region} AND status=3
+    </update>
+
+    <update id="markSeckillClaimPaid">
+        UPDATE seckill_claim SET status=2,updated_at=CURRENT_TIMESTAMP WHERE order_id=#{orderId} AND status=1
+    </update>
+
+    <update id="releaseSeckillClaim">
+        UPDATE seckill_claim SET status=#{status},updated_at=CURRENT_TIMESTAMP
+        WHERE order_id=#{orderId} AND status IN (1,2)
+    </update>
+
+    <update id="releaseSeckillStock">
+        UPDATE seckill_event SET sold=sold-#{quantity},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND sold&gt;=#{quantity}
+    </update>
 
     <sql id="groupCols">
         id,region,shop_id,merchant_id,deal_id,title,group_price,currency,group_size,start_at,end_at,status,audit_status,reject_reason

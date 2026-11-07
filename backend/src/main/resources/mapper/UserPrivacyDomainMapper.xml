@@ -164,7 +164,7 @@
         WHERE c.user_id=#{userId} ORDER BY c.id
     </select>
     <select id="selectSeckillClaims" resultMap="privacyRecord">
-        SELECT c.id,c.region,c.event_id AS `eventId`,e.title,c.created_at AS `createdAt`
+        SELECT c.id,c.region,c.event_id AS `eventId`,e.title,c.order_id AS `orderId`,c.status,c.created_at AS `createdAt`
         FROM seckill_claim c LEFT JOIN seckill_event e ON e.id=c.event_id AND e.region=c.region
         WHERE c.user_id=#{userId} ORDER BY c.id
     </select>
@@ -321,7 +321,13 @@
         SELECT e.id FROM seckill_event e WHERE EXISTS(SELECT 1 FROM seckill_claim c WHERE c.event_id=e.id AND c.user_id=#{userId}) ORDER BY e.id FOR UPDATE
     </select>
     <delete id="deleteSeckillClaims">DELETE FROM seckill_claim WHERE user_id=#{userId}</delete>
-    <update id="refreshSeckillSold">UPDATE seckill_event SET sold=(SELECT COUNT(*) FROM seckill_claim WHERE event_id=#{id}),updated_at=CURRENT_TIMESTAMP WHERE id=#{id}</update>
+    <update id="refreshSeckillSold">
+        UPDATE seckill_event SET sold=
+            (SELECT COUNT(*) FROM seckill_claim WHERE event_id=#{id} AND order_id IS NULL AND status=0)
+            + (SELECT COALESCE(SUM(quantity),0) FROM `order`
+               WHERE order_source='seckill' AND campaign_id=#{id} AND inventory_released=FALSE),
+            updated_at=CURRENT_TIMESTAMP WHERE id=#{id}
+    </update>
     <select id="lockAffectedGroupbuyTeams" resultType="long">
         SELECT t.id FROM groupbuy_team t WHERE t.leader_user_id=#{userId}
            OR EXISTS(SELECT 1 FROM groupbuy_member m WHERE m.team_id=t.id AND m.user_id=#{userId}) ORDER BY t.id FOR UPDATE

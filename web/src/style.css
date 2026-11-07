@@ -202,6 +202,7 @@ img {
   margin: 0 auto;
   padding: 18px 24px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
@@ -279,15 +280,20 @@ img {
 
 .top-nav {
   display: flex;
+  order: 3;
+  width: 100%;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 6px;
-  border-radius: 999px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(26, 34, 45, 0.08);
 }
 
 .top-nav__link {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 11px 16px;
   border-radius: 999px;
   color: var(--text-soft);

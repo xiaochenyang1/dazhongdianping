@@ -422,6 +422,7 @@ onMounted(() => {
               <td class="numeric-cell">{{ item.createdAt }}</td>
               <td>
                 <strong>{{ item.orderNo }}</strong>
+                <p v-if="item.orderSource === 'seckill'" class="inline-note">{{ state.region === 'EU' ? 'Flash sale' : '秒杀' }} · {{ item.campaignTitle }}</p>
                 <p class="inline-note">{{ item.dealTitle || strings.adminOrders.dealFallback(item.dealId) }}</p>
               </td>
               <td>

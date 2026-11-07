@@ -7,6 +7,10 @@ export interface SeckillEvent {
   currency: string
   stock: number
   sold: number
+  availableStock?: number
+  perUserLimit?: number
+  participationStatus?: number | null
+  orderId?: number | null
   startAt?: string
   endAt?: string
 }

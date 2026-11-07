@@ -127,6 +127,10 @@ class TradeOrder {
     required this.status,
     required this.coupons,
     this.refund,
+    this.orderSource = 'deal',
+    this.campaignTitle = '',
+    this.expireAt = '',
+    this.canPay,
   });
   final int id;
   final String orderNo;
@@ -141,10 +145,18 @@ class TradeOrder {
   final int status;
   final List<Coupon> coupons;
   final RefundInfo? refund;
+  final String orderSource;
+  final String campaignTitle;
+  final String expireAt;
+  final bool? canPay;
 
   factory TradeOrder.fromJson(Map<String, dynamic> json) => TradeOrder(
     id: json['id'] as int,
     orderNo: json['orderNo'] as String? ?? '',
+    orderSource: json['orderSource'] as String? ?? 'deal',
+    campaignTitle: json['campaignTitle'] as String? ?? '',
+    expireAt: json['expireAt'] as String? ?? '',
+    canPay: json['canPay'] as bool?,
     dealTitle: json['dealTitle'] as String? ?? '',
     shopName: json['shopName'] as String? ?? '',
     quantity: json['quantity'] as int? ?? 0,
@@ -313,6 +325,7 @@ class CouponDetail extends Coupon {
 class RefundInfo {
   const RefundInfo({
     required this.reason,
+    this.refundType = 'user',
     required this.status,
     required this.statusText,
     required this.auditReason,
@@ -322,6 +335,7 @@ class RefundInfo {
     this.channelFailureReason = '',
   });
   final String reason;
+  final String refundType;
   final int? status;
   final String statusText;
   final String auditReason;
@@ -332,6 +346,7 @@ class RefundInfo {
 
   factory RefundInfo.fromJson(Map<String, dynamic> json) => RefundInfo(
     reason: json['reason'] as String? ?? '',
+    refundType: json['refundType'] as String? ?? 'user',
     status: (json['status'] as num?)?.toInt(),
     statusText: json['statusText'] as String? ?? '',
     auditReason: json['auditReason'] as String? ?? '',

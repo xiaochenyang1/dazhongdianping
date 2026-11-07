@@ -87,6 +87,9 @@ export interface MerchantOrderRefund {
   channelFailureReason?: string
 }
 export interface MerchantOrder {
+  orderSource?: string
+  campaignId?: number | null
+  campaignTitle?: string
   id: number
   orderNo: string
   shopName: string

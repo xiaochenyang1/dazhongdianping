@@ -34,6 +34,7 @@ public class MerchantFulfillmentService {
     private final NotificationService notificationService;
     private final ReservationAvailabilityService availability;
     private final ReservationTimeService time;
+    private final com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService inventory;
 
     public MerchantFulfillmentService(
             ReservationMapper reservationMapper,
@@ -41,7 +42,8 @@ public class MerchantFulfillmentService {
             MerchantAuthorizationService authorizationService,
             NotificationService notificationService,
             ReservationAvailabilityService availability,
-            ReservationTimeService time
+            ReservationTimeService time,
+            com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService inventory
     ) {
         this.reservationMapper = reservationMapper;
         this.tradeMapper = tradeMapper;
@@ -49,6 +51,7 @@ public class MerchantFulfillmentService {
         this.notificationService = notificationService;
         this.availability = availability;
         this.time = time;
+        this.inventory = inventory;
     }
 
     @Transactional
@@ -80,7 +83,14 @@ public class MerchantFulfillmentService {
             throw new NotFoundException("券码不存在");
         }
         authorizationService.requireShop(merchant, "coupon:verify", coupon.getShopId());
-        if (coupon.getStatus() != 1) {
+        var order = inventory.lockOrder(coupon.getOrderId());
+        var refund = tradeMapper.selectRefundForUpdate(order.getId());
+        if (!Integer.valueOf(1).equals(order.getPayStatus()) || !Integer.valueOf(1).equals(order.getStatus())
+                || refund != null && (refund.getStatus() == 0 || refund.getStatus() == 3)) {
+            throw new IllegalArgumentException("订单退款处理中或已关闭，不能核销");
+        }
+        coupon = tradeMapper.selectCouponForUpdate(coupon.getId());
+        if (coupon == null || coupon.getStatus() != 1) {
             throw new IllegalArgumentException("券码当前不可核销");
         }
         if (coupon.getExpireAt() != null && coupon.getExpireAt().isBefore(LocalDate.now())) {

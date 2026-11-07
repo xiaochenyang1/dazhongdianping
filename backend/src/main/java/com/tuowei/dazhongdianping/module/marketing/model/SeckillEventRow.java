@@ -18,6 +18,7 @@ public class SeckillEventRow {
     private String currency;
     private Integer stock;
     private Integer sold;
+    private Integer availableStock;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
     private Integer status;

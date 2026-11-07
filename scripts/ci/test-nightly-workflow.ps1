@@ -48,4 +48,9 @@ foreach ($flag in @('APP_LAUNCH_DEFERRED_FEATURES_ENABLED', 'APP_LAUNCH_EU_CREAT
 Assert-True ($creatorStep -notmatch 'continue-on-error') "creator browser failures must fail nightly regression"
 Assert-True ($workflow -match 'path: web/test-results/creator-review/') "nightly must preserve creator browser evidence"
 
+$seckillStep = [regex]::Match($workflow, '(?ms)^      - name: Verify flash-sale orders on MySQL\r?\n(?:(?!^      - ).)*').Value
+Assert-True ($seckillStep -match 'seckill-order-integration\.py --server docker') "nightly must verify flash-sale transactions and browsers on disposable MySQL"
+Assert-True ($seckillStep -notmatch 'continue-on-error') "flash-sale failures must fail nightly regression"
+Assert-True ($workflow -match 'path: reports/seckill-order-integration/') "nightly must preserve flash-sale evidence"
+
 Write-Output "nightly workflow contract passed"

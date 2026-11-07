@@ -29,14 +29,17 @@ public class MerchantMarketingService {
     private final MarketingMapper couponMapper;
     private final MarketingCampaignMapper campaignMapper;
     private final MerchantAuthorizationService authorizationService;
+    private final com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper trades;
 
     public MerchantMarketingService(
             MarketingMapper couponMapper,
             MarketingCampaignMapper campaignMapper,
-            MerchantAuthorizationService authorizationService) {
+            MerchantAuthorizationService authorizationService,
+            com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper trades) {
         this.couponMapper = couponMapper;
         this.campaignMapper = campaignMapper;
         this.authorizationService = authorizationService;
+        this.trades = trades;
     }
 
     public List<Map<String, Object>> coupons() {
@@ -84,6 +87,16 @@ public class MerchantMarketingService {
         authorizationService.requireShop(session, "marketing:manage", request.shopId());
         String region = region();
         requireDeal(request.dealId(), request.shopId(), session.merchantId(), region);
+        var deal = trades.selectDeal(request.dealId(), region);
+        if (deal == null || deal.getValidEnd() != null && deal.getValidEnd().isBefore(java.time.LocalDate.now())) {
+            throw new IllegalArgumentException("秒杀套餐已失效");
+        }
+        if (request.seckillPrice().compareTo(deal.getPrice()) > 0) {
+            throw new IllegalArgumentException("秒杀价不能高于套餐售价");
+        }
+        if (!currency(request.shopId(), region).equals(deal.getCurrency())) {
+            throw new IllegalArgumentException("秒杀套餐币种不匹配");
+        }
         SeckillEventRow row = new SeckillEventRow();
         row.setRegion(region);
         row.setShopId(request.shopId());

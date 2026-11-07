@@ -48,6 +48,7 @@ public class MerchantTradeService {
     private final TradeMapper tradeMapper;
     private final PaymentChannelResolver channelResolver;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService inventory;
 
     public MerchantTradeService(MerchantTradeMapper mapper,
                                 AdminAuditMapper adminAuditMapper,
@@ -55,7 +56,8 @@ public class MerchantTradeService {
                                 NotificationService notificationService,
                                 TradeMapper tradeMapper,
                                 PaymentChannelResolver channelResolver,
-                                ApplicationEventPublisher eventPublisher) {
+                                ApplicationEventPublisher eventPublisher,
+                                com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService inventory) {
         this.mapper = mapper;
         this.adminAuditMapper = adminAuditMapper;
         this.authorizationService = authorizationService;
@@ -63,6 +65,7 @@ public class MerchantTradeService {
         this.tradeMapper = tradeMapper;
         this.channelResolver = channelResolver;
         this.eventPublisher = eventPublisher;
+        this.inventory = inventory;
     }
 
     public PageResult<Map<String, Object>> deals(Long shopId,
@@ -224,7 +227,8 @@ public class MerchantTradeService {
             throw new NotFoundException("订单不存在");
         }
         authorizationService.requireShop(session, "order:refund", order.getShopId());
-        RefundRow refund = mapper.selectRefund(orderId);
+        order = inventory.lockOrder(orderId);
+        RefundRow refund = tradeMapper.selectRefundForUpdate(orderId);
         if (refund == null || refund.getStatus() != 0) {
             throw new IllegalArgumentException("订单没有待处理退款申请");
         }
@@ -234,13 +238,16 @@ public class MerchantTradeService {
         String notificationState;
         String notificationReason = reason;
         if ("approve".equals(decision)) {
+            if (tradeMapper.selectOrderCouponsForUpdate(orderId).stream().anyMatch(c -> Integer.valueOf(2).equals(c.getStatus()))) {
+                throw new IllegalArgumentException("存在已核销券，不能整单退款");
+            }
             RefundResult channelResult = issueChannelRefund(refund, reason);
             recordChannelResult(refund, channelResult);
             if (channelResult.state() == RefundChannelState.SUCCEEDED) {
                 requireAffected(mapper.approveRefund(orderId, session.operatorId(), reason));
                 requireAffected(mapper.markOrderRefunded(orderId));
                 mapper.markCouponsRefunded(orderId);
-                requireAffected(mapper.restoreDealStock(order.getDealId(), order.getQuantity()));
+                inventory.release(order);
                 action = "refund_approve";
                 notificationState = "succeeded";
             } else if (channelResult.state() == RefundChannelState.PENDING) {
@@ -306,7 +313,7 @@ public class MerchantTradeService {
      * failed channel results are persisted as local states 3/4.
      */
     private RefundResult issueChannelRefund(RefundRow refund, String reason) {
-        PaymentRow payment = tradeMapper.selectPayment(refund.getOrderId());
+        PaymentRow payment = tradeMapper.selectPaymentForUpdate(refund.getOrderId());
         if (payment == null || payment.getChannel() == null || payment.getChannelTxn() == null) {
             throw new ServiceUnavailableException("订单缺少可退款的支付记录");
         }
@@ -476,6 +483,9 @@ public class MerchantTradeService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", row.getId());
         result.put("orderNo", row.getOrderNo());
+        result.put("orderSource", row.getOrderSource());
+        result.put("campaignId", row.getCampaignId());
+        result.put("campaignTitle", row.getCampaignTitle());
         result.put("userId", row.getUserId());
         result.put("dealId", row.getDealId());
         result.put("dealTitle", row.getDealTitle());

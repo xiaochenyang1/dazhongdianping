@@ -704,6 +704,10 @@ public class UserPrivacyService {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("id", row.getId());
         item.put("orderNo", row.getOrderNo());
+        item.put("orderSource", row.getOrderSource());
+        item.put("campaignId", row.getCampaignId());
+        item.put("campaignTitle", row.getCampaignTitle());
+        item.put("couponValidEnd", row.getCouponValidEnd());
         item.put("dealId", row.getDealId());
         item.put("dealTitle", row.getDealTitle());
         item.put("shopId", row.getShopId());

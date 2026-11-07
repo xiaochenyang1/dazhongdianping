@@ -69,6 +69,11 @@ export interface WebTradeStrings {
     refund: string
   }
   orderDetail: {
+    flashSale: string
+    payDeadline: string
+    expired: string
+    closed: string
+    automaticRefund: string
     loadFailed: string
     paymentFailed: string
     mockPaymentFailed: string
@@ -306,6 +311,11 @@ const zhCnStrings: WebTradeStrings = {
     refund: '退款',
   },
   orderDetail: {
+    flashSale: '秒杀订单',
+    payDeadline: '支付截止',
+    expired: '订单支付时间已过，请取消后重新下单。',
+    closed: '已关闭',
+    automaticRefund: '订单关闭后收到付款，款项将原路退回。',
     loadFailed: '订单加载失败',
     paymentFailed: '支付发起失败',
     mockPaymentFailed: '模拟支付失败',
@@ -474,6 +484,11 @@ const enStrings: WebTradeStrings = {
     refund: 'Refund',
   },
   orderDetail: {
+    flashSale: 'Flash-sale order',
+    payDeadline: 'Pay before',
+    expired: 'The payment deadline has passed. Cancel this order to purchase again.',
+    closed: 'Closed',
+    automaticRefund: 'Payment arrived after the order closed. It will be refunded to the original payment method.',
     loadFailed: 'Could not load order details',
     paymentFailed: 'Could not start payment',
     mockPaymentFailed: 'Could not complete the test payment',
@@ -580,6 +595,7 @@ const enStrings: WebTradeStrings = {
     timeline: 'Change timeline',
   },
   errorTranslations: {
+    '订单已超时，请重新下单': 'The payment deadline has passed. Please place a new order.',
     '团购不存在': 'This offer is not available',
     '订单不存在': 'Order not found',
     '券码不存在': 'Voucher not found',

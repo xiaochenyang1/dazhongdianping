@@ -50,6 +50,7 @@ public class AdminTradeService {
     private final NotificationService notificationService;
     private final TradeMapper tradeMapper;
     private final PaymentChannelResolver channelResolver;
+    private final com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService inventory;
 
     public AdminTradeService(
             AdminTradeMapper mapper,
@@ -57,7 +58,8 @@ public class AdminTradeService {
             TradeCompensationService tradeCompensationService,
             NotificationService notificationService,
             TradeMapper tradeMapper,
-            PaymentChannelResolver channelResolver
+            PaymentChannelResolver channelResolver,
+            com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService inventory
     ) {
         this.mapper = mapper;
         this.adminAuditMapper = adminAuditMapper;
@@ -65,6 +67,7 @@ public class AdminTradeService {
         this.notificationService = notificationService;
         this.tradeMapper = tradeMapper;
         this.channelResolver = channelResolver;
+        this.inventory = inventory;
     }
 
     public PageResult<AdminOrderResponse> listOrders(AdminOrderQuery query) {
@@ -97,7 +100,8 @@ public class AdminTradeService {
         if (order == null) {
             throw new NotFoundException("订单不存在");
         }
-        RefundRow refund = mapper.selectRefundByOrder(orderId);
+        var stockOrder = inventory.lockOrder(orderId);
+        RefundRow refund = tradeMapper.selectRefundForUpdate(orderId);
         if (refund == null || refund.getStatus() != 0) {
             throw new IllegalArgumentException("订单没有待处理退款申请");
         }
@@ -108,13 +112,16 @@ public class AdminTradeService {
         String notificationState;
         String notificationReason = reason;
         if ("approve".equals(decision)) {
+            if (tradeMapper.selectOrderCouponsForUpdate(orderId).stream().anyMatch(c -> Integer.valueOf(2).equals(c.getStatus()))) {
+                throw new IllegalArgumentException("存在已核销券，不能整单退款");
+            }
             RefundResult channelResult = issueChannelRefund(refund, reason);
             recordChannelResult(refund, channelResult);
             if (channelResult.state() == RefundChannelState.SUCCEEDED) {
                 requireAffected(mapper.approveRefund(orderId, admin.adminId(), reason));
                 requireAffected(mapper.markOrderRefunded(orderId));
                 mapper.markCouponsRefunded(orderId);
-                requireAffected(mapper.restoreDealStock(order.getDealId(), order.getQuantity()));
+                inventory.release(stockOrder);
                 action = "refund_approve";
                 notificationState = "succeeded";
             } else if (channelResult.state() == RefundChannelState.PENDING) {
@@ -155,7 +162,7 @@ public class AdminTradeService {
      * failed channel results are persisted as local states 3/4.
      */
     private RefundResult issueChannelRefund(RefundRow refund, String reason) {
-        PaymentRow payment = tradeMapper.selectPayment(refund.getOrderId());
+        PaymentRow payment = tradeMapper.selectPaymentForUpdate(refund.getOrderId());
         if (payment == null || payment.getChannel() == null || payment.getChannelTxn() == null) {
             throw new ServiceUnavailableException("订单缺少可退款的支付记录");
         }
@@ -310,7 +317,8 @@ public class AdminTradeService {
                 safeText(row.getRefundChannelFailureReason()),
                 safeText(row.getRefundAuditReason()),
                 formatDateTime(row.getRefundAuditedAt()),
-                formatDateTime(row.getRefundCreatedAt())
+                formatDateTime(row.getRefundCreatedAt()),
+                safeText(row.getOrderSource()), row.getCampaignId(), safeText(row.getCampaignTitle())
         );
     }
 
