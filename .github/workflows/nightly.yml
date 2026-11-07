@@ -7,7 +7,7 @@ on:
 
 jobs:
   nightly-regression:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     services:
@@ -135,7 +135,7 @@ jobs:
 
       - name: Preserve creator review browser evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: nightly-creator-review-${{ github.run_attempt }}
           retention-days: 7
@@ -148,7 +148,7 @@ jobs:
 
       - name: Preserve flash-sale order evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: nightly-seckill-orders-${{ github.run_attempt }}
           retention-days: 7
@@ -157,7 +157,7 @@ jobs:
 
       - name: Preserve browser failure evidence
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: nightly-browser-failures-${{ github.run_attempt }}
           retention-days: 7

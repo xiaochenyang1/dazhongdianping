@@ -20,6 +20,7 @@ $workflow = Get-Content -LiteralPath $workflowPath -Raw
 
 Assert-True ($workflow -match "workflow_dispatch:") "mobile release must be manually dispatched"
 Assert-True ($workflow -match "environment:.*\$\{\{ inputs\.environment \}\}") "mobile release must use a GitHub Environment gate"
+Assert-True ($workflow -match "runs-on:\s*ubuntu-24\.04") "mobile release must pin Ubuntu 24.04"
 Assert-True ($workflow -match "region:") "mobile release must require a release region"
 Assert-True ($workflow -match "build_name:") "mobile release must require a build name"
 Assert-True ($workflow -match "build_number:") "mobile release must require a build number"
@@ -53,7 +54,7 @@ Assert-True ($workflow -match "sha256sum") "mobile release must checksum the app
 Assert-True ($workflow -match "mobile-release-manifest\.json") "mobile release must write a release manifest"
 Assert-True ($workflow -match "shareBaseUrl") "mobile release manifest must record the share base URL"
 Assert-True ($workflow -match "stripeConfigured") "mobile release manifest must record that Stripe was configured without exposing the key"
-Assert-True ($workflow -match "actions/upload-artifact@v4") "mobile release must upload the signed app bundle"
+Assert-True ($workflow -match "actions/upload-artifact@v7\.0\.2") "mobile release must upload the signed app bundle with upload-artifact 7.0.2"
 Assert-True ($workflow -match "if-no-files-found: error") "mobile release must fail when the app bundle is missing"
 Assert-True ($workflow -match "if: always\(\)") "mobile release must always clean up the keystore"
 Assert-True ($workflow -match "rm -f.*dzdp-android-release\.jks") "mobile release must remove the decoded keystore"

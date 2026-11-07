@@ -21,6 +21,8 @@ $workflow = Get-Content -LiteralPath $workflowPath -Raw
 Assert-True ($workflow -match '(?ms)push:\s*branches:\s*- main\s*tags:\s*- "eu-pre-rc-\*"') "workflow must limit push verification to main and release-candidate tags"
 Assert-True ($workflow -match '(?ms)pull_request:\s*branches:\s*- main') "workflow must verify pull requests targeting main"
 Assert-True ($workflow -match '(?ms)concurrency:\s*group:\s*ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\s*cancel-in-progress:\s*true') "workflow must cancel superseded CI runs per branch or pull request"
+Assert-True (([regex]::Matches($workflow, "runs-on:\s*ubuntu-24\.04")).Count -eq 2) "all CI jobs must pin Ubuntu 24.04"
+Assert-True (([regex]::Matches($workflow, "actions/upload-artifact@v7\.0\.2")).Count -eq 3) "CI evidence uploads must pin upload-artifact 7.0.2"
 
 Assert-True ($workflow -match "verify-all\.ps1") "workflow must run scripts/ci/verify-all.ps1"
 Assert-True ($workflow -match "IncludeMysqlSmoke") "workflow must include the MySQL smoke gate"
@@ -49,7 +51,7 @@ $migrationJobMatch = [regex]::Match(
 )
 Assert-True $migrationJobMatch.Success "workflow must define a separate database-migration-integration job"
 $migrationJob = $migrationJobMatch.Value
-Assert-True ($migrationJob -match "runs-on:\s*ubuntu-latest") "migration integration job must run on Ubuntu"
+Assert-True ($migrationJob -match "runs-on:\s*ubuntu-24\.04") "migration integration job must run on Ubuntu 24.04"
 Assert-True ($migrationJob -match "timeout-minutes:\s*10") "migration integration job must have a bounded timeout"
 Assert-True ($migrationJob -match "contents:\s*read") "migration integration job must use read-only repository permissions"
 Assert-True ($migrationJob -match "MYSQL_MIGRATION_TEST_IMAGE:\s*mysql:8\.4") "migration integration job must pin the tested MySQL release"
