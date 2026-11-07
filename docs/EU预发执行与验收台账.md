@@ -40,7 +40,7 @@ PR #30（秒杀订单交易闭环）已合入主干 `24fba53e707ef73b086e70a69a6
    ./scripts/ci/stripe-preflight.sh --check-cli
    ```
 
-2. 在已通过 CI 的固定 SHA 干净工作区用真实构建配置打包，调用 `scripts/ci/package-release.ps1 -Version <新版本> -CommitSha <40位SHA>`，或设置 `APP_RELEASE_COMMIT_SHA`。脚本以实际 Git HEAD 为来源并校验显式 SHA，拒绝未提交改动、未跟踪构建输入和已有版本输出，不使用 `GITHUB_SHA` 冒充源码来源。核对包内后端 JAR、三端 dist、03–29 连续迁移与全部校验和、迁移 runner；manifest 的 SHA、EU 默认区域、API/WSS、Stripe 和实际 SEO 快照必须一致。配置变化重新生成新版本。
+2. 在已通过 CI 的固定 SHA 干净工作区用真实构建配置打包，调用 `scripts/ci/package-release.ps1 -Version <新版本> -CommitSha <40位SHA>`，或设置 `APP_RELEASE_COMMIT_SHA`。脚本以实际 Git HEAD 为来源并校验显式 SHA，拒绝未提交改动、未跟踪构建输入和已有版本输出，不使用 `GITHUB_SHA` 冒充源码来源。核对包内后端 JAR、三端 dist、03–31 连续迁移与全部校验和、迁移 runner；manifest 的 SHA、EU 默认区域、API/WSS、Stripe 和实际 SEO 快照必须一致。配置变化重新生成新版本。
 3. 在独立恢复环境完成数据库备份恢复核对，记录数据一致性、迁移版本和恢复耗时。确认已有库的基线再应用迁移；不要把历史基线直接假设为 25，也不要把全量 schema/seed 导入现有库。仓库的 `mysql-smoke.ps1`、ES smoke 和浏览器 E2E 面向隔离测试，不能直接当作现有预发库的部署命令。
 4. 先部署 `test`，再部署 `pre`。使用 `deploy-release.ps1 -ExpectedCommitSha <已验证的40位SHA>`（或设置 `DEPLOY_EXPECTED_COMMIT_SHA`），其公共预检在 SSH/SCP 之前校验 ZIP/旁车、源码、版本、环境/区域、迁移与 Web/Stripe/SEO 配置。技术候选仅能通过 `release-bundle-preflight.ps1 -ArtifactOnly` 的制品检查，不能直接部署。`-DryRun` 仅展示计划，不验证实际包或连接目标机；正式执行保存 SSH、迁移、服务重启与每个 HTTPS smoke 的结果。配置门禁导致步骤 skipped 仍记为未部署。
 5. ES 目标索引执行管理员 `POST /api/admin/v1/search/reindex`，等待队列清空，核对失败任务为零，再测试中文/英文团购标题、编辑旧词移除、上下架、审核和区域隔离。不能用 H2/MySQL 搜索通过替代已有 ES 索引重建。

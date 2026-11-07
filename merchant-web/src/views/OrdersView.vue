@@ -106,7 +106,10 @@ onMounted(load)
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
-            <td>{{ item.orderNo }}<p v-if="item.orderSource === 'seckill'" class="muted">{{ state.region === 'EU' ? 'Flash sale' : '秒杀' }} · {{ item.campaignTitle }}</p></td>
+            <td>{{ item.orderNo }}
+              <p v-if="item.orderSource === 'seckill'" class="muted">{{ state.region === 'EU' ? 'Flash sale' : '秒杀' }} · {{ item.campaignTitle }}</p>
+              <p v-else-if="item.orderSource === 'groupbuy'" class="muted" :data-testid="`groupbuy-source-${item.id}`">{{ state.region === 'EU' ? 'Group buy' : '拼团' }} · {{ item.campaignTitle }}</p>
+            </td>
             <td>{{ item.shopName }}</td>
             <td>{{ item.amount }} {{ item.currency }}</td>
             <td>{{ item.payStatusText }}</td>

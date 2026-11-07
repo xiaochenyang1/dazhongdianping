@@ -1782,19 +1782,29 @@ CREATE TABLE IF NOT EXISTS groupbuy_team (
     leader_user_id BIGINT NOT NULL,
     status TINYINT NOT NULL DEFAULT 1,
     member_count INT NOT NULL DEFAULT 1,
+    paid_count INT NOT NULL DEFAULT 0,
     expire_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_groupbuy_team_campaign ON groupbuy_team(campaign_id, status, id);
+CREATE INDEX IF NOT EXISTS idx_groupbuy_team_expire ON groupbuy_team(status, expire_at, id);
 
 CREATE TABLE IF NOT EXISTS groupbuy_member (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     team_id BIGINT NOT NULL,
+    campaign_id BIGINT NOT NULL,
+    region VARCHAR(8) NOT NULL DEFAULT 'CN',
     user_id BIGINT NOT NULL,
+    order_id BIGINT,
+    status TINYINT NOT NULL DEFAULT 0,
+    remind_status TINYINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uk_groupbuy_member UNIQUE(team_id, user_id)
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_groupbuy_member UNIQUE(team_id, user_id),
+    CONSTRAINT uk_groupbuy_member_order UNIQUE(order_id)
 );
+CREATE INDEX IF NOT EXISTS idx_groupbuy_member_campaign_user ON groupbuy_member(campaign_id, user_id, region, status, id);
 
 -- ============================================================
 -- 攻略 / 创作者 / 实验开关
@@ -1870,6 +1880,21 @@ CREATE TABLE IF NOT EXISTS feature_flag (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_feature_flag UNIQUE(region, flag_key)
 );
+
+CREATE TABLE IF NOT EXISTS feature_flag_scope (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    feature_flag_id BIGINT NOT NULL,
+    scope_type VARCHAR(16) NOT NULL,
+    scope_id BIGINT NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    rollout_percent INT NOT NULL DEFAULT 100,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_feature_flag_scope UNIQUE(feature_flag_id, scope_type, scope_id),
+    CONSTRAINT fk_feature_flag_scope_flag FOREIGN KEY(feature_flag_id) REFERENCES feature_flag(id)
+);
+CREATE INDEX IF NOT EXISTS idx_feature_flag_scope_lookup
+    ON feature_flag_scope(feature_flag_id, scope_type, scope_id);
 
 CREATE TABLE IF NOT EXISTS experiment (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

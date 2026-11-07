@@ -32,6 +32,7 @@ public class AdminMenuService {
                         leaf("data.import", "种子导入", "/data/import", "data:shop:import"),
                         leaf("data.meta", "基础数据", "/data/meta", "data:geo:read"),
                         leaf("data.orders", "订单退款", "/data/orders", "data:order:read"),
+                        leaf("data.groupbuy_operations", "拼团运维", "/data/groupbuy-operations", "data:order:read"),
                         leaf("data.invoices", "发票税率", "/data/invoices", "finance:invoice:read"),
                         leaf("data.search_sync", "搜索同步", "/data/search-sync", "data:search_index:read")
                 )),

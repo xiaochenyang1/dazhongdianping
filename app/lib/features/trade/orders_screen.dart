@@ -139,6 +139,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
+  String _groupBuyStatus(AppLocalizations strings, TradeOrder order) {
+    final progress = strings.groupBuyProgress(
+      paid: order.groupBuyPaidCount ?? 0,
+      size: order.groupBuySize ?? 0,
+    );
+    if (order.groupBuyStatus == 2) {
+      return '${strings.groupBuyFormed} · $progress';
+    }
+    if (order.groupBuyStatus == 3) {
+      if (order.payStatus == 2) return strings.groupBuyRefunded;
+      if (order.refund != null) return strings.groupBuyRefunding;
+      return strings.groupBuyFailed;
+    }
+    return '${strings.groupBuyWaiting} · $progress';
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
@@ -240,6 +256,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       order.currency,
                       locale: strings.tag,
                     );
+                    final groupBuyText = order.orderSource == 'groupbuy'
+                        ? '\n${strings.groupBuyOrder} · ${_groupBuyStatus(strings, order)}'
+                        : '';
                     return Card(
                       key: Key('order-card-${order.id}'),
                       child: ListTile(
@@ -249,7 +268,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               : order.dealTitle,
                         ),
                         subtitle: Text(
-                          '${order.orderNo}\n${order.shopName} · $payStatusText · $amountText',
+                          '${order.orderNo}\n${order.shopName} · $payStatusText · $amountText$groupBuyText',
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),

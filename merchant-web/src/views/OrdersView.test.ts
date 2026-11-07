@@ -39,6 +39,8 @@ describe('OrdersView', () => {
           amount: 36,
           currency: 'EUR',
           payStatusText: '已支付',
+          orderSource: 'groupbuy',
+          campaignTitle: 'Paris dinner group',
           refund: { status: 0, statusText: '申请中' },
         },
         {
@@ -71,6 +73,7 @@ describe('OrdersView', () => {
     expect(host.querySelector('[data-testid="refund-actions-81"]')).not.toBeNull()
     expect(host.querySelector('[data-testid="refund-actions-82"]')).toBeNull()
     expect(host.textContent).toContain('Approve refund')
+    expect(host.querySelector('[data-testid="groupbuy-source-81"]')?.textContent).toContain('Group buy · Paris dinner group')
 
     const reason = host.querySelector<HTMLInputElement>('[name="refund-reason-81"]')
     if (!reason) throw new Error('missing refund reason')

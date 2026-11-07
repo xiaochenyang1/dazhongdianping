@@ -27,7 +27,11 @@ class TradeCompensationServiceTest {
         PaymentChannel channel = mock(PaymentChannel.class);
         com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService =
                 mock(com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService.class);
-        TradeCompensationService service = new TradeCompensationService(mapper, resolver, tradeService, marketingCouponService);
+        com.tuowei.dazhongdianping.module.marketing.service.GroupBuyOrderService groupBuyOrderService =
+                mock(com.tuowei.dazhongdianping.module.marketing.service.GroupBuyOrderService.class);
+        TradeCompensationService service = new TradeCompensationService(
+                mapper, resolver, tradeService, marketingCouponService, groupBuyOrderService,
+                mock(com.tuowei.dazhongdianping.module.marketing.service.GroupBuyMetrics.class));
 
         RefundRow refund = new RefundRow();
         refund.setId(91L);

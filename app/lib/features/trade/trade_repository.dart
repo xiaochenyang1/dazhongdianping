@@ -131,6 +131,11 @@ class TradeOrder {
     this.campaignTitle = '',
     this.expireAt = '',
     this.canPay,
+    this.groupBuyTeamId,
+    this.groupBuyStatus,
+    this.groupBuyMemberCount,
+    this.groupBuyPaidCount,
+    this.groupBuySize,
   });
   final int id;
   final String orderNo;
@@ -149,6 +154,11 @@ class TradeOrder {
   final String campaignTitle;
   final String expireAt;
   final bool? canPay;
+  final int? groupBuyTeamId;
+  final int? groupBuyStatus;
+  final int? groupBuyMemberCount;
+  final int? groupBuyPaidCount;
+  final int? groupBuySize;
 
   factory TradeOrder.fromJson(Map<String, dynamic> json) => TradeOrder(
     id: json['id'] as int,
@@ -157,6 +167,11 @@ class TradeOrder {
     campaignTitle: json['campaignTitle'] as String? ?? '',
     expireAt: json['expireAt'] as String? ?? '',
     canPay: json['canPay'] as bool?,
+    groupBuyTeamId: (json['groupBuyTeamId'] as num?)?.toInt(),
+    groupBuyStatus: (json['groupBuyStatus'] as num?)?.toInt(),
+    groupBuyMemberCount: (json['groupBuyMemberCount'] as num?)?.toInt(),
+    groupBuyPaidCount: (json['groupBuyPaidCount'] as num?)?.toInt(),
+    groupBuySize: (json['groupBuySize'] as num?)?.toInt(),
     dealTitle: json['dealTitle'] as String? ?? '',
     shopName: json['shopName'] as String? ?? '',
     quantity: json['quantity'] as int? ?? 0,

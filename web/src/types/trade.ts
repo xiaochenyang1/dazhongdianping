@@ -50,6 +50,11 @@ export interface TradeOrder {
   payStatus: number
   payStatusText: string
   status: number
+  groupBuyTeamId?: number
+  groupBuyStatus?: number
+  groupBuyMemberCount?: number
+  groupBuyPaidCount?: number
+  groupBuySize?: number
   refund?: OrderRefund
   coupons?: Coupon[]
 }

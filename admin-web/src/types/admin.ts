@@ -660,6 +660,63 @@ export interface AdminSystemHealth {
   components: AdminSystemHealthComponent[]
 }
 
+export interface AdminGroupBuyAlert {
+  severity: 'critical' | 'warning' | string
+  code: string
+  count: number
+  message: string
+}
+
+export interface AdminGroupBuySummary {
+  windowHours: number
+  totalTeams: number
+  activeTeams: number
+  formedTeams: number
+  expiredTeams: number
+  overdueActiveTeams: number
+  memberOrders: number
+  paidOrders: number
+  pendingRefunds: number
+  failedRefunds: number
+  missingCouponOrders: number
+  unreleasedInventoryOrders: number
+  alerts: AdminGroupBuyAlert[]
+}
+
+export interface AdminGroupBuyTeam {
+  id: number
+  campaignId: number
+  campaignTitle: string
+  shopId: number
+  shopName: string
+  cityId: number
+  region: Region
+  status: number
+  statusText: string
+  memberCount: number
+  paidCount: number
+  groupSize: number
+  memberOrders: number
+  paidOrders: number
+  pendingRefunds: number
+  failedRefunds: number
+  missingCouponOrders: number
+  unreleasedInventoryOrders: number
+  problem: boolean
+  expireAt: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminGroupBuyReconcileResult {
+  teamId: number
+  teamStatus: number
+  expiredOrdersProcessed: number
+  vouchersIssued: number
+  failures: number
+  team: AdminGroupBuyTeam
+}
+
 export interface AdminAuditTask {
   id: number
   bizType: number

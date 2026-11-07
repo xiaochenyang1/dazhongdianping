@@ -48,6 +48,7 @@ class GroupBuyCampaign {
     required this.dealId,
     required this.groupPrice,
     required this.groupSize,
+    this.currency = '',
   });
 
   final int id;
@@ -55,6 +56,7 @@ class GroupBuyCampaign {
   final int dealId;
   final num groupPrice;
   final int groupSize;
+  final String currency;
 
   factory GroupBuyCampaign.fromJson(Map<String, dynamic> json) =>
       GroupBuyCampaign(
@@ -63,6 +65,35 @@ class GroupBuyCampaign {
         dealId: (json['dealId'] as num?)?.toInt() ?? 0,
         groupPrice: json['groupPrice'] as num? ?? 0,
         groupSize: (json['groupSize'] as num?)?.toInt() ?? 2,
+        currency: json['currency'] as String? ?? '',
+      );
+}
+
+class GroupBuyTeamResult {
+  const GroupBuyTeamResult({
+    required this.id,
+    required this.status,
+    required this.memberCount,
+    required this.paidCount,
+    required this.groupSize,
+    required this.order,
+  });
+
+  final int id;
+  final int status;
+  final int memberCount;
+  final int paidCount;
+  final int groupSize;
+  final TradeOrder order;
+
+  factory GroupBuyTeamResult.fromJson(Map<String, dynamic> json) =>
+      GroupBuyTeamResult(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        status: (json['status'] as num?)?.toInt() ?? 1,
+        memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+        paidCount: (json['paidCount'] as num?)?.toInt() ?? 0,
+        groupSize: (json['groupSize'] as num?)?.toInt() ?? 0,
+        order: TradeOrder.fromJson(json['order'] as Map<String, dynamic>),
       );
 }
 
@@ -100,15 +131,17 @@ class CampaignRepository {
     return const [];
   }
 
-  Future<int> openTeam(int campaignId) async {
+  Future<GroupBuyTeamResult> openTeam(int campaignId) async {
     final result = await api.postJson(
       '/api/c/v1/marketing/groupbuy/$campaignId/teams',
     );
-    return (result['id'] as num?)?.toInt() ?? 0;
+    return GroupBuyTeamResult.fromJson(result);
   }
 
-  Future<void> joinTeam(int teamId) =>
-      api.postJson('/api/c/v1/marketing/groupbuy/teams/$teamId/join');
+  Future<GroupBuyTeamResult> joinTeam(int teamId) async =>
+      GroupBuyTeamResult.fromJson(
+        await api.postJson('/api/c/v1/marketing/groupbuy/teams/$teamId/join'),
+      );
 }
 
 class LevelPrivileges {

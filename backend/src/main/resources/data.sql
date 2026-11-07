@@ -470,4 +470,6 @@ INSERT INTO creator_task (id, region, title, description, reward_points, status,
 
 INSERT INTO feature_flag (id, region, flag_key, description, enabled, rollout_percent) VALUES
     (9201, 'CN', 'guide_home', '首页展示攻略入口', TRUE, 100),
-    (9202, 'EU', 'guide_home', 'Show guides on home', TRUE, 100);
+    (9202, 'EU', 'guide_home', 'Show guides on home', TRUE, 100),
+    (9203, 'CN', 'group_buy', '拼团总熔断与灰度开关', FALSE, 0),
+    (9204, 'EU', 'group_buy', 'Group-buy kill switch and rollout', FALSE, 0);

@@ -68,6 +68,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'data/groupbuy-operations',
+          name: 'groupbuy-operations',
+          component: () => import('@/views/GroupBuyOperationsView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'groupBuyOperations',
+            requiredPermission: 'data:order:read',
+          },
+        },
+        {
           path: 'audit/reviews',
           name: 'audit-reviews',
           component: () => import('@/views/AuditReviewView.vue'),
