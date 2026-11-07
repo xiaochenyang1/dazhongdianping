@@ -12,6 +12,7 @@ public class RefundRow {
     private Long couponId;
     private BigDecimal amount;
     private String reason;
+    private String refundType = "user";
     private Integer status;
     private Long auditBy;
     private String auditReason;

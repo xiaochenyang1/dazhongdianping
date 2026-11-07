@@ -228,10 +228,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       );
                     }
                     final order = items[index];
-                    final payStatusText = strings.payStatusLabel(
-                      status: order.payStatus,
-                      fallback: order.payStatusText,
-                    );
+                    final payStatusText =
+                        order.status == 2 && order.payStatus == 0
+                        ? strings.orderClosed
+                        : strings.payStatusLabel(
+                            status: order.payStatus,
+                            fallback: order.payStatusText,
+                          );
                     final amountText = formatMoney(
                       order.amount,
                       order.currency,

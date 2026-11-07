@@ -85,8 +85,8 @@
 
     <sql id="orderColumns">
         o.id,o.order_no,o.user_id,o.deal_id,o.shop_id,o.region,o.quantity,o.unit_price,o.amount,
-        o.currency,o.pay_method,o.pay_status,o.status,o.paid_at,o.expire_at,o.created_at,
-        d.title AS deal_title,s.name AS shop_name,d.cover_image
+        o.currency,o.pay_method,o.pay_status,o.status,o.paid_at,o.expire_at,o.created_at,o.order_source,o.campaign_id,o.campaign_title,
+        COALESCE(NULLIF(o.deal_title_snapshot,''),d.title) AS deal_title,s.name AS shop_name,d.cover_image
     </sql>
 
     <sql id="orderWhere">

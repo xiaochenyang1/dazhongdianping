@@ -36,7 +36,7 @@ let pollRequestId = 0
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 
 const canCancel = computed(() => order.value?.payStatus === 0 && order.value?.status === 1)
-const canRefund = computed(() => order.value?.payStatus === 1 && !order.value?.refund)
+const canRefund = computed(() => order.value?.payStatus === 1 && order.value?.status === 1 && !order.value?.refund)
 const refundBanner = computed(() => {
   const marker = String(route.query.refund || '')
   if (marker === 'approved') return copy.value.orderDetail.refundApproved
@@ -82,7 +82,7 @@ async function pollOrderUntilPaid() {
     try {
       const next = await fetchOrder(props.orderId)
       if (requestId !== pollRequestId) return
-      if (next?.payStatus === 1) {
+      if (next && (next.payStatus !== 0 || next.refund)) {
         order.value = next
         intent.value = null
         successMessage.value = ''
@@ -156,6 +156,9 @@ async function cancel() {
   successMessage.value = ''
   try {
     order.value = await cancelOrder(props.orderId)
+    stripeCheckout.unmount()
+    intent.value = null
+    stopPolling()
     successMessage.value = copy.value.orderDetail.cancelSuccess
   } catch (error) {
     errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.orderDetail.cancelFailed)
@@ -193,7 +196,7 @@ watch(
   { immediate: true },
 )
 
-onBeforeUnmount(() => stopPolling())
+onBeforeUnmount(() => { stopPolling(); stripeCheckout.unmount() })
 </script>
 
 <template>
@@ -204,7 +207,7 @@ onBeforeUnmount(() => stopPolling())
         <h1>{{ order?.dealTitle || copy.orderDetail.title }}</h1>
         <p v-if="order">
           {{ order.shopName }} · {{ formatMoney(order.amount, order.currency) }} ·
-          {{ copy.statuses.pay(order.payStatus, order.payStatusText) }}
+          {{ order.status === 2 && order.payStatus === 0 ? copy.orderDetail.closed : copy.statuses.pay(order.payStatus, order.payStatusText) }}
         </p>
       </div>
       <RouterLink class="secondary-button" to="/user/orders">{{ copy.orderDetail.back }}</RouterLink>
@@ -221,9 +224,16 @@ onBeforeUnmount(() => stopPolling())
     </div>
 
     <template v-else-if="order">
+      <p v-if="order.orderSource === 'seckill'" class="status-pill" data-testid="order-source">
+        {{ copy.orderDetail.flashSale }} · {{ order.campaignTitle }}
+      </p>
+      <p v-if="order.expireAt && canCancel" class="muted" data-testid="order-deadline">
+        {{ copy.orderDetail.payDeadline }} {{ formatWebDateTime(order.expireAt, copy.tag) }}
+      </p>
+      <p v-if="order.canPay === false && canCancel" class="feedback">{{ copy.orderDetail.expired }}</p>
       <div class="hero-actions">
         <button
-          v-if="order.payStatus === 0 && !intent && order.status === 1"
+          v-if="order.payStatus === 0 && order.canPay !== false && !intent && order.status === 1"
           class="primary-button"
           type="button"
           :disabled="acting"
@@ -292,7 +302,7 @@ onBeforeUnmount(() => stopPolling())
           <span class="status-pill">{{ copy.statuses.refund(order.refund.status, order.refund.statusText) }}</span>
           · {{ copy.orderDetail.amount }} {{ formatMoney(order.refund.amount, order.currency) }}
         </p>
-        <p>{{ copy.orderDetail.reason }}: {{ order.refund.reason || copy.common.notAvailable }}</p>
+        <p>{{ copy.orderDetail.reason }}: {{ order.refund.refundType === 'late_payment' ? copy.orderDetail.automaticRefund : order.refund.reason || copy.common.notAvailable }}</p>
         <p v-if="order.refund.channelRefundTxn">
           {{ order.refund.channel || copy.common.notAvailable }} / {{ order.refund.channelRefundTxn }}
         </p>

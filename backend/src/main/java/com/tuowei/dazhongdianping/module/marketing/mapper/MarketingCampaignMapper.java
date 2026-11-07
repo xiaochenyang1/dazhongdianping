@@ -33,6 +33,8 @@ public interface MarketingCampaignMapper {
 
     SeckillEventRow selectSeckill(@Param("id") Long id, @Param("region") String region);
 
+    SeckillEventRow selectSeckillForUpdate(@Param("id") Long id, @Param("region") String region);
+
     int updateSeckillAudit(
             @Param("id") Long id,
             @Param("region") String region,
@@ -45,6 +47,18 @@ public interface MarketingCampaignMapper {
     int countSeckillClaim(@Param("eventId") Long eventId, @Param("userId") Long userId);
 
     void insertSeckillClaim(SeckillClaimRow row);
+
+    SeckillClaimRow selectSeckillClaim(@Param("eventId") Long eventId, @Param("userId") Long userId);
+
+    List<SeckillClaimRow> selectSeckillClaimsForUser(@Param("userId") Long userId, @Param("region") String region);
+
+    int reserveSeckillClaim(SeckillClaimRow row);
+
+    int markSeckillClaimPaid(@Param("orderId") Long orderId);
+
+    int releaseSeckillClaim(@Param("orderId") Long orderId, @Param("status") Integer status);
+
+    int releaseSeckillStock(@Param("id") Long id, @Param("quantity") Integer quantity);
 
     void insertGroup(GroupBuyCampaignRow row);
 

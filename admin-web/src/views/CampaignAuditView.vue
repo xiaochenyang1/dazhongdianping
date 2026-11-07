@@ -85,15 +85,15 @@ watch(() => state.region, load, { immediate: true })
     <p v-if="success" class="feedback is-success">{{ success }}</p>
     <div class="toolbar">
       <label><input v-model="pendingOnly" type="checkbox" /> 只看待审核</label>
-      <input v-if="canWrite()" v-model="reason" placeholder="驳回原因" />
+      <input v-if="canWrite()" v-model="reason" data-testid="campaign-reject-reason" placeholder="驳回原因" />
     </div>
     <h2>秒杀</h2>
     <table class="data-table">
       <thead>
-        <tr><th>活动</th><th>门店</th><th>价格</th><th>已售/库存</th><th>时间</th><th>状态</th><th></th></tr>
+        <tr><th>活动</th><th>门店</th><th>价格</th><th>已售及待支付/总名额</th><th>时间</th><th>状态</th><th></th></tr>
       </thead>
       <tbody>
-        <tr v-for="item in visibleSeckills" :key="item.id">
+        <tr v-for="item in visibleSeckills" :key="item.id" :data-testid="`seckill-row-${item.id}`">
           <td>{{ item.title }}</td>
           <td>{{ item.shopId }}</td>
           <td>{{ item.seckillPrice }} {{ item.currency }}</td>
@@ -101,8 +101,8 @@ watch(() => state.region, load, { immediate: true })
           <td>{{ windowText(item) }}</td>
           <td>{{ statusText(item.auditStatus) }}<span v-if="item.rejectReason"> · {{ item.rejectReason }}</span></td>
           <td v-if="canWrite() && item.auditStatus === 1">
-            <button type="button" class="link" :disabled="savingId !== 0" @click="audit('seckill', item.id, true)">通过</button>
-            <button type="button" class="link" :disabled="savingId !== 0" @click="audit('seckill', item.id, false)">驳回</button>
+            <button type="button" class="link" :data-testid="`seckill-approve-${item.id}`" :disabled="savingId !== 0" @click="audit('seckill', item.id, true)">通过</button>
+            <button type="button" class="link" :data-testid="`seckill-reject-${item.id}`" :disabled="savingId !== 0" @click="audit('seckill', item.id, false)">驳回</button>
           </td>
           <td v-else></td>
         </tr>
@@ -115,7 +115,7 @@ watch(() => state.region, load, { immediate: true })
         <tr><th>活动</th><th>门店</th><th>价格</th><th>成团人数</th><th>时间</th><th>状态</th><th></th></tr>
       </thead>
       <tbody>
-        <tr v-for="item in visibleGroups" :key="item.id">
+        <tr v-for="item in visibleGroups" :key="item.id" :data-testid="`groupbuy-row-${item.id}`">
           <td>{{ item.title }}</td>
           <td>{{ item.shopId }}</td>
           <td>{{ item.groupPrice }} {{ item.currency }}</td>
@@ -123,8 +123,8 @@ watch(() => state.region, load, { immediate: true })
           <td>{{ windowText(item) }}</td>
           <td>{{ statusText(item.auditStatus) }}<span v-if="item.rejectReason"> · {{ item.rejectReason }}</span></td>
           <td v-if="canWrite() && item.auditStatus === 1">
-            <button type="button" class="link" :disabled="savingId !== 0" @click="audit('groupbuy', item.id, true)">通过</button>
-            <button type="button" class="link" :disabled="savingId !== 0" @click="audit('groupbuy', item.id, false)">驳回</button>
+            <button type="button" class="link" :data-testid="`groupbuy-approve-${item.id}`" :disabled="savingId !== 0" @click="audit('groupbuy', item.id, true)">通过</button>
+            <button type="button" class="link" :data-testid="`groupbuy-reject-${item.id}`" :disabled="savingId !== 0" @click="audit('groupbuy', item.id, false)">驳回</button>
           </td>
           <td v-else></td>
         </tr>

@@ -381,7 +381,7 @@
 
     <select id="selectOrdersByUserId" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">
         SELECT o.id,
-               o.order_no,
+               o.order_no,o.order_source,o.campaign_id,o.campaign_title,o.deal_title_snapshot,o.coupon_valid_end,o.inventory_released,
                o.user_id,
                o.deal_id,
                o.shop_id,
@@ -396,7 +396,7 @@
                o.paid_at,
                o.expire_at,
                o.created_at,
-               d.title AS deal_title,
+               COALESCE(NULLIF(o.deal_title_snapshot,''),d.title) AS deal_title,
                s.name AS shop_name,
                d.cover_image
         FROM `order` o

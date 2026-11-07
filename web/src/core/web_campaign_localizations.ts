@@ -10,6 +10,16 @@ export interface WebCampaignStrings {
   empty: string
   loadFailed: string
   claim: string
+  purchaseRules: string
+  purchaseFailed: string
+  buying: string
+  soldOut: string
+  limitReached: string
+  viewOrder: string
+  offerDetails: string
+  endsAt: string
+  remaining: (count: number) => string
+  retry: string
   open: string
   join: string
   teamId: string
@@ -69,7 +79,17 @@ const zhCnStrings: WebCampaignStrings = {
   loading: '加载中...',
   empty: '当前没有可参加的活动。',
   loadFailed: '活动加载失败',
-  claim: '立即抢',
+  claim: '立即抢购',
+  purchaseRules: '每人每场限购一件，不叠加优惠券。下单后最多保留 15 分钟，请在订单截止时间前完成付款。成功购买后退款仍计入限购次数。',
+  purchaseFailed: '秒杀下单失败',
+  buying: '下单中…',
+  soldOut: '已售罄',
+  limitReached: '已参与',
+  viewOrder: '查看订单',
+  offerDetails: '套餐详情',
+  endsAt: '活动结束',
+  remaining: (count) => `剩余 ${count} 件`,
+  retry: '刷新重试',
   open: '开团',
   join: '加入拼团',
   teamId: '拼团号',
@@ -129,7 +149,17 @@ const enStrings: WebCampaignStrings = {
   loading: 'Loading...',
   empty: 'Nothing is open right now.',
   loadFailed: 'Could not load campaigns',
-  claim: 'Claim',
+  claim: 'Buy now',
+  purchaseRules: 'One purchase per person per event, including refunded purchases. No additional coupons. Orders are held for up to 15 minutes; pay before the deadline shown on your order.',
+  purchaseFailed: 'Could not create your flash-sale order',
+  buying: 'Creating order…',
+  soldOut: 'Sold out',
+  limitReached: 'Already participated',
+  viewOrder: 'View order',
+  offerDetails: 'Offer details',
+  endsAt: 'Sale ends',
+  remaining: (count) => `${count} left`,
+  retry: 'Refresh and retry',
   open: 'Start a group',
   join: 'Join',
   teamId: 'Team',
@@ -182,6 +212,13 @@ const enStrings: WebCampaignStrings = {
     '榜单详情加载失败': 'Could not load ranking details',
     '活动列表加载失败': 'Could not load activities',
     '活动详情加载失败': 'Could not load activity details',
+    '秒杀已售罄': 'This flash sale is sold out.',
+    '团购库存不足': 'This offer is sold out.',
+    '已参与过该秒杀': 'You have already participated in this flash sale.',
+    '不在秒杀活动时间内': 'This flash sale is not currently available.',
+    '秒杀活动不存在': 'This flash sale is no longer available.',
+    '秒杀套餐已失效': 'This offer is no longer available.',
+    '秒杀价格已失效': 'The flash-sale price is no longer available.',
   },
 }
 

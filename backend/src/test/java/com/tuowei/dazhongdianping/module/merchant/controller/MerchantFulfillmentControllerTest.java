@@ -86,8 +86,7 @@ class MerchantFulfillmentControllerTest {
                 "%/user/reservations/" + secondId + "%"
         ));
 
-        jdbc.update("INSERT INTO coupon(order_id,user_id,deal_id,shop_id,code,status,expire_at) "
-                + "VALUES(999,9001,41001,20001,'VERIFYME001',1,'2026-12-31')");
+        paidCoupon(999, "VERIFYME001");
         mockMvc.perform(post("/api/b/v1/coupons/VERIFYME001/verify")
                         .header("Authorization", bearer(merchant))
                         .header("X-Region", "EU"))
@@ -222,8 +221,7 @@ class MerchantFulfillmentControllerTest {
                         .header("X-Region", "EU"))
                 .andExpect(status().isOk());
 
-        jdbc.update("INSERT INTO coupon(order_id,user_id,deal_id,shop_id,code,status,expire_at) "
-                + "VALUES(997,9001,41001,20001,'STAFFVERIFY01',1,'2026-12-31')");
+        paidCoupon(997, "STAFFVERIFY01");
         mockMvc.perform(post("/api/b/v1/coupons/STAFFVERIFY01/verify")
                         .header("Authorization", bearer(staffToken))
                         .header("X-Region", "EU"))
@@ -235,6 +233,15 @@ class MerchantFulfillmentControllerTest {
                 Long.class,
                 confirmedReservation
         ));
+    }
+
+    private void paidCoupon(long orderId, String code) {
+        jdbc.update("INSERT INTO `order`(id,order_no,user_id,deal_id,shop_id,region,quantity,unit_price,amount,currency,pay_status,status,paid_at) "
+                        + "VALUES(?,?,9001,41001,20001,'EU',1,59,59,'EUR',1,1,CURRENT_TIMESTAMP)",
+                orderId, "FULFILLMENT-" + orderId);
+        jdbc.update("INSERT INTO coupon(order_id,user_id,deal_id,shop_id,code,status,expire_at) "
+                        + "VALUES(?,9001,41001,20001,?,1,'2026-12-31')",
+                orderId, code);
     }
 
     private long createReservation(String userToken, boolean includeReserveTime) throws Exception {

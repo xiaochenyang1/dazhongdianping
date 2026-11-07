@@ -67,7 +67,7 @@ class MarketingCampaignControllerTest {
     }
 
     @Test
-    void seckillClaimIsOnceAndStopsWhenSoldOut() throws Exception {
+    void seckillCreatesOneOrderAndStopsWhenSoldOut() throws Exception {
         String merchant = loginMerchant();
         String admin = adminToken();
         MvcResult created = mockMvc.perform(post("/api/b/v1/marketing/seckill")
@@ -111,10 +111,13 @@ class MarketingCampaignControllerTest {
                         .header("Authorization", bearer(first)).header("X-Region", "CN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.messageKey").value("marketing.seckill_claimed"))
-                .andExpect(jsonPath("$.data.sold").value(1));
+                .andExpect(jsonPath("$.data.sold").value(1))
+                .andExpect(jsonPath("$.data.order.amount").value(9.90))
+                .andExpect(jsonPath("$.data.order.orderSource").value("seckill"));
         mockMvc.perform(post("/api/c/v1/marketing/seckill/{id}/claim", id)
                         .header("Authorization", bearer(first)).header("X-Region", "CN"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sold").value(1));
 
         String second = registerUser();
         mockMvc.perform(post("/api/c/v1/marketing/seckill/{id}/claim", id)

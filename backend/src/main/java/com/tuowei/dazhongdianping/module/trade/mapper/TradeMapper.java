@@ -18,6 +18,8 @@ public interface TradeMapper {
 
     DealRow selectDeal(@Param("dealId") Long dealId, @Param("region") String region);
 
+    DealRow selectDealForUpdate(@Param("dealId") Long dealId, @Param("region") String region);
+
     List<DealItemRow> selectDealItems(@Param("dealId") Long dealId);
 
     int decrementDealStock(@Param("dealId") Long dealId, @Param("quantity") Integer quantity);
@@ -35,6 +37,10 @@ public interface TradeMapper {
     OrderRow selectOrderByNo(@Param("orderNo") String orderNo);
 
     OrderRow selectOrderById(@Param("orderId") Long orderId);
+
+    OrderRow selectOrderForUpdate(@Param("orderId") Long orderId);
+
+    int markInventoryReleased(@Param("orderId") Long orderId);
 
     List<OrderRow> selectUserOrders(
             @Param("userId") Long userId,
@@ -64,11 +70,17 @@ public interface TradeMapper {
 
     PaymentRow selectPayment(@Param("orderId") Long orderId);
 
+    PaymentRow selectPaymentForUpdate(@Param("orderId") Long orderId);
+
+    PaymentRow selectPaymentByTxnForUpdate(@Param("channel") String channel, @Param("channelTxn") String channelTxn);
+
     PaymentRow selectPaymentByTxn(@Param("channel") String channel, @Param("channelTxn") String channelTxn);
 
     int markPaymentSuccess(PaymentRow row);
 
     int markOrderPaid(@Param("orderId") Long orderId, @Param("channel") String channel);
+
+    int markClosedOrderPaid(@Param("orderId") Long orderId, @Param("channel") String channel);
 
     long countOrderCoupons(@Param("orderId") Long orderId);
 
@@ -111,7 +123,13 @@ public interface TradeMapper {
 
     long countUsedCoupons(@Param("orderId") Long orderId);
 
+    List<CouponRow> selectOrderCouponsForUpdate(@Param("orderId") Long orderId);
+
+    CouponRow selectCouponForUpdate(@Param("couponId") Long couponId);
+
     RefundRow selectRefundByOrder(@Param("orderId") Long orderId);
+
+    RefundRow selectRefundForUpdate(@Param("orderId") Long orderId);
 
     RefundRow selectRefundByChannelTxn(
             @Param("channel") String channel,
@@ -142,6 +160,13 @@ public interface TradeMapper {
     );
 
     List<RefundRow> selectProcessingRefunds(@Param("limit") Integer limit);
+
+    List<RefundRow> selectUnsubmittedAutoRefunds(@Param("limit") Integer limit);
+
+    void insertAutomaticRefund(@Param("orderId") Long orderId, @Param("amount") BigDecimal amount,
+            @Param("channel") String channel);
+
+    int recordAutomaticRefundRetry(@Param("refundId") Long refundId);
 
     int markCouponsRefunded(@Param("orderId") Long orderId);
 

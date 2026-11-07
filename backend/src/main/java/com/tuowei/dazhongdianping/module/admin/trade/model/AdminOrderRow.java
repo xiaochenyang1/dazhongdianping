@@ -8,6 +8,9 @@ import lombok.Data;
 public class AdminOrderRow {
     private Long id;
     private String orderNo;
+    private String orderSource;
+    private Long campaignId;
+    private String campaignTitle;
     private Long merchantId;
     private String merchantName;
     private Long shopId;

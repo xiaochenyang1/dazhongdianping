@@ -46,6 +46,9 @@ class MerchantTradeServiceRefundFailClosedTest {
     private final PaymentChannelResolver channelResolver = mock(PaymentChannelResolver.class);
     private final MerchantAuthorizationService authorizationService = mock(MerchantAuthorizationService.class);
 
+    private final com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService inventory =
+            mock(com.tuowei.dazhongdianping.module.trade.service.OrderInventoryService.class);
+
     private final MerchantTradeService service = new MerchantTradeService(
             mapper,
             mock(AdminAuditMapper.class),
@@ -53,7 +56,7 @@ class MerchantTradeServiceRefundFailClosedTest {
             mock(NotificationService.class),
             tradeMapper,
             channelResolver,
-            mock(org.springframework.context.ApplicationEventPublisher.class)
+            mock(org.springframework.context.ApplicationEventPublisher.class), inventory
     );
 
     private static final Long ORDER_ID = 7701L;
@@ -73,13 +76,14 @@ class MerchantTradeServiceRefundFailClosedTest {
         order.setOrderNo("MERCHANT-ORDER-001");
         order.setDealTitle("测试团购");
         when(mapper.selectOrder(anyLong(), anyLong(), anyString())).thenReturn(order);
+        when(inventory.lockOrder(ORDER_ID)).thenReturn(order);
 
         RefundRow refund = new RefundRow();
         refund.setId(8801L);
         refund.setOrderId(ORDER_ID);
         refund.setStatus(0);
         refund.setAmount(new BigDecimal("88.00"));
-        when(mapper.selectRefund(ORDER_ID)).thenReturn(refund);
+        when(tradeMapper.selectRefundForUpdate(ORDER_ID)).thenReturn(refund);
 
         when(mapper.approveRefund(anyLong(), anyLong(), anyString())).thenReturn(1);
         when(mapper.markOrderRefunded(anyLong())).thenReturn(1);
@@ -88,7 +92,7 @@ class MerchantTradeServiceRefundFailClosedTest {
         PaymentRow payment = new PaymentRow();
         payment.setChannel("alipay_mock");
         payment.setChannelTxn("TX-MERCHANT-001");
-        when(tradeMapper.selectPayment(ORDER_ID)).thenReturn(payment);
+        when(tradeMapper.selectPaymentForUpdate(ORDER_ID)).thenReturn(payment);
         when(tradeMapper.recordRefundChannelResult(anyLong(), anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(1);
     }
@@ -111,7 +115,7 @@ class MerchantTradeServiceRefundFailClosedTest {
         // Channel resolution happens before any local refund/order/stock transition.
         verify(channelResolver).resolveByChannel("alipay_mock");
         verify(mapper, never()).approveRefund(anyLong(), anyLong(), anyString());
-        verify(mapper, never()).restoreDealStock(anyLong(), anyInt());
+        verify(inventory, never()).release(any());
         verify(mapper, never()).insertOperationLog(
                 anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString());
     }
@@ -133,7 +137,7 @@ class MerchantTradeServiceRefundFailClosedTest {
 
     @Test
     void shouldFailClosedWhenPaymentRecordMissing() {
-        when(tradeMapper.selectPayment(ORDER_ID)).thenReturn(null);
+        when(tradeMapper.selectPaymentForUpdate(ORDER_ID)).thenReturn(null);
 
         assertThrows(ServiceUnavailableException.class, () ->
                 service.auditRefund(ORDER_ID,

@@ -26,54 +26,33 @@ public class MarketingCampaignService {
 
     private final MarketingCampaignMapper mapper;
     private final LaunchPolicy launch;
+    private final SeckillOrderService seckillOrders;
 
-    public MarketingCampaignService(MarketingCampaignMapper mapper, LaunchPolicy launch) {
+    public MarketingCampaignService(MarketingCampaignMapper mapper, LaunchPolicy launch, SeckillOrderService seckillOrders) {
         this.mapper = mapper;
         this.launch = launch;
+        this.seckillOrders = seckillOrders;
     }
 
     public List<Map<String, Object>> seckills() {
         launch.require(Feature.SECKILL);
-        return mapper.selectActiveSeckills(region(), LocalDateTime.now()).stream().map(this::seckillMap).toList();
+        UserSession user = UserSessionContext.get();
+        Map<Long, SeckillClaimRow> claims = new java.util.HashMap<>();
+        if (user != null) mapper.selectSeckillClaimsForUser(user.userId(), region())
+                .forEach(claim -> claims.put(claim.getEventId(), claim));
+        return mapper.selectActiveSeckills(region(), LocalDateTime.now()).stream().map(event -> {
+            Map<String, Object> body = seckillMap(event);
+            SeckillClaimRow claim = claims.get(event.getId());
+            body.put("perUserLimit", 1);
+            body.put("availableStock", event.getAvailableStock());
+            body.put("participationStatus", claim == null ? null : claim.getStatus());
+            body.put("orderId", claim == null || Integer.valueOf(3).equals(claim.getStatus()) ? null : claim.getOrderId());
+            return body;
+        }).toList();
     }
 
-    @Transactional
     public Map<String, Object> claimSeckill(Long id) {
-        launch.require(Feature.SECKILL);
-        UserSession user = requireUser();
-        String region = region();
-        LocalDateTime now = LocalDateTime.now();
-        SeckillEventRow event = mapper.selectSeckill(id, region);
-        if (event == null || event.getAuditStatus() == null || event.getAuditStatus() != 2
-                || event.getStatus() == null || event.getStatus() != 1) {
-            throw new NotFoundException("秒杀活动不存在");
-        }
-        if (event.getStartAt() != null && now.isBefore(event.getStartAt())
-                || event.getEndAt() != null && now.isAfter(event.getEndAt())) {
-            throw new IllegalArgumentException("不在秒杀活动时间内");
-        }
-        if (mapper.countSeckillClaim(id, user.userId()) > 0) {
-            throw new IllegalArgumentException("已参与过该秒杀");
-        }
-        if (event.getSold() != null && event.getStock() != null && event.getSold() >= event.getStock()) {
-            throw new IllegalArgumentException("秒杀已售罄");
-        }
-        if (mapper.incrementSeckillSold(id, region, now) == 0) {
-            throw new IllegalArgumentException("秒杀已售罄");
-        }
-        SeckillClaimRow claim = new SeckillClaimRow();
-        claim.setEventId(id);
-        claim.setUserId(user.userId());
-        claim.setRegion(region);
-        try {
-            mapper.insertSeckillClaim(claim);
-        } catch (DuplicateKeyException duplicate) {
-            throw new IllegalArgumentException("已参与过该秒杀");
-        }
-        SeckillEventRow saved = mapper.selectSeckill(id, region);
-        Map<String, Object> body = seckillMap(saved);
-        body.put("claimId", claim.getId());
-        return body;
+        return seckillOrders.create(id);
     }
 
     public List<Map<String, Object>> groupBuys() {

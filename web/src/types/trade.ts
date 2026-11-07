@@ -17,6 +17,7 @@ export interface OrderRefund {
   id: number
   amount: number
   reason: string
+  refundType?: string
   status: number
   statusText: string
   channel?: string
@@ -30,6 +31,11 @@ export interface OrderRefund {
 export interface TradeOrder {
   id: number
   orderNo: string
+  orderSource?: string
+  campaignId?: number | null
+  campaignTitle?: string
+  expireAt?: string
+  canPay?: boolean
   dealId: number
   dealTitle: string
   shopId: number

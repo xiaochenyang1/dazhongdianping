@@ -1,6 +1,7 @@
 package com.tuowei.dazhongdianping.module.trade.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -13,6 +14,12 @@ public class OrderRow {
     private Long dealId;
     private Long shopId;
     private String region;
+    private String orderSource = "deal";
+    private Long campaignId;
+    private String campaignTitle = "";
+    private String dealTitleSnapshot = "";
+    private LocalDate couponValidEnd;
+    private Boolean inventoryReleased = false;
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal originalAmount;

@@ -5,10 +5,28 @@
     <select id="selectShopDeals" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">SELECT <include refid="dealCols"/> FROM deal d JOIN shop s ON s.id=d.shop_id WHERE d.shop_id=#{shopId} AND d.region=#{region} AND d.audit_status=1 AND d.status=1 AND d.is_deleted=FALSE ORDER BY d.id</select>
     <select id="selectDeal" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">SELECT <include refid="dealCols"/> FROM deal d JOIN shop s ON s.id=d.shop_id WHERE d.id=#{dealId} AND d.region=#{region} AND d.audit_status=1 AND d.status=1 AND d.is_deleted=FALSE</select>
     <select id="selectDealItems" resultType="com.tuowei.dazhongdianping.module.trade.model.DealItemRow">SELECT id,deal_id,name,quantity,price,sort FROM deal_item WHERE deal_id=#{dealId} ORDER BY sort,id</select>
+    <select id="selectDealForUpdate" resultType="com.tuowei.dazhongdianping.module.trade.model.DealRow">
+        SELECT * FROM deal WHERE id=#{dealId} AND region=#{region}
+          AND audit_status=1 AND status=1 AND is_deleted=FALSE FOR UPDATE
+    </select>
     <update id="decrementDealStock">UPDATE deal SET stock=CASE WHEN stock=-1 THEN -1 ELSE stock-#{quantity} END,sold_count=sold_count+#{quantity},updated_at=CURRENT_TIMESTAMP WHERE id=#{dealId} AND status=1 AND (stock=-1 OR stock&gt;=#{quantity})</update>
     <update id="restoreDealStock">UPDATE deal SET stock=CASE WHEN stock=-1 THEN -1 ELSE stock+#{quantity} END,sold_count=CASE WHEN sold_count&gt;=#{quantity} THEN sold_count-#{quantity} ELSE 0 END WHERE id=#{dealId}</update>
-    <insert id="insertOrder" useGeneratedKeys="true" keyProperty="id">INSERT INTO `order`(order_no,user_id,deal_id,shop_id,region,quantity,unit_price,original_amount,discount_amount,user_coupon_id,amount,currency,pay_status,status,expire_at) VALUES(#{orderNo},#{userId},#{dealId},#{shopId},#{region},#{quantity},#{unitPrice},#{originalAmount},#{discountAmount},#{userCouponId},#{amount},#{currency},0,1,#{expireAt})</insert>
-    <sql id="orderCols">o.id,o.order_no,o.user_id,o.deal_id,o.shop_id,o.region,o.quantity,o.unit_price,o.original_amount,o.discount_amount,o.user_coupon_id,o.amount,o.currency,o.pay_method,o.pay_status,o.status,o.paid_at,o.expire_at,o.created_at,d.title AS deal_title,s.name AS shop_name,d.cover_image</sql>
+    <insert id="insertOrder" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `order`(order_no,user_id,deal_id,shop_id,region,quantity,unit_price,original_amount,discount_amount,
+            user_coupon_id,amount,currency,pay_status,status,expire_at,order_source,campaign_id,campaign_title,
+            deal_title_snapshot,coupon_valid_end,inventory_released)
+        VALUES(#{orderNo},#{userId},#{dealId},#{shopId},#{region},#{quantity},#{unitPrice},#{originalAmount},#{discountAmount},
+            #{userCouponId},#{amount},#{currency},0,1,#{expireAt},#{orderSource},#{campaignId},#{campaignTitle},
+            #{dealTitleSnapshot},#{couponValidEnd},FALSE)
+    </insert>
+    <sql id="orderCols">o.id,o.order_no,o.user_id,o.deal_id,o.shop_id,o.region,o.quantity,o.unit_price,o.original_amount,o.discount_amount,o.user_coupon_id,o.amount,o.currency,o.pay_method,o.pay_status,o.status,o.paid_at,o.expire_at,o.created_at,o.order_source,o.campaign_id,o.campaign_title,o.deal_title_snapshot,o.coupon_valid_end,o.inventory_released,COALESCE(NULLIF(o.deal_title_snapshot,''),d.title) AS deal_title,s.name AS shop_name,d.cover_image</sql>
+    <select id="selectOrderForUpdate" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">
+        SELECT * FROM `order` WHERE id=#{orderId} FOR UPDATE
+    </select>
+    <update id="markInventoryReleased">
+        UPDATE `order` SET inventory_released=TRUE,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{orderId} AND inventory_released=FALSE
+    </update>
     <select id="selectUserOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">SELECT <include refid="orderCols"/> FROM `order` o JOIN deal d ON d.id=o.deal_id JOIN shop s ON s.id=o.shop_id WHERE o.id=#{orderId} AND o.user_id=#{userId} AND o.region=#{region}</select>
     <select id="selectOrderByNo" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">SELECT <include refid="orderCols"/> FROM `order` o JOIN deal d ON d.id=o.deal_id JOIN shop s ON s.id=o.shop_id WHERE o.order_no=#{orderNo}</select>
     <select id="selectOrderById" resultType="com.tuowei.dazhongdianping.module.trade.model.OrderRow">SELECT <include refid="orderCols"/> FROM `order` o JOIN deal d ON d.id=o.deal_id JOIN shop s ON s.id=o.shop_id WHERE o.id=#{orderId}</select>
@@ -23,7 +41,7 @@
         WHERE o.pay_status=0
           AND o.status=1
           AND o.expire_at IS NOT NULL
-          AND o.expire_at &lt; CURRENT_TIMESTAMP
+          AND o.expire_at &lt;= CURRENT_TIMESTAMP
         ORDER BY o.expire_at ASC, o.id ASC
         LIMIT #{limit}
     </select>
@@ -39,7 +57,7 @@
         WHERE p.status = 0
           AND (
                 o.status = 2
-             OR (o.pay_status = 0 AND o.expire_at IS NOT NULL AND o.expire_at &lt; CURRENT_TIMESTAMP)
+             OR (o.pay_status = 0 AND o.expire_at IS NOT NULL AND o.expire_at &lt;= CURRENT_TIMESTAMP)
           )
         ORDER BY p.id ASC
         LIMIT #{limit}
@@ -52,8 +70,18 @@
     <insert id="insertPayment" useGeneratedKeys="true" keyProperty="id">INSERT INTO payment(order_id,order_no,channel,channel_txn,client_secret,amount,currency,status) VALUES(#{orderId},#{orderNo},#{channel},#{channelTxn},#{clientSecret},#{amount},#{currency},0)</insert>
     <select id="selectPayment" resultType="com.tuowei.dazhongdianping.module.trade.model.PaymentRow">SELECT id,order_id,order_no,channel,channel_txn,client_secret,amount,currency,status,raw_response FROM payment WHERE order_id=#{orderId} ORDER BY id DESC LIMIT 1</select>
     <select id="selectPaymentByTxn" resultType="com.tuowei.dazhongdianping.module.trade.model.PaymentRow">SELECT id,order_id,order_no,channel,channel_txn,client_secret,amount,currency,status,raw_response FROM payment WHERE channel=#{channel} AND channel_txn=#{channelTxn}</select>
-    <update id="markPaymentSuccess">UPDATE payment SET status=1,raw_response=#{rawResponse},updated_at=CURRENT_TIMESTAMP WHERE id=#{id} AND status=0</update>
+    <select id="selectPaymentForUpdate" resultType="com.tuowei.dazhongdianping.module.trade.model.PaymentRow">
+        SELECT * FROM payment WHERE order_id=#{orderId} ORDER BY id DESC LIMIT 1 FOR UPDATE
+    </select>
+    <select id="selectPaymentByTxnForUpdate" resultType="com.tuowei.dazhongdianping.module.trade.model.PaymentRow">
+        SELECT * FROM payment WHERE channel=#{channel} AND channel_txn=#{channelTxn} FOR UPDATE
+    </select>
+    <update id="markPaymentSuccess">UPDATE payment SET status=1,raw_response=#{rawResponse},updated_at=CURRENT_TIMESTAMP WHERE id=#{id} AND status IN (0,2)</update>
     <update id="markOrderPaid">UPDATE `order` SET pay_status=1,pay_method=#{channel},paid_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=#{orderId} AND pay_status=0 AND status=1</update>
+    <update id="markClosedOrderPaid">
+        UPDATE `order` SET pay_status=1,pay_method=#{channel},paid_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{orderId} AND pay_status=0 AND status=2
+    </update>
     <select id="countOrderCoupons" resultType="long">SELECT COUNT(1) FROM coupon WHERE order_id=#{orderId}</select>
     <insert id="insertCoupon">INSERT INTO coupon(order_id,user_id,deal_id,shop_id,code,status,expire_at) VALUES(#{orderId},#{userId},#{dealId},#{shopId},#{code},1,#{expireAt})</insert>
     <sql id="couponCols">c.id,c.order_id,c.user_id,c.deal_id,c.shop_id,c.code,c.status,c.verify_at,c.verify_by,c.expire_at,c.remind_status,c.created_at,d.title AS deal_title,s.name AS shop_name,d.cover_image,d.region AS region</sql>
@@ -75,8 +103,17 @@
     <select id="selectMerchantCoupon" resultType="com.tuowei.dazhongdianping.module.trade.model.CouponRow">SELECT <include refid="couponCols"/> FROM coupon c JOIN deal d ON d.id=c.deal_id JOIN shop s ON s.id=c.shop_id WHERE c.code=#{code} AND s.merchant_id=#{merchantId} AND d.region=#{region}</select>
     <update id="verifyMerchantCoupon">UPDATE coupon SET status=2,verify_at=CURRENT_TIMESTAMP,verify_by=#{operatorId} WHERE code=#{code} AND status=1 AND (expire_at IS NULL OR expire_at&gt;=CURRENT_DATE) AND EXISTS (SELECT 1 FROM deal d JOIN shop s ON s.id=d.shop_id WHERE d.id=coupon.deal_id AND s.id=coupon.shop_id AND s.merchant_id=#{merchantId} AND d.region=#{region})</update>
     <select id="countUsedCoupons" resultType="long">SELECT COUNT(1) FROM coupon WHERE order_id=#{orderId} AND status=2</select>
-    <sql id="refundCols">id,order_id,coupon_id,amount,reason,status,audit_by,audit_reason,channel,channel_refund_txn,channel_status,channel_failure_reason,audited_at,created_at,updated_at</sql>
+    <select id="selectOrderCouponsForUpdate" resultType="com.tuowei.dazhongdianping.module.trade.model.CouponRow">
+        SELECT * FROM coupon WHERE order_id=#{orderId} ORDER BY id FOR UPDATE
+    </select>
+    <select id="selectCouponForUpdate" resultType="com.tuowei.dazhongdianping.module.trade.model.CouponRow">
+        SELECT * FROM coupon WHERE id=#{couponId} FOR UPDATE
+    </select>
+    <sql id="refundCols">id,order_id,coupon_id,amount,reason,refund_type,status,audit_by,audit_reason,channel,channel_refund_txn,channel_status,channel_failure_reason,audited_at,created_at,updated_at</sql>
     <select id="selectRefundByOrder" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">SELECT <include refid="refundCols"/> FROM refund WHERE order_id=#{orderId} ORDER BY id DESC LIMIT 1</select>
+    <select id="selectRefundForUpdate" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">
+        SELECT <include refid="refundCols"/> FROM refund WHERE order_id=#{orderId} FOR UPDATE
+    </select>
     <select id="selectRefundByChannelTxn" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">SELECT <include refid="refundCols"/> FROM refund WHERE channel=#{channel} AND channel_refund_txn=#{channelRefundTxn} LIMIT 1</select>
     <select id="selectProcessingRefunds" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">
         SELECT <include refid="refundCols"/>
@@ -86,6 +123,19 @@
         LIMIT #{limit}
     </select>
     <insert id="insertRefund">INSERT INTO refund(order_id,amount,reason,status) VALUES(#{orderId},#{amount},#{reason},0)</insert>
+    <insert id="insertAutomaticRefund">
+        INSERT INTO refund(order_id,amount,reason,refund_type,status,channel,channel_status)
+        VALUES(#{orderId},#{amount},'订单关闭后收到支付，自动退款','late_payment',3,#{channel},'pending')
+    </insert>
+    <select id="selectUnsubmittedAutoRefunds" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">
+        SELECT <include refid="refundCols"/> FROM refund
+        WHERE refund_type='late_payment' AND status=3 AND channel_refund_txn=''
+        ORDER BY updated_at,id LIMIT #{limit}
+    </select>
+    <update id="recordAutomaticRefundRetry">
+        UPDATE refund SET channel_failure_reason='退款渠道暂时不可用，系统将重试',updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{refundId} AND refund_type='late_payment' AND status=3 AND channel_refund_txn=''
+    </update>
     <update id="recordRefundChannelResult">
         UPDATE refund
         SET channel=#{channel},channel_refund_txn=#{channelRefundTxn},channel_status=#{channelStatus},

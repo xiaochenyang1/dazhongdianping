@@ -32,6 +32,13 @@ backend/local-storage/
 # Logs
 *.log
 
+# Local verification and release outputs
+/artifacts/
+/reports/
+/docs/发布加固与预发推进-*.md
+/docs/项目现状*.md
+/docs/项目进度复核-*.md
+
 # Deployment credentials
 deploy/*.env
 deploy/*.cnf

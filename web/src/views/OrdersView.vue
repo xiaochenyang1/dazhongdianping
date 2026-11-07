@@ -141,8 +141,9 @@ watch(
             {{ order.shopName }} · {{ copy.orders.quantity(order.quantity) }} ·
             {{ formatMoney(order.amount, order.currency) }}
           </p>
+          <p v-if="order.orderSource === 'seckill'" class="status-pill">{{ copy.orderDetail.flashSale }} · {{ order.campaignTitle }}</p>
           <p class="muted">{{ copy.orders.orderNo(order.orderNo) }}</p>
-          <span class="status-pill">{{ copy.statuses.pay(order.payStatus, order.payStatusText) }}</span>
+          <span class="status-pill">{{ order.status === 2 && order.payStatus === 0 ? copy.orderDetail.closed : copy.statuses.pay(order.payStatus, order.payStatusText) }}</span>
         </div>
         <div class="form-actions">
           <RouterLink class="secondary-button" :to="`/user/orders/${order.id}`">

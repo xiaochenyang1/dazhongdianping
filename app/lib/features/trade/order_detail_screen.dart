@@ -215,7 +215,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         final order = await widget.repository.loadOrder(widget.orderId);
         if (!mounted) return;
         setState(() => _order = order);
-        if (order.payStatus == 1) {
+        if (order.payStatus != 0 || order.refund != null) {
           // 订单已确认:清掉"确认中"提示,订单卡片本身已切到已支付态。
           ScaffoldMessenger.of(context).clearSnackBars();
           return;
@@ -305,9 +305,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  payStatusText,
+                  order.status == 2 && order.payStatus == 0
+                      ? strings.orderClosed
+                      : payStatusText,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
+                if (order.orderSource == 'seckill')
+                  Text(
+                    '${strings.flashSaleOrder} · ${order.campaignTitle}',
+                    key: const Key('order-source'),
+                  ),
                 const SizedBox(height: 8),
                 Text(
                   order.dealTitle,
@@ -374,6 +381,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             label: Text(strings.invoiceRequest),
           ),
         if (order.payStatus == 0 && order.status == 1) ...[
+          if (order.expireAt.isNotEmpty)
+            Text(
+              '${strings.orderPayDeadline} ${formatDisplayDateTime(order.expireAt, locale: strings.tag)}',
+              key: const Key('order-deadline'),
+            ),
+          if (order.canPay == false) Text(strings.orderPaymentExpired),
           const SizedBox(height: 14),
           if (paymentReason.isNotEmpty)
             Card(
@@ -386,7 +399,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 10),
           FilledButton.icon(
             key: const Key('order-pay-button'),
-            onPressed: _acting ? null : _pay,
+            onPressed: _acting || order.canPay == false ? null : _pay,
             icon: const Icon(Icons.payments_outlined),
             label: Text(strings.startPayment),
           ),
@@ -420,7 +433,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 6),
-                  Text(order.refund!.reason),
+                  Text(
+                    order.refund!.refundType == 'late_payment'
+                        ? strings.orderAutomaticRefund
+                        : order.refund!.reason,
+                  ),
                   if (order.refund!.channelFailureReason.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(order.refund!.channelFailureReason),
