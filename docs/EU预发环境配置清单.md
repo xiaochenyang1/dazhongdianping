@@ -100,7 +100,16 @@ set +a
 
 源码 SHA 由工作流按选定版本自动注入：打包使用 `APP_RELEASE_COMMIT_SHA`，部署使用 `DEPLOY_EXPECTED_COMMIT_SHA`，不要将它们配置成长期固定值。本地执行时分别传入 `package-release.ps1 -CommitSha <40位SHA>` 和 `deploy-release.ps1 -ExpectedCommitSha <同一40位SHA>`；两者必须来自通过 CI 的版本。实际 `test/pre` 包须分别按对应环境构建，不能直接复用未注入配置的技术候选。
 
-2026-10-14 只读核对 GitHub `pre` Environment 后，当前可见的变量名为 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`；没有配置 secret 名称。不得把此清单当作变量值或凭证核验。正式预发前仍需补齐下表中依赖目标环境的变量和 secrets。
+2026-11-07 只读核对 GitHub `pre` Environment 后，当前可见的变量名仍为 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`；没有配置 secret 名称。不得把此清单当作变量值或凭证核验。正式预发前仍需补齐下表中依赖目标环境的变量和 secrets。
+
+可在仓库根目录执行只读审计；脚本只输出缺失名称和格式问题，不输出变量值或 secret 内容：
+
+```powershell
+./scripts/ci/github-environment-preflight.ps1 -Environment pre -ReportOnly
+./scripts/ci/github-environment-preflight.ps1 -Environment pre -ReportOnly -Json
+```
+
+移除 `-ReportOnly` 后，任何缺失或格式错误都会以非零状态失败，可作为正式发版前的人工门禁。该审计只证明 GitHub Environment 发布入口齐备，不替代目标机上的 `stripe-preflight.sh --check-cli`、中间件连通性、供应商送达、部署 smoke 和回滚演练。
 
 Variables：
 
@@ -150,7 +159,7 @@ Secrets：
 - Stripe CLI 1.50.1 已安装，但没有真实 Stripe test 凭证与 Stripe CLI 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
-- 当前核对到的 GitHub `pre` Environment 只有 6 个固定变量名、没有 secret 名称；目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证和 SSH secrets 均未齐备。`prod` Environment 尚未创建。
+- 2026-11-07 运行 `github-environment-preflight.ps1` 的只读审计仍显示 GitHub `pre` Environment 只有 6 个固定变量名，缺少 10 个发布变量和 `DEPLOY_KNOWN_HOSTS`、`DEPLOY_SSH_PRIVATE_KEY` 两个 secret；目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证均未齐备。`prod` Environment 尚未创建。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
 ## 6. 已完成的仓库侧准备
