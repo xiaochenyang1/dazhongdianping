@@ -5,6 +5,7 @@ param(
     [string]$Repository,
     [string]$VariablesJson,
     [string]$SecretsJson,
+    [string]$ProtectionJson,
     [switch]$ReportOnly,
     [switch]$Json
 )
@@ -56,8 +57,10 @@ function Test-SafeAbsolutePath {
         -not $Value.Contains("//")
 }
 
-if ([string]::IsNullOrWhiteSpace($VariablesJson) -xor [string]::IsNullOrWhiteSpace($SecretsJson)) {
-    throw "VariablesJson and SecretsJson must be supplied together for an offline audit"
+$offlineInputs = @($VariablesJson, $SecretsJson, $ProtectionJson) |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+if ($offlineInputs.Count -gt 0 -and $offlineInputs.Count -ne 3) {
+    throw "VariablesJson, SecretsJson, and ProtectionJson must be supplied together for an offline audit"
 }
 
 $offline = -not [string]::IsNullOrWhiteSpace($VariablesJson)
@@ -72,6 +75,9 @@ if (-not $offline) {
     $SecretsJson = Invoke-GhJson -Arguments @(
         "secret", "list", "--repo", $Repository, "--env", $TargetEnvironment, "--json", "name"
     )
+    $ProtectionJson = Invoke-GhJson -Arguments @(
+        "api", "repos/$Repository/environments/$TargetEnvironment"
+    )
 }
 elseif ([string]::IsNullOrWhiteSpace($Repository)) {
     $Repository = "offline-snapshot"
@@ -80,6 +86,7 @@ elseif ([string]::IsNullOrWhiteSpace($Repository)) {
 try {
     $variableEntries = @($VariablesJson | ConvertFrom-Json)
     $secretEntries = @($SecretsJson | ConvertFrom-Json)
+    $protection = $ProtectionJson | ConvertFrom-Json
 }
 catch {
     throw "Environment snapshot JSON is invalid"
@@ -104,6 +111,9 @@ foreach ($entry in $secretEntries) {
 $missingVariables = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $missingSecrets = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $invalidVariables = [System.Collections.Generic.List[object]]::new()
+$missingProtectionRules = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$invalidProtectionRules = [System.Collections.Generic.List[object]]::new()
+$warnings = [System.Collections.Generic.List[object]]::new()
 
 function Get-EnvironmentVariableValue {
     param([string]$Name)
@@ -130,6 +140,30 @@ function Add-InvalidVariable {
     )
 
     $invalidVariables.Add([pscustomobject]@{
+        Name = $Name
+        Message = $Message
+    })
+}
+
+function Add-InvalidProtectionRule {
+    param(
+        [string]$Name,
+        [string]$Message
+    )
+
+    $invalidProtectionRules.Add([pscustomobject]@{
+        Name = $Name
+        Message = $Message
+    })
+}
+
+function Add-AuditWarning {
+    param(
+        [string]$Name,
+        [string]$Message
+    )
+
+    $warnings.Add([pscustomobject]@{
         Name = $Name
         Message = $Message
     })
@@ -268,12 +302,41 @@ if (Test-ConfiguredValue -Value $retentionCount) {
     }
 }
 
+$protectionRules = @($protection.protection_rules)
+if ($TargetEnvironment -in @("pre", "prod")) {
+    $requiredReviewerRules = @($protectionRules | Where-Object { $_.type -eq "required_reviewers" })
+    if ($requiredReviewerRules.Count -eq 0) {
+        $null = $missingProtectionRules.Add("required_reviewers")
+    }
+    else {
+        $reviewerCount = @($requiredReviewerRules | ForEach-Object { @($_.reviewers) }).Count
+        if ($reviewerCount -eq 0) {
+            Add-InvalidProtectionRule -Name "required_reviewers" -Message "must contain at least one reviewer"
+        }
+        if (@($requiredReviewerRules | Where-Object { $_.prevent_self_review -eq $true }).Count -eq 0) {
+            Add-AuditWarning -Name "prevent_self_review" -Message "release initiators can approve their own deployment"
+        }
+    }
+
+    if ($protection.can_admins_bypass -eq $true) {
+        Add-AuditWarning -Name "can_admins_bypass" -Message "repository administrators can bypass the environment approval gate"
+    }
+    if ($null -eq $protection.deployment_branch_policy) {
+        Add-AuditWarning -Name "deployment_branch_policy" -Message "the environment does not restrict deployment branches or tags"
+    }
+}
+
 $missingVariableNames = @($missingVariables | Sort-Object)
 $missingSecretNames = @($missingSecrets | Sort-Object)
 $invalidVariableReports = @($invalidVariables | Sort-Object Name, Message)
+$missingProtectionRuleNames = @($missingProtectionRules | Sort-Object)
+$invalidProtectionRuleReports = @($invalidProtectionRules | Sort-Object Name, Message)
+$warningReports = @($warnings | Sort-Object Name, Message)
 $ready = $missingVariableNames.Count -eq 0 -and
     $missingSecretNames.Count -eq 0 -and
-    $invalidVariableReports.Count -eq 0
+    $invalidVariableReports.Count -eq 0 -and
+    $missingProtectionRuleNames.Count -eq 0 -and
+    $invalidProtectionRuleReports.Count -eq 0
 
 $report = [pscustomobject]@{
     SchemaVersion = 1
@@ -282,9 +345,13 @@ $report = [pscustomobject]@{
     Ready = $ready
     VariablesObserved = $variables.Count
     SecretsObserved = $secrets.Count
+    ProtectionRulesObserved = $protectionRules.Count
     MissingVariables = $missingVariableNames
     MissingSecrets = $missingSecretNames
     InvalidVariables = $invalidVariableReports
+    MissingProtectionRules = $missingProtectionRuleNames
+    InvalidProtectionRules = $invalidProtectionRuleReports
+    Warnings = $warningReports
 }
 
 if ($Json) {
@@ -301,11 +368,20 @@ else {
     foreach ($item in $invalidVariableReports) {
         Write-Output "[invalid variable] $($item.Name): $($item.Message)"
     }
+    foreach ($name in $missingProtectionRuleNames) {
+        Write-Output "[missing protection] $name"
+    }
+    foreach ($item in $invalidProtectionRuleReports) {
+        Write-Output "[invalid protection] $($item.Name): $($item.Message)"
+    }
+    foreach ($item in $warningReports) {
+        Write-Output "[warning] $($item.Name): $($item.Message)"
+    }
     if ($ready) {
         Write-Output "[ready] GitHub Environment deployment configuration is complete."
     }
     else {
-        Write-Output "[blocked] Missing variables: $($missingVariableNames.Count); missing secrets: $($missingSecretNames.Count); invalid variables: $($invalidVariableReports.Count)."
+        Write-Output "[blocked] Missing variables: $($missingVariableNames.Count); missing secrets: $($missingSecretNames.Count); invalid variables: $($invalidVariableReports.Count); missing protections: $($missingProtectionRuleNames.Count); invalid protections: $($invalidProtectionRuleReports.Count)."
     }
 }
 

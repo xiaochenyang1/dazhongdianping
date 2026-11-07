@@ -72,12 +72,29 @@ $readyVariables = @{
 }
 $readyVariablesJson = ConvertTo-VariableJson -Values $readyVariables
 $readySecretsJson = ConvertTo-SecretJson -Names @("DEPLOY_KNOWN_HOSTS", "DEPLOY_SSH_PRIVATE_KEY")
+$readyProtectionJson = @{
+    protection_rules = @(
+        @{
+            type = "required_reviewers"
+            prevent_self_review = $true
+            reviewers = @(@{ type = "User"; reviewer = @{ login = "release-approver" } })
+        }
+    )
+    can_admins_bypass = $false
+    deployment_branch_policy = @{ protected_branches = $true; custom_branch_policies = $false }
+} | ConvertTo-Json -Depth 6 -Compress
+$unprotectedEnvironmentJson = @{
+    protection_rules = @()
+    can_admins_bypass = $true
+    deployment_branch_policy = $null
+} | ConvertTo-Json -Depth 4 -Compress
 
 $readyReport = & $preflightPath `
     -Environment pre `
     -Repository owner/repo `
     -VariablesJson $readyVariablesJson `
     -SecretsJson $readySecretsJson `
+    -ProtectionJson $readyProtectionJson `
     -ReportOnly `
     -Json | ConvertFrom-Json
 Assert-True $readyReport.Ready "complete pre environment fixture must be ready"
@@ -97,6 +114,7 @@ $multiRegionReport = & $preflightPath `
     -Environment pre `
     -VariablesJson (ConvertTo-VariableJson -Values $multiRegionVariables) `
     -SecretsJson $readySecretsJson `
+    -ProtectionJson $readyProtectionJson `
     -ReportOnly `
     -Json | ConvertFrom-Json
 Assert-True $multiRegionReport.Ready "complete multi-region SEO fixture must be ready"
@@ -114,6 +132,7 @@ $missingReportText = (& $preflightPath `
     -Environment pre `
     -VariablesJson $missingVariablesJson `
     -SecretsJson "[]" `
+    -ProtectionJson $unprotectedEnvironmentJson `
     -ReportOnly) -join "`n"
 foreach ($expected in @(
     "DEPLOY_DB_DEFAULTS_FILE",
@@ -132,12 +151,14 @@ foreach ($expected in @(
 foreach ($expected in @("DEPLOY_KNOWN_HOSTS", "DEPLOY_SSH_PRIVATE_KEY")) {
     Assert-True ($missingReportText -match "\[missing secret\]\s+$expected") "missing fixture must identify $expected"
 }
+Assert-True ($missingReportText -match '\[missing protection\] required_reviewers') "pre must require an approval gate"
 Assert-True ($missingReportText -notmatch 'dzdp-backend') "preflight output must not echo variable values"
 Assert-ThrowsLike {
     & $preflightPath `
         -Environment pre `
         -VariablesJson $missingVariablesJson `
-        -SecretsJson "[]"
+        -SecretsJson "[]" `
+        -ProtectionJson $unprotectedEnvironmentJson
 } "not ready for deployment" "incomplete environment must fail without ReportOnly"
 
 $invalidVariables = $readyVariables.Clone()
@@ -157,6 +178,7 @@ $invalidReport = & $preflightPath `
     -Environment pre `
     -VariablesJson (ConvertTo-VariableJson -Values $invalidVariables) `
     -SecretsJson $readySecretsJson `
+    -ProtectionJson $readyProtectionJson `
     -ReportOnly `
     -Json | ConvertFrom-Json
 $invalidNames = @($invalidReport.InvalidVariables | ForEach-Object { $_.Name })
@@ -186,12 +208,69 @@ $prodReport = & $preflightPath `
     -Environment prod `
     -VariablesJson (ConvertTo-VariableJson -Values $prodVariables) `
     -SecretsJson $readySecretsJson `
+    -ProtectionJson $readyProtectionJson `
     -ReportOnly `
     -Json | ConvertFrom-Json
 Assert-True $prodReport.Ready "prod fixture must accept a live Stripe publishable key"
 
+$testReport = & $preflightPath `
+    -Environment test `
+    -VariablesJson $readyVariablesJson `
+    -SecretsJson $readySecretsJson `
+    -ProtectionJson $unprotectedEnvironmentJson `
+    -ReportOnly `
+    -Json | ConvertFrom-Json
+Assert-True $testReport.Ready "test must not require a manual approval gate"
+Assert-True ($testReport.MissingProtectionRules.Count -eq 0) "test must not report a missing reviewer rule"
+
+$emptyReviewerProtectionJson = @{
+    protection_rules = @(
+        @{
+            type = "required_reviewers"
+            prevent_self_review = $true
+            reviewers = @()
+        }
+    )
+    can_admins_bypass = $false
+    deployment_branch_policy = @{ protected_branches = $true; custom_branch_policies = $false }
+} | ConvertTo-Json -Depth 5 -Compress
+$emptyReviewerReport = & $preflightPath `
+    -Environment pre `
+    -VariablesJson $readyVariablesJson `
+    -SecretsJson $readySecretsJson `
+    -ProtectionJson $emptyReviewerProtectionJson `
+    -ReportOnly `
+    -Json | ConvertFrom-Json
+Assert-True (-not $emptyReviewerReport.Ready) "an empty required-reviewers rule must not be ready"
+Assert-True ("required_reviewers" -in @($emptyReviewerReport.InvalidProtectionRules.Name)) "empty reviewer rules must be invalid"
+
+$warningProtectionJson = @{
+    protection_rules = @(
+        @{
+            type = "required_reviewers"
+            prevent_self_review = $false
+            reviewers = @(@{ type = "User"; reviewer = @{ login = "must_not_be_printed" } })
+        }
+    )
+    can_admins_bypass = $true
+    deployment_branch_policy = $null
+} | ConvertTo-Json -Depth 6 -Compress
+$warningReport = & $preflightPath `
+    -Environment pre `
+    -VariablesJson $readyVariablesJson `
+    -SecretsJson $readySecretsJson `
+    -ProtectionJson $warningProtectionJson `
+    -ReportOnly `
+    -Json | ConvertFrom-Json
+Assert-True $warningReport.Ready "advisory approval hardening warnings must not hide an otherwise complete gate"
+$warningNames = @($warningReport.Warnings.Name)
+foreach ($expected in @("can_admins_bypass", "deployment_branch_policy", "prevent_self_review")) {
+    Assert-True ($expected -in $warningNames) "approval audit must warn about $expected"
+}
+Assert-True (($warningReport | ConvertTo-Json -Depth 6) -notmatch 'must_not_be_printed') "approval report must not expose reviewer identities"
+
 Assert-ThrowsLike {
     & $preflightPath -VariablesJson "[]"
-} "must be supplied together" "offline snapshots must supply variables and secrets together"
+} "must be supplied together" "offline snapshots must supply variables, secrets, and protection together"
 
 Write-Output "GitHub Environment preflight contract passed"
