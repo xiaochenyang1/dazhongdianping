@@ -29,7 +29,7 @@ on:
 
 jobs:
   rollback:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     concurrency:
       group: release-${{ inputs.environment }}-${{ inputs.region }}
       cancel-in-progress: false

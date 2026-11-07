@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       mysql:
@@ -149,7 +149,7 @@ jobs:
 
       - name: Preserve creator review browser evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ci-creator-review-${{ github.run_attempt }}
           retention-days: 7
@@ -162,7 +162,7 @@ jobs:
 
       - name: Preserve flash-sale order evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ci-seckill-orders-${{ github.run_attempt }}
           retention-days: 7
@@ -171,7 +171,7 @@ jobs:
 
       - name: Preserve browser failure evidence
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ci-browser-failures-${{ github.run_attempt }}
           retention-days: 7
@@ -182,7 +182,7 @@ jobs:
             web/playwright-report/
 
   database-migration-integration:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read

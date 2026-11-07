@@ -20,6 +20,8 @@ $workflow = Get-Content -LiteralPath $workflowPath -Raw
 
 Assert-True ($workflow -match "schedule:") "nightly workflow must run on a schedule"
 Assert-True ($workflow -match "workflow_dispatch:") "nightly workflow must support manual dispatch"
+Assert-True ($workflow -match "runs-on:\s*ubuntu-24\.04") "nightly workflow must pin Ubuntu 24.04"
+Assert-True (([regex]::Matches($workflow, "actions/upload-artifact@v7\.0\.2")).Count -eq 3) "nightly evidence uploads must pin upload-artifact 7.0.2"
 Assert-True ($workflow -match "verify-all\.ps1") "nightly workflow must run scripts/ci/verify-all.ps1"
 Assert-True ($workflow -match "IncludeMysqlSmoke") "nightly workflow must include the MySQL smoke gate"
 Assert-True ($workflow -match "IncludeStorageSmoke") "nightly workflow must include the storage smoke gate"
