@@ -151,6 +151,40 @@ describe('OrderDetailView', () => {
     app.unmount()
   })
 
+  it('shows group-buy payment progress while waiting to form', async () => {
+    tradeMocks.fetchOrder.mockResolvedValue({
+      id: 88,
+      orderNo: 'OD-GROUP',
+      orderSource: 'groupbuy',
+      campaignTitle: '三人拼团',
+      dealId: 40001,
+      dealTitle: '双人套餐',
+      shopId: 10001,
+      shopName: '测试火锅',
+      coverImage: '',
+      quantity: 1,
+      unitPrice: 68,
+      amount: 68,
+      currency: 'CNY',
+      payStatus: 1,
+      payStatusText: '已支付',
+      status: 1,
+      groupBuyStatus: 1,
+      groupBuyMemberCount: 3,
+      groupBuyPaidCount: 1,
+      groupBuySize: 3,
+      coupons: [],
+    })
+
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.querySelector('[data-testid="groupbuy-status"]')?.textContent).toContain('等待全员付款成团')
+    expect(host.textContent).toContain('付款进度 1/3')
+    expect(host.textContent).not.toContain('券码已发放')
+    app.unmount()
+  })
+
   it('shows refund result banner from notification query', async () => {
     routeState.query = { refund: 'approved' }
     tradeMocks.fetchOrder.mockResolvedValue({

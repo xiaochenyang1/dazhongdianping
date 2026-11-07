@@ -59,6 +59,12 @@ public class OrderInventoryService {
             // A cancelled attempt may already have been replaced by a new order.
             campaigns.releaseSeckillClaim(order.getId(), Integer.valueOf(0).equals(order.getPayStatus()) ? 3 : 4);
         }
+        if (isGroupBuy(order)) {
+            var member = campaigns.selectMemberByOrderForUpdate(order.getId());
+            if (member != null && campaigns.releaseGroupBuyMember(order.getId()) == 1) {
+                campaigns.refreshOpenGroupBuyTeam(member.getTeamId());
+            }
+        }
         if (trades.restoreDealStock(order.getDealId(), order.getQuantity()) != 1) {
             throw new IllegalStateException("订单库存恢复失败");
         }
@@ -73,5 +79,9 @@ public class OrderInventoryService {
 
     public static boolean isSeckill(OrderRow order) {
         return "seckill".equals(order.getOrderSource()) && order.getCampaignId() != null;
+    }
+
+    public static boolean isGroupBuy(OrderRow order) {
+        return "groupbuy".equals(order.getOrderSource()) && order.getCampaignId() != null;
     }
 }

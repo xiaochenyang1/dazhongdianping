@@ -34,6 +34,17 @@ function payStatusLabel(status?: number) {
   return status == null ? copy.value.statuses.all : copy.value.statuses.pay(status)
 }
 
+function groupBuyStatus(order: TradeOrder) {
+  const progress = copy.value.orderDetail.groupBuyProgress(order.groupBuyPaidCount ?? 0, order.groupBuySize ?? 0)
+  if (order.groupBuyStatus === 2) return `${copy.value.orderDetail.groupBuyFormed} · ${progress}`
+  if (order.groupBuyStatus === 3) {
+    if (order.payStatus === 2) return copy.value.orderDetail.groupBuyRefunded
+    if (order.refund) return copy.value.orderDetail.groupBuyRefunding
+    return copy.value.orderDetail.groupBuyFailed
+  }
+  return `${copy.value.orderDetail.groupBuyWaiting} · ${progress}`
+}
+
 async function load() {
   loading.value = true
   errorMessage.value = ''
@@ -142,6 +153,9 @@ watch(
             {{ formatMoney(order.amount, order.currency) }}
           </p>
           <p v-if="order.orderSource === 'seckill'" class="status-pill">{{ copy.orderDetail.flashSale }} · {{ order.campaignTitle }}</p>
+          <p v-if="order.orderSource === 'groupbuy'" class="status-pill" :data-testid="`groupbuy-status-${order.id}`">
+            {{ copy.orderDetail.groupBuy }} · {{ groupBuyStatus(order) }}
+          </p>
           <p class="muted">{{ copy.orders.orderNo(order.orderNo) }}</p>
           <span class="status-pill">{{ order.status === 2 && order.payStatus === 0 ? copy.orderDetail.closed : copy.statuses.pay(order.payStatus, order.payStatusText) }}</span>
         </div>

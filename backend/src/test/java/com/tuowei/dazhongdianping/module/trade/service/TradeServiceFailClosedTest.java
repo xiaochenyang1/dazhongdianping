@@ -38,7 +38,8 @@ class TradeServiceFailClosedTest {
             "payment-secret-for-runtime-safety-tests-001",
             resolver,
             mock(com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService.class),
-            inventory
+            inventory,
+            mock(com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper.class)
     );
 
     @BeforeEach

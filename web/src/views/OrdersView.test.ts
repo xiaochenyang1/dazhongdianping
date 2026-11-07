@@ -148,4 +148,27 @@ describe('OrdersView', () => {
     expect(host.textContent).toContain('CN-20')
     app.unmount()
   })
+
+  it('shows group-buy formation progress in the order list', async () => {
+    tradeMocks.fetchOrders.mockResolvedValue({
+      list: [{
+        ...unpaidOrder,
+        id: 11,
+        orderSource: 'groupbuy',
+        groupBuyStatus: 1,
+        groupBuyMemberCount: 3,
+        groupBuyPaidCount: 1,
+        groupBuySize: 3,
+      }],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      hasMore: false,
+    })
+    const { app, host } = mount()
+    await flush()
+
+    expect(host.querySelector('[data-testid="groupbuy-status-11"]')?.textContent).toContain('付款进度 1/3')
+    app.unmount()
+  })
 })

@@ -259,6 +259,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  String _groupBuyStatus(AppLocalizations strings, TradeOrder order) {
+    final progress = strings.groupBuyProgress(
+      paid: order.groupBuyPaidCount ?? 0,
+      size: order.groupBuySize ?? 0,
+    );
+    if (order.groupBuyStatus == 2) {
+      return '${strings.groupBuyFormed} · $progress';
+    }
+    if (order.groupBuyStatus == 3) {
+      if (order.payStatus == 2) return strings.groupBuyRefunded;
+      if (order.refund != null) return strings.groupBuyRefunding;
+      return strings.groupBuyFailed;
+    }
+    return '${strings.groupBuyWaiting} · $progress';
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
@@ -314,6 +330,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   Text(
                     '${strings.flashSaleOrder} · ${order.campaignTitle}',
                     key: const Key('order-source'),
+                  ),
+                if (order.orderSource == 'groupbuy')
+                  Text(
+                    '${strings.groupBuyOrder} · ${_groupBuyStatus(strings, order)}',
+                    key: const Key('groupbuy-status'),
                   ),
                 const SizedBox(height: 8),
                 Text(
@@ -436,6 +457,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   Text(
                     order.refund!.refundType == 'late_payment'
                         ? strings.orderAutomaticRefund
+                        : order.refund!.refundType == 'groupbuy_expired'
+                        ? strings.groupBuyAutomaticRefund
                         : order.refund!.reason,
                   ),
                   if (order.refund!.channelFailureReason.isNotEmpty) ...[

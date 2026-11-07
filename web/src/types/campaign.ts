@@ -1,3 +1,5 @@
+import type { TradeOrder } from './trade'
+
 export interface SeckillEvent {
   id: number
   shopId: number
@@ -33,5 +35,9 @@ export interface GroupBuyTeam {
   leaderUserId: number
   status: number
   memberCount: number
+  paidCount: number
+  groupSize: number
   expireAt?: string
+  orderId: number
+  order: TradeOrder
 }

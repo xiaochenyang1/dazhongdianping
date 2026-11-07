@@ -333,7 +333,7 @@
 - `sql/mysql/28_creator_task_review_migration.sql`: 冻结领取时条款和奖励，增加成果引用、提交版本、审核字段及待审索引；历史已发奖金额优先读取原积分流水，状态保持终态。
 - `sql/mysql/29_seckill_order_migration.sql`: 订单增加活动来源、价格展示所需标题快照、券有效期及一次性库存释放标记；秒杀参与记录关联订单和状态，退款支持迟到支付自动退款。历史参与不补发订单或券，已取消/已退款订单标记为已释放库存。
 
-> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-29 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
+> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-30 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
 
 ### 3.3 导入后哪些表会直接有数据
 

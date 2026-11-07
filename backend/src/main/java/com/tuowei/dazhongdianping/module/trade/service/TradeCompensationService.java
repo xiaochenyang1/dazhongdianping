@@ -24,22 +24,27 @@ public class TradeCompensationService {
     private final PaymentChannelResolver channelResolver;
     private final TradeService tradeService;
     private final com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService;
+    private final com.tuowei.dazhongdianping.module.marketing.service.GroupBuyOrderService groupBuyOrderService;
 
     public TradeCompensationService(
             TradeMapper mapper,
             PaymentChannelResolver channelResolver,
             TradeService tradeService,
-            com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService) {
+            com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService,
+            com.tuowei.dazhongdianping.module.marketing.service.GroupBuyOrderService groupBuyOrderService) {
         this.mapper = mapper;
         this.channelResolver = channelResolver;
         this.tradeService = tradeService;
         this.marketingCouponService = marketingCouponService;
+        this.groupBuyOrderService = groupBuyOrderService;
     }
 
     public TradeReconcileResult reconcile() {
         int closedOrders = 0;
         int restoredStockOrders = 0;
         int failedPayments = 0;
+
+        int expiredGroups = groupBuyOrderService.expireDueTeams(BATCH_SIZE);
 
         List<OrderRow> expiredOrders = mapper.selectExpiredUnpaidOrders(BATCH_SIZE);
         for (OrderRow order : expiredOrders) {
@@ -93,10 +98,10 @@ public class TradeCompensationService {
             }
         }
 
-        if (closedOrders > 0 || failedPayments > 0 || reconciledRefunds > 0) {
+        if (closedOrders > 0 || failedPayments > 0 || reconciledRefunds > 0 || expiredGroups > 0) {
             log.info(
-                    "trade reconcile finished: closedOrders={}, restoredStockOrders={}, failedPayments={}, reconciledRefunds={}",
-                    closedOrders, restoredStockOrders, failedPayments, reconciledRefunds
+                    "trade reconcile finished: expiredGroups={}, closedOrders={}, restoredStockOrders={}, failedPayments={}, reconciledRefunds={}",
+                    expiredGroups, closedOrders, restoredStockOrders, failedPayments, reconciledRefunds
             );
         }
         return new TradeReconcileResult(closedOrders, restoredStockOrders, failedPayments, reconciledRefunds);

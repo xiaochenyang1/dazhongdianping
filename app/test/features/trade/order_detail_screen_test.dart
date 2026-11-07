@@ -829,4 +829,55 @@ void main() {
     );
     expect(find.text('Reload full details'), findsOneWidget);
   });
+
+  testWidgets('group-buy expiry shows automatic refund progress in English', (
+    tester,
+  ) async {
+    const order = TradeOrder(
+      id: 10,
+      orderNo: 'OD-GROUP',
+      dealTitle: 'Dinner group',
+      shopName: 'Paris restaurant',
+      quantity: 1,
+      unitPrice: 19.9,
+      amount: 19.9,
+      currency: 'EUR',
+      payStatus: 1,
+      payStatusText: '已支付',
+      status: 1,
+      coupons: [],
+      orderSource: 'groupbuy',
+      campaignTitle: 'Dinner group',
+      groupBuyTeamId: 90,
+      groupBuyStatus: 3,
+      groupBuyMemberCount: 2,
+      groupBuyPaidCount: 1,
+      groupBuySize: 3,
+      refund: RefundInfo(
+        reason: '拼团未在截止时间前完成，系统自动退款',
+        refundType: 'groupbuy_expired',
+        status: 3,
+        statusText: '退款处理中',
+        auditReason: '',
+      ),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: OrderDetailScreen(
+          repository: TradeRepository(OrderDetailApi()),
+          orderId: 10,
+          initialOrder: order,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('refund in progress'), findsOneWidget);
+    expect(
+      find.textContaining('did not form before the deadline'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('拼团未在截止时间前完成'), findsNothing);
+  });
 }

@@ -168,6 +168,9 @@ class MarketingCampaignControllerTest {
                 .andExpect(jsonPath("$.messageKey").value("marketing.group_opened"))
                 .andExpect(jsonPath("$.data.status").value(1))
                 .andExpect(jsonPath("$.data.memberCount").value(1))
+                .andExpect(jsonPath("$.data.paidCount").value(0))
+                .andExpect(jsonPath("$.data.order.orderSource").value("groupbuy"))
+                .andExpect(jsonPath("$.data.order.amount").value(19.90))
                 .andReturn();
         long teamId = objectMapper.readTree(opened.getResponse().getContentAsString()).at("/data/id").asLong();
 
@@ -176,8 +179,10 @@ class MarketingCampaignControllerTest {
                         .header("Authorization", bearer(member)).header("X-Region", "CN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.messageKey").value("marketing.group_joined"))
-                .andExpect(jsonPath("$.data.status").value(2))
-                .andExpect(jsonPath("$.data.memberCount").value(2));
+                .andExpect(jsonPath("$.data.status").value(1))
+                .andExpect(jsonPath("$.data.memberCount").value(2))
+                .andExpect(jsonPath("$.data.paidCount").value(0))
+                .andExpect(jsonPath("$.data.order.orderSource").value("groupbuy"));
         mockMvc.perform(post("/api/c/v1/marketing/groupbuy/teams/{teamId}/join", teamId)
                         .header("Authorization", bearer(member)).header("X-Region", "CN"))
                 .andExpect(status().isBadRequest());

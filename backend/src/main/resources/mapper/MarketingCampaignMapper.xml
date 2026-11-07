@@ -145,6 +145,11 @@
         WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE
     </select>
 
+    <select id="selectGroupForUpdate" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyCampaignRow">
+        SELECT <include refid="groupCols"/> FROM groupbuy_campaign
+        WHERE id=#{id} AND region=#{region} AND is_deleted=FALSE FOR UPDATE
+    </select>
+
     <update id="updateGroupAudit">
         UPDATE groupbuy_campaign
         SET audit_status=#{auditStatus},reject_reason=#{rejectReason},updated_at=CURRENT_TIMESTAMP
@@ -152,17 +157,48 @@
     </update>
 
     <insert id="insertTeam" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO groupbuy_team(campaign_id,region,leader_user_id,status,member_count,expire_at)
-        VALUES(#{campaignId},#{region},#{leaderUserId},1,1,#{expireAt})
+        INSERT INTO groupbuy_team(campaign_id,region,leader_user_id,status,member_count,paid_count,expire_at)
+        VALUES(#{campaignId},#{region},#{leaderUserId},1,1,0,#{expireAt})
     </insert>
 
-    <insert id="insertMember">
-        INSERT INTO groupbuy_member(team_id,user_id) VALUES(#{teamId},#{userId})
+    <insert id="insertMember" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO groupbuy_member(team_id,campaign_id,region,user_id,order_id,status)
+        VALUES(#{teamId},#{campaignId},#{region},#{userId},#{orderId},0)
     </insert>
 
     <select id="selectTeam" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyTeamRow">
-        SELECT id,campaign_id,region,leader_user_id,status,member_count,expire_at
-        FROM groupbuy_team WHERE id=#{id}
+        SELECT t.id,t.campaign_id,t.region,t.leader_user_id,t.status,t.member_count,t.paid_count,t.expire_at,
+               c.group_size AS group_size
+        FROM groupbuy_team t JOIN groupbuy_campaign c ON c.id=t.campaign_id
+        WHERE t.id=#{id}
+    </select>
+
+    <select id="selectTeamForUpdate" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyTeamRow">
+        SELECT t.id,t.campaign_id,t.region,t.leader_user_id,t.status,t.member_count,t.paid_count,t.expire_at,
+               c.group_size AS group_size
+        FROM groupbuy_team t JOIN groupbuy_campaign c ON c.id=t.campaign_id
+        WHERE t.id=#{id} FOR UPDATE
+    </select>
+
+    <select id="selectTeamByOrder" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyTeamRow">
+        SELECT t.id,t.campaign_id,t.region,t.leader_user_id,t.status,t.member_count,t.paid_count,t.expire_at,
+               c.group_size AS group_size
+        FROM groupbuy_member m
+        JOIN groupbuy_team t ON t.id=m.team_id
+        JOIN groupbuy_campaign c ON c.id=t.campaign_id
+        WHERE m.order_id=#{orderId}
+    </select>
+
+    <select id="selectActiveMember" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyMemberRow">
+        SELECT id,team_id,campaign_id,region,user_id,order_id,status,created_at,updated_at
+        FROM groupbuy_member
+        WHERE campaign_id=#{campaignId} AND user_id=#{userId} AND region=#{region} AND status IN (0,1)
+        ORDER BY id DESC LIMIT 1
+    </select>
+
+    <select id="selectMemberByOrderForUpdate" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyMemberRow">
+        SELECT id,team_id,campaign_id,region,user_id,order_id,status,created_at,updated_at
+        FROM groupbuy_member WHERE order_id=#{orderId} FOR UPDATE
     </select>
 
     <select id="countTeamMember" resultType="int">
@@ -172,9 +208,71 @@
     <update id="joinTeam">
         UPDATE groupbuy_team
         SET member_count=member_count+1,
-            status=CASE WHEN member_count+1 &gt;= #{groupSize} THEN 2 ELSE 1 END,
             updated_at=CURRENT_TIMESTAMP
         WHERE id=#{id} AND region=#{region} AND status=1 AND expire_at &gt; #{now} AND member_count &lt; #{groupSize}
     </update>
+
+    <update id="markGroupBuyMemberPaid">
+        UPDATE groupbuy_member SET status=1,updated_at=CURRENT_TIMESTAMP
+        WHERE order_id=#{orderId} AND status=0
+    </update>
+
+    <update id="recordGroupBuyPayment">
+        UPDATE groupbuy_team
+        SET paid_count=paid_count+1,
+            status=CASE
+                WHEN paid_count+1 &gt;= (SELECT group_size FROM groupbuy_campaign WHERE id=groupbuy_team.campaign_id)
+                 AND member_count &gt;= (SELECT group_size FROM groupbuy_campaign WHERE id=groupbuy_team.campaign_id)
+                THEN 2 ELSE status END,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{teamId} AND status=1 AND paid_count &lt; member_count
+    </update>
+
+    <select id="selectPaidGroupBuyOrderIds" resultType="long">
+        SELECT m.order_id FROM groupbuy_member m JOIN `order` o ON o.id=m.order_id
+        WHERE m.team_id=#{teamId} AND m.status=1 AND o.pay_status=1 AND o.status=1
+        ORDER BY m.id
+    </select>
+
+    <update id="releaseGroupBuyMember">
+        UPDATE groupbuy_member SET status=2,updated_at=CURRENT_TIMESTAMP
+        WHERE order_id=#{orderId} AND status IN (0,1)
+    </update>
+
+    <update id="refreshOpenGroupBuyTeam">
+        UPDATE groupbuy_team
+        SET member_count=(SELECT COUNT(*) FROM groupbuy_member WHERE team_id=#{teamId} AND status IN (0,1)),
+            paid_count=(SELECT COUNT(*) FROM groupbuy_member WHERE team_id=#{teamId} AND status=1),
+            leader_user_id=COALESCE((SELECT MIN(user_id) FROM groupbuy_member WHERE team_id=#{teamId} AND status IN (0,1)),0),
+            status=CASE WHEN NOT EXISTS(SELECT 1 FROM groupbuy_member WHERE team_id=#{teamId} AND status IN (0,1)) THEN 3 ELSE status END,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{teamId} AND status=1
+    </update>
+
+    <select id="selectExpiredGroupBuyTeamIds" resultType="long">
+        SELECT t.id FROM groupbuy_team t
+        WHERE t.expire_at &lt;= CURRENT_TIMESTAMP
+          AND (
+                t.status=1
+                OR (t.status=3 AND EXISTS(
+                    SELECT 1
+                    FROM groupbuy_member m
+                    JOIN `order` o ON o.id=m.order_id
+                    WHERE m.team_id=t.id AND o.inventory_released=FALSE
+                ))
+          )
+        ORDER BY t.expire_at,t.id LIMIT #{limit}
+    </select>
+
+    <update id="markGroupBuyTeamExpired">
+        UPDATE groupbuy_team SET status=3,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{teamId} AND status=1 AND expire_at &lt;= CURRENT_TIMESTAMP
+    </update>
+
+    <select id="selectGroupBuyOrderIds" resultType="long">
+        SELECT order_id FROM groupbuy_member
+        WHERE team_id=#{teamId} AND order_id IS NOT NULL
+        ORDER BY id
+    </select>
 
 </mapper>
