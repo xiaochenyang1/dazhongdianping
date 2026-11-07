@@ -3,6 +3,7 @@ package com.tuowei.dazhongdianping.module.marketing.mapper;
 import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyCampaignRow;
 import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyMemberRow;
 import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyTeamRow;
+import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyReminderRow;
 import com.tuowei.dazhongdianping.module.marketing.model.SeckillClaimRow;
 import com.tuowei.dazhongdianping.module.marketing.model.SeckillEventRow;
 import java.time.LocalDateTime;
@@ -122,4 +123,11 @@ public interface MarketingCampaignMapper {
     int markGroupBuyTeamExpired(@Param("teamId") Long teamId);
 
     List<Long> selectGroupBuyOrderIds(@Param("teamId") Long teamId);
+
+    List<GroupBuyReminderRow> selectDueGroupBuyReminders(
+            @Param("now") LocalDateTime now,
+            @Param("windowEnd") LocalDateTime windowEnd,
+            @Param("limit") Integer limit);
+
+    int markGroupBuyReminderSent(@Param("memberId") Long memberId);
 }

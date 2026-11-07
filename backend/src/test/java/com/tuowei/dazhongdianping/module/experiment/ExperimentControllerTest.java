@@ -46,7 +46,7 @@ class ExperimentControllerTest {
         createFlag(admin, "CN", "rollout_half", true, 50);
         createFlag(admin, "EU", "eu_only", true, 100);
 
-        boolean half = Math.floorMod(Math.abs("rollout_half".hashCode()), 100) < 50;
+        boolean half = Math.floorMod("rollout_half:anonymous".hashCode(), 100) < 50;
         mockMvc.perform(get("/api/c/v1/flags").header("X-Region", "CN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.flagKey=='rollout_zero')].enabled", hasItem(false)))

@@ -152,6 +152,9 @@ describe('OrderDetailView', () => {
   })
 
   it('shows group-buy payment progress while waiting to form', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined })
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     tradeMocks.fetchOrder.mockResolvedValue({
       id: 88,
       orderNo: 'OD-GROUP',
@@ -170,9 +173,11 @@ describe('OrderDetailView', () => {
       payStatusText: '已支付',
       status: 1,
       groupBuyStatus: 1,
+      groupBuyTeamId: 90,
       groupBuyMemberCount: 3,
       groupBuyPaidCount: 1,
       groupBuySize: 3,
+      expireAt: '2026-12-31T12:00:00',
       coupons: [],
     })
 
@@ -181,6 +186,11 @@ describe('OrderDetailView', () => {
 
     expect(host.querySelector('[data-testid="groupbuy-status"]')?.textContent).toContain('等待全员付款成团')
     expect(host.textContent).toContain('付款进度 1/3')
+    expect(host.querySelector('[data-testid="groupbuy-countdown"]')?.textContent).toContain('距拼团截止还有')
+    host.querySelector<HTMLButtonElement>('[data-testid="groupbuy-share"]')?.click()
+    await flush()
+    expect(writeText).toHaveBeenCalledWith('http://localhost:3000/marketing/groupbuy?teamId=90')
+    expect(host.textContent).toContain('参团链接已复制')
     expect(host.textContent).not.toContain('券码已发放')
     app.unmount()
   })

@@ -39,7 +39,8 @@ class TradeServiceFailClosedTest {
             resolver,
             mock(com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService.class),
             inventory,
-            mock(com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper.class)
+            mock(com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper.class),
+            mock(com.tuowei.dazhongdianping.module.marketing.service.GroupBuyMetrics.class)
     );
 
     @BeforeEach

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dazhongdianping_app/features/invoice/invoice_repository.dart';
 import 'package:dazhongdianping_app/features/invoice/invoices_screen.dart';
 import 'package:dazhongdianping_app/core/app_localizations.dart';
@@ -8,6 +10,11 @@ import 'package:dazhongdianping_app/features/trade/trade_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
+import 'package:share_plus/share_plus.dart';
+
+typedef GroupBuyShareLauncher =
+    Future<void> Function(String text, String subject, Rect? origin);
+typedef GroupBuyClipboardWriter = Future<void> Function(String text);
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({
@@ -16,12 +23,16 @@ class OrderDetailScreen extends StatefulWidget {
     required this.orderId,
     this.initialOrder,
     this.thirdPartyConfig = const ThirdPartyConfig(),
+    this.groupBuyShareLauncher,
+    this.groupBuyClipboardWriter,
   });
 
   final TradeRepository repository;
   final int orderId;
   final TradeOrder? initialOrder;
   final ThirdPartyConfig thirdPartyConfig;
+  final GroupBuyShareLauncher? groupBuyShareLauncher;
+  final GroupBuyClipboardWriter? groupBuyClipboardWriter;
 
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
@@ -35,16 +46,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _acting = false;
   bool _confirmingCancel = false;
   bool _refundDialogOpen = false;
+  bool _sharingGroupBuy = false;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
     super.initState();
     _order = widget.initialOrder;
-    if (_order == null) _load();
+    if (_order == null) {
+      _load();
+    } else {
+      _syncCountdownTimer();
+    }
   }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _refundReasonController.dispose();
     super.dispose();
   }
@@ -57,7 +75,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     });
     try {
       final order = await widget.repository.loadOrder(widget.orderId);
-      if (mounted) setState(() => _order = order);
+      if (mounted) {
+        setState(() => _order = order);
+        _syncCountdownTimer();
+      }
     } catch (error) {
       if (mounted) {
         setState(
@@ -240,6 +261,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       final order = await action();
       if (!mounted) return false;
       setState(() => _order = order);
+      _syncCountdownTimer();
       _showMessage(successMessage);
       return true;
     } catch (error) {
@@ -257,6 +279,80 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _syncCountdownTimer() {
+    _countdownTimer?.cancel();
+    final remaining = _groupBuyRemaining(_order);
+    if (remaining == null || remaining == Duration.zero) return;
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final next = _groupBuyRemaining(_order);
+      if (next == null || next == Duration.zero) timer.cancel();
+      if (mounted) setState(() {});
+    });
+  }
+
+  Duration? _groupBuyRemaining(TradeOrder? order) {
+    if (order == null ||
+        order.orderSource != 'groupbuy' ||
+        order.groupBuyStatus != 1 ||
+        order.expireAt.isEmpty) {
+      return null;
+    }
+    final deadline = DateTime.tryParse(order.expireAt);
+    if (deadline == null) return null;
+    final remaining = deadline.difference(DateTime.now());
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+
+  String _formatCountdown(Duration remaining) {
+    final seconds = remaining.inSeconds;
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final rest = seconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:'
+        '${minutes.toString().padLeft(2, '0')}:'
+        '${rest.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _shareGroupBuy(TradeOrder order) async {
+    final teamId = order.groupBuyTeamId;
+    if (_sharingGroupBuy || teamId == null) return;
+    setState(() => _sharingGroupBuy = true);
+    final strings = AppLocalizations.of(context);
+    final url = widget.thirdPartyConfig.groupBuyShareUrl(teamId);
+    final title = order.campaignTitle.isEmpty
+        ? order.dealTitle
+        : order.campaignTitle;
+    final text = strings.groupBuyShareText(
+      title: title,
+      paid: order.groupBuyPaidCount ?? 0,
+      size: order.groupBuySize ?? 0,
+      url: url,
+    );
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box == null
+        ? null
+        : box.localToGlobal(Offset.zero) & box.size;
+    try {
+      final launcher = widget.groupBuyShareLauncher;
+      if (launcher == null) {
+        await Share.share(text, subject: title, sharePositionOrigin: origin);
+      } else {
+        await launcher(text, title, origin);
+      }
+      if (mounted) _showMessage(strings.shareCopied);
+    } catch (_) {
+      final clipboardWriter = widget.groupBuyClipboardWriter;
+      if (clipboardWriter == null) {
+        await Clipboard.setData(ClipboardData(text: text));
+      } else {
+        await clipboardWriter(text);
+      }
+      if (mounted) _showMessage(strings.shareCopied);
+    } finally {
+      if (mounted) setState(() => _sharingGroupBuy = false);
+    }
   }
 
   String _groupBuyStatus(AppLocalizations strings, TradeOrder order) {
@@ -296,6 +392,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Widget _buildOrder(BuildContext context, TradeOrder order) {
     final strings = AppLocalizations.of(context);
+    final groupBuyRemaining = _groupBuyRemaining(order);
+    final activeGroupBuy =
+        order.orderSource == 'groupbuy' && order.groupBuyStatus == 1;
     final paymentReason = widget.thirdPartyConfig.unavailableReason(
       strings,
       ThirdPartyFeature.payment,
@@ -354,6 +453,44 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
           ),
         ),
+        if (activeGroupBuy) ...[
+          const SizedBox(height: 14),
+          Card(
+            color: Theme.of(context).colorScheme.secondaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (groupBuyRemaining != null)
+                    Text(
+                      strings.groupBuyCountdown(
+                        _formatCountdown(groupBuyRemaining),
+                      ),
+                      key: const Key('groupbuy-countdown'),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  if (order.groupBuyTeamId != null) ...[
+                    if (groupBuyRemaining != null) const SizedBox(height: 10),
+                    FilledButton.tonalIcon(
+                      key: const Key('groupbuy-share-button'),
+                      onPressed:
+                          _sharingGroupBuy || groupBuyRemaining == Duration.zero
+                          ? null
+                          : () => _shareGroupBuy(order),
+                      icon: const Icon(Icons.group_add_outlined),
+                      label: Text(
+                        _sharingGroupBuy
+                            ? strings.sharing
+                            : strings.groupBuyInvite,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 14),
         Card(
           child: Padding(

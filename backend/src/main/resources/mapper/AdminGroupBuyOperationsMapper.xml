@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tuowei.dazhongdianping.module.admin.groupbuy.mapper.AdminGroupBuyOperationsMapper">
+
+    <sql id="teamScope">
+        <if test="allCities == false">
+            AND (
+            <if test="cityIds != null and !cityIds.isEmpty()">
+                s.city_id IN
+                <foreach collection="cityIds" item="cityId" open="(" separator="," close=")">
+                    #{cityId}
+                </foreach>
+            </if>
+            <if test="cityIds != null and !cityIds.isEmpty() and shopIds != null and !shopIds.isEmpty()"> OR </if>
+            <if test="shopIds != null and !shopIds.isEmpty()">
+                s.id IN
+                <foreach collection="shopIds" item="shopId" open="(" separator="," close=")">
+                    #{shopId}
+                </foreach>
+            </if>
+            <if test="(cityIds == null or cityIds.isEmpty()) and (shopIds == null or shopIds.isEmpty())">1 = 0</if>
+            )
+        </if>
+    </sql>
+
+    <sql id="problemWhere">
+        AND (
+            (t.status=1 AND t.expire_at &lt;= CURRENT_TIMESTAMP)
+            OR EXISTS(
+                SELECT 1 FROM groupbuy_member pm
+                JOIN `order` po ON po.id=pm.order_id
+                LEFT JOIN refund pr ON pr.order_id=po.id
+                WHERE pm.team_id=t.id
+                  AND (pr.status IN (3,4)
+                       OR (t.status=2 AND po.pay_status=1 AND NOT EXISTS(
+                           SELECT 1 FROM coupon pc WHERE pc.order_id=po.id
+                       ))
+                       OR (t.status=3 AND po.inventory_released=FALSE))
+            )
+        )
+    </sql>
+
+    <select id="selectSummary" resultType="com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuySummaryRow">
+        SELECT
+            COALESCE(SUM(CASE WHEN t.created_at &gt;= #{since} THEN 1 ELSE 0 END),0) AS total_teams,
+            COALESCE(SUM(CASE WHEN t.created_at &gt;= #{since} AND t.status=1 THEN 1 ELSE 0 END),0) AS active_teams,
+            COALESCE(SUM(CASE WHEN t.created_at &gt;= #{since} AND t.status=2 THEN 1 ELSE 0 END),0) AS formed_teams,
+            COALESCE(SUM(CASE WHEN t.created_at &gt;= #{since} AND t.status=3 THEN 1 ELSE 0 END),0) AS expired_teams,
+            COALESCE(SUM(CASE WHEN t.status=1 AND t.expire_at &lt;= CURRENT_TIMESTAMP THEN 1 ELSE 0 END),0) AS overdue_active_teams,
+            COALESCE(SUM(CASE WHEN t.created_at &gt;= #{since} THEN (
+                SELECT COUNT(*) FROM groupbuy_member sm WHERE sm.team_id=t.id
+            ) ELSE 0 END),0) AS member_orders,
+            COALESCE(SUM(CASE WHEN t.created_at &gt;= #{since} THEN (
+                SELECT COUNT(*) FROM groupbuy_member spm
+                JOIN `order` spo ON spo.id=spm.order_id
+                WHERE spm.team_id=t.id AND spo.pay_status IN (1,2,3)
+            ) ELSE 0 END),0) AS paid_orders,
+            COALESCE(SUM((
+                SELECT COUNT(*) FROM groupbuy_member srm
+                JOIN refund sr ON sr.order_id=srm.order_id
+                WHERE srm.team_id=t.id AND sr.refund_type='groupbuy_expired' AND sr.status=3
+            )),0) AS pending_refunds,
+            COALESCE(SUM((
+                SELECT COUNT(*) FROM groupbuy_member sfm
+                JOIN refund sfr ON sfr.order_id=sfm.order_id
+                WHERE sfm.team_id=t.id AND sfr.refund_type='groupbuy_expired' AND sfr.status=4
+            )),0) AS failed_refunds,
+            COALESCE(SUM((
+                SELECT COUNT(*) FROM groupbuy_member scm
+                JOIN `order` sco ON sco.id=scm.order_id
+                WHERE scm.team_id=t.id AND t.status=2 AND sco.pay_status=1
+                  AND NOT EXISTS(SELECT 1 FROM coupon sc WHERE sc.order_id=sco.id)
+            )),0) AS missing_coupon_orders,
+            COALESCE(SUM((
+                SELECT COUNT(*) FROM groupbuy_member sim
+                JOIN `order` sio ON sio.id=sim.order_id
+                WHERE sim.team_id=t.id AND t.status=3 AND sio.inventory_released=FALSE
+            )),0) AS unreleased_inventory_orders
+        FROM groupbuy_team t
+        JOIN groupbuy_campaign c ON c.id=t.campaign_id
+        JOIN shop s ON s.id=c.shop_id
+        WHERE t.region=#{region} AND c.region=#{region} AND s.region=#{region}
+        <include refid="teamScope"/>
+    </select>
+
+    <select id="countTeams" resultType="long">
+        SELECT COUNT(*)
+        FROM groupbuy_team t
+        JOIN groupbuy_campaign c ON c.id=t.campaign_id
+        JOIN shop s ON s.id=c.shop_id
+        WHERE t.region=#{region} AND c.region=#{region} AND s.region=#{region}
+        <if test="status != null">AND t.status=#{status}</if>
+        <include refid="teamScope"/>
+        <if test="problemOnly"><include refid="problemWhere"/></if>
+    </select>
+
+    <sql id="teamColumns">
+        t.id,t.campaign_id,c.title AS campaign_title,c.shop_id,s.name AS shop_name,s.city_id,
+        t.region,t.status,t.member_count,t.paid_count,c.group_size,t.expire_at,t.created_at,t.updated_at,
+        (SELECT COUNT(*) FROM groupbuy_member lm WHERE lm.team_id=t.id) AS member_orders,
+        (SELECT COUNT(*) FROM groupbuy_member lpm JOIN `order` lpo ON lpo.id=lpm.order_id
+         WHERE lpm.team_id=t.id AND lpo.pay_status IN (1,2,3)) AS paid_orders,
+        (SELECT COUNT(*) FROM groupbuy_member lrm JOIN refund lr ON lr.order_id=lrm.order_id
+         WHERE lrm.team_id=t.id AND lr.refund_type='groupbuy_expired' AND lr.status=3) AS pending_refunds,
+        (SELECT COUNT(*) FROM groupbuy_member lfm JOIN refund lfr ON lfr.order_id=lfm.order_id
+         WHERE lfm.team_id=t.id AND lfr.refund_type='groupbuy_expired' AND lfr.status=4) AS failed_refunds,
+        (SELECT COUNT(*) FROM groupbuy_member lcm JOIN `order` lco ON lco.id=lcm.order_id
+         WHERE lcm.team_id=t.id AND t.status=2 AND lco.pay_status=1
+           AND NOT EXISTS(SELECT 1 FROM coupon lc WHERE lc.order_id=lco.id)) AS missing_coupon_orders,
+        (SELECT COUNT(*) FROM groupbuy_member lim JOIN `order` lio ON lio.id=lim.order_id
+         WHERE lim.team_id=t.id AND t.status=3 AND lio.inventory_released=FALSE) AS unreleased_inventory_orders
+    </sql>
+
+    <select id="selectTeams" resultType="com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuyTeamRow">
+        SELECT <include refid="teamColumns"/>
+        FROM groupbuy_team t
+        JOIN groupbuy_campaign c ON c.id=t.campaign_id
+        JOIN shop s ON s.id=c.shop_id
+        WHERE t.region=#{region} AND c.region=#{region} AND s.region=#{region}
+        <if test="status != null">AND t.status=#{status}</if>
+        <include refid="teamScope"/>
+        <if test="problemOnly"><include refid="problemWhere"/></if>
+        ORDER BY
+            CASE WHEN t.status=1 AND t.expire_at &lt;= CURRENT_TIMESTAMP THEN 0 ELSE 1 END,
+            t.updated_at DESC,t.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectTeam" resultType="com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuyTeamRow">
+        SELECT <include refid="teamColumns"/>
+        FROM groupbuy_team t
+        JOIN groupbuy_campaign c ON c.id=t.campaign_id
+        JOIN shop s ON s.id=c.shop_id
+        WHERE t.id=#{teamId} AND t.region=#{region} AND c.region=#{region} AND s.region=#{region}
+        <include refid="teamScope"/>
+    </select>
+</mapper>

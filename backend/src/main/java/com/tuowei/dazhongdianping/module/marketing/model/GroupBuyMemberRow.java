@@ -14,6 +14,7 @@ public class GroupBuyMemberRow {
     private Long userId;
     private Long orderId;
     private Integer status;
+    private Integer remindStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

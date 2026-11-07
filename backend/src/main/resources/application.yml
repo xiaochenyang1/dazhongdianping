@@ -76,6 +76,7 @@ logging:
 app:
   launch:
     deferred-features-enabled: ${APP_LAUNCH_DEFERRED_FEATURES_ENABLED:false}
+    group-buy-feature-flag-enforced: ${APP_LAUNCH_GROUP_BUY_FEATURE_FLAG_ENFORCED:true}
     eu:
       creator-rewards-enabled: ${APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED:false}
       seckill-enabled: ${APP_LAUNCH_EU_SECKILL_ENABLED:false}

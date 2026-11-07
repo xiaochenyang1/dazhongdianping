@@ -8,9 +8,11 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   openAuthDialog: vi.fn(),
 }))
+const route = reactive({ query: {} as Record<string, string> })
 vi.mock('@/services/campaign', () => mocks)
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: mocks.push }),
+  useRoute: () => route,
   RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
 }))
 const state = reactive({ region: 'EU' })
@@ -33,6 +35,7 @@ describe('group-buy purchase', () => {
     session.accessToken = 'token'
     session.currentUser = { id: 1 }
     mocks.fetchGroupBuy.mockResolvedValue([campaign])
+    route.query = {}
   })
   afterEach(() => mounted.splice(0).forEach(app => app.unmount()))
 
@@ -56,6 +59,12 @@ describe('group-buy purchase', () => {
     await flush()
     expect(mocks.joinGroupTeam).toHaveBeenCalledWith(90)
     expect(mocks.push).toHaveBeenCalledWith('/user/orders/88')
+  })
+
+  it('prefills a shared team id from the invitation URL', async () => {
+    route.query = { teamId: '91' }
+    const host = mount(); await flush()
+    expect(host.querySelector<HTMLInputElement>('[data-testid="group-team-id"]')?.value).toBe('91')
   })
 
   it('asks the user to sign in before reserving inventory', async () => {

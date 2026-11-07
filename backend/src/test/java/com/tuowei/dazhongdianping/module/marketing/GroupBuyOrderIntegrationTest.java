@@ -11,6 +11,9 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 
 import com.tuowei.dazhongdianping.common.api.ServiceUnavailableException;
+import com.tuowei.dazhongdianping.common.admin.AdminCityScope;
+import com.tuowei.dazhongdianping.common.admin.AdminSession;
+import com.tuowei.dazhongdianping.common.admin.AdminSessionContext;
 import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
@@ -18,6 +21,9 @@ import com.tuowei.dazhongdianping.common.user.UserSessionContext;
 import com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper;
 import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyCampaignRow;
 import com.tuowei.dazhongdianping.module.marketing.service.GroupBuyOrderService;
+import com.tuowei.dazhongdianping.module.marketing.service.GroupBuyReminderService;
+import com.tuowei.dazhongdianping.module.marketing.scheduler.GroupBuyReminderScheduler;
+import com.tuowei.dazhongdianping.module.admin.groupbuy.service.AdminGroupBuyOperationsService;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSession;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSessionContext;
 import com.tuowei.dazhongdianping.module.merchant.service.MerchantFulfillmentService;
@@ -25,6 +31,7 @@ import com.tuowei.dazhongdianping.module.merchant.trade.model.request.MerchantRe
 import com.tuowei.dazhongdianping.module.merchant.trade.service.MerchantTradeService;
 import com.tuowei.dazhongdianping.module.trade.model.request.RefundRequest;
 import com.tuowei.dazhongdianping.module.trade.payment.MockPaymentChannel;
+import com.tuowei.dazhongdianping.module.trade.payment.PaymentNotifyResult;
 import com.tuowei.dazhongdianping.module.trade.scheduler.TradeCompensationScheduler;
 import com.tuowei.dazhongdianping.module.trade.service.TradeCompensationService;
 import com.tuowei.dazhongdianping.module.trade.service.TradeService;
@@ -34,6 +41,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -52,7 +60,10 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /** Committed fixtures are intentional: races run in independent, real transactions. */
-@SpringBootTest(properties = "app.launch.deferred-features-enabled=true")
+@SpringBootTest(properties = {
+        "app.launch.deferred-features-enabled=true",
+        "app.launch.group-buy-feature-flag-enforced=false"
+})
 class GroupBuyOrderIntegrationTest {
     private static final AtomicLong IDS = new AtomicLong(800_000);
 
@@ -63,8 +74,11 @@ class GroupBuyOrderIntegrationTest {
     @Autowired TradeCompensationService compensation;
     @Autowired MerchantTradeService merchantTrade;
     @Autowired MerchantFulfillmentService fulfillment;
+    @Autowired AdminGroupBuyOperationsService groupBuyOperations;
+    @Autowired GroupBuyReminderService reminders;
     @SpyBean MockPaymentChannel channel;
     @MockBean TradeCompensationScheduler compensationScheduler;
+    @MockBean GroupBuyReminderScheduler reminderScheduler;
 
     @BeforeEach void prepare() { reset(channel); }
 
@@ -72,6 +86,7 @@ class GroupBuyOrderIntegrationTest {
         UserSessionContext.clear();
         RegionContext.clear();
         MerchantSessionContext.clear();
+        AdminSessionContext.clear();
     }
 
     @Test void formsOnlyAfterEveryMemberPaysAndIssuesOneCouponPerOrder() {
@@ -126,6 +141,45 @@ class GroupBuyOrderIntegrationTest {
             assertThat(count("SELECT COUNT(*) FROM `order` WHERE campaign_id=?", fixture.campaign)).isEqualTo(expectedMembers);
             assertThat(stock(fixture)).isEqualTo(limits[1] - expectedMembers);
         }
+    }
+
+    @Test void concurrentSandboxPaymentsFormOnceAndDuplicateCallbacksStayIdempotent() throws Exception {
+        Fixture fixture = fixture(12, 12);
+        List<Participant> participants = new ArrayList<>();
+        long leader = user();
+        Map<String, Object> opened = as(leader, () -> groupBuy.open(fixture.campaign));
+        long teamId = number(opened, "id");
+        participants.add(new Participant(leader, number(opened, "orderId")));
+        for (int index = 1; index < 12; index++) {
+            long userId = user();
+            long orderId = as(userId, () -> number(groupBuy.join(teamId), "orderId"));
+            participants.add(new Participant(userId, orderId));
+        }
+
+        List<Callable<Long>> payments = participants.stream()
+                .<Callable<Long>>map(participant -> () -> as(participant.userId,
+                        () -> number(trade.completeMockPayment(participant.orderId), "id")))
+                .toList();
+        assertThat(race(payments)).hasSize(12);
+        assertThat(count("SELECT status FROM groupbuy_team WHERE id=?", teamId)).isEqualTo(2);
+        assertThat(count("SELECT paid_count FROM groupbuy_team WHERE id=?", teamId)).isEqualTo(12);
+        assertThat(count("SELECT COUNT(*) FROM coupon c JOIN groupbuy_member m ON m.order_id=c.order_id WHERE m.team_id=?", teamId))
+                .isEqualTo(12);
+
+        List<Callable<Boolean>> duplicates = participants.stream().<Callable<Boolean>>map(participant -> () -> {
+            Map<String, Object> payment = jdbc.queryForMap(
+                    "SELECT p.channel,p.channel_txn,o.order_no,o.amount FROM payment p JOIN `order` o ON o.id=p.order_id WHERE p.order_id=?",
+                    participant.orderId);
+            return as(participant.userId, () -> Boolean.TRUE.equals(trade.notifyInternal(
+                    String.valueOf(payment.get("channel")),
+                    new PaymentNotifyResult(
+                            String.valueOf(payment.get("order_no")),
+                            String.valueOf(payment.get("channel_txn")),
+                            new BigDecimal(String.valueOf(payment.get("amount"))), true)).get("processed")));
+        }).toList();
+        assertThat(race(duplicates)).containsOnly(false);
+        assertThat(count("SELECT COUNT(*) FROM coupon c JOIN groupbuy_member m ON m.order_id=c.order_id WHERE m.team_id=?", teamId))
+                .isEqualTo(12);
     }
 
     @Test void expiryClosesUnpaidOrderAndAutomaticallyRefundsPaidOrderExactlyOnce() {
@@ -200,6 +254,48 @@ class GroupBuyOrderIntegrationTest {
         assertThat(stock(fixture)).isEqualTo(1);
     }
 
+    @Test void operationsSummaryFindsAndRepairsMissingVoucherWithinAdminScope() {
+        Fixture fixture = fixture(2, 2);
+        long leader = user(), member = user();
+        Map<String, Object> opened = as(leader, () -> groupBuy.open(fixture.campaign));
+        long teamId = number(opened, "id"), leaderOrder = number(opened, "orderId");
+        long memberOrder = as(member, () -> number(groupBuy.join(teamId), "orderId"));
+        as(leader, () -> trade.completeMockPayment(leaderOrder));
+        as(member, () -> trade.completeMockPayment(memberOrder));
+        jdbc.update("DELETE FROM coupon WHERE order_id=?", memberOrder);
+
+        admin(new AdminCityScope(false, Set.of(), Set.of(10001L)));
+        assertThat(groupBuyOperations.summary().missingCouponOrders()).isEqualTo(1);
+        assertThat(groupBuyOperations.teams(null, true, 1, 20).list())
+                .extracting("id").contains(teamId);
+
+        var repaired = groupBuyOperations.reconcile(teamId, "127.0.0.1");
+
+        assertThat(repaired.vouchersIssued()).isEqualTo(1);
+        assertThat(repaired.failures()).isZero();
+        assertThat(repaired.team().missingCouponOrders()).isZero();
+        assertThat(count("SELECT COUNT(*) FROM coupon WHERE order_id=?", memberOrder)).isEqualTo(1);
+    }
+
+    @Test void deadlineReminderIsSentOnceToEveryActiveMember() {
+        // Other committed fixtures in this class intentionally survive between
+        // tests so transaction races use real connections. Exclude those teams
+        // from this scheduler assertion and keep the due set deterministic.
+        jdbc.update("UPDATE groupbuy_member SET remind_status=1");
+        Fixture fixture = fixture(2, 2);
+        long leader = user(), member = user();
+        long teamId = as(leader, () -> number(groupBuy.open(fixture.campaign), "id"));
+        as(member, () -> groupBuy.join(teamId));
+        jdbc.update("UPDATE groupbuy_team SET expire_at=? WHERE id=?", LocalDateTime.now().plusMinutes(30), teamId);
+
+        assertThat(reminders.dispatchDueReminders().sent()).isEqualTo(2);
+        assertThat(reminders.dispatchDueReminders().sent()).isZero();
+
+        assertThat(count("SELECT COUNT(*) FROM user_notification WHERE type='groupbuy.deadline' AND link_url=?",
+                "/marketing/groupbuy?teamId=" + teamId)).isEqualTo(2);
+        assertThat(count("SELECT COUNT(*) FROM groupbuy_member WHERE team_id=? AND remind_status=1", teamId)).isEqualTo(2);
+    }
+
     private Fixture fixture(int groupSize, int dealStock) {
         long id = IDS.incrementAndGet();
         LocalDate validEnd = LocalDate.now().plusDays(30);
@@ -237,6 +333,13 @@ class GroupBuyOrderIntegrationTest {
     private void merchant() {
         RegionContext.setRegion(Region.CN);
         MerchantSessionContext.set(new MerchantSession(12001L, 1001L, "merchant", 1, "CN"));
+    }
+
+    private void admin(AdminCityScope scope) {
+        RegionContext.setRegion(Region.CN);
+        AdminSessionContext.set(new AdminSession(
+                1L, "admin", "Admin", Set.of("data:order:read", "data:order:write"),
+                Set.of("CN"), Map.of("CN", scope)));
     }
 
     private void expire(long teamId) {
@@ -283,4 +386,5 @@ class GroupBuyOrderIntegrationTest {
     }
 
     private record Fixture(long campaign, long deal) {}
+    private record Participant(long userId, long orderId) {}
 }

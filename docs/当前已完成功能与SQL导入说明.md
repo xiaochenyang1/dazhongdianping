@@ -93,7 +93,7 @@
 - 区域支付默认通道已隔离：`CN=alipay_mock`、`EU=stripe`;EU 区 Stripe test mode 已打通（PaymentIntent → Web/Flutter Elements/PaymentSheet → webhook 验签 → 发券），商户/平台退款审批已接 Stripe Refund、稳定幂等键与渠道回执持久化；真实凭证、退款到账 smoke 与生产 switchover 待验收。
 - 预订已完成：时段容量、自动/人工确认、创建、列表、详情、取消截止时间、改期重新确认、容量释放和变更时间线。
 - 巴黎首发已补城市 IANA 时区和预订时区快照：创建/改期/确认及时段启用统一校验门店与所属地理数据可用性；停用城市的历史预订保留查询、允许截止前取消和已确认记录的提醒。客户端显示门店当地时间，取消与提醒按真实时刻计算；新预订拒绝夏令时缺失/重复时间。具体接口契约见 [2026-10-14 执行记录](巴黎首发优化与发布候选验证-2026-10-14.md)。
-- EU 创作者奖励、秒杀和拼团默认关闭，后端在写入前拒绝延期功能，Web/Flutter 隐藏入口，Web 拦截直达路由；普通门店团购与预订继续开放。公开 `/api/c/v1/launch-config` 返回当前区域能力。
+- EU 创作者奖励、秒杀和拼团默认关闭，后端在写入前拒绝延期功能，Web/Flutter 隐藏入口，Web 拦截直达路由；普通门店团购与预订继续开放。拼团额外受数据库 `group_buy` 开关约束，活动 > 门店 > 城市 > 区域总规则，按用户稳定百分比灰度，CN/EU 默认均关闭。公开 `/api/c/v1/launch-config` 返回当前区域能力。
 - 商户履约后端已完成：确认、拒绝、到店、爽约、券码核销；SQL 同时约束商户归属、区域、当前状态和券有效期，避免串店操作。
 - 商户核销页面已支持摄像头扫码与手动输码，识别后关闭相机并等待商户确认；相机帧只在浏览器内解码，授权失败可继续输码。商户端 67 项测试、构建及含真实后端扫码核销的 11 项浏览器 E2E 通过；手机实体摄像头、目标 HTTPS 环境和商户试用仍待验收，见 [2026-10-24 记录](商户摄像头扫码验证-2026-10-24.md)。
 - Web 已完成团购详情、订单、券、在线预订、我的预订和预订详情页面；独立 `merchant-web` 已补齐注册、登录、资质提交/状态分流、概览、门店、员工、预订、团购、订单退款、点评回复/申诉页面。
@@ -211,6 +211,7 @@
 
 - 商户自助优惠券、秒杀、拼团：商户创建后待审，管理端审核；C 端公开列表，领取/开团/参团需登录。优惠券中心只展示 `audit_status=2`。
 - 秒杀现已接入待支付订单、冻结价格、并发库存、支付发券、取消/到期释放、退款和核销；Web/Flutter 可从活动进入已有交易页面，商户和管理端可查看活动来源。需应用 29 号迁移，默认上线开关仍关闭；详情见[秒杀交易契约](integration/commerce.md#秒杀订单)。
+- 拼团现已接入独立成员订单、并发容量与套餐库存、全员付款后一次成团并逐单发券、到期关单/自动退款/幂等补偿；后台 `/data/groupbuy-operations` 可按管理员城市/门店范围查看 24 小时摘要、异常团和退款/缺券/库存告警，并对单团执行过期处理、退款重试和缺券修复，操作写审计日志。生命周期与失败指标写入 `dianping.groupbuy.lifecycle` / `dianping.groupbuy.failure`，成功指标只在事务提交后计数。Web/Flutter 已提供倒计时与邀请分享，截止前一小时发送一次 `groupbuy.deadline` 站内提醒。需应用 30、31 号迁移，`group_buy` 默认关闭；详情见[拼团交易与运营契约](integration/commerce.md#拼团交易与运营)。
 - 发票：抬头、已支付订单申请、税率（CN 6% / EU 20%）、管理端开具或驳回，同一订单重复申请返回 409。管理端可上传已开具 PDF（最大 5 MiB），Web/APP 用户鉴权下载并显式确认收到；私有文件、SHA-256 与回执存储于 27 号迁移新增表，发票隐私导出包含 PDF，注销清理文件。
 - 点评信任：有用投票与按有用排序、菜品点评、社区译文、关键词自动拦截命中记录。
 - 客服工单：用户创建/回复，商户按门店回复，管理端回复并把待处理改为处理中，状态只允许 2/3/4。
@@ -299,12 +300,12 @@
 .\scripts\ci\mysql-smoke.ps1 -DbName dazhongdianping_smoke -DropDatabaseAfter
 ```
 
-`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-28 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
+`mysql-smoke.ps1` 默认只在 `-DbName` 尚不存在时创建数据库，依次导入 `01_schema.sql`、`02_seed_data.sql`，再用迁移器登记 14 号基线并应用 15-31 号迁移；同名库已存在时会拒绝执行，避免 `01_schema.sql` 的重建逻辑误清业务数据。`-SkipImport` 只适用于已准备到最新迁移版本的数据库。确需重置既有临时库时必须显式同时传入 `-DbName` 与 `-AllowDestructiveImport`。`-DropDatabaseAfter` 只接受显式传入的安全数据库标识符，并且只在 `finally` 中删除本次执行实际创建且所有权标记仍匹配的库。
 
 ### 3.2 初始化与迁移 SQL 的作用
 
 - `sql/mysql/00_all_in_one.sql`: 已退役的安全阻断桩,执行时直接报错,不再串联破坏性建表脚本。
-- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-28 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
+- `sql/mysql/01_schema.sql`: 新库快照，结构和种子以 14 号迁移为基线；快照后的现行结构由 15-31 号迁移补齐。快照包含 `review_like`、`review_comment`、`review_report`、`review_comment_report`、`review_merchant_reply`、`merchant_review_appeal`、`growth_points_log`、`user_check_in`、`points_product`、`points_exchange`、`post_comment_report` 等表。
 - `sql/mysql/02_seed_data.sql`: 浏览数据、公开点评、待审/驳回审核案例、点评图片、点赞/评论演示数据、C 端演示账号、成长规则(含 `check_in`)。
 - `sql/mysql/03_admin_city_scope_migration.sql`: 既有数据库增加管理员城市/门店范围；只用于升级，不参与全新数据库初始化。
 - `sql/mysql/04_admin_import_batch_scope_migration.sql`: 既有数据库增加受限管理员本人导入批次查询索引；在 `03` 后执行一次。
@@ -332,8 +333,10 @@
 - `sql/mysql/27_invoice_document_delivery_migration.sql`: 发票 PDF 文档、文件校验与用户收件确认。
 - `sql/mysql/28_creator_task_review_migration.sql`: 冻结领取时条款和奖励，增加成果引用、提交版本、审核字段及待审索引；历史已发奖金额优先读取原积分流水，状态保持终态。
 - `sql/mysql/29_seckill_order_migration.sql`: 订单增加活动来源、价格展示所需标题快照、券有效期及一次性库存释放标记；秒杀参与记录关联订单和状态，退款支持迟到支付自动退款。历史参与不补发订单或券，已取消/已退款订单标记为已释放库存。
+- `sql/mysql/30_groupbuy_order_migration.sql`: 拼团成员关联独立订单，拼团记录增加已付款人数与到期扫描索引，退款增加自动退款类型；历史成员保留为不可补单的历史数据。
+- `sql/mysql/31_groupbuy_rollout_migration.sql`: 创建活动/门店/城市级功能开关范围表，为 CN/EU 写入默认关闭的 `group_buy` 总开关，并为拼团成员增加截止提醒去重状态。
 
-> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-30 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
+> 全新库先导入 `01_schema.sql` + `02_seed_data.sql`，再运行 `mysql-migrate.sh --baseline-version 14` 应用 15-31 号迁移。这样同一份增量脚本也用于既有库升级，避免重复创建快照已经包含的早期对象。14 号基线对应当前 `01_schema.sql` / `02_seed_data.sql`；不要仅导入快照就启动最新后端。
 
 ### 3.3 导入后哪些表会直接有数据
 

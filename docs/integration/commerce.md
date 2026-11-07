@@ -84,6 +84,12 @@ empty and historical deleted owners cannot acquire documents.
 - POST /api/admin/v1/marketing/coupon-templates/{id}/audit
 - POST /api/admin/v1/marketing/seckill/{id}/audit
 - POST /api/admin/v1/marketing/groupbuy/{id}/audit
+- GET /api/admin/v1/groupbuy/operations/summary
+- GET /api/admin/v1/groupbuy/operations/teams
+- POST /api/admin/v1/groupbuy/operations/teams/{teamId}/reconcile
+- GET /api/admin/v1/flags/{id}/scopes
+- POST /api/admin/v1/flags/{id}/scopes
+- DELETE /api/admin/v1/flags/{id}/scopes/{scopeId}
 - GET /api/c/v1/marketing/seckill
 - POST /api/c/v1/marketing/seckill/{id}/orders
 - POST /api/c/v1/marketing/seckill/{id}/claim（兼容入口，行为与 `/orders` 相同）
@@ -106,6 +112,19 @@ empty and historical deleted owners cannot acquire documents.
 部署前按顺序应用 [`29_seckill_order_migration.sql`](../../sql/mysql/29_seckill_order_migration.sql)。全新库导入基础快照后使用基线 14，增量升级到 29。默认 `APP_LAUNCH_DEFERRED_FEATURES_ENABLED=false`，EU 秒杀还受 `APP_LAUNCH_EU_SECKILL_ENABLED=false` 限制；仅在独立开发环境显式开启，现有巴黎首发开关不变。
 
 本地复现：`python3 scripts/ci/seckill-order-integration.py --server local`。脚本会创建私有 MySQL 数据目录和临时账号，运行真实事务并发用例及 CN/EU 三端浏览器购买、退款、核销流程，结束后清理服务；不会连接现有业务库。CI/nightly 使用 `--server docker` 和 MySQL 8.4。验证范围与证据见[交付记录](../秒杀订单交易闭环-2026-11-06.md)。
+
+### 拼团交易与运营
+
+每位成员开团或参团时创建一笔独立待支付订单，并在同一事务中占用拼团名额和套餐库存。成员付款只更新本人成员状态；达到活动人数后只允许一次状态跃迁为已成团，再为全部已付款订单逐单发券。并发付款和重复渠道回调均保持幂等。
+
+- 进行中的团到期后，未付款订单关闭并释放库存，已付款订单创建 `refundType=groupbuy_expired` 的自动退款；渠道失败由补偿任务使用稳定幂等键重试。已成团订单继续复用普通券核销和退款约束。
+- 订单详情返回 `groupBuyTeamId/groupBuyStatus/groupBuyMemberCount/groupBuyPaidCount/groupBuySize`。Web 与 Flutter 在进行中展示实时倒计时和邀请链接 `/marketing/groupbuy?teamId={teamId}`；Web 直达页面会预填团号。
+- 截止前 60 分钟内向仍有效成员发送一次 `groupbuy.deadline` 站内通知，`groupbuy_member.remind_status` 保证持久去重；成团发券发送 `groupbuy.formed`。
+- 管理端 `/data/groupbuy-operations` 使用 `data:order:read|write` 权限，并遵守管理员区域、城市和门店范围。摘要会提示过期未处理、退款等待/失败、已成团缺券和库存未释放；单团修复可重跑过期处理、退款补偿和缺券发放，并记录审计日志。
+- Micrometer 指标为 `dianping.groupbuy.lifecycle` 和 `dianping.groupbuy.failure`。成功生命周期事件在事务提交后记录，避免回滚事务产生虚假成功数。
+- 部署总开关 `APP_LAUNCH_DEFERRED_FEATURES_ENABLED` 必须先开启；随后由区域 `group_buy` 总开关与活动 > 门店 > 城市规则决定用户是否可用，同级按稳定用户哈希执行 `rolloutPercent`。CN/EU 的总开关种子均为关闭；`APP_LAUNCH_GROUP_BUY_FEATURE_FLAG_ENFORCED` 默认 `true`。
+
+部署前按顺序应用 [`30_groupbuy_order_migration.sql`](../../sql/mysql/30_groupbuy_order_migration.sql) 和 [`31_groupbuy_rollout_migration.sql`](../../sql/mysql/31_groupbuy_rollout_migration.sql)。迁移契约和本地真实 MySQL 8 的旧库、全新库、重复执行、锁与 checksum 漂移验证均覆盖到版本 31。
 
 ## Ads
 

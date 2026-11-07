@@ -1,4 +1,4 @@
-import { apiDownload, apiGet, apiPost, apiPostForm, apiPut } from '@/lib/http'
+import { apiDelete, apiDownload, apiGet, apiPost, apiPostForm, apiPut } from '@/lib/http'
 import type { PageResult } from '@/types/admin'
 
 export interface OpsTicket {
@@ -39,6 +39,15 @@ export interface OpsFlag {
   id: number
   flagKey: string
   description: string
+  enabled: boolean
+  rolloutPercent: number
+}
+
+export interface OpsFlagScope {
+  id: number
+  featureFlagId: number
+  scopeType: 'city' | 'shop' | 'campaign'
+  scopeId: number
   enabled: boolean
   rolloutPercent: number
 }
@@ -173,6 +182,23 @@ export function saveAdminFlag(payload: {
   return id
     ? apiPut<OpsFlag>(`/api/admin/v1/flags/${id}`, payload)
     : apiPost<OpsFlag>('/api/admin/v1/flags', payload)
+}
+
+export function fetchAdminFlagScopes(flagId: number) {
+  return apiGet<OpsFlagScope[]>(`/api/admin/v1/flags/${flagId}/scopes`)
+}
+
+export function saveAdminFlagScope(flagId: number, payload: {
+  scopeType: 'city' | 'shop' | 'campaign'
+  scopeId: number
+  enabled: boolean
+  rolloutPercent: number
+}) {
+  return apiPost<OpsFlagScope>(`/api/admin/v1/flags/${flagId}/scopes`, payload)
+}
+
+export function deleteAdminFlagScope(flagId: number, scopeId: number) {
+  return apiDelete<void>(`/api/admin/v1/flags/${flagId}/scopes/${scopeId}`)
 }
 
 export function fetchAdminExperiments() {

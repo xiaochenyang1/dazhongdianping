@@ -79,6 +79,12 @@ export interface WebTradeStrings {
     groupBuyProgress: (paid: number, size: number) => string
     groupBuyPaymentSuccess: (paid: number, size: number) => string
     groupBuyAutomaticRefund: string
+    groupBuyRemaining: (hours: number, minutes: number) => string
+    groupBuyCountdownExpired: string
+    groupBuyShare: string
+    groupBuyShareText: (title: string, teamId: number) => string
+    groupBuyShareCopied: string
+    groupBuyShareFailed: string
     payDeadline: string
     expired: string
     closed: string
@@ -330,6 +336,12 @@ const zhCnStrings: WebTradeStrings = {
     groupBuyProgress: (paid, size) => `付款进度 ${paid}/${size}`,
     groupBuyPaymentSuccess: (paid, size) => `支付成功，等待成团（${paid}/${size} 人已付款）。`,
     groupBuyAutomaticRefund: '拼团未在截止时间前完成，系统将原路退款。',
+    groupBuyRemaining: (hours, minutes) => `距拼团截止还有 ${hours} 小时 ${minutes} 分钟`,
+    groupBuyCountdownExpired: '拼团已到截止时间，状态即将更新。',
+    groupBuyShare: '邀请好友参团',
+    groupBuyShareText: (title, teamId) => `来参加「${title}」拼团，拼团号 ${teamId}`,
+    groupBuyShareCopied: '参团链接已复制。',
+    groupBuyShareFailed: '分享失败，请稍后重试。',
     payDeadline: '支付截止',
     expired: '订单支付时间已过，请取消后重新下单。',
     closed: '已关闭',
@@ -512,6 +524,12 @@ const enStrings: WebTradeStrings = {
     groupBuyProgress: (paid, size) => `Payment progress ${paid}/${size}`,
     groupBuyPaymentSuccess: (paid, size) => `Payment complete. Waiting for the group to form (${paid}/${size} paid).`,
     groupBuyAutomaticRefund: 'The group did not form before the deadline. Payment will be refunded automatically.',
+    groupBuyRemaining: (hours, minutes) => `${hours}h ${minutes}m left to form the group`,
+    groupBuyCountdownExpired: 'The group deadline has passed. Status will update shortly.',
+    groupBuyShare: 'Invite friends',
+    groupBuyShareText: (title, teamId) => `Join my group for “${title}” — team ${teamId}`,
+    groupBuyShareCopied: 'Join link copied.',
+    groupBuyShareFailed: 'Could not share the group. Please retry.',
     payDeadline: 'Pay before',
     expired: 'The payment deadline has passed. Cancel this order to purchase again.',
     closed: 'Closed',

@@ -177,6 +177,9 @@ class AppLocalizations {
     'groupBuyRefunding': '拼团失败，正在原路退款',
     'groupBuyRefunded': '拼团失败，款项已原路退回',
     'groupBuyProgress': '付款进度 {paid}/{size}',
+    'groupBuyCountdown': '距拼团截止 {time}',
+    'groupBuyInvite': '邀请好友参团',
+    'groupBuyShareText': '我正在拼「{title}」，付款进度 {paid}/{size}，一起来参团：{url}',
     'groupBuyAutomaticRefund': '拼团未在截止时间前完成，系统将原路退款。',
     'levelPrivilegesTitle': '等级权益',
     'complaintsEmpty': '你还没有发起过投诉。',
@@ -1407,6 +1410,9 @@ class AppLocalizations {
     'groupBuyRefunding': '拼團失敗，正在原路退款',
     'groupBuyRefunded': '拼團失敗，款項已原路退回',
     'groupBuyProgress': '付款進度 {paid}/{size}',
+    'groupBuyCountdown': '距拼團截止 {time}',
+    'groupBuyInvite': '邀請好友參團',
+    'groupBuyShareText': '我正在拼「{title}」，付款進度 {paid}/{size}，一起來參團：{url}',
     'groupBuyAutomaticRefund': '拼團未在截止時間前完成，系統將原路退款。',
     'levelPrivilegesTitle': '等級權益',
     'complaintsEmpty': '你還沒有發起過投訴。',
@@ -2650,6 +2656,10 @@ class AppLocalizations {
     'groupBuyRefunding': 'Group did not form — refund in progress',
     'groupBuyRefunded': 'Group did not form — payment refunded',
     'groupBuyProgress': 'Payment progress {paid}/{size}',
+    'groupBuyCountdown': 'Group ends in {time}',
+    'groupBuyInvite': 'Invite friends',
+    'groupBuyShareText':
+        'I am joining "{title}". Payment progress {paid}/{size}. Join my group: {url}',
     'groupBuyAutomaticRefund':
         'The group did not form before the deadline. Payment will be refunded automatically.',
     'levelPrivilegesTitle': 'Level perks',
@@ -4134,6 +4144,19 @@ class AppLocalizations {
   String groupBuyProgress({required int paid, required int size}) => _text(
     'groupBuyProgress',
   ).replaceFirst('{paid}', '$paid').replaceFirst('{size}', '$size');
+  String groupBuyCountdown(String time) =>
+      _text('groupBuyCountdown').replaceFirst('{time}', time);
+  String get groupBuyInvite => _text('groupBuyInvite');
+  String groupBuyShareText({
+    required String title,
+    required int paid,
+    required int size,
+    required String url,
+  }) => _text('groupBuyShareText')
+      .replaceFirst('{title}', title)
+      .replaceFirst('{paid}', '$paid')
+      .replaceFirst('{size}', '$size')
+      .replaceFirst('{url}', url);
   String get groupBuyAutomaticRefund => _text('groupBuyAutomaticRefund');
   String get levelPrivilegesTitle => _text('levelPrivilegesTitle');
   String get complaintsEmpty => _text('complaintsEmpty');

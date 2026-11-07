@@ -41,11 +41,21 @@ const groupBuyStatus = computed(() => {
   }
   return `${copy.value.orderDetail.groupBuyWaiting} · ${progress}`
 })
+const now = ref(Date.now())
+const groupBuyRemaining = computed(() => {
+  const current = order.value
+  if (!current || current.orderSource !== 'groupbuy' || current.groupBuyStatus !== 1 || !current.expireAt) return ''
+  const deadline = new Date(current.expireAt).getTime()
+  if (!Number.isFinite(deadline) || deadline <= now.value) return copy.value.orderDetail.groupBuyCountdownExpired
+  const totalMinutes = Math.ceil((deadline - now.value) / 60_000)
+  return copy.value.orderDetail.groupBuyRemaining(Math.floor(totalMinutes / 60), totalMinutes % 60)
+})
 
 const POLL_INTERVAL_MS = 1500
 const POLL_MAX_TRIES = 12
 let pollRequestId = 0
 let pollTimer: ReturnType<typeof setTimeout> | null = null
+const countdownTimer = window.setInterval(() => { now.value = Date.now() }, 30_000)
 
 const canCancel = computed(() => order.value?.payStatus === 0 && order.value?.status === 1)
 const canRefund = computed(() => order.value?.payStatus === 1 && order.value?.status === 1 && !order.value?.refund)
@@ -197,6 +207,31 @@ async function refund() {
   }
 }
 
+async function shareGroupBuy() {
+  const current = order.value
+  if (!current?.groupBuyTeamId) return
+  errorMessage.value = ''
+  const url = `${window.location.origin}/marketing/groupbuy?teamId=${current.groupBuyTeamId}`
+  const payload = {
+    title: current.campaignTitle || current.dealTitle,
+    text: copy.value.orderDetail.groupBuyShareText(
+      current.campaignTitle || current.dealTitle,
+      current.groupBuyTeamId,
+    ),
+    url,
+  }
+  try {
+    if (typeof navigator.share === 'function') await navigator.share(payload)
+    else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+      successMessage.value = copy.value.orderDetail.groupBuyShareCopied
+    } else throw new Error('share unavailable')
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    errorMessage.value = copy.value.orderDetail.groupBuyShareFailed
+  }
+}
+
 watch(
   [() => props.orderId, () => state.region],
   () => {
@@ -210,7 +245,7 @@ watch(
   { immediate: true },
 )
 
-onBeforeUnmount(() => { stopPolling(); stripeCheckout.unmount() })
+onBeforeUnmount(() => { stopPolling(); window.clearInterval(countdownTimer); stripeCheckout.unmount() })
 </script>
 
 <template>
@@ -244,11 +279,19 @@ onBeforeUnmount(() => { stopPolling(); stripeCheckout.unmount() })
       <p v-if="order.orderSource === 'groupbuy'" class="status-pill" data-testid="groupbuy-status">
         {{ copy.orderDetail.groupBuy }} · {{ groupBuyStatus }}
       </p>
+      <p v-if="groupBuyRemaining" class="muted" data-testid="groupbuy-countdown">{{ groupBuyRemaining }}</p>
       <p v-if="order.expireAt && canCancel" class="muted" data-testid="order-deadline">
         {{ copy.orderDetail.payDeadline }} {{ formatWebDateTime(order.expireAt, copy.tag) }}
       </p>
       <p v-if="order.canPay === false && canCancel" class="feedback">{{ copy.orderDetail.expired }}</p>
       <div class="hero-actions">
+        <button
+          v-if="order.orderSource === 'groupbuy' && order.groupBuyStatus === 1 && order.groupBuyTeamId"
+          class="secondary-button"
+          type="button"
+          data-testid="groupbuy-share"
+          @click="shareGroupBuy"
+        >{{ copy.orderDetail.groupBuyShare }}</button>
         <button
           v-if="order.payStatus === 0 && order.canPay !== false && !intent && order.status === 1"
           class="primary-button"

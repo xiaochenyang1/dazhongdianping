@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAppContext } from '@/composables/useAppContext'
 import { useUserSession } from '@/composables/useUserSession'
 import { campaignStringsForRegion, localizeWebCampaignError } from '@/core/web_campaign_localizations'
@@ -11,6 +11,7 @@ import type { GroupBuyCampaign } from '@/types/campaign'
 const { state } = useAppContext()
 const { state: session, openAuthDialog } = useUserSession()
 const router = useRouter()
+const route = useRoute()
 const copy = computed(() => campaignStringsForRegion(state.region))
 const campaigns = ref<GroupBuyCampaign[]>([])
 const loading = ref(false)
@@ -79,6 +80,10 @@ watch([() => state.region, () => session.accessToken, () => session.currentUser?
   joining.value = false
   campaigns.value = []
   void load()
+}, { immediate: true })
+watch(() => route.query.teamId, (value) => {
+  const parsed = Number(Array.isArray(value) ? value[0] : value)
+  if (Number.isInteger(parsed) && parsed > 0) teamId.value = String(parsed)
 }, { immediate: true })
 onBeforeUnmount(() => { scopeVersion++; loadVersion++ })
 </script>

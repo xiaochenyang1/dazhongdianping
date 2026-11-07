@@ -35,6 +35,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class GroupBuyOrderService {
 
+    public record TeamReconcileResult(
+            long teamId,
+            int teamStatus,
+            int expiredOrdersProcessed,
+            int vouchersIssued,
+            int failures) {}
+
     private static final Logger log = LoggerFactory.getLogger(GroupBuyOrderService.class);
     private static final String EXPIRED_REFUND_TYPE = "groupbuy_expired";
     private static final String EXPIRED_REFUND_REASON = "拼团未在截止时间前完成，系统自动退款";
@@ -45,6 +52,7 @@ public class GroupBuyOrderService {
     private final OrderInventoryService inventory;
     private final TradeService tradeService;
     private final LaunchPolicy launch;
+    private final GroupBuyMetrics metrics;
     private final TransactionTemplate transactions;
 
     public GroupBuyOrderService(
@@ -54,6 +62,7 @@ public class GroupBuyOrderService {
             OrderInventoryService inventory,
             TradeService tradeService,
             LaunchPolicy launch,
+            GroupBuyMetrics metrics,
             PlatformTransactionManager transactionManager) {
         this.campaigns = campaigns;
         this.trades = trades;
@@ -61,6 +70,7 @@ public class GroupBuyOrderService {
         this.inventory = inventory;
         this.tradeService = tradeService;
         this.launch = launch;
+        this.metrics = metrics;
         this.transactions = new TransactionTemplate(transactionManager);
     }
 
@@ -71,6 +81,7 @@ public class GroupBuyOrderService {
         String region = region();
         LocalDateTime now = LocalDateTime.now();
         GroupBuyCampaignRow campaign = requireOpenCampaign(campaignId, region, now);
+        launch.requireGroupBuy(campaign.getId(), campaign.getShopId(), userId);
         requireNotParticipating(campaignId, userId, region);
         DealRow deal = requireDealAndReserve(campaign);
 
@@ -83,6 +94,7 @@ public class GroupBuyOrderService {
 
         OrderRow order = createOrder(campaign, deal, userId, team.getExpireAt());
         insertMember(team.getId(), campaignId, region, userId, order.getId());
+        metrics.teamOpened(region);
         return result(team.getId(), order.getId());
     }
 
@@ -96,6 +108,7 @@ public class GroupBuyOrderService {
         GroupBuyTeamRow visible = campaigns.selectTeam(teamId);
         if (visible == null || !region.equals(visible.getRegion())) throw new NotFoundException("拼团不存在");
         GroupBuyCampaignRow campaign = requireOpenCampaign(visible.getCampaignId(), region, now);
+        launch.requireGroupBuy(campaign.getId(), campaign.getShopId(), userId);
         GroupBuyTeamRow team = campaigns.selectTeamForUpdate(teamId);
         if (team == null || !region.equals(team.getRegion())) throw new NotFoundException("拼团不存在");
         if (!Integer.valueOf(1).equals(team.getStatus())) throw new IllegalArgumentException("拼团已结束");
@@ -109,6 +122,7 @@ public class GroupBuyOrderService {
         DealRow deal = requireDealAndReserve(campaign);
         OrderRow order = createOrder(campaign, deal, userId, team.getExpireAt());
         insertMember(teamId, campaign.getId(), region, userId, order.getId());
+        metrics.memberJoined(region);
         return result(teamId, order.getId());
     }
 
@@ -122,17 +136,66 @@ public class GroupBuyOrderService {
                 return team != null && Integer.valueOf(3).equals(team.getStatus()) ? 0 : -1;
             });
             if (state == null || state < 0) continue;
-            if (state == 1) expired++;
+            GroupBuyTeamRow team = campaigns.selectTeam(teamId);
+            String teamRegion = team == null ? "unknown" : team.getRegion();
+            if (state == 1) {
+                expired++;
+                metrics.teamExpired(teamRegion);
+            }
             for (Long orderId : campaigns.selectGroupBuyOrderIds(teamId)) {
                 try {
                     transactions.executeWithoutResult(ignored -> expireOrder(orderId));
                 } catch (RuntimeException failure) {
+                    metrics.failure(teamRegion, "expiry_reconcile");
                     log.warn("expired group-buy order reconcile failed: teamId={}, orderId={}",
                             teamId, orderId, failure);
                 }
             }
         }
         return expired;
+    }
+
+    /** Idempotent, targeted repair used by the operations console. */
+    public TeamReconcileResult reconcileTeam(Long teamId, String expectedRegion) {
+        GroupBuyTeamRow visible = campaigns.selectTeam(teamId);
+        if (visible == null || !visible.getRegion().equals(expectedRegion)) {
+            throw new NotFoundException("拼团不存在");
+        }
+        if (Integer.valueOf(1).equals(visible.getStatus())
+                && visible.getExpireAt() != null
+                && !visible.getExpireAt().isAfter(LocalDateTime.now())) {
+            Integer expired = transactions.execute(ignored -> campaigns.markGroupBuyTeamExpired(teamId));
+            if (expired != null && expired == 1) metrics.teamExpired(visible.getRegion());
+        }
+
+        GroupBuyTeamRow team = campaigns.selectTeam(teamId);
+        int expiredOrders = 0;
+        int vouchers = 0;
+        int failures = 0;
+        if (Integer.valueOf(3).equals(team.getStatus())) {
+            for (Long orderId : campaigns.selectGroupBuyOrderIds(teamId)) {
+                try {
+                    transactions.executeWithoutResult(ignored -> expireOrder(orderId));
+                    expiredOrders++;
+                } catch (RuntimeException failure) {
+                    failures++;
+                    metrics.failure(team.getRegion(), "manual_expiry_reconcile");
+                    log.warn("manual group-buy expiry reconcile failed: teamId={}, orderId={}",
+                            teamId, orderId, failure);
+                }
+            }
+        } else if (Integer.valueOf(2).equals(team.getStatus())) {
+            for (Long orderId : campaigns.selectPaidGroupBuyOrderIds(teamId)) {
+                try {
+                    if (tradeService.reconcileGroupBuyFulfillment(orderId)) vouchers++;
+                } catch (RuntimeException failure) {
+                    failures++;
+                    log.warn("manual group-buy voucher reconcile failed: teamId={}, orderId={}",
+                            teamId, orderId, failure);
+                }
+            }
+        }
+        return new TeamReconcileResult(teamId, team.getStatus(), expiredOrders, vouchers, failures);
     }
 
     private void expireOrder(Long orderId) {
@@ -154,7 +217,7 @@ public class GroupBuyOrderService {
         } else if (Integer.valueOf(0).equals(refund.getStatus())) {
             trades.promoteRefundToAutomatic(orderId, payment.getChannel(), EXPIRED_REFUND_TYPE, EXPIRED_REFUND_REASON);
         }
-        tradeService.processAutomaticRefund(orderId);
+        metrics.automaticRefund(order.getRegion(), tradeService.processAutomaticRefund(orderId));
     }
 
     private long requireActiveUser() {
@@ -196,7 +259,11 @@ public class GroupBuyOrderService {
                 || campaign.getGroupPrice().compareTo(deal.getPrice()) > 0) {
             throw new IllegalArgumentException("拼团价格已失效");
         }
-        if (trades.decrementDealStock(deal.getId(), 1) != 1) throw new IllegalArgumentException("团购库存不足");
+        if (trades.decrementDealStock(deal.getId(), 1) != 1) {
+            metrics.failure(campaign.getRegion(), "inventory_exhausted");
+            throw new IllegalArgumentException("团购库存不足");
+        }
+        metrics.inventoryReserved(campaign.getRegion());
         return deal;
     }
 

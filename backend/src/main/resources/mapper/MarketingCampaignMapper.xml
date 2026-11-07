@@ -190,14 +190,14 @@
     </select>
 
     <select id="selectActiveMember" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyMemberRow">
-        SELECT id,team_id,campaign_id,region,user_id,order_id,status,created_at,updated_at
+        SELECT id,team_id,campaign_id,region,user_id,order_id,status,remind_status,created_at,updated_at
         FROM groupbuy_member
         WHERE campaign_id=#{campaignId} AND user_id=#{userId} AND region=#{region} AND status IN (0,1)
         ORDER BY id DESC LIMIT 1
     </select>
 
     <select id="selectMemberByOrderForUpdate" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyMemberRow">
-        SELECT id,team_id,campaign_id,region,user_id,order_id,status,created_at,updated_at
+        SELECT id,team_id,campaign_id,region,user_id,order_id,status,remind_status,created_at,updated_at
         FROM groupbuy_member WHERE order_id=#{orderId} FOR UPDATE
     </select>
 
@@ -274,5 +274,21 @@
         WHERE team_id=#{teamId} AND order_id IS NOT NULL
         ORDER BY id
     </select>
+
+    <select id="selectDueGroupBuyReminders" resultType="com.tuowei.dazhongdianping.module.marketing.model.GroupBuyReminderRow">
+        SELECT m.id AS member_id,m.team_id,m.user_id,m.region,c.title AS campaign_title,
+               t.member_count,t.paid_count,c.group_size,t.expire_at
+        FROM groupbuy_member m
+        JOIN groupbuy_team t ON t.id=m.team_id
+        JOIN groupbuy_campaign c ON c.id=t.campaign_id
+        WHERE t.status=1 AND m.status IN (0,1) AND m.remind_status=0
+          AND t.expire_at &gt; #{now} AND t.expire_at &lt;= #{windowEnd}
+        ORDER BY t.expire_at,m.id LIMIT #{limit}
+    </select>
+
+    <update id="markGroupBuyReminderSent">
+        UPDATE groupbuy_member SET remind_status=1,updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{memberId} AND remind_status=0 AND status IN (0,1)
+    </update>
 
 </mapper>

@@ -1,8 +1,8 @@
 package com.tuowei.dazhongdianping.module.trade.service;
-import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping.common.region.RegionContext;import com.tuowei.dazhongdianping.common.user.*;import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;import com.tuowei.dazhongdianping.module.notification.service.NotificationService;import com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper;import com.tuowei.dazhongdianping.module.trade.model.*;import com.tuowei.dazhongdianping.module.trade.model.request.*;import com.tuowei.dazhongdianping.module.trade.payment.*;import java.math.*;import java.nio.charset.StandardCharsets;import java.security.MessageDigest;import java.time.*;import java.util.*;import org.springframework.beans.factory.annotation.Value;import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Propagation;import org.springframework.transaction.annotation.Transactional;
+import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping.common.region.RegionContext;import com.tuowei.dazhongdianping.common.user.*;import com.tuowei.dazhongdianping.module.auth.service.UserGrowthService;import com.tuowei.dazhongdianping.module.marketing.service.GroupBuyMetrics;import com.tuowei.dazhongdianping.module.notification.service.NotificationService;import com.tuowei.dazhongdianping.module.trade.mapper.TradeMapper;import com.tuowei.dazhongdianping.module.trade.model.*;import com.tuowei.dazhongdianping.module.trade.model.request.*;import com.tuowei.dazhongdianping.module.trade.payment.*;import java.math.*;import java.nio.charset.StandardCharsets;import java.security.MessageDigest;import java.time.*;import java.util.*;import org.springframework.beans.factory.annotation.Value;import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Propagation;import org.springframework.transaction.annotation.Transactional;
 @Service public class TradeService {
  private static final String ORDER_PAID_TYPE = "order.paid";
- private final OrderInventoryService inventory;private final TradeMapper mapper;private final com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper authCommandMapper;private final UserGrowthService userGrowthService;private final CouponLifecycleService couponLifecycleService;private final NotificationService notificationService;private final String secret;private final PaymentChannelResolver channelResolver;private final com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService;private final com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper campaignMapper;public TradeService(TradeMapper mapper,com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper authCommandMapper,UserGrowthService userGrowthService,CouponLifecycleService couponLifecycleService,NotificationService notificationService,@Value("${app.payment.notify-secret}")String secret,PaymentChannelResolver channelResolver,com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService,OrderInventoryService inventory,com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper campaignMapper){this.inventory=inventory;this.mapper=mapper;this.authCommandMapper=authCommandMapper;this.userGrowthService=userGrowthService;this.couponLifecycleService=couponLifecycleService;this.notificationService=notificationService;this.secret=secret;this.channelResolver=channelResolver;this.marketingCouponService=marketingCouponService;this.campaignMapper=campaignMapper;}
+ private final OrderInventoryService inventory;private final TradeMapper mapper;private final com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper authCommandMapper;private final UserGrowthService userGrowthService;private final CouponLifecycleService couponLifecycleService;private final NotificationService notificationService;private final String secret;private final PaymentChannelResolver channelResolver;private final com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService;private final com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper campaignMapper;private final GroupBuyMetrics groupBuyMetrics;public TradeService(TradeMapper mapper,com.tuowei.dazhongdianping.module.auth.mapper.AuthCommandMapper authCommandMapper,UserGrowthService userGrowthService,CouponLifecycleService couponLifecycleService,NotificationService notificationService,@Value("${app.payment.notify-secret}")String secret,PaymentChannelResolver channelResolver,com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService,OrderInventoryService inventory,com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper campaignMapper,GroupBuyMetrics groupBuyMetrics){this.inventory=inventory;this.mapper=mapper;this.authCommandMapper=authCommandMapper;this.userGrowthService=userGrowthService;this.couponLifecycleService=couponLifecycleService;this.notificationService=notificationService;this.secret=secret;this.channelResolver=channelResolver;this.marketingCouponService=marketingCouponService;this.campaignMapper=campaignMapper;this.groupBuyMetrics=groupBuyMetrics;}
  public List<Map<String,Object>> shopDeals(Long shopId){return mapper.selectShopDeals(shopId,region()).stream().map(this::dealSummary).toList();}
  public Map<String,Object> deal(Long id){DealRow d=requireDeal(id);Map<String,Object> m=new LinkedHashMap<>(dealSummary(d));m.put("items",mapper.selectDealItems(id));m.put("rules",d.getRules());m.put("validStart",d.getValidStart());m.put("validEnd",d.getValidEnd());return m;}
  @Transactional
@@ -90,12 +90,20 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
    throw new IllegalStateException("拼团成员支付状态不一致");
   if(campaignMapper.recordGroupBuyPayment(member.getTeamId())!=1)
    throw new IllegalStateException("拼团支付人数更新失败");
+  groupBuyMetrics.paymentCompleted(order.getRegion());
   var team=campaignMapper.selectTeamForUpdate(member.getTeamId());
   if(team==null)throw new IllegalStateException("拼团不存在");
   if(!Integer.valueOf(2).equals(team.getStatus()))return;
+  groupBuyMetrics.teamFormed(order.getRegion());
   for(Long orderId:campaignMapper.selectPaidGroupBuyOrderIds(team.getId())){
    OrderRow paid=orderId.equals(order.getId())?order:inventory.lockOrder(orderId);
-   fulfillPaidOrder(paid);
+   try{
+    fulfillPaidOrder(paid);
+    groupBuyMetrics.voucherIssued(paid.getRegion());
+   }catch(RuntimeException failure){
+    groupBuyMetrics.failure(paid.getRegion(),"voucher_issuance");
+    throw failure;
+   }
   }
  }
 
@@ -118,6 +126,25 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
   if(recipient!=null&&Integer.valueOf(1).equals(recipient.getStatus())){
    userGrowthService.rewardForCompletedOrder(order.getUserId(),order.getId());
    notifyOrderPaid(order);
+  }
+ }
+
+ @Transactional
+ public boolean reconcileGroupBuyFulfillment(Long orderId) {
+  OrderRow order=inventory.lockOrder(orderId);
+  if(!OrderInventoryService.isGroupBuy(order)||!Integer.valueOf(1).equals(order.getStatus())
+      ||!Integer.valueOf(1).equals(order.getPayStatus()))return false;
+  var team=campaignMapper.selectTeamByOrder(orderId);
+  if(team==null||!Integer.valueOf(2).equals(team.getStatus()))return false;
+  long before=mapper.countOrderCoupons(orderId);
+  try{
+   fulfillPaidOrder(order);
+   boolean issued=mapper.countOrderCoupons(orderId)>before;
+   if(issued)groupBuyMetrics.voucherIssued(order.getRegion());
+   return issued;
+  }catch(RuntimeException failure){
+   groupBuyMetrics.failure(order.getRegion(),"voucher_reconcile");
+   throw failure;
   }
  }
 
@@ -277,7 +304,9 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
           +" · 券码已发放，可在我的券查看";
   String linkUrl="/user/orders/"+order.getId()+"?paid=1";
   String region=order.getRegion()==null||order.getRegion().isBlank()?RegionContext.getRegion().name():order.getRegion();
-  notificationService.create(order.getUserId(),region,ORDER_PAID_TYPE,"支付成功",content,linkUrl);
+  boolean groupBuy=OrderInventoryService.isGroupBuy(order);
+  notificationService.create(order.getUserId(),region,groupBuy?"groupbuy.formed":ORDER_PAID_TYPE,
+          groupBuy?"拼团成功":"支付成功",content,linkUrl);
  }
  private String sign(String orderNo,String txn,String status,BigDecimal amount){try{String raw=orderNo+"|"+txn+"|"+status+"|"+amount.setScale(2).toPlainString()+"|"+secret;return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
 }
