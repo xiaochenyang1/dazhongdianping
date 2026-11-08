@@ -717,6 +717,33 @@ export interface AdminGroupBuyReconcileResult {
   team: AdminGroupBuyTeam
 }
 
+export interface AdminGroupBuyFailedRefund {
+  refundId: number
+  orderId: number
+  orderNo: string
+  teamId: number
+  campaignTitle: string
+  shopName: string
+  amount: number
+  currency: string
+  channel: string
+  channelRefundTxn: string
+  channelStatus: string
+  channelFailureReason: string
+  refundStatus: number
+  auditBy: number | null
+  auditReason: string
+  auditedAt: string | null
+  updatedAt: string
+}
+
+export interface AdminGroupBuyRefundDispositionResult {
+  processed: boolean
+  alertResolved: boolean
+  outcome: 'provider_refunded' | 'provider_not_refunded'
+  refund: AdminGroupBuyFailedRefund
+}
+
 export interface AdminAuditTask {
   id: number
   bizType: number

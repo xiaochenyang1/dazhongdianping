@@ -159,6 +159,18 @@ public interface TradeMapper {
             @Param("channelFailureReason") String channelFailureReason
     );
 
+    int recordFailedAutomaticRefundReview(
+            @Param("refundId") Long refundId,
+            @Param("auditBy") Long auditBy,
+            @Param("auditReason") String auditReason
+    );
+
+    int confirmFailedAutomaticRefund(
+            @Param("refundId") Long refundId,
+            @Param("auditBy") Long auditBy,
+            @Param("auditReason") String auditReason
+    );
+
     List<RefundRow> selectProcessingRefunds(@Param("limit") Integer limit);
 
     List<RefundRow> selectUnsubmittedAutoRefunds(@Param("limit") Integer limit);

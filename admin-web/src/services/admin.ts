@@ -43,6 +43,8 @@ import type {
   AdminGroupBuySummary,
   AdminGroupBuyTeam,
   AdminGroupBuyReconcileResult,
+  AdminGroupBuyFailedRefund,
+  AdminGroupBuyRefundDispositionResult,
   AdminIdentity,
   AdminLoginResponse,
   AdminMenuItem,
@@ -316,6 +318,27 @@ export function listAdminGroupBuyTeams(query: {
 export function reconcileAdminGroupBuyTeam(teamId: number) {
   return apiPost<AdminGroupBuyReconcileResult>(
     `/api/admin/v1/groupbuy/operations/teams/${teamId}/reconcile`,
+  )
+}
+
+export function listAdminGroupBuyFailedRefunds(query: { page?: number; pageSize?: number } = {}) {
+  return apiGet<PageResult<AdminGroupBuyFailedRefund>>(
+    '/api/admin/v1/groupbuy/operations/refunds/failed',
+    query,
+  )
+}
+
+export function disposeAdminGroupBuyFailedRefund(
+  refundId: number,
+  payload: {
+    outcome: 'provider_refunded' | 'provider_not_refunded'
+    providerReference: string
+    note: string
+  },
+) {
+  return apiPost<AdminGroupBuyRefundDispositionResult>(
+    `/api/admin/v1/groupbuy/operations/refunds/${refundId}/disposition`,
+    payload,
   )
 }
 

@@ -1,5 +1,6 @@
 package com.tuowei.dazhongdianping.module.admin.groupbuy.mapper;
 
+import com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuyFailedRefundRow;
 import com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuySummaryRow;
 import com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuyTeamRow;
 import java.time.LocalDateTime;
@@ -39,6 +40,27 @@ public interface AdminGroupBuyOperationsMapper {
     AdminGroupBuyTeamRow selectTeam(
             @Param("region") String region,
             @Param("teamId") Long teamId,
+            @Param("allCities") boolean allCities,
+            @Param("cityIds") Set<Long> cityIds,
+            @Param("shopIds") Set<Long> shopIds);
+
+    long countFailedRefunds(
+            @Param("region") String region,
+            @Param("allCities") boolean allCities,
+            @Param("cityIds") Set<Long> cityIds,
+            @Param("shopIds") Set<Long> shopIds);
+
+    List<AdminGroupBuyFailedRefundRow> selectFailedRefunds(
+            @Param("region") String region,
+            @Param("limit") int limit,
+            @Param("offset") int offset,
+            @Param("allCities") boolean allCities,
+            @Param("cityIds") Set<Long> cityIds,
+            @Param("shopIds") Set<Long> shopIds);
+
+    AdminGroupBuyFailedRefundRow selectRefund(
+            @Param("region") String region,
+            @Param("refundId") Long refundId,
             @Param("allCities") boolean allCities,
             @Param("cityIds") Set<Long> cityIds,
             @Param("shopIds") Set<Long> shopIds);

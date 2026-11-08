@@ -136,4 +136,45 @@
         WHERE t.id=#{teamId} AND t.region=#{region} AND c.region=#{region} AND s.region=#{region}
         <include refid="teamScope"/>
     </select>
+
+    <sql id="failedRefundFrom">
+        FROM refund r
+        JOIN `order` o ON o.id=r.order_id
+        JOIN groupbuy_member gm ON gm.order_id=o.id
+        JOIN groupbuy_team t ON t.id=gm.team_id
+        JOIN groupbuy_campaign c ON c.id=t.campaign_id
+        JOIN shop s ON s.id=c.shop_id
+    </sql>
+
+    <sql id="failedRefundColumns">
+        r.id AS refund_id,o.id AS order_id,o.order_no,gm.team_id,c.title AS campaign_title,s.name AS shop_name,
+        r.amount,o.currency,r.channel,r.channel_refund_txn,r.channel_status,r.channel_failure_reason,
+        r.status AS refund_status,r.audit_by,r.audit_reason,r.audited_at,r.updated_at
+    </sql>
+
+    <select id="countFailedRefunds" resultType="long">
+        SELECT COUNT(*)
+        <include refid="failedRefundFrom"/>
+        WHERE r.refund_type='groupbuy_expired' AND r.status=4
+          AND o.region=#{region} AND t.region=#{region} AND c.region=#{region} AND s.region=#{region}
+        <include refid="teamScope"/>
+    </select>
+
+    <select id="selectFailedRefunds" resultType="com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuyFailedRefundRow">
+        SELECT <include refid="failedRefundColumns"/>
+        <include refid="failedRefundFrom"/>
+        WHERE r.refund_type='groupbuy_expired' AND r.status=4
+          AND o.region=#{region} AND t.region=#{region} AND c.region=#{region} AND s.region=#{region}
+        <include refid="teamScope"/>
+        ORDER BY r.updated_at,r.id
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectRefund" resultType="com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuyFailedRefundRow">
+        SELECT <include refid="failedRefundColumns"/>
+        <include refid="failedRefundFrom"/>
+        WHERE r.id=#{refundId} AND r.refund_type='groupbuy_expired'
+          AND o.region=#{region} AND t.region=#{region} AND c.region=#{region} AND s.region=#{region}
+        <include refid="teamScope"/>
+    </select>
 </mapper>
