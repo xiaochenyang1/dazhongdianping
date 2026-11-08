@@ -4,11 +4,13 @@ import com.tuowei.dazhongdianping.common.api.ApiResponse;
 import com.tuowei.dazhongdianping.module.admin.auth.AdminPermission;
 import com.tuowei.dazhongdianping.module.experiment.model.request.ExperimentSaveRequest;
 import com.tuowei.dazhongdianping.module.experiment.model.request.FlagSaveRequest;
+import com.tuowei.dazhongdianping.module.experiment.model.request.FlagScopeSaveRequest;
 import com.tuowei.dazhongdianping.module.experiment.service.ExperimentService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -43,6 +45,26 @@ public class AdminExperimentController {
     public ApiResponse<Map<String, Object>> updateFlag(
             @PathVariable Long id, @Valid @RequestBody FlagSaveRequest request) {
         return ApiResponse.success("开关已保存", "admin.flag_saved", service.updateFlag(id, request));
+    }
+
+    @GetMapping("/flags/{id}/scopes")
+    @AdminPermission("operations:experiment:read")
+    public ApiResponse<List<Map<String, Object>>> flagScopes(@PathVariable Long id) {
+        return ApiResponse.success(service.flagScopes(id));
+    }
+
+    @PostMapping("/flags/{id}/scopes")
+    @AdminPermission("operations:experiment:write")
+    public ApiResponse<Map<String, Object>> saveFlagScope(
+            @PathVariable Long id, @Valid @RequestBody FlagScopeSaveRequest request) {
+        return ApiResponse.success("灰度规则已保存", "admin.flag_scope_saved", service.saveFlagScope(id, request));
+    }
+
+    @DeleteMapping("/flags/{id}/scopes/{scopeId}")
+    @AdminPermission("operations:experiment:write")
+    public ApiResponse<Void> deleteFlagScope(@PathVariable Long id, @PathVariable Long scopeId) {
+        service.deleteFlagScope(id, scopeId);
+        return ApiResponse.success(null);
     }
 
     @GetMapping("/experiments")

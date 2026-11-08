@@ -5,11 +5,17 @@ $currentStatusPath = Join-Path $repoRoot 'docs\当前已完成功能与SQL导入
 $requirementsPath = Join-Path $repoRoot 'docs\需求文档.md'
 $readmePath = Join-Path $repoRoot 'README.md'
 $testChecklistPath = Join-Path $repoRoot 'docs\测试清单与验收用例.md'
+$euBaselinePath = Join-Path $repoRoot 'docs\EU预发发布基线.md'
+$euLedgerPath = Join-Path $repoRoot 'docs\EU预发执行与验收台账.md'
+$groupBuyDeliveryPath = Join-Path $repoRoot 'docs\拼团订单交易与灰度运营-2026-11-08.md'
 
 $currentStatus = Get-Content -Raw -LiteralPath $currentStatusPath
 $requirements = Get-Content -Raw -LiteralPath $requirementsPath
 $readme = Get-Content -Raw -LiteralPath $readmePath
 $testChecklist = Get-Content -Raw -LiteralPath $testChecklistPath
+$euBaseline = Get-Content -Raw -LiteralPath $euBaselinePath
+$euLedger = Get-Content -Raw -LiteralPath $euLedgerPath
+$groupBuyDelivery = Get-Content -Raw -LiteralPath $groupBuyDeliveryPath
 
 function Assert-Contains {
     param([string]$Text, [string]$Expected, [string]$Message)
@@ -37,5 +43,15 @@ Assert-NotContains $currentStatus '剩余未完成项是 M7 关系链/私信/圈
 Assert-Contains $requirements '当前实现与验收状态以 [`当前已完成功能与SQL导入说明.md`](当前已完成功能与SQL导入说明.md) §2.2、§5 为准' '需求文档未声明当前状态权威入口'
 Assert-Contains $readme '全局功能完成矩阵' '根 README 未指向全局功能完成矩阵'
 Assert-Contains $testChecklist '仓库全量本地基线已于 2026-07-18 重新验证通过' '测试清单没有本轮验证事实'
+
+Assert-NotContains $euBaseline '拼团目前仍只有开团/参团状态' 'EU 基线仍把已完成的拼团交易写成组队状态'
+Assert-NotContains $euLedger '拼团活动价订单、支付、发券、成团/超时退款及库存补偿仍未完成' 'EU 台账仍把拼团交易闭环写成未完成'
+Assert-Contains $currentStatus '在线咨询已在用户 Web、商户端与 Flutter 接入最近 50 条消息、历史翻页与增量补收' '权威功能矩阵仍未同步咨询分页完成状态'
+Assert-Contains $currentStatus '拼团现已接入独立成员订单' '权威功能矩阵仍未同步拼团交易完成状态'
+Assert-Contains $euLedger 'GB-01' 'EU 台账缺少拼团目标环境验收场景'
+Assert-Contains $euLedger '第 30 号迁移' 'EU 台账缺少拼团订单迁移回滚边界'
+Assert-Contains $euLedger '第 31 号迁移' 'EU 台账缺少拼团灰度迁移回滚边界'
+Assert-Contains $groupBuyDelivery '渠道明确返回失败时保留原交易状态' '拼团交付记录缺少终态退款失败边界'
+Assert-Contains $groupBuyDelivery '迁移终点为 29' '拼团交付记录未阻断旧候选包口径'
 
 Write-Output 'document status consistency contract passed'

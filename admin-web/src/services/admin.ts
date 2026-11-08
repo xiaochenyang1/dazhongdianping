@@ -40,6 +40,9 @@ import type {
   AdminSearchSyncState,
   AdminSearchSyncTask,
   AdminSystemHealth,
+  AdminGroupBuySummary,
+  AdminGroupBuyTeam,
+  AdminGroupBuyReconcileResult,
   AdminIdentity,
   AdminLoginResponse,
   AdminMenuItem,
@@ -295,6 +298,25 @@ export function rebuildAdminSearchIndex() {
 
 export function getAdminSystemHealth() {
   return apiGet<AdminSystemHealth>('/api/admin/v1/system/health', undefined, 15_000)
+}
+
+export function getAdminGroupBuySummary() {
+  return apiGet<AdminGroupBuySummary>('/api/admin/v1/groupbuy/operations/summary')
+}
+
+export function listAdminGroupBuyTeams(query: {
+  status?: number
+  problemOnly?: boolean
+  page?: number
+  pageSize?: number
+}) {
+  return apiGet<PageResult<AdminGroupBuyTeam>>('/api/admin/v1/groupbuy/operations/teams', query)
+}
+
+export function reconcileAdminGroupBuyTeam(teamId: number) {
+  return apiPost<AdminGroupBuyReconcileResult>(
+    `/api/admin/v1/groupbuy/operations/teams/${teamId}/reconcile`,
+  )
 }
 
 export function listAuditTasks(query: AdminAuditTaskQuery) {

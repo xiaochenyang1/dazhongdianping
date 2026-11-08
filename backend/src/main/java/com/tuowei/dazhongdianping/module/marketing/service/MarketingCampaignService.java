@@ -27,11 +27,14 @@ public class MarketingCampaignService {
     private final MarketingCampaignMapper mapper;
     private final LaunchPolicy launch;
     private final SeckillOrderService seckillOrders;
+    private final GroupBuyOrderService groupBuyOrders;
 
-    public MarketingCampaignService(MarketingCampaignMapper mapper, LaunchPolicy launch, SeckillOrderService seckillOrders) {
+    public MarketingCampaignService(MarketingCampaignMapper mapper, LaunchPolicy launch,
+            SeckillOrderService seckillOrders, GroupBuyOrderService groupBuyOrders) {
         this.mapper = mapper;
         this.launch = launch;
         this.seckillOrders = seckillOrders;
+        this.groupBuyOrders = groupBuyOrders;
     }
 
     public List<Map<String, Object>> seckills() {
@@ -60,79 +63,12 @@ public class MarketingCampaignService {
         return mapper.selectActiveGroups(region(), LocalDateTime.now()).stream().map(this::groupMap).toList();
     }
 
-    @Transactional
     public Map<String, Object> openTeam(Long campaignId) {
-        launch.require(Feature.GROUP_BUY);
-        UserSession user = requireUser();
-        String region = region();
-        LocalDateTime now = LocalDateTime.now();
-        GroupBuyCampaignRow campaign = requireOpenCampaign(campaignId, region, now);
-        GroupBuyTeamRow team = new GroupBuyTeamRow();
-        team.setCampaignId(campaign.getId());
-        team.setRegion(region);
-        team.setLeaderUserId(user.userId());
-        team.setExpireAt(now.plusHours(24));
-        mapper.insertTeam(team);
-        mapper.insertMember(team.getId(), user.userId());
-        return teamMap(mapper.selectTeam(team.getId()));
+        return groupBuyOrders.open(campaignId);
     }
 
-    @Transactional
     public Map<String, Object> joinTeam(Long teamId) {
-        launch.require(Feature.GROUP_BUY);
-        UserSession user = requireUser();
-        String region = region();
-        LocalDateTime now = LocalDateTime.now();
-        GroupBuyTeamRow team = mapper.selectTeam(teamId);
-        if (team == null || team.getRegion() == null || !team.getRegion().equals(region)) {
-            throw new NotFoundException("拼团不存在");
-        }
-        GroupBuyCampaignRow campaign = mapper.selectGroup(team.getCampaignId(), region);
-        if (campaign == null) {
-            throw new NotFoundException("拼团不存在");
-        }
-        if (mapper.countTeamMember(teamId, user.userId()) > 0) {
-            throw new IllegalArgumentException("已参加该拼团");
-        }
-        if (team.getStatus() == null || team.getStatus() != 1) {
-            throw new IllegalArgumentException("拼团已结束");
-        }
-        if (team.getExpireAt() != null && !team.getExpireAt().isAfter(now)) {
-            throw new IllegalArgumentException("拼团已过期");
-        }
-        int groupSize = campaign.getGroupSize() == null ? 2 : campaign.getGroupSize();
-        if (team.getMemberCount() != null && team.getMemberCount() >= groupSize) {
-            throw new IllegalArgumentException("拼团已满员");
-        }
-        if (mapper.joinTeam(teamId, region, groupSize, now) == 0) {
-            GroupBuyTeamRow latest = mapper.selectTeam(teamId);
-            if (latest != null && latest.getExpireAt() != null && !latest.getExpireAt().isAfter(now)) {
-                throw new IllegalArgumentException("拼团已过期");
-            }
-            if (latest != null && latest.getStatus() != null && latest.getStatus() != 1) {
-                throw new IllegalArgumentException("拼团已结束");
-            }
-            throw new IllegalArgumentException("拼团已满员");
-        }
-        try {
-            mapper.insertMember(teamId, user.userId());
-        } catch (DuplicateKeyException duplicate) {
-            throw new IllegalArgumentException("已参加该拼团");
-        }
-        return teamMap(mapper.selectTeam(teamId));
-    }
-
-    private GroupBuyCampaignRow requireOpenCampaign(Long id, String region, LocalDateTime now) {
-        GroupBuyCampaignRow campaign = mapper.selectGroup(id, region);
-        if (campaign == null || campaign.getAuditStatus() == null || campaign.getAuditStatus() != 2
-                || campaign.getStatus() == null || campaign.getStatus() != 1) {
-            throw new NotFoundException("拼团活动不存在");
-        }
-        if (campaign.getStartAt() != null && now.isBefore(campaign.getStartAt())
-                || campaign.getEndAt() != null && now.isAfter(campaign.getEndAt())) {
-            throw new IllegalArgumentException("不在拼团活动时间内");
-        }
-        return campaign;
+        return groupBuyOrders.join(teamId);
     }
 
     private Map<String, Object> seckillMap(SeckillEventRow row) {
@@ -171,6 +107,8 @@ public class MarketingCampaignService {
         body.put("leaderUserId", row.getLeaderUserId());
         body.put("status", row.getStatus());
         body.put("memberCount", row.getMemberCount());
+        body.put("paidCount", row.getPaidCount());
+        body.put("groupSize", row.getGroupSize());
         body.put("expireAt", row.getExpireAt());
         return body;
     }

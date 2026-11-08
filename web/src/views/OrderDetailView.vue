@@ -29,11 +29,33 @@ const pollTimedOut = ref(false)
 const cardElement = ref<HTMLElement | null>(null)
 const stripeCheckout = useStripeCheckout(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '')
 const needsStripe = computed(() => Boolean(intent.value?.clientSecret))
+const groupBuyStatus = computed(() => {
+  const current = order.value
+  if (!current || current.orderSource !== 'groupbuy') return ''
+  const progress = copy.value.orderDetail.groupBuyProgress(current.groupBuyPaidCount ?? 0, current.groupBuySize ?? 0)
+  if (current.groupBuyStatus === 2) return `${copy.value.orderDetail.groupBuyFormed} · ${progress}`
+  if (current.groupBuyStatus === 3) {
+    if (current.payStatus === 2) return copy.value.orderDetail.groupBuyRefunded
+    if (current.refund) return copy.value.orderDetail.groupBuyRefunding
+    return copy.value.orderDetail.groupBuyFailed
+  }
+  return `${copy.value.orderDetail.groupBuyWaiting} · ${progress}`
+})
+const now = ref(Date.now())
+const groupBuyRemaining = computed(() => {
+  const current = order.value
+  if (!current || current.orderSource !== 'groupbuy' || current.groupBuyStatus !== 1 || !current.expireAt) return ''
+  const deadline = new Date(current.expireAt).getTime()
+  if (!Number.isFinite(deadline) || deadline <= now.value) return copy.value.orderDetail.groupBuyCountdownExpired
+  const totalMinutes = Math.ceil((deadline - now.value) / 60_000)
+  return copy.value.orderDetail.groupBuyRemaining(Math.floor(totalMinutes / 60), totalMinutes % 60)
+})
 
 const POLL_INTERVAL_MS = 1500
 const POLL_MAX_TRIES = 12
 let pollRequestId = 0
 let pollTimer: ReturnType<typeof setTimeout> | null = null
+const countdownTimer = window.setInterval(() => { now.value = Date.now() }, 30_000)
 
 const canCancel = computed(() => order.value?.payStatus === 0 && order.value?.status === 1)
 const canRefund = computed(() => order.value?.payStatus === 1 && order.value?.status === 1 && !order.value?.refund)
@@ -141,7 +163,9 @@ async function complete() {
   try {
     order.value = await completeMockPayment(props.orderId)
     intent.value = null
-    successMessage.value = copy.value.orderDetail.mockPaymentSuccess
+    successMessage.value = order.value.orderSource === 'groupbuy' && order.value.groupBuyStatus === 1
+      ? copy.value.orderDetail.groupBuyPaymentSuccess(order.value.groupBuyPaidCount ?? 0, order.value.groupBuySize ?? 0)
+      : copy.value.orderDetail.mockPaymentSuccess
   } catch (error) {
     errorMessage.value = localizeWebTradeError(copy.value, error, copy.value.orderDetail.mockPaymentFailed)
   } finally {
@@ -183,6 +207,31 @@ async function refund() {
   }
 }
 
+async function shareGroupBuy() {
+  const current = order.value
+  if (!current?.groupBuyTeamId) return
+  errorMessage.value = ''
+  const url = `${window.location.origin}/marketing/groupbuy?teamId=${current.groupBuyTeamId}`
+  const payload = {
+    title: current.campaignTitle || current.dealTitle,
+    text: copy.value.orderDetail.groupBuyShareText(
+      current.campaignTitle || current.dealTitle,
+      current.groupBuyTeamId,
+    ),
+    url,
+  }
+  try {
+    if (typeof navigator.share === 'function') await navigator.share(payload)
+    else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+      successMessage.value = copy.value.orderDetail.groupBuyShareCopied
+    } else throw new Error('share unavailable')
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    errorMessage.value = copy.value.orderDetail.groupBuyShareFailed
+  }
+}
+
 watch(
   [() => props.orderId, () => state.region],
   () => {
@@ -196,7 +245,7 @@ watch(
   { immediate: true },
 )
 
-onBeforeUnmount(() => { stopPolling(); stripeCheckout.unmount() })
+onBeforeUnmount(() => { stopPolling(); window.clearInterval(countdownTimer); stripeCheckout.unmount() })
 </script>
 
 <template>
@@ -227,11 +276,22 @@ onBeforeUnmount(() => { stopPolling(); stripeCheckout.unmount() })
       <p v-if="order.orderSource === 'seckill'" class="status-pill" data-testid="order-source">
         {{ copy.orderDetail.flashSale }} · {{ order.campaignTitle }}
       </p>
+      <p v-if="order.orderSource === 'groupbuy'" class="status-pill" data-testid="groupbuy-status">
+        {{ copy.orderDetail.groupBuy }} · {{ groupBuyStatus }}
+      </p>
+      <p v-if="groupBuyRemaining" class="muted" data-testid="groupbuy-countdown">{{ groupBuyRemaining }}</p>
       <p v-if="order.expireAt && canCancel" class="muted" data-testid="order-deadline">
         {{ copy.orderDetail.payDeadline }} {{ formatWebDateTime(order.expireAt, copy.tag) }}
       </p>
       <p v-if="order.canPay === false && canCancel" class="feedback">{{ copy.orderDetail.expired }}</p>
       <div class="hero-actions">
+        <button
+          v-if="order.orderSource === 'groupbuy' && order.groupBuyStatus === 1 && order.groupBuyTeamId"
+          class="secondary-button"
+          type="button"
+          data-testid="groupbuy-share"
+          @click="shareGroupBuy"
+        >{{ copy.orderDetail.groupBuyShare }}</button>
         <button
           v-if="order.payStatus === 0 && order.canPay !== false && !intent && order.status === 1"
           class="primary-button"
@@ -302,7 +362,13 @@ onBeforeUnmount(() => { stopPolling(); stripeCheckout.unmount() })
           <span class="status-pill">{{ copy.statuses.refund(order.refund.status, order.refund.statusText) }}</span>
           · {{ copy.orderDetail.amount }} {{ formatMoney(order.refund.amount, order.currency) }}
         </p>
-        <p>{{ copy.orderDetail.reason }}: {{ order.refund.refundType === 'late_payment' ? copy.orderDetail.automaticRefund : order.refund.reason || copy.common.notAvailable }}</p>
+        <p>{{ copy.orderDetail.reason }}:
+          {{ order.refund.refundType === 'late_payment'
+            ? copy.orderDetail.automaticRefund
+            : order.refund.refundType === 'groupbuy_expired'
+              ? copy.orderDetail.groupBuyAutomaticRefund
+              : order.refund.reason || copy.common.notAvailable }}
+        </p>
         <p v-if="order.refund.channelRefundTxn">
           {{ order.refund.channel || copy.common.notAvailable }} / {{ order.refund.channelRefundTxn }}
         </p>

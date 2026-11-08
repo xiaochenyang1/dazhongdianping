@@ -374,6 +374,11 @@ void main() {
     );
     expect(AppLocalizations.forTag('en').myOrders, 'Orders');
     expect(AppLocalizations.forTag('en').groupDeals, 'Group deals');
+    expect(
+      AppLocalizations.forTag('en').groupBuyProgress(paid: 1, size: 3),
+      'Payment progress 1/3',
+    );
+    expect(AppLocalizations.forTag('zh-TW').groupBuyRefunded, '拼團失敗，款項已原路退回');
     expect(AppLocalizations.forTag('zh-CN').payPending, '待支付');
     expect(AppLocalizations.forTag('en').buy, 'Buy');
     expect(

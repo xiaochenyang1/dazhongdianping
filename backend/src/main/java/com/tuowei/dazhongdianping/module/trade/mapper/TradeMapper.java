@@ -163,8 +163,18 @@ public interface TradeMapper {
 
     List<RefundRow> selectUnsubmittedAutoRefunds(@Param("limit") Integer limit);
 
-    void insertAutomaticRefund(@Param("orderId") Long orderId, @Param("amount") BigDecimal amount,
-            @Param("channel") String channel);
+    void insertAutomaticRefund(
+            @Param("orderId") Long orderId,
+            @Param("amount") BigDecimal amount,
+            @Param("channel") String channel,
+            @Param("refundType") String refundType,
+            @Param("reason") String reason);
+
+    int promoteRefundToAutomatic(
+            @Param("orderId") Long orderId,
+            @Param("channel") String channel,
+            @Param("refundType") String refundType,
+            @Param("reason") String reason);
 
     int recordAutomaticRefundRetry(@Param("refundId") Long refundId);
 

@@ -169,7 +169,8 @@
         WHERE c.user_id=#{userId} ORDER BY c.id
     </select>
     <select id="selectGroupbuyMemberships" resultMap="privacyRecord">
-        SELECT m.id,t.region,m.team_id AS `teamId`,t.campaign_id AS `campaignId`,t.status,t.member_count AS `memberCount`,
+        SELECT m.id,t.region,m.team_id AS `teamId`,t.campaign_id AS `campaignId`,m.order_id AS `orderId`,
+               m.status AS `memberStatus`,t.status,t.member_count AS `memberCount`,t.paid_count AS `paidCount`,
                CASE WHEN t.leader_user_id=#{userId} THEN TRUE ELSE FALSE END AS `leader`,t.expire_at AS `expireAt`,m.created_at AS `createdAt`
         FROM groupbuy_member m JOIN groupbuy_team t ON t.id=m.team_id WHERE m.user_id=#{userId} ORDER BY m.id
     </select>
@@ -335,9 +336,10 @@
     <delete id="deleteGroupbuyMembers">DELETE FROM groupbuy_member WHERE user_id=#{userId}</delete>
     <update id="refreshGroupbuyTeam">
         UPDATE groupbuy_team SET
-               leader_user_id=CASE WHEN leader_user_id=#{userId} THEN COALESCE((SELECT MIN(user_id) FROM groupbuy_member WHERE team_id=#{id}),0) ELSE leader_user_id END,
-               member_count=(SELECT COUNT(*) FROM groupbuy_member WHERE team_id=#{id}),
-               status=CASE WHEN status=1 AND (expire_at &lt;= CURRENT_TIMESTAMP OR NOT EXISTS(SELECT 1 FROM groupbuy_member WHERE team_id=#{id})) THEN 3 ELSE status END,
+               leader_user_id=CASE WHEN leader_user_id=#{userId} THEN COALESCE((SELECT MIN(user_id) FROM groupbuy_member WHERE team_id=#{id} AND status IN (0,1)),0) ELSE leader_user_id END,
+               member_count=(SELECT COUNT(*) FROM groupbuy_member WHERE team_id=#{id} AND status IN (0,1)),
+               paid_count=(SELECT COUNT(*) FROM groupbuy_member WHERE team_id=#{id} AND status=1),
+               status=CASE WHEN status=1 AND (expire_at &lt;= CURRENT_TIMESTAMP OR NOT EXISTS(SELECT 1 FROM groupbuy_member WHERE team_id=#{id} AND status IN (0,1))) THEN 3 ELSE status END,
                updated_at=CURRENT_TIMESTAMP WHERE id=#{id}
     </update>
     <select id="lockAffectedReviews" resultType="long">

@@ -11,8 +11,13 @@ export interface WebCampaignStrings {
   loadFailed: string
   claim: string
   purchaseRules: string
+  groupRules: string
   purchaseFailed: string
+  openFailed: string
+  joinFailed: string
   buying: string
+  opening: string
+  joining: string
   soldOut: string
   limitReached: string
   viewOrder: string
@@ -81,8 +86,13 @@ const zhCnStrings: WebCampaignStrings = {
   loadFailed: '活动加载失败',
   claim: '立即抢购',
   purchaseRules: '每人每场限购一件，不叠加优惠券。下单后最多保留 15 分钟，请在订单截止时间前完成付款。成功购买后退款仍计入限购次数。',
+  groupRules: '每位成员各生成一笔订单并预占一份套餐。全员付款后统一成团发券；到期未成团，已付款订单自动原路退款。',
   purchaseFailed: '秒杀下单失败',
+  openFailed: '开团失败',
+  joinFailed: '参团失败',
   buying: '下单中…',
+  opening: '开团中…',
+  joining: '参团中…',
   soldOut: '已售罄',
   limitReached: '已参与',
   viewOrder: '查看订单',
@@ -151,8 +161,13 @@ const enStrings: WebCampaignStrings = {
   loadFailed: 'Could not load campaigns',
   claim: 'Buy now',
   purchaseRules: 'One purchase per person per event, including refunded purchases. No additional coupons. Orders are held for up to 15 minutes; pay before the deadline shown on your order.',
+  groupRules: 'Each member gets a separate order and reserves one offer. Vouchers are issued after everyone pays. If the group expires, paid orders are refunded automatically.',
   purchaseFailed: 'Could not create your flash-sale order',
+  openFailed: 'Could not start the group',
+  joinFailed: 'Could not join the group',
   buying: 'Creating order…',
+  opening: 'Starting group…',
+  joining: 'Joining…',
   soldOut: 'Sold out',
   limitReached: 'Already participated',
   viewOrder: 'View order',
@@ -219,6 +234,15 @@ const enStrings: WebCampaignStrings = {
     '秒杀活动不存在': 'This flash sale is no longer available.',
     '秒杀套餐已失效': 'This offer is no longer available.',
     '秒杀价格已失效': 'The flash-sale price is no longer available.',
+    '拼团不存在': 'This group is no longer available.',
+    '拼团已结束': 'This group has ended.',
+    '拼团已过期': 'This group has expired.',
+    '拼团已满员或已结束': 'This group is full or has ended.',
+    '已参加该拼团活动': 'You have already joined this group-buy campaign.',
+    '不在拼团活动时间内': 'This group-buy campaign is not currently available.',
+    '拼团活动不存在': 'This group-buy campaign is no longer available.',
+    '拼团套餐已失效': 'This offer is no longer available.',
+    '拼团价格已失效': 'This group-buy price is no longer available.',
   },
 }
 

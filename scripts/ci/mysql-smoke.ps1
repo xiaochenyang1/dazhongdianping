@@ -351,7 +351,7 @@ if ($DryRun) {
         }
         Write-Output "- Source sql/mysql/01_schema.sql into $DbName."
         Write-Output "- Source sql/mysql/02_seed_data.sql into $DbName."
-        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-28."
+        Write-Output "- Run scripts/ci/mysql-migrate.sh with baseline 14 to apply migrations 15-31."
     }
     Write-Output "- Package backend with backend/mvnw.cmd -DskipTests package."
     Write-Output "- Start the packaged backend jar with APP_DB_* environment variables on port $BackendPort."
@@ -511,7 +511,7 @@ VALUES ('$databaseOwnershipToken');
             "--default-character-set=utf8mb4"
         )) -SqlFile $seedSql
 
-        Write-Step "applying MySQL migrations 15-28 from schema baseline 14"
+        Write-Step "applying MySQL migrations 15-31 from schema baseline 14"
         $escapedDbPassword = $DbPassword.Replace('\', '\\').Replace('"', '\"')
         $migrationDefaultsContent = @"
 [client]

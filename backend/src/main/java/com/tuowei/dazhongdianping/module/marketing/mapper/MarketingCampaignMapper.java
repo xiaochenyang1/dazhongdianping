@@ -1,7 +1,9 @@
 package com.tuowei.dazhongdianping.module.marketing.mapper;
 
 import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyCampaignRow;
+import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyMemberRow;
 import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyTeamRow;
+import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyReminderRow;
 import com.tuowei.dazhongdianping.module.marketing.model.SeckillClaimRow;
 import com.tuowei.dazhongdianping.module.marketing.model.SeckillEventRow;
 import java.time.LocalDateTime;
@@ -73,6 +75,8 @@ public interface MarketingCampaignMapper {
 
     GroupBuyCampaignRow selectGroup(@Param("id") Long id, @Param("region") String region);
 
+    GroupBuyCampaignRow selectGroupForUpdate(@Param("id") Long id, @Param("region") String region);
+
     int updateGroupAudit(
             @Param("id") Long id,
             @Param("region") String region,
@@ -81,9 +85,20 @@ public interface MarketingCampaignMapper {
 
     void insertTeam(GroupBuyTeamRow row);
 
-    void insertMember(@Param("teamId") Long teamId, @Param("userId") Long userId);
+    void insertMember(GroupBuyMemberRow row);
 
     GroupBuyTeamRow selectTeam(@Param("id") Long id);
+
+    GroupBuyTeamRow selectTeamForUpdate(@Param("id") Long id);
+
+    GroupBuyTeamRow selectTeamByOrder(@Param("orderId") Long orderId);
+
+    GroupBuyMemberRow selectActiveMember(
+            @Param("campaignId") Long campaignId,
+            @Param("userId") Long userId,
+            @Param("region") String region);
+
+    GroupBuyMemberRow selectMemberByOrderForUpdate(@Param("orderId") Long orderId);
 
     int countTeamMember(@Param("teamId") Long teamId, @Param("userId") Long userId);
 
@@ -92,4 +107,27 @@ public interface MarketingCampaignMapper {
             @Param("region") String region,
             @Param("groupSize") int groupSize,
             @Param("now") LocalDateTime now);
+
+    int markGroupBuyMemberPaid(@Param("orderId") Long orderId);
+
+    int recordGroupBuyPayment(@Param("teamId") Long teamId);
+
+    List<Long> selectPaidGroupBuyOrderIds(@Param("teamId") Long teamId);
+
+    int releaseGroupBuyMember(@Param("orderId") Long orderId);
+
+    int refreshOpenGroupBuyTeam(@Param("teamId") Long teamId);
+
+    List<Long> selectExpiredGroupBuyTeamIds(@Param("limit") Integer limit);
+
+    int markGroupBuyTeamExpired(@Param("teamId") Long teamId);
+
+    List<Long> selectGroupBuyOrderIds(@Param("teamId") Long teamId);
+
+    List<GroupBuyReminderRow> selectDueGroupBuyReminders(
+            @Param("now") LocalDateTime now,
+            @Param("windowEnd") LocalDateTime windowEnd,
+            @Param("limit") Integer limit);
+
+    int markGroupBuyReminderSent(@Param("memberId") Long memberId);
 }

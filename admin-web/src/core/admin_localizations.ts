@@ -19,6 +19,7 @@ export interface AdminStrings {
     shopManagement: string
     basicDataManagement: string
     dataOrders: string
+    groupBuyOperations: string
     searchSyncManagement: string
     auditReviews: string
     auditReviewAppeals: string
@@ -2587,6 +2588,7 @@ const ROUTE_TITLE_KEYS: Partial<Record<string, AdminRouteTitleKey>> = {
   '/data/shops': 'shopManagement',
   '/data/meta': 'basicDataManagement',
   '/data/orders': 'dataOrders',
+  '/data/groupbuy-operations': 'groupBuyOperations',
   '/data/search-sync': 'searchSyncManagement',
   '/audit/reviews': 'auditReviews',
   '/audit/review-appeals': 'auditReviewAppeals',
@@ -2828,6 +2830,7 @@ const zhCnStrings: AdminStrings = {
     shopManagement: '商户管理',
     basicDataManagement: '基础数据',
     dataOrders: '订单退款',
+    groupBuyOperations: '拼团运维',
     searchSyncManagement: '搜索同步',
     auditReviews: '点评审核',
     auditReviewAppeals: '商户点评申诉',
@@ -5535,6 +5538,7 @@ const enStrings: AdminStrings = {
     shopManagement: 'Shop Management',
     basicDataManagement: 'Basic Data',
     dataOrders: 'Orders & Refunds',
+    groupBuyOperations: 'Group-buy Operations',
     searchSyncManagement: 'Search Sync',
     auditReviews: 'Review Audit',
     auditReviewAppeals: 'Merchant Review Appeals',

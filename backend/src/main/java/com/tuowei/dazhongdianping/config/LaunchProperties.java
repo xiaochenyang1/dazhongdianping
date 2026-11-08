@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.launch")
 public class LaunchProperties {
     private boolean deferredFeaturesEnabled;
+    private boolean groupBuyFeatureFlagEnforced = true;
     private final Eu eu = new Eu();
 
     @Data

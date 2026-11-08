@@ -423,6 +423,7 @@ onMounted(() => {
               <td>
                 <strong>{{ item.orderNo }}</strong>
                 <p v-if="item.orderSource === 'seckill'" class="inline-note">{{ state.region === 'EU' ? 'Flash sale' : '秒杀' }} · {{ item.campaignTitle }}</p>
+                <p v-else-if="item.orderSource === 'groupbuy'" class="inline-note" :data-testid="`groupbuy-source-${item.id}`">{{ state.region === 'EU' ? 'Group buy' : '拼团' }} · {{ item.campaignTitle }}</p>
                 <p class="inline-note">{{ item.dealTitle || strings.adminOrders.dealFallback(item.dealId) }}</p>
               </td>
               <td>

@@ -125,16 +125,23 @@
     <insert id="insertRefund">INSERT INTO refund(order_id,amount,reason,status) VALUES(#{orderId},#{amount},#{reason},0)</insert>
     <insert id="insertAutomaticRefund">
         INSERT INTO refund(order_id,amount,reason,refund_type,status,channel,channel_status)
-        VALUES(#{orderId},#{amount},'订单关闭后收到支付，自动退款','late_payment',3,#{channel},'pending')
+        VALUES(#{orderId},#{amount},#{reason},#{refundType},3,#{channel},'pending')
     </insert>
+    <update id="promoteRefundToAutomatic">
+        UPDATE refund
+        SET reason=#{reason},refund_type=#{refundType},status=3,channel=#{channel},channel_status='pending',
+            channel_refund_txn='',channel_failure_reason='',audit_reason='',
+            audited_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
+        WHERE order_id=#{orderId} AND status IN (0,2)
+    </update>
     <select id="selectUnsubmittedAutoRefunds" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">
         SELECT <include refid="refundCols"/> FROM refund
-        WHERE refund_type='late_payment' AND status=3 AND channel_refund_txn=''
+        WHERE refund_type IN ('late_payment','groupbuy_expired') AND status=3 AND channel_refund_txn=''
         ORDER BY updated_at,id LIMIT #{limit}
     </select>
     <update id="recordAutomaticRefundRetry">
         UPDATE refund SET channel_failure_reason='退款渠道暂时不可用，系统将重试',updated_at=CURRENT_TIMESTAMP
-        WHERE id=#{refundId} AND refund_type='late_payment' AND status=3 AND channel_refund_txn=''
+        WHERE id=#{refundId} AND refund_type IN ('late_payment','groupbuy_expired') AND status=3 AND channel_refund_txn=''
     </update>
     <update id="recordRefundChannelResult">
         UPDATE refund

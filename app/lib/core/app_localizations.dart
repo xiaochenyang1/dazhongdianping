@@ -162,6 +162,25 @@ class AppLocalizations {
     'groupBuyTitle': '拼团',
     'groupBuyOpen': '开团',
     'groupBuyJoin': '参团',
+    'groupBuyRules': '每位成员各生成一笔订单并预占一份套餐。全员付款后统一成团发券；到期未成团，已付款订单自动原路退款。',
+    'groupBuyTeamId': '拼团号',
+    'groupBuyOpening': '开团中…',
+    'groupBuyJoining': '参团中…',
+    'groupBuyEmpty': '暂时没有可参加的拼团。',
+    'groupBuyLoadFailed': '拼团活动加载失败，请重试。',
+    'groupBuyUnavailable': '拼团已满员、结束或失效。',
+    'groupBuySize': '{count} 人成团',
+    'groupBuyOrder': '拼团订单',
+    'groupBuyWaiting': '等待全员付款成团',
+    'groupBuyFormed': '已成团，券码已发放',
+    'groupBuyFailed': '拼团失败',
+    'groupBuyRefunding': '拼团失败，正在原路退款',
+    'groupBuyRefunded': '拼团失败，款项已原路退回',
+    'groupBuyProgress': '付款进度 {paid}/{size}',
+    'groupBuyCountdown': '距拼团截止 {time}',
+    'groupBuyInvite': '邀请好友参团',
+    'groupBuyShareText': '我正在拼「{title}」，付款进度 {paid}/{size}，一起来参团：{url}',
+    'groupBuyAutomaticRefund': '拼团未在截止时间前完成，系统将原路退款。',
     'levelPrivilegesTitle': '等级权益',
     'complaintsEmpty': '你还没有发起过投诉。',
     'complaintsLoadFailed': '投诉加载失败：{error}',
@@ -1376,6 +1395,25 @@ class AppLocalizations {
     'groupBuyTitle': '拼團',
     'groupBuyOpen': '開團',
     'groupBuyJoin': '參團',
+    'groupBuyRules': '每位成員各產生一筆訂單並預留一份套餐。全員付款後統一成團發券；到期未成團，已付款訂單自動原路退款。',
+    'groupBuyTeamId': '拼團號',
+    'groupBuyOpening': '開團中…',
+    'groupBuyJoining': '參團中…',
+    'groupBuyEmpty': '暫時沒有可參加的拼團。',
+    'groupBuyLoadFailed': '拼團活動載入失敗，請重試。',
+    'groupBuyUnavailable': '拼團已滿員、結束或失效。',
+    'groupBuySize': '{count} 人成團',
+    'groupBuyOrder': '拼團訂單',
+    'groupBuyWaiting': '等待全員付款成團',
+    'groupBuyFormed': '已成團，券碼已發放',
+    'groupBuyFailed': '拼團失敗',
+    'groupBuyRefunding': '拼團失敗，正在原路退款',
+    'groupBuyRefunded': '拼團失敗，款項已原路退回',
+    'groupBuyProgress': '付款進度 {paid}/{size}',
+    'groupBuyCountdown': '距拼團截止 {time}',
+    'groupBuyInvite': '邀請好友參團',
+    'groupBuyShareText': '我正在拼「{title}」，付款進度 {paid}/{size}，一起來參團：{url}',
+    'groupBuyAutomaticRefund': '拼團未在截止時間前完成，系統將原路退款。',
     'levelPrivilegesTitle': '等級權益',
     'complaintsEmpty': '你還沒有發起過投訴。',
     'complaintsLoadFailed': '投訴載入失敗：{error}',
@@ -2583,7 +2621,8 @@ class AppLocalizations {
     'seckillTitle': 'Flash sale',
     'seckillClaim': 'Buy now',
     'seckillEmpty': 'No flash sales right now.',
-    'seckillRules': 'One purchase per person per event, including refunded purchases. No additional coupons. Pay before your order deadline, within 15 minutes.',
+    'seckillRules':
+        'One purchase per person per event, including refunded purchases. No additional coupons. Pay before your order deadline, within 15 minutes.',
     'seckillSoldOut': 'Sold out',
     'seckillLimitReached': 'Already participated',
     'seckillViewOrder': 'View order',
@@ -2593,12 +2632,36 @@ class AppLocalizations {
     'seckillStock': 'Left',
     'flashSaleOrder': 'Flash-sale order',
     'orderPayDeadline': 'Pay before',
-    'orderPaymentExpired': 'The payment deadline has passed. Cancel this order to purchase again.',
+    'orderPaymentExpired':
+        'The payment deadline has passed. Cancel this order to purchase again.',
     'orderClosed': 'Closed',
-    'orderAutomaticRefund': 'Payment arrived after the order closed. It will be refunded to the original payment method.',
+    'orderAutomaticRefund':
+        'Payment arrived after the order closed. It will be refunded to the original payment method.',
     'groupBuyTitle': 'Group buy',
     'groupBuyOpen': 'Start a group',
     'groupBuyJoin': 'Join',
+    'groupBuyRules':
+        'Each member gets a separate order and reserves one offer. Vouchers are issued after everyone pays. If the group expires, paid orders are refunded automatically.',
+    'groupBuyTeamId': 'Team number',
+    'groupBuyOpening': 'Starting group…',
+    'groupBuyJoining': 'Joining…',
+    'groupBuyEmpty': 'No group-buy campaigns right now.',
+    'groupBuyLoadFailed': 'Could not load group-buy campaigns. Please retry.',
+    'groupBuyUnavailable': 'This group is full, ended or no longer available.',
+    'groupBuySize': 'Group of {count}',
+    'groupBuyOrder': 'Group-buy order',
+    'groupBuyWaiting': 'Waiting for everyone to pay',
+    'groupBuyFormed': 'Group formed — coupons are ready',
+    'groupBuyFailed': 'Group did not form',
+    'groupBuyRefunding': 'Group did not form — refund in progress',
+    'groupBuyRefunded': 'Group did not form — payment refunded',
+    'groupBuyProgress': 'Payment progress {paid}/{size}',
+    'groupBuyCountdown': 'Group ends in {time}',
+    'groupBuyInvite': 'Invite friends',
+    'groupBuyShareText':
+        'I am joining "{title}". Payment progress {paid}/{size}. Join my group: {url}',
+    'groupBuyAutomaticRefund':
+        'The group did not form before the deadline. Payment will be refunded automatically.',
     'levelPrivilegesTitle': 'Level perks',
     'complaintsEmpty': 'You have not filed any complaints yet.',
     'complaintsLoadFailed': 'Failed to load complaints: {error}',
@@ -4064,6 +4127,37 @@ class AppLocalizations {
   String get groupBuyTitle => _text('groupBuyTitle');
   String get groupBuyOpen => _text('groupBuyOpen');
   String get groupBuyJoin => _text('groupBuyJoin');
+  String get groupBuyRules => _text('groupBuyRules');
+  String get groupBuyTeamId => _text('groupBuyTeamId');
+  String get groupBuyOpening => _text('groupBuyOpening');
+  String get groupBuyJoining => _text('groupBuyJoining');
+  String get groupBuyEmpty => _text('groupBuyEmpty');
+  String get groupBuyLoadFailed => _text('groupBuyLoadFailed');
+  String get groupBuyUnavailable => _text('groupBuyUnavailable');
+  String groupBuySize(int count) => _withCount('groupBuySize', count);
+  String get groupBuyOrder => _text('groupBuyOrder');
+  String get groupBuyWaiting => _text('groupBuyWaiting');
+  String get groupBuyFormed => _text('groupBuyFormed');
+  String get groupBuyFailed => _text('groupBuyFailed');
+  String get groupBuyRefunding => _text('groupBuyRefunding');
+  String get groupBuyRefunded => _text('groupBuyRefunded');
+  String groupBuyProgress({required int paid, required int size}) => _text(
+    'groupBuyProgress',
+  ).replaceFirst('{paid}', '$paid').replaceFirst('{size}', '$size');
+  String groupBuyCountdown(String time) =>
+      _text('groupBuyCountdown').replaceFirst('{time}', time);
+  String get groupBuyInvite => _text('groupBuyInvite');
+  String groupBuyShareText({
+    required String title,
+    required int paid,
+    required int size,
+    required String url,
+  }) => _text('groupBuyShareText')
+      .replaceFirst('{title}', title)
+      .replaceFirst('{paid}', '$paid')
+      .replaceFirst('{size}', '$size')
+      .replaceFirst('{url}', url);
+  String get groupBuyAutomaticRefund => _text('groupBuyAutomaticRefund');
   String get levelPrivilegesTitle => _text('levelPrivilegesTitle');
   String get complaintsEmpty => _text('complaintsEmpty');
   String complaintsLoadFailed(Object error) =>

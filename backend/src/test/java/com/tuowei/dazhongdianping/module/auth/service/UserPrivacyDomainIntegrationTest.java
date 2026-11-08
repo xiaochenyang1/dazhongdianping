@@ -386,7 +386,7 @@ class UserPrivacyDomainIntegrationTest {
         jdbc.update("INSERT INTO seckill_event(id,region,shop_id,merchant_id,title,seckill_price,currency,stock,sold,start_at,end_at) VALUES(991802,'EU',20001,2001,'Synthetic seckill',2,'EUR',10,99,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO seckill_claim(event_id,user_id,region) VALUES(991802,?,'EU'), (991802,?,'EU')", OWNER, OTHER);
         jdbc.update("INSERT INTO groupbuy_team(id,campaign_id,region,leader_user_id,status,member_count,expire_at) VALUES(991803,1,'EU',?,2,99,?)", OWNER, LocalDateTime.now().plusDays(1));
-        jdbc.update("INSERT INTO groupbuy_member(team_id,user_id) VALUES(991803,?), (991803,?)", OWNER, OTHER);
+        jdbc.update("INSERT INTO groupbuy_member(team_id,campaign_id,region,user_id,status) VALUES(991803,1,'EU',?,1), (991803,1,'EU',?,1)", OWNER, OTHER);
         jdbc.update("INSERT INTO experiment(id,region,name) VALUES(991804,'EU','Synthetic experiment')");
         jdbc.update("INSERT INTO experiment_assignment(experiment_id,user_id,variant) VALUES(991804,?,'A'), (991804,?,'B')", OWNER, OTHER);
         jdbc.update("INSERT INTO review(id,user_id,shop_id,region,user_name,content,score_overall,like_count,helpful_count) VALUES(991901,?,20001,'EU','Other person','Synthetic public review',4,99,99)", OTHER);

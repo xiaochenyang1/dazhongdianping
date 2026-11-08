@@ -229,6 +229,11 @@ INSERT INTO `order`(id,status,pay_status) VALUES(90020,1,0),(90021,2,0),(90022,1
 INSERT INTO seckill_event(id,region,shop_id,merchant_id,deal_id,title,seckill_price,stock,sold,start_at,end_at)
   VALUES(90030,'CN',1,1,1,'Legacy flash sale',9.90,2,1,'2026-01-01','2027-01-01');
 INSERT INTO seckill_claim(event_id,user_id,region) VALUES(90030,7,'CN');
+INSERT INTO groupbuy_campaign(id,region,shop_id,merchant_id,deal_id,title,group_price,currency,group_size,start_at,end_at)
+  VALUES(90040,'CN',1,1,1,'Legacy group buy',12.80,'CNY',2,'2026-01-01','2027-01-01');
+INSERT INTO groupbuy_team(id,campaign_id,region,leader_user_id,status,member_count,expire_at)
+  VALUES(90041,90040,'CN',7,2,1,'2027-01-01');
+INSERT INTO groupbuy_member(team_id,user_id) VALUES(90041,7);
 SQL
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -249,11 +254,17 @@ SELECT
   (SELECT COUNT(*) FROM seckill_claim WHERE event_id=90030 AND order_id IS NULL AND status=0) +
   (SELECT COUNT(*) FROM seckill_event WHERE id=90030 AND sold=1);")"
 [[ "$seckill_legacy" == "6" ]] || fail "migration 29 did not preserve legacy participation and released inventory"
+groupbuy_legacy="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e "
+SELECT COUNT(*) FROM groupbuy_member m
+JOIN groupbuy_team t ON t.id=m.team_id
+WHERE m.team_id=90041 AND m.campaign_id=90040 AND m.region='CN'
+  AND m.order_id IS NULL AND m.status=2 AND t.paid_count=0;")"
+[[ "$groupbuy_legacy" == "1" ]] || fail "migration 30 did not preserve legacy group-buy membership as historical data"
 
 
 history_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$history_count" == "27" ]] || fail "expected 27 migration history rows, found $history_count"
+[[ "$history_count" == "29" ]] || fail "expected 29 migration history rows, found $history_count"
 cleanup_marker_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e \
   "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='privacy_delete_task' AND column_name='domain_cleanup_version' AND column_default='0';")"
 [[ "$cleanup_marker_count" == "1" ]] || fail "historical deletions must receive a pending cleanup marker"
@@ -294,8 +305,15 @@ SELECT
   (SELECT IF(COUNT(*)=6,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name IN ('order_source','campaign_id','campaign_title','deal_title_snapshot','coupon_valid_end','inventory_released')) +
   (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='seckill_claim' AND column_name IN ('order_id','status','updated_at')) +
   (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='seckill_claim' AND index_name='uk_seckill_claim_order') +
-  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='refund' AND column_name='refund_type');")"
-[[ "$schema_probe" == "28" ]] || fail "migrations 03-29 schema/data probe expected 28, found $schema_probe"
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='refund' AND column_name='refund_type') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='groupbuy_team' AND column_name='paid_count') +
+  (SELECT IF(COUNT(*)=5,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='groupbuy_member' AND column_name IN ('campaign_id','region','order_id','status','updated_at')) +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='groupbuy_team' AND index_name='idx_groupbuy_team_expire') +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='groupbuy_member' AND index_name='uk_groupbuy_member_order') +
+  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='feature_flag_scope') +
+  (SELECT IF(COUNT(*)=2,1,0) FROM feature_flag WHERE flag_key='group_buy' AND enabled=0 AND rollout_percent=0) +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='groupbuy_member' AND column_name='remind_status');")"
+[[ "$schema_probe" == "35" ]] || fail "migrations 03-31 schema/data probe expected 35, found $schema_probe"
 
 "$runner" \
   --defaults-extra-file "$database_defaults" \
@@ -303,7 +321,7 @@ SELECT
   --lock-file "$run_dir/repeat.lock"
 repeat_count="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names \
   -e 'SELECT COUNT(*) FROM dzdp_schema_migration;')"
-[[ "$repeat_count" == "27" ]] || fail "repeat apply changed migration history"
+[[ "$repeat_count" == "29" ]] || fail "repeat apply changed migration history"
 repeat_legacy="$(mysql --defaults-extra-file="$database_defaults" --batch --skip-column-names -e "SELECT GROUP_CONCAT(CONCAT(status,':',reward_points,':',task_title) ORDER BY id) FROM creator_task_claim WHERE id IN(90011,90012);")"
 [[ "$repeat_legacy" == "1:50:Legacy terms,2:20:Legacy terms" ]] || fail "repeat apply rewrote frozen historical claims"
 
@@ -432,8 +450,8 @@ mysql --defaults-extra-file="$fresh_defaults" < "$source_dir/02_seed_data.sql"
 
 fresh_history_counts="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e \
   "SELECT SUM(state='BASELINED' AND version<=14), SUM(state='APPLIED' AND version>14) FROM dzdp_schema_migration;")"
-[[ "$fresh_history_counts" == $'12\t15' ]] ||
-  fail "fresh schema must baseline versions 03-14 and apply 15-29; found $fresh_history_counts"
+[[ "$fresh_history_counts" == $'12\t17' ]] ||
+  fail "fresh schema must baseline versions 03-14 and apply 15-31; found $fresh_history_counts"
 
 fresh_schema_probe="$(mysql --defaults-extra-file="$fresh_defaults" --batch --skip-column-names -e "
 SELECT
@@ -461,8 +479,15 @@ SELECT
   (SELECT IF(COUNT(*)=6,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='order' AND column_name IN ('order_source','campaign_id','campaign_title','deal_title_snapshot','coupon_valid_end','inventory_released')) +
   (SELECT IF(COUNT(*)=3,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='seckill_claim' AND column_name IN ('order_id','status','updated_at')) +
   (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='seckill_claim' AND index_name='uk_seckill_claim_order') +
-  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='refund' AND column_name='refund_type');")"
-[[ "$fresh_schema_probe" == "23" ]] ||
-  fail "fresh schema plus migrations 15-29 probe expected 23, found $fresh_schema_probe"
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='refund' AND column_name='refund_type') +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='groupbuy_team' AND column_name='paid_count') +
+  (SELECT IF(COUNT(*)=5,1,0) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='groupbuy_member' AND column_name IN ('campaign_id','region','order_id','status','updated_at')) +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='groupbuy_team' AND index_name='idx_groupbuy_team_expire') +
+  (SELECT IF(COUNT(DISTINCT index_name)=1,1,0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='groupbuy_member' AND index_name='uk_groupbuy_member_order') +
+  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='feature_flag_scope') +
+  (SELECT IF(COUNT(*)=2,1,0) FROM feature_flag WHERE flag_key='group_buy' AND enabled=0 AND rollout_percent=0) +
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='groupbuy_member' AND column_name='remind_status');")"
+[[ "$fresh_schema_probe" == "30" ]] ||
+  fail "fresh schema plus migrations 15-31 probe expected 30, found $fresh_schema_probe"
 
 printf '[mysql-migration-integration] old baseline, creator legacy claims, fresh baseline 14, repeat, verify, DB lock, checksum drift, and failure blocking passed.\n'

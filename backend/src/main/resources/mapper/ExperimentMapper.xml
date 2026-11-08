@@ -33,6 +33,50 @@
         WHERE id=#{id} AND region=#{region}
     </update>
 
+    <select id="selectFlagScopes" resultType="com.tuowei.dazhongdianping.module.experiment.model.FeatureFlagScopeRow">
+        SELECT id,feature_flag_id,scope_type,scope_id,enabled,rollout_percent,created_at,updated_at
+        FROM feature_flag_scope WHERE feature_flag_id=#{featureFlagId}
+        ORDER BY CASE WHEN scope_type='campaign' THEN 1 WHEN scope_type='shop' THEN 2 ELSE 3 END,scope_id,id
+    </select>
+
+    <select id="selectFlagScope" resultType="com.tuowei.dazhongdianping.module.experiment.model.FeatureFlagScopeRow">
+        SELECT id,feature_flag_id,scope_type,scope_id,enabled,rollout_percent,created_at,updated_at
+        FROM feature_flag_scope WHERE id=#{id} AND feature_flag_id=#{featureFlagId}
+    </select>
+
+    <select id="selectFlagScopeByTarget" resultType="com.tuowei.dazhongdianping.module.experiment.model.FeatureFlagScopeRow">
+        SELECT id,feature_flag_id,scope_type,scope_id,enabled,rollout_percent,created_at,updated_at
+        FROM feature_flag_scope
+        WHERE feature_flag_id=#{featureFlagId} AND scope_type=#{scopeType} AND scope_id=#{scopeId}
+    </select>
+
+    <select id="selectEffectiveFlagScope" resultType="com.tuowei.dazhongdianping.module.experiment.model.FeatureFlagScopeRow">
+        SELECT fs.id,fs.feature_flag_id,fs.scope_type,fs.scope_id,fs.enabled,fs.rollout_percent,fs.created_at,fs.updated_at
+        FROM feature_flag_scope fs
+        WHERE fs.feature_flag_id=#{featureFlagId}
+          AND (
+            (fs.scope_type='campaign' AND fs.scope_id=#{campaignId})
+            OR (fs.scope_type='shop' AND fs.scope_id=#{shopId})
+            OR (fs.scope_type='city' AND fs.scope_id=(SELECT city_id FROM shop WHERE id=#{shopId}))
+          )
+        ORDER BY CASE WHEN fs.scope_type='campaign' THEN 1 WHEN fs.scope_type='shop' THEN 2 ELSE 3 END
+        LIMIT 1
+    </select>
+
+    <insert id="insertFlagScope" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO feature_flag_scope(feature_flag_id,scope_type,scope_id,enabled,rollout_percent)
+        VALUES(#{featureFlagId},#{scopeType},#{scopeId},#{enabled},#{rolloutPercent})
+    </insert>
+
+    <update id="updateFlagScope">
+        UPDATE feature_flag_scope SET enabled=#{enabled},rollout_percent=#{rolloutPercent},updated_at=CURRENT_TIMESTAMP
+        WHERE id=#{id} AND feature_flag_id=#{featureFlagId}
+    </update>
+
+    <delete id="deleteFlagScope">
+        DELETE FROM feature_flag_scope WHERE id=#{id} AND feature_flag_id=#{featureFlagId}
+    </delete>
+
     <select id="selectExperiments" resultType="com.tuowei.dazhongdianping.module.experiment.model.ExperimentRow">
         SELECT id, region, name, flag_key, status, created_at
         FROM experiment

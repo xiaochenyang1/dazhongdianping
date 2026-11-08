@@ -24,22 +24,30 @@ public class TradeCompensationService {
     private final PaymentChannelResolver channelResolver;
     private final TradeService tradeService;
     private final com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService;
+    private final com.tuowei.dazhongdianping.module.marketing.service.GroupBuyOrderService groupBuyOrderService;
+    private final com.tuowei.dazhongdianping.module.marketing.service.GroupBuyMetrics groupBuyMetrics;
 
     public TradeCompensationService(
             TradeMapper mapper,
             PaymentChannelResolver channelResolver,
             TradeService tradeService,
-            com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService) {
+            com.tuowei.dazhongdianping.module.marketing.service.MarketingCouponService marketingCouponService,
+            com.tuowei.dazhongdianping.module.marketing.service.GroupBuyOrderService groupBuyOrderService,
+            com.tuowei.dazhongdianping.module.marketing.service.GroupBuyMetrics groupBuyMetrics) {
         this.mapper = mapper;
         this.channelResolver = channelResolver;
         this.tradeService = tradeService;
         this.marketingCouponService = marketingCouponService;
+        this.groupBuyOrderService = groupBuyOrderService;
+        this.groupBuyMetrics = groupBuyMetrics;
     }
 
     public TradeReconcileResult reconcile() {
         int closedOrders = 0;
         int restoredStockOrders = 0;
         int failedPayments = 0;
+
+        int expiredGroups = groupBuyOrderService.expireDueTeams(BATCH_SIZE);
 
         List<OrderRow> expiredOrders = mapper.selectExpiredUnpaidOrders(BATCH_SIZE);
         for (OrderRow order : expiredOrders) {
@@ -65,8 +73,11 @@ public class TradeCompensationService {
         int reconciledRefunds = 0;
         for (RefundRow refund : mapper.selectUnsubmittedAutoRefunds(BATCH_SIZE)) {
             try {
-                if (tradeService.processAutomaticRefund(refund.getOrderId())) reconciledRefunds++;
+                boolean processed = tradeService.processAutomaticRefund(refund.getOrderId());
+                if (processed) reconciledRefunds++;
+                recordGroupBuyRefund(refund, processed);
             } catch (RuntimeException failure) {
+                recordGroupBuyFailure(refund, "refund_submission");
                 log.warn("automatic refund submission failed: refundId={}", refund.getId(), failure);
             }
         }
@@ -86,6 +97,7 @@ public class TradeCompensationService {
                     reconciledRefunds++;
                 }
             } catch (RuntimeException exception) {
+                recordGroupBuyFailure(refund, "refund_query");
                 log.warn(
                         "refund reconcile query failed: refundId={}, channel={}, refundTxn={}",
                         refund.getId(), refund.getChannel(), refund.getChannelRefundTxn(), exception
@@ -93,12 +105,24 @@ public class TradeCompensationService {
             }
         }
 
-        if (closedOrders > 0 || failedPayments > 0 || reconciledRefunds > 0) {
+        if (closedOrders > 0 || failedPayments > 0 || reconciledRefunds > 0 || expiredGroups > 0) {
             log.info(
-                    "trade reconcile finished: closedOrders={}, restoredStockOrders={}, failedPayments={}, reconciledRefunds={}",
-                    closedOrders, restoredStockOrders, failedPayments, reconciledRefunds
+                    "trade reconcile finished: expiredGroups={}, closedOrders={}, restoredStockOrders={}, failedPayments={}, reconciledRefunds={}",
+                    expiredGroups, closedOrders, restoredStockOrders, failedPayments, reconciledRefunds
             );
         }
         return new TradeReconcileResult(closedOrders, restoredStockOrders, failedPayments, reconciledRefunds);
+    }
+
+    private void recordGroupBuyRefund(RefundRow refund, boolean submitted) {
+        if (!"groupbuy_expired".equals(refund.getRefundType())) return;
+        OrderRow order = mapper.selectOrderById(refund.getOrderId());
+        groupBuyMetrics.automaticRefund(order == null ? "unknown" : order.getRegion(), submitted);
+    }
+
+    private void recordGroupBuyFailure(RefundRow refund, String stage) {
+        if (!"groupbuy_expired".equals(refund.getRefundType())) return;
+        OrderRow order = mapper.selectOrderById(refund.getOrderId());
+        groupBuyMetrics.failure(order == null ? "unknown" : order.getRegion(), stage);
     }
 }

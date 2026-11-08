@@ -24,6 +24,8 @@ const orders = [
   {
     id: 9301,
     orderNo: 'ADMIN-ORDER-001',
+    orderSource: 'groupbuy',
+    campaignTitle: 'Paris dinner group',
     merchantId: 1001,
     merchantName: '沪上渝里餐饮',
     shopId: 10001,
@@ -206,6 +208,7 @@ describe('AdminOrdersView', () => {
     expect(host.textContent).toContain('ADMIN-ORDER-001')
     expect(host.textContent).toContain('Orders and refunds')
     expect(host.textContent).toContain('Refunded')
+    expect(host.querySelector('[data-testid="groupbuy-source-9301"]')?.textContent).toContain('Group buy · Paris dinner group')
 
     input(host, 'admin-order-merchant-id', '1001')
     input(host, 'admin-order-shop-id', '10001')

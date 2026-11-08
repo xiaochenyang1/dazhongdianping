@@ -171,6 +171,29 @@ Widget localizedApp({
   );
 }
 
+TradeOrder activeGroupBuyOrder() => TradeOrder(
+  id: 10,
+  orderNo: 'OD-GROUP-ACTIVE',
+  dealTitle: 'Weekend dinner',
+  shopName: 'Berlin Tea House',
+  quantity: 1,
+  unitPrice: 19.9,
+  amount: 19.9,
+  currency: 'EUR',
+  payStatus: 1,
+  payStatusText: '已支付',
+  status: 1,
+  coupons: const [],
+  orderSource: 'groupbuy',
+  campaignTitle: 'Weekend dinner group',
+  expireAt: DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+  groupBuyTeamId: 90,
+  groupBuyStatus: 1,
+  groupBuyMemberCount: 2,
+  groupBuyPaidCount: 1,
+  groupBuySize: 3,
+);
+
 void main() {
   testWidgets('coupon QR uses embedded PNG bytes without an image download', (
     tester,
@@ -828,5 +851,158 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Reload full details'), findsOneWidget);
+  });
+
+  testWidgets('group-buy expiry shows automatic refund progress in English', (
+    tester,
+  ) async {
+    const order = TradeOrder(
+      id: 10,
+      orderNo: 'OD-GROUP',
+      dealTitle: 'Dinner group',
+      shopName: 'Paris restaurant',
+      quantity: 1,
+      unitPrice: 19.9,
+      amount: 19.9,
+      currency: 'EUR',
+      payStatus: 1,
+      payStatusText: '已支付',
+      status: 1,
+      coupons: [],
+      orderSource: 'groupbuy',
+      campaignTitle: 'Dinner group',
+      groupBuyTeamId: 90,
+      groupBuyStatus: 3,
+      groupBuyMemberCount: 2,
+      groupBuyPaidCount: 1,
+      groupBuySize: 3,
+      refund: RefundInfo(
+        reason: '拼团未在截止时间前完成，系统自动退款',
+        refundType: 'groupbuy_expired',
+        status: 3,
+        statusText: '退款处理中',
+        auditReason: '',
+      ),
+    );
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: OrderDetailScreen(
+          repository: TradeRepository(OrderDetailApi()),
+          orderId: 10,
+          initialOrder: order,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('refund in progress'), findsOneWidget);
+    expect(
+      find.textContaining('did not form before the deadline'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('拼团未在截止时间前完成'), findsNothing);
+  });
+
+  for (final scenario in [
+    (locale: const Locale('zh', 'CN'), countdown: '距拼团截止', invite: '邀请好友参团'),
+    (locale: const Locale('zh', 'TW'), countdown: '距拼團截止', invite: '邀請好友參團'),
+    (
+      locale: const Locale('en'),
+      countdown: 'Group ends in',
+      invite: 'Invite friends',
+    ),
+  ]) {
+    testWidgets(
+      'active group-buy countdown and invite localize for ${scenario.locale}',
+      (tester) async {
+        await tester.pumpWidget(
+          localizedApp(
+            locale: scenario.locale,
+            home: OrderDetailScreen(
+              repository: TradeRepository(OrderDetailApi()),
+              orderId: 10,
+              initialOrder: activeGroupBuyOrder(),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byKey(const Key('groupbuy-countdown')), findsOneWidget);
+        expect(find.textContaining(scenario.countdown), findsOneWidget);
+        expect(find.text(scenario.invite), findsOneWidget);
+        expect(find.byKey(const Key('groupbuy-share-button')), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
+  testWidgets('group-buy invite shares the canonical team link', (
+    tester,
+  ) async {
+    String? sharedText;
+    String? sharedSubject;
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('en'),
+        home: OrderDetailScreen(
+          repository: TradeRepository(OrderDetailApi()),
+          orderId: 10,
+          initialOrder: activeGroupBuyOrder(),
+          thirdPartyConfig: const ThirdPartyConfig(
+            shareBaseUrl: 'https://example.test/',
+          ),
+          groupBuyShareLauncher: (text, subject, origin) async {
+            sharedText = text;
+            sharedSubject = subject;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('groupbuy-share-button')));
+    await tester.pump();
+
+    expect(sharedSubject, 'Weekend dinner group');
+    expect(sharedText, contains('Payment progress 1/3'));
+    expect(
+      sharedText,
+      contains('https://example.test/marketing/groupbuy?teamId=90'),
+    );
+    expect(find.text('Share text copied'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('group-buy invite falls back to localized clipboard text', (
+    tester,
+  ) async {
+    String? copiedText;
+    await tester.pumpWidget(
+      localizedApp(
+        locale: const Locale('zh', 'TW'),
+        home: OrderDetailScreen(
+          repository: TradeRepository(OrderDetailApi()),
+          orderId: 10,
+          initialOrder: activeGroupBuyOrder(),
+          groupBuyShareLauncher: (text, subject, origin) async {
+            throw StateError('native share unavailable');
+          },
+          groupBuyClipboardWriter: (text) async => copiedText = text,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('groupbuy-share-button')));
+    await tester.pump();
+
+    expect(copiedText, contains('付款進度 1/3'));
+    expect(copiedText, contains('/marketing/groupbuy?teamId=90'));
+    expect(find.text('分享文案已複製'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }

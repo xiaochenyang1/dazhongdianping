@@ -48,6 +48,10 @@ class ThirdPartyConfig {
   /// Builds the canonical deep link for a shop detail page.
   String shopShareUrl(int shopId) => '$normalizedShareBaseUrl/shops/$shopId';
 
+  /// Builds the canonical invite link for an active group-buy team.
+  String groupBuyShareUrl(int teamId) =>
+      '$normalizedShareBaseUrl/marketing/groupbuy?teamId=$teamId';
+
   Uri googleMapsDirectionsUri({
     required String address,
     double? latitude,

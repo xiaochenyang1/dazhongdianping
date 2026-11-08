@@ -9,8 +9,10 @@ import com.tuowei.dazhongdianping.module.experiment.mapper.ExperimentMapper;
 import com.tuowei.dazhongdianping.module.experiment.model.ExperimentAssignmentRow;
 import com.tuowei.dazhongdianping.module.experiment.model.ExperimentRow;
 import com.tuowei.dazhongdianping.module.experiment.model.FeatureFlagRow;
+import com.tuowei.dazhongdianping.module.experiment.model.FeatureFlagScopeRow;
 import com.tuowei.dazhongdianping.module.experiment.model.request.ExperimentSaveRequest;
 import com.tuowei.dazhongdianping.module.experiment.model.request.FlagSaveRequest;
+import com.tuowei.dazhongdianping.module.experiment.model.request.FlagScopeSaveRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,14 +36,19 @@ public class ExperimentService {
      * 否则当 {@code Math.floorMod(Math.abs(flagKey.hashCode()), 100) < rolloutPercent} 时开启。
      */
     public static boolean resolvedEnabled(boolean enabled, int rolloutPercent, String flagKey) {
+        return resolvedEnabled(enabled, rolloutPercent, flagKey, "anonymous");
+    }
+
+    public static boolean resolvedEnabled(
+            boolean enabled, int rolloutPercent, String flagKey, String subjectKey) {
         if (!enabled || rolloutPercent <= 0) {
             return false;
         }
         if (rolloutPercent >= 100) {
             return true;
         }
-        String key = flagKey == null ? "" : flagKey;
-        return Math.floorMod(Math.abs(key.hashCode()), 100) < rolloutPercent;
+        String key = (flagKey == null ? "" : flagKey) + ":" + (subjectKey == null ? "" : subjectKey);
+        return Math.floorMod(key.hashCode(), 100) < rolloutPercent;
     }
 
     public List<Map<String, Object>> flags() {
@@ -91,6 +98,38 @@ public class ExperimentService {
             throw new NotFoundException("开关不存在");
         }
         return flagMap(requireFlag(id));
+    }
+
+    public List<Map<String, Object>> flagScopes(Long flagId) {
+        requireFlag(flagId);
+        return mapper.selectFlagScopes(flagId).stream().map(this::flagScopeMap).toList();
+    }
+
+    @Transactional
+    public Map<String, Object> saveFlagScope(Long flagId, FlagScopeSaveRequest request) {
+        requireFlag(flagId);
+        FeatureFlagScopeRow row = mapper.selectFlagScopeByTarget(
+                flagId, request.scopeType(), request.scopeId());
+        if (row == null) {
+            row = new FeatureFlagScopeRow();
+            row.setFeatureFlagId(flagId);
+            row.setScopeType(request.scopeType());
+            row.setScopeId(request.scopeId());
+            row.setEnabled(request.enabled());
+            row.setRolloutPercent(request.rolloutPercent());
+            mapper.insertFlagScope(row);
+        } else {
+            row.setEnabled(request.enabled());
+            row.setRolloutPercent(request.rolloutPercent());
+            mapper.updateFlagScope(row);
+        }
+        return flagScopeMap(mapper.selectFlagScope(row.getId(), flagId));
+    }
+
+    @Transactional
+    public void deleteFlagScope(Long flagId, Long scopeId) {
+        requireFlag(flagId);
+        if (mapper.deleteFlagScope(scopeId, flagId) != 1) throw new NotFoundException("灰度规则不存在");
     }
 
     public List<Map<String, Object>> adminExperiments() {
@@ -167,6 +206,17 @@ public class ExperimentService {
         map.put("id", row.getId());
         map.put("flagKey", row.getFlagKey());
         map.put("description", row.getDescription() == null ? "" : row.getDescription());
+        map.put("enabled", Boolean.TRUE.equals(row.getEnabled()));
+        map.put("rolloutPercent", row.getRolloutPercent() == null ? 0 : row.getRolloutPercent());
+        return map;
+    }
+
+    private Map<String, Object> flagScopeMap(FeatureFlagScopeRow row) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", row.getId());
+        map.put("featureFlagId", row.getFeatureFlagId());
+        map.put("scopeType", row.getScopeType());
+        map.put("scopeId", row.getScopeId());
         map.put("enabled", Boolean.TRUE.equals(row.getEnabled()));
         map.put("rolloutPercent", row.getRolloutPercent() == null ? 0 : row.getRolloutPercent());
         return map;
