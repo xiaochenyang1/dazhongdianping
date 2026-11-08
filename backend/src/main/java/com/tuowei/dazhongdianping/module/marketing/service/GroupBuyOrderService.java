@@ -35,6 +35,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class GroupBuyOrderService {
 
+    private enum ExpireOrderResult {
+        PROCESSED,
+        NOOP,
+        RETRY_PENDING,
+        TERMINAL_FAILED
+    }
+
     public record TeamReconcileResult(
             long teamId,
             int teamStatus,
@@ -144,7 +151,10 @@ public class GroupBuyOrderService {
             }
             for (Long orderId : campaigns.selectGroupBuyOrderIds(teamId)) {
                 try {
-                    transactions.executeWithoutResult(ignored -> expireOrder(orderId));
+                    ExpireOrderResult result = transactions.execute(ignored -> expireOrder(orderId));
+                    if (result == ExpireOrderResult.TERMINAL_FAILED) {
+                        metrics.failure(teamRegion, "expiry_refund_failed");
+                    }
                 } catch (RuntimeException failure) {
                     metrics.failure(teamRegion, "expiry_reconcile");
                     log.warn("expired group-buy order reconcile failed: teamId={}, orderId={}",
@@ -175,8 +185,14 @@ public class GroupBuyOrderService {
         if (Integer.valueOf(3).equals(team.getStatus())) {
             for (Long orderId : campaigns.selectGroupBuyOrderIds(teamId)) {
                 try {
-                    transactions.executeWithoutResult(ignored -> expireOrder(orderId));
-                    expiredOrders++;
+                    ExpireOrderResult result = transactions.execute(ignored -> expireOrder(orderId));
+                    if (result == ExpireOrderResult.PROCESSED) {
+                        expiredOrders++;
+                    } else if (result == ExpireOrderResult.RETRY_PENDING
+                            || result == ExpireOrderResult.TERMINAL_FAILED) {
+                        failures++;
+                        metrics.failure(team.getRegion(), "manual_expiry_reconcile");
+                    }
                 } catch (RuntimeException failure) {
                     failures++;
                     metrics.failure(team.getRegion(), "manual_expiry_reconcile");
@@ -198,14 +214,15 @@ public class GroupBuyOrderService {
         return new TeamReconcileResult(teamId, team.getStatus(), expiredOrders, vouchers, failures);
     }
 
-    private void expireOrder(Long orderId) {
+    private ExpireOrderResult expireOrder(Long orderId) {
         OrderRow order = inventory.lockOrder(orderId);
-        if (!Integer.valueOf(1).equals(order.getStatus()) || Integer.valueOf(2).equals(order.getPayStatus())) return;
-        if (Integer.valueOf(0).equals(order.getPayStatus())) {
-            inventory.closeUnpaid(order);
-            return;
+        if (!Integer.valueOf(1).equals(order.getStatus()) || Integer.valueOf(2).equals(order.getPayStatus())) {
+            return ExpireOrderResult.NOOP;
         }
-        if (!Integer.valueOf(1).equals(order.getPayStatus())) return;
+        if (Integer.valueOf(0).equals(order.getPayStatus())) {
+            return inventory.closeUnpaid(order) ? ExpireOrderResult.PROCESSED : ExpireOrderResult.NOOP;
+        }
+        if (!Integer.valueOf(1).equals(order.getPayStatus())) return ExpireOrderResult.NOOP;
         PaymentRow payment = trades.selectPaymentForUpdate(orderId);
         if (payment == null || payment.getChannel() == null || payment.getChannel().isBlank()) {
             throw new IllegalStateException("拼团订单缺少可退款支付记录");
@@ -214,10 +231,24 @@ public class GroupBuyOrderService {
         if (refund == null) {
             trades.insertAutomaticRefund(orderId, order.getAmount(), payment.getChannel(),
                     EXPIRED_REFUND_TYPE, EXPIRED_REFUND_REASON);
-        } else if (Integer.valueOf(0).equals(refund.getStatus())) {
+            refund = trades.selectRefundForUpdate(orderId);
+        } else if (Integer.valueOf(0).equals(refund.getStatus()) || Integer.valueOf(2).equals(refund.getStatus())) {
             trades.promoteRefundToAutomatic(orderId, payment.getChannel(), EXPIRED_REFUND_TYPE, EXPIRED_REFUND_REASON);
+            refund = trades.selectRefundForUpdate(orderId);
+        } else if (Integer.valueOf(4).equals(refund.getStatus())) {
+            return ExpireOrderResult.TERMINAL_FAILED;
         }
-        metrics.automaticRefund(order.getRegion(), tradeService.processAutomaticRefund(orderId));
+        boolean awaitingSubmission = refund != null
+                && Integer.valueOf(3).equals(refund.getStatus())
+                && (refund.getChannelRefundTxn() == null || refund.getChannelRefundTxn().isBlank());
+        boolean submitted = tradeService.processAutomaticRefund(orderId);
+        metrics.automaticRefund(order.getRegion(), submitted);
+        RefundRow current = trades.selectRefundForUpdate(orderId);
+        if (current != null && Integer.valueOf(4).equals(current.getStatus())) {
+            return ExpireOrderResult.TERMINAL_FAILED;
+        }
+        if (awaitingSubmission && !submitted) return ExpireOrderResult.RETRY_PENDING;
+        return submitted ? ExpireOrderResult.PROCESSED : ExpireOrderResult.NOOP;
     }
 
     private long requireActiveUser() {

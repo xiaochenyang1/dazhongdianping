@@ -11,7 +11,7 @@ import type { AdminGroupBuySummary, AdminGroupBuyTeam, PageResult } from '@/type
 const zhCopy = {
   eyebrow: '交易可观测与补偿',
   heading: '拼团运维中心',
-  description: '查看最近 24 小时成团与支付表现，并定位退款、发券、库存释放异常。所有补偿操作均为幂等执行。',
+  description: '查看最近 24 小时成团与支付表现，并定位退款、发券、库存释放异常。补偿操作幂等执行；渠道明确失败的退款只报告失败，需核对渠道流水后人工处置。',
   refresh: '刷新',
   loading: '加载中...',
   metrics: {
@@ -49,7 +49,7 @@ const zhCopy = {
 const enCopy = {
   eyebrow: 'Transaction observability and recovery',
   heading: 'Group-buy Operations',
-  description: 'Inspect the last 24 hours of team and payment performance, then repair refund, voucher, and inventory issues with idempotent actions.',
+  description: 'Inspect the last 24 hours of team and payment performance. Recovery is idempotent; terminal refund failures are reported for provider verification and manual disposition.',
   refresh: 'Refresh',
   loading: 'Loading...',
   metrics: {

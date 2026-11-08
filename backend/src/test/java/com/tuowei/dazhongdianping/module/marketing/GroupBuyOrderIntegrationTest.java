@@ -6,8 +6,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.tuowei.dazhongdianping.common.api.ServiceUnavailableException;
@@ -32,6 +34,8 @@ import com.tuowei.dazhongdianping.module.merchant.trade.service.MerchantTradeSer
 import com.tuowei.dazhongdianping.module.trade.model.request.RefundRequest;
 import com.tuowei.dazhongdianping.module.trade.payment.MockPaymentChannel;
 import com.tuowei.dazhongdianping.module.trade.payment.PaymentNotifyResult;
+import com.tuowei.dazhongdianping.module.trade.payment.RefundChannelState;
+import com.tuowei.dazhongdianping.module.trade.payment.RefundResult;
 import com.tuowei.dazhongdianping.module.trade.scheduler.TradeCompensationScheduler;
 import com.tuowei.dazhongdianping.module.trade.service.TradeCompensationService;
 import com.tuowei.dazhongdianping.module.trade.service.TradeService;
@@ -228,6 +232,52 @@ class GroupBuyOrderIntegrationTest {
         assertThat(count("SELECT status FROM refund WHERE order_id=?", orderId)).isEqualTo(1);
         assertThat(count("SELECT pay_status FROM `order` WHERE id=?", orderId)).isEqualTo(2);
         assertThat(stock(fixture)).isEqualTo(2);
+    }
+
+    @Test void rejectedUserRefundIsPromotedToAutomaticRefundWhenTeamExpires() {
+        Fixture fixture = fixture(2, 2);
+        long leader = user();
+        Map<String, Object> opened = as(leader, () -> groupBuy.open(fixture.campaign));
+        long teamId = number(opened, "id"), orderId = number(opened, "orderId");
+        as(leader, () -> trade.completeMockPayment(orderId));
+        as(leader, () -> trade.refund(orderId, new RefundRequest("Plans changed")));
+        merchant();
+        merchantTrade.auditRefund(orderId, new MerchantRefundAuditRequest("reject", "Policy mismatch"));
+        assertThat(count("SELECT status FROM refund WHERE order_id=?", orderId)).isEqualTo(2);
+        expire(teamId);
+
+        compensation.reconcile();
+
+        assertThat(count("SELECT status FROM refund WHERE order_id=?", orderId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT refund_type FROM refund WHERE order_id=?", String.class, orderId))
+                .isEqualTo("groupbuy_expired");
+        assertThat(count("SELECT pay_status FROM `order` WHERE id=?", orderId)).isEqualTo(2);
+        assertThat(stock(fixture)).isEqualTo(2);
+    }
+
+    @Test void operationsRecoveryReportsTerminalRefundFailureWithoutResubmittingMoneyMovement() {
+        Fixture fixture = fixture(2, 2);
+        long leader = user();
+        Map<String, Object> opened = as(leader, () -> groupBuy.open(fixture.campaign));
+        long teamId = number(opened, "id"), orderId = number(opened, "orderId");
+        as(leader, () -> trade.completeMockPayment(orderId));
+        expire(teamId);
+        doReturn(new RefundResult(
+                "alipay_mock", "failed_" + orderId, new BigDecimal("12.80"),
+                RefundChannelState.FAILED, "provider_declined"))
+                .when(channel).refund(any(), any(), anyString(), anyString());
+
+        compensation.reconcile();
+        assertThat(count("SELECT status FROM refund WHERE order_id=?", orderId)).isEqualTo(4);
+
+        admin(new AdminCityScope(false, Set.of(), Set.of(10001L)));
+        var result = groupBuyOperations.reconcile(teamId, "127.0.0.1");
+
+        assertThat(result.expiredOrdersProcessed()).isZero();
+        assertThat(result.failures()).isEqualTo(1);
+        assertThat(result.team().failedRefunds()).isEqualTo(1);
+        assertThat(count("SELECT pay_status FROM `order` WHERE id=?", orderId)).isEqualTo(1);
+        verify(channel, times(1)).refund(any(), any(), anyString(), anyString());
     }
 
     @Test void completedTeamUsesExistingRedemptionAndRefundRules() {

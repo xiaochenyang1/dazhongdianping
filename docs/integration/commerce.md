@@ -117,10 +117,10 @@ empty and historical deleted owners cannot acquire documents.
 
 每位成员开团或参团时创建一笔独立待支付订单，并在同一事务中占用拼团名额和套餐库存。成员付款只更新本人成员状态；达到活动人数后只允许一次状态跃迁为已成团，再为全部已付款订单逐单发券。并发付款和重复渠道回调均保持幂等。
 
-- 进行中的团到期后，未付款订单关闭并释放库存，已付款订单创建 `refundType=groupbuy_expired` 的自动退款；渠道失败由补偿任务使用稳定幂等键重试。已成团订单继续复用普通券核销和退款约束。
+- 进行中的团到期后，未付款订单关闭并释放库存，已付款订单创建 `refundType=groupbuy_expired` 的自动退款；提交超时或响应丢失等不确定结果由补偿任务使用稳定幂等键重试，渠道明确返回失败则保留原订单、券和库存并进入运营告警，不自动重提资金。此前被驳回但尚未出账的用户退款会转为到期自动退款。已成团订单继续复用普通券核销和退款约束。
 - 订单详情返回 `groupBuyTeamId/groupBuyStatus/groupBuyMemberCount/groupBuyPaidCount/groupBuySize`。Web 与 Flutter 在进行中展示实时倒计时和邀请链接 `/marketing/groupbuy?teamId={teamId}`；Web 直达页面会预填团号。
 - 截止前 60 分钟内向仍有效成员发送一次 `groupbuy.deadline` 站内通知，`groupbuy_member.remind_status` 保证持久去重；成团发券发送 `groupbuy.formed`。
-- 管理端 `/data/groupbuy-operations` 使用 `data:order:read|write` 权限，并遵守管理员区域、城市和门店范围。摘要会提示过期未处理、退款等待/失败、已成团缺券和库存未释放；单团修复可重跑过期处理、退款补偿和缺券发放，并记录审计日志。
+- 管理端 `/data/groupbuy-operations` 使用 `data:order:read|write` 权限，并遵守管理员区域、城市和门店范围。摘要会提示过期未处理、退款等待/失败、已成团缺券和库存未释放；单团修复可重跑未提交的到期处理和缺券发放，并记录实际处理数、失败数与审计日志。渠道明确失败的退款只报告失败，须先按渠道流水核实并由有权限的资金处置流程处理。
 - Micrometer 指标为 `dianping.groupbuy.lifecycle` 和 `dianping.groupbuy.failure`。成功生命周期事件在事务提交后记录，避免回滚事务产生虚假成功数。
 - 部署总开关 `APP_LAUNCH_DEFERRED_FEATURES_ENABLED` 必须先开启；随后由区域 `group_buy` 总开关与活动 > 门店 > 城市规则决定用户是否可用，同级按稳定用户哈希执行 `rolloutPercent`。CN/EU 的总开关种子均为关闭；`APP_LAUNCH_GROUP_BUY_FEATURE_FLAG_ENFORCED` 默认 `true`。
 

@@ -130,8 +130,9 @@
     <update id="promoteRefundToAutomatic">
         UPDATE refund
         SET reason=#{reason},refund_type=#{refundType},status=3,channel=#{channel},channel_status='pending',
-            audit_reason='',audited_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
-        WHERE order_id=#{orderId} AND status=0
+            channel_refund_txn='',channel_failure_reason='',audit_reason='',
+            audited_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
+        WHERE order_id=#{orderId} AND status IN (0,2)
     </update>
     <select id="selectUnsubmittedAutoRefunds" resultType="com.tuowei.dazhongdianping.module.trade.model.RefundRow">
         SELECT <include refid="refundCols"/> FROM refund
