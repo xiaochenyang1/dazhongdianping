@@ -9,18 +9,24 @@ import com.tuowei.dazhongdianping.common.api.UnauthorizedException;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.module.admin.audit.mapper.AdminAuditMapper;
 import com.tuowei.dazhongdianping.module.admin.groupbuy.mapper.AdminGroupBuyOperationsMapper;
+import com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuyFailedRefundRow;
 import com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuySummaryRow;
 import com.tuowei.dazhongdianping.module.admin.groupbuy.model.AdminGroupBuyTeamRow;
+import com.tuowei.dazhongdianping.module.admin.groupbuy.model.request.AdminGroupBuyRefundDispositionRequest;
 import com.tuowei.dazhongdianping.module.admin.groupbuy.model.response.AdminGroupBuyAlertResponse;
+import com.tuowei.dazhongdianping.module.admin.groupbuy.model.response.AdminGroupBuyFailedRefundResponse;
 import com.tuowei.dazhongdianping.module.admin.groupbuy.model.response.AdminGroupBuyReconcileResponse;
+import com.tuowei.dazhongdianping.module.admin.groupbuy.model.response.AdminGroupBuyRefundDispositionResponse;
 import com.tuowei.dazhongdianping.module.admin.groupbuy.model.response.AdminGroupBuySummaryResponse;
 import com.tuowei.dazhongdianping.module.admin.groupbuy.model.response.AdminGroupBuyTeamResponse;
 import com.tuowei.dazhongdianping.module.marketing.service.GroupBuyOrderService;
+import com.tuowei.dazhongdianping.module.trade.service.TradeService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -31,14 +37,17 @@ public class AdminGroupBuyOperationsService {
     private final AdminGroupBuyOperationsMapper mapper;
     private final AdminAuditMapper auditMapper;
     private final GroupBuyOrderService groupBuyOrders;
+    private final TradeService tradeService;
 
     public AdminGroupBuyOperationsService(
             AdminGroupBuyOperationsMapper mapper,
             AdminAuditMapper auditMapper,
-            GroupBuyOrderService groupBuyOrders) {
+            GroupBuyOrderService groupBuyOrders,
+            TradeService tradeService) {
         this.mapper = mapper;
         this.auditMapper = auditMapper;
         this.groupBuyOrders = groupBuyOrders;
+        this.tradeService = tradeService;
     }
 
     public AdminGroupBuySummaryResponse summary() {
@@ -100,6 +109,54 @@ public class AdminGroupBuyOperationsService {
                 result.vouchersIssued(), result.failures(), teamResponse(after));
     }
 
+    public PageResult<AdminGroupBuyFailedRefundResponse> failedRefunds(Integer page, Integer pageSize) {
+        int normalizedPage = page == null ? 1 : Math.max(1, page);
+        int normalizedSize = pageSize == null ? 20 : Math.min(100, Math.max(1, pageSize));
+        int offset = (normalizedPage - 1) * normalizedSize;
+        String region = RegionContext.getRegion().name();
+        AdminCityScope scope = scope(region);
+        long total = mapper.countFailedRefunds(region, scope.allCities(), scope.cityIds(), scope.shopIds());
+        List<AdminGroupBuyFailedRefundResponse> list = mapper.selectFailedRefunds(
+                        region, normalizedSize, offset, scope.allCities(), scope.cityIds(), scope.shopIds()).stream()
+                .map(this::failedRefundResponse)
+                .toList();
+        return new PageResult<>(list, total, normalizedPage, normalizedSize, offset + list.size() < total);
+    }
+
+    @Transactional
+    public AdminGroupBuyRefundDispositionResponse disposeRefund(
+            Long refundId, AdminGroupBuyRefundDispositionRequest request, String requestIp) {
+        String region = RegionContext.getRegion().name();
+        AdminCityScope scope = scope(region);
+        AdminGroupBuyFailedRefundRow refund = mapper.selectRefund(
+                region, refundId, scope.allCities(), scope.cityIds(), scope.shopIds());
+        if (refund == null) throw new NotFoundException("拼团自动退款不存在");
+        String outcome = required(request == null ? null : request.outcome(), "核验结果", 32);
+        boolean providerRefunded;
+        if ("provider_refunded".equals(outcome)) providerRefunded = true;
+        else if ("provider_not_refunded".equals(outcome)) providerRefunded = false;
+        else throw new IllegalArgumentException("核验结果只允许 provider_refunded 或 provider_not_refunded");
+        String providerReference = required(
+                request.providerReference(), "渠道核验编号", 128);
+        String note = required(request.note(), "核验备注", 180);
+        AdminSession admin = currentAdmin();
+        String auditReason = limit(outcome + " | ref=" + providerReference + " | " + note, 255);
+        TradeService.ManualRefundDispositionResult result = tradeService.reviewTerminalGroupBuyRefund(
+                refund.getOrderId(), refundId, providerRefunded, admin.adminId(), auditReason);
+        auditMapper.insertAuditLog(
+                admin.adminId(),
+                providerRefunded ? "groupbuy_refund_confirmed" : "groupbuy_refund_verified_unresolved",
+                "refund:" + refundId,
+                "teamId=" + refund.getTeamId() + ",orderId=" + refund.getOrderId()
+                        + ",outcome=" + outcome + ",providerReference=" + providerReference
+                        + ",processed=" + result.processed() + ",note=" + note,
+                StringUtils.hasText(requestIp) ? requestIp.trim() : "");
+        AdminGroupBuyFailedRefundRow current = mapper.selectRefund(
+                region, refundId, scope.allCities(), scope.cityIds(), scope.shopIds());
+        return new AdminGroupBuyRefundDispositionResponse(
+                result.processed(), result.alertResolved(), outcome, failedRefundResponse(current));
+    }
+
     private List<AdminGroupBuyAlertResponse> alerts(AdminGroupBuySummaryRow row) {
         List<AdminGroupBuyAlertResponse> alerts = new ArrayList<>();
         addAlert(alerts, "critical", "refund_failed", value(row.getFailedRefunds()), "存在自动退款失败订单");
@@ -131,6 +188,27 @@ public class AdminGroupBuyOperationsService {
                 pending, failed, missingCoupons, unreleased,
                 overdue || pending > 0 || failed > 0 || missingCoupons > 0 || unreleased > 0,
                 row.getExpireAt(), row.getCreatedAt(), row.getUpdatedAt());
+    }
+
+    private AdminGroupBuyFailedRefundResponse failedRefundResponse(AdminGroupBuyFailedRefundRow row) {
+        if (row == null) throw new NotFoundException("拼团自动退款不存在");
+        return new AdminGroupBuyFailedRefundResponse(
+                row.getRefundId(), row.getOrderId(), text(row.getOrderNo()), row.getTeamId(),
+                text(row.getCampaignTitle()), text(row.getShopName()), row.getAmount(), text(row.getCurrency()),
+                text(row.getChannel()), text(row.getChannelRefundTxn()), text(row.getChannelStatus()),
+                text(row.getChannelFailureReason()), row.getRefundStatus(), row.getAuditBy(),
+                text(row.getAuditReason()), row.getAuditedAt(), row.getUpdatedAt());
+    }
+
+    private String required(String value, String label, int maxLength) {
+        String normalized = value == null ? "" : value.trim().replaceAll("[\\r\\n\\t]+", " ");
+        if (normalized.isBlank()) throw new IllegalArgumentException(label + "不能为空");
+        if (normalized.length() > maxLength) throw new IllegalArgumentException(label + "不能超过" + maxLength + "个字符");
+        return normalized;
+    }
+
+    private String limit(String value, int maxLength) {
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 
     private String statusText(Integer status) {

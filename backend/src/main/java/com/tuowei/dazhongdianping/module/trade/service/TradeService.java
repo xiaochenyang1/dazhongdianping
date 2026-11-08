@@ -167,6 +167,39 @@ import com.tuowei.dazhongdianping.common.api.*;import com.tuowei.dazhongdianping
   return processAutomaticRefundLocked(order,refund);
  }
 
+ public record ManualRefundDispositionResult(boolean processed,int refundStatus,boolean alertResolved) {}
+
+ /** Records provider verification without ever resubmitting money movement. */
+ @Transactional
+ public ManualRefundDispositionResult reviewTerminalGroupBuyRefund(Long orderId,Long refundId,
+     boolean providerRefunded,Long auditBy,String auditReason) {
+  OrderRow order=inventory.lockOrder(orderId);
+  RefundRow refund=mapper.selectRefundForUpdate(orderId);
+  if(refund==null||!refundId.equals(refund.getId())||!"groupbuy_expired".equals(refund.getRefundType()))
+   throw new NotFoundException("拼团自动退款不存在");
+  int status=refund.getStatus()==null?0:refund.getStatus();
+  if(status==1){
+   if(providerRefunded)return new ManualRefundDispositionResult(false,1,true);
+   throw new IllegalArgumentException("退款已完成，不能记录为渠道未退款");
+  }
+  if(status!=4)throw new IllegalArgumentException("仅渠道明确失败的拼团自动退款可人工核验");
+  if(!providerRefunded){
+   int changed=mapper.recordFailedAutomaticRefundReview(refundId,auditBy,auditReason);
+   return new ManualRefundDispositionResult(changed==1,4,false);
+  }
+  int changed=mapper.confirmFailedAutomaticRefund(refundId,auditBy,auditReason);
+  if(changed!=1)throw new IllegalStateException("拼团退款人工确认状态更新失败");
+  if(Integer.valueOf(1).equals(order.getPayStatus())){
+   if(mapper.markOrderRefunded(order.getId())!=1)throw new IllegalStateException("订单退款状态更新失败");
+  }else if(!Integer.valueOf(2).equals(order.getPayStatus())){
+   throw new IllegalStateException("订单支付状态不允许确认退款");
+  }
+  mapper.markCouponsRefunded(order.getId());
+  inventory.release(order);
+  notifyRefundChannelResult(order,"succeeded","");
+  return new ManualRefundDispositionResult(true,1,true);
+ }
+
  private boolean processAutomaticRefundLocked(OrderRow order,RefundRow refund) {
   PaymentRow payment=mapper.selectPaymentForUpdate(order.getId());
   RefundResult result;

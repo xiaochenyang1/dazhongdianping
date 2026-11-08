@@ -20,12 +20,13 @@ import com.tuowei.dazhongdianping.common.region.Region;
 import com.tuowei.dazhongdianping.common.region.RegionContext;
 import com.tuowei.dazhongdianping.common.user.UserSession;
 import com.tuowei.dazhongdianping.common.user.UserSessionContext;
+import com.tuowei.dazhongdianping.module.admin.groupbuy.model.request.AdminGroupBuyRefundDispositionRequest;
+import com.tuowei.dazhongdianping.module.admin.groupbuy.service.AdminGroupBuyOperationsService;
 import com.tuowei.dazhongdianping.module.marketing.mapper.MarketingCampaignMapper;
 import com.tuowei.dazhongdianping.module.marketing.model.GroupBuyCampaignRow;
 import com.tuowei.dazhongdianping.module.marketing.service.GroupBuyOrderService;
 import com.tuowei.dazhongdianping.module.marketing.service.GroupBuyReminderService;
 import com.tuowei.dazhongdianping.module.marketing.scheduler.GroupBuyReminderScheduler;
-import com.tuowei.dazhongdianping.module.admin.groupbuy.service.AdminGroupBuyOperationsService;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSession;
 import com.tuowei.dazhongdianping.module.merchant.auth.MerchantSessionContext;
 import com.tuowei.dazhongdianping.module.merchant.service.MerchantFulfillmentService;
@@ -269,6 +270,16 @@ class GroupBuyOrderIntegrationTest {
 
         compensation.reconcile();
         assertThat(count("SELECT status FROM refund WHERE order_id=?", orderId)).isEqualTo(4);
+        long refundId = count("SELECT id FROM refund WHERE order_id=?", orderId);
+
+        admin(new AdminCityScope(false, Set.of(), Set.of(999_999L)));
+        assertThat(groupBuyOperations.failedRefunds(1, 20).list()).isEmpty();
+        assertThatThrownBy(() -> groupBuyOperations.disposeRefund(
+                refundId,
+                new AdminGroupBuyRefundDispositionRequest(
+                        "provider_refunded", "out_of_scope", "Must not cross shop scope"),
+                "127.0.0.1"))
+                .hasMessageContaining("不存在");
 
         admin(new AdminCityScope(false, Set.of(), Set.of(10001L)));
         var result = groupBuyOperations.reconcile(teamId, "127.0.0.1");
@@ -277,6 +288,52 @@ class GroupBuyOrderIntegrationTest {
         assertThat(result.failures()).isEqualTo(1);
         assertThat(result.team().failedRefunds()).isEqualTo(1);
         assertThat(count("SELECT pay_status FROM `order` WHERE id=?", orderId)).isEqualTo(1);
+        verify(channel, times(1)).refund(any(), any(), anyString(), anyString());
+
+        assertThat(groupBuyOperations.failedRefunds(1, 20).list())
+                .extracting("refundId").contains(refundId);
+        var unresolved = groupBuyOperations.disposeRefund(
+                refundId,
+                new AdminGroupBuyRefundDispositionRequest(
+                        "provider_not_refunded", "provider_case_" + refundId, "Provider confirmed no money moved"),
+                "127.0.0.1");
+        assertThat(unresolved.alertResolved()).isFalse();
+        assertThat(unresolved.refund().refundStatus()).isEqualTo(4);
+        assertThat(unresolved.refund().auditReason()).contains("provider_case_" + refundId);
+        assertThat(count("SELECT COUNT(*) FROM audit_log WHERE action='groupbuy_refund_verified_unresolved' AND target=?",
+                "refund:" + refundId)).isEqualTo(1);
+        verify(channel, times(1)).refund(any(), any(), anyString(), anyString());
+
+        var confirmed = groupBuyOperations.disposeRefund(
+                refundId,
+                new AdminGroupBuyRefundDispositionRequest(
+                        "provider_refunded", "manual_refund_" + refundId, "Verified in provider dashboard"),
+                "127.0.0.1");
+        assertThat(confirmed.processed()).isTrue();
+        assertThat(confirmed.alertResolved()).isTrue();
+        assertThat(confirmed.refund().refundStatus()).isEqualTo(1);
+        assertThat(confirmed.refund().auditReason()).contains("manual_refund_" + refundId);
+        assertThat(count("SELECT pay_status FROM `order` WHERE id=?", orderId)).isEqualTo(2);
+        assertThat(stock(fixture)).isEqualTo(2);
+        assertThat(jdbc.queryForObject(
+                "SELECT channel_refund_txn FROM refund WHERE id=?", String.class, refundId))
+                .isEqualTo("failed_" + orderId);
+        assertThat(groupBuyOperations.failedRefunds(1, 20).list())
+                .extracting("refundId").doesNotContain(refundId);
+        assertThat(count("SELECT COUNT(*) FROM audit_log WHERE action='groupbuy_refund_confirmed' AND target=?",
+                "refund:" + refundId)).isEqualTo(1);
+        verify(channel, times(1)).refund(any(), any(), anyString(), anyString());
+
+        var duplicate = groupBuyOperations.disposeRefund(
+                refundId,
+                new AdminGroupBuyRefundDispositionRequest(
+                        "provider_refunded", "manual_refund_" + refundId, "Repeated operator submission"),
+                "127.0.0.1");
+        assertThat(duplicate.processed()).isFalse();
+        assertThat(duplicate.alertResolved()).isTrue();
+        assertThat(stock(fixture)).isEqualTo(2);
+        assertThat(count("SELECT COUNT(*) FROM user_notification WHERE user_id=? "
+                + "AND type='order.refund.result' AND title='退款已到账'", leader)).isEqualTo(1);
         verify(channel, times(1)).refund(any(), any(), anyString(), anyString());
     }
 

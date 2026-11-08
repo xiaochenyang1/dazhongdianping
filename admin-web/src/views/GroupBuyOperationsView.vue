@@ -2,11 +2,18 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAdminSession } from '@/composables/useAdminSession'
 import {
+  disposeAdminGroupBuyFailedRefund,
   getAdminGroupBuySummary,
+  listAdminGroupBuyFailedRefunds,
   listAdminGroupBuyTeams,
   reconcileAdminGroupBuyTeam,
 } from '@/services/admin'
-import type { AdminGroupBuySummary, AdminGroupBuyTeam, PageResult } from '@/types/admin'
+import type {
+  AdminGroupBuyFailedRefund,
+  AdminGroupBuySummary,
+  AdminGroupBuyTeam,
+  PageResult,
+} from '@/types/admin'
 
 const zhCopy = {
   eyebrow: '交易可观测与补偿',
@@ -20,6 +27,22 @@ const zhCopy = {
   },
   alertHeading: '当前告警',
   healthy: '当前没有发现需要处理的拼团异常。',
+  refundHeading: '渠道失败退款核验',
+  refundDescription: '先在支付渠道后台核对真实资金结果，再记录核验结论。记录“未退款”会保留告警；确认“已退款”只补齐本地状态，不会再次发起退款。',
+  noFailedRefunds: '当前没有需要人工核验的渠道失败退款。',
+  refundHeaders: {
+    order: '订单 / 拼团', provider: '渠道回执', failure: '失败原因', review: '核验记录', actions: '人工处置',
+  },
+  providerReference: '渠道核验编号',
+  dispositionNote: '核验备注',
+  markNotRefunded: '确认渠道未退款',
+  markRefunded: '确认渠道已退款',
+  disposing: '提交中...',
+  dispositionRequired: '请填写渠道核验编号和核验备注。',
+  confirmRefunded: '确认已在支付渠道后台核对到实际退款成功？此操作会补齐本地退款、库存和用户通知状态，但不会再次调用退款接口。',
+  unresolvedResult: '已记录渠道未退款，告警继续保留，系统不会自动重提。',
+  resolvedResult: '已确认渠道退款成功，本地状态已补齐，相关告警已解除。',
+  dispositionError: '退款核验结果提交失败。',
   listHeading: '拼团列表',
   allStatuses: '全部状态',
   open: '进行中', formed: '已成团', expired: '已过期',
@@ -58,6 +81,22 @@ const enCopy = {
   },
   alertHeading: 'Active alerts',
   healthy: 'No group-buy operational issues are currently detected.',
+  refundHeading: 'Terminal refund verification',
+  refundDescription: 'Verify the actual funds in the provider console first. “Not refunded” keeps the alert open; “Refunded” only reconciles local state and never resubmits the refund.',
+  noFailedRefunds: 'No terminal provider refund failures require verification.',
+  refundHeaders: {
+    order: 'Order / team', provider: 'Provider receipt', failure: 'Failure', review: 'Last review', actions: 'Manual disposition',
+  },
+  providerReference: 'Provider verification reference',
+  dispositionNote: 'Verification note',
+  markNotRefunded: 'Provider did not refund',
+  markRefunded: 'Provider refunded',
+  disposing: 'Submitting...',
+  dispositionRequired: 'Enter the provider verification reference and note.',
+  confirmRefunded: 'Confirm the provider console shows a successful refund? This reconciles local refund, inventory, and notification state without calling the refund API again.',
+  unresolvedResult: 'Provider non-refund recorded. The alert remains open and no retry was submitted.',
+  resolvedResult: 'Provider refund confirmed. Local state was reconciled and the alert was resolved.',
+  dispositionError: 'Failed to submit the refund verification result.',
   listHeading: 'Teams',
   allStatuses: 'All statuses',
   open: 'Active', formed: 'Formed', expired: 'Expired',
@@ -89,13 +128,18 @@ const copy = computed(() => state.region === 'EU' ? enCopy : zhCopy)
 const canWrite = computed(() => state.permissions.includes('data:order:write'))
 const summary = ref<AdminGroupBuySummary | null>(null)
 const teams = ref<PageResult<AdminGroupBuyTeam> | null>(null)
+const failedRefunds = ref<PageResult<AdminGroupBuyFailedRefund> | null>(null)
 const statusFilter = ref('')
 const problemOnly = ref(true)
 const page = ref(1)
+const refundPage = ref(1)
 const loading = ref(false)
 const errorMessage = ref('')
 const actionMessage = ref('')
 const reconcilingId = ref<number | null>(null)
+const disposingId = ref<number | null>(null)
+const providerReferences = ref<Record<number, string>>({})
+const dispositionNotes = ref<Record<number, string>>({})
 
 const problemCount = computed(() => {
   if (!summary.value) return 0
@@ -120,16 +164,54 @@ async function load() {
       page: page.value,
       pageSize: 20,
     }
-    const [nextSummary, nextTeams] = await Promise.all([
+    const [nextSummary, nextTeams, nextFailedRefunds] = await Promise.all([
       getAdminGroupBuySummary(),
       listAdminGroupBuyTeams(query),
+      listAdminGroupBuyFailedRefunds({ page: refundPage.value, pageSize: 20 }),
     ])
     summary.value = nextSummary
     teams.value = nextTeams
+    failedRefunds.value = nextFailedRefunds
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : copy.value.loadError
   } finally {
     loading.value = false
+  }
+}
+
+async function disposeRefund(
+  refund: AdminGroupBuyFailedRefund,
+  outcome: 'provider_refunded' | 'provider_not_refunded',
+) {
+  if (!canWrite.value || disposingId.value !== null) return
+  const providerReference = (providerReferences.value[refund.refundId] ?? '').trim()
+  const note = (dispositionNotes.value[refund.refundId] ?? '').trim()
+  if (!providerReference || !note) {
+    errorMessage.value = copy.value.dispositionRequired
+    return
+  }
+  if (outcome === 'provider_refunded' && !window.confirm(copy.value.confirmRefunded)) return
+  disposingId.value = refund.refundId
+  actionMessage.value = ''
+  errorMessage.value = ''
+  try {
+    const result = await disposeAdminGroupBuyFailedRefund(refund.refundId, {
+      outcome,
+      providerReference,
+      note,
+    })
+    delete providerReferences.value[refund.refundId]
+    delete dispositionNotes.value[refund.refundId]
+    actionMessage.value = result.alertResolved ? copy.value.resolvedResult : copy.value.unresolvedResult
+    await load()
+    if (failedRefunds.value?.list.length === 0 && refundPage.value > 1) {
+      refundPage.value -= 1
+      await load()
+    }
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : copy.value.dispositionError
+  } finally {
+    disposingId.value = null
   }
 }
 
@@ -165,6 +247,7 @@ watch([statusFilter, problemOnly], () => {
 })
 watch(() => state.region, () => {
   page.value = 1
+  refundPage.value = 1
   void load()
 })
 onMounted(load)
@@ -204,6 +287,68 @@ onMounted(load)
           <strong>{{ alert.count }}</strong><span>{{ alert.message }}</span>
         </li>
       </ul>
+    </article>
+
+    <article class="panel">
+      <div class="section-heading"><div><h2>{{ copy.refundHeading }}</h2><p>{{ copy.refundDescription }}</p></div></div>
+      <p v-if="!failedRefunds?.list.length" class="empty-state">{{ copy.noFailedRefunds }}</p>
+      <div v-else class="table-scroll">
+        <table class="data-table terminal-refund-table">
+          <thead><tr>
+            <th>{{ copy.refundHeaders.order }}</th><th>{{ copy.refundHeaders.provider }}</th>
+            <th>{{ copy.refundHeaders.failure }}</th><th>{{ copy.refundHeaders.review }}</th>
+            <th>{{ copy.refundHeaders.actions }}</th>
+          </tr></thead>
+          <tbody><tr v-for="refund in failedRefunds.list" :key="refund.refundId">
+            <td>
+              <strong>{{ refund.orderNo }}</strong>
+              <small>#{{ refund.orderId }} · team #{{ refund.teamId }} · {{ refund.campaignTitle }} / {{ refund.shopName }}</small>
+              <small>{{ refund.amount }} {{ refund.currency }}</small>
+            </td>
+            <td><strong>{{ refund.channel }}</strong><small>{{ refund.channelRefundTxn || '--' }} · {{ refund.channelStatus }}</small></td>
+            <td>{{ refund.channelFailureReason || '--' }}</td>
+            <td><span>{{ refund.auditReason || '--' }}</span><small>{{ formatDate(refund.auditedAt || '') }}</small></td>
+            <td>
+              <div class="disposition-form">
+                <input
+                  v-model="providerReferences[refund.refundId]"
+                  :data-testid="`refund-reference-${refund.refundId}`"
+                  :placeholder="copy.providerReference"
+                  :disabled="!canWrite || disposingId !== null"
+                >
+                <textarea
+                  v-model="dispositionNotes[refund.refundId]"
+                  :data-testid="`refund-note-${refund.refundId}`"
+                  :placeholder="copy.dispositionNote"
+                  :disabled="!canWrite || disposingId !== null"
+                  rows="2"
+                />
+                <div class="disposition-actions">
+                  <button
+                    type="button"
+                    class="table-action"
+                    :data-testid="`refund-not-refunded-${refund.refundId}`"
+                    :disabled="!canWrite || disposingId !== null"
+                    @click="disposeRefund(refund, 'provider_not_refunded')"
+                  >{{ disposingId === refund.refundId ? copy.disposing : copy.markNotRefunded }}</button>
+                  <button
+                    type="button"
+                    class="table-action is-danger"
+                    :data-testid="`refund-refunded-${refund.refundId}`"
+                    :disabled="!canWrite || disposingId !== null"
+                    @click="disposeRefund(refund, 'provider_refunded')"
+                  >{{ disposingId === refund.refundId ? copy.disposing : copy.markRefunded }}</button>
+                </div>
+              </div>
+            </td>
+          </tr></tbody>
+        </table>
+      </div>
+      <div v-if="failedRefunds?.total" class="pagination-row">
+        <button type="button" :disabled="refundPage <= 1 || loading" @click="refundPage--; load()">{{ copy.previous }}</button>
+        <span>{{ copy.page(refundPage) }}</span>
+        <button type="button" :disabled="!failedRefunds.hasMore || loading" @click="refundPage++; load()">{{ copy.next }}</button>
+      </div>
     </article>
 
     <article class="panel">
@@ -270,6 +415,11 @@ td small { display: block; margin-top: .25rem; color: var(--muted-text); }
 .status-warning { background: #fff7ed; color: #9a3412; }
 .status-up { background: #ecfdf5; color: #047857; }
 .pagination-row { display: flex; justify-content: flex-end; align-items: center; gap: .75rem; margin-top: 1rem; }
+.terminal-refund-table { min-width: 1100px; }
+.disposition-form { display: grid; gap: .5rem; min-width: 20rem; }
+.disposition-form input, .disposition-form textarea { width: 100%; }
+.disposition-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.table-action.is-danger { color: #991b1b; }
 @media (max-width: 1100px) { .groupbuy-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .groupbuy-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .groupbuy-toolbar { align-items: flex-start; } }
 </style>
