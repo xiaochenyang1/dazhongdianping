@@ -72,7 +72,15 @@ $readyVariables = @{
     PRERENDER_API_BASE_URL = "https://api.example.com"
 }
 $readyVariablesJson = ConvertTo-VariableJson -Values $readyVariables
-$readySecretsJson = ConvertTo-SecretJson -Names @("DEPLOY_KNOWN_HOSTS", "DEPLOY_SSH_PRIVATE_KEY")
+$readySecretsJson = ConvertTo-SecretJson -Names @(
+    "DEPLOY_DB_DEFAULTS_FILE",
+    "DEPLOY_KNOWN_HOSTS",
+    "DEPLOY_REMOTE_ROOT",
+    "DEPLOY_RUNTIME_ENV_FILE",
+    "DEPLOY_SSH_HOST",
+    "DEPLOY_SSH_PRIVATE_KEY",
+    "DEPLOY_SSH_USER"
+)
 $readyProtectionJson = @{
     protection_rules = @(
         @{
@@ -136,12 +144,7 @@ $missingReportText = (& $preflightPath `
     -ProtectionJson $unprotectedEnvironmentJson `
     -ReportOnly) -join "`n"
 foreach ($expected in @(
-    "DEPLOY_DB_DEFAULTS_FILE",
-    "DEPLOY_RUNTIME_ENV_FILE",
-    "DEPLOY_REMOTE_ROOT",
     "DEPLOY_SMOKE_URLS",
-    "DEPLOY_SSH_HOST",
-    "DEPLOY_SSH_USER",
     "PRERENDER_API_BASE_URL",
     "PUBLIC_SITE_URL",
     "VITE_API_BASE_URL",
@@ -150,7 +153,15 @@ foreach ($expected in @(
 )) {
     Assert-True ($missingReportText -match "\[missing variable\] $expected") "missing fixture must identify $expected"
 }
-foreach ($expected in @("DEPLOY_KNOWN_HOSTS", "DEPLOY_SSH_PRIVATE_KEY")) {
+foreach ($expected in @(
+    "DEPLOY_DB_DEFAULTS_FILE",
+    "DEPLOY_KNOWN_HOSTS",
+    "DEPLOY_REMOTE_ROOT",
+    "DEPLOY_RUNTIME_ENV_FILE",
+    "DEPLOY_SSH_HOST",
+    "DEPLOY_SSH_PRIVATE_KEY",
+    "DEPLOY_SSH_USER"
+)) {
     Assert-True ($missingReportText -match "\[missing secret\]\s+$expected") "missing fixture must identify $expected"
 }
 Assert-True ($missingReportText -match '\[missing protection\] required_reviewers') "pre must require an approval gate"

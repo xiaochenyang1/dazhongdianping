@@ -222,6 +222,17 @@ foreach ($name in @(
     $null = $allowedVariableNames.Add($name)
 }
 
+$sensitiveVariableNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+foreach ($name in @(
+    "DEPLOY_SSH_HOST",
+    "DEPLOY_SSH_USER",
+    "DEPLOY_REMOTE_ROOT",
+    "DEPLOY_RUNTIME_ENV_FILE",
+    "DEPLOY_DB_DEFAULTS_FILE"
+)) {
+    $null = $sensitiveVariableNames.Add($name)
+}
+
 Assert-OnlyProperties -Value $config.variables -Allowed @($allowedVariableNames) -Context "Config.variables"
 $variables = [ordered]@{}
 foreach ($property in @($config.variables.PSObject.Properties | Sort-Object Name)) {
@@ -232,6 +243,16 @@ foreach ($property in @($config.variables.PSObject.Properties | Sort-Object Name
         throw "Config variable '$($property.Name)' must contain a non-placeholder string value"
     }
     $variables[$property.Name] = [string]$property.Value
+}
+$publicVariables = [ordered]@{}
+$sensitiveValues = [ordered]@{}
+foreach ($entry in $variables.GetEnumerator()) {
+    if ($sensitiveVariableNames.Contains($entry.Key)) {
+        $sensitiveValues[$entry.Key] = $entry.Value
+    }
+    else {
+        $publicVariables[$entry.Key] = $entry.Value
+    }
 }
 
 $allowedSecretNames = @("DEPLOY_KNOWN_HOSTS", "DEPLOY_SSH_PRIVATE_KEY")
@@ -364,7 +385,8 @@ $protectionSnapshot = [pscustomobject]@{
 $variablesJson = @($variables.GetEnumerator() | ForEach-Object {
     [pscustomobject]@{ name = $_.Key; value = $_.Value }
 }) | ConvertTo-Json -Compress
-$secretsJson = @($secretFiles.Keys | ForEach-Object {
+$secretNames = @(@($sensitiveValues.Keys) + @($secretFiles.Keys))
+$secretsJson = @($secretNames | ForEach-Object {
     [pscustomobject]@{ name = $_ }
 }) | ConvertTo-Json -Compress
 $protectionJson = $protectionSnapshot | ConvertTo-Json -Depth 8 -Compress
@@ -385,7 +407,8 @@ if (-not $desiredAudit.Ready) {
 $actionNames = [Collections.Generic.List[string]]::new()
 $actionNames.Add("environment-protection")
 foreach ($policy in $deploymentPolicies) { $actionNames.Add("deployment-policy:$($policy.Type):$($policy.Name)") }
-foreach ($name in $variables.Keys) { $actionNames.Add("variable:$name") }
+foreach ($name in $publicVariables.Keys) { $actionNames.Add("variable:$name") }
+foreach ($name in $sensitiveValues.Keys) { $actionNames.Add("secret:$name") }
 foreach ($name in $secretFiles.Keys) { $actionNames.Add("secret:$name") }
 if (-not $canAdminsBypass) {
     $actionNames.Add("manual:verify-admin-bypass-disabled")
@@ -464,11 +487,17 @@ if ($Apply) {
         }
     }
 
-    foreach ($entry in $variables.GetEnumerator()) {
+    foreach ($entry in $publicVariables.GetEnumerator()) {
         Invoke-GhProcess -GhPath $ghPath `
             -Arguments @("variable", "set", $entry.Key, "--repo", $repositoryName, "--env", $TargetEnvironment) `
             -StandardInput $entry.Value `
             -Operation "set environment variable $($entry.Key)" | Out-Null
+    }
+    foreach ($entry in $sensitiveValues.GetEnumerator()) {
+        Invoke-GhProcess -GhPath $ghPath `
+            -Arguments @("secret", "set", $entry.Key, "--repo", $repositoryName, "--env", $TargetEnvironment) `
+            -StandardInput $entry.Value `
+            -Operation "set environment secret $($entry.Key)" | Out-Null
     }
     foreach ($entry in $secretFiles.GetEnumerator()) {
         $secretValue = Get-Content -LiteralPath $entry.Value -Raw
@@ -527,8 +556,8 @@ $report = [pscustomobject]@{
     ConfigurationReady = $true
     Applied = [bool]$Apply
     PostApplyReady = $postApplyReady
-    VariableNames = @($variables.Keys)
-    SecretNames = @($secretFiles.Keys)
+    VariableNames = @($publicVariables.Keys)
+    SecretNames = $secretNames
     ReviewerCount = $reviewers.Count
     DeploymentPolicies = @($deploymentPolicies | ForEach-Object { "$($_.Type):$($_.Name)" })
     Actions = @($actionNames)
@@ -543,7 +572,7 @@ else {
     Write-Output "[plan] create or update environment protection with $($reviewers.Count) reviewer(s)"
     foreach ($policy in $report.DeploymentPolicies) { Write-Output "[plan] ensure deployment policy $policy" }
     foreach ($name in $report.VariableNames) { Write-Output "[plan] upsert variable $name" }
-    foreach ($name in $report.SecretNames) { Write-Output "[plan] upsert secret $name from a local private file" }
+    foreach ($name in $report.SecretNames) { Write-Output "[plan] upsert secret $name" }
     foreach ($manualAction in $report.ManualActions) { Write-Output "[manual] $manualAction" }
     Write-Output "[plan] run the live GitHub Environment preflight after apply"
     if ($Apply) {
