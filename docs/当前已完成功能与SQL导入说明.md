@@ -527,8 +527,7 @@
 
 - 本次 E2E 覆盖 8 条 H2 本地链路，不等于 MySQL 运行配置、S3、Elasticsearch、真邮件/短信或目标环境部署验收。
 - GitHub `pre` Environment 和目标机仍缺完整运行参数、SMTP/Twilio/Stripe 真实测试凭证、SSH 发布配置、HTTPS/WSS 域名和回滚 smoke URL。
-- 2026-11-09 已在当前主干 `4ad66a0d…` 使用 PowerShell 7 完整执行 `scripts/ci/verify-all.ps1 -IncludeFlutter`：全部发布/回滚/预检契约、后端 707 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项及所有构建、Flutter analyze 均通过。该结果仍不替代目标环境 MySQL/Redis/S3/ES、真实供应商和部署验收。
-- 同日当前开发工作区的发布身份、WebSocket 来源和部署后验收增量继续完成回归：后端全量 711 项、用户 Web 293 项、管理端 193 项均通过，用户 Web 与管理端生产构建通过；发布/回滚、验收报告、GitHub Actions runtime、文档状态一致性和 `git diff --check` 契约通过。后续审计又固定 `test` 回滚为 EU 同组并发锁，并拒绝 API/smoke URL 的 query/fragment，避免错误区域回滚及令牌进入证据。该工作区结果尚未提交，不得写成当前主干或真实 `test/pre` 部署证据。
+- 2026-11-09 PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 已将发布身份、WebSocket 真实来源、部署后验收证据、手工 `test/EU` 重试和固定区域回滚合入主干，合并基线为 `e92ba3c…`。其 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42574817291) 全部通过：后端 711 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项及各端构建、Flutter analyze、浏览器 E2E、MySQL/Redis/S3/Elasticsearch smoke 和迁移集成均通过。随后 [release 运行](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42576540273) 因 `test` Environment 缺配置，仅通过门禁并跳过 checkout、打包、上传、部署与验收证据；该结果不构成真实 `test/pre` 部署证据。
 
 ## 6. 下一步建议
 
@@ -536,4 +535,4 @@
 
 1. 先由环境负责人补齐 `test/pre` Environment variables/secrets 与目标机私有 env；只通过 GitHub Environment/密钥管理系统写入，不把真实密钥放进仓库或聊天。
 2. 运行 GitHub Environment 预检和 `stripe-preflight.sh --check-cli`；通过后依次做目标环境 MySQL、Redis、S3、Elasticsearch、SMTP/Twilio 和 Stripe smoke。
-3. 在不可变主干 `4ad66a0d…` 上使用真实 Web/Stripe/SEO 配置生成新版本环境化候选，先发布 `test` 再发布 `pre`，完成数据库迁移、ES 重建、20 项台账、备份恢复和回滚演练。FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。
+3. 在不可变主干 `e92ba3c…` 或更新的已通过 CI 提交上使用真实 Web/Stripe/SEO 配置生成新版本环境化候选，先发布 `test` 再发布 `pre`，完成数据库迁移、ES 重建、20 项台账、备份恢复和回滚演练。FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。
