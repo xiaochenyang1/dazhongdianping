@@ -177,6 +177,7 @@ $requiredVariables = @(
     "DEPLOY_SSH_USER",
     "DEPLOY_REMOTE_ROOT",
     "DEPLOY_SMOKE_URLS",
+    "DEPLOY_RUNTIME_ENV_FILE",
     "DEPLOY_DB_DEFAULTS_FILE",
     "VITE_API_BASE_URL",
     "VITE_WS_BASE_URL",
@@ -246,6 +247,11 @@ if ((Test-ConfiguredValue -Value $remoteRoot) -and -not (Test-SafeAbsolutePath -
 $databaseDefaultsFile = Get-EnvironmentVariableValue -Name "DEPLOY_DB_DEFAULTS_FILE"
 if ((Test-ConfiguredValue -Value $databaseDefaultsFile) -and -not (Test-SafeAbsolutePath -Value $databaseDefaultsFile -AllowRoot)) {
     Add-InvalidVariable -Name "DEPLOY_DB_DEFAULTS_FILE" -Message "must be a safe absolute path without traversal"
+}
+
+$runtimeEnvFile = Get-EnvironmentVariableValue -Name "DEPLOY_RUNTIME_ENV_FILE"
+if ((Test-ConfiguredValue -Value $runtimeEnvFile) -and -not (Test-SafeAbsolutePath -Value $runtimeEnvFile -AllowRoot)) {
+    Add-InvalidVariable -Name "DEPLOY_RUNTIME_ENV_FILE" -Message "must be a safe absolute path without traversal"
 }
 
 $smokeUrls = Get-EnvironmentVariableValue -Name "DEPLOY_SMOKE_URLS"

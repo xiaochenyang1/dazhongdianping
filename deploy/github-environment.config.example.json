@@ -12,6 +12,7 @@
     "DEPLOY_ADMIN_SERVICE": "dzdp-admin-web",
     "DEPLOY_MERCHANT_SERVICE": "dzdp-merchant-web",
     "DEPLOY_SMOKE_URLS": "https://CHANGE_ME/actuator/health,https://CHANGE_ME/health",
+    "DEPLOY_RUNTIME_ENV_FILE": "/etc/dazhongdianping/eu-pre.env",
     "DEPLOY_DB_DEFAULTS_FILE": "/etc/dazhongdianping/mysql-release.cnf",
     "DEPLOY_DB_MIGRATION_MODE": "apply",
     "DEPLOY_RELEASE_RETENTION_COUNT": "5",
