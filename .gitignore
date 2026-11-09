@@ -43,3 +43,5 @@ backend/local-storage/
 deploy/*.env
 deploy/*.cnf
 !deploy/*.cnf.example
+deploy/github-environment.*.json
+!deploy/github-environment.config.example.json
