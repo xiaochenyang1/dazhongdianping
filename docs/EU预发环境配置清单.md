@@ -165,7 +165,7 @@ Environment protection：
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
 - 2026-11-09 运行 `github-environment-preflight.ps1` 的只读审计：`test` 缺少 10 个发布变量和 `DEPLOY_KNOWN_HOSTS` / `DEPLOY_SSH_PRIVATE_KEY` 两个 secret；`pre` 除相同 10 个变量和 2 个 secret 外，还缺少 `required_reviewers` 审批规则，管理员仍可绕过，且未限制部署分支或标签。目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证均未齐备；`prod` Environment 尚未创建。
-- 当前技术候选 `eu-pre-rc-20261108-2` 已绑定主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。
+- 当前技术候选 `eu-pre-rc-20261108-2` 已绑定历史主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 的合并基线为 `e92ba3c…`；环境配置补齐后必须从该提交或更新的已通过 CI 提交重新生成版本号唯一的环境化候选。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
 ## 6. 已完成的仓库侧准备
@@ -176,3 +176,4 @@ Environment protection：
 - PR #1 已合入 `main`；合并提交的主干 CI 全部通过。
 - 已执行一次不注入伪造域名或支付配置的完整本地打包，ZIP、旁车 SHA-256、release manifest、后端 JAR、三个 Web `dist`、迁移 runner、迁移清单和 `03-14` 共 12 个迁移文件均已核验。
 - 自动 `release` 已验证配置缺失时只完成门禁检查，打包、上传和部署均跳过。此项不替代真实 `test`/`pre` 发布、smoke 或回滚演练。
+- PR #37 合并提交 `e92ba3c…` 的 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42574817291) 全部通过；随后 [release 运行](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42576540273) 再次确认 `test` 缺配置时只执行门禁，checkout、打包、上传、部署和验收证据均 skipped。
