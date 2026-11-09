@@ -529,11 +529,12 @@
 - GitHub `pre` Environment 和目标机仍缺完整运行参数、SMTP/Twilio/Stripe 真实测试凭证、SSH 发布配置、HTTPS/WSS 域名和回滚 smoke URL。
 - 2026-11-09 PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 已将发布身份、WebSocket 真实来源、部署后验收证据、手工 `test/EU` 重试和固定区域回滚合入主干，合并基线为 `e92ba3c…`。其 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42574817291) 全部通过：后端 711 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项及各端构建、Flutter analyze、浏览器 E2E、MySQL/Redis/S3/Elasticsearch smoke 和迁移集成均通过。随后 [release 运行](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42576540273) 因 `test` Environment 缺配置，仅通过门禁并跳过 checkout、打包、上传、部署与验收证据；该结果不构成真实 `test/pre` 部署证据。
 - 仓库已新增 `github-environment-bootstrap.ps1` 和私有配置示例：默认只做脱敏 Plan，显式 Apply 才写入变量、两个部署 secret、审批规则和 branch/tag policy；`prod` 有额外保护，Apply 后会实时复核。GitHub API 无法关闭管理员绕过，因此该项仍需在 UI 人工设置并由脚本读取实际状态确认。该工具不包含任何真实值，也不代表当前 `test/pre` 已配置完成。
+- 仓库已新增 `target-host-preflight.ps1` / `.sh`：通过单次 SSH 只读检查 Linux 工具、发布目录/软链、磁盘、私有文件权限、运行配置、MySQL 查询、systemd/sudo 和 Redis/S3/Elasticsearch/SMTP/Twilio/Stripe 网络入口；报告脱敏且明确不修改目标。隔离夹具覆盖完整通过、占位值、权限过宽和严格阻断；尚未获得真实目标机配置，因此没有真实预检结果。
 
 ## 6. 下一步建议
 
 如果你现在要继续往下干,最合理的顺序是:
 
 1. 由环境负责人使用 `github-environment-bootstrap.ps1` 按 `test`、`pre` 顺序补齐 Environment variables/secrets/protection；默认先审 Plan，真实值只进入私有文件、GitHub Environment 或密钥管理系统，并在 UI 关闭管理员绕过。
-2. 开发目标机预检，覆盖运行配置、工具、目录/权限、网络和 MySQL、Redis、S3、Elasticsearch、SMTP/Twilio、Stripe 入口；再把 GitHub Environment、目标机预检和自动化测试汇总成就绪报告。
+2. 在真实目标机运行只读预检；同时开发自动就绪报告，把 GitHub Environment 审计、目标机预检和仓库测试证据汇总成可交接结论。
 3. 所有真实配置通过后，在不可变主干 `e92ba3c…` 或更新的已通过 CI 提交上生成环境化候选，先发布 `test` 再经审批发布 `pre`，完成数据库迁移、ES 重建、20 项台账、备份恢复和回滚演练。环境闭环后再继续新业务；FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。

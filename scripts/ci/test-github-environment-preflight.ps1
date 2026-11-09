@@ -61,6 +61,7 @@ $readyVariables = @{
     DEPLOY_ADMIN_SERVICE = "dzdp-admin-web"
     DEPLOY_MERCHANT_SERVICE = "dzdp-merchant-web"
     DEPLOY_SMOKE_URLS = "https://api.example.com/actuator/health,https://www.example.com/health"
+    DEPLOY_RUNTIME_ENV_FILE = "/etc/dazhongdianping/eu-pre.env"
     DEPLOY_DB_DEFAULTS_FILE = "/etc/dazhongdianping/mysql-release.cnf"
     DEPLOY_DB_MIGRATION_MODE = "apply"
     DEPLOY_RELEASE_RETENTION_COUNT = "5"
@@ -136,6 +137,7 @@ $missingReportText = (& $preflightPath `
     -ReportOnly) -join "`n"
 foreach ($expected in @(
     "DEPLOY_DB_DEFAULTS_FILE",
+    "DEPLOY_RUNTIME_ENV_FILE",
     "DEPLOY_REMOTE_ROOT",
     "DEPLOY_SMOKE_URLS",
     "DEPLOY_SSH_HOST",
@@ -166,6 +168,7 @@ $invalidVariables.DEPLOY_SSH_HOST = "ssh://deploy@example.com/path"
 $invalidVariables.DEPLOY_SSH_PORT = "70000"
 $invalidVariables.DEPLOY_REMOTE_ROOT = "/"
 $invalidVariables.DEPLOY_SMOKE_URLS = "http://user:pass@example.com/health"
+$invalidVariables.DEPLOY_RUNTIME_ENV_FILE = "/etc/../runtime.env"
 $invalidVariables.DEPLOY_DB_DEFAULTS_FILE = "/etc/../root.cnf"
 $invalidVariables.DEPLOY_DB_MIGRATION_MODE = "drop"
 $invalidVariables.DEPLOY_RELEASE_RETENTION_COUNT = "0"
@@ -187,6 +190,7 @@ foreach ($expected in @(
     "DEPLOY_SSH_PORT",
     "DEPLOY_REMOTE_ROOT",
     "DEPLOY_SMOKE_URLS",
+    "DEPLOY_RUNTIME_ENV_FILE",
     "DEPLOY_DB_DEFAULTS_FILE",
     "DEPLOY_DB_MIGRATION_MODE",
     "DEPLOY_RELEASE_RETENTION_COUNT",

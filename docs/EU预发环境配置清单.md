@@ -95,6 +95,7 @@ set +a
 - 文件不放在 release bundle 目录内。
 - GitHub Environment 变量 `DEPLOY_DB_DEFAULTS_FILE` 指向这个路径。
 - 首次接管已有库时，临时设置 `DEPLOY_DB_BASELINE_VERSION`；确认迁移成功后移除。
+- 安装后的真实运行 env 同样放在 release bundle 外，并由 `DEPLOY_RUNTIME_ENV_FILE` 指向；建议路径为 `/etc/dazhongdianping/eu-pre.env`，权限使用 `0400` 或 `0600`。
 
 ## 3. GitHub `pre` Environment
 
@@ -130,6 +131,17 @@ Copy-Item deploy/github-environment.config.example.json deploy/github-environmen
 
 移除 `-ReportOnly` 后，任何缺失或格式错误都会以非零状态失败，可作为正式发版前的人工门禁。该审计只证明 GitHub Environment 发布入口齐备，不替代目标机上的 `stripe-preflight.sh --check-cli`、中间件连通性、供应商送达、部署 smoke 和回滚演练。
 
+GitHub Environment 审计通过且 SSH 已按发布工作流准备后，可运行目标机只读预检：
+
+```powershell
+./scripts/ci/target-host-preflight.ps1 -Environment pre -Region EU -ReportOnly
+./scripts/ci/target-host-preflight.ps1 -Environment pre -Region EU -ReportOnly -Json
+```
+
+脚本从 `DEPLOY_*` 变量读取 SSH、发布目录、运行 env、MySQL defaults 文件和四个 systemd 服务名，通过一次非交互 SSH 执行只读检查：Linux/部署工具、Java 17+、发布目录和 `current/previous` 软链安全、默认 2 GiB 可用空间、两个私有文件的 `0400/0600` 权限、运行参数名称/格式、MySQL `SELECT 1`、systemd unit、精确的无密码 sudo 权限，以及 Redis、Elasticsearch、S3、SMTP、Twilio、Stripe 的网络可达性。默认模式有失败即返回非零；`-ReportOnly` 用于盘点，`-DryRun` 只显示计划且不连接目标机。输出和 JSON 都不包含主机、私有路径或配置值，报告固定声明 `MutatedTarget=false`。
+
+该预检不会创建目录、修改权限、重启服务或写入中间件；Redis/S3/SMTP/Twilio/Stripe 等网络检查也不等于带真实凭证的读写/送达/支付验收，后续仍必须执行对应 smoke。
+
 Variables：
 
 | 变量 | 示例/约束 |
@@ -143,6 +155,7 @@ Variables：
 | `DEPLOY_ADMIN_SERVICE` | 默认 `dzdp-admin-web` |
 | `DEPLOY_MERCHANT_SERVICE` | 默认 `dzdp-merchant-web` |
 | `DEPLOY_SMOKE_URLS` | 逗号或换行分隔、无 userinfo/query/fragment 的绝对 HTTPS smoke URL；每项必须返回 `2xx`，认证令牌不得放进 URL 或验收报告 |
+| `DEPLOY_RUNTIME_ENV_FILE` | 目标机私有运行 env 的绝对路径，例如 `/etc/dazhongdianping/eu-pre.env` |
 | `DEPLOY_DB_DEFAULTS_FILE` | 目标机 MySQL defaults 文件绝对路径 |
 | `DEPLOY_DB_MIGRATION_MODE` | `apply` 或 `verify` |
 | `DEPLOY_DB_BASELINE_VERSION` | 仅首次接管已有库时临时设置 |
@@ -183,7 +196,7 @@ Environment protection：
 - Stripe CLI 1.50.1 已安装；2026-11-09 加载仓库模板执行 `stripe-preflight.sh --check-cli` 后，CLI 检查通过，但仍有 29 个真实值/凭证缺失，因此没有 Stripe test 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
-- 2026-11-09 运行 `github-environment-preflight.ps1` 的只读审计：`test` 缺少 10 个发布变量和 `DEPLOY_KNOWN_HOSTS` / `DEPLOY_SSH_PRIVATE_KEY` 两个 secret；`pre` 除相同 10 个变量和 2 个 secret 外，还缺少 `required_reviewers` 审批规则，管理员仍可绕过，且未限制部署分支或标签。目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证均未齐备；`prod` Environment 尚未创建。
+- 2026-11-09 按当时规则运行 `github-environment-preflight.ps1` 的只读审计：`test` 缺少 10 个发布变量和 `DEPLOY_KNOWN_HOSTS` / `DEPLOY_SSH_PRIVATE_KEY` 两个 secret；`pre` 除相同 10 个变量和 2 个 secret 外，还缺少 `required_reviewers` 审批规则，管理员仍可绕过，且未限制部署分支或标签。当前规则另要求 `DEPLOY_RUNTIME_ENV_FILE`，用于后续目标机只读预检。目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证均未齐备；`prod` Environment 尚未创建。
 - 当前技术候选 `eu-pre-rc-20261108-2` 已绑定历史主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 的合并基线为 `e92ba3c…`；环境配置补齐后必须从该提交或更新的已通过 CI 提交重新生成版本号唯一的环境化候选。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
