@@ -207,7 +207,7 @@ Environment protection：
 - Stripe CLI 1.50.1 已安装；2026-11-09 加载仓库模板执行 `stripe-preflight.sh --check-cli` 后，CLI 检查通过，但仍有 29 个真实值/凭证缺失，因此没有 Stripe test 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
-- 2026-11-09 对主干提交 `269eb94812da244ee77ced4b5707bb1d219ae4d3` 运行了真实但只读的 `test/EU` readiness（Actions run `42621891825`）：CI 两个必需 job 均通过，证据先成功上传，最终因 Environment 缺少 11 个变量、2 个 SSH secret 且无法连接目标机而按预期阻断，`readyForDeployment=false`、`mutatedExternalState=false`。随后规则把 SSH 主机/用户及三个私有路径改为 secrets；再次执行前须按本节新分类配置。目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证仍未齐备；`prod` Environment 尚未创建。
+- 2026-11-09 对主干提交 `971554a0ae6f5573b940b74f01c0902955e421bd` 运行了真实但只读的 `test/EU` readiness（Actions run [`42644934571`](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42644934571)）：CI 两个必需 job 均通过，证据先成功上传，最终因 Environment 缺少 6 个公开变量、7 个部署 secret 且无法连接目标机而按预期阻断，`readyForDeployment=false`、`mutatedExternalState=false`。报告没有主机、私有路径或凭证正文；目标机、数据库、Web/SEO 配置及 SMTP/Twilio/Stripe 凭证仍未齐备，`prod` Environment 尚未创建。
 - 当前技术候选 `eu-pre-rc-20261108-2` 已绑定历史主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 的合并基线为 `e92ba3c…`；环境配置补齐后必须从该提交或更新的已通过 CI 提交重新生成版本号唯一的环境化候选。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
