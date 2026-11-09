@@ -1,0 +1,171 @@
+name: readiness
+
+permissions:
+  actions: read
+  contents: read
+  deployments: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to audit
+        required: true
+        type: choice
+        options:
+          - test
+          - pre
+          - prod
+      region:
+        description: Region to audit (test is fixed to EU)
+        required: true
+        default: EU
+        type: choice
+        options:
+          - CN
+          - EU
+      commit_sha:
+        description: Full 40-character main commit SHA with completed CI
+        required: true
+        type: string
+
+jobs:
+  readiness:
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.environment }}
+    env:
+      DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+      DEPLOY_REGION: ${{ inputs.region }}
+      DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+      DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+      DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+      DEPLOY_REMOTE_ROOT: ${{ vars.DEPLOY_REMOTE_ROOT }}
+      DEPLOY_BACKEND_SERVICE: ${{ vars.DEPLOY_BACKEND_SERVICE }}
+      DEPLOY_WEB_SERVICE: ${{ vars.DEPLOY_WEB_SERVICE }}
+      DEPLOY_ADMIN_SERVICE: ${{ vars.DEPLOY_ADMIN_SERVICE }}
+      DEPLOY_MERCHANT_SERVICE: ${{ vars.DEPLOY_MERCHANT_SERVICE }}
+      DEPLOY_SMOKE_URLS: ${{ vars.DEPLOY_SMOKE_URLS }}
+      DEPLOY_RUNTIME_ENV_FILE: ${{ vars.DEPLOY_RUNTIME_ENV_FILE }}
+      DEPLOY_DB_DEFAULTS_FILE: ${{ vars.DEPLOY_DB_DEFAULTS_FILE }}
+      DEPLOY_DB_MIGRATION_MODE: ${{ vars.DEPLOY_DB_MIGRATION_MODE }}
+      DEPLOY_DB_BASELINE_VERSION: ${{ vars.DEPLOY_DB_BASELINE_VERSION }}
+      DEPLOY_RELEASE_RETENTION_COUNT: ${{ vars.DEPLOY_RELEASE_RETENTION_COUNT }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_WS_BASE_URL: ${{ vars.VITE_WS_BASE_URL }}
+      VITE_STRIPE_PUBLISHABLE_KEY: ${{ vars.VITE_STRIPE_PUBLISHABLE_KEY }}
+      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+      PRERENDER_API_BASE_URL: ${{ vars.PRERENDER_API_BASE_URL }}
+      PRERENDER_REGIONS: ${{ vars.PRERENDER_REGIONS }}
+      PUBLIC_SITE_URL_CN: ${{ vars.PUBLIC_SITE_URL_CN }}
+      PRERENDER_API_BASE_URL_CN: ${{ vars.PRERENDER_API_BASE_URL_CN }}
+      PUBLIC_SITE_URL_EU: ${{ vars.PUBLIC_SITE_URL_EU }}
+      PRERENDER_API_BASE_URL_EU: ${{ vars.PRERENDER_API_BASE_URL_EU }}
+      READINESS_REPORT_DIR: artifacts/readiness
+      READINESS_ENVIRONMENT: ${{ inputs.environment }}
+      READINESS_REGION: ${{ inputs.region }}
+      READINESS_COMMIT_SHA: ${{ inputs.commit_sha }}
+      READINESS_REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Validate readiness request
+        shell: bash
+        run: |
+          if [[ ! "$READINESS_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::commit_sha must be a lowercase full 40-character Git SHA."
+            exit 1
+          fi
+          if [[ "$READINESS_ENVIRONMENT" == "test" && "$READINESS_REGION" != "EU" ]]; then
+            echo "::error::test readiness is fixed to region EU."
+            exit 1
+          fi
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.commit_sha }}
+      - name: Prepare SSH for read-only target audit
+        shell: bash
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Build offline GitHub Environment audit
+        id: environment-audit
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          $variableNames = @(
+            "DEPLOY_SSH_HOST", "DEPLOY_SSH_PORT", "DEPLOY_SSH_USER", "DEPLOY_REMOTE_ROOT",
+            "DEPLOY_BACKEND_SERVICE", "DEPLOY_WEB_SERVICE", "DEPLOY_ADMIN_SERVICE", "DEPLOY_MERCHANT_SERVICE",
+            "DEPLOY_SMOKE_URLS", "DEPLOY_RUNTIME_ENV_FILE", "DEPLOY_DB_DEFAULTS_FILE",
+            "DEPLOY_DB_MIGRATION_MODE", "DEPLOY_DB_BASELINE_VERSION", "DEPLOY_RELEASE_RETENTION_COUNT",
+            "VITE_API_BASE_URL", "VITE_WS_BASE_URL", "VITE_STRIPE_PUBLISHABLE_KEY",
+            "PUBLIC_SITE_URL", "PRERENDER_API_BASE_URL", "PRERENDER_REGIONS",
+            "PUBLIC_SITE_URL_CN", "PRERENDER_API_BASE_URL_CN", "PUBLIC_SITE_URL_EU", "PRERENDER_API_BASE_URL_EU"
+          )
+          $variables = @($variableNames | ForEach-Object {
+            $value = [Environment]::GetEnvironmentVariable($_)
+            if (-not [string]::IsNullOrWhiteSpace($value)) { [pscustomobject]@{ name = $_; value = $value } }
+          })
+          $secrets = @(
+            if (-not [string]::IsNullOrWhiteSpace($env:DEPLOY_KNOWN_HOSTS)) { [pscustomobject]@{ name = "DEPLOY_KNOWN_HOSTS" } }
+            if (-not [string]::IsNullOrWhiteSpace($env:DEPLOY_SSH_PRIVATE_KEY)) { [pscustomobject]@{ name = "DEPLOY_SSH_PRIVATE_KEY" } }
+          )
+          $protection = gh api "repos/$($env:READINESS_REPOSITORY)/environments/$($env:READINESS_ENVIRONMENT)"
+          if ($LASTEXITCODE -ne 0) { throw "Unable to read Environment protection" }
+          $audit = ./scripts/ci/github-environment-preflight.ps1 `
+            -Environment $env:READINESS_ENVIRONMENT `
+            -Repository $env:READINESS_REPOSITORY `
+            -VariablesJson (ConvertTo-Json -InputObject $variables -Compress) `
+            -SecretsJson (ConvertTo-Json -InputObject $secrets -Compress) `
+            -ProtectionJson ($protection -join "`n") `
+            -ReportOnly `
+            -Json
+          $snapshotPath = Join-Path $env:RUNNER_TEMP "environment-audit.json"
+          $audit | Set-Content -LiteralPath $snapshotPath -Encoding utf8
+          "snapshot_path=$snapshotPath" >> $env:GITHUB_OUTPUT
+      - name: Generate readiness evidence
+        id: report
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $parameters = @{
+            Environment = $env:READINESS_ENVIRONMENT
+            Region = $env:READINESS_REGION
+            Repository = $env:READINESS_REPOSITORY
+            CommitSha = $env:READINESS_COMMIT_SHA
+            OutputDirectory = $env:READINESS_REPORT_DIR
+            ReportOnly = $true
+          }
+          $environmentSnapshot = "${{ steps.environment-audit.outputs.snapshot_path }}"
+          if (-not [string]::IsNullOrWhiteSpace($environmentSnapshot) -and (Test-Path -LiteralPath $environmentSnapshot)) {
+            $parameters.EnvironmentSnapshotPath = $environmentSnapshot
+          }
+          ./scripts/ci/readiness-report.ps1 @parameters
+          $jsonPath = Get-ChildItem -LiteralPath $env:READINESS_REPORT_DIR -Filter "readiness-*.json" | Select-Object -First 1 -ExpandProperty FullName
+          "json_path=$jsonPath" >> $env:GITHUB_OUTPUT
+      - name: Upload readiness evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: readiness-${{ inputs.environment }}-${{ inputs.region }}-${{ github.run_id }}
+          path: ${{ env.READINESS_REPORT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+      - name: Enforce readiness gate
+        if: always()
+        shell: pwsh
+        run: |
+          $jsonPath = "${{ steps.report.outputs.json_path }}"
+          if ([string]::IsNullOrWhiteSpace($jsonPath) -or -not (Test-Path -LiteralPath $jsonPath)) {
+            throw "Readiness evidence was not generated"
+          }
+          $report = Get-Content -LiteralPath $jsonPath -Raw | ConvertFrom-Json
+          if (-not [bool]$report.ready) { throw "Deployment readiness is blocked; inspect the uploaded evidence" }
