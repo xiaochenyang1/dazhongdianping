@@ -142,6 +142,16 @@ GitHub Environment 审计通过且 SSH 已按发布工作流准备后，可运�
 
 该预检不会创建目录、修改权限、重启服务或写入中间件；Redis/S3/SMTP/Twilio/Stripe 等网络检查也不等于带真实凭证的读写/送达/支付验收，后续仍必须执行对应 smoke。
 
+Environment 和目标机预检都有真实结果后，使用一个已经完成主干 CI 的 40 位提交生成自动就绪报告：
+
+```powershell
+./scripts/ci/readiness-report.ps1 -Environment pre -Region EU -CommitSha <40位main提交> -ReportOnly
+```
+
+也可从 GitHub Actions 手工运行 `readiness` workflow，输入环境、区域和同一个 40 位提交。它会绑定所选 GitHub Environment，核对该提交的 `ci` push 运行及 `verify`、`database-migration-integration` 两个 job，执行 Environment 审计和目标机只读预检，先上传保留 30 天的脱敏 JSON/Markdown，再根据 `ready` 结果通过或失败。`pre/prod` 的 Environment 审批仍会生效。该 workflow 不打包、不部署、不回滚。
+
+只有三个门禁同时通过、Environment 没有管理员绕过/自审/分支策略等加固警告、目标报告声明未修改机器时，`readyForDeployment` 才为 `true`。报告不替代真实供应商 smoke、部署后验收、备份恢复和回滚证据。
+
 Variables：
 
 | 变量 | 示例/约束 |
@@ -189,7 +199,8 @@ Environment protection：
 7. Stripe CLI 转发 `payment_intent.succeeded` 到后端，Webhook 验签通过并发券。
 8. 非法 Stripe 签名返回 `400`。
 9. EU Stripe 订单不能通过 `mock-complete` 绕过支付。
-10. 发布包 SHA-256 校验、部署 smoke 和回滚演练通过；部署与回滚 smoke 均只接受 `2xx`。
+10. 自动就绪报告绑定同一 40 位主干提交并显示 `readyForDeployment=true`。
+11. 发布包 SHA-256 校验、部署 smoke 和回滚演练通过；部署与回滚 smoke 均只接受 `2xx`。
 
 ## 5. 当前阻塞
 
