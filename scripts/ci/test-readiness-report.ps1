@@ -34,6 +34,7 @@ function Write-Snapshots {
         [string]$CiConclusion = "success",
         [string]$VerifyConclusion = "success",
         [bool]$EnvironmentReady = $true,
+        [string[]]$EnvironmentMissingSecrets = @(),
         [object[]]$EnvironmentWarnings = @(),
         [bool]$TargetReady = $true
     )
@@ -56,7 +57,7 @@ function Write-Snapshots {
         Environment = "pre"
         Ready = $EnvironmentReady
         MissingVariables = @()
-        MissingSecrets = @()
+        MissingSecrets = $EnvironmentMissingSecrets
         InvalidVariables = @()
         MissingProtectionRules = @()
         InvalidProtectionRules = @()
@@ -161,6 +162,21 @@ try {
     Assert-True (-not $warningReport.ready) "environment hardening warnings must block full readiness"
     Assert-True ("can_admins_bypass" -in @($warningReport.sections.githubEnvironment.hardeningWarnings)) "report must preserve warning names without warning details"
     Assert-True (($warningReport | ConvertTo-Json -Depth 10) -notmatch 'must not be copied') "report must not copy external warning details"
+
+    Write-Snapshots -EnvironmentReady $false -EnvironmentMissingSecrets @("DEPLOY_SSH_HOST", "DEPLOY_RUNTIME_ENV_FILE")
+    $missingSecretReport = & $scriptPath `
+        -Environment pre `
+        -Region EU `
+        -Repository owner/repo `
+        -CommitSha $commitSha `
+        -CiSnapshotPath $ciPath `
+        -EnvironmentSnapshotPath $environmentPath `
+        -TargetSnapshotPath $targetPath `
+        -OutputDirectory $reportRoot `
+        -ReportOnly `
+        -Json | ConvertFrom-Json
+    Assert-True ("DEPLOY_SSH_HOST" -in @($missingSecretReport.sections.githubEnvironment.missingSecrets)) "readiness must preserve the SSH host secret name"
+    Assert-True ("DEPLOY_RUNTIME_ENV_FILE" -in @($missingSecretReport.sections.githubEnvironment.missingSecrets)) "readiness must preserve the runtime path secret name"
 
     Write-Snapshots -TargetReady $false
     $targetBlocked = & $scriptPath `

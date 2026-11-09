@@ -21,7 +21,7 @@ foreach ($required in @(
     "contents: read",
     "deployments: read",
     "environment: `${{ inputs.environment }}",
-    "DEPLOY_RUNTIME_ENV_FILE: `${{ vars.DEPLOY_RUNTIME_ENV_FILE }}",
+    "DEPLOY_RUNTIME_ENV_FILE: `${{ secrets.DEPLOY_RUNTIME_ENV_FILE }}",
     "READINESS_COMMIT_SHA: `${{ inputs.commit_sha }}",
     "Prepare SSH for read-only target audit",
     "github-environment-preflight.ps1",
@@ -39,6 +39,10 @@ Assert-True ($workflow.IndexOf("Upload readiness evidence", [StringComparison]::
     $workflow.IndexOf("Enforce readiness gate", [StringComparison]::Ordinal)) "readiness evidence must upload before the final gate fails"
 Assert-True ($workflow -notmatch 'deploy-release[.]ps1|rollback-release[.]ps1|package-release[.]ps1') "readiness workflow must not package, deploy, or roll back"
 Assert-True ($workflow -notmatch 'DEPLOY_SSH_PRIVATE_KEY.*GITHUB_OUTPUT|DEPLOY_KNOWN_HOSTS.*GITHUB_OUTPUT') "readiness workflow must never write secret bodies to outputs"
+foreach ($name in @("DEPLOY_SSH_HOST", "DEPLOY_SSH_USER", "DEPLOY_REMOTE_ROOT", "DEPLOY_RUNTIME_ENV_FILE", "DEPLOY_DB_DEFAULTS_FILE")) {
+    Assert-True ($workflow.Contains("$name`: `${{ secrets.$name }}")) "readiness workflow must mask private deployment metadata $name"
+    Assert-True (-not $workflow.Contains("$name`: `${{ vars.$name }}")) "readiness workflow must not expose private deployment metadata $name as a variable"
+}
 Assert-True ($workflow -notmatch '"\$\{\{ inputs[.]commit_sha \}\}"') "shell bodies must consume the commit through an environment variable"
 
 Write-Output "readiness workflow contract passed"

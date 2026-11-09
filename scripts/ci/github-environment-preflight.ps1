@@ -173,12 +173,7 @@ function Add-AuditWarning {
 }
 
 $requiredVariables = @(
-    "DEPLOY_SSH_HOST",
-    "DEPLOY_SSH_USER",
-    "DEPLOY_REMOTE_ROOT",
     "DEPLOY_SMOKE_URLS",
-    "DEPLOY_RUNTIME_ENV_FILE",
-    "DEPLOY_DB_DEFAULTS_FILE",
     "VITE_API_BASE_URL",
     "VITE_WS_BASE_URL",
     "VITE_STRIPE_PUBLISHABLE_KEY"
@@ -187,7 +182,15 @@ foreach ($name in $requiredVariables) {
     Require-EnvironmentVariable -Name $name
 }
 
-foreach ($name in @("DEPLOY_SSH_PRIVATE_KEY", "DEPLOY_KNOWN_HOSTS")) {
+foreach ($name in @(
+    "DEPLOY_SSH_HOST",
+    "DEPLOY_SSH_USER",
+    "DEPLOY_REMOTE_ROOT",
+    "DEPLOY_RUNTIME_ENV_FILE",
+    "DEPLOY_DB_DEFAULTS_FILE",
+    "DEPLOY_SSH_PRIVATE_KEY",
+    "DEPLOY_KNOWN_HOSTS"
+)) {
     if (-not $secrets.Contains($name)) {
         $null = $missingSecrets.Add($name)
     }

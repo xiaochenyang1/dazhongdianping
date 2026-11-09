@@ -30,6 +30,10 @@ $allowedEnvironmentVariableNames = @(
     "PUBLIC_SITE_URL", "PRERENDER_API_BASE_URL", "PRERENDER_REGIONS",
     "PUBLIC_SITE_URL_CN", "PRERENDER_API_BASE_URL_CN", "PUBLIC_SITE_URL_EU", "PRERENDER_API_BASE_URL_EU"
 )
+$allowedEnvironmentSecretNames = @(
+    "DEPLOY_SSH_HOST", "DEPLOY_SSH_USER", "DEPLOY_REMOTE_ROOT", "DEPLOY_RUNTIME_ENV_FILE",
+    "DEPLOY_DB_DEFAULTS_FILE", "DEPLOY_KNOWN_HOSTS", "DEPLOY_SSH_PRIVATE_KEY"
+)
 $allowedTargetCheckNames = @(
     "input", "operating-system", "deployment-tools", "java-runtime", "release-root", "release-layout",
     "disk-space", "runtime-env-file", "runtime-env-permissions", "database-defaults-file",
@@ -303,7 +307,7 @@ $ciReady = [string]$ciSnapshot.commitSha -ceq $CommitSha -and
     "automated-tests" -notin $sectionErrors
 
 $missingVariables = Get-AllowedNames -Values @($environmentSnapshot.MissingVariables) -Allowed $allowedEnvironmentVariableNames -UnknownName "unknown-variable"
-$missingSecrets = Get-AllowedNames -Values @($environmentSnapshot.MissingSecrets) -Allowed @("DEPLOY_KNOWN_HOSTS", "DEPLOY_SSH_PRIVATE_KEY") -UnknownName "unknown-secret"
+$missingSecrets = Get-AllowedNames -Values @($environmentSnapshot.MissingSecrets) -Allowed $allowedEnvironmentSecretNames -UnknownName "unknown-secret"
 $invalidVariables = Get-AllowedNames -Values @($environmentSnapshot.InvalidVariables | ForEach-Object { [string]$_.Name }) -Allowed $allowedEnvironmentVariableNames -UnknownName "unknown-variable"
 $missingProtectionRules = Get-AllowedNames -Values @($environmentSnapshot.MissingProtectionRules) -Allowed @("required_reviewers") -UnknownName "unknown-protection"
 $invalidProtectionRules = Get-AllowedNames -Values @($environmentSnapshot.InvalidProtectionRules | ForEach-Object { [string]$_.Name }) -Allowed @("required_reviewers") -UnknownName "unknown-protection"

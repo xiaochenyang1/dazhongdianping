@@ -93,7 +93,7 @@ set +a
 
 - 权限为 `0400` 或 `0600`。
 - 文件不放在 release bundle 目录内。
-- GitHub Environment 变量 `DEPLOY_DB_DEFAULTS_FILE` 指向这个路径。
+- GitHub Environment secret `DEPLOY_DB_DEFAULTS_FILE` 指向这个路径，避免私有目标机路径出现在 Actions 日志。
 - 首次接管已有库时，临时设置 `DEPLOY_DB_BASELINE_VERSION`；确认迁移成功后移除。
 - 安装后的真实运行 env 同样放在 release bundle 外，并由 `DEPLOY_RUNTIME_ENV_FILE` 指向；建议路径为 `/etc/dazhongdianping/eu-pre.env`，权限使用 `0400` 或 `0600`。
 
@@ -117,8 +117,8 @@ Copy-Item deploy/github-environment.config.example.json deploy/github-environmen
 ```
 
 - `deploy/github-environment.*.json` 已被 Git 忽略；Apply 也会拒绝 Git 已跟踪的私有配置和 secret 文件。也可把它们放在仓库外，`secretFiles` 的相对路径按配置文件所在目录解析。
-- 配置文件只保存非敏感变量和两个 secret 文件路径。secret 正文经标准输入交给 `gh`，不会出现在命令参数、Plan 或 JSON 报告中；不要把私钥、known_hosts 或真实配置粘贴进仓库和聊天。Unix 上 SSH 私钥必须禁止 group/other 权限，例如 `chmod 600 <private-key>`。
-- 工具只接受发布变量白名单和 `DEPLOY_SSH_PRIVATE_KEY`、`DEPLOY_KNOWN_HOSTS` 两个 secret，拒绝占位值；`pre/prod` 强制真实审批人、禁止自审并启用自定义 branch/tag policy。`prod -Apply` 还必须显式增加 `-AllowProduction`。
+- 配置文件保存白名单配置值和两个 credential secret 文件路径；工具会把 SSH 主机/用户及三个目标机私有路径自动写成 GitHub Environment secrets，其余公开部署元数据写成 variables。所有 secret 正文都经标准输入交给 `gh`，不会出现在命令参数、Plan 或 JSON 报告中；不要把私钥、known_hosts 或真实配置粘贴进仓库和聊天。Unix 上 SSH 私钥必须禁止 group/other 权限，例如 `chmod 600 <private-key>`。
+- 工具拒绝占位值；`pre/prod` 强制真实审批人、禁止自审并启用自定义 branch/tag policy。`prod -Apply` 还必须显式增加 `-AllowProduction`。
 - GitHub Environment API 不支持写入 `can_admins_bypass`。当配置要求 `false` 时，Apply 后必须在 GitHub UI 关闭管理员绕过；工具会读取实际状态，并在未关闭时保留人工动作且令 `PostApplyReady=false`，不会把环境误报为完全就绪。完成 UI 设置后重新运行 Apply/预检即可复核。
 - 初始化只补齐 GitHub 发布入口，不创建目标机运行配置，也不执行真实部署。
 
@@ -156,17 +156,12 @@ Variables：
 
 | 变量 | 示例/约束 |
 |---|---|
-| `DEPLOY_SSH_HOST` | 目标机域名或 IP |
 | `DEPLOY_SSH_PORT` | 默认 `22` |
-| `DEPLOY_SSH_USER` | 发布用户 |
-| `DEPLOY_REMOTE_ROOT` | 非根绝对路径，例如 `/opt/dazhongdianping` |
 | `DEPLOY_BACKEND_SERVICE` | 默认 `dzdp-backend` |
 | `DEPLOY_WEB_SERVICE` | 默认 `dzdp-web` |
 | `DEPLOY_ADMIN_SERVICE` | 默认 `dzdp-admin-web` |
 | `DEPLOY_MERCHANT_SERVICE` | 默认 `dzdp-merchant-web` |
 | `DEPLOY_SMOKE_URLS` | 逗号或换行分隔、无 userinfo/query/fragment 的绝对 HTTPS smoke URL；每项必须返回 `2xx`，认证令牌不得放进 URL 或验收报告 |
-| `DEPLOY_RUNTIME_ENV_FILE` | 目标机私有运行 env 的绝对路径，例如 `/etc/dazhongdianping/eu-pre.env` |
-| `DEPLOY_DB_DEFAULTS_FILE` | 目标机 MySQL defaults 文件绝对路径 |
 | `DEPLOY_DB_MIGRATION_MODE` | `apply` 或 `verify` |
 | `DEPLOY_DB_BASELINE_VERSION` | 仅首次接管已有库时临时设置 |
 | `DEPLOY_RELEASE_RETENTION_COUNT` | 可选，保留的旧版本数量，默认 `5`，范围 `1-100`；当前和 `previous` 始终保留 |
@@ -180,6 +175,11 @@ Secrets：
 
 | Secret | 用途 |
 |---|---|
+| `DEPLOY_SSH_HOST` | 目标机域名或 IP |
+| `DEPLOY_SSH_USER` | 发布用户 |
+| `DEPLOY_REMOTE_ROOT` | 非根绝对路径，例如 `/opt/dazhongdianping` |
+| `DEPLOY_RUNTIME_ENV_FILE` | 目标机私有运行 env 的绝对路径，例如 `/etc/dazhongdianping/eu-pre.env` |
+| `DEPLOY_DB_DEFAULTS_FILE` | 目标机 MySQL defaults 文件绝对路径 |
 | `DEPLOY_SSH_PRIVATE_KEY` | GitHub Actions 发布用 SSH 私钥 |
 | `DEPLOY_KNOWN_HOSTS` | 目标机 known_hosts 内容 |
 
@@ -207,7 +207,7 @@ Environment protection：
 - Stripe CLI 1.50.1 已安装；2026-11-09 加载仓库模板执行 `stripe-preflight.sh --check-cli` 后，CLI 检查通过，但仍有 29 个真实值/凭证缺失，因此没有 Stripe test 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
-- 2026-11-09 按当时规则运行 `github-environment-preflight.ps1` 的只读审计：`test` 缺少 10 个发布变量和 `DEPLOY_KNOWN_HOSTS` / `DEPLOY_SSH_PRIVATE_KEY` 两个 secret；`pre` 除相同 10 个变量和 2 个 secret 外，还缺少 `required_reviewers` 审批规则，管理员仍可绕过，且未限制部署分支或标签。当前规则另要求 `DEPLOY_RUNTIME_ENV_FILE`，用于后续目标机只读预检。目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证均未齐备；`prod` Environment 尚未创建。
+- 2026-11-09 对主干提交 `269eb94812da244ee77ced4b5707bb1d219ae4d3` 运行了真实但只读的 `test/EU` readiness（Actions run `42621891825`）：CI 两个必需 job 均通过，证据先成功上传，最终因 Environment 缺少 11 个变量、2 个 SSH secret 且无法连接目标机而按预期阻断，`readyForDeployment=false`、`mutatedExternalState=false`。随后规则把 SSH 主机/用户及三个私有路径改为 secrets；再次执行前须按本节新分类配置。目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证仍未齐备；`prod` Environment 尚未创建。
 - 当前技术候选 `eu-pre-rc-20261108-2` 已绑定历史主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 的合并基线为 `e92ba3c…`；环境配置补齐后必须从该提交或更新的已通过 CI 提交重新生成版本号唯一的环境化候选。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 

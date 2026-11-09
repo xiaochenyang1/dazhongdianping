@@ -121,8 +121,8 @@ try {
     Assert-True ($plan.Mode -eq "Plan") "default bootstrap mode must be Plan"
     Assert-True (-not $plan.Applied) "Plan must not claim to apply GitHub state"
     Assert-True $plan.ConfigurationReady "ready config must pass the offline preflight"
-    Assert-True ($plan.VariableNames.Count -eq 18) "plan must include every configured variable name"
-    Assert-True ($plan.SecretNames.Count -eq 2) "plan must include both environment secret names"
+    Assert-True ($plan.VariableNames.Count -eq 13) "plan must keep public deployment metadata as variables"
+    Assert-True ($plan.SecretNames.Count -eq 7) "plan must classify private deployment metadata and credentials as secrets"
     Assert-True ($plan.ReviewerCount -eq 1) "plan must report the reviewer count"
     Assert-True ("branch:main" -in $plan.DeploymentPolicies) "plan must include the main branch policy"
     Assert-True ("tag:eu-pre-rc-*" -in $plan.DeploymentPolicies) "plan must include the release tag policy"
@@ -141,7 +141,8 @@ try {
         -ConfigPath $configPath `
         -Repository owner/repo) -join "`n"
     Assert-True ($planText -match '\[plan only\] No GitHub state was changed') "text plan must state that it made no changes"
-    Assert-True ($planText -match '\[plan\] upsert secret DEPLOY_SSH_PRIVATE_KEY from a local private file') "text plan must identify secret names without paths"
+    Assert-True ($planText -match '\[plan\] upsert secret DEPLOY_SSH_PRIVATE_KEY') "text plan must identify credential secret names without paths"
+    Assert-True ($planText -match '\[plan\] upsert secret DEPLOY_SSH_HOST') "text plan must identify private deployment metadata as a secret"
     Assert-True ($planText -notmatch 'api[.]example[.]test') "text plan must not expose variable values"
 
     $placeholderConfig = New-ReadyConfig
@@ -229,8 +230,13 @@ try {
         [pscustomobject]@{ name = $_.Key; value = $_.Value }
     }) | ConvertTo-Json -Compress | Set-Content -LiteralPath $variablesSnapshotPath -Encoding utf8
     @(
+        [pscustomobject]@{ name = "DEPLOY_DB_DEFAULTS_FILE" },
         [pscustomobject]@{ name = "DEPLOY_KNOWN_HOSTS" },
-        [pscustomobject]@{ name = "DEPLOY_SSH_PRIVATE_KEY" }
+        [pscustomobject]@{ name = "DEPLOY_REMOTE_ROOT" },
+        [pscustomobject]@{ name = "DEPLOY_RUNTIME_ENV_FILE" },
+        [pscustomobject]@{ name = "DEPLOY_SSH_HOST" },
+        [pscustomobject]@{ name = "DEPLOY_SSH_PRIVATE_KEY" },
+        [pscustomobject]@{ name = "DEPLOY_SSH_USER" }
     ) | ConvertTo-Json -Compress | Set-Content -LiteralPath $secretsSnapshotPath -Encoding utf8
     @{
         protection_rules = @(
@@ -359,7 +365,8 @@ exit 91
 
     $ghLog = Get-Content -LiteralPath $ghLogPath -Raw
     Assert-True ($ghLog -match 'api --method PUT repos/owner/repo/environments/pre --input -') "apply must create or update the target environment"
-    Assert-True ($ghLog -match 'variable-set DEPLOY_SSH_HOST') "apply must set environment variables through stdin"
+    Assert-True ($ghLog -match 'secret-set DEPLOY_SSH_HOST') "apply must set private deployment metadata as secrets through stdin"
+    Assert-True ($ghLog -match 'variable-set DEPLOY_SSH_PORT') "apply must keep public deployment metadata as variables through stdin"
     Assert-True ($ghLog -match 'secret-set DEPLOY_SSH_PRIVATE_KEY') "apply must set environment secrets through stdin"
     Assert-True ($ghLog -notmatch 'PRIVATE-KEY-MATERIAL') "fake gh arguments/logs must not contain secret bodies"
     Assert-True ($ghLog -notmatch 'api[.]example[.]test') "fake gh arguments/logs must not contain variable values"
