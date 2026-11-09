@@ -102,6 +102,25 @@ set +a
 
 2026-11-09 只读核对 GitHub Environment：`test` 为 0 个变量、0 个 secret；`pre` 可见变量仍只有 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`，secret 为 0。不得把此清单当作变量值或凭证核验。正式发布前仍需补齐下表中依赖目标环境的变量和 secrets。
 
+仓库提供了初始化工具，用来把经过审核的本地私有配置写入 GitHub Environment。先复制示例并替换所有 `CHANGE_ME`；`test` 需要把配置中的 `environment` 改为 `test`，且区域固定为 `EU`：
+
+```powershell
+Copy-Item deploy/github-environment.config.example.json deploy/github-environment.pre.json
+./scripts/ci/github-environment-bootstrap.ps1 -Environment pre -ConfigPath deploy/github-environment.pre.json
+```
+
+默认只生成 Plan，不修改 GitHub。确认变量名、secret 名称、审批人数量和 branch/tag policy 后，再显式 Apply：
+
+```powershell
+./scripts/ci/github-environment-bootstrap.ps1 -Environment pre -ConfigPath deploy/github-environment.pre.json -Apply
+```
+
+- `deploy/github-environment.*.json` 已被 Git 忽略；Apply 也会拒绝 Git 已跟踪的私有配置和 secret 文件。也可把它们放在仓库外，`secretFiles` 的相对路径按配置文件所在目录解析。
+- 配置文件只保存非敏感变量和两个 secret 文件路径。secret 正文经标准输入交给 `gh`，不会出现在命令参数、Plan 或 JSON 报告中；不要把私钥、known_hosts 或真实配置粘贴进仓库和聊天。Unix 上 SSH 私钥必须禁止 group/other 权限，例如 `chmod 600 <private-key>`。
+- 工具只接受发布变量白名单和 `DEPLOY_SSH_PRIVATE_KEY`、`DEPLOY_KNOWN_HOSTS` 两个 secret，拒绝占位值；`pre/prod` 强制真实审批人、禁止自审并启用自定义 branch/tag policy。`prod -Apply` 还必须显式增加 `-AllowProduction`。
+- GitHub Environment API 不支持写入 `can_admins_bypass`。当配置要求 `false` 时，Apply 后必须在 GitHub UI 关闭管理员绕过；工具会读取实际状态，并在未关闭时保留人工动作且令 `PostApplyReady=false`，不会把环境误报为完全就绪。完成 UI 设置后重新运行 Apply/预检即可复核。
+- 初始化只补齐 GitHub 发布入口，不创建目标机运行配置，也不执行真实部署。
+
 可在仓库根目录执行只读审计；脚本只输出缺失名称和格式问题，不输出变量值或 secret 内容：
 
 ```powershell
@@ -144,7 +163,7 @@ Secrets：
 Environment protection：
 
 - `pre` 至少配置一条 `required_reviewers` 规则并指定真实审批人；仅有 `environment: pre` 声明而没有 protection rule 不构成人工审批闸门。
-- 建议启用 `prevent_self_review`，关闭管理员绕过，并用 deployment branch/tag policy 限制允许发版的主干或不可变候选标签。审计脚本把缺少审批人视为阻塞，把后三项作为明确警告输出。
+- 必须启用 `prevent_self_review`，关闭管理员绕过，并用 deployment branch/tag policy 限制允许发版的主干或不可变候选标签。初始化工具强制前后两项可写配置和 policy，并把管理员绕过保留为 UI 人工核验；只读审计把缺少审批人视为阻塞，把其余加固缺口作为明确警告输出。
 
 ## 4. 最小验收顺序
 

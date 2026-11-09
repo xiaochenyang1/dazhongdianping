@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "environment": "pre",
+  "region": "EU",
+  "variables": {
+    "DEPLOY_SSH_HOST": "CHANGE_ME",
+    "DEPLOY_SSH_PORT": "22",
+    "DEPLOY_SSH_USER": "deploy",
+    "DEPLOY_REMOTE_ROOT": "/opt/dazhongdianping",
+    "DEPLOY_BACKEND_SERVICE": "dzdp-backend",
+    "DEPLOY_WEB_SERVICE": "dzdp-web",
+    "DEPLOY_ADMIN_SERVICE": "dzdp-admin-web",
+    "DEPLOY_MERCHANT_SERVICE": "dzdp-merchant-web",
+    "DEPLOY_SMOKE_URLS": "https://CHANGE_ME/actuator/health,https://CHANGE_ME/health",
+    "DEPLOY_DB_DEFAULTS_FILE": "/etc/dazhongdianping/mysql-release.cnf",
+    "DEPLOY_DB_MIGRATION_MODE": "apply",
+    "DEPLOY_RELEASE_RETENTION_COUNT": "5",
+    "VITE_API_BASE_URL": "https://CHANGE_ME",
+    "VITE_WS_BASE_URL": "wss://CHANGE_ME",
+    "VITE_STRIPE_PUBLISHABLE_KEY": "pk_test_CHANGE_ME",
+    "PUBLIC_SITE_URL": "https://CHANGE_ME",
+    "PRERENDER_API_BASE_URL": "https://CHANGE_ME"
+  },
+  "secretFiles": {
+    "DEPLOY_SSH_PRIVATE_KEY": "../../private/pre/id_ed25519",
+    "DEPLOY_KNOWN_HOSTS": "../../private/pre/known_hosts"
+  },
+  "protection": {
+    "reviewers": [
+      "CHANGE_ME_APPROVER"
+    ],
+    "preventSelfReview": true,
+    "canAdminsBypass": false,
+    "waitTimer": 0,
+    "deploymentPolicies": [
+      {
+        "type": "branch",
+        "name": "main"
+      },
+      {
+        "type": "tag",
+        "name": "eu-pre-rc-*"
+      }
+    ]
+  }
+}
