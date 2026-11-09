@@ -14,7 +14,7 @@
 
 - C 端公开浏览已完成:首页 Banner/feed、商户列表、商户详情、城市/分类/商圈筛选、`CN / EU` 区域隔离。
 - 头部关键词搜索已接到 `GET /api/c/v1/search/shops`:默认 provider 为 MySQL；配置 `APP_SEARCH_PROVIDER=elasticsearch` 后启用 ES 分词、拼音、纠错、组合筛选和距离排序。MySQL→ES 支持管理端全量重建与事务 outbox 增量同步：任务按门店合并并带版本防竞态，失败指数退避，处理中任务超时恢复；门店、点评聚合、分类/城市/商圈名称或状态变化均会触发同步。管理端 `/data/search-sync` 已补区域/城市/门店范围内的任务概览、分页筛选、错误查看、单条/批量重试和全量重建，人工操作写审计日志。`GET /api/c/v1/search/suggest`、`GET /api/c/v1/search/hot`、登录用户搜索历史面板/清空和切区重拉也已接通。
-- 管理端最小闭环已完成:管理员登录、门店 CRUD、种子导入、导入批次查询、搜索同步运维和系统健康监控。`/system/health` 对数据库、Redis、Elasticsearch、文件存储执行只读实时检查，对支付、验证码、推送只检查配置完整性，不返回连接串或凭证；公共 `/actuator/health` 仅返回整体状态。控制台会按权限并发读取业务概览、最近门店/批次、系统健康和搜索同步状态；单个数据源失败时只显示局部失败提示，不清空其他成功结果。
+- 管理端最小闭环已完成:管理员登录、门店 CRUD、种子导入、导入批次查询、搜索同步运维和系统健康监控。`/system/health` 对数据库、Redis、Elasticsearch、文件存储执行只读实时检查，对支付、验证码、推送只检查配置完整性，不返回连接串或凭证，并展示后端 build-info 中的发布版本、commit、构建环境/区域和迁移终点；公共 `/actuator/health` 仅返回整体状态，公共只读 `/api/c/v1/release-info` 仅返回同一组非敏感发布身份供部署验收。控制台会按权限并发读取业务概览、最近门店/批次、系统健康和搜索同步状态；单个数据源失败时只显示局部失败提示，不清空其他成功结果。
 - `B` 端最小只读工作台已建立:当前提供 `GET /api/b/v1/health`、`GET /api/b/v1/account/me`、`GET /api/b/v1/roles`、`GET /api/b/v1/shops`;一期商户账号绑定单区域,`X-Region` 必须与商户经营区域一致,错区请求直接 `401`;完整入驻、员工、团购、预订等商户工作台能力仍不在 M1/M2。
 - 对应后端接口已完成:
   - `GET /api/c/v1/categories`
@@ -527,12 +527,13 @@
 
 - 本次 E2E 覆盖 8 条 H2 本地链路，不等于 MySQL 运行配置、S3、Elasticsearch、真邮件/短信或目标环境部署验收。
 - GitHub `pre` Environment 和目标机仍缺完整运行参数、SMTP/Twilio/Stripe 真实测试凭证、SSH 发布配置、HTTPS/WSS 域名和回滚 smoke URL。
-- 本机没有 PowerShell 7，因此仓库的 PowerShell 契约脚本与 `verify-all.ps1` 包装器尚未执行；直接运行的对应本地测试结果见上。
+- 2026-11-09 已在当前主干 `4ad66a0d…` 使用 PowerShell 7 完整执行 `scripts/ci/verify-all.ps1 -IncludeFlutter`：全部发布/回滚/预检契约、后端 707 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项及所有构建、Flutter analyze 均通过。该结果仍不替代目标环境 MySQL/Redis/S3/ES、真实供应商和部署验收。
+- 同日当前开发工作区的发布身份、WebSocket 来源和部署后验收增量继续完成回归：后端全量 711 项、用户 Web 293 项、管理端 193 项均通过，用户 Web 与管理端生产构建通过；发布/回滚、验收报告、GitHub Actions runtime、文档状态一致性和 `git diff --check` 契约通过。后续审计又固定 `test` 回滚为 EU 同组并发锁，并拒绝 API/smoke URL 的 query/fragment，避免错误区域回滚及令牌进入证据。该工作区结果尚未提交，不得写成当前主干或真实 `test/pre` 部署证据。
 
 ## 6. 下一步建议
 
 如果你现在要继续往下干,最合理的顺序是:
 
-1. 先由环境负责人补齐 `pre` Environment variables/secrets 与目标机私有 env；只通过 GitHub Environment/密钥管理系统写入，不把真实密钥放进仓库或聊天。
-2. 运行 `stripe-preflight.sh --check-cli`；通过后依次做目标环境 MySQL、Redis、S3、Elasticsearch、SMTP/Twilio 和 Stripe smoke。
-3. 用通过 CI 的不可变 SHA 发布到 `test`/`pre`，完成部署 smoke、数据库迁移校验和回滚演练。FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。
+1. 先由环境负责人补齐 `test/pre` Environment variables/secrets 与目标机私有 env；只通过 GitHub Environment/密钥管理系统写入，不把真实密钥放进仓库或聊天。
+2. 运行 GitHub Environment 预检和 `stripe-preflight.sh --check-cli`；通过后依次做目标环境 MySQL、Redis、S3、Elasticsearch、SMTP/Twilio 和 Stripe smoke。
+3. 在不可变主干 `4ad66a0d…` 上使用真实 Web/Stripe/SEO 配置生成新版本环境化候选，先发布 `test` 再发布 `pre`，完成数据库迁移、ES 重建、20 项台账、备份恢复和回滚演练。FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。

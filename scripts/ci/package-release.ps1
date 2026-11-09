@@ -207,7 +207,7 @@ function Assert-ReleaseFrontendConfiguration {
         Assert-DzdpReleaseUrl -Name "PUBLIC_SITE_URL_$($configuration.Region)" -Value $configuration.SiteUrl -OriginOnly
         Assert-DzdpReleaseUrl -Name "PRERENDER_API_BASE_URL_$($configuration.Region)" -Value $configuration.ApiBaseUrl
     }
-    Assert-DzdpReleaseUrl -Name "VITE_WS_BASE_URL" -Value $viteWebSocketBaseUrl -Scheme "wss"
+    Assert-DzdpReleaseUrl -Name "VITE_WS_BASE_URL" -Value $viteWebSocketBaseUrl -Scheme "wss" -OriginOnly
 
     $requiredStripeMode = if ($deployEnvironment -eq "prod") { "live" } else { "test" }
     if ($viteStripeMode -cne $requiredStripeMode -or $viteStripePublishableKey -match 'CHANGE_ME|xxxxx') {
@@ -253,7 +253,17 @@ try {
     $env:PUBLIC_SITE_URL = $baseConfiguration.SiteUrl
     $env:PRERENDER_API_BASE_URL = $baseConfiguration.ApiBaseUrl
 
-    Invoke-Native -FilePath $mvnw -Arguments @("-q", "package") -WorkingDirectory $backendDir
+    $releaseBuildEnvironment = if ($deployEnvironment) { $deployEnvironment } else { "artifact" }
+    $releaseMigrationVersion = $migrationEntries[$migrationEntries.Count - 1].Version
+    Invoke-Native -FilePath $mvnw -Arguments @(
+        "-q",
+        "-Dapp.release.version=$Version",
+        "-Dapp.release.commit-sha=$sourceCommitSha",
+        "-Dapp.release.environment=$releaseBuildEnvironment",
+        "-Dapp.release.region=$deployRegion",
+        "-Dapp.release.migration-version=$releaseMigrationVersion",
+        "package"
+    ) -WorkingDirectory $backendDir
     Invoke-Native -FilePath "npm" -Arguments @("run", "build") -WorkingDirectory $webDir
     $baseWebDistDir = Join-Path $stagingDir "__base-web-dist"
     Copy-Item -LiteralPath (Join-Path $webDir "dist") -Destination $baseWebDistDir -Recurse

@@ -65,7 +65,7 @@ $readyVariables = @{
     DEPLOY_DB_MIGRATION_MODE = "apply"
     DEPLOY_RELEASE_RETENTION_COUNT = "5"
     VITE_API_BASE_URL = "https://api.example.com"
-    VITE_WS_BASE_URL = "wss://api.example.com/ws"
+    VITE_WS_BASE_URL = "wss://api.example.com"
     VITE_STRIPE_PUBLISHABLE_KEY = "pk_test_fixture"
     PUBLIC_SITE_URL = "https://www.example.com"
     PRERENDER_API_BASE_URL = "https://api.example.com"
@@ -201,6 +201,17 @@ foreach ($expected in @(
 $invalidReportJson = $invalidReport | ConvertTo-Json -Depth 5
 Assert-True ($invalidReportJson -notmatch 'pk_live_must_not_be_printed') "JSON report must not expose invalid variable values"
 Assert-True ($invalidReportJson -notmatch 'user:secret') "JSON report must not expose URL credentials"
+
+$invalidPathVariables = $readyVariables.Clone()
+$invalidPathVariables.VITE_WS_BASE_URL = "wss://api.example.com/ws"
+$invalidPathReport = & $preflightPath `
+    -Environment pre `
+    -VariablesJson (ConvertTo-VariableJson -Values $invalidPathVariables) `
+    -SecretsJson $readySecretsJson `
+    -ProtectionJson $readyProtectionJson `
+    -ReportOnly `
+    -Json | ConvertFrom-Json
+Assert-True ("VITE_WS_BASE_URL" -in @($invalidPathReport.InvalidVariables.Name)) "WebSocket base URL with a path must be invalid"
 
 $prodVariables = $readyVariables.Clone()
 $prodVariables.VITE_STRIPE_PUBLISHABLE_KEY = "pk_live_fixture"

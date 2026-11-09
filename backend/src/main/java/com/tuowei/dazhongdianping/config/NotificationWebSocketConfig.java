@@ -10,7 +10,22 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @Configuration
 @EnableWebSocket
 public class NotificationWebSocketConfig implements WebSocketConfigurer {
-    private final NotificationWebSocketHandler handler; private final NotificationHandshakeInterceptor interceptor;
-    public NotificationWebSocketConfig(NotificationWebSocketHandler handler, NotificationHandshakeInterceptor interceptor) { this.handler = handler; this.interceptor = interceptor; }
-    @Override public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) { registry.addHandler(handler, "/ws/notifications").addInterceptors(interceptor).setAllowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*"); }
+    private final NotificationWebSocketHandler handler;
+    private final NotificationHandshakeInterceptor interceptor;
+    private final CorsProperties corsProperties;
+
+    public NotificationWebSocketConfig(NotificationWebSocketHandler handler,
+                                       NotificationHandshakeInterceptor interceptor,
+                                       CorsProperties corsProperties) {
+        this.handler = handler;
+        this.interceptor = interceptor;
+        this.corsProperties = corsProperties;
+    }
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(handler, "/ws/notifications")
+                .addInterceptors(interceptor)
+                .setAllowedOriginPatterns(corsProperties.getAllowedOriginPatterns().toArray(String[]::new));
+    }
 }

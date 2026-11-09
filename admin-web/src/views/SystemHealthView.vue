@@ -19,6 +19,9 @@ const zhCopy = {
   uptime: '运行时长',
   checkedAt: '检查时间',
   version: '应用版本',
+  buildTarget: '构建目标',
+  commit: '提交',
+  migration: '迁移版本',
   profiles: 'Spring Profiles',
   tableEyebrow: '组件状态',
   tableHeading: '核心依赖与外部能力',
@@ -74,6 +77,9 @@ const enCopy = {
   uptime: 'Uptime',
   checkedAt: 'Checked at',
   version: 'Application version',
+  buildTarget: 'Build target',
+  commit: 'Commit',
+  migration: 'Migration',
   profiles: 'Spring profiles',
   tableEyebrow: 'Component status',
   tableHeading: 'Core dependencies and external capabilities',
@@ -164,6 +170,11 @@ function profilesText() {
     : copy.value.defaultProfile
 }
 
+function shortCommit() {
+  const value = health.value?.release.commitSha ?? ''
+  return value.length >= 12 ? value.slice(0, 12) : value || '--'
+}
+
 async function load() {
   const currentRequestId = ++requestId
   loading.value = true
@@ -215,11 +226,13 @@ onMounted(() => {
         <p>{{ copy.runtime }}</p>
         <strong>{{ health?.runtimeMode ?? '--' }}</strong>
         <span>{{ copy.profiles }}: {{ profilesText() }}</span>
+        <span>{{ copy.buildTarget }}: {{ health?.release.buildEnvironment ?? '--' }}/{{ health?.release.buildRegion ?? '--' }}</span>
       </article>
       <article class="stat-card">
         <p>{{ copy.uptime }}</p>
         <strong>{{ health ? formatUptime(health.uptimeSeconds) : '--' }}</strong>
         <span>{{ copy.version }}: {{ health?.applicationVersion ?? '--' }}</span>
+        <span>{{ copy.commit }}: {{ shortCommit() }} · {{ copy.migration }}: {{ health?.release.migrationVersion ?? '--' }}</span>
       </article>
       <article class="stat-card">
         <p>{{ copy.checkedAt }}</p>

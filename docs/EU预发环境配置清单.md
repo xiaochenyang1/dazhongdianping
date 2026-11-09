@@ -1,6 +1,6 @@
 # EU 预发环境配置清单
 
-更新时间：2026-10-15
+更新时间：2026-11-09
 
 当前候选基线以最新 `eu-pre-rc-*` tag 或通过 CI 的不可变提交 SHA 为准，不在本文内维护会过期的固定 SHA。
 
@@ -30,7 +30,7 @@
 | S3 兼容存储 | `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_BUCKET`、`APP_S3_REGION`、`APP_S3_ENDPOINT=https://...`、`APP_S3_PUBLIC_BASE_URL=https://...`、`APP_S3_ACCESS_KEY`、`APP_S3_SECRET_KEY` |
 | 移动推送 | `APP_PUSH_ENABLED=false`，直到真实 FCM/APNs 真机 smoke 通过 |
 | 延期功能 | 部署总开关 `APP_LAUNCH_DEFERRED_FEATURES_ENABLED=false`，同时关闭所有区域的延期能力；另保留 `APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED=false`、`APP_LAUNCH_EU_SECKILL_ENABLED=false`、`APP_LAUNCH_EU_GROUP_BUY_ENABLED=false` |
-| Web/SEO | `PUBLIC_SITE_URL=https://...`、`PRERENDER_API_BASE_URL=https://...`、`PRERENDER_REGION=EU`、`VITE_DEFAULT_REGION=EU`、`VITE_API_BASE_URL=https://...`、`VITE_WS_BASE_URL=wss://...`、`VITE_STRIPE_PUBLISHABLE_KEY=pk_test_*` |
+| Web/SEO | `PUBLIC_SITE_URL=https://...`、`PRERENDER_API_BASE_URL=https://...`、`PRERENDER_REGION=EU`、`VITE_DEFAULT_REGION=EU`、`VITE_API_BASE_URL=https://...`、`VITE_WS_BASE_URL=wss://...`（只填 origin，不附加 `/ws`）、`VITE_STRIPE_PUBLISHABLE_KEY=pk_test_*` |
 
 ### EU 入口代理与广告点击 IP
 
@@ -100,7 +100,7 @@ set +a
 
 源码 SHA 由工作流按选定版本自动注入：打包使用 `APP_RELEASE_COMMIT_SHA`，部署使用 `DEPLOY_EXPECTED_COMMIT_SHA`，不要将它们配置成长期固定值。本地执行时分别传入 `package-release.ps1 -CommitSha <40位SHA>` 和 `deploy-release.ps1 -ExpectedCommitSha <同一40位SHA>`；两者必须来自通过 CI 的版本。实际 `test/pre` 包须分别按对应环境构建，不能直接复用未注入配置的技术候选。
 
-2026-11-07 只读核对 GitHub `pre` Environment 后，当前可见的变量名仍为 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`；没有配置 secret 名称。不得把此清单当作变量值或凭证核验。正式预发前仍需补齐下表中依赖目标环境的变量和 secrets。
+2026-11-09 只读核对 GitHub Environment：`test` 为 0 个变量、0 个 secret；`pre` 可见变量仍只有 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`，secret 为 0。不得把此清单当作变量值或凭证核验。正式发布前仍需补齐下表中依赖目标环境的变量和 secrets。
 
 可在仓库根目录执行只读审计；脚本只输出缺失名称和格式问题，不输出变量值或 secret 内容：
 
@@ -123,13 +123,13 @@ Variables：
 | `DEPLOY_WEB_SERVICE` | 默认 `dzdp-web` |
 | `DEPLOY_ADMIN_SERVICE` | 默认 `dzdp-admin-web` |
 | `DEPLOY_MERCHANT_SERVICE` | 默认 `dzdp-merchant-web` |
-| `DEPLOY_SMOKE_URLS` | 逗号或换行分隔、无 userinfo 的绝对 HTTPS smoke URL；每项必须返回 `2xx` |
+| `DEPLOY_SMOKE_URLS` | 逗号或换行分隔、无 userinfo/query/fragment 的绝对 HTTPS smoke URL；每项必须返回 `2xx`，认证令牌不得放进 URL 或验收报告 |
 | `DEPLOY_DB_DEFAULTS_FILE` | 目标机 MySQL defaults 文件绝对路径 |
 | `DEPLOY_DB_MIGRATION_MODE` | `apply` 或 `verify` |
 | `DEPLOY_DB_BASELINE_VERSION` | 仅首次接管已有库时临时设置 |
 | `DEPLOY_RELEASE_RETENTION_COUNT` | 可选，保留的旧版本数量，默认 `5`，范围 `1-100`；当前和 `previous` 始终保留 |
 | `VITE_API_BASE_URL` | `https://...` |
-| `VITE_WS_BASE_URL` | `wss://...` |
+| `VITE_WS_BASE_URL` | `wss://...` origin；前端自动追加 `/ws/notifications`，禁止预带路径、查询或凭证 |
 | `VITE_STRIPE_PUBLISHABLE_KEY` | `pk_test_*` |
 | `PUBLIC_SITE_URL` | `https://...` |
 | `PRERENDER_API_BASE_URL` | `https://...` |
@@ -161,10 +161,11 @@ Environment protection：
 
 ## 5. 当前阻塞
 
-- Stripe CLI 1.50.1 已安装，但没有真实 Stripe test 凭证与 Stripe CLI 验收结果。
+- Stripe CLI 1.50.1 已安装；2026-11-09 加载仓库模板执行 `stripe-preflight.sh --check-cli` 后，CLI 检查通过，但仍有 29 个真实值/凭证缺失，因此没有 Stripe test 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
-- 2026-11-07 运行 `github-environment-preflight.ps1` 的只读审计仍显示 GitHub `pre` Environment 只有 6 个固定变量名，缺少 10 个发布变量、`DEPLOY_KNOWN_HOSTS` / `DEPLOY_SSH_PRIVATE_KEY` 两个 secret 和 `required_reviewers` 审批规则；管理员仍可绕过，且未限制部署分支或标签。目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证均未齐备；`prod` Environment 尚未创建。
+- 2026-11-09 运行 `github-environment-preflight.ps1` 的只读审计：`test` 缺少 10 个发布变量和 `DEPLOY_KNOWN_HOSTS` / `DEPLOY_SSH_PRIVATE_KEY` 两个 secret；`pre` 除相同 10 个变量和 2 个 secret 外，还缺少 `required_reviewers` 审批规则，管理员仍可绕过，且未限制部署分支或标签。目标机、数据库、Web/SEO 变量、SMTP/Twilio/Stripe 凭证均未齐备；`prod` Environment 尚未创建。
+- 当前技术候选 `eu-pre-rc-20261108-2` 已绑定主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
 ## 6. 已完成的仓库侧准备

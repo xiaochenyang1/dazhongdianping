@@ -91,7 +91,7 @@ def shim():
 DRIVER = r'''
 $ErrorActionPreference = 'Stop'
 function Invoke-WebRequest {
-    param($Uri, [switch]$UseBasicParsing, $MaximumRedirection, $TimeoutSec)
+    param($Uri, $Headers, [switch]$UseBasicParsing, $MaximumRedirection, $TimeoutSec)
     $current = (Get-Item -LiteralPath "$env:DZDP_RELEASE_TEST_ROOT/current" -ErrorAction SilentlyContinue).Target
     Add-Content -LiteralPath "$env:DZDP_RELEASE_TEST_HTTP" -Value "$current $Uri"
     if ($env:DZDP_RELEASE_TEST_CASE -eq 'newer-release' -and $current -like '*/rc-new') {
@@ -100,15 +100,31 @@ function Invoke-WebRequest {
     }
     if ($env:DZDP_RELEASE_TEST_CASE -eq 'newer-release' -or
         ($env:DZDP_RELEASE_TEST_CASE -in @('smoke-failure', 'first-smoke-failure') -and $current -like '*/rc-new')) {
-        return @{ StatusCode = 503 }
+        return [pscustomobject]@{ StatusCode = 503; Content = '' }
     }
-    return @{ StatusCode = 200 }
+    $body = if ([string]$Uri -like '*/actuator/health') {
+        @{ status = 'UP' }
+    } elseif ([string]$Uri -like '*/api/c/v1/release-info') {
+        $manifest = Get-Content -LiteralPath (Join-Path $current 'release-manifest.json') -Raw | ConvertFrom-Json
+        @{ code = 0; data = @{
+            version = $manifest.version; commitSha = $manifest.commitSha
+            buildEnvironment = $manifest.buildEnvironment; buildRegion = $manifest.webRuntime.defaultRegion
+            migrationVersion = $manifest.databaseMigrations.endVersion; runtimeMode = $manifest.buildEnvironment
+            builtAtUtc = '2026-11-09T00:00:00Z'
+        } }
+    } elseif ([string]$Uri -like '*/api/c/v1/launch-config') {
+        @{ code = 0; data = @{ region = 'EU'; creatorRewards = $false; seckill = $false; groupBuy = $false } }
+    } else {
+        return [pscustomobject]@{ StatusCode = 200; Content = 'ok' }
+    }
+    return [pscustomobject]@{ StatusCode = 200; Content = ($body | ConvertTo-Json -Depth 5 -Compress) }
 }
 function Start-Sleep { param($Seconds) }
 $parameters = @{
     Environment = 'pre'; Region = 'EU'; RemoteHost = 'fixture.invalid'; RemoteUser = 'deploy'
     RemoteRoot = $env:DZDP_RELEASE_TEST_ROOT; SmokeUrls = 'https://fixture.invalid/health,https://fixture.invalid/merchant'
     ReleaseRetentionCount = [int]$env:DZDP_RELEASE_TEST_RETENTION
+    AcceptanceReportDirectory = $env:DZDP_RELEASE_TEST_ACCEPTANCE
 }
 try {
     if ($env:DZDP_RELEASE_TEST_ROLLBACK -eq 'true') {
@@ -153,7 +169,7 @@ class ReleaseExecutionTest(unittest.TestCase):
                         DZDP_RELEASE_TEST_HTTP=str(self.http), DZDP_RELEASE_TEST_SCRIPTS=str(self.scripts),
                         DZDP_RELEASE_TEST_DATABASE=str(self.database), DZDP_RELEASE_TEST_CASE='success',
                         DZDP_RELEASE_TEST_ROLLBACK='false', DZDP_RELEASE_TEST_TARGET='',
-                        DZDP_RELEASE_TEST_RETENTION='1',
+                        DZDP_RELEASE_TEST_RETENTION='1', DZDP_RELEASE_TEST_ACCEPTANCE=str(self.base / 'acceptance'),
                         active_release='/must-not-expand', current_release='/must-not-expand', target='must-not-expand')
         self.bundle = self.base / 'dazhongdianping-release-rc-new.zip'
         self.env['DZDP_RELEASE_TEST_BUNDLE'] = str(self.bundle)
@@ -167,7 +183,7 @@ class ReleaseExecutionTest(unittest.TestCase):
             'databaseMigrations': {'runner': 'database/mysql-migrate.sh', 'manifest': 'database/migrations.sha256',
                                    'directory': 'database/migrations', 'startVersion': 3, 'endVersion': 3, 'count': 1},
             'webRuntime': {'defaultRegion': 'EU', 'apiBaseUrl': 'https://api.fixture.invalid',
-                           'webSocketBaseUrl': 'wss://api.fixture.invalid/ws', 'stripeConfigured': True, 'stripeMode': 'test'},
+                           'webSocketBaseUrl': 'wss://api.fixture.invalid', 'stripeConfigured': True, 'stripeMode': 'test'},
             'seoSnapshot': {'enabled': True},
             'seoSnapshots': [{'region': 'EU', 'directory': 'web/seo-snapshots/EU',
                               'siteUrl': 'https://fixture.invalid', 'apiBaseUrl': 'https://api.fixture.invalid'}],
@@ -193,6 +209,16 @@ if [ "$DZDP_RELEASE_TEST_CASE" = migration-failure ]; then exit 23; fi
         directory = self.root / 'releases' / name
         directory.mkdir(parents=True)
         (directory / 'release-version.txt').write_text(name + '\n')
+        manifest = {
+            'version': name, 'bundleName': f'dazhongdianping-release-{name}.zip',
+            'commitSha': ('c' if name == 'old' else 'd') * 40, 'buildEnvironment': 'pre',
+            'backendJar': 'fixture.jar', 'frontends': ['web', 'admin-web', 'merchant-web'],
+            'databaseMigrations': {'runner': 'database/mysql-migrate.sh', 'manifest': 'database/migrations.sha256',
+                                   'directory': 'database/migrations', 'startVersion': 3, 'endVersion': 30, 'count': 28},
+            'webRuntime': {'defaultRegion': 'EU', 'apiBaseUrl': 'https://api.fixture.invalid',
+                           'webSocketBaseUrl': 'wss://api.fixture.invalid', 'stripeConfigured': True, 'stripeMode': 'test'},
+        }
+        (directory / 'release-manifest.json').write_text(json.dumps(manifest))
         return directory
 
     def history(self):
@@ -222,7 +248,7 @@ if [ "$DZDP_RELEASE_TEST_CASE" = migration-failure ]; then exit 23; fi
         self.assertLess(tools.index('ssh'), tools.index('scp'))
         checks = [r['args'][-1] for r in self.records if r['tool'] == 'systemctl' and r['args'][0] == 'is-active']
         self.assertEqual(checks, ['dzdp-backend', 'dzdp-web', 'dzdp-admin-web', 'dzdp-merchant-web'])
-        self.assertEqual(len(self.http.read_text().splitlines()), 2)
+        self.assertEqual(len(self.http.read_text().splitlines()), 7)
         self.assertNotIn('WARNING', self.output)
 
     def test_upgrade_and_manual_rollback_keep_explicit_history(self):

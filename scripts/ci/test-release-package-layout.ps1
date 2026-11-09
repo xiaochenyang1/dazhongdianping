@@ -183,7 +183,7 @@ try {
     $env:DEPLOY_ENVIRONMENT = 'pre'
     $env:DEPLOY_REGION = 'EU'
     $env:VITE_API_BASE_URL = 'https://api.eu.example.test'
-    $env:VITE_WS_BASE_URL = 'wss://api.eu.example.test/ws'
+    $env:VITE_WS_BASE_URL = 'wss://api.eu.example.test'
     $env:VITE_STRIPE_PUBLISHABLE_KEY = 'pk_test_fixture123'
     $bundle = & $fixtureScript -Version 'layout-pre' -OutputDir $outputDir
     Test-Bundle -Bundle $bundle -WithSnapshots $true

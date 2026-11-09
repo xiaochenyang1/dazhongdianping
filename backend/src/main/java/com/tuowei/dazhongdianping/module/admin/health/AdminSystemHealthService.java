@@ -7,6 +7,8 @@ import com.tuowei.dazhongdianping.config.SearchProperties;
 import com.tuowei.dazhongdianping.config.VerificationCodeProperties;
 import com.tuowei.dazhongdianping.module.admin.health.model.response.AdminSystemHealthComponentResponse;
 import com.tuowei.dazhongdianping.module.admin.health.model.response.AdminSystemHealthResponse;
+import com.tuowei.dazhongdianping.module.release.ReleaseInfoService;
+import com.tuowei.dazhongdianping.module.release.model.response.ReleaseInfoResponse;
 import java.lang.management.ManagementFactory;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -20,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -54,6 +55,7 @@ public class AdminSystemHealthService {
     private final boolean stripeSecretConfigured;
     private final boolean stripeEndpointSecretConfigured;
     private final HttpClient httpClient;
+    private final ReleaseInfoService releaseInfoService;
 
     public AdminSystemHealthService(
             JdbcTemplate jdbcTemplate,
@@ -69,7 +71,8 @@ public class AdminSystemHealthService {
             @Value("${app.payment.mock-enabled:false}") boolean paymentMockEnabled,
             @Value("${app.payment.stripe.enabled:false}") boolean stripeEnabled,
             @Value("${app.payment.stripe.secret-key:}") String stripeSecret,
-            @Value("${app.payment.stripe.endpoint-secret:}") String stripeEndpointSecret) {
+            @Value("${app.payment.stripe.endpoint-secret:}") String stripeEndpointSecret,
+            ReleaseInfoService releaseInfoService) {
         this.jdbcTemplate = jdbcTemplate;
         this.infrastructureProperties = infrastructureProperties;
         this.searchProperties = searchProperties;
@@ -84,6 +87,7 @@ public class AdminSystemHealthService {
         this.stripeEnabled = stripeEnabled;
         this.stripeSecretConfigured = StringUtils.hasText(stripeSecret);
         this.stripeEndpointSecretConfigured = StringUtils.hasText(stripeEndpointSecret);
+        this.releaseInfoService = releaseInfoService;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(EXTERNAL_CONNECT_TIMEOUT)
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -91,6 +95,7 @@ public class AdminSystemHealthService {
     }
 
     public AdminSystemHealthResponse inspect() {
+        ReleaseInfoResponse release = releaseInfoService.inspect();
         List<AdminSystemHealthComponentResponse> components = new ArrayList<>();
         components.add(checkDatabase());
         components.add(checkStateStore());
@@ -105,7 +110,8 @@ public class AdminSystemHealthService {
                 LocalDateTime.now(),
                 Math.max(0L, ManagementFactory.getRuntimeMXBean().getUptime() / 1000L),
                 runtimeMode,
-                Optional.ofNullable(getClass().getPackage().getImplementationVersion()).orElse("dev"),
+                release.version(),
+                release,
                 Arrays.stream(environment.getActiveProfiles()).sorted().toList(),
                 List.copyOf(components)
         );

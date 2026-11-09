@@ -66,8 +66,8 @@ wss_url_check() {
   local name="$1"
   local value="${2-}"
   check "$name" "$value"
-  if [[ -n "${value-}" && "$value" != *CHANGE_ME* && "$value" != *xxxxx* && ! "$value" =~ ^wss://[^[:space:]]+$ ]]; then
-    printf '[invalid] %s must be a wss URL\n' "$name" >&2
+  if [[ -n "${value-}" && "$value" != *CHANGE_ME* && "$value" != *xxxxx* && ! "$value" =~ ^wss://[^/@[:space:]]+/?$ ]]; then
+    printf '[invalid] %s must be a wss origin without credentials or a path\n' "$name" >&2
     failures=$((failures + 1))
   fi
 }

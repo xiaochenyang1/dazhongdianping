@@ -46,7 +46,7 @@ async function connect() {
   shouldReconnect = true
   const { ticket } = await issueWebSocketTicket()
   const configuredBase = import.meta.env.VITE_WS_BASE_URL as string | undefined
-  const base = configuredBase || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`
+  const base = (configuredBase || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`).replace(/\/+$/, '')
   socket = new WebSocket(`${base}/ws/notifications?ticket=${encodeURIComponent(ticket)}`)
   socket.onopen = () => { state.connected = true }
   socket.onmessage = (event) => {

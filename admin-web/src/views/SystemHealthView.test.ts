@@ -29,6 +29,15 @@ const health = {
   uptimeSeconds: 93_900,
   runtimeMode: 'pre',
   applicationVersion: '2026.08.14',
+  release: {
+    version: '2026.08.14',
+    commitSha: 'abcdef1234567890abcdef1234567890abcdef12',
+    buildEnvironment: 'pre',
+    buildRegion: 'EU',
+    migrationVersion: 31,
+    runtimeMode: 'pre',
+    builtAtUtc: '2026-08-14T13:00:00Z',
+  },
   activeProfiles: ['mysql', 'eu'],
   components: [
     {
@@ -91,6 +100,9 @@ describe('SystemHealthView', () => {
     expect(host.textContent).toContain('Degraded')
     expect(host.textContent).toContain('1d 2h')
     expect(host.textContent).toContain('mysql, eu')
+    expect(host.textContent).toContain('pre/EU')
+    expect(host.textContent).toContain('abcdef123456')
+    expect(host.textContent).toContain('Migration: 31')
     expect(host.textContent).toContain('MySQL database')
     expect(host.textContent).toContain('12 ms')
     expect(host.textContent).toContain('Mobile push')

@@ -152,7 +152,7 @@ $contractEnvironment = [ordered]@{
     APP_LAUNCH_EU_SECKILL_ENABLED = 'false'
     APP_LAUNCH_EU_GROUP_BUY_ENABLED = 'false'
     VITE_API_BASE_URL = 'https://api.eu.example.com'
-    VITE_WS_BASE_URL = 'wss://api.eu.example.com/ws'
+    VITE_WS_BASE_URL = 'wss://api.eu.example.com'
     VITE_STRIPE_PUBLISHABLE_KEY = 'pk_' + 'test_contract'
 }
 $previousEnvironment = @{}
@@ -259,8 +259,12 @@ try {
     if ((Invoke-PreflightContract) -eq 0) { throw 'non-HTTPS APP_S3_PUBLIC_BASE_URL must fail preflight' }
     $env:APP_S3_PUBLIC_BASE_URL = $contractEnvironment.APP_S3_PUBLIC_BASE_URL
 
-    $env:VITE_WS_BASE_URL = 'ws://api.eu.example.com/ws'
+    $env:VITE_WS_BASE_URL = 'ws://api.eu.example.com'
     if ((Invoke-PreflightContract) -eq 0) { throw 'non-WSS VITE_WS_BASE_URL must fail preflight' }
+    $env:VITE_WS_BASE_URL = $contractEnvironment.VITE_WS_BASE_URL
+
+    $env:VITE_WS_BASE_URL = 'wss://api.eu.example.com/ws'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'VITE_WS_BASE_URL with a path must fail preflight' }
     $env:VITE_WS_BASE_URL = $contractEnvironment.VITE_WS_BASE_URL
 
     $env:APP_CORS_ALLOWED_ORIGIN_PATTERNS = 'http://localhost:5173'
