@@ -53,5 +53,10 @@ Assert-Contains $euLedger '第 30 号迁移' 'EU 台账缺少拼团订单迁移�
 Assert-Contains $euLedger '第 31 号迁移' 'EU 台账缺少拼团灰度迁移回滚边界'
 Assert-Contains $groupBuyDelivery '渠道明确返回失败时保留原交易状态' '拼团交付记录缺少终态退款失败边界'
 Assert-Contains $groupBuyDelivery '迁移终点为 29' '拼团交付记录未阻断旧候选包口径'
+Assert-Contains $groupBuyDelivery 'eu-pre-rc-20261108-2' '拼团交付记录缺少当前技术候选'
+Assert-Contains $groupBuyDelivery '4ad66a0d3c806d8b455c877ec34fb92e1f55d832' '拼团交付记录未绑定当前不可变主干'
+Assert-Contains $euLedger 'eu-pre-rc-20261108-2' 'EU 台账缺少当前技术候选'
+Assert-Contains $euBaseline 'PR #36' 'EU 基线缺少终态退款人工核验交付状态'
+Assert-NotContains $euLedger '补丁合入并取得同 SHA CI/nightly 后须使用新版本号生成候选' 'EU 台账仍把已生成的当前候选写成待生成'
 
 Write-Output 'document status consistency contract passed'

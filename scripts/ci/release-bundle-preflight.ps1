@@ -120,7 +120,7 @@ function Test-DzdpReleaseBundle {
             $runtime = $manifest.webRuntime
             if ($runtime.defaultRegion -cne $TargetRegion) { throw 'Release manifest defaultRegion does not match the deployment region' }
             Assert-DzdpReleaseUrl 'webRuntime.apiBaseUrl' $runtime.apiBaseUrl
-            Assert-DzdpReleaseUrl 'webRuntime.webSocketBaseUrl' $runtime.webSocketBaseUrl 'wss'
+            Assert-DzdpReleaseUrl 'webRuntime.webSocketBaseUrl' $runtime.webSocketBaseUrl 'wss' -OriginOnly
             $stripeMode = if ($TargetEnvironment -eq 'prod') { 'live' } else { 'test' }
             if ($runtime.stripeConfigured -isnot [bool] -or -not $runtime.stripeConfigured -or $runtime.stripeMode -cne $stripeMode) {
                 throw 'Release manifest Stripe configuration must match the deployment environment'

@@ -14,11 +14,13 @@ param(
     [string]$MerchantServiceName,
     [string]$SmokeUrls,
     [int]$ReleaseRetentionCount = 5,
+    [string]$AcceptanceReportDirectory,
     [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
 $remotePortWasExplicitlySupplied = $PSBoundParameters.ContainsKey("RemotePort")
+$acceptanceScriptPath = Join-Path $PSScriptRoot "post-deploy-acceptance.ps1"
 
 if (-not $Environment) { $Environment = if ($env:DEPLOY_ENVIRONMENT) { $env:DEPLOY_ENVIRONMENT } else { "" } }
 if (-not $Region) { $Region = if ($env:DEPLOY_REGION) { $env:DEPLOY_REGION } else { "EU" } }
@@ -31,6 +33,9 @@ if (-not $WebServiceName) { $WebServiceName = if ($env:DEPLOY_WEB_SERVICE) { $en
 if (-not $AdminServiceName) { $AdminServiceName = if ($env:DEPLOY_ADMIN_SERVICE) { $env:DEPLOY_ADMIN_SERVICE } else { "dzdp-admin-web" } }
 if (-not $MerchantServiceName) { $MerchantServiceName = if ($env:DEPLOY_MERCHANT_SERVICE) { $env:DEPLOY_MERCHANT_SERVICE } else { "dzdp-merchant-web" } }
 if (-not $SmokeUrls) { $SmokeUrls = if ($env:DEPLOY_SMOKE_URLS) { $env:DEPLOY_SMOKE_URLS } else { "" } }
+if (-not $AcceptanceReportDirectory) {
+    $AcceptanceReportDirectory = if ($env:DEPLOY_ACCEPTANCE_REPORT_DIR) { $env:DEPLOY_ACCEPTANCE_REPORT_DIR } else { "artifacts/acceptance" }
+}
 if (-not $PSBoundParameters.ContainsKey("ReleaseRetentionCount") -and $env:DEPLOY_RELEASE_RETENTION_COUNT) {
     $ReleaseRetentionCount = [int]$env:DEPLOY_RELEASE_RETENTION_COUNT
 }
@@ -138,7 +143,8 @@ if ($DryRun) {
     Write-Output "3. Point the remote current symlink back to the selected release."
     Write-Output "4. Restart the backend, web, admin-web, and merchant-web services."
     Write-Output "5. Run smoke checks after rollback."
-    Write-Output "6. After successful smoke checks, retain current, previous, and $ReleaseRetentionCount older releases and remove stale bundles."
+    Write-Output "6. Verify the restored manifest, health, WSS configuration, launch safety, and HTTPS smoke URLs; write JSON and Markdown evidence."
+    Write-Output "7. After successful acceptance, retain current, previous, and $ReleaseRetentionCount older releases and remove stale bundles."
     exit 0
 }
 
@@ -289,6 +295,20 @@ $restoredVersion = [string](@($rolledBackVersion)[-1])
 Assert-SafeReleaseVersion -Value $restoredVersion
 
 Invoke-SmokeChecks -Urls $validatedSmokeUrls
+
+& $acceptanceScriptPath `
+    -Operation rollback `
+    -Environment $Environment `
+    -Region $Region `
+    -ExpectedVersion $restoredVersion `
+    -RemoteHost $RemoteHost `
+    -RemotePort $RemotePort `
+    -RemoteUser $RemoteUser `
+    -RemoteRoot $RemoteRoot `
+    -SmokeUrls $SmokeUrls `
+    -ReportDirectory $AcceptanceReportDirectory `
+    -AllowMissingRuntimeIdentity |
+    ForEach-Object { Write-Host $_ }
 
 $remoteReleaseRoot = "$RemoteRoot/releases"
 $remoteCurrentPath = "$RemoteRoot/current"

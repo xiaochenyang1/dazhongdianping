@@ -656,6 +656,15 @@ export interface AdminSystemHealth {
   uptimeSeconds: number
   runtimeMode: string
   applicationVersion: string
+  release: {
+    version: string
+    commitSha: string
+    buildEnvironment: string
+    buildRegion: string
+    migrationVersion: number
+    runtimeMode: string
+    builtAtUtc: string
+  }
   activeProfiles: string[]
   components: AdminSystemHealthComponent[]
 }

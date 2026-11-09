@@ -497,6 +497,15 @@ test.describe.serial('real backend review flow', () => {
         uptimeSeconds: number
         runtimeMode: string
         applicationVersion: string
+        release: {
+          version: string
+          commitSha: string
+          buildEnvironment: string
+          buildRegion: string
+          migrationVersion: number
+          runtimeMode: string
+          builtAtUtc: string
+        }
         activeProfiles: string[]
         components: Array<{
           key: string
@@ -513,12 +522,30 @@ test.describe.serial('real backend review flow', () => {
         'applicationVersion',
         'checkedAt',
         'components',
+        'release',
         'runtimeMode',
         'status',
         'uptimeSeconds',
       ])
       expect(health.status).toBe('degraded')
       expect(health.runtimeMode).toBe('local')
+      expect(Object.keys(health.release).sort()).toEqual([
+        'buildEnvironment',
+        'buildRegion',
+        'builtAtUtc',
+        'commitSha',
+        'migrationVersion',
+        'runtimeMode',
+        'version',
+      ])
+      expect(health.release).toMatchObject({
+        version: 'development',
+        commitSha: 'unknown',
+        buildEnvironment: 'local',
+        buildRegion: 'EU',
+        migrationVersion: 0,
+        runtimeMode: 'local',
+      })
       expect(health.activeProfiles).toEqual(['h2', 'local'])
       expect(health.components).toHaveLength(7)
       expect(health.components.map((component) => component.key)).toEqual([
@@ -550,6 +577,8 @@ test.describe.serial('real backend review flow', () => {
       await expect(healthMain.locator('.system-health-table tbody tr')).toHaveCount(7)
       await expect(healthMain.getByText('MySQL 数据库')).toBeVisible()
       await expect(healthMain.getByText('当前由 MySQL 提供搜索，Elasticsearch 未启用')).toBeVisible()
+      await expect(healthMain.getByText('构建目标: local/EU')).toBeVisible()
+      await expect(healthMain.getByText('提交: unknown · 迁移版本: 0')).toBeVisible()
       await expect(healthMain).not.toContainText('jdbc:h2:')
       await expect(healthMain).not.toContainText('admin123456')
       await expect(healthMain).not.toContainText('Demo123456')

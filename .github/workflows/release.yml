@@ -15,10 +15,11 @@ on:
         required: true
         type: choice
         options:
+          - test
           - pre
           - prod
       region:
-        description: Deployment region
+        description: Deployment region (test is fixed to EU)
         required: true
         default: EU
         type: choice
@@ -33,9 +34,10 @@ on:
 jobs:
   deploy-test:
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.environment == 'test')
     runs-on: ubuntu-24.04
     concurrency:
       group: release-test-EU
@@ -57,6 +59,7 @@ jobs:
       DEPLOY_DB_MIGRATION_MODE: ${{ vars.DEPLOY_DB_MIGRATION_MODE }}
       DEPLOY_DB_BASELINE_VERSION: ${{ vars.DEPLOY_DB_BASELINE_VERSION }}
       DEPLOY_RELEASE_RETENTION_COUNT: ${{ vars.DEPLOY_RELEASE_RETENTION_COUNT }}
+      DEPLOY_ACCEPTANCE_REPORT_DIR: artifacts/acceptance
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       VITE_WS_BASE_URL: ${{ vars.VITE_WS_BASE_URL }}
       VITE_STRIPE_PUBLISHABLE_KEY: ${{ vars.VITE_STRIPE_PUBLISHABLE_KEY }}
@@ -68,9 +71,9 @@ jobs:
       PRERENDER_API_BASE_URL_CN: ${{ vars.PRERENDER_API_BASE_URL_CN }}
       PUBLIC_SITE_URL_EU: ${{ vars.PUBLIC_SITE_URL_EU }}
       PRERENDER_API_BASE_URL_EU: ${{ vars.PRERENDER_API_BASE_URL_EU }}
-      APP_RELEASE_VERSION: ${{ github.event.workflow_run.head_sha }}
-      APP_RELEASE_COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
-      DEPLOY_EXPECTED_COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+      APP_RELEASE_VERSION: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.release_version }}
+      APP_RELEASE_COMMIT_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      DEPLOY_EXPECTED_COMMIT_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
       - name: Check test deployment configuration
         id: deployment-config
@@ -97,12 +100,16 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping test deployment because the test environment is not configured."
+            if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+              echo "::error::The manually requested test deployment environment is incomplete."
+              exit 1
+            fi
+            echo "::notice::Skipping automatic test deployment because the test environment is not configured."
           fi
       - uses: actions/checkout@v5
         if: steps.deployment-config.outputs.configured == 'true'
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-java@v5
         if: steps.deployment-config.outputs.configured == 'true'
         with:
@@ -164,6 +171,14 @@ jobs:
         if: steps.deployment-config.outputs.configured == 'true'
         shell: pwsh
         run: ./scripts/ci/deploy-release.ps1
+      - name: Upload test acceptance evidence
+        if: always() && steps.deployment-config.outputs.configured == 'true'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: acceptance-${{ env.DEPLOY_ENVIRONMENT }}-${{ env.DEPLOY_REGION }}-${{ github.run_id }}
+          path: ${{ env.DEPLOY_ACCEPTANCE_REPORT_DIR }}
+          if-no-files-found: ignore
+          retention-days: 30
 
   deploy-pre:
     if: github.event_name == 'workflow_dispatch' && inputs.environment == 'pre'
@@ -188,6 +203,7 @@ jobs:
       DEPLOY_DB_MIGRATION_MODE: ${{ vars.DEPLOY_DB_MIGRATION_MODE }}
       DEPLOY_DB_BASELINE_VERSION: ${{ vars.DEPLOY_DB_BASELINE_VERSION }}
       DEPLOY_RELEASE_RETENTION_COUNT: ${{ vars.DEPLOY_RELEASE_RETENTION_COUNT }}
+      DEPLOY_ACCEPTANCE_REPORT_DIR: artifacts/acceptance
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       VITE_WS_BASE_URL: ${{ vars.VITE_WS_BASE_URL }}
       VITE_STRIPE_PUBLISHABLE_KEY: ${{ vars.VITE_STRIPE_PUBLISHABLE_KEY }}
@@ -281,6 +297,14 @@ jobs:
       - name: Deploy pre
         shell: pwsh
         run: ./scripts/ci/deploy-release.ps1
+      - name: Upload pre acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: acceptance-${{ env.DEPLOY_ENVIRONMENT }}-${{ env.DEPLOY_REGION }}-${{ github.run_id }}
+          path: ${{ env.DEPLOY_ACCEPTANCE_REPORT_DIR }}
+          if-no-files-found: ignore
+          retention-days: 30
 
   deploy-prod:
     if: github.event_name == 'workflow_dispatch' && inputs.environment == 'prod'
@@ -305,6 +329,7 @@ jobs:
       DEPLOY_DB_MIGRATION_MODE: ${{ vars.DEPLOY_DB_MIGRATION_MODE }}
       DEPLOY_DB_BASELINE_VERSION: ${{ vars.DEPLOY_DB_BASELINE_VERSION }}
       DEPLOY_RELEASE_RETENTION_COUNT: ${{ vars.DEPLOY_RELEASE_RETENTION_COUNT }}
+      DEPLOY_ACCEPTANCE_REPORT_DIR: artifacts/acceptance
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       VITE_WS_BASE_URL: ${{ vars.VITE_WS_BASE_URL }}
       VITE_STRIPE_PUBLISHABLE_KEY: ${{ vars.VITE_STRIPE_PUBLISHABLE_KEY }}
@@ -398,3 +423,11 @@ jobs:
       - name: Deploy prod
         shell: pwsh
         run: ./scripts/ci/deploy-release.ps1
+      - name: Upload prod acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: acceptance-${{ env.DEPLOY_ENVIRONMENT }}-${{ env.DEPLOY_REGION }}-${{ github.run_id }}
+          path: ${{ env.DEPLOY_ACCEPTANCE_REPORT_DIR }}
+          if-no-files-found: ignore
+          retention-days: 30

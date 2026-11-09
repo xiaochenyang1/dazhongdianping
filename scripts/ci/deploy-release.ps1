@@ -16,6 +16,7 @@ param(
     [string]$DatabaseMigrationMode,
     [string]$DatabaseBaselineVersion,
     [int]$ReleaseRetentionCount = 5,
+    [string]$AcceptanceReportDirectory,
     [switch]$DryRun
 )
 
@@ -23,6 +24,7 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "release-bundle-preflight.ps1")
 $remotePortWasExplicitlySupplied = $PSBoundParameters.ContainsKey("RemotePort")
 $rollbackScriptPath = Join-Path $PSScriptRoot "rollback-release.ps1"
+$acceptanceScriptPath = Join-Path $PSScriptRoot "post-deploy-acceptance.ps1"
 
 if (-not $ReleaseBundle) { $ReleaseBundle = if ($env:APP_RELEASE_BUNDLE) { $env:APP_RELEASE_BUNDLE } else { "" } }
 if (-not $Environment) { $Environment = if ($env:DEPLOY_ENVIRONMENT) { $env:DEPLOY_ENVIRONMENT } else { "" } }
@@ -40,6 +42,9 @@ if (-not $SmokeUrls) { $SmokeUrls = if ($env:DEPLOY_SMOKE_URLS) { $env:DEPLOY_SM
 if (-not $DatabaseDefaultsFile) { $DatabaseDefaultsFile = if ($env:DEPLOY_DB_DEFAULTS_FILE) { $env:DEPLOY_DB_DEFAULTS_FILE } else { "" } }
 if (-not $DatabaseMigrationMode) { $DatabaseMigrationMode = if ($env:DEPLOY_DB_MIGRATION_MODE) { $env:DEPLOY_DB_MIGRATION_MODE } else { "apply" } }
 if (-not $DatabaseBaselineVersion) { $DatabaseBaselineVersion = if ($env:DEPLOY_DB_BASELINE_VERSION) { $env:DEPLOY_DB_BASELINE_VERSION } else { "" } }
+if (-not $AcceptanceReportDirectory) {
+    $AcceptanceReportDirectory = if ($env:DEPLOY_ACCEPTANCE_REPORT_DIR) { $env:DEPLOY_ACCEPTANCE_REPORT_DIR } else { "artifacts/acceptance" }
+}
 if (-not $PSBoundParameters.ContainsKey("ReleaseRetentionCount") -and $env:DEPLOY_RELEASE_RETENTION_COUNT) {
     $ReleaseRetentionCount = [int]$env:DEPLOY_RELEASE_RETENTION_COUNT
 }
@@ -162,8 +167,9 @@ if ($DryRun) {
     Write-Output "6. Switch the remote current symlink to the new release only after migration apply/strict verification succeeds."
     Write-Output "7. Restart the backend, web, admin-web, and merchant-web services."
     Write-Output "8. Run smoke checks against the deployed environment."
-    Write-Output "9. If activation or smoke checks fail, automatically restore the tracked previous release only while this version is current, and keep the deployment failed."
-    Write-Output "10. After successful smoke checks, retain current, previous, and $ReleaseRetentionCount older releases and remove stale bundles."
+    Write-Output "9. Verify the active manifest against the online release identity, health, WSS configuration, launch safety, and HTTPS smoke URLs; write JSON and Markdown evidence."
+    Write-Output "10. If activation, smoke, or acceptance checks fail, automatically restore the tracked previous release only while this version is current, and keep the deployment failed."
+    Write-Output "11. After successful acceptance, retain current, previous, and $ReleaseRetentionCount older releases and remove stale bundles."
     exit 0
 }
 
@@ -317,6 +323,19 @@ $restartCommand
 try {
     Invoke-Native -FilePath $sshPath -Arguments $sshArguments -InputScript $remoteDeployScript
     Invoke-SmokeChecks -Urls $validatedSmokeUrls
+    & $acceptanceScriptPath `
+        -Operation deploy `
+        -Environment $Environment `
+        -Region $Region `
+        -ExpectedVersion $version `
+        -ExpectedCommitSha $bundleVerification.CommitSha `
+        -RemoteHost $RemoteHost `
+        -RemotePort $RemotePort `
+        -RemoteUser $RemoteUser `
+        -RemoteRoot $RemoteRoot `
+        -SmokeUrls $SmokeUrls `
+        -ReportDirectory $AcceptanceReportDirectory |
+        ForEach-Object { Write-Host $_ }
 }
 catch {
     $smokeFailure = $_.Exception.Message
@@ -335,6 +354,7 @@ catch {
             -AdminServiceName $AdminServiceName `
             -MerchantServiceName $MerchantServiceName `
             -ReleaseRetentionCount $ReleaseRetentionCount `
+            -AcceptanceReportDirectory $AcceptanceReportDirectory `
             -SmokeUrls $SmokeUrls |
             ForEach-Object { Write-Host $_ }
     }

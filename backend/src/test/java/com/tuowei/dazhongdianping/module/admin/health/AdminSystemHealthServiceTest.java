@@ -11,6 +11,8 @@ import com.tuowei.dazhongdianping.config.SearchProperties;
 import com.tuowei.dazhongdianping.config.VerificationCodeProperties;
 import com.tuowei.dazhongdianping.module.admin.health.model.response.AdminSystemHealthComponentResponse;
 import com.tuowei.dazhongdianping.module.admin.health.model.response.AdminSystemHealthResponse;
+import com.tuowei.dazhongdianping.module.release.ReleaseInfoService;
+import com.tuowei.dazhongdianping.module.release.model.response.ReleaseInfoResponse;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -45,6 +47,9 @@ class AdminSystemHealthServiceTest {
 
         assertThat(response.status()).isEqualTo("up");
         assertThat(response.runtimeMode()).isEqualTo("pre");
+        assertThat(response.applicationVersion()).isEqualTo("test-release");
+        assertThat(response.release().commitSha()).isEqualTo("a".repeat(40));
+        assertThat(response.release().migrationVersion()).isEqualTo(31);
         assertThat(response.activeProfiles()).containsExactly("eu", "test");
         assertThat(response.checkedAt()).isNotNull();
         assertThat(response.uptimeSeconds()).isNotNegative();
@@ -168,8 +173,16 @@ class AdminSystemHealthServiceTest {
                 paymentMockEnabled,
                 stripeEnabled,
                 stripeSecret,
-                stripeEndpointSecret
+                stripeEndpointSecret,
+                releaseInfoService()
         );
+    }
+
+    private ReleaseInfoService releaseInfoService() {
+        ReleaseInfoService service = mock(ReleaseInfoService.class);
+        when(service.inspect()).thenReturn(new ReleaseInfoResponse(
+                "test-release", "a".repeat(40), "pre", "EU", 31, "pre", "2026-11-09T00:00:00Z"));
+        return service;
     }
 
     @SuppressWarnings("unchecked")

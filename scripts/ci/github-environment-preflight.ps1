@@ -33,14 +33,17 @@ function Test-ConfiguredValue {
 function Test-AbsoluteUrl {
     param(
         [string]$Value,
-        [string]$Scheme
+        [string]$Scheme,
+        [switch]$OriginOnly
     )
 
     $uri = $null
-    return [Uri]::TryCreate($Value, [UriKind]::Absolute, [ref]$uri) -and
+    $valid = [Uri]::TryCreate($Value, [UriKind]::Absolute, [ref]$uri) -and
         $uri.Scheme -ceq $Scheme -and
         -not [string]::IsNullOrWhiteSpace($uri.Host) -and
         [string]::IsNullOrWhiteSpace($uri.UserInfo)
+    return $valid -and (-not $OriginOnly -or
+        ($uri.AbsolutePath -ceq "/" -and [string]::IsNullOrWhiteSpace($uri.Query) -and [string]::IsNullOrWhiteSpace($uri.Fragment)))
 }
 
 function Test-SafeAbsolutePath {
@@ -266,8 +269,8 @@ foreach ($name in @("VITE_API_BASE_URL") + @($seoUrlVariables)) {
 }
 
 $webSocketUrl = Get-EnvironmentVariableValue -Name "VITE_WS_BASE_URL"
-if ((Test-ConfiguredValue -Value $webSocketUrl) -and -not (Test-AbsoluteUrl -Value $webSocketUrl -Scheme "wss")) {
-    Add-InvalidVariable -Name "VITE_WS_BASE_URL" -Message "must be an absolute WSS URL without user info"
+if ((Test-ConfiguredValue -Value $webSocketUrl) -and -not (Test-AbsoluteUrl -Value $webSocketUrl -Scheme "wss" -OriginOnly)) {
+    Add-InvalidVariable -Name "VITE_WS_BASE_URL" -Message "must be a WSS origin without user info, path, query, or fragment"
 }
 
 $stripePublishableKey = Get-EnvironmentVariableValue -Name "VITE_STRIPE_PUBLISHABLE_KEY"

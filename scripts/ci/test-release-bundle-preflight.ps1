@@ -50,7 +50,7 @@ function New-TestBundle {
         }
         webRuntime = @{
             defaultRegion = 'EU'; apiBaseUrl = 'https://api.example.test'
-            webSocketBaseUrl = 'wss://api.example.test/ws'; stripeConfigured = $true; stripeMode = 'test'
+            webSocketBaseUrl = 'wss://api.example.test'; stripeConfigured = $true; stripeMode = 'test'
         }
         seoSnapshot = @{ enabled = $true }
         seoSnapshots = @(@{
@@ -190,7 +190,8 @@ try {
         catch { $message = $_.Exception.Message }
         Assert-BundleTest (-not $message.Contains($url)) 'URL rejection must not echo credentials or query values'
     }
-    Assert-Rejected (New-TestBundle -ManifestEdit { param($m) $m.webRuntime.webSocketBaseUrl = 'ws://api.example.test/ws' }) 'webRuntime.webSocketBaseUrl must be'
+    Assert-Rejected (New-TestBundle -ManifestEdit { param($m) $m.webRuntime.webSocketBaseUrl = 'ws://api.example.test' }) 'webRuntime.webSocketBaseUrl must be'
+    Assert-Rejected (New-TestBundle -ManifestEdit { param($m) $m.webRuntime.webSocketBaseUrl = 'wss://api.example.test/ws' }) 'origin without a path'
 
     foreach ($member in @('release-manifest.json', 'release-version.txt', 'database/migrations.sha256')) {
         Assert-Rejected (New-TestBundle -EntriesEdit { param($e) $e.Remove($member) }) 'missing'

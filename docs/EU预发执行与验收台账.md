@@ -1,6 +1,6 @@
 # EU 预发执行与验收台账
 
-更新时间：2026-11-08。首发范围沿用 [EU 基线](EU预发发布基线.md)：巴黎单城、EUR、`Europe/Paris`。本文件给出执行顺序和证据字段；空白验收项均为待执行，不能凭本地测试或配置门禁通过改为已验收。
+更新时间：2026-11-09。首发范围沿用 [EU 基线](EU预发发布基线.md)：巴黎单城、EUR、`Europe/Paris`。本文件给出执行顺序和证据字段；空白验收项均为待执行，不能凭本地测试或配置门禁通过改为已验收。
 
 ## 1. 当前交付与环境边界
 
@@ -10,17 +10,21 @@ PR #28（创作者成果提交、人工审核与一次性发奖）已合入主�
 
 PR #30（秒杀订单交易闭环）已合入主干 `24fba53e707ef73b086e70a69a60fc538026415b`。该 SHA 的 [CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42324586352) 与 [nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42325997994) 均通过，活动价订单、两层并发库存、支付发券、取消/到期释放、退款、迟到支付自动退款和券码核销已进入主干，配套迁移终点为 29；候选包及运行结果见 [秒杀交付记录](秒杀订单交易闭环-2026-11-06.md#主干与技术候选)。基础巴黎预发仍保持秒杀开关关闭，目标环境业务验收前不得开放。
 
-PR #35 交付拼团订单交易与灰度运营：成员独立订单、团队/套餐两层并发约束、全员付款后一次成团发券、到期关闭与自动退款、后台异常看板和单团幂等修复、生命周期指标、截止提醒及活动/门店/城市稳定百分比灰度。配套迁移终点为 31，默认 `group_buy` 总开关与范围规则均关闭。提交结果不确定的退款可用稳定幂等键补偿；渠道明确失败只进入告警和人工资金处置，不由运营按钮自动重提。PR 已合入主干 `5b761fadfd48e2c72859b77c25e99c2cc971ba28`，该 SHA 的 [CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42454591828) 与 [nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42457667209) 均通过；03–31 技术候选及包内 JAR 启动结果见 [拼团交付记录](拼团订单交易与灰度运营-2026-11-08.md)。
+PR #35 交付拼团订单交易与灰度运营，PR #36 进一步收口渠道终态退款失败的人工核验与本地幂等补齐。当前不可变主干为 `4ad66a0d3c806d8b455c877ec34fb92e1f55d832`，该 SHA 的 [CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42465825993)、[手工 nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42467072287) 与 [定时 nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42526357580) 均通过。配套迁移终点为 31，默认 `group_buy` 总开关与范围规则均关闭；当前 03–31 技术候选及包内 JAR 启动结果见 [拼团交付记录](拼团订单交易与灰度运营-2026-11-08.md)。
 
 隐私数据域收尾和团购标题搜索已合入主干，扫码交付见 [摄像头验证记录](商户摄像头扫码验证-2026-10-24.md)。隐私变更新增第 26 号迁移，既有 Elasticsearch 索引必须执行全量重建。最终发布版本以同一不可变 SHA 的 CI、nightly、候选 manifest 与 SHA-256 为准，执行结果保存在对应日期的候选记录中。
 
-2026-11-08 再次只读核对 GitHub：Environment 仍只有 `test`、`pre`；`test` 的变量和 secret 均为 0，`pre` 只有 SSH 端口、四个服务名与数据库迁移模式这 6 个固定变量名，secret 仍为 0，且没有 required-reviewers 规则或部署分支/标签限制；`prod` 尚未创建。目标机、HTTPS/WSS、数据库/中间件、Stripe test、SMTP/Twilio 配置尚未提供。自动 [release 运行](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42325974262) 因 `test` 未配置而在 checkout、打包、上传和部署前按门禁跳过。技术候选可在不注入伪造配置的情况下生成；实际预发包需使用真实 Web、Stripe 和 SEO 配置重新构建，不能把空配置候选直接视为环境验收完成。
+2026-11-09 再次只读核对 GitHub：Environment 仍只有 `test`、`pre`；`test` 的变量和 secret 均为 0，`pre` 只有 SSH 端口、四个服务名与数据库迁移模式这 6 个固定变量名，secret 仍为 0，且没有 required-reviewers 规则或部署分支/标签限制；`prod` 尚未创建。目标机、HTTPS/WSS、数据库/中间件、Stripe test、SMTP/Twilio 配置尚未提供。当前主干的自动 [release 运行](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42467048527) 结论虽为 `success`，但 `test` 只执行配置门禁，checkout、打包、上传和部署均 skipped，`pre/prod` 作业也未执行。技术候选可在不注入伪造配置的情况下生成；实际预发包需使用真实 Web、Stripe 和 SEO 配置重新构建，不能把空配置候选直接视为环境验收完成。
+
+当前开发工作区已补充手工 `test` 重试入口，供配置补齐后对已通过 CI 的固定 ref 再次发版；该入口固定 EU，并将 checkout、打包 manifest 和部署预期 SHA 统一到手工运行的 `github.sha`。自动 test 在缺配置时仍 notice + skip，明确手工发 test 时缺配置则直接失败。此改动须提交并通过 CI 后才可在 GitHub Actions 使用，不改变上段所述当前主干运行与环境未就绪的事实。
+
+同一工作区继续补齐发布可观测性：后端 JAR 编入版本、commit、构建环境/区域和迁移终点，公开只读 `/api/c/v1/release-info` 与管理端系统健康页展示该身份；发布/回滚会从远端 `current` manifest 交叉核对在线身份、actuator、延期功能关闭状态、WSS origin 和 HTTPS smoke，并上传脱敏 JSON/Markdown 报告。API 与 smoke URL 禁止 query/fragment，避免令牌进入报告；`test` 回滚固定使用 EU 和 `release-test-EU` 并发锁，非 EU 请求在 SSH 前拒绝。WebSocket 握手来源现与 HTTP CORS 共用真实环境配置；`VITE_WS_BASE_URL` 必须只填 `wss://host[:port]` origin，前端会自行追加 `/ws/notifications`。这些改动同样须提交并通过 CI 后方可用于真实环境。
 
 ## 2. 开始部署前的输入
 
 | 输入 | 存放位置 / 完成条件 | 当前状态 |
 | --- | --- | --- |
-| 版本与制品 | 固定 SHA/tag，CI 与 nightly 链接，ZIP、SHA-256、manifest | 技术候选 `eu-pre-rc-20261108-1` 已绑定主干 `5b761fad…`，CI/nightly、ZIP、旁车、manifest、03–31 迁移和 H2 启动均通过，但不含后续终态退款人工核验补丁；补丁合入并取得同 SHA CI/nightly 后须使用新版本号生成候选。两者均未注入目标 API/WSS、Stripe/SEO 配置，环境化包待配置后重建 |
+| 版本与制品 | 固定 SHA/tag，CI 与 nightly 链接，ZIP、SHA-256、manifest | 技术候选 `eu-pre-rc-20261108-2` 已绑定当前主干 `4ad66a0d…`，包含终态退款人工核验补丁；CI/nightly、ZIP、旁车、manifest、03–31 迁移和 H2 启动均通过。其目标 API/WSS、Stripe/SEO 配置为空，`BuildConfigurationVerified=false`，环境化包待真实配置后使用新版本号重建 |
 | 目标机与发布服务 | `test` / `pre` SSH、发布根目录、四个服务、HTTPS smoke URL | 待提供 |
 | 数据库 | 私有 MySQL defaults 文件权限 `0400/0600`；迁移模式与已有库准确基线 | 待提供 |
 | 运行环境 | 私有 env 文件或密钥管理引用；严格 `pre`、Redis、S3、ES、CORS/可信代理 | 待提供 |
@@ -44,7 +48,7 @@ PR #35 交付拼团订单交易与灰度运营：成员独立订单、团队/套
 
 2. 在已通过 CI 的固定 SHA 干净工作区用真实构建配置打包，调用 `scripts/ci/package-release.ps1 -Version <新版本> -CommitSha <40位SHA>`，或设置 `APP_RELEASE_COMMIT_SHA`。脚本以实际 Git HEAD 为来源并校验显式 SHA，拒绝未提交改动、未跟踪构建输入和已有版本输出，不使用 `GITHUB_SHA` 冒充源码来源。核对包内后端 JAR、三端 dist、03–31 连续迁移与全部校验和、迁移 runner；manifest 的 SHA、EU 默认区域、API/WSS、Stripe 和实际 SEO 快照必须一致。配置变化重新生成新版本。
 3. 在独立恢复环境完成数据库备份恢复核对，记录数据一致性、迁移版本和恢复耗时。确认已有库的基线再应用迁移；不要把历史基线直接假设为 25，也不要把全量 schema/seed 导入现有库。仓库的 `mysql-smoke.ps1`、ES smoke 和浏览器 E2E 面向隔离测试，不能直接当作现有预发库的部署命令。
-4. 先部署 `test`，再部署 `pre`。使用 `deploy-release.ps1 -ExpectedCommitSha <已验证的40位SHA>`（或设置 `DEPLOY_EXPECTED_COMMIT_SHA`），其公共预检在 SSH/SCP 之前校验 ZIP/旁车、源码、版本、环境/区域、迁移与 Web/Stripe/SEO 配置。技术候选仅能通过 `release-bundle-preflight.ps1 -ArtifactOnly` 的制品检查，不能直接部署。`-DryRun` 仅展示计划，不验证实际包或连接目标机；正式执行保存 SSH、迁移、服务重启与每个 HTTPS smoke 的结果。配置门禁导致步骤 skipped 仍记为未部署。
+4. 先部署 `test`，再部署 `pre`。配置补齐后可在 release workflow 选择 `test`，从已通过 CI 的固定 ref 手工重试；test 固定 EU，所选 ref 的 `github.sha` 必须与构建和部署预期 SHA 一致，配置不完整时手工运行应失败。也可使用 `deploy-release.ps1 -ExpectedCommitSha <已验证的40位SHA>`（或设置 `DEPLOY_EXPECTED_COMMIT_SHA`），其公共预检在 SSH/SCP 之前校验 ZIP/旁车、源码、版本、环境/区域、迁移与 Web/Stripe/SEO 配置。技术候选仅能通过 `release-bundle-preflight.ps1 -ArtifactOnly` 的制品检查，不能直接部署。正式执行还必须得到 `post-deploy-acceptance.ps1` 的报告：远端 manifest、在线 release-info、actuator、延期功能关闭状态和 HTTPS smoke 全部匹配；失败报告保留证据并触发既有自动恢复。`-DryRun` 仅展示计划，不验证实际包或连接目标机。自动入口因配置门禁导致步骤 skipped 仍记为未部署。
 5. ES 目标索引执行管理员 `POST /api/admin/v1/search/reindex`，等待队列清空，核对失败任务为零，再测试中文/英文团购标题、编辑旧词移除、上下架、审核和区域隔离。不能用 H2/MySQL 搜索通过替代已有 ES 索引重建。
 6. 在真实供应商和目标环境按下表执行交易、预订、隐私和商户试用；保存合成订单/券/退款 ID、供应商事件 ID、状态核对和截图。验收过程不操作真实消费者资金或个人记录。
 7. 在 `test` 和 `pre` 分别演练应用回滚及同组 HTTPS smoke，确认当前/previous/旧版本保留策略和告警处置；最后由业务、运维和隐私责任人填验收结论。
