@@ -150,7 +150,7 @@ Environment 和目标机预检都有真实结果后，使用一个已经完成�
 
 也可从 GitHub Actions 手工运行 `readiness` workflow，输入环境、区域和同一个 40 位提交。它会绑定所选 GitHub Environment，核对该提交的 `ci` push 运行及 `verify`、`database-migration-integration` 两个 job，执行 Environment 审计和目标机只读预检，先上传保留 30 天的脱敏 JSON/Markdown，再根据 `ready` 结果通过或失败。`pre/prod` 的 Environment 审批仍会生效。该 workflow 不打包、不部署、不回滚。
 
-只有三个门禁同时通过、Environment 没有管理员绕过/自审/分支策略等加固警告、目标报告声明未修改机器时，`readyForDeployment` 才为 `true`。报告不替代真实供应商 smoke、部署后验收、备份恢复和回滚证据。
+只有三个门禁同时通过、Environment 没有管理员绕过/自审/部署来源等加固警告、目标报告声明未修改机器时，`readyForDeployment` 才为 `true`。部署来源审计会读取自定义 policy 明细，要求恰好允许 `main` 与 `eu-pre-rc-*`；策略为空、缺少候选标签或额外放行其他来源都会继续阻断。报告不替代真实供应商 smoke、部署后验收、备份恢复和回滚证据。
 
 Variables：
 

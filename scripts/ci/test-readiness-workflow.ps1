@@ -25,6 +25,8 @@ foreach ($required in @(
     "READINESS_COMMIT_SHA: `${{ inputs.commit_sha }}",
     "Prepare SSH for read-only target audit",
     "github-environment-preflight.ps1",
+    "deployment-branch-policies?per_page=100",
+    "deployment_branch_policies",
     "readiness-report.ps1",
     "-ReportOnly",
     "Upload readiness evidence",

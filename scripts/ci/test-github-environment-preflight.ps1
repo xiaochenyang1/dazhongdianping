@@ -90,7 +90,11 @@ $readyProtectionJson = @{
         }
     )
     can_admins_bypass = $false
-    deployment_branch_policy = @{ protected_branches = $true; custom_branch_policies = $false }
+    deployment_branch_policy = @{ protected_branches = $false; custom_branch_policies = $true }
+    deployment_branch_policies = @(
+        @{ name = "main"; type = "branch" },
+        @{ name = "eu-pre-rc-*"; type = "tag" }
+    )
 } | ConvertTo-Json -Depth 6 -Compress
 $unprotectedEnvironmentJson = @{
     protection_rules = @()
@@ -110,6 +114,7 @@ Assert-True $readyReport.Ready "complete pre environment fixture must be ready"
 Assert-True ($readyReport.MissingVariables.Count -eq 0) "ready fixture must not report missing variables"
 Assert-True ($readyReport.MissingSecrets.Count -eq 0) "ready fixture must not report missing secrets"
 Assert-True ($readyReport.InvalidVariables.Count -eq 0) "ready fixture must not report invalid variables"
+Assert-True ("deployment_branch_policy" -notin @($readyReport.Warnings.Name)) "ready fixture must use the exact deployment policy allowlist"
 
 $multiRegionVariables = $readyVariables.Clone()
 $multiRegionVariables.Remove("PUBLIC_SITE_URL")
@@ -294,6 +299,45 @@ foreach ($expected in @("can_admins_bypass", "deployment_branch_policy", "preven
     Assert-True ($expected -in $warningNames) "approval audit must warn about $expected"
 }
 Assert-True (($warningReport | ConvertTo-Json -Depth 6) -notmatch 'must_not_be_printed') "approval report must not expose reviewer identities"
+
+$incompletePolicyProtection = $readyProtectionJson | ConvertFrom-Json
+$incompletePolicyProtection.deployment_branch_policies = @(
+    [pscustomobject]@{ name = "main"; type = "branch" }
+)
+$incompletePolicyReport = & $preflightPath `
+    -Environment pre `
+    -VariablesJson $readyVariablesJson `
+    -SecretsJson $readySecretsJson `
+    -ProtectionJson ($incompletePolicyProtection | ConvertTo-Json -Depth 7 -Compress) `
+    -ReportOnly `
+    -Json | ConvertFrom-Json
+Assert-True ("deployment_branch_policy" -in @($incompletePolicyReport.Warnings.Name)) "pre must warn when the release tag policy is missing"
+
+$broadPolicyProtection = $readyProtectionJson | ConvertFrom-Json
+$broadPolicyProtection.deployment_branch_policies = @(
+    [pscustomobject]@{ name = "main"; type = "branch" },
+    [pscustomobject]@{ name = "eu-pre-rc-*"; type = "tag" },
+    [pscustomobject]@{ name = "*"; type = "branch" }
+)
+$broadPolicyReport = & $preflightPath `
+    -Environment pre `
+    -VariablesJson $readyVariablesJson `
+    -SecretsJson $readySecretsJson `
+    -ProtectionJson ($broadPolicyProtection | ConvertTo-Json -Depth 7 -Compress) `
+    -ReportOnly `
+    -Json | ConvertFrom-Json
+Assert-True ("deployment_branch_policy" -in @($broadPolicyReport.Warnings.Name)) "pre must warn when deployment policies allow an unexpected source"
+
+$missingPolicySnapshot = $readyProtectionJson | ConvertFrom-Json
+$missingPolicySnapshot.PSObject.Properties.Remove("deployment_branch_policies")
+$missingPolicySnapshotReport = & $preflightPath `
+    -Environment pre `
+    -VariablesJson $readyVariablesJson `
+    -SecretsJson $readySecretsJson `
+    -ProtectionJson ($missingPolicySnapshot | ConvertTo-Json -Depth 7 -Compress) `
+    -ReportOnly `
+    -Json | ConvertFrom-Json
+Assert-True ("deployment_branch_policy" -in @($missingPolicySnapshotReport.Warnings.Name)) "pre must warn when custom policy evidence is absent"
 
 Assert-ThrowsLike {
     & $preflightPath -VariablesJson "[]"

@@ -95,6 +95,26 @@ catch {
     throw "Environment snapshot JSON is invalid"
 }
 
+if (-not $offline -and
+    $null -ne $protection.deployment_branch_policy -and
+    $protection.deployment_branch_policy.custom_branch_policies -eq $true) {
+    try {
+        $policyList = Invoke-GhJson -Arguments @(
+            "api", "repos/$Repository/environments/$TargetEnvironment/deployment-branch-policies?per_page=100"
+        ) | ConvertFrom-Json
+        $deploymentPolicies = @($policyList.branch_policies | ForEach-Object {
+            [pscustomobject]@{
+                name = [string]$_.name
+                type = [string]$_.type
+            }
+        })
+        $protection | Add-Member -NotePropertyName "deployment_branch_policies" -NotePropertyValue $deploymentPolicies -Force
+    }
+    catch {
+        throw "Unable to read Environment deployment policies"
+    }
+}
+
 $variables = @{}
 foreach ($entry in $variableEntries) {
     if ([string]::IsNullOrWhiteSpace([string]$entry.name)) {
@@ -333,8 +353,39 @@ if ($TargetEnvironment -in @("pre", "prod")) {
     if ($protection.can_admins_bypass -eq $true) {
         Add-AuditWarning -Name "can_admins_bypass" -Message "repository administrators can bypass the environment approval gate"
     }
-    if ($null -eq $protection.deployment_branch_policy) {
-        Add-AuditWarning -Name "deployment_branch_policy" -Message "the environment does not restrict deployment branches or tags"
+    $deploymentBranchPolicy = $protection.deployment_branch_policy
+    if ($null -eq $deploymentBranchPolicy -or
+        $deploymentBranchPolicy.protected_branches -ne $false -or
+        $deploymentBranchPolicy.custom_branch_policies -ne $true) {
+        Add-AuditWarning -Name "deployment_branch_policy" -Message "the environment must use the approved custom branch and tag policies"
+    }
+    else {
+        $expectedPolicyKeys = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+        $null = $expectedPolicyKeys.Add("branch:main")
+        $null = $expectedPolicyKeys.Add("tag:eu-pre-rc-*")
+        $observedPolicyKeys = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+        $deploymentPoliciesProperty = $protection.PSObject.Properties["deployment_branch_policies"]
+        $deploymentPolicies = if ($null -eq $deploymentPoliciesProperty) { @() } else { @($deploymentPoliciesProperty.Value) }
+        $policyEntriesValid = $deploymentPolicies.Count -eq $expectedPolicyKeys.Count
+        foreach ($policy in $deploymentPolicies) {
+            $policyType = [string]$policy.type
+            $policyName = [string]$policy.name
+            if ($policyType -notin @("branch", "tag") -or [string]::IsNullOrWhiteSpace($policyName)) {
+                $policyEntriesValid = $false
+                continue
+            }
+            if (-not $observedPolicyKeys.Add("${policyType}:$policyName")) {
+                $policyEntriesValid = $false
+            }
+        }
+        foreach ($expectedPolicyKey in $expectedPolicyKeys) {
+            if (-not $observedPolicyKeys.Contains($expectedPolicyKey)) {
+                $policyEntriesValid = $false
+            }
+        }
+        if (-not $policyEntriesValid) {
+            Add-AuditWarning -Name "deployment_branch_policy" -Message "the environment deployment policies must allow only main and eu-pre-rc-*"
+        }
     }
 }
 

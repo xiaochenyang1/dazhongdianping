@@ -121,14 +121,26 @@ jobs:
             if (-not [string]::IsNullOrWhiteSpace($env:DEPLOY_KNOWN_HOSTS)) { [pscustomobject]@{ name = "DEPLOY_KNOWN_HOSTS" } }
             if (-not [string]::IsNullOrWhiteSpace($env:DEPLOY_SSH_PRIVATE_KEY)) { [pscustomobject]@{ name = "DEPLOY_SSH_PRIVATE_KEY" } }
           )
-          $protection = gh api "repos/$($env:READINESS_REPOSITORY)/environments/$($env:READINESS_ENVIRONMENT)"
+          $protectionText = gh api "repos/$($env:READINESS_REPOSITORY)/environments/$($env:READINESS_ENVIRONMENT)"
           if ($LASTEXITCODE -ne 0) { throw "Unable to read Environment protection" }
+          $protection = ($protectionText -join "`n") | ConvertFrom-Json
+          $deploymentPolicies = @()
+          if ($null -ne $protection.deployment_branch_policy -and
+              $protection.deployment_branch_policy.custom_branch_policies -eq $true) {
+            $policyListText = gh api "repos/$($env:READINESS_REPOSITORY)/environments/$($env:READINESS_ENVIRONMENT)/deployment-branch-policies?per_page=100"
+            if ($LASTEXITCODE -ne 0) { throw "Unable to read Environment deployment policies" }
+            $policyList = ($policyListText -join "`n") | ConvertFrom-Json
+            $deploymentPolicies = @($policyList.branch_policies | ForEach-Object {
+              [pscustomobject]@{ name = [string]$_.name; type = [string]$_.type }
+            })
+          }
+          $protection | Add-Member -NotePropertyName "deployment_branch_policies" -NotePropertyValue $deploymentPolicies -Force
           $audit = ./scripts/ci/github-environment-preflight.ps1 `
             -Environment $env:READINESS_ENVIRONMENT `
             -Repository $env:READINESS_REPOSITORY `
             -VariablesJson (ConvertTo-Json -InputObject $variables -Compress) `
             -SecretsJson (ConvertTo-Json -InputObject $secrets -Compress) `
-            -ProtectionJson ($protection -join "`n") `
+            -ProtectionJson ($protection | ConvertTo-Json -Depth 10 -Compress) `
             -ReportOnly `
             -Json
           $snapshotPath = Join-Path $env:RUNNER_TEMP "environment-audit.json"
