@@ -381,6 +381,9 @@ $protectionSnapshot = [pscustomobject]@{
         protected_branches = $false
         custom_branch_policies = $true
     }
+    deployment_branch_policies = @($deploymentPolicies | ForEach-Object {
+        [pscustomobject]@{ name = $_.Name; type = $_.Type }
+    })
 }
 $variablesJson = @($variables.GetEnumerator() | ForEach-Object {
     [pscustomobject]@{ name = $_.Key; value = $_.Value }
