@@ -30,8 +30,8 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: String.fromEnvironment('FIREBASE_IOS_API_KEY'),
-    appId: '1:YOUR_PROJECT_ID:ios:YOUR_IOS_BUNDLE_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
+    appId: String.fromEnvironment('FIREBASE_IOS_APP_ID'),
+    messagingSenderId: String.fromEnvironment('FIREBASE_IOS_SENDER_ID'),
+    projectId: String.fromEnvironment('FIREBASE_IOS_PROJECT_ID'),
   );
 }

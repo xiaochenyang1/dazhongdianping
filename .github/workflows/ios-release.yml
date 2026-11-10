@@ -1,0 +1,362 @@
+name: ios-release
+run-name: iOS ${{ inputs.environment }} ${{ inputs.region }} ${{ inputs.build_name }}+${{ inputs.build_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Release environment
+        required: true
+        default: pre
+        type: choice
+        options:
+          - test
+          - pre
+          - prod
+      region:
+        description: Application region
+        required: true
+        default: EU
+        type: choice
+        options:
+          - CN
+          - EU
+      build_name:
+        description: Semantic app version, for example 1.0.0
+        required: true
+        default: 1.0.0
+        type: string
+      build_number:
+        description: Positive iOS build number
+        required: true
+        default: "1"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-release-${{ inputs.environment }}-${{ inputs.region }}
+  cancel-in-progress: false
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    environment: ${{ inputs.environment }}
+    env:
+      DZDP_IOS_BUNDLE_ID: ${{ vars.DZDP_IOS_BUNDLE_ID }}
+      DZDP_IOS_TEAM_ID: ${{ vars.DZDP_IOS_TEAM_ID }}
+      DZDP_APP_API_BASE_URL: ${{ vars.DZDP_APP_API_BASE_URL }}
+      DZDP_IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.DZDP_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+      DZDP_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.DZDP_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+      DZDP_IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.DZDP_IOS_PROVISIONING_PROFILE_BASE64 }}
+      DZDP_FIREBASE_IOS_CONFIG_BASE64: ${{ secrets.DZDP_FIREBASE_IOS_CONFIG_BASE64 }}
+      GOOGLE_MAPS_API_KEY: ${{ secrets.DZDP_GOOGLE_MAPS_API_KEY }}
+      STRIPE_PUBLISHABLE_KEY: ${{ vars.VITE_STRIPE_PUBLISHABLE_KEY }}
+      SHARE_BASE_URL: ${{ vars.PUBLIC_SITE_URL }}
+      RELEASE_ENVIRONMENT: ${{ inputs.environment }}
+      RELEASE_REGION: ${{ inputs.region }}
+      RELEASE_BUILD_NAME: ${{ inputs.build_name }}
+      RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.44.8"
+          cache: true
+
+      - name: Validate iOS release configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            DZDP_IOS_BUNDLE_ID
+            DZDP_IOS_TEAM_ID
+            DZDP_APP_API_BASE_URL
+            DZDP_IOS_DISTRIBUTION_CERTIFICATE_BASE64
+            DZDP_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD
+            DZDP_IOS_PROVISIONING_PROFILE_BASE64
+            GOOGLE_MAPS_API_KEY
+            STRIPE_PUBLISHABLE_KEY
+            SHARE_BASE_URL
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::$name is not configured for the selected GitHub Environment."
+              exit 1
+            fi
+          done
+          if [[ "$DZDP_IOS_BUNDLE_ID" == com.example* ]] ||
+             [[ ! "$DZDP_IOS_BUNDLE_ID" =~ ^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$ ]]; then
+            echo "::error::DZDP_IOS_BUNDLE_ID must be a production reverse-DNS bundle identifier."
+            exit 1
+          fi
+          if [[ ! "$DZDP_IOS_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "::error::DZDP_IOS_TEAM_ID must be a 10-character Apple Developer Team ID."
+            exit 1
+          fi
+          if [[ ! "$DZDP_APP_API_BASE_URL" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "::error::DZDP_APP_API_BASE_URL must be an absolute HTTPS URL."
+            exit 1
+          fi
+          expected_stripe_prefix="pk_test_"
+          if [[ "$RELEASE_ENVIRONMENT" == "prod" ]]; then
+            expected_stripe_prefix="pk_live_"
+          fi
+          if [[ "$STRIPE_PUBLISHABLE_KEY" != "$expected_stripe_prefix"* ]]; then
+            echo "::error::VITE_STRIPE_PUBLISHABLE_KEY must match the selected release environment."
+            exit 1
+          fi
+          if [[ ! "$SHARE_BASE_URL" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "::error::PUBLIC_SITE_URL must be an absolute HTTPS URL for app share links."
+            exit 1
+          fi
+          if [[ ! "$RELEASE_BUILD_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::build_name must be a semantic version such as 1.0.0."
+            exit 1
+          fi
+          if [[ ! "$RELEASE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::build_number must be a positive integer."
+            exit 1
+          fi
+
+      - name: Prepare and validate signing assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          certificate_path="$RUNNER_TEMP/dzdp-ios-distribution.p12"
+          profile_source="$RUNNER_TEMP/dzdp-ios.mobileprovision"
+          profile_plist="$RUNNER_TEMP/dzdp-ios-profile.plist"
+          keychain_path="$RUNNER_TEMP/dzdp-ios-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 24)"
+          echo "DZDP_IOS_KEYCHAIN_PATH=$keychain_path" >> "$GITHUB_ENV"
+
+          printf '%s' "$DZDP_IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 -D > "$certificate_path"
+          printf '%s' "$DZDP_IOS_PROVISIONING_PROFILE_BASE64" | base64 -D > "$profile_source"
+          [[ -s "$certificate_path" ]] || { echo "::error::Decoded iOS distribution certificate is empty."; exit 1; }
+          [[ -s "$profile_source" ]] || { echo "::error::Decoded iOS provisioning profile is empty."; exit 1; }
+
+          security cms -D -i "$profile_source" > "$profile_plist"
+          profile_uuid="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$profile_plist")"
+          profile_team_id="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$profile_plist")"
+          profile_app_id="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$profile_plist")"
+          profile_apns="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:aps-environment' "$profile_plist")"
+          expected_app_id="$DZDP_IOS_TEAM_ID.$DZDP_IOS_BUNDLE_ID"
+          [[ "$profile_team_id" == "$DZDP_IOS_TEAM_ID" ]] || { echo "::error::Provisioning profile Team ID does not match DZDP_IOS_TEAM_ID."; exit 1; }
+          [[ "$profile_app_id" == "$expected_app_id" ]] || { echo "::error::Provisioning profile does not match DZDP_IOS_BUNDLE_ID."; exit 1; }
+          [[ "$profile_apns" == "production" ]] || { echo "::error::Provisioning profile must include the production APNs entitlement."; exit 1; }
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$certificate_path" -P "$DZDP_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -f pkcs12 -T /usr/bin/codesign -T /usr/bin/security -k "$keychain_path"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+          identity_count="$(security find-identity -v -p codesigning "$keychain_path" | awk '/Apple Distribution/ { count++ } END { print count+0 }')"
+          [[ "$identity_count" -gt 0 ]] || { echo "::error::The PKCS#12 file does not contain an Apple Distribution signing identity."; exit 1; }
+
+          profile_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
+          installed_profile="$profile_dir/$profile_uuid.mobileprovision"
+          echo "DZDP_IOS_INSTALLED_PROFILE=$installed_profile" >> "$GITHUB_ENV"
+          mkdir -p "$profile_dir"
+          cp "$profile_source" "$installed_profile"
+          chmod 600 "$installed_profile"
+
+          echo "DZDP_IOS_PROFILE_UUID=$profile_uuid" >> "$GITHUB_ENV"
+
+      - name: Prepare optional Firebase configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          firebase_plist="$RUNNER_TEMP/GoogleService-Info.plist"
+          if [[ -n "${DZDP_FIREBASE_IOS_CONFIG_BASE64:-}" ]]; then
+            printf '%s' "$DZDP_FIREBASE_IOS_CONFIG_BASE64" | base64 -D > "$firebase_plist"
+            [[ -s "$firebase_plist" ]] || { echo "::error::Decoded Firebase iOS configuration is empty."; exit 1; }
+            firebase_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' "$firebase_plist")"
+            [[ "$firebase_bundle_id" == "$DZDP_IOS_BUNDLE_ID" ]] || { echo "::error::Firebase iOS configuration does not match DZDP_IOS_BUNDLE_ID."; exit 1; }
+            firebase_api_key="$(/usr/libexec/PlistBuddy -c 'Print :API_KEY' "$firebase_plist")"
+            firebase_app_id="$(/usr/libexec/PlistBuddy -c 'Print :GOOGLE_APP_ID' "$firebase_plist")"
+            firebase_sender_id="$(/usr/libexec/PlistBuddy -c 'Print :GCM_SENDER_ID' "$firebase_plist")"
+            firebase_project_id="$(/usr/libexec/PlistBuddy -c 'Print :PROJECT_ID' "$firebase_plist")"
+            echo "::add-mask::$firebase_api_key"
+            echo "::add-mask::$firebase_app_id"
+            echo "::add-mask::$firebase_sender_id"
+            echo "::add-mask::$firebase_project_id"
+            echo "FIREBASE_IOS_API_KEY=$firebase_api_key" >> "$GITHUB_ENV"
+            echo "FIREBASE_IOS_APP_ID=$firebase_app_id" >> "$GITHUB_ENV"
+            echo "FIREBASE_IOS_SENDER_ID=$firebase_sender_id" >> "$GITHUB_ENV"
+            echo "FIREBASE_IOS_PROJECT_ID=$firebase_project_id" >> "$GITHUB_ENV"
+            echo "FIREBASE_CONFIGURED=true" >> "$GITHUB_ENV"
+          else
+            echo "FIREBASE_IOS_API_KEY=" >> "$GITHUB_ENV"
+            echo "FIREBASE_IOS_APP_ID=" >> "$GITHUB_ENV"
+            echo "FIREBASE_IOS_SENDER_ID=" >> "$GITHUB_ENV"
+            echo "FIREBASE_IOS_PROJECT_ID=" >> "$GITHUB_ENV"
+            echo "FIREBASE_CONFIGURED=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Prepare Xcode release configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          overrides="app/ios/Flutter/ReleaseOverrides.xcconfig"
+          export_options="$RUNNER_TEMP/dzdp-ios-export-options.plist"
+          {
+            echo "DZDP_IOS_BUNDLE_ID = $DZDP_IOS_BUNDLE_ID"
+            echo "DZDP_IOS_TEAM_ID = $DZDP_IOS_TEAM_ID"
+            echo "DZDP_APNS_ENVIRONMENT = production"
+            echo "GOOGLE_MAPS_API_KEY = $GOOGLE_MAPS_API_KEY"
+            echo "DEVELOPMENT_TEAM = $DZDP_IOS_TEAM_ID"
+            echo "CODE_SIGN_STYLE = Manual"
+            echo "CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution"
+            echo "PROVISIONING_PROFILE_SPECIFIER = $DZDP_IOS_PROFILE_UUID"
+          } > "$overrides"
+          chmod 600 "$overrides"
+
+          /usr/libexec/PlistBuddy -c 'Add :method string app-store-connect' "$export_options"
+          /usr/libexec/PlistBuddy -c "Add :teamID string $DZDP_IOS_TEAM_ID" "$export_options"
+          /usr/libexec/PlistBuddy -c 'Add :signingStyle string manual' "$export_options"
+          /usr/libexec/PlistBuddy -c 'Add :signingCertificate string Apple Distribution' "$export_options"
+          /usr/libexec/PlistBuddy -c 'Add :destination string export' "$export_options"
+          /usr/libexec/PlistBuddy -c 'Add :manageAppVersionAndBuildNumber bool false' "$export_options"
+          /usr/libexec/PlistBuddy -c 'Add :stripSwiftSymbols bool true' "$export_options"
+          /usr/libexec/PlistBuddy -c 'Add :uploadSymbols bool true' "$export_options"
+          /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles dict' "$export_options"
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:$DZDP_IOS_BUNDLE_ID string $DZDP_IOS_PROFILE_UUID" "$export_options"
+          chmod 600 "$export_options"
+          echo "DZDP_IOS_EXPORT_OPTIONS=$export_options" >> "$GITHUB_ENV"
+
+      - name: Verify Flutter app
+        working-directory: app
+        run: |
+          flutter pub get
+          (cd ios && pod install --deployment)
+          flutter test
+          flutter analyze
+
+      - name: Build signed iOS IPA
+        working-directory: app
+        run: >-
+          flutter build ipa --release
+          --build-name "$RELEASE_BUILD_NAME"
+          --build-number "$RELEASE_BUILD_NUMBER"
+          --export-options-plist "$DZDP_IOS_EXPORT_OPTIONS"
+          --dart-define "API_BASE_URL=$DZDP_APP_API_BASE_URL"
+          --dart-define "APP_REGION=$RELEASE_REGION"
+          --dart-define "FIREBASE_CONFIGURED=$FIREBASE_CONFIGURED"
+          --dart-define "FIREBASE_IOS_API_KEY=$FIREBASE_IOS_API_KEY"
+          --dart-define "FIREBASE_IOS_APP_ID=$FIREBASE_IOS_APP_ID"
+          --dart-define "FIREBASE_IOS_SENDER_ID=$FIREBASE_IOS_SENDER_ID"
+          --dart-define "FIREBASE_IOS_PROJECT_ID=$FIREBASE_IOS_PROJECT_ID"
+          --dart-define "GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY"
+          --dart-define "GOOGLE_MAPS_NATIVE_CONFIGURED=true"
+          --dart-define "STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY"
+          --dart-define "SHARE_BASE_URL=$SHARE_BASE_URL"
+
+      - name: Verify and package signed iOS release
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          ipa_candidates=(app/build/ios/ipa/*.ipa)
+          [[ "${#ipa_candidates[@]}" -eq 1 ]] || { echo "::error::Expected exactly one IPA output."; exit 1; }
+
+          verify_dir="$RUNNER_TEMP/dzdp-ios-verify"
+          artifact_dir="$RUNNER_TEMP/dzdp-ios-artifact"
+          artifact_name="dazhongdianping-${RELEASE_ENVIRONMENT}-${RELEASE_REGION}-${RELEASE_BUILD_NAME}+${RELEASE_BUILD_NUMBER}.ipa"
+          mkdir -p "$verify_dir" "$artifact_dir"
+          unzip -q "${ipa_candidates[0]}" -d "$verify_dir"
+          app_candidates=("$verify_dir"/Payload/*.app)
+          [[ "${#app_candidates[@]}" -eq 1 ]] || { echo "::error::Expected exactly one application in the IPA payload."; exit 1; }
+          app_path="${app_candidates[0]}"
+
+          actual_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist")"
+          actual_build_name="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_path/Info.plist")"
+          actual_build_number="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app_path/Info.plist")"
+          [[ "$actual_bundle_id" == "$DZDP_IOS_BUNDLE_ID" ]] || { echo "::error::IPA bundle identifier does not match the requested value."; exit 1; }
+          [[ "$actual_build_name" == "$RELEASE_BUILD_NAME" ]] || { echo "::error::IPA marketing version does not match build_name."; exit 1; }
+          [[ "$actual_build_number" == "$RELEASE_BUILD_NUMBER" ]] || { echo "::error::IPA build version does not match build_number."; exit 1; }
+          [[ -s "$app_path/embedded.mobileprovision" ]] || { echo "::error::IPA does not contain an embedded provisioning profile."; exit 1; }
+
+          embedded_profile="$RUNNER_TEMP/dzdp-ios-embedded-profile.plist"
+          security cms -D -i "$app_path/embedded.mobileprovision" > "$embedded_profile"
+          embedded_uuid="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$embedded_profile")"
+          [[ "$embedded_uuid" == "$DZDP_IOS_PROFILE_UUID" ]] || { echo "::error::IPA embedded an unexpected provisioning profile."; exit 1; }
+
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          signed_entitlements="$RUNNER_TEMP/dzdp-ios-signed-entitlements.plist"
+          codesign -d --entitlements :- "$app_path" > "$signed_entitlements"
+          signed_app_id="$(/usr/libexec/PlistBuddy -c 'Print :application-identifier' "$signed_entitlements")"
+          signed_apns="$(/usr/libexec/PlistBuddy -c 'Print :aps-environment' "$signed_entitlements")"
+          [[ "$signed_app_id" == "$DZDP_IOS_TEAM_ID.$DZDP_IOS_BUNDLE_ID" ]] || { echo "::error::Signed application identifier is invalid."; exit 1; }
+          [[ "$signed_apns" == "production" ]] || { echo "::error::Signed IPA does not use the production APNs entitlement."; exit 1; }
+
+          cp "${ipa_candidates[0]}" "$artifact_dir/$artifact_name"
+          (
+            cd "$artifact_dir"
+            shasum -a 256 "$artifact_name" > "$artifact_name.sha256"
+          )
+          jq -n \
+            --arg environment "$RELEASE_ENVIRONMENT" \
+            --arg region "$RELEASE_REGION" \
+            --arg buildName "$RELEASE_BUILD_NAME" \
+            --arg buildNumber "$RELEASE_BUILD_NUMBER" \
+            --arg bundleId "$DZDP_IOS_BUNDLE_ID" \
+            --arg apiBaseUrl "$DZDP_APP_API_BASE_URL" \
+            --arg shareBaseUrl "$SHARE_BASE_URL" \
+            --argjson firebaseConfigured "$FIREBASE_CONFIGURED" \
+            --argjson googleMapsConfigured true \
+            --argjson stripeConfigured true \
+            --arg commitSha "$GITHUB_SHA" \
+            --arg builtAtUtc "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --arg artifact "$artifact_name" \
+            '{
+              environment: $environment,
+              region: $region,
+              buildName: $buildName,
+              buildNumber: $buildNumber,
+              bundleId: $bundleId,
+              apiBaseUrl: $apiBaseUrl,
+              shareBaseUrl: $shareBaseUrl,
+              firebaseConfigured: $firebaseConfigured,
+              googleMapsConfigured: $googleMapsConfigured,
+              stripeConfigured: $stripeConfigured,
+              apnsEnvironment: "production",
+              commitSha: $commitSha,
+              builtAtUtc: $builtAtUtc,
+              artifact: $artifact
+            }' > "$artifact_dir/ios-release-manifest.json"
+          echo "artifact_dir=$artifact_dir" >> "$GITHUB_OUTPUT"
+          echo "artifact_label=ios-${RELEASE_ENVIRONMENT}-${RELEASE_REGION}-${RELEASE_BUILD_NAME}+${RELEASE_BUILD_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload signed iOS release
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: ${{ steps.package.outputs.artifact_label }}
+          path: ${{ steps.package.outputs.artifact_dir }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove temporary iOS release credentials
+        if: always()
+        shell: bash
+        run: |
+          rm -f app/ios/Flutter/ReleaseOverrides.xcconfig
+          rm -f "$RUNNER_TEMP/dzdp-ios-distribution.p12" \
+            "$RUNNER_TEMP/dzdp-ios.mobileprovision" \
+            "$RUNNER_TEMP/dzdp-ios-profile.plist" \
+            "$RUNNER_TEMP/GoogleService-Info.plist" \
+            "$RUNNER_TEMP/dzdp-ios-export-options.plist" \
+            "$RUNNER_TEMP/dzdp-ios-embedded-profile.plist" \
+            "$RUNNER_TEMP/dzdp-ios-signed-entitlements.plist"
+          if [[ -n "${DZDP_IOS_INSTALLED_PROFILE:-}" ]]; then
+            rm -f "$DZDP_IOS_INSTALLED_PROFILE"
+          fi
+          if [[ -n "${DZDP_IOS_KEYCHAIN_PATH:-}" ]]; then
+            security delete-keychain "$DZDP_IOS_KEYCHAIN_PATH" || true
+          fi
