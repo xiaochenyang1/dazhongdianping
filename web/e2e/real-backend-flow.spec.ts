@@ -1391,8 +1391,18 @@ test('customer and merchant exchange live consultation replies and support close
     await merchantPage.goto(`${merchantBaseURL}/login`)
     await merchantPage.locator('input[autocomplete="username"]').fill('merchant_eu_sichuan@example.com')
     await merchantPage.locator('input[autocomplete="current-password"]').fill('merchant123456')
+    const merchantAccountResponse = merchantPage.waitForResponse((response) =>
+      response.request().method() === 'GET'
+      && new URL(response.url()).pathname === '/api/b/v1/account/me',
+    )
+    const merchantDashboardResponse = merchantPage.waitForResponse((response) =>
+      response.request().method() === 'GET'
+      && new URL(response.url()).pathname === '/api/b/v1/dashboard',
+    )
     await merchantPage.locator('form button').click()
     await expect(merchantPage).toHaveURL(`${merchantBaseURL}/dashboard`)
+    await expectApiSuccess(await merchantAccountResponse)
+    await expectApiSuccess(await merchantDashboardResponse)
     await merchantPage.goto(`${merchantBaseURL}/consult`)
     await merchantPage.getByTestId(`session-${consultation.id}`).click()
     await expect(merchantPage.getByTestId('consult-load-older')).toBeVisible()
