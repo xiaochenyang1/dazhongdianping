@@ -148,29 +148,47 @@ function Wait-HttpReady {
     )
 
     $deadline = [System.DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
-    while ([System.DateTimeOffset]::UtcNow -lt $deadline) {
-        $Process.Refresh()
-        if ($Process.HasExited) {
-            $logs = Get-ProcessLogTail -Name $Name
-            throw "$Name exited before becoming ready (exit code $($Process.ExitCode)).`n$logs"
-        }
+    $httpClient = [System.Net.Http.HttpClient]::new()
+    $httpClient.Timeout = [System.TimeSpan]::FromSeconds(2)
+    try {
+        while ([System.DateTimeOffset]::UtcNow -lt $deadline) {
+            $Process.Refresh()
+            if ($Process.HasExited) {
+                $logs = Get-ProcessLogTail -Name $Name
+                throw "$Name exited before becoming ready (exit code $($Process.ExitCode)).`n$logs"
+            }
 
-        try {
-            $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 2
-            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
-                Start-Sleep -Milliseconds 300
-                $Process.Refresh()
-                if ($Process.HasExited) {
-                    $logs = Get-ProcessLogTail -Name $Name
-                    throw "$Name exited after the readiness probe responded on $Url (exit code $($Process.ExitCode)).`n$logs"
+            $response = $null
+            try {
+                # Vite keeps response bodies stream-friendly; reading headers only avoids a pwsh/macOS body hang.
+                $response = $httpClient.GetAsync(
+                    $Url,
+                    [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead
+                ).GetAwaiter().GetResult()
+                $statusCode = [int]$response.StatusCode
+                if ($statusCode -ge 200 -and $statusCode -lt 500) {
+                    Start-Sleep -Milliseconds 300
+                    $Process.Refresh()
+                    if ($Process.HasExited) {
+                        $logs = Get-ProcessLogTail -Name $Name
+                        throw "$Name exited after the readiness probe responded on $Url (exit code $($Process.ExitCode)).`n$logs"
+                    }
+                    Write-Step "$Name ready at $Url"
+                    return
                 }
-                Write-Step "$Name ready at $Url"
-                return
+            }
+            catch {
+                Start-Sleep -Milliseconds 500
+            }
+            finally {
+                if ($null -ne $response) {
+                    $response.Dispose()
+                }
             }
         }
-        catch {
-            Start-Sleep -Milliseconds 500
-        }
+    }
+    finally {
+        $httpClient.Dispose()
     }
 
     $logs = Get-ProcessLogTail -Name $Name
@@ -316,7 +334,10 @@ try {
         $backendJar.FullName,
         "--spring.profiles.active=h2,local",
         "--server.port=$BackendPort",
-        "--management.health.redis.enabled=false"
+        "--management.health.redis.enabled=false",
+        # The suite creates several isolated synthetic accounts behind the same loopback IP.
+        # Keep account/device throttles intact while preventing cross-test IP bucket pollution.
+        "--app.auth.send-code-rate-limit.ip-window-max-requests=1000"
     ) -WorkingDirectory $backendDir
     Wait-HttpReady -Name "backend" -Process $backendProcess -Url "$backendBaseUrl/actuator/health" -TimeoutSeconds 120
 

@@ -37,7 +37,9 @@ Assert-True ($browserE2eScript -match "java") "browser E2E script must start the
 Assert-True ($browserE2eScript -match "vite[\\/]bin[\\/]vite.js") "browser E2E script must start Vite directly through Node"
 Assert-True ($browserE2eScript -match "PLAYWRIGHT_EXTERNAL_SERVERS") "browser E2E script must disable Playwright-managed server teardown"
 Assert-True ($browserE2eScript -match "spring\.profiles\.active=h2,local") "real E2E backend must use the H2 and explicit local profiles"
+Assert-True ($browserE2eScript -match "app\.auth\.send-code-rate-limit\.ip-window-max-requests=1000") "real E2E backend must isolate loopback IP rate-limit state across synthetic users"
 Assert-True ($browserE2eScript -match "PLAYWRIGHT_OUTPUT_DIR") "browser E2E script must isolate Playwright output per run"
+Assert-True ($browserE2eScript -match "ResponseHeadersRead") "browser E2E readiness probes must not block on streaming response bodies"
 Assert-True ($browserE2eScript -match "PLAYWRIGHT_MERCHANT_PORT") "browser E2E must manage the merchant camera QR server"
 Assert-True ($browserE2eScript -match "@playwright[\\/]test[\\/]cli.js") "browser E2E script must invoke Playwright directly without npm recursion"
 Assert-True ($browserE2eScript -match "Stop-Process") "browser E2E script must stop every managed process in finally"
@@ -66,6 +68,7 @@ Assert-True ($realBackendSpec -match "data/search-sync") "real backend spec must
 Assert-True ($realBackendSpec -match "overview\.enabled\)\.toBe\(false\)") "real backend spec must verify MySQL disables search sync mutations"
 Assert-True ($realBackendSpec -match 'captureStream') "merchant QR E2E must decode real video frames from the issued coupon image"
 Assert-True ($realBackendSpec -match 'coupon-scan-start') "merchant QR E2E must exercise the camera entry and explicit verification"
+Assert-True ($realBackendSpec -match 'merchantDashboardResponse') "merchant consultation E2E must await dashboard loading before navigating away"
 
 $dryRunOutput = & $scriptPath -DryRun
 $dryRunText = $dryRunOutput -join "`n"
