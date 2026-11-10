@@ -207,7 +207,7 @@ Environment protection：
 - Stripe CLI 1.50.1 已安装；2026-11-09 加载仓库模板执行 `stripe-preflight.sh --check-cli` 后，CLI 检查通过，但仍有 29 个真实值/凭证缺失，因此没有 Stripe test 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
-- 2026-11-09 对主干提交 `971554a0ae6f5573b940b74f01c0902955e421bd` 运行了真实但只读的 `test/EU` readiness（Actions run [`42644934571`](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42644934571)）：CI 两个必需 job 均通过，证据先成功上传，最终因 Environment 缺少 6 个公开变量、7 个部署 secret 且无法连接目标机而按预期阻断，`readyForDeployment=false`、`mutatedExternalState=false`。报告没有主机、私有路径或凭证正文；目标机、数据库、Web/SEO 配置及 SMTP/Twilio/Stripe 凭证仍未齐备，`prod` Environment 尚未创建。
+- 2026-11-10，PR [#46](https://github.com/xiaochenyang1/dazhongdianping/pull/46) 已把部署来源明细审计合入主干 `f6de5f9862ff30367b7dd2ad7177fc57542bee96`；该提交的 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42767544480) 两个必需 job 均通过。随后运行的只读 [`pre/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42769728523) 与 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42772204662) 均确认自定义部署来源只允许 `main` 与 `eu-pre-rc-*`，但两个 Environment 仍各缺 6 个公开变量和 7 个部署 secret，且无法连接目标机；`pre` 另缺 required reviewer，并仍允许管理员绕过。两份报告均为 `readyForDeployment=false`、`mutatedExternalState=false`，没有主机、私有路径或凭证正文；`prod` Environment 尚未创建。
 - 当前技术候选 `eu-pre-rc-20261108-2` 已绑定历史主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 的合并基线为 `e92ba3c…`；环境配置补齐后必须从该提交或更新的已通过 CI 提交重新生成版本号唯一的环境化候选。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
@@ -220,3 +220,4 @@ Environment protection：
 - 已执行一次不注入伪造域名或支付配置的完整本地打包，ZIP、旁车 SHA-256、release manifest、后端 JAR、三个 Web `dist`、迁移 runner、迁移清单和 `03-14` 共 12 个迁移文件均已核验。
 - 自动 `release` 已验证配置缺失时只完成门禁检查，打包、上传和部署均跳过。此项不替代真实 `test`/`pre` 发布、smoke 或回滚演练。
 - PR #37 合并提交 `e92ba3c…` 的 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42574817291) 全部通过；随后 [release 运行](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42576540273) 再次确认 `test` 缺配置时只执行门禁，checkout、打包、上传、部署和验收证据均 skipped。
+- PR #46 合并提交 `f6de5f9…` 的主干 CI 与 03–31 迁移集成通过；最新 `test/pre` readiness 已能核对实际 branch/tag allowlist，当前策略均精确为 `main` 与 `eu-pre-rc-*`，不再把“只打开自定义策略开关”误判为完成。
