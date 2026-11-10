@@ -1,6 +1,6 @@
 # EU 预发执行与验收台账
 
-更新时间：2026-11-09。首发范围沿用 [EU 基线](EU预发发布基线.md)：巴黎单城、EUR、`Europe/Paris`。本文件给出执行顺序和证据字段；空白验收项均为待执行，不能凭本地测试或配置门禁通过改为已验收。
+更新时间：2026-11-10。首发范围沿用 [EU 基线](EU预发发布基线.md)：巴黎单城、EUR、`Europe/Paris`。本文件给出执行顺序和证据字段；空白验收项均为待执行，不能凭本地测试或配置门禁通过改为已验收。
 
 ## 1. 当前交付与环境边界
 
@@ -16,7 +16,9 @@ PR #35 交付拼团订单交易与灰度运营，PR #36 进一步收口渠道终
 
 PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 已把手工 `test/EU` 重试入口、发布身份、WebSocket 真实来源和部署后验收证据合入主干；该能力的合并基线为 `e92ba3c228ccd5d7fb02f1e8969bb8ad82f8c982`，其 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42574817291) 全部通过。后端 JAR 会编入版本、commit、构建环境/区域和迁移终点，公开只读 `/api/c/v1/release-info` 与管理端系统健康页展示该身份；发布/回滚会从远端 `current` manifest 交叉核对在线身份、actuator、延期功能关闭状态、WSS origin 和 HTTPS smoke，并上传脱敏 JSON/Markdown 报告。API 与 smoke URL 禁止 query/fragment；`test` 回滚固定使用 EU 和 `release-test-EU` 并发锁，非 EU 请求在 SSH 前拒绝；`VITE_WS_BASE_URL` 只接受 `wss://host[:port]` origin，前端自行追加 `/ws/notifications`。
 
-2026-11-09 合并后再次只读核对 GitHub：Environment 仍只有 `test`、`pre`；`test` 的变量和 secret 均为 0，`pre` 只有 SSH 端口、四个服务名与数据库迁移模式这 6 个固定变量名，secret 仍为 0，且没有 required-reviewers 规则或部署分支/标签限制；`prod` 尚未创建。目标机、HTTPS/WSS、数据库/中间件、Stripe test、SMTP/Twilio 配置尚未提供。当前主干的自动 [release 运行](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42576540273) 只完成 `test` 配置门禁，checkout、打包、上传、部署与验收证据步骤均 skipped，`pre/prod` 作业未执行；这证明缺配置时会安全停机，不构成真实部署。技术候选可在不注入伪造配置的情况下生成；实际预发包需使用真实 Web、Stripe 和 SEO 配置重新构建，不能把空配置候选直接视为环境验收完成。
+PR [#46](https://github.com/xiaochenyang1/dazhongdianping/pull/46) 已把 Environment 自定义部署来源的明细审计合入主干 `f6de5f9862ff30367b7dd2ad7177fc57542bee96`。该提交的 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42767544480) 全部通过，其中 MySQL 迁移集成耗时 55 秒，全量验证耗时 18 分 42 秒；`pre/test` 当前均只允许 `main` 分支和 `eu-pre-rc-*` 标签，部署来源门禁已通过最新脚本核对。
+
+2026-11-10 对同一主干提交分别运行了只读的 [`pre/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42769728523) 和 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42772204662)。两次报告都确认自动测试已就绪，但 Environment 均缺少 6 个公开变量和 7 个部署 secret，且无法取得目标机证据；`pre` 另缺 required reviewer，并仍允许管理员绕过。`prod` 尚未创建。报告均为 `readyForDeployment=false`、`mutatedExternalState=false`，没有输出主机、私有路径或凭证正文。目标机、HTTPS/WSS、数据库/中间件、Stripe test、SMTP/Twilio 配置尚未提供，因此当前仍不能打包环境化候选或执行真实部署。
 
 ## 2. 开始部署前的输入
 
