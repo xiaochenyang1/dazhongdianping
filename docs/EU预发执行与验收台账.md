@@ -20,19 +20,19 @@ PR [#46](https://github.com/xiaochenyang1/dazhongdianping/pull/46) 已把 Enviro
 
 2026-11-10 对同一主干提交分别运行了只读的 [`pre/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42769728523) 和 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42772204662)。两次报告都确认自动测试已就绪，但 Environment 均缺少 6 个公开变量和 7 个部署 secret，且无法取得目标机证据；`pre` 另缺 required reviewer，并仍允许管理员绕过。`prod` 尚未创建。报告均为 `readyForDeployment=false`、`mutatedExternalState=false`，没有输出主机、私有路径或凭证正文。目标机、HTTPS/WSS、数据库/中间件、Stripe test、SMTP/Twilio 配置尚未提供，因此当前仍不能打包环境化候选或执行真实部署。
 
-PR #48–#52 已在 2026-11-13 前全部进入主干：签名 iOS IPA 流水线、nightly 咨询测试隔离、候选完整门禁、隔离 MySQL/Redis/MinIO/Elasticsearch 编排，以及只允许 `test/EU` 且核对在线发布身份的远端浏览器验收均已落库。最新冻结源码候选 `eu-pre-rc-20261113-1` 指向 `c0720f877c2ee9d36c6c8ad7fb19afd534f75576`；其 [tag CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43381478323) 与 [nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43379749086) 均通过。
+PR #48–#53 已在 2026-11-13 前全部进入主干：签名 iOS IPA 流水线、nightly 咨询测试隔离、候选完整门禁、隔离 MySQL/Redis/MinIO/Elasticsearch 编排、只允许 `test/EU` 且核对在线发布身份的远端浏览器验收，以及同 ref、同 SHA 的手工发布来源门禁和打包前目标机只读预检均已落库。最新冻结源码候选 `eu-pre-rc-20261113-2` 指向 `dc7d0ff8cfe770c2f2fc020dbe72449321240336`；其 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43395962901)、[nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43398489069) 与 [tag CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43399956525) 均通过。
 
-2026-11-13 再次只读检查 GitHub Environment，配置缺口没有变化：`test` 仍为 0 variables / 0 secrets，`pre` 仍只有 6 个非敏感固定 variables / 0 secrets且没有 required reviewer，`prod` 不存在。当前 SHA 尚未取得新的 `readyForDeployment=true` 报告，也没有环境化 ZIP、目标机预检、部署后验收或远端浏览器验收证据。
+2026-11-13 再次只读检查 GitHub Environment：`test` 仍为 0 variables / 0 secrets，按当前契约缺 10 个 variables 和 11 个 secrets；`pre` 仍只有 6 个非敏感固定 variables / 0 secrets，缺 6 个 variables、7 个 secrets 和 required reviewer，并允许管理员绕过；`prod` 不存在。当前 SHA 尚未取得 `readyForDeployment=true` 报告，也没有环境化 ZIP、真实目标机预检、部署后验收或远端浏览器验收证据。
 
-同日已对当前候选执行新的 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43387040998)。报告精确绑定 `c0720f877c2ee9d36c6c8ad7fb19afd534f75576`：自动测试门禁为通过，GitHub Environment 缺 6 个必需变量和 7 个部署 secret，目标机证据无法采集，最终 `readyForDeployment=false`、`mutatedExternalState=false`。脱敏 JSON/Markdown 已作为该运行的 30 天 artifact 保存；这次失败是当前配置缺口的正式证据，不是代码回归失败。
+同日曾对上一候选 `eu-pre-rc-20261113-1` 执行 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43387040998)。该历史报告精确绑定 `c0720f877c2ee9d36c6c8ad7fb19afd534f75576`：自动测试门禁为通过，GitHub Environment 当时缺 6 个必需变量和 7 个部署 secret，目标机证据无法采集，最终 `readyForDeployment=false`、`mutatedExternalState=false`。
 
-该运行早于手工 `test/EU` 发布接入远端浏览器验收。当前仓库已把四个验收 HTTPS origin 和四个管理员/商户凭据纳入 test Environment 预检，并在部署后自动执行 13 条用例；因此旧报告仍是当时的正式证据，但不能代表新门禁的完整缺口。配置补齐后须对新提交重新生成 readiness，再手工发布 test 并归档浏览器验收 artifact。
+该旧运行早于手工 `test/EU` 发布接入远端浏览器验收。当前仓库已把四个验收 HTTPS origin 和四个管理员/商户凭据纳入 test Environment 预检，并在部署后自动执行 13 条用例。新的 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43403449494) 已绑定 `dc7d0ff8cfe770c2f2fc020dbe72449321240336` 重跑：CI ready，Environment 按新契约缺 10 个变量和 11 个 secret，目标机证据无法采集，`readyForDeployment=false`、`mutatedExternalState=false`；脱敏 JSON/Markdown 已作为 30 天 artifact 上传。配置补齐后须再次生成 readiness，再手工发布 test 并归档浏览器验收 artifact。
 
 ## 2. 开始部署前的输入
 
 | 输入 | 存放位置 / 完成条件 | 当前状态 |
 | --- | --- | --- |
-| 版本与制品 | 固定 SHA/tag，CI 与 nightly 链接，ZIP、SHA-256、manifest | 当前源码候选 `eu-pre-rc-20261113-1` 绑定 `c0720f8…`，同 SHA CI/nightly 已通过；新源码门禁已用真实 Actions 数据确认 tag CI `43381478323` 的两个必需 job 成功，但尚无环境化 ZIP/manifest。历史技术包 `eu-pre-rc-20261108-2` 仅作旧基线证据，不能部署；真实配置补齐后须基于新提交重新冻结 tag 并生成版本号唯一的环境化候选 |
+| 版本与制品 | 固定 SHA/tag，CI 与 nightly 链接，ZIP、SHA-256、manifest | 当前源码候选 `eu-pre-rc-20261113-2` 绑定 `dc7d0ff…`，同 SHA 主干 CI、nightly 与 tag CI 已通过；源码门禁已用真实 Actions 数据确认 tag CI `43399956525` 的两个必需 job 成功，但尚无环境化 ZIP/manifest。历史技术包 `eu-pre-rc-20261108-2` 仅作旧基线证据，不能部署；真实配置补齐后须使用版本号唯一的环境化候选，不得改写现有标签 |
 | 目标机与发布服务 | `test` / `pre` SSH、发布根目录、四个服务、HTTPS smoke URL | 待提供 |
 | 数据库 | 私有 MySQL defaults 文件权限 `0400/0600`；迁移模式与已有库准确基线 | 待提供 |
 | 运行环境 | 私有 env 文件或密钥管理引用；严格 `pre`、Redis、S3、ES、CORS/可信代理 | 待提供 |

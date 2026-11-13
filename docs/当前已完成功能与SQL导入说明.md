@@ -531,12 +531,11 @@
 - 仓库已新增 `github-environment-bootstrap.ps1` 和私有配置示例：默认只做脱敏 Plan，显式 Apply 才写入公开变量、五个私有部署元数据 secret、SSH credential secrets、审批规则和 branch/tag policy；`test` 另从四个私有文件写入远端浏览器验收账号/密码 secrets。`prod` 有额外保护，Apply 后会实时复核。GitHub API 无法关闭管理员绕过，因此该项仍需在 UI 人工设置并由脚本读取实际状态确认。该工具不包含任何真实值，也不代表当前 `test/pre` 已配置完成。
 - 仓库已新增 `target-host-preflight.ps1` / `.sh`：通过单次 SSH 只读检查 Linux 工具、发布目录/软链、磁盘、私有文件权限、运行配置、MySQL 查询、systemd/sudo 和 Redis/S3/Elasticsearch/SMTP/Twilio/Stripe 网络入口；报告脱敏且明确不修改目标。隔离夹具覆盖完整通过、占位值、权限过宽和严格阻断；尚未获得真实目标机配置，因此没有真实预检结果。
 - 仓库已新增 `readiness-report.ps1` 和手工 `readiness` workflow：绑定 40 位主干提交，汇总该 SHA 的 CI 必需 job、GitHub Environment 审计和目标机预检，先保存 30 天脱敏 JSON/Markdown，再执行最终就绪门禁；任一缺口、加固 warning 或环境/区域错配都会阻断。该流程不打包、不部署、不回滚；当前没有真实 Environment/目标机配置，因此尚无 `readyForDeployment=true` 的真实报告。
-- 手工 release 已新增独立 `verify_source` job 和 `release-source-preflight.ps1`：只接受 `main` / `eu-pre-rc-*`，在进入 Environment 前要求同 ref、同 SHA 的最新 `ci` push 及两个必需 job 成功。已用 `eu-pre-rc-20261113-1` 的真实 Actions 运行 `43381478323` 只读验证该门禁可识别通过状态；没有触发发布或修改 GitHub 状态。
+- 手工 release 已新增独立 `verify_source` job 和 `release-source-preflight.ps1`：只接受 `main` / `eu-pre-rc-*`，在进入 Environment 前要求同 ref、同 SHA 的最新 `ci` push 及两个必需 job 成功。已用 `eu-pre-rc-20261113-2` 的真实 Actions 运行 `43399956525` 只读验证该门禁可识别通过状态；没有触发发布或修改 GitHub 状态。
 - `release.yml` 的 test/pre/prod 已统一映射私有 `DEPLOY_RUNTIME_ENV_FILE`，准备 SSH 后在打包前严格运行目标机只读预检；任何运行配置、私有文件权限、MySQL、systemd/sudo 或依赖网络失败都会阻断制品生成和部署。当前仍无真实目标机，因此只有隔离夹具通过记录。
-- 2026-11-13 最新源码候选 `eu-pre-rc-20261113-1` 绑定 `c0720f877c2ee9d36c6c8ad7fb19afd534f75576`。其 [tag CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43381478323) 与 [nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43379749086) 均通过：后端 711 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项及构建、8 条浏览器 smoke、13 条真实后端浏览器 E2E、MySQL/Redis/S3/Elasticsearch smoke 和 03–31 迁移集成全部成功。
-- PR #48–#52 已补签名 iOS IPA 流水线、nightly 咨询测试隔离、候选完整门禁、隔离 smoke 服务编排和远端 `test/EU` 浏览器验收。当前 Environment 仍未补齐，自动 release 没有执行打包、上传、部署或验收，因此源码标签不能替代环境化候选。
-- 当前 SHA 的 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43387040998) 已生成脱敏证据：CI ready，Environment 缺 6 个变量和 7 个 secret，目标机证据缺失，结论为 `readyForDeployment=false` 且未修改外部状态。
-- 该 readiness 运行早于手工 test 远端验收接线；当前仓库又为 `test` 增加 4 个验收 origin variables 和 4 个浏览器 credential secrets，下一次 readiness 会按新契约重新计数。
+- 2026-11-13 最新源码候选 `eu-pre-rc-20261113-2` 绑定 `dc7d0ff8cfe770c2f2fc020dbe72449321240336`。其 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43395962901)、[nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43398489069) 与 [tag CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43399956525) 均通过：后端 711 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项及构建、8 条浏览器 smoke、13 条真实后端浏览器 E2E、MySQL/Redis/S3/Elasticsearch smoke 和 03–31 迁移集成全部成功。
+- PR #48–#53 已补签名 iOS IPA 流水线、nightly 咨询测试隔离、候选完整门禁、隔离 smoke 服务编排、远端 `test/EU` 浏览器验收、精确发布来源门禁和打包前目标机只读预检。主干自动 [`release`](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43397858174) 仅执行配置检查后安全跳过，tag CI 后的 [`release`](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43402332668) 全部跳过；当前 Environment 仍未补齐，因此源码标签不能替代环境化候选。
+- 当前 SHA 的 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43403449494) 已生成并上传脱敏证据：CI ready，Environment 按新契约缺 10 个变量和 11 个 secret，目标机证据缺失，结论为 `readyForDeployment=false`、`mutatedExternalState=false`。这次失败是配置门禁按设计阻断，不是代码回归失败。
 
 ## 6. 下一步建议
 
@@ -544,4 +543,4 @@
 
 1. 由环境负责人使用 `github-environment-bootstrap.ps1` 按 `test`、`pre` 顺序补齐 Environment variables/secrets/protection；默认先审 Plan，真实值只进入私有文件、GitHub Environment 或密钥管理系统，并在 UI 关闭管理员绕过。
 2. 在真实目标机运行只读预检，并对同一个已通过主干 CI 的 40 位提交运行 `readiness` workflow，取得 `readyForDeployment=true` 的脱敏报告。
-3. 所有真实配置通过后，在 `c0720f8…` 或报告绑定的更新不可变提交上生成新版本环境化候选，先发布 `test`，执行部署后验收和远端浏览器回归，再经审批发布 `pre`，完成数据库迁移、ES 重建、20 项台账、备份恢复和回滚演练。环境闭环后再继续新业务；FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。
+3. 所有真实配置通过后，在当前冻结候选 `eu-pre-rc-20261113-2` 或 readiness 报告绑定的更新不可变提交上生成版本号唯一的环境化候选，先发布 `test`，执行部署后验收和远端浏览器回归，再经审批发布 `pre`，完成数据库迁移、ES 重建、20 项台账、备份恢复和回滚演练。环境闭环后再继续新业务；FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。
