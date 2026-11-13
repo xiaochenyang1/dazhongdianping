@@ -6,7 +6,7 @@
 
 创作者成果提交、人工审核与一次性发奖已通过 PR #28 合入主干，新增第 28 号迁移；秒杀真实订单、并发库存、支付发券、取消/到期释放、退款与核销已通过 PR #30 合入主干，新增第 29 号迁移；拼团独立成员订单、并发库存、全员付款成团发券、到期关单与自动退款、运营告警/修复、截止提醒和分层灰度已通过 PR #35 合入，终态退款人工核验与本地幂等补齐已通过 PR #36 收口。第 30、31 号迁移保持不变，三项能力的默认上线开关仍关闭。创作者主干 `246d90b` 的证据见 [创作者交付记录](创作者任务提交审核与发奖-2026-11-06.md#主干与技术候选)；秒杀主干 `24fba53` 的 CI、nightly 与技术候选见 [秒杀交付记录](秒杀订单交易闭环-2026-11-06.md#主干与技术候选)；拼团历史技术包 `eu-pre-rc-20261108-2` 与包内 JAR 启动证据见 [拼团交付记录](拼团订单交易与灰度运营-2026-11-08.md)。此前隐私数据域收尾和团购标题搜索分别通过 PR #20 / #21 合入主干；扫码交付见 [验证记录](商户摄像头扫码验证-2026-10-24.md)。上述延期能力在目标环境独立验收前仍不得开放；部署准备、供应商送达/支付、商户试用及备份/回滚按 [执行与验收台账](EU预发执行与验收台账.md) 留证，尚无真实目标环境部署通过记录。
 
-当前冻结源码候选为 `eu-pre-rc-20261113-1`，绑定不可变主干 `c0720f877c2ee9d36c6c8ad7fb19afd534f75576`。PR #48 已补签名 iOS IPA 流水线，PR #49–#52 已依次补 nightly 测试隔离、候选完整门禁、隔离 smoke 服务编排和远端 `test/EU` 浏览器验收；这些能力均已通过当前 SHA 的 CI/nightly，但尚未生成带真实环境参数的部署包，也没有目标机执行证据。
+当前冻结源码候选为 `eu-pre-rc-20261113-2`，绑定不可变提交 `dc7d0ff8cfe770c2f2fc020dbe72449321240336`。PR #48 已补签名 iOS IPA 流水线，PR #49–#52 已依次补 nightly 测试隔离、候选完整门禁、隔离 smoke 服务编排和远端 `test/EU` 浏览器验收；PR #53 进一步补齐同 ref、同 SHA 的发布来源门禁、三个环境打包前目标机只读预检和 test 远端验收配置审计。这些能力均已通过当前 SHA 的主干 CI、nightly 与 tag CI，但尚未生成带真实环境参数的部署包，也没有目标机执行证据。
 
 ## 首发范围
 
@@ -33,8 +33,8 @@ CN 保留为代码兼容区域，但不作为本轮真实支付验收目标；CN
 
 巴黎首发和时区证据见 [10 月 14 日执行记录](巴黎首发优化与发布候选验证-2026-10-14.md)，跨区域奖励修复及本地回归见 [10 月 15 日执行记录](跨区域奖励修复与候选验证-2026-10-15.md)。最终候选以同一不可变 SHA 的 CI、nightly 和发布 manifest 为准。下列 8 月记录保留为历史证据，不能代替本轮验证。
 
-- `eu-pre-rc-20261113-1` 指向 `c0720f877c2ee9d36c6c8ad7fb19afd534f75576`；其 [tag CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43381478323) 与 [手工 nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43379749086) 均通过。CI 覆盖后端 711 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项，以及真实 MySQL/Redis/S3/Elasticsearch、浏览器 smoke/E2E 和 03–31 迁移集成。
-- 当前标签触发的 `release` 仍因 `test` Environment 不完整而没有打包、上传、SSH、部署或验收步骤；绿色/跳过结论只证明 fail-closed 条件生效，不构成目标环境发布证据。
+- `eu-pre-rc-20261113-2` 指向 `dc7d0ff8cfe770c2f2fc020dbe72449321240336`；其 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43395962901)、[手工 nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43398489069) 与 [tag CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43399956525) 均通过。CI 覆盖后端 711 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项，以及真实 MySQL/Redis/S3/Elasticsearch、浏览器 smoke/E2E 和 03–31 迁移集成；发布来源预检已用真实 Actions 数据确认两个必需 job 成功。
+- 主干 CI 后的自动 [`release`](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43397858174) 只执行 test 配置门禁并安全跳过 checkout、打包、上传、SSH、部署和验收；tag CI 后的 workflow-run [`release`](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43402332668) 全部跳过。绿色/跳过结论只证明 fail-closed 条件生效，不构成目标环境发布证据。
 
 - `eu-pre-rc-20260816-3` 已发布并指向提交 `ca683d14a8661ab05fb0d6ede51dcae98a63b29f`；标签 CI 运行 `31983461176` 的全量验证和 MySQL 迁移集成作业均通过。
 - PR #1 已以 merge commit `71ee8f8e6215a04c4af5fba5d1b3b0688aa2a83c` 合入 `main`；主干 CI 运行 `31984095560` 的全量验证和 MySQL 迁移集成作业均通过。

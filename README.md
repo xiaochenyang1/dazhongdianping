@@ -19,7 +19,7 @@
 
 功能完成矩阵和验收证据统一维护在 [`docs/当前已完成功能与SQL导入说明.md`](docs/当前已完成功能与SQL导入说明.md) §2.2、§5。EU 预发所需的目标机、供应商凭证和 GitHub Environment 配置尚未齐备，不能把本地测试通过当作上线验收。
 
-当前冻结源码候选为 `eu-pre-rc-20261113-1`（`c0720f877c2ee9d36c6c8ad7fb19afd534f75576`）；同 SHA 的 tag CI 与 nightly 已通过全端测试、真实中间件 smoke、浏览器 E2E 和 03–31 迁移集成。由于 `test/pre` 仍无完整 variables/secrets、目标机和供应商配置，release 没有执行环境化打包、上传或部署，该标签仍不是可上线制品。
+当前冻结源码候选为 `eu-pre-rc-20261113-2`（`dc7d0ff8cfe770c2f2fc020dbe72449321240336`）；同 SHA 的 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43395962901)、[手工 nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43398489069) 与 [tag CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43399956525) 已通过全端测试、真实中间件 smoke、浏览器 E2E 和 03–31 迁移集成。主干自动 release 只执行配置门禁后安全跳过，标签完成后的 workflow-run release 全部跳过；由于 `test/pre` 仍无完整 variables/secrets、目标机和供应商配置，该标签仍不是可上线制品。
 
 巴黎单城、EUR 首发限制已接到预订、搜索和延期功能入口；预订以门店时区处理日期、取消和提醒。五端本地回归、真实中间件及浏览器验证记录见 [`巴黎首发优化与发布候选验证`](docs/巴黎首发优化与发布候选验证-2026-10-14.md)。
 
