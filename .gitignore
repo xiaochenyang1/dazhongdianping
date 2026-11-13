@@ -45,3 +45,4 @@ deploy/*.cnf
 !deploy/*.cnf.example
 deploy/github-environment.*.json
 !deploy/github-environment.config.example.json
+!deploy/github-environment.test.config.example.json

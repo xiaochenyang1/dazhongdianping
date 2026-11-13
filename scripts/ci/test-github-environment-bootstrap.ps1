@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $bootstrapPath = Join-Path $repoRoot "scripts\ci\github-environment-bootstrap.ps1"
 $examplePath = Join-Path $repoRoot "deploy\github-environment.config.example.json"
+$testExamplePath = Join-Path $repoRoot "deploy\github-environment.test.config.example.json"
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ("dzdp-github-environment-bootstrap-" + [Guid]::NewGuid().ToString("N"))
 $privateRoot = Join-Path $fixtureRoot "private"
 $binRoot = Join-Path $fixtureRoot "bin"
@@ -103,6 +104,17 @@ function Write-Config {
 try {
     Assert-True (Test-Path -LiteralPath $bootstrapPath) "GitHub Environment bootstrap script must exist"
     Assert-True (Test-Path -LiteralPath $examplePath) "GitHub Environment bootstrap example must exist"
+    Assert-True (Test-Path -LiteralPath $testExamplePath) "test GitHub Environment bootstrap example must exist"
+    $testExample = Get-Content -LiteralPath $testExamplePath -Raw | ConvertFrom-Json -Depth 20
+    Assert-True ($testExample.environment -ceq "test") "test bootstrap example must target test"
+    Assert-True ($testExample.region -ceq "EU") "test bootstrap example must target EU"
+    $expectedTestVariableNames = @((New-ReadyVariables -Environment test).Keys | Sort-Object)
+    $testExampleVariableNames = @($testExample.variables.PSObject.Properties.Name | Sort-Object)
+    Assert-True (($testExampleVariableNames -join ",") -ceq ($expectedTestVariableNames -join ",")) "test bootstrap example must declare every supported readiness variable"
+    $testExampleSecretNames = @($testExample.secretFiles.PSObject.Properties.Name | Sort-Object)
+    Assert-True (($testExampleSecretNames -join ",") -ceq "DEPLOY_KNOWN_HOSTS,DEPLOY_SSH_PRIVATE_KEY") "test bootstrap example must reference both credential files"
+    Assert-True (@($testExample.protection.reviewers).Count -eq 0) "test bootstrap example must not add a deployment approval gate"
+    Assert-True $testExample.protection.canAdminsBypass "test bootstrap example must allow automatic test deployment"
     New-Item -ItemType Directory -Path $privateRoot, $binRoot -Force | Out-Null
     Set-Content -LiteralPath $privateKeyPath -Value "PRIVATE-KEY-MATERIAL-MUST-NOT-PRINT" -Encoding utf8 -NoNewline
     Set-Content -LiteralPath $knownHostsPath -Value "example.test ssh-ed25519 AAAAFIXTURE" -Encoding utf8 -NoNewline
