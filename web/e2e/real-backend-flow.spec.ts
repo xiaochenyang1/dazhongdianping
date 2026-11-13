@@ -1,12 +1,23 @@
 import { Buffer } from 'node:buffer'
-import { expect, test, type APIRequestContext, type APIResponse, type Page, type Response } from '@playwright/test'
+import { expect, test, type APIRequestContext, type APIResponse, type BrowserContext, type Page, type Response } from '@playwright/test'
 
 const adminPort = Number(process.env.PLAYWRIGHT_ADMIN_PORT ?? 15174)
-const adminBaseURL = `http://127.0.0.1:${adminPort}`
+const normalizeBaseURL = (value: string | undefined, fallback: string) => (value?.trim() || fallback).replace(/\/+$/, '')
+const adminBaseURL = normalizeBaseURL(process.env.PLAYWRIGHT_ADMIN_BASE_URL, `http://127.0.0.1:${adminPort}`)
 const merchantPort = Number(process.env.PLAYWRIGHT_MERCHANT_PORT ?? 15175)
-const merchantBaseURL = `http://127.0.0.1:${merchantPort}`
+const merchantBaseURL = normalizeBaseURL(process.env.PLAYWRIGHT_MERCHANT_BASE_URL, `http://127.0.0.1:${merchantPort}`)
 const backendPort = Number(process.env.PLAYWRIGHT_BACKEND_PORT ?? 18080)
-const backendBaseURL = `http://127.0.0.1:${backendPort}`
+const backendBaseURL = normalizeBaseURL(process.env.PLAYWRIGHT_BACKEND_BASE_URL, `http://127.0.0.1:${backendPort}`)
+const webPort = Number(process.env.PLAYWRIGHT_WEB_PORT ?? 15173)
+const webBaseURL = normalizeBaseURL(process.env.PLAYWRIGHT_WEB_BASE_URL, `http://127.0.0.1:${webPort}`)
+const remoteAcceptance = process.env.PLAYWRIGHT_REMOTE_ACCEPTANCE === '1'
+const expectedCommitSha = process.env.PLAYWRIGHT_EXPECTED_COMMIT_SHA?.trim() ?? ''
+const adminAccount = process.env.PLAYWRIGHT_E2E_ADMIN_ACCOUNT?.trim() || 'admin'
+const adminPassword = process.env.PLAYWRIGHT_E2E_ADMIN_PASSWORD?.trim() || 'admin123456'
+const merchantAccount = process.env.PLAYWRIGHT_E2E_MERCHANT_ACCOUNT?.trim() || 'merchant_eu_sichuan@example.com'
+const merchantPassword = process.env.PLAYWRIGHT_E2E_MERCHANT_PASSWORD?.trim() || 'merchant123456'
+const applicationOrigins = new Set([webBaseURL, adminBaseURL, merchantBaseURL, backendBaseURL].map((value) => new URL(value).origin))
+let syntheticAccountSequence = 0
 const reviewUploadPng = {
   name: 'real-backend-review-upload.png',
   mimeType: 'image/png',
@@ -26,7 +37,13 @@ async function loginFromAuthDialog(page: Page, account: string, password: string
   await authDialog.getByRole('button', { name: '登录', exact: true }).click()
 }
 
-async function loginToAdminConsole(page: Page, account = 'admin', password = 'admin123456') {
+async function setUserRegion(context: BrowserContext, region: 'CN' | 'EU') {
+  await context.addInitScript((selectedRegion) => {
+    localStorage.setItem('dzdp:region', selectedRegion)
+  }, region)
+}
+
+async function loginToAdminConsole(page: Page, account = adminAccount, password = adminPassword) {
   await page.goto(`${adminBaseURL}/login`)
   // Login fields deliberately start empty; never rely on demo credentials being prefilled.
   await page.locator('input[autocomplete="username"]').fill(account)
@@ -38,6 +55,35 @@ async function loginToAdminConsole(page: Page, account = 'admin', password = 'ad
   await page.getByRole('button', { name: /进入后台|Enter console/ }).click()
   await expectApiSuccess(await loginResponse)
   await expect(page).toHaveURL(`${adminBaseURL}/dashboard`)
+}
+
+async function registerSyntheticUser(
+  request: APIRequestContext,
+  prefix: string,
+  region: 'CN' | 'EU' = 'CN',
+) {
+  syntheticAccountSequence += 1
+  const account = `${prefix}-${Date.now()}-${syntheticAccountSequence}@example.com`
+  const password = 'Passw0rd!'
+  const headers = { 'Accept-Language': 'zh-CN', 'X-Region': region }
+  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
+    headers,
+    data: { scene: 'register', type: 'email', account, deviceId: account },
+  }))
+  const session = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
+    await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
+      headers,
+      data: { type: 'email', account, code: '123456', password, preferredRegion: region },
+    }),
+  )
+  return { account, password, ...session }
+}
+
+let sharedEuUser: Awaited<ReturnType<typeof registerSyntheticUser>> | undefined
+
+async function getSharedEuUser(request: APIRequestContext) {
+  sharedEuUser ??= await registerSyntheticUser(request, 'shared-eu-flow', 'EU')
+  return sharedEuUser
 }
 
 async function navigateAdmin(page: Page, path: string) {
@@ -167,7 +213,7 @@ test.describe('Paris launch', () => {
     expect(availability.timeZone).toBe('Europe/Paris')
     const merchant = await expectApiSuccess<{ accessToken: string }>(
       await request.post(`${backendBaseURL}/api/b/v1/auth/login`, {
-        headers, data: { account: 'merchant_eu_sichuan@example.com', password: 'merchant123456' },
+        headers, data: { account: merchantAccount, password: merchantPassword },
       }),
     )
     await expectApiSuccess(await request.post(`${backendBaseURL}/api/b/v1/reservation-slots`, {
@@ -242,20 +288,7 @@ test.describe('Paris launch', () => {
 })
 
 async function createApprovedPublicReview(request: APIRequestContext, content: string) {
-  const reviewerSession = await expectApiSuccess<{
-    accessToken: string
-  }>(
-    await request.post(`${backendBaseURL}/api/c/v1/auth/login/password`, {
-      headers: {
-        'Accept-Language': 'zh-CN',
-        'X-Region': 'CN',
-      },
-      data: {
-        account: 'demo.cn@example.com',
-        password: 'Demo123456',
-      },
-    }),
-  )
+  const reviewerSession = await registerSyntheticUser(request, 'review-author')
 
   const createdReview = await expectApiSuccess<{ id: number }>(
     await request.post(`${backendBaseURL}/api/c/v1/reviews`, {
@@ -289,8 +322,8 @@ async function createApprovedPublicReview(request: APIRequestContext, content: s
         'X-Region': 'CN',
       },
       data: {
-        account: 'admin',
-        password: 'admin123456',
+        account: adminAccount,
+        password: adminPassword,
       },
     }),
   )
@@ -329,20 +362,12 @@ async function createApprovedPublicReview(request: APIRequestContext, content: s
     }),
   )
 
-  return createdReview.id
+  return { reviewId: createdReview.id, reviewerSession }
 }
 
 test('renders a redeemable coupon QR without contacting an external image service', async ({ page, context, request }) => {
   const headers = { 'X-Region': 'EU' }
-  const account = `coupon-qr-${Date.now()}@example.com`
-  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
-    headers, data: { scene: 'register', type: 'email', account, deviceId: account },
-  }))
-  const session = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
-    await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
-      headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
-    }),
-  )
+  const session = await getSharedEuUser(request)
   const userHeaders = { ...headers, Authorization: `Bearer ${session.accessToken}` }
   const order = await expectApiSuccess<{ id: number }>(await request.post(`${backendBaseURL}/api/c/v1/orders`, {
     headers: userHeaders, data: { dealId: 41001, quantity: 1 },
@@ -355,7 +380,7 @@ test('renders a redeemable coupon QR without contacting an external image servic
   await page.route('**/*', async (route) => {
     const resource = route.request()
     const url = new URL(resource.url())
-    if (resource.resourceType() === 'image' && !['127.0.0.1', 'localhost'].includes(url.hostname)) {
+    if (resource.resourceType() === 'image' && !applicationOrigins.has(url.origin)) {
       externalImageRequests.push(resource.url())
       await route.abort()
     } else {
@@ -378,15 +403,7 @@ test('renders a redeemable coupon QR without contacting an external image servic
 
 test('scans an issued coupon from video frames, confirms verification and rejects a second redemption', async ({ page, request }) => {
   const headers = { 'X-Region': 'EU' }
-  const account = `camera-qr-${Date.now()}@example.com`
-  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
-    headers, data: { scene: 'register', type: 'email', account, deviceId: account },
-  }))
-  const session = await expectApiSuccess<{ accessToken: string }>(
-    await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
-      headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
-    }),
-  )
+  const session = await getSharedEuUser(request)
   const userHeaders = { ...headers, Authorization: `Bearer ${session.accessToken}` }
   const order = await expectApiSuccess<{ id: number }>(await request.post(`${backendBaseURL}/api/c/v1/orders`, {
     headers: userHeaders, data: { dealId: 41001, quantity: 1 },
@@ -400,15 +417,15 @@ test('scans an issued coupon from video frames, confirms verification and reject
   ))
   const merchant = await expectApiSuccess<{ accessToken: string; merchantId: number }>(
     await request.post(`${backendBaseURL}/api/b/v1/auth/login`, {
-      headers, data: { account: 'merchant_eu_sichuan@example.com', password: 'merchant123456' },
+      headers, data: { account: merchantAccount, password: merchantPassword },
     }),
   )
   await page.addInitScript((auth) => {
     localStorage.setItem('dzdp:merchant-token', auth.accessToken)
     localStorage.setItem('dzdp:merchant-id', String(auth.merchantId))
-    localStorage.setItem('dzdp:merchant-account', 'merchant_eu_sichuan@example.com')
+    localStorage.setItem('dzdp:merchant-account', auth.account)
     localStorage.setItem('dzdp:merchant-region', 'EU')
-  }, merchant)
+  }, { ...merchant, account: merchantAccount })
   await page.goto(`${merchantBaseURL}/coupons`)
   await expect(page.getByTestId('coupon-scan-start')).toBeEnabled()
 
@@ -445,7 +462,7 @@ test('scans an issued coupon from video frames, confirms verification and reject
   const externalRequests: string[] = []
   page.on('request', (request) => {
     if (request.method() === 'POST' && request.url().includes(`/coupons/${code}/verify`)) verificationRequests.push(request.url())
-    if (!['127.0.0.1', 'localhost'].includes(new URL(request.url()).hostname)) externalRequests.push(request.url())
+    if (!applicationOrigins.has(new URL(request.url()).origin)) externalRequests.push(request.url())
   })
   await page.getByTestId('coupon-scan-start').click()
   await expect(page.getByTestId('coupon-code-input')).toHaveValue(code)
@@ -467,7 +484,7 @@ test('scans an issued coupon from video frames, confirms verification and reject
 })
 
 test.describe.serial('real backend review flow', () => {
-  test('shows safe system health and disables search sync mutations for the MySQL provider', async ({ browser }) => {
+  test('shows safe system health and reflects the active search provider', async ({ browser }) => {
     const adminContext = await browser.newContext()
     const adminPage = await adminContext.newPage()
     const diagnostics = collectBrowserErrors(adminPage)
@@ -527,8 +544,7 @@ test.describe.serial('real backend review flow', () => {
         'status',
         'uptimeSeconds',
       ])
-      expect(health.status).toBe('degraded')
-      expect(health.runtimeMode).toBe('local')
+      expect(['up', 'degraded']).toContain(health.status)
       expect(Object.keys(health.release).sort()).toEqual([
         'buildEnvironment',
         'buildRegion',
@@ -538,15 +554,30 @@ test.describe.serial('real backend review flow', () => {
         'runtimeMode',
         'version',
       ])
-      expect(health.release).toMatchObject({
-        version: 'development',
-        commitSha: 'unknown',
-        buildEnvironment: 'local',
-        buildRegion: 'EU',
-        migrationVersion: 0,
-        runtimeMode: 'local',
-      })
-      expect(health.activeProfiles).toEqual(['h2', 'local'])
+      if (remoteAcceptance) {
+        expect(expectedCommitSha).toMatch(/^[0-9a-f]{40}$/)
+        expect(health.runtimeMode).toBe('test')
+        expect(health.release).toMatchObject({
+          commitSha: expectedCommitSha,
+          buildEnvironment: 'test',
+          buildRegion: 'EU',
+          runtimeMode: 'test',
+        })
+        expect(health.release.migrationVersion).toBeGreaterThanOrEqual(3)
+        expect(health.activeProfiles).not.toContain('local')
+        expect(health.activeProfiles).not.toContain('h2')
+      } else {
+        expect(health.runtimeMode).toBe('local')
+        expect(health.release).toMatchObject({
+          version: 'development',
+          commitSha: 'unknown',
+          buildEnvironment: 'local',
+          buildRegion: 'EU',
+          migrationVersion: 0,
+          runtimeMode: 'local',
+        })
+        expect(health.activeProfiles).toEqual(['h2', 'local'])
+      }
       expect(health.components).toHaveLength(7)
       expect(health.components.map((component) => component.key)).toEqual([
         'database',
@@ -576,9 +607,14 @@ test.describe.serial('real backend review flow', () => {
       await expect(healthMain.getByRole('heading', { name: '系统健康' })).toBeVisible()
       await expect(healthMain.locator('.system-health-table tbody tr')).toHaveCount(7)
       await expect(healthMain.getByText('MySQL 数据库')).toBeVisible()
-      await expect(healthMain.getByText('当前由 MySQL 提供搜索，Elasticsearch 未启用')).toBeVisible()
-      await expect(healthMain.getByText('构建目标: local/EU')).toBeVisible()
-      await expect(healthMain.getByText('提交: unknown · 迁移版本: 0')).toBeVisible()
+      if (remoteAcceptance) {
+        await expect(healthMain.getByText('构建目标: test/EU')).toBeVisible()
+        await expect(healthMain).toContainText(expectedCommitSha)
+      } else {
+        await expect(healthMain.getByText('当前由 MySQL 提供搜索，Elasticsearch 未启用')).toBeVisible()
+        await expect(healthMain.getByText('构建目标: local/EU')).toBeVisible()
+        await expect(healthMain.getByText('提交: unknown · 迁移版本: 0')).toBeVisible()
+      }
       await expect(healthMain).not.toContainText('jdbc:h2:')
       await expect(healthMain).not.toContainText('admin123456')
       await expect(healthMain).not.toContainText('Demo123456')
@@ -606,21 +642,25 @@ test.describe.serial('real backend review flow', () => {
       }>(overviewResponse)
       const tasks = await expectApiSuccess<{ list: unknown[]; total: number }>(tasksResponse)
 
-      expect(overview.provider).toBe('mysql')
-      expect(overview.enabled).toBe(false)
-      expect(overview.indexName).toBe('dzdp_shop_v1')
-      expect(overview.total).toBe(0)
-      expect(tasks.list).toEqual([])
-      expect(tasks.total).toBe(0)
+      expect(['mysql', 'elasticsearch']).toContain(overview.provider)
+      expect(overview.indexName).not.toBe('')
+      expect(overview.total).toBeGreaterThanOrEqual(0)
+      expect(tasks.total).toBeGreaterThanOrEqual(tasks.list.length)
       const searchMain = adminPage.getByRole('main')
       await expect(searchMain.getByRole('heading', { name: '搜索索引同步' })).toBeVisible()
-      await expect(searchMain.getByRole('heading', { name: 'mysql', exact: true })).toBeVisible()
-      await expect(searchMain.getByText('增量同步已暂停', { exact: true })).toBeVisible()
-      await expect(searchMain.getByText('当前 APP_SEARCH_PROVIDER 不是 elasticsearch，任务不会被投递。')).toBeVisible()
-      await expect(searchMain.getByText('当前筛选条件下没有同步任务。')).toBeVisible()
-      await expect(searchMain.getByRole('button', { name: '重试异常任务' })).toBeDisabled()
-      await expect(searchMain.getByRole('button', { name: '全量重建索引' })).toBeDisabled()
-      await expect(searchMain.getByRole('button', { name: '立即重试' })).toHaveCount(0)
+      await expect(searchMain.getByRole('heading', { name: overview.provider, exact: true })).toBeVisible()
+      if (overview.enabled) {
+        expect(overview.provider).toBe('elasticsearch')
+        await expect(searchMain.getByText('增量同步运行中', { exact: true })).toBeVisible()
+        await expect(searchMain.getByRole('button', { name: '重试异常任务' })).toBeEnabled()
+        await expect(searchMain.getByRole('button', { name: '全量重建索引' })).toBeEnabled()
+      } else {
+        expect(overview.provider).toBe('mysql')
+        await expect(searchMain.getByText('增量同步已暂停', { exact: true })).toBeVisible()
+        await expect(searchMain.getByText('当前 APP_SEARCH_PROVIDER 不是 elasticsearch，任务不会被投递。')).toBeVisible()
+        await expect(searchMain.getByRole('button', { name: '重试异常任务' })).toBeDisabled()
+        await expect(searchMain.getByRole('button', { name: '全量重建索引' })).toBeDisabled()
+      }
 
       expectNoBrowserFailures(diagnostics)
     } finally {
@@ -641,7 +681,7 @@ test.describe.serial('real backend review flow', () => {
     const adminSession = await expectApiSuccess<{ accessToken: string }>(
       await request.post(`${backendBaseURL}/api/admin/v1/auth/login`, {
         headers: { 'Accept-Language': 'zh-CN', 'X-Region': 'EU' },
-        data: { account: 'admin', password: 'admin123456' },
+        data: { account: adminAccount, password: adminPassword },
       }),
     )
     const headers = adminHeaders(adminSession.accessToken, 'EU')
@@ -788,8 +828,10 @@ test.describe.serial('real backend review flow', () => {
     }
   })
 
-  test('submits an image review against H2 backend, approves it, and sees growth records', async ({ page, context }) => {
+  test('submits an image review against the real backend, approves it, and sees growth records', async ({ page, context, request }) => {
     const reviewContent = `真实后端 E2E 点评 ${Date.now()}`
+    const reviewer = await registerSyntheticUser(request, 'image-review')
+    await setUserRegion(context, 'CN')
 
     await page.goto('/')
     await page.getByRole('searchbox', { name: '搜索商户' }).fill('火锅')
@@ -800,7 +842,7 @@ test.describe.serial('real backend review flow', () => {
 
     await page.goto('/shops/10001/reviews/new')
 
-    await loginFromAuthDialog(page, 'demo.cn@example.com', 'Demo123456')
+    await loginFromAuthDialog(page, reviewer.account, reviewer.password)
 
     await expect(page).toHaveURL(/\/shops\/10001\/reviews\/new/)
     await expect(page.getByRole('heading', { name: '渝里火锅徐汇店' })).toBeVisible()
@@ -856,15 +898,17 @@ test.describe.serial('real backend review flow', () => {
 
   test('resumes guest like comment and report actions after login on a public review', async ({ browser, request }) => {
     const reviewContent = `游客续执行 E2E 点评 ${Date.now()}`
-    const reviewId = await createApprovedPublicReview(request, reviewContent)
+    const { reviewId, reviewerSession } = await createApprovedPublicReview(request, reviewContent)
+    const actor = await registerSyntheticUser(request, 'guest-resume')
 
     const likeContext = await browser.newContext()
     try {
+      await setUserRegion(likeContext, 'CN')
       const likePage = await likeContext.newPage()
       await likePage.goto(`/reviews/${reviewId}`)
       await expect(likePage.getByText(reviewContent)).toBeVisible()
       await likePage.getByRole('button', { name: /给个赞/ }).click()
-      await loginFromAuthDialog(likePage, '+447700900999', 'Demo123456')
+      await loginFromAuthDialog(likePage, actor.account, actor.password)
       await expect(likePage).toHaveURL(new RegExp(`/reviews/${reviewId}$`))
       await expect(likePage.getByText('这次点赞真落下去了。')).toBeVisible()
       await expect(likePage.getByRole('button', { name: /取消点赞 · 1/ })).toBeVisible()
@@ -875,12 +919,13 @@ test.describe.serial('real backend review flow', () => {
     const commentText = `游客续执行评论 ${Date.now()}`
     const commentContext = await browser.newContext()
     try {
+      await setUserRegion(commentContext, 'CN')
       const commentPage = await commentContext.newPage()
       await commentPage.goto(`/reviews/${reviewId}`)
       await expect(commentPage.getByText(reviewContent)).toBeVisible()
       await commentPage.getByLabel('写条评论').fill(commentText)
       await commentPage.getByRole('button', { name: '先登录再说' }).click()
-      await loginFromAuthDialog(commentPage, '+447700900999', 'Demo123456')
+      await loginFromAuthDialog(commentPage, actor.account, actor.password)
       await expect(commentPage).toHaveURL(new RegExp(`/reviews/${reviewId}$`))
       await expect(commentPage.getByText('评论已经发出去了。')).toBeVisible()
       await expect(commentPage.locator('.comment-card').filter({ hasText: commentText })).toHaveCount(1)
@@ -891,13 +936,14 @@ test.describe.serial('real backend review flow', () => {
     const reportReason = `游客续执行举报 ${Date.now()}`
     const reportContext = await browser.newContext()
     try {
+      await setUserRegion(reportContext, 'CN')
       const reportPage = await reportContext.newPage()
       await reportPage.goto(`/reviews/${reviewId}`)
       await expect(reportPage.getByText(reviewContent)).toBeVisible()
       await reportPage.getByRole('button', { name: '举报这条点评' }).click()
       await reportPage.getByLabel('举报理由').fill(reportReason)
       await reportPage.getByRole('button', { name: '提交举报' }).click()
-      await loginFromAuthDialog(reportPage, '+447700900999', 'Demo123456')
+      await loginFromAuthDialog(reportPage, actor.account, actor.password)
       await expect(reportPage).toHaveURL(new RegExp(`/reviews/${reviewId}$`))
       await expect(reportPage.getByText('举报已提交，后台会复核这条点评。')).toBeVisible()
     } finally {
@@ -905,23 +951,11 @@ test.describe.serial('real backend review flow', () => {
     }
 
     const commentReportReason = `评论举报 E2E ${Date.now()}`
-    const commentAuthorSession = await expectApiSuccess<{ accessToken: string }>(
-      await request.post(`${backendBaseURL}/api/c/v1/auth/login/password`, {
-        headers: {
-          'Accept-Language': 'zh-CN',
-          'X-Region': 'CN',
-        },
-        data: {
-          account: 'demo.cn@example.com',
-          password: 'Demo123456',
-        },
-      }),
-    )
     const seededComment = await expectApiSuccess<{ id: number; content: string }>(
       await request.post(`${backendBaseURL}/api/c/v1/reviews/${reviewId}/comments`, {
         headers: {
           'Accept-Language': 'zh-CN',
-          'Authorization': `Bearer ${commentAuthorSession.accessToken}`,
+          'Authorization': `Bearer ${reviewerSession.accessToken}`,
           'Idempotency-Key': `pw-cmt-${Date.now()}`,
           'X-Region': 'CN',
         },
@@ -933,12 +967,13 @@ test.describe.serial('real backend review flow', () => {
 
     const commentReportContext = await browser.newContext()
     try {
+      await setUserRegion(commentReportContext, 'CN')
       const commentReportPage = await commentReportContext.newPage()
       await commentReportPage.goto(`/reviews/${reviewId}`)
       await expect(commentReportPage.getByText(seededComment.content)).toBeVisible()
       // Guest report opens auth first; panel appears after login resume.
       await commentReportPage.getByTestId(`comment-report-${seededComment.id}`).click()
-      await loginFromAuthDialog(commentReportPage, '+447700900999', 'Demo123456')
+      await loginFromAuthDialog(commentReportPage, actor.account, actor.password)
       await expect(commentReportPage).toHaveURL(new RegExp(`/reviews/${reviewId}$`))
       await expect(commentReportPage.getByTestId(`comment-report-reason-${seededComment.id}`)).toBeVisible()
       await commentReportPage.getByTestId(`comment-report-reason-${seededComment.id}`).fill(commentReportReason)
@@ -949,7 +984,9 @@ test.describe.serial('real backend review flow', () => {
     }
   })
 
-  test('completes daily check-in and points mall exchange against the real backend', async ({ page, request }) => {
+  test('completes daily check-in and points mall exchange against the real backend', async ({ page, context, request }) => {
+    const shopper = await registerSyntheticUser(request, 'points-shopper')
+    await setUserRegion(context, 'CN')
     const adminSession = await expectApiSuccess<{ accessToken: string }>(
       await request.post(`${backendBaseURL}/api/admin/v1/auth/login`, {
         headers: {
@@ -957,8 +994,8 @@ test.describe.serial('real backend review flow', () => {
           'X-Region': 'CN',
         },
         data: {
-          account: 'admin',
-          password: 'admin123456',
+          account: adminAccount,
+          password: adminPassword,
         },
       }),
     )
@@ -981,42 +1018,44 @@ test.describe.serial('real backend review flow', () => {
     )
     expect(product.pointsPrice).toBe(1)
 
-    await page.goto('/user/check-in')
-    await loginFromAuthDialog(page, 'demo.cn@example.com', 'Demo123456')
-    await expect(page).toHaveURL(/\/user\/check-in/)
-    await expect(page.getByTestId('check-in-status')).toBeVisible()
-
-    const alreadyCheckedIn = await page.getByTestId('check-in-submit').isDisabled()
-    if (!alreadyCheckedIn) {
+    try {
+      await page.goto('/user/check-in')
+      await loginFromAuthDialog(page, shopper.account, shopper.password)
+      await expect(page).toHaveURL(/\/user\/check-in/)
+      await expect(page.getByTestId('check-in-status')).toBeVisible()
       await page.getByTestId('check-in-submit').click()
       await expect(page.getByText('签到成功，奖励已入账。')).toBeVisible()
       await expect(page.getByTestId('check-in-status')).toContainText('已签到')
       await expect(page.getByTestId('check-in-submit')).toBeDisabled()
-    } else {
-      await expect(page.getByTestId('check-in-status')).toContainText('已签到')
+
+      await page.goto('/user/points-mall')
+      await expect(page).toHaveURL(/\/user\/points-mall/)
+      await expect(page.getByTestId('points-balance')).toBeVisible()
+      await expect(page.getByTestId(`points-product-${product.id}`)).toBeVisible()
+
+      page.once('dialog', async (dialog) => {
+        await dialog.accept()
+      })
+      await page.getByTestId(`points-product-${product.id}`).getByRole('button', { name: '立即兑换' }).click()
+      await expect(page.getByTestId('points-success')).toContainText(/兑换成功/)
+
+      await page.getByTestId('points-tab-exchanges').click()
+      await expect(page.getByText(productName)).toBeVisible()
+    } finally {
+      await request.delete(`${backendBaseURL}/api/admin/v1/points/products/${product.id}`, {
+        headers: adminHeaders(adminSession.accessToken, 'CN'),
+      })
     }
-
-    await page.goto('/user/points-mall')
-    await expect(page).toHaveURL(/\/user\/points-mall/)
-    await expect(page.getByTestId('points-balance')).toBeVisible()
-    await expect(page.getByTestId(`points-product-${product.id}`)).toBeVisible()
-
-    page.once('dialog', async (dialog) => {
-      await dialog.accept()
-    })
-    await page.getByTestId(`points-product-${product.id}`).getByRole('button', { name: '立即兑换' }).click()
-    await expect(page.getByTestId('points-success')).toContainText(/兑换成功/)
-
-    await page.getByTestId('points-tab-exchanges').click()
-    await expect(page.getByText(productName)).toBeVisible()
   })
 
   test('binds a phone, updates password, and completes a successful admin import', async ({ page, context, request }) => {
+    const user = await registerSyntheticUser(request, 'profile-password')
     const newPhone = `+4477009${Date.now().toString().slice(-6)}`
-    const newPassword = 'Demo123456!'
+    const newPassword = 'ChangedPassw0rd!'
+    await setUserRegion(context, 'CN')
 
     await page.goto('/user/profile')
-    await loginFromAuthDialog(page, 'demo.cn@example.com', 'Demo123456')
+    await loginFromAuthDialog(page, user.account, user.password)
     await expect(page).toHaveURL(/\/user\/profile/)
     await expect(page.getByRole('heading', { name: '管理个人资料、账号绑定和登录密码。' })).toBeVisible()
 
@@ -1030,7 +1069,7 @@ test.describe.serial('real backend review flow', () => {
     await expect(page.getByText('手机号已绑定成功。')).toBeVisible()
     await expect(page.getByText(newPhone)).toBeVisible()
 
-    await page.getByPlaceholder('已有密码时填写').fill('Demo123456')
+    await page.getByPlaceholder('已有密码时填写').fill(user.password)
     await page.getByPlaceholder('设置新密码').fill(newPassword)
     await page.getByPlaceholder('再次输入新密码').fill(newPassword)
     await page.getByRole('button', { name: '更新密码' }).click()
@@ -1045,7 +1084,7 @@ test.describe.serial('real backend review flow', () => {
           'X-Region': 'CN',
         },
         data: {
-          account: 'demo.cn@example.com',
+          account: user.account,
           password: newPassword,
         },
       }),
@@ -1062,9 +1101,11 @@ test.describe.serial('real backend review flow', () => {
     await expect(adminPage.getByText('成功 1 / 失败 0')).toBeVisible()
   })
 
-  test('exports privacy data and cancels an account deletion during the cooling-off period', async ({ page }) => {
+  test('exports privacy data and cancels an account deletion during the cooling-off period', async ({ page, context, request }) => {
+    const user = await registerSyntheticUser(request, 'privacy-center')
+    await setUserRegion(context, 'CN')
     await page.goto('/user/privacy')
-    await loginFromAuthDialog(page, '+447700900999', 'Demo123456')
+    await loginFromAuthDialog(page, user.account, user.password)
     await expect(page).toHaveURL(/\/user\/privacy/)
     await expect(page.getByRole('heading', { name: '管理数据导出、协议记录、设备和账号删除。' })).toBeVisible()
 
@@ -1078,7 +1119,7 @@ test.describe.serial('real backend review flow', () => {
     const download = await downloadPromise
     expect(download.suggestedFilename()).toMatch(/^privacy-export-\d+\.zip$/)
 
-    await page.getByLabel('当前已绑定账号').selectOption('+447700900999')
+    await page.getByLabel('当前已绑定账号').selectOption(user.account)
     await page.getByLabel('删除原因').fill('真实后端 E2E 验证冷静期撤销')
     await page.getByRole('button', { name: '发送注销验证码' }).click()
     await expect(page.getByText('本地 mock 验证码：123456')).toBeVisible()
@@ -1119,7 +1160,7 @@ test.describe.serial('real backend review flow', () => {
       const roleForm = adminPage.getByTestId('role-form')
       await roleForm.getByLabel('角色编码').fill(roleCode)
       await roleForm.getByLabel('角色名称').fill(roleName)
-      await roleForm.getByLabel('说明').fill('只允许处理 EU 点评审核的真实 H2 E2E 账号')
+      await roleForm.getByLabel('说明').fill('只允许处理 EU 点评审核的真实 E2E 账号')
       await roleForm.getByRole('checkbox', { name: /查看点评审核.*audit:review:read/ }).check()
       await roleForm.getByRole('button', { name: '保存角色' }).click()
       const roleRow = adminPage.locator('tr').filter({ hasText: roleCode })
@@ -1325,15 +1366,7 @@ test.describe.serial('real backend review flow', () => {
 test('customer and merchant exchange live consultation replies and support closes a ticket', async ({ page, context, browser, request }) => {
   test.setTimeout(60_000)
   const headers = { 'X-Region': 'EU' }
-  const account = `support-flow-${Date.now()}@example.com`
-  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
-    headers, data: { scene: 'register', type: 'email', account, deviceId: account },
-  }))
-  const auth = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
-    await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
-      headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
-    }),
-  )
+  const auth = await getSharedEuUser(request)
   const userHeaders = { ...headers, Authorization: `Bearer ${auth.accessToken}` }
   await context.addInitScript((session) => {
     localStorage.setItem('dzdp:region', 'EU')
@@ -1389,8 +1422,8 @@ test('customer and merchant exchange live consultation replies and support close
     await page.getByTestId('consult-send').click()
     await expect(page.getByText('Is a table available tonight?', { exact: true })).toBeInViewport()
     await merchantPage.goto(`${merchantBaseURL}/login`)
-    await merchantPage.locator('input[autocomplete="username"]').fill('merchant_eu_sichuan@example.com')
-    await merchantPage.locator('input[autocomplete="current-password"]').fill('merchant123456')
+    await merchantPage.locator('input[autocomplete="username"]').fill(merchantAccount)
+    await merchantPage.locator('input[autocomplete="current-password"]').fill(merchantPassword)
     const merchantAccountResponse = merchantPage.waitForResponse((response) =>
       response.request().method() === 'GET'
       && new URL(response.url()).pathname === '/api/b/v1/account/me',
@@ -1433,7 +1466,7 @@ test('customer and merchant exchange live consultation replies and support close
     const detail = page.getByTestId(`ticket-detail-${ticket.id}`)
     await expect(detail).toBeVisible()
     const admin = await expectApiSuccess<{ accessToken: string }>(await request.post(`${backendBaseURL}/api/admin/v1/auth/login`, {
-      data: { account: 'admin', password: 'admin123456' },
+      data: { account: adminAccount, password: adminPassword },
     }))
     await expectApiSuccess(await request.post(`${backendBaseURL}/api/admin/v1/tickets/${ticket.id}/reply`, {
       headers: adminHeaders(admin.accessToken, 'EU'), data: { content: 'Please confirm your invoice title.' },
@@ -1460,15 +1493,8 @@ test('customer and merchant exchange live consultation replies and support close
 
 test('admin delivers a private invoice PDF and customer explicitly confirms receipt', async ({ page, context, browser, request }) => {
   const headers = { 'X-Region': 'EU' }
-  const account = `invoice-delivery-${Date.now()}@example.com`
-  await expectApiSuccess(await request.post(`${backendBaseURL}/api/c/v1/auth/send-code`, {
-    headers, data: { scene: 'register', type: 'email', account, deviceId: account },
-  }))
-  const auth = await expectApiSuccess<{ accessToken: string; refreshToken: string; user: object }>(
-    await request.post(`${backendBaseURL}/api/c/v1/auth/register`, {
-      headers, data: { type: 'email', account, code: '123456', password: 'Passw0rd!', preferredRegion: 'EU' },
-    }),
-  )
+  const auth = await getSharedEuUser(request)
+  const account = auth.account
   const userHeaders = { ...headers, Authorization: `Bearer ${auth.accessToken}` }
   const order = await expectApiSuccess<{ id: number }>(await request.post(`${backendBaseURL}/api/c/v1/orders`, {
     headers: userHeaders, data: { dealId: 41001, quantity: 1 },

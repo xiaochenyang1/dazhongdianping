@@ -30,6 +30,15 @@ Assert-True ($playwrightConfig -match "PLAYWRIGHT_REAL_BACKEND") "Playwright con
 Assert-True ($playwrightConfig -match "PLAYWRIGHT_BACKEND_PORT") "Playwright config must support configurable backend port"
 Assert-True ($playwrightConfig -match "VITE_PROXY_TARGET") "Playwright config must pass VITE_PROXY_TARGET to Vite dev servers"
 Assert-True ($playwrightConfig -match "PLAYWRIGHT_EXTERNAL_SERVERS") "Playwright config must support externally managed E2E servers"
+foreach ($baseUrlName in @(
+    "PLAYWRIGHT_WEB_BASE_URL",
+    "PLAYWRIGHT_ADMIN_BASE_URL",
+    "PLAYWRIGHT_MERCHANT_BASE_URL",
+    "PLAYWRIGHT_BACKEND_BASE_URL"
+)) {
+    Assert-True ($playwrightConfig -match $baseUrlName) "Playwright config must support $baseUrlName"
+}
+Assert-True ($playwrightConfig -match "PLAYWRIGHT_REMOTE_ACCEPTANCE") "remote acceptance must disable Playwright retries"
 
 $browserE2eScript = Get-Content -LiteralPath $scriptPath -Raw
 Assert-True ($browserE2eScript -match "Start-Process") "browser E2E script must manage child processes explicitly on Windows"
@@ -65,7 +74,12 @@ Assert-True ($realBackendSpec -match "通过点评") "real backend spec must cov
 Assert-True ($realBackendSpec -match "渝里火锅徐汇店") "real backend spec must use H2 seed shop data"
 Assert-True ($realBackendSpec -match "system/health") "real backend spec must cover admin system health"
 Assert-True ($realBackendSpec -match "data/search-sync") "real backend spec must cover admin search sync operations"
-Assert-True ($realBackendSpec -match "overview\.enabled\)\.toBe\(false\)") "real backend spec must verify MySQL disables search sync mutations"
+Assert-True ($realBackendSpec -match "PLAYWRIGHT_REMOTE_ACCEPTANCE") "real backend spec must distinguish remote acceptance from local H2"
+Assert-True ($realBackendSpec -match "PLAYWRIGHT_EXPECTED_COMMIT_SHA") "remote real backend checks must verify the expected commit"
+Assert-True ($realBackendSpec -match "PLAYWRIGHT_E2E_ADMIN_ACCOUNT") "admin acceptance credentials must be configurable"
+Assert-True ($realBackendSpec -match "PLAYWRIGHT_E2E_MERCHANT_ACCOUNT") "merchant acceptance credentials must be configurable"
+Assert-True ($realBackendSpec -match "registerSyntheticUser") "mutable user flows must use synthetic accounts"
+Assert-True ($realBackendSpec -notmatch "demo\.cn@example\.com") "real backend E2E must not mutate the shared demo user"
 Assert-True ($realBackendSpec -match 'captureStream') "merchant QR E2E must decode real video frames from the issued coupon image"
 Assert-True ($realBackendSpec -match 'coupon-scan-start') "merchant QR E2E must exercise the camera entry and explicit verification"
 Assert-True ($realBackendSpec -match 'merchantDashboardResponse') "merchant consultation E2E must await dashboard loading before navigating away"
