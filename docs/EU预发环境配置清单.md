@@ -97,20 +97,28 @@ set +a
 - 首次接管已有库时，临时设置 `DEPLOY_DB_BASELINE_VERSION`；确认迁移成功后移除。
 - 安装后的真实运行 env 同样放在 release bundle 外，并由 `DEPLOY_RUNTIME_ENV_FILE` 指向；建议路径为 `/etc/dazhongdianping/eu-pre.env`，权限使用 `0400` 或 `0600`。
 
-## 3. GitHub `pre` Environment
+## 3. GitHub `test/pre` Environment
 
 源码 SHA 由工作流按选定版本自动注入：打包使用 `APP_RELEASE_COMMIT_SHA`，部署使用 `DEPLOY_EXPECTED_COMMIT_SHA`，不要将它们配置成长期固定值。本地执行时分别传入 `package-release.ps1 -CommitSha <40位SHA>` 和 `deploy-release.ps1 -ExpectedCommitSha <同一40位SHA>`；两者必须来自通过 CI 的版本。实际 `test/pre` 包须分别按对应环境构建，不能直接复用未注入配置的技术候选。
 
-2026-11-09 只读核对 GitHub Environment：`test` 为 0 个变量、0 个 secret；`pre` 可见变量仍只有 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`，secret 为 0。不得把此清单当作变量值或凭证核验。正式发布前仍需补齐下表中依赖目标环境的变量和 secrets。
+2026-11-13 只读核对 GitHub Environment：`test` 为 0 个变量、0 个 secret；`pre` 可见变量仍只有 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`，secret 为 0。不得把此清单当作变量值或凭证核验。正式发布前仍需补齐下表中依赖目标环境的变量和 secrets。
 
-仓库提供了初始化工具，用来把经过审核的本地私有配置写入 GitHub Environment。先复制示例并替换所有 `CHANGE_ME`；`test` 需要把配置中的 `environment` 改为 `test`，且区域固定为 `EU`：
+仓库提供了初始化工具，用来把经过审核的本地私有配置写入 GitHub Environment。先从独立的 `test` 示例复制私有配置、替换所有 `CHANGE_ME` 并核对两个 secret 文件路径；该示例固定为 EU 且不增加人工审批门禁，保持主干 CI 成功后的自动 test 发布可用：
 
 ```powershell
+Copy-Item deploy/github-environment.test.config.example.json deploy/github-environment.test.json
+./scripts/ci/github-environment-bootstrap.ps1 -Environment test -ConfigPath deploy/github-environment.test.json
+```
+
+默认只生成脱敏 Plan，不修改 GitHub。确认变量名、secret 名称和 branch/tag policy 后，再显式 Apply；完成后先取得 test readiness，再处理 pre：
+
+```powershell
+./scripts/ci/github-environment-bootstrap.ps1 -Environment test -ConfigPath deploy/github-environment.test.json -Apply
 Copy-Item deploy/github-environment.config.example.json deploy/github-environment.pre.json
 ./scripts/ci/github-environment-bootstrap.ps1 -Environment pre -ConfigPath deploy/github-environment.pre.json
 ```
 
-默认只生成 Plan，不修改 GitHub。确认变量名、secret 名称、审批人数量和 branch/tag policy 后，再显式 Apply：
+确认 pre 的审批人数量和策略后再显式 Apply：
 
 ```powershell
 ./scripts/ci/github-environment-bootstrap.ps1 -Environment pre -ConfigPath deploy/github-environment.pre.json -Apply
@@ -125,6 +133,8 @@ Copy-Item deploy/github-environment.config.example.json deploy/github-environmen
 可在仓库根目录执行只读审计；脚本只输出缺失名称和格式问题，不输出变量值或 secret 内容：
 
 ```powershell
+./scripts/ci/github-environment-preflight.ps1 -Environment test -ReportOnly
+./scripts/ci/github-environment-preflight.ps1 -Environment test -ReportOnly -Json
 ./scripts/ci/github-environment-preflight.ps1 -Environment pre -ReportOnly
 ./scripts/ci/github-environment-preflight.ps1 -Environment pre -ReportOnly -Json
 ```
@@ -134,6 +144,8 @@ Copy-Item deploy/github-environment.config.example.json deploy/github-environmen
 GitHub Environment 审计通过且 SSH 已按发布工作流准备后，可运行目标机只读预检：
 
 ```powershell
+./scripts/ci/target-host-preflight.ps1 -Environment test -Region EU -ReportOnly
+./scripts/ci/target-host-preflight.ps1 -Environment test -Region EU -ReportOnly -Json
 ./scripts/ci/target-host-preflight.ps1 -Environment pre -Region EU -ReportOnly
 ./scripts/ci/target-host-preflight.ps1 -Environment pre -Region EU -ReportOnly -Json
 ```
@@ -145,6 +157,7 @@ GitHub Environment 审计通过且 SSH 已按发布工作流准备后，可运�
 Environment 和目标机预检都有真实结果后，使用一个已经完成主干 CI 的 40 位提交生成自动就绪报告：
 
 ```powershell
+./scripts/ci/readiness-report.ps1 -Environment test -Region EU -CommitSha <40位main提交> -ReportOnly
 ./scripts/ci/readiness-report.ps1 -Environment pre -Region EU -CommitSha <40位main提交> -ReportOnly
 ```
 
