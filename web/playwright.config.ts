@@ -8,13 +8,18 @@ const merchantPort = Number(process.env.PLAYWRIGHT_MERCHANT_PORT ?? 15175)
 const backendPort = Number(process.env.PLAYWRIGHT_BACKEND_PORT ?? 18080)
 const realBackend = process.env.PLAYWRIGHT_REAL_BACKEND === '1'
 const externalServers = process.env.PLAYWRIGHT_EXTERNAL_SERVERS === '1'
+const remoteAcceptance = process.env.PLAYWRIGHT_REMOTE_ACCEPTANCE === '1'
 const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR ?? 'test-results'
 const browserExecutablePath = process.env.PLAYWRIGHT_EXECUTABLE_PATH
 const browserChannel = process.env.PLAYWRIGHT_CHANNEL ?? 'chrome'
 const webDir = fileURLToPath(new URL('.', import.meta.url))
 const repoRoot = path.resolve(webDir, '..')
 const backendDir = path.join(repoRoot, 'backend')
-const backendBaseURL = `http://127.0.0.1:${backendPort}`
+const normalizeBaseURL = (value: string | undefined, fallback: string) => (value?.trim() || fallback).replace(/\/+$/, '')
+const webBaseURL = normalizeBaseURL(process.env.PLAYWRIGHT_WEB_BASE_URL, `http://127.0.0.1:${webPort}`)
+const adminBaseURL = normalizeBaseURL(process.env.PLAYWRIGHT_ADMIN_BASE_URL, `http://127.0.0.1:${adminPort}`)
+const merchantBaseURL = normalizeBaseURL(process.env.PLAYWRIGHT_MERCHANT_BASE_URL, `http://127.0.0.1:${merchantPort}`)
+const backendBaseURL = normalizeBaseURL(process.env.PLAYWRIGHT_BACKEND_BASE_URL, `http://127.0.0.1:${backendPort}`)
 const backendCommand = `${process.platform === 'win32' ? 'mvnw.cmd' : './mvnw'} -q -DskipTests spring-boot:run "-Dspring-boot.run.profiles=h2,local" "-Dspring-boot.run.arguments=--server.port=${backendPort} --management.health.redis.enabled=false"`
 const viteCliPath = './node_modules/vite/bin/vite.js'
 const realBackendEnv = {
@@ -25,15 +30,15 @@ const realBackendEnv = {
 export default defineConfig({
   testDir: './e2e',
   outputDir,
-  timeout: 30_000,
+  timeout: remoteAcceptance ? 60_000 : 30_000,
   expect: {
-    timeout: 10_000,
+    timeout: remoteAcceptance ? 15_000 : 10_000,
   },
   fullyParallel: false,
-  retries: process.env.CI ? 1 : 0,
+  retries: remoteAcceptance ? 0 : (process.env.CI ? 1 : 0),
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: `http://127.0.0.1:${webPort}`,
+    baseURL: webBaseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     ...devices['Desktop Chrome'],
@@ -69,7 +74,7 @@ export default defineConfig({
     {
       command: `node ${viteCliPath} --host 127.0.0.1 --port ${adminPort} --strictPort`,
       cwd: path.join(repoRoot, 'admin-web'),
-      url: `http://127.0.0.1:${adminPort}/login`,
+      url: `${adminBaseURL}/login`,
       reuseExistingServer: false,
       timeout: 60_000,
       ...(realBackend ? { env: realBackendEnv } : {}),
@@ -77,7 +82,7 @@ export default defineConfig({
     ...(realBackend ? [{
       command: `node ${viteCliPath} --host 127.0.0.1 --port ${merchantPort} --strictPort`,
       cwd: path.join(repoRoot, 'merchant-web'),
-      url: `http://127.0.0.1:${merchantPort}/login`,
+      url: `${merchantBaseURL}/login`,
       reuseExistingServer: false,
       timeout: 60_000,
       env: realBackendEnv,
