@@ -244,15 +244,66 @@ $prodReport = & $preflightPath `
     -Json | ConvertFrom-Json
 Assert-True $prodReport.Ready "prod fixture must accept a live Stripe publishable key"
 
-$testReport = & $preflightPath `
+$incompleteTestReport = & $preflightPath `
     -Environment test `
     -VariablesJson $readyVariablesJson `
     -SecretsJson $readySecretsJson `
     -ProtectionJson $unprotectedEnvironmentJson `
     -ReportOnly `
     -Json | ConvertFrom-Json
+Assert-True (-not $incompleteTestReport.Ready) "test must require remote browser acceptance configuration"
+foreach ($expected in @(
+    "REMOTE_ACCEPTANCE_WEB_BASE_URL",
+    "REMOTE_ACCEPTANCE_ADMIN_BASE_URL",
+    "REMOTE_ACCEPTANCE_MERCHANT_BASE_URL",
+    "REMOTE_ACCEPTANCE_BACKEND_BASE_URL"
+)) {
+    Assert-True ($expected -in @($incompleteTestReport.MissingVariables)) "test preflight must require $expected"
+}
+foreach ($expected in @(
+    "PLAYWRIGHT_E2E_ADMIN_ACCOUNT",
+    "PLAYWRIGHT_E2E_ADMIN_PASSWORD",
+    "PLAYWRIGHT_E2E_MERCHANT_ACCOUNT",
+    "PLAYWRIGHT_E2E_MERCHANT_PASSWORD"
+)) {
+    Assert-True ($expected -in @($incompleteTestReport.MissingSecrets)) "test preflight must require $expected"
+}
+
+$testVariables = $readyVariables.Clone()
+$testVariables.REMOTE_ACCEPTANCE_WEB_BASE_URL = "https://www-test.example.com"
+$testVariables.REMOTE_ACCEPTANCE_ADMIN_BASE_URL = "https://admin-test.example.com"
+$testVariables.REMOTE_ACCEPTANCE_MERCHANT_BASE_URL = "https://merchant-test.example.com"
+$testVariables.REMOTE_ACCEPTANCE_BACKEND_BASE_URL = "https://api-test.example.com"
+$testSecretsJson = ConvertTo-SecretJson -Names @(
+    @($readySecretsJson | ConvertFrom-Json | ForEach-Object { [string]$_.name }) + @(
+        "PLAYWRIGHT_E2E_ADMIN_ACCOUNT",
+        "PLAYWRIGHT_E2E_ADMIN_PASSWORD",
+        "PLAYWRIGHT_E2E_MERCHANT_ACCOUNT",
+        "PLAYWRIGHT_E2E_MERCHANT_PASSWORD"
+    )
+)
+$testReport = & $preflightPath `
+    -Environment test `
+    -VariablesJson (ConvertTo-VariableJson -Values $testVariables) `
+    -SecretsJson $testSecretsJson `
+    -ProtectionJson $unprotectedEnvironmentJson `
+    -ReportOnly `
+    -Json | ConvertFrom-Json
 Assert-True $testReport.Ready "test must not require a manual approval gate"
 Assert-True ($testReport.MissingProtectionRules.Count -eq 0) "test must not report a missing reviewer rule"
+
+$invalidTestOrigins = $testVariables.Clone()
+$invalidTestOrigins.REMOTE_ACCEPTANCE_WEB_BASE_URL = "https://127.0.0.1"
+$invalidTestOrigins.REMOTE_ACCEPTANCE_BACKEND_BASE_URL = "https://api-test.example.com/private"
+$invalidTestOriginsReport = & $preflightPath `
+    -Environment test `
+    -VariablesJson (ConvertTo-VariableJson -Values $invalidTestOrigins) `
+    -SecretsJson $testSecretsJson `
+    -ProtectionJson $unprotectedEnvironmentJson `
+    -ReportOnly `
+    -Json | ConvertFrom-Json
+Assert-True ("REMOTE_ACCEPTANCE_WEB_BASE_URL" -in @($invalidTestOriginsReport.InvalidVariables.Name)) "test remote acceptance must reject loopback origins"
+Assert-True ("REMOTE_ACCEPTANCE_BACKEND_BASE_URL" -in @($invalidTestOriginsReport.InvalidVariables.Name)) "test remote acceptance must reject origins with paths"
 
 $emptyReviewerProtectionJson = @{
     protection_rules = @(

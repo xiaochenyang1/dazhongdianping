@@ -34,9 +34,11 @@ function Write-Snapshots {
         [string]$CiConclusion = "success",
         [string]$VerifyConclusion = "success",
         [bool]$EnvironmentReady = $true,
+        [string[]]$EnvironmentMissingVariables = @(),
         [string[]]$EnvironmentMissingSecrets = @(),
         [object[]]$EnvironmentWarnings = @(),
-        [bool]$TargetReady = $true
+        [bool]$TargetReady = $true,
+        [string]$SnapshotEnvironment = "pre"
     )
 
     [ordered]@{
@@ -54,9 +56,9 @@ function Write-Snapshots {
         )
     } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ciPath -Encoding utf8
     [ordered]@{
-        Environment = "pre"
+        Environment = $SnapshotEnvironment
         Ready = $EnvironmentReady
-        MissingVariables = @()
+        MissingVariables = $EnvironmentMissingVariables
         MissingSecrets = $EnvironmentMissingSecrets
         InvalidVariables = @()
         MissingProtectionRules = @()
@@ -64,7 +66,7 @@ function Write-Snapshots {
         Warnings = $EnvironmentWarnings
     } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $environmentPath -Encoding utf8
     [ordered]@{
-        Environment = "pre"
+        Environment = $SnapshotEnvironment
         Region = "EU"
         Ready = $TargetReady
         MutatedTarget = $false
@@ -177,6 +179,27 @@ try {
         -Json | ConvertFrom-Json
     Assert-True ("DEPLOY_SSH_HOST" -in @($missingSecretReport.sections.githubEnvironment.missingSecrets)) "readiness must preserve the SSH host secret name"
     Assert-True ("DEPLOY_RUNTIME_ENV_FILE" -in @($missingSecretReport.sections.githubEnvironment.missingSecrets)) "readiness must preserve the runtime path secret name"
+
+    Write-Snapshots `
+        -SnapshotEnvironment test `
+        -EnvironmentReady $false `
+        -EnvironmentMissingVariables @("REMOTE_ACCEPTANCE_WEB_BASE_URL", "REMOTE_ACCEPTANCE_BACKEND_BASE_URL") `
+        -EnvironmentMissingSecrets @("PLAYWRIGHT_E2E_ADMIN_ACCOUNT", "PLAYWRIGHT_E2E_MERCHANT_PASSWORD")
+    $testAcceptanceMissingReport = & $scriptPath `
+        -Environment test `
+        -Region EU `
+        -Repository owner/repo `
+        -CommitSha $commitSha `
+        -CiSnapshotPath $ciPath `
+        -EnvironmentSnapshotPath $environmentPath `
+        -TargetSnapshotPath $targetPath `
+        -OutputDirectory $reportRoot `
+        -ReportOnly `
+        -Json | ConvertFrom-Json
+    Assert-True ("REMOTE_ACCEPTANCE_WEB_BASE_URL" -in @($testAcceptanceMissingReport.sections.githubEnvironment.missingVariables)) "test readiness must preserve remote acceptance variable names"
+    Assert-True ("REMOTE_ACCEPTANCE_BACKEND_BASE_URL" -in @($testAcceptanceMissingReport.sections.githubEnvironment.missingVariables)) "test readiness must preserve backend acceptance origin names"
+    Assert-True ("PLAYWRIGHT_E2E_ADMIN_ACCOUNT" -in @($testAcceptanceMissingReport.sections.githubEnvironment.missingSecrets)) "test readiness must preserve admin acceptance credential names"
+    Assert-True ("PLAYWRIGHT_E2E_MERCHANT_PASSWORD" -in @($testAcceptanceMissingReport.sections.githubEnvironment.missingSecrets)) "test readiness must preserve merchant acceptance credential names"
 
     Write-Snapshots -TargetReady $false
     $targetBlocked = & $scriptPath `

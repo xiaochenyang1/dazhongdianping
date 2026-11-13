@@ -10,6 +10,10 @@ $binRoot = Join-Path $fixtureRoot "bin"
 $configPath = Join-Path $fixtureRoot "github-environment.pre.json"
 $privateKeyPath = Join-Path $privateRoot "id_ed25519"
 $knownHostsPath = Join-Path $privateRoot "known_hosts"
+$adminAccountPath = Join-Path $privateRoot "playwright-admin-account"
+$adminPasswordPath = Join-Path $privateRoot "playwright-admin-password"
+$merchantAccountPath = Join-Path $privateRoot "playwright-merchant-account"
+$merchantPasswordPath = Join-Path $privateRoot "playwright-merchant-password"
 $originalPath = $env:PATH
 $testEnvironmentNames = @(
     "DZDP_GH_LOG",
@@ -45,7 +49,7 @@ function Assert-ThrowsLike {
 function New-ReadyVariables {
     param([string]$Environment = "pre")
 
-    return [ordered]@{
+    $values = [ordered]@{
         DEPLOY_SSH_HOST = "$Environment.example.test"
         DEPLOY_SSH_PORT = "22"
         DEPLOY_SSH_USER = "deploy"
@@ -65,6 +69,13 @@ function New-ReadyVariables {
         PUBLIC_SITE_URL = "https://www.example.test"
         PRERENDER_API_BASE_URL = "https://api.example.test"
     }
+    if ($Environment -eq "test") {
+        $values.REMOTE_ACCEPTANCE_WEB_BASE_URL = "https://www.example.test"
+        $values.REMOTE_ACCEPTANCE_ADMIN_BASE_URL = "https://admin.example.test"
+        $values.REMOTE_ACCEPTANCE_MERCHANT_BASE_URL = "https://merchant.example.test"
+        $values.REMOTE_ACCEPTANCE_BACKEND_BASE_URL = "https://api.example.test"
+    }
+    return $values
 }
 
 function New-ReadyConfig {
@@ -73,15 +84,23 @@ function New-ReadyConfig {
         [string]$Region = "EU"
     )
 
+    $secretFiles = [ordered]@{
+        DEPLOY_SSH_PRIVATE_KEY = $privateKeyPath
+        DEPLOY_KNOWN_HOSTS = $knownHostsPath
+    }
+    if ($Environment -eq "test") {
+        $secretFiles.PLAYWRIGHT_E2E_ADMIN_ACCOUNT = $adminAccountPath
+        $secretFiles.PLAYWRIGHT_E2E_ADMIN_PASSWORD = $adminPasswordPath
+        $secretFiles.PLAYWRIGHT_E2E_MERCHANT_ACCOUNT = $merchantAccountPath
+        $secretFiles.PLAYWRIGHT_E2E_MERCHANT_PASSWORD = $merchantPasswordPath
+    }
+
     return [ordered]@{
         schemaVersion = 1
         environment = $Environment
         region = $Region
         variables = New-ReadyVariables -Environment $Environment
-        secretFiles = [ordered]@{
-            DEPLOY_SSH_PRIVATE_KEY = $privateKeyPath
-            DEPLOY_KNOWN_HOSTS = $knownHostsPath
-        }
+        secretFiles = $secretFiles
         protection = [ordered]@{
             reviewers = @("release-approver")
             preventSelfReview = $true
@@ -112,14 +131,28 @@ try {
     $testExampleVariableNames = @($testExample.variables.PSObject.Properties.Name | Sort-Object)
     Assert-True (($testExampleVariableNames -join ",") -ceq ($expectedTestVariableNames -join ",")) "test bootstrap example must declare every supported readiness variable"
     $testExampleSecretNames = @($testExample.secretFiles.PSObject.Properties.Name | Sort-Object)
-    Assert-True (($testExampleSecretNames -join ",") -ceq "DEPLOY_KNOWN_HOSTS,DEPLOY_SSH_PRIVATE_KEY") "test bootstrap example must reference both credential files"
+    $expectedTestSecretNames = @(
+        "DEPLOY_KNOWN_HOSTS",
+        "DEPLOY_SSH_PRIVATE_KEY",
+        "PLAYWRIGHT_E2E_ADMIN_ACCOUNT",
+        "PLAYWRIGHT_E2E_ADMIN_PASSWORD",
+        "PLAYWRIGHT_E2E_MERCHANT_ACCOUNT",
+        "PLAYWRIGHT_E2E_MERCHANT_PASSWORD"
+    ) | Sort-Object
+    Assert-True (($testExampleSecretNames -join ",") -ceq ($expectedTestSecretNames -join ",")) "test bootstrap example must reference deployment and remote acceptance credential files"
     Assert-True (@($testExample.protection.reviewers).Count -eq 0) "test bootstrap example must not add a deployment approval gate"
     Assert-True $testExample.protection.canAdminsBypass "test bootstrap example must allow automatic test deployment"
     New-Item -ItemType Directory -Path $privateRoot, $binRoot -Force | Out-Null
     Set-Content -LiteralPath $privateKeyPath -Value "PRIVATE-KEY-MATERIAL-MUST-NOT-PRINT" -Encoding utf8 -NoNewline
     Set-Content -LiteralPath $knownHostsPath -Value "example.test ssh-ed25519 AAAAFIXTURE" -Encoding utf8 -NoNewline
+    Set-Content -LiteralPath $adminAccountPath -Value "PRIVATE-ADMIN-ACCOUNT-MUST-NOT-PRINT" -Encoding utf8 -NoNewline
+    Set-Content -LiteralPath $adminPasswordPath -Value "PRIVATE-ADMIN-PASSWORD-MUST-NOT-PRINT" -Encoding utf8 -NoNewline
+    Set-Content -LiteralPath $merchantAccountPath -Value "PRIVATE-MERCHANT-ACCOUNT-MUST-NOT-PRINT" -Encoding utf8 -NoNewline
+    Set-Content -LiteralPath $merchantPasswordPath -Value "PRIVATE-MERCHANT-PASSWORD-MUST-NOT-PRINT" -Encoding utf8 -NoNewline
     if ([Environment]::OSVersion.Platform -ne "Win32NT") {
-        [IO.File]::SetUnixFileMode($privateKeyPath, [IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)
+        foreach ($path in @($privateKeyPath, $adminAccountPath, $adminPasswordPath, $merchantAccountPath, $merchantPasswordPath)) {
+            [IO.File]::SetUnixFileMode($path, [IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)
+        }
     }
 
     $readyConfig = New-ReadyConfig
@@ -204,13 +237,19 @@ try {
     $testBypassConfig.protection.preventSelfReview = $false
     $testBypassConfig.protection.canAdminsBypass = $true
     Write-Config -Config $testBypassConfig
-    $testBypassPlan = & $bootstrapPath `
+    $testBypassPlanRaw = (& $bootstrapPath `
         -Environment test `
         -ConfigPath $configPath `
         -Repository owner/repo `
-        -Json | ConvertFrom-Json
+        -Json) -join "`n"
+    $testBypassPlan = $testBypassPlanRaw | ConvertFrom-Json
     Assert-True ($testBypassPlan.ManualActions.Count -eq 0) "test may explicitly allow administrator bypass without a contradictory manual action"
     Assert-True ("manual:verify-admin-bypass-disabled" -notin $testBypassPlan.Actions) "the action list must reflect the administrator-bypass intent"
+    Assert-True ($testBypassPlan.VariableNames.Count -eq 17) "test plan must include the four remote acceptance origins"
+    Assert-True ($testBypassPlan.SecretNames.Count -eq 11) "test plan must classify the four browser credentials as secrets"
+    foreach ($forbidden in @("PRIVATE-ADMIN", "PRIVATE-MERCHANT", $adminPasswordPath, $merchantPasswordPath)) {
+        Assert-True ($testBypassPlanRaw -notmatch [regex]::Escape($forbidden)) "test plan must not expose remote acceptance credential values or paths"
+    }
 
     if ([Environment]::OSVersion.Platform -ne "Win32NT") {
         [IO.File]::SetUnixFileMode($privateKeyPath,
@@ -220,6 +259,18 @@ try {
             & $bootstrapPath -Environment pre -ConfigPath $configPath -Repository owner/repo
         } "must not grant group or other permissions" "private key permissions must be restricted"
         [IO.File]::SetUnixFileMode($privateKeyPath, [IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)
+
+        [IO.File]::SetUnixFileMode($adminPasswordPath,
+            [IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite -bor [IO.UnixFileMode]::GroupRead)
+        $testCredentialPermissionConfig = New-ReadyConfig -Environment test
+        $testCredentialPermissionConfig.protection.reviewers = @()
+        $testCredentialPermissionConfig.protection.preventSelfReview = $false
+        $testCredentialPermissionConfig.protection.canAdminsBypass = $true
+        Write-Config -Config $testCredentialPermissionConfig
+        Assert-ThrowsLike {
+            & $bootstrapPath -Environment test -ConfigPath $configPath -Repository owner/repo
+        } "Secret file for PLAYWRIGHT_E2E_ADMIN_PASSWORD" "remote acceptance credential file permissions must be restricted"
+        [IO.File]::SetUnixFileMode($adminPasswordPath, [IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)
     }
 
     $prodConfig = New-ReadyConfig -Environment prod

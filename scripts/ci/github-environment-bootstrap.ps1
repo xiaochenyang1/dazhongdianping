@@ -95,8 +95,11 @@ function Test-GitTrackedPath {
     return $LASTEXITCODE -eq 0
 }
 
-function Assert-PrivateKeyPermissions {
-    param([string]$Path)
+function Assert-SecretFilePermissions {
+    param(
+        [string]$Name,
+        [string]$Path
+    )
 
     if ([Environment]::OSVersion.Platform -eq "Win32NT") {
         return
@@ -109,7 +112,7 @@ function Assert-PrivateKeyPermissions {
         [IO.UnixFileMode]::OtherWrite -bor
         [IO.UnixFileMode]::OtherExecute
     if (($mode -band $unsafe) -ne 0) {
-        throw "Secret file for DEPLOY_SSH_PRIVATE_KEY must not grant group or other permissions"
+        throw "Secret file for $Name must not grant group or other permissions"
     }
 }
 
@@ -221,6 +224,16 @@ foreach ($name in @(
 )) {
     $null = $allowedVariableNames.Add($name)
 }
+if ($TargetEnvironment -eq "test") {
+    foreach ($name in @(
+        "REMOTE_ACCEPTANCE_WEB_BASE_URL",
+        "REMOTE_ACCEPTANCE_ADMIN_BASE_URL",
+        "REMOTE_ACCEPTANCE_MERCHANT_BASE_URL",
+        "REMOTE_ACCEPTANCE_BACKEND_BASE_URL"
+    )) {
+        $null = $allowedVariableNames.Add($name)
+    }
+}
 
 $sensitiveVariableNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($name in @(
@@ -256,6 +269,14 @@ foreach ($entry in $variables.GetEnumerator()) {
 }
 
 $allowedSecretNames = @("DEPLOY_KNOWN_HOSTS", "DEPLOY_SSH_PRIVATE_KEY")
+if ($TargetEnvironment -eq "test") {
+    $allowedSecretNames += @(
+        "PLAYWRIGHT_E2E_ADMIN_ACCOUNT",
+        "PLAYWRIGHT_E2E_ADMIN_PASSWORD",
+        "PLAYWRIGHT_E2E_MERCHANT_ACCOUNT",
+        "PLAYWRIGHT_E2E_MERCHANT_PASSWORD"
+    )
+}
 Assert-OnlyProperties -Value $config.secretFiles -Allowed $allowedSecretNames -Context "Config.secretFiles"
 $secretFiles = [ordered]@{}
 $configDirectory = Split-Path -Parent $resolvedConfigPath
@@ -276,8 +297,8 @@ foreach ($property in @($config.secretFiles.PSObject.Properties | Sort-Object Na
     if ([string]::IsNullOrWhiteSpace((Get-Content -LiteralPath $resolvedSecretPath -Raw))) {
         throw "Secret file for $($property.Name) must not be empty"
     }
-    if ($property.Name -eq "DEPLOY_SSH_PRIVATE_KEY") {
-        Assert-PrivateKeyPermissions -Path $resolvedSecretPath
+    if ($property.Name -ne "DEPLOY_KNOWN_HOSTS") {
+        Assert-SecretFilePermissions -Name $property.Name -Path $resolvedSecretPath
     }
     $secretFiles[$property.Name] = $resolvedSecretPath
 }

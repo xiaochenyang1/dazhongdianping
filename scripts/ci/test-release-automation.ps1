@@ -6,6 +6,9 @@ $deployScriptPath = Join-Path $repoRoot "scripts\ci\deploy-release.ps1"
 $preflightScriptPath = Join-Path $repoRoot "scripts\ci\release-bundle-preflight.ps1"
 $rollbackScriptPath = Join-Path $repoRoot "scripts\ci\rollback-release.ps1"
 $acceptanceScriptPath = Join-Path $repoRoot "scripts\ci\post-deploy-acceptance.ps1"
+$remoteAcceptanceScriptPath = Join-Path $repoRoot "scripts\ci\remote-browser-acceptance.ps1"
+$sourcePreflightScriptPath = Join-Path $repoRoot "scripts\ci\release-source-preflight.ps1"
+$targetHostPreflightScriptPath = Join-Path $repoRoot "scripts\ci\target-host-preflight.ps1"
 $releaseWorkflowPath = Join-Path $repoRoot ".github\workflows\release.yml"
 $rollbackWorkflowPath = Join-Path $repoRoot ".github\workflows\rollback.yml"
 
@@ -44,6 +47,9 @@ Assert-True (Test-Path -LiteralPath $deployScriptPath) "scripts/ci/deploy-releas
 Assert-True (Test-Path -LiteralPath $preflightScriptPath) "the shared release bundle preflight must exist"
 Assert-True (Test-Path -LiteralPath $rollbackScriptPath) "scripts/ci/rollback-release.ps1 must exist"
 Assert-True (Test-Path -LiteralPath $acceptanceScriptPath) "scripts/ci/post-deploy-acceptance.ps1 must exist"
+Assert-True (Test-Path -LiteralPath $remoteAcceptanceScriptPath) "scripts/ci/remote-browser-acceptance.ps1 must exist"
+Assert-True (Test-Path -LiteralPath $sourcePreflightScriptPath) "scripts/ci/release-source-preflight.ps1 must exist"
+Assert-True (Test-Path -LiteralPath $targetHostPreflightScriptPath) "scripts/ci/target-host-preflight.ps1 must exist"
 Assert-True (Test-Path -LiteralPath $releaseWorkflowPath) ".github/workflows/release.yml must exist"
 Assert-True (Test-Path -LiteralPath $rollbackWorkflowPath) ".github/workflows/rollback.yml must exist"
 
@@ -180,17 +186,27 @@ Assert-True ($migrationInvocationIndex -lt $deployScript.LastIndexOf('$restartCo
 Assert-True ($releaseWorkflow -match "workflow_run:") "release workflow must react to workflow_run events"
 Assert-True ($releaseWorkflow -match "workflow_dispatch:") "release workflow must support manual dispatch"
 Assert-True ($releaseWorkflow -match "options:\s*\r?\n\s*- test\s*\r?\n\s*- pre\s*\r?\n\s*- prod") "manual release dispatch must support test, pre, and prod"
-Assert-True ($releaseWorkflow -match "permissions:\s*contents:\s*read") "release workflow must use a read-only contents token"
-Assert-True (([regex]::Matches($releaseWorkflow, "runs-on:\s*ubuntu-24\.04")).Count -eq 3) "all release jobs must pin Ubuntu 24.04"
+Assert-True ($releaseWorkflow -match "contents:\s*read") "release workflow must use a read-only contents token"
+Assert-True ($releaseWorkflow -match "actions:\s*read") "manual source verification must use read-only Actions access"
+Assert-True (([regex]::Matches($releaseWorkflow, "runs-on:\s*ubuntu-24\.04")).Count -eq 4) "source verification and all release jobs must pin Ubuntu 24.04"
 Assert-True ($releaseWorkflow -notmatch "printf[^\r\n]*\$\{\{\s*secrets\.") "release workflow must not interpolate secrets directly into shell commands"
 Assert-True (([regex]::Matches($releaseWorkflow, "DEPLOY_SSH_PRIVATE_KEY:\s*\$\{\{\s*secrets\.DEPLOY_SSH_PRIVATE_KEY\s*\}\}")).Count -eq 6) "release workflow must scope SSH private key through configuration and SSH step environments"
 Assert-True (([regex]::Matches($releaseWorkflow, "DEPLOY_KNOWN_HOSTS:\s*\$\{\{\s*secrets\.DEPLOY_KNOWN_HOSTS\s*\}\}")).Count -eq 6) "release workflow must scope known hosts through configuration and SSH step environments"
 Assert-True ($releaseWorkflow -match "deploy-test") "release workflow must define deploy-test"
 Assert-True ($releaseWorkflow -match "deploy-pre") "release workflow must define deploy-pre"
 Assert-True ($releaseWorkflow -match "deploy-prod") "release workflow must define deploy-prod"
+Assert-True ($releaseWorkflow -match "verify_source") "release workflow must define a manual source verification job"
+$sourceJob = [regex]::Match($releaseWorkflow, '(?s)\n  verify_source:.*?\n  deploy-test:').Value
+Assert-True (-not [string]::IsNullOrWhiteSpace($sourceJob)) "manual source verification job must be independently inspectable"
+Assert-True ($sourceJob -notmatch '\n\s+environment:') "manual source verification must run before entering a protected deployment Environment"
+Assert-True ($sourceJob -match "release-source-preflight\.ps1") "manual source verification must invoke the shared CI evidence gate"
+Assert-True ($sourceJob -match 'GH_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}') "manual source verification must use the workflow token through the step environment"
+Assert-True (([regex]::Matches($releaseWorkflow, "needs:\s*verify_source")).Count -eq 3) "all deployment jobs must depend on manual source verification"
+Assert-True (([regex]::Matches($releaseWorkflow, "needs\.verify_source\.result == 'success'")).Count -eq 3) "manual test, pre, and prod deployments must require a successful source gate"
+Assert-True ($releaseWorkflow -match '(?s)deploy-test:.*?if:\s*>-\s+always\(\).*?github\.event_name == ''workflow_run''') "automatic test deployment must remain eligible when the manual source job is skipped"
 Assert-True (([regex]::Matches($releaseWorkflow, 'APP_RELEASE_COMMIT_SHA:')).Count -eq 3) "all deployment jobs must pin packaging to their checked-out source"
 Assert-True (([regex]::Matches($releaseWorkflow, 'DEPLOY_EXPECTED_COMMIT_SHA:')).Count -eq 3) "all deployment jobs must check the bundle against their expected source"
-Assert-True ($releaseWorkflow -match "github.event_name == 'workflow_dispatch' && inputs.environment == 'test'") "release workflow must support manually retrying the test deployment"
+Assert-True ($releaseWorkflow -match "github\.event_name == 'workflow_dispatch'\s*&&\s*inputs\.environment == 'test'") "release workflow must support manually retrying the test deployment"
 Assert-True ($releaseWorkflow -match 'APP_RELEASE_VERSION: \$\{\{ github\.event_name == ''workflow_run'' && github\.event\.workflow_run\.head_sha \|\| inputs\.release_version \}\}') "test packaging must use the CI SHA automatically and allow a manual release version override"
 Assert-True ($releaseWorkflow -match 'APP_RELEASE_COMMIT_SHA: \$\{\{ github\.event_name == ''workflow_run'' && github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}') "test packaging must select the checked-out SHA for automatic and manual releases"
 Assert-True ($releaseWorkflow -match 'DEPLOY_EXPECTED_COMMIT_SHA: \$\{\{ github\.event_name == ''workflow_run'' && github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}') "test deployment must expect the same SHA selected for packaging"
@@ -199,6 +215,8 @@ Assert-True ($releaseWorkflow -match "Check test deployment configuration") "rel
 Assert-True ($releaseWorkflow -match "Skipping automatic test deployment because the test environment is not configured") "an unconfigured automatic test deployment must be skipped explicitly"
 Assert-True ($releaseWorkflow -match "The manually requested test deployment environment is incomplete") "an unconfigured manual test deployment must fail explicitly"
 Assert-True ($releaseWorkflow -match '(?s)if \[\[ "\$GITHUB_EVENT_NAME" == "workflow_dispatch" \]\]; then\s+echo "::error::The manually requested test deployment environment is incomplete\."\s+exit 1') "test configuration handling must fail manual dispatch before deployment steps"
+Assert-True ($releaseWorkflow -match '(?s)- name: Check manual test remote acceptance configuration\s+if: steps\.deployment-config\.outputs\.configured == ''true'' && github\.event_name == ''workflow_dispatch''') "remote acceptance credentials must be checked only for manual test releases"
+Assert-True ($releaseWorkflow -match "The manually requested test remote acceptance configuration is incomplete") "manual test deployment must fail when remote acceptance inputs are incomplete"
 Assert-True ($releaseWorkflow -match "Check pre deployment configuration") "release workflow must fail fast when pre deployment configuration is incomplete"
 Assert-True ($releaseWorkflow -match "Check prod deployment configuration") "release workflow must fail fast when prod deployment configuration is incomplete"
 Assert-True ($releaseWorkflow -match "steps\.deployment-config\.outputs\.configured") "release workflow must guard automatic test deployment steps"
@@ -210,6 +228,7 @@ Assert-True ($releaseWorkflow -match "secrets\.DEPLOY_SSH_HOST") "release workfl
 Assert-True ($releaseWorkflow -match "vars\.DEPLOY_SSH_PORT") "release workflow must map environment SSH port configuration"
 Assert-True ($releaseWorkflow -match "secrets\.DEPLOY_SSH_USER") "release workflow must mask environment SSH user configuration"
 Assert-True ($releaseWorkflow -match "secrets\.DEPLOY_REMOTE_ROOT") "release workflow must mask environment remote root configuration"
+Assert-True (([regex]::Matches($releaseWorkflow, "DEPLOY_RUNTIME_ENV_FILE:\s*\$\{\{\s*secrets\.DEPLOY_RUNTIME_ENV_FILE\s*\}\}")).Count -eq 3) "release workflow must map the private runtime env path for all deployment jobs"
 Assert-True ($releaseWorkflow -match "secrets\.DEPLOY_DB_DEFAULTS_FILE") "release workflow must mask the private database defaults path"
 Assert-True ($releaseWorkflow -match "vars\.DEPLOY_MERCHANT_SERVICE") "release workflow must map the merchant-web service"
 Assert-True (([regex]::Matches($releaseWorkflow, "DEPLOY_DB_DEFAULTS_FILE")).Count -ge 3) "release workflow must map database defaults for test, pre, and prod"
@@ -220,15 +239,60 @@ Assert-True (([regex]::Matches($releaseWorkflow, "VITE_WS_BASE_URL")).Count -ge 
 Assert-True (([regex]::Matches($releaseWorkflow, "VITE_STRIPE_PUBLISHABLE_KEY")).Count -ge 3) "release workflow must map the Stripe publishable key for test, pre, and prod"
 Assert-True ($releaseWorkflow -match "merchant-web/package-lock\.json") "release workflow must cache merchant-web dependencies"
 Assert-True ($releaseWorkflow -match "npm ci --prefix merchant-web") "release workflow must install merchant-web dependencies"
+Assert-True (([regex]::Matches($releaseWorkflow, "target-host-preflight\.ps1")).Count -eq 3) "test, pre, and prod must run the shared read-only target-host preflight"
+Assert-True (([regex]::Matches($releaseWorkflow, "Verify (test|pre|prod) target host readiness")).Count -eq 3) "all deployment jobs must expose a target-host readiness gate"
+foreach ($environmentName in @("test", "pre", "prod")) {
+    $jobPattern = if ($environmentName -eq "prod") {
+        '(?s)\n  deploy-prod:.*$'
+    }
+    else {
+        "(?s)\n  deploy-${environmentName}:.*?(?=\n  deploy-)"
+    }
+    $jobBlock = [regex]::Match($releaseWorkflow, $jobPattern).Value
+    Assert-True (-not [string]::IsNullOrWhiteSpace($jobBlock)) "release workflow must expose the $environmentName deployment job"
+    $targetPreflightIndex = $jobBlock.IndexOf("Verify $environmentName target host readiness", [StringComparison]::Ordinal)
+    $packageIndex = $jobBlock.IndexOf("Package release", [StringComparison]::Ordinal)
+    Assert-True ($targetPreflightIndex -ge 0 -and $packageIndex -ge 0 -and $targetPreflightIndex -lt $packageIndex) "the $environmentName target-host preflight must pass before packaging"
+    Assert-True ($jobBlock -match "(?s)Verify $environmentName target host readiness\s+.*?timeout-minutes:\s*10") "the $environmentName target-host preflight must have a bounded timeout"
+}
+Assert-True ($releaseWorkflow -match "Validate test remote browser acceptance plan") "manual test release must validate the remote acceptance plan before packaging"
+Assert-True ($releaseWorkflow -match "Install Playwright Chromium for remote acceptance") "manual test release must install the pinned Playwright browser"
+Assert-True ($releaseWorkflow -match "npx playwright install --with-deps chromium") "remote acceptance must install Playwright Chromium and its system dependencies"
+Assert-True ($releaseWorkflow -match "Run test remote browser acceptance") "manual test release must run remote browser acceptance after deployment"
+Assert-True (([regex]::Matches($releaseWorkflow, "remote-browser-acceptance\.ps1")).Count -eq 2) "manual test release must dry-run and execute the shared remote acceptance script"
+Assert-True (([regex]::Matches($releaseWorkflow, "-AllowRemoteMutations")).Count -eq 2) "both remote acceptance invocations must require explicit mutation authorization"
+Assert-True (([regex]::Matches($releaseWorkflow, "-DryRun")).Count -eq 1) "only the pre-deployment remote acceptance plan may use DryRun"
+Assert-True ($releaseWorkflow -match '(?s)- name: Run test remote browser acceptance\s+if: steps\.deployment-config\.outputs\.configured == ''true'' && github\.event_name == ''workflow_dispatch''') "remote browser acceptance must run only for manual test releases"
+Assert-True ($releaseWorkflow -match '(?s)- name: Run test remote browser acceptance.*?timeout-minutes:\s*30') "remote browser acceptance must have a bounded workflow timeout"
+Assert-True ($releaseWorkflow -notmatch "continue-on-error") "release gates, including remote browser acceptance, must fail the workflow"
+Assert-True ($releaseWorkflow.IndexOf("Deploy test", [StringComparison]::Ordinal) -lt $releaseWorkflow.IndexOf("Run test remote browser acceptance", [StringComparison]::Ordinal)) "remote browser acceptance must run after test deployment"
+foreach ($name in @(
+    "REMOTE_ACCEPTANCE_WEB_BASE_URL",
+    "REMOTE_ACCEPTANCE_ADMIN_BASE_URL",
+    "REMOTE_ACCEPTANCE_MERCHANT_BASE_URL",
+    "REMOTE_ACCEPTANCE_BACKEND_BASE_URL"
+)) {
+    Assert-True ($releaseWorkflow -match "${name}:\s*\$\{\{\s*vars\.${name}\s*\}\}") "release workflow must map test remote acceptance variable $name"
+}
+foreach ($name in @(
+    "PLAYWRIGHT_E2E_ADMIN_ACCOUNT",
+    "PLAYWRIGHT_E2E_ADMIN_PASSWORD",
+    "PLAYWRIGHT_E2E_MERCHANT_ACCOUNT",
+    "PLAYWRIGHT_E2E_MERCHANT_PASSWORD"
+)) {
+    Assert-True (([regex]::Matches($releaseWorkflow, "${name}:\s*\$\{\{\s*secrets\.${name}\s*\}\}")).Count -eq 2) "remote acceptance secret $name must be scoped only to configuration and execution steps"
+}
 Assert-True ($releaseWorkflow -match "Release bundle path was not produced") "release workflow must validate the packaged bundle path"
 Assert-True ($releaseWorkflow -match "Release bundle checksum was not produced") "release workflow must validate the packaged checksum path"
 Assert-True ($releaseWorkflow -match "package-release\.ps1") "release workflow must package a release bundle"
-Assert-True (([regex]::Matches($releaseWorkflow, "actions/upload-artifact@v7\.0\.2")).Count -eq 6) "release workflow must upload server bundles and acceptance evidence for test, pre, and prod"
-Assert-True (([regex]::Matches($releaseWorkflow, "retention-days:\s*30")).Count -eq 6) "server bundles and acceptance evidence must be retained for 30 days"
+Assert-True (([regex]::Matches($releaseWorkflow, "actions/upload-artifact@v7\.0\.2")).Count -eq 7) "release workflow must upload server bundles, deployment evidence, and manual test browser evidence"
+Assert-True (([regex]::Matches($releaseWorkflow, "retention-days:\s*30")).Count -eq 7) "server bundles and all acceptance evidence must be retained for 30 days"
 Assert-True (([regex]::Matches($releaseWorkflow, "steps\.package\.outputs\.checksum")).Count -eq 3) "each server artifact must include its checksum sidecar"
 Assert-True (([regex]::Matches($releaseWorkflow, "DEPLOY_ACCEPTANCE_REPORT_DIR:\s*artifacts/acceptance")).Count -eq 3) "all release jobs must use a stable acceptance evidence directory"
 Assert-True (([regex]::Matches($releaseWorkflow, "Upload (test|pre|prod) acceptance evidence")).Count -eq 3) "all release jobs must upload acceptance evidence"
-Assert-True (([regex]::Matches($releaseWorkflow, "if-no-files-found:\s*ignore")).Count -eq 3) "acceptance uploads must tolerate failures before evidence can be created"
+Assert-True ($releaseWorkflow -match "REMOTE_ACCEPTANCE_REPORT_DIR:\s*artifacts/remote-browser-acceptance") "manual test browser acceptance must use a stable redacted evidence directory"
+Assert-True ($releaseWorkflow -match "Upload test remote browser acceptance evidence") "manual test release must upload remote browser acceptance evidence"
+Assert-True (([regex]::Matches($releaseWorkflow, "if-no-files-found:\s*ignore")).Count -eq 4) "acceptance uploads must tolerate failures before evidence can be created"
 Assert-True ($releaseWorkflow -match "PUBLIC_SITE_URL") "release workflow must pass the public SEO site URL"
 Assert-True ($releaseWorkflow -match "PRERENDER_API_BASE_URL") "release workflow must pass the real SEO snapshot API base URL"
 Assert-True (([regex]::Matches($releaseWorkflow, "PRERENDER_REGIONS:")).Count -eq 3) "release workflow must expose optional multi-region SEO packaging"
