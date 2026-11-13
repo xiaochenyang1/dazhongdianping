@@ -15,9 +15,11 @@
 
 ## 当前实现状态
 
-截至 `2026-11-08`，项目已覆盖约定范围内的大部分本地业务闭环；当前仍需区分本地功能完成与目标环境验收：
+截至 `2026-11-13`，项目已覆盖约定范围内的大部分本地业务闭环；当前仍需区分本地功能完成与目标环境验收：
 
 功能完成矩阵和验收证据统一维护在 [`docs/当前已完成功能与SQL导入说明.md`](docs/当前已完成功能与SQL导入说明.md) §2.2、§5。EU 预发所需的目标机、供应商凭证和 GitHub Environment 配置尚未齐备，不能把本地测试通过当作上线验收。
+
+当前冻结源码候选为 `eu-pre-rc-20261113-1`（`c0720f877c2ee9d36c6c8ad7fb19afd534f75576`）；同 SHA 的 tag CI 与 nightly 已通过全端测试、真实中间件 smoke、浏览器 E2E 和 03–31 迁移集成。由于 `test/pre` 仍无完整 variables/secrets、目标机和供应商配置，release 没有执行环境化打包、上传或部署，该标签仍不是可上线制品。
 
 巴黎单城、EUR 首发限制已接到预订、搜索和延期功能入口；预订以门店时区处理日期、取消和提醒。五端本地回归、真实中间件及浏览器验证记录见 [`巴黎首发优化与发布候选验证`](docs/巴黎首发优化与发布候选验证-2026-10-14.md)。
 
@@ -50,7 +52,7 @@
 - 管理端种子导入失败时会生成真实本地错误明细文件，批次查询返回同一条 `errorFile` 路径。
 - 当前后端默认运行配置已指向 `MySQL`；可直接导入 MySQL 的脚本已补到 `sql/mysql/`，并带公开点评、点评图片、点赞/评论演示数据、审核演示数据、`user_expert_certification` 表与 `audit:expert_certification:*` 权限种子，以及可直接密码登录的 C 端演示账号。`H2` 仍保留为 `h2` profile 和测试环境使用。
 - 文件上传默认仍可本地落盘，也已接入 S3 兼容对象存储上传入口：配置 `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_*` 后，`POST /api/c/v1/files/upload` 会上传到对象存储并返回公开 URL。
-- `CI/CD` 已补本地复用脚本和 GitHub Actions:`scripts/ci/verify-all.ps1` 负责后端测试、Web/管理端/商户端测试与构建，以及可选 Flutter、MySQL、S3 兼容对象存储、Elasticsearch、浏览器冒烟 / E2E；`ci.yml` 当前同时起 MySQL 8、Redis 7、MinIO、Elasticsearch 8 服务,执行 `-IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeBrowserE2E -IncludeElasticsearchSmoke -IncludeFlutter`，并用独立 MySQL 8.4 job 验证 `03-31` 真实增量迁移；`.github/workflows/nightly.yml` 已补定时夜跑和手工触发,复用同一套浏览器 E2E 回归;`.github/workflows/release.yml` 已补测试环境自动部署和 `pre/prod` 手工发版入口,`.github/workflows/rollback.yml` 已补手工回滚入口,配套 `package-release.ps1`、`deploy-release.ps1`、`rollback-release.ps1` 已落库，发布包和部署 / 回滚服务均覆盖 `web`、`admin-web`、`merchant-web`。
+- `CI/CD` 已补本地复用脚本和 GitHub Actions：`verify-all.ps1` 覆盖后端、三套 Web、Flutter、MySQL、S3、Elasticsearch、浏览器 smoke/E2E；`candidate-verify.ps1` 与 `local-smoke-services.ps1` 提供候选完整门禁和隔离服务编排；所有手工发布先核对所选 main/tag 的精确 SHA 与两个必需 CI job，再进入 Environment，三个环境均在打包前执行目标机只读预检。手工 `test/EU` 部署后运行 13 条真实后端浏览器验收并归档脱敏证据。真实环境部署和签名移动制品仍待首次执行。
 
 完整的“已完成 / 部分完成 / 外部待验收”证据请看 `docs/当前已完成功能与SQL导入说明.md` 的“全局功能完成矩阵”；根 README 只保留启动入口和阶段摘要，不再重复维护第二套完成判断。
 

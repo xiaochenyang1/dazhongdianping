@@ -98,6 +98,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          REMOTE_ACCEPTANCE_WEB_BASE_URL: ${{ vars.REMOTE_ACCEPTANCE_WEB_BASE_URL }}
+          REMOTE_ACCEPTANCE_ADMIN_BASE_URL: ${{ vars.REMOTE_ACCEPTANCE_ADMIN_BASE_URL }}
+          REMOTE_ACCEPTANCE_MERCHANT_BASE_URL: ${{ vars.REMOTE_ACCEPTANCE_MERCHANT_BASE_URL }}
+          REMOTE_ACCEPTANCE_BACKEND_BASE_URL: ${{ vars.REMOTE_ACCEPTANCE_BACKEND_BASE_URL }}
+          PLAYWRIGHT_E2E_ADMIN_ACCOUNT: ${{ secrets.PLAYWRIGHT_E2E_ADMIN_ACCOUNT }}
+          PLAYWRIGHT_E2E_ADMIN_PASSWORD: ${{ secrets.PLAYWRIGHT_E2E_ADMIN_PASSWORD }}
+          PLAYWRIGHT_E2E_MERCHANT_ACCOUNT: ${{ secrets.PLAYWRIGHT_E2E_MERCHANT_ACCOUNT }}
+          PLAYWRIGHT_E2E_MERCHANT_PASSWORD: ${{ secrets.PLAYWRIGHT_E2E_MERCHANT_PASSWORD }}
         run: |
           $variableNames = @(
             "DEPLOY_SSH_PORT",
@@ -106,7 +114,9 @@ jobs:
             "DEPLOY_DB_MIGRATION_MODE", "DEPLOY_DB_BASELINE_VERSION", "DEPLOY_RELEASE_RETENTION_COUNT",
             "VITE_API_BASE_URL", "VITE_WS_BASE_URL", "VITE_STRIPE_PUBLISHABLE_KEY",
             "PUBLIC_SITE_URL", "PRERENDER_API_BASE_URL", "PRERENDER_REGIONS",
-            "PUBLIC_SITE_URL_CN", "PRERENDER_API_BASE_URL_CN", "PUBLIC_SITE_URL_EU", "PRERENDER_API_BASE_URL_EU"
+            "PUBLIC_SITE_URL_CN", "PRERENDER_API_BASE_URL_CN", "PUBLIC_SITE_URL_EU", "PRERENDER_API_BASE_URL_EU",
+            "REMOTE_ACCEPTANCE_WEB_BASE_URL", "REMOTE_ACCEPTANCE_ADMIN_BASE_URL",
+            "REMOTE_ACCEPTANCE_MERCHANT_BASE_URL", "REMOTE_ACCEPTANCE_BACKEND_BASE_URL"
           )
           $variables = @($variableNames | ForEach-Object {
             $value = [Environment]::GetEnvironmentVariable($_)
@@ -120,6 +130,10 @@ jobs:
             if (-not [string]::IsNullOrWhiteSpace($env:DEPLOY_DB_DEFAULTS_FILE)) { [pscustomobject]@{ name = "DEPLOY_DB_DEFAULTS_FILE" } }
             if (-not [string]::IsNullOrWhiteSpace($env:DEPLOY_KNOWN_HOSTS)) { [pscustomobject]@{ name = "DEPLOY_KNOWN_HOSTS" } }
             if (-not [string]::IsNullOrWhiteSpace($env:DEPLOY_SSH_PRIVATE_KEY)) { [pscustomobject]@{ name = "DEPLOY_SSH_PRIVATE_KEY" } }
+            if (-not [string]::IsNullOrWhiteSpace($env:PLAYWRIGHT_E2E_ADMIN_ACCOUNT)) { [pscustomobject]@{ name = "PLAYWRIGHT_E2E_ADMIN_ACCOUNT" } }
+            if (-not [string]::IsNullOrWhiteSpace($env:PLAYWRIGHT_E2E_ADMIN_PASSWORD)) { [pscustomobject]@{ name = "PLAYWRIGHT_E2E_ADMIN_PASSWORD" } }
+            if (-not [string]::IsNullOrWhiteSpace($env:PLAYWRIGHT_E2E_MERCHANT_ACCOUNT)) { [pscustomobject]@{ name = "PLAYWRIGHT_E2E_MERCHANT_ACCOUNT" } }
+            if (-not [string]::IsNullOrWhiteSpace($env:PLAYWRIGHT_E2E_MERCHANT_PASSWORD)) { [pscustomobject]@{ name = "PLAYWRIGHT_E2E_MERCHANT_PASSWORD" } }
           )
           $protectionText = gh api "repos/$($env:READINESS_REPOSITORY)/environments/$($env:READINESS_ENVIRONMENT)"
           if ($LASTEXITCODE -ne 0) { throw "Unable to read Environment protection" }

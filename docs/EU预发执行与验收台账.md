@@ -1,6 +1,6 @@
 # EU 预发执行与验收台账
 
-更新时间：2026-11-10。首发范围沿用 [EU 基线](EU预发发布基线.md)：巴黎单城、EUR、`Europe/Paris`。本文件给出执行顺序和证据字段；空白验收项均为待执行，不能凭本地测试或配置门禁通过改为已验收。
+更新时间：2026-11-13。首发范围沿用 [EU 基线](EU预发发布基线.md)：巴黎单城、EUR、`Europe/Paris`。本文件给出执行顺序和证据字段；空白验收项均为待执行，不能凭本地测试或配置门禁通过改为已验收。
 
 ## 1. 当前交付与环境边界
 
@@ -20,11 +20,19 @@ PR [#46](https://github.com/xiaochenyang1/dazhongdianping/pull/46) 已把 Enviro
 
 2026-11-10 对同一主干提交分别运行了只读的 [`pre/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42769728523) 和 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42772204662)。两次报告都确认自动测试已就绪，但 Environment 均缺少 6 个公开变量和 7 个部署 secret，且无法取得目标机证据；`pre` 另缺 required reviewer，并仍允许管理员绕过。`prod` 尚未创建。报告均为 `readyForDeployment=false`、`mutatedExternalState=false`，没有输出主机、私有路径或凭证正文。目标机、HTTPS/WSS、数据库/中间件、Stripe test、SMTP/Twilio 配置尚未提供，因此当前仍不能打包环境化候选或执行真实部署。
 
+PR #48–#52 已在 2026-11-13 前全部进入主干：签名 iOS IPA 流水线、nightly 咨询测试隔离、候选完整门禁、隔离 MySQL/Redis/MinIO/Elasticsearch 编排，以及只允许 `test/EU` 且核对在线发布身份的远端浏览器验收均已落库。最新冻结源码候选 `eu-pre-rc-20261113-1` 指向 `c0720f877c2ee9d36c6c8ad7fb19afd534f75576`；其 [tag CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43381478323) 与 [nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43379749086) 均通过。
+
+2026-11-13 再次只读检查 GitHub Environment，配置缺口没有变化：`test` 仍为 0 variables / 0 secrets，`pre` 仍只有 6 个非敏感固定 variables / 0 secrets且没有 required reviewer，`prod` 不存在。当前 SHA 尚未取得新的 `readyForDeployment=true` 报告，也没有环境化 ZIP、目标机预检、部署后验收或远端浏览器验收证据。
+
+同日已对当前候选执行新的 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43387040998)。报告精确绑定 `c0720f877c2ee9d36c6c8ad7fb19afd534f75576`：自动测试门禁为通过，GitHub Environment 缺 6 个必需变量和 7 个部署 secret，目标机证据无法采集，最终 `readyForDeployment=false`、`mutatedExternalState=false`。脱敏 JSON/Markdown 已作为该运行的 30 天 artifact 保存；这次失败是当前配置缺口的正式证据，不是代码回归失败。
+
+该运行早于手工 `test/EU` 发布接入远端浏览器验收。当前仓库已把四个验收 HTTPS origin 和四个管理员/商户凭据纳入 test Environment 预检，并在部署后自动执行 13 条用例；因此旧报告仍是当时的正式证据，但不能代表新门禁的完整缺口。配置补齐后须对新提交重新生成 readiness，再手工发布 test 并归档浏览器验收 artifact。
+
 ## 2. 开始部署前的输入
 
 | 输入 | 存放位置 / 完成条件 | 当前状态 |
 | --- | --- | --- |
-| 版本与制品 | 固定 SHA/tag，CI 与 nightly 链接，ZIP、SHA-256、manifest | 技术候选 `eu-pre-rc-20261108-2` 绑定历史主干 `4ad66a0d…`，包含终态退款人工核验补丁；CI/nightly、ZIP、旁车、manifest、03–31 迁移和 H2 启动均通过。其目标 API/WSS、Stripe/SEO 配置为空，`BuildConfigurationVerified=false`，不能部署；环境配置补齐后须从 PR #37 合并基线 `e92ba3c…` 或更新的已通过 CI 提交使用新版本号重建 |
+| 版本与制品 | 固定 SHA/tag，CI 与 nightly 链接，ZIP、SHA-256、manifest | 当前源码候选 `eu-pre-rc-20261113-1` 绑定 `c0720f8…`，同 SHA CI/nightly 已通过；新源码门禁已用真实 Actions 数据确认 tag CI `43381478323` 的两个必需 job 成功，但尚无环境化 ZIP/manifest。历史技术包 `eu-pre-rc-20261108-2` 仅作旧基线证据，不能部署；真实配置补齐后须基于新提交重新冻结 tag 并生成版本号唯一的环境化候选 |
 | 目标机与发布服务 | `test` / `pre` SSH、发布根目录、四个服务、HTTPS smoke URL | 待提供 |
 | 数据库 | 私有 MySQL defaults 文件权限 `0400/0600`；迁移模式与已有库准确基线 | 待提供 |
 | 运行环境 | 私有 env 文件或密钥管理引用；严格 `pre`、Redis、S3、ES、CORS/可信代理 | 待提供 |
@@ -37,7 +45,7 @@ PR [#46](https://github.com/xiaochenyang1/dazhongdianping/pull/46) 已把 Enviro
 
 ## 3. 执行顺序
 
-1. 在目标环境核对运行与 GitHub Environment 配置，加载私有 env 后执行预检。预检通过只证明配置格式与模式，真实送达和支付仍按下一节验收。
+1. 在目标环境核对运行与 GitHub Environment 配置，加载私有 env 后执行预检。发布 workflow 会在打包前再次运行目标机只读预检；预检通过只证明配置、权限与入口连通性，真实送达和支付仍按下一节验收。
 
    ```bash
    set -a

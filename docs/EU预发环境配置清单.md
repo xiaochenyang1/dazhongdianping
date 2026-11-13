@@ -1,6 +1,6 @@
 # EU 预发环境配置清单
 
-更新时间：2026-11-09
+更新时间：2026-11-13
 
 当前候选基线以最新 `eu-pre-rc-*` tag 或通过 CI 的不可变提交 SHA 为准，不在本文内维护会过期的固定 SHA。
 
@@ -103,7 +103,7 @@ set +a
 
 2026-11-13 只读核对 GitHub Environment：`test` 为 0 个变量、0 个 secret；`pre` 可见变量仍只有 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`，secret 为 0。不得把此清单当作变量值或凭证核验。正式发布前仍需补齐下表中依赖目标环境的变量和 secrets。
 
-仓库提供了初始化工具，用来把经过审核的本地私有配置写入 GitHub Environment。先从独立的 `test` 示例复制私有配置、替换所有 `CHANGE_ME` 并核对两个 secret 文件路径；该示例固定为 EU 且不增加人工审批门禁，保持主干 CI 成功后的自动 test 发布可用：
+仓库提供了初始化工具，用来把经过审核的本地私有配置写入 GitHub Environment。先从独立的 `test` 示例复制私有配置、替换所有 `CHANGE_ME`，并核对 SSH 两个文件及远端浏览器验收四个凭据文件；该示例固定为 EU 且不增加人工审批门禁，保持主干 CI 成功后的自动 test 发布可用：
 
 ```powershell
 Copy-Item deploy/github-environment.test.config.example.json deploy/github-environment.test.json
@@ -125,7 +125,7 @@ Copy-Item deploy/github-environment.config.example.json deploy/github-environmen
 ```
 
 - `deploy/github-environment.*.json` 已被 Git 忽略；Apply 也会拒绝 Git 已跟踪的私有配置和 secret 文件。也可把它们放在仓库外，`secretFiles` 的相对路径按配置文件所在目录解析。
-- 配置文件保存白名单配置值和两个 credential secret 文件路径；工具会把 SSH 主机/用户及三个目标机私有路径自动写成 GitHub Environment secrets，其余公开部署元数据写成 variables。所有 secret 正文都经标准输入交给 `gh`，不会出现在命令参数、Plan 或 JSON 报告中；不要把私钥、known_hosts 或真实配置粘贴进仓库和聊天。Unix 上 SSH 私钥必须禁止 group/other 权限，例如 `chmod 600 <private-key>`。
+- 配置文件保存白名单配置值和 secret 文件路径；`pre/prod` 使用 SSH 私钥与 known_hosts 两个文件，`test` 另外使用管理员/商户账号与密码四个文件。工具会把 SSH 主机/用户及三个目标机私有路径自动写成 GitHub Environment secrets，其余公开部署元数据写成 variables。所有 secret 正文都经标准输入交给 `gh`，不会出现在命令参数、Plan 或 JSON 报告中；不要把私钥、账号、密码、known_hosts 或真实配置粘贴进仓库和聊天。Unix 上除 known_hosts 外的 secret 文件必须禁止 group/other 权限，例如 `chmod 600 <secret-file>`。
 - 工具拒绝占位值；`pre/prod` 强制真实审批人、禁止自审并启用自定义 branch/tag policy。`prod -Apply` 还必须显式增加 `-AllowProduction`。
 - GitHub Environment API 不支持写入 `can_admins_bypass`。当配置要求 `false` 时，Apply 后必须在 GitHub UI 关闭管理员绕过；工具会读取实际状态，并在未关闭时保留人工动作且令 `PostApplyReady=false`，不会把环境误报为完全就绪。完成 UI 设置后重新运行 Apply/预检即可复核。
 - 初始化只补齐 GitHub 发布入口，不创建目标机运行配置，也不执行真实部署。
@@ -141,7 +141,7 @@ Copy-Item deploy/github-environment.config.example.json deploy/github-environmen
 
 移除 `-ReportOnly` 后，任何缺失或格式错误都会以非零状态失败，可作为正式发版前的人工门禁。该审计只证明 GitHub Environment 发布入口齐备，不替代目标机上的 `stripe-preflight.sh --check-cli`、中间件连通性、供应商送达、部署 smoke 和回滚演练。
 
-GitHub Environment 审计通过且 SSH 已按发布工作流准备后，可运行目标机只读预检：
+GitHub Environment 审计通过且 SSH 已按发布工作流准备后，可独立运行目标机只读预检：
 
 ```powershell
 ./scripts/ci/target-host-preflight.ps1 -Environment test -Region EU -ReportOnly
@@ -150,7 +150,7 @@ GitHub Environment 审计通过且 SSH 已按发布工作流准备后，可运�
 ./scripts/ci/target-host-preflight.ps1 -Environment pre -Region EU -ReportOnly -Json
 ```
 
-脚本从 `DEPLOY_*` 变量读取 SSH、发布目录、运行 env、MySQL defaults 文件和四个 systemd 服务名，通过一次非交互 SSH 执行只读检查：Linux/部署工具、Java 17+、发布目录和 `current/previous` 软链安全、默认 2 GiB 可用空间、两个私有文件的 `0400/0600` 权限、运行参数名称/格式、MySQL `SELECT 1`、systemd unit、精确的无密码 sudo 权限，以及 Redis、Elasticsearch、S3、SMTP、Twilio、Stripe 的网络可达性。默认模式有失败即返回非零；`-ReportOnly` 用于盘点，`-DryRun` 只显示计划且不连接目标机。输出和 JSON 都不包含主机、私有路径或配置值，报告固定声明 `MutatedTarget=false`。
+脚本从 `DEPLOY_*` 变量读取 SSH、发布目录、运行 env、MySQL defaults 文件和四个 systemd 服务名，通过一次非交互 SSH 执行只读检查：Linux/部署工具、Java 17+、发布目录和 `current/previous` 软链安全、默认 2 GiB 可用空间、两个私有文件的 `0400/0600` 权限、运行参数名称/格式、MySQL `SELECT 1`、systemd unit、精确的无密码 sudo 权限，以及 Redis、Elasticsearch、S3、SMTP、Twilio、Stripe 的网络可达性。默认模式有失败即返回非零；`-ReportOnly` 用于盘点，`-DryRun` 只显示计划且不连接目标机。输出和 JSON 都不包含主机、私有路径或配置值，报告固定声明 `MutatedTarget=false`。`release` workflow 已在三个环境的打包步骤之前强制重跑严格模式；独立运行和 readiness 证据仍用于提前排障与交接。
 
 该预检不会创建目录、修改权限、重启服务或写入中间件；Redis/S3/SMTP/Twilio/Stripe 等网络检查也不等于带真实凭证的读写/送达/支付验收，后续仍必须执行对应 smoke。
 
@@ -183,6 +183,10 @@ Variables：
 | `VITE_STRIPE_PUBLISHABLE_KEY` | `pk_test_*` |
 | `PUBLIC_SITE_URL` | `https://...` |
 | `PRERENDER_API_BASE_URL` | `https://...` |
+| `REMOTE_ACCEPTANCE_WEB_BASE_URL` | 仅 `test`；用户站非回环 HTTPS origin，不带路径、query、fragment 或 userinfo |
+| `REMOTE_ACCEPTANCE_ADMIN_BASE_URL` | 仅 `test`；管理站非回环 HTTPS origin |
+| `REMOTE_ACCEPTANCE_MERCHANT_BASE_URL` | 仅 `test`；商户站非回环 HTTPS origin |
+| `REMOTE_ACCEPTANCE_BACKEND_BASE_URL` | 仅 `test`；后端非回环 HTTPS origin；用于先核对线上 `release-info` |
 
 Secrets：
 
@@ -195,6 +199,12 @@ Secrets：
 | `DEPLOY_DB_DEFAULTS_FILE` | 目标机 MySQL defaults 文件绝对路径 |
 | `DEPLOY_SSH_PRIVATE_KEY` | GitHub Actions 发布用 SSH 私钥 |
 | `DEPLOY_KNOWN_HOSTS` | 目标机 known_hosts 内容 |
+| `PLAYWRIGHT_E2E_ADMIN_ACCOUNT` | 仅 `test`；远端浏览器验收专用管理员账号 |
+| `PLAYWRIGHT_E2E_ADMIN_PASSWORD` | 仅 `test`；验收管理员密码 |
+| `PLAYWRIGHT_E2E_MERCHANT_ACCOUNT` | 仅 `test`；远端浏览器验收专用商户账号 |
+| `PLAYWRIGHT_E2E_MERCHANT_PASSWORD` | 仅 `test`；验收商户密码 |
+
+手工触发 `release` 的 `test/EU` 发布时，工作流会在部署前校验上述四个 origin 和目标 SHA，部署成功后执行 13 条真实后端浏览器用例。该验收会注册用户并写入/修改 test 数据；自动主干 test 发布不会运行它。原始 Playwright 输出只存在 runner 临时目录，最终 artifact 只保存发布身份匹配结果和聚合计数。
 
 Environment protection：
 
@@ -213,14 +223,17 @@ Environment protection：
 8. 非法 Stripe 签名返回 `400`。
 9. EU Stripe 订单不能通过 `mock-complete` 绕过支付。
 10. 自动就绪报告绑定同一 40 位主干提交并显示 `readyForDeployment=true`。
-11. 发布包 SHA-256 校验、部署 smoke 和回滚演练通过；部署与回滚 smoke 均只接受 `2xx`。
+11. 手工发布 `test/EU`，发布包 SHA-256、部署 smoke 和 13 条远端浏览器验收全部通过，并归档两组脱敏证据。
+12. 经审批发布 `pre/EU`，完成回滚演练；部署与回滚 smoke 均只接受 `2xx`。
 
 ## 5. 当前阻塞
 
 - Stripe CLI 1.50.1 已安装；2026-11-09 加载仓库模板执行 `stripe-preflight.sh --check-cli` 后，CLI 检查通过，但仍有 29 个真实值/凭证缺失，因此没有 Stripe test 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
+- `test` 尚无四个远端验收 HTTPS origin 和四个专用管理员/商户凭据，无法执行手工发布后的 13 条浏览器验收。
 - 2026-11-10，PR [#46](https://github.com/xiaochenyang1/dazhongdianping/pull/46) 已把部署来源明细审计合入主干 `f6de5f9862ff30367b7dd2ad7177fc57542bee96`；该提交的 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42767544480) 两个必需 job 均通过。随后运行的只读 [`pre/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42769728523) 与 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42772204662) 均确认自定义部署来源只允许 `main` 与 `eu-pre-rc-*`，但两个 Environment 仍各缺 6 个公开变量和 7 个部署 secret，且无法连接目标机；`pre` 另缺 required reviewer，并仍允许管理员绕过。两份报告均为 `readyForDeployment=false`、`mutatedExternalState=false`，没有主机、私有路径或凭证正文；`prod` Environment 尚未创建。
+- 上述历史 readiness 运行早于手工 test 远端浏览器验收接线。按当前契约，空的 `test` Environment 还会额外缺少 4 个 `REMOTE_ACCEPTANCE_*` variables 和 4 个 `PLAYWRIGHT_E2E_*` secrets；必须重新运行 readiness 才能取得当前门禁的正式缺口计数。
 - 当前技术候选 `eu-pre-rc-20261108-2` 已绑定历史主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 的合并基线为 `e92ba3c…`；环境配置补齐后必须从该提交或更新的已通过 CI 提交重新生成版本号唯一的环境化候选。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 

@@ -46,6 +46,17 @@ function Test-AbsoluteUrl {
         ($uri.AbsolutePath -ceq "/" -and [string]::IsNullOrWhiteSpace($uri.Query) -and [string]::IsNullOrWhiteSpace($uri.Fragment)))
 }
 
+function Test-PublicHttpsOrigin {
+    param([string]$Value)
+
+    $uri = $null
+    if (-not (Test-AbsoluteUrl -Value $Value -Scheme "https" -OriginOnly) -or
+        -not [Uri]::TryCreate($Value, [UriKind]::Absolute, [ref]$uri)) {
+        return $false
+    }
+    return -not $uri.IsLoopback -and $uri.Host -notmatch '(?i)(^|[.])localhost$'
+}
+
 function Test-SafeAbsolutePath {
     param(
         [string]$Value,
@@ -202,6 +213,17 @@ foreach ($name in $requiredVariables) {
     Require-EnvironmentVariable -Name $name
 }
 
+if ($TargetEnvironment -eq "test") {
+    foreach ($name in @(
+        "REMOTE_ACCEPTANCE_WEB_BASE_URL",
+        "REMOTE_ACCEPTANCE_ADMIN_BASE_URL",
+        "REMOTE_ACCEPTANCE_MERCHANT_BASE_URL",
+        "REMOTE_ACCEPTANCE_BACKEND_BASE_URL"
+    )) {
+        Require-EnvironmentVariable -Name $name
+    }
+}
+
 foreach ($name in @(
     "DEPLOY_SSH_HOST",
     "DEPLOY_SSH_USER",
@@ -213,6 +235,19 @@ foreach ($name in @(
 )) {
     if (-not $secrets.Contains($name)) {
         $null = $missingSecrets.Add($name)
+    }
+}
+
+if ($TargetEnvironment -eq "test") {
+    foreach ($name in @(
+        "PLAYWRIGHT_E2E_ADMIN_ACCOUNT",
+        "PLAYWRIGHT_E2E_ADMIN_PASSWORD",
+        "PLAYWRIGHT_E2E_MERCHANT_ACCOUNT",
+        "PLAYWRIGHT_E2E_MERCHANT_PASSWORD"
+    )) {
+        if (-not $secrets.Contains($name)) {
+            $null = $missingSecrets.Add($name)
+        }
     }
 }
 
@@ -294,6 +329,20 @@ foreach ($name in @("VITE_API_BASE_URL") + @($seoUrlVariables)) {
     $value = Get-EnvironmentVariableValue -Name $name
     if ((Test-ConfiguredValue -Value $value) -and -not (Test-AbsoluteUrl -Value $value -Scheme "https")) {
         Add-InvalidVariable -Name $name -Message "must be an absolute HTTPS URL without user info"
+    }
+}
+
+if ($TargetEnvironment -eq "test") {
+    foreach ($name in @(
+        "REMOTE_ACCEPTANCE_WEB_BASE_URL",
+        "REMOTE_ACCEPTANCE_ADMIN_BASE_URL",
+        "REMOTE_ACCEPTANCE_MERCHANT_BASE_URL",
+        "REMOTE_ACCEPTANCE_BACKEND_BASE_URL"
+    )) {
+        $value = Get-EnvironmentVariableValue -Name $name
+        if ((Test-ConfiguredValue -Value $value) -and -not (Test-PublicHttpsOrigin -Value $value)) {
+            Add-InvalidVariable -Name $name -Message "must be a non-loopback HTTPS origin without user info, path, query, or fragment"
+        }
     }
 }
 

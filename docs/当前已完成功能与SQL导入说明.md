@@ -528,9 +528,15 @@
 - 本次 E2E 覆盖 8 条 H2 本地链路，不等于 MySQL 运行配置、S3、Elasticsearch、真邮件/短信或目标环境部署验收。
 - GitHub `pre` Environment 和目标机仍缺完整运行参数、SMTP/Twilio/Stripe 真实测试凭证、SSH 发布配置、HTTPS/WSS 域名和回滚 smoke URL。
 - 2026-11-09 PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 已将发布身份、WebSocket 真实来源、部署后验收证据、手工 `test/EU` 重试和固定区域回滚合入主干，合并基线为 `e92ba3c…`。其 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42574817291) 全部通过：后端 711 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项及各端构建、Flutter analyze、浏览器 E2E、MySQL/Redis/S3/Elasticsearch smoke 和迁移集成均通过。随后 [release 运行](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42576540273) 因 `test` Environment 缺配置，仅通过门禁并跳过 checkout、打包、上传、部署与验收证据；该结果不构成真实 `test/pre` 部署证据。
-- 仓库已新增 `github-environment-bootstrap.ps1` 和私有配置示例：默认只做脱敏 Plan，显式 Apply 才写入公开变量、五个私有部署元数据 secret、两个 credential secret、审批规则和 branch/tag policy；`prod` 有额外保护，Apply 后会实时复核。GitHub API 无法关闭管理员绕过，因此该项仍需在 UI 人工设置并由脚本读取实际状态确认。该工具不包含任何真实值，也不代表当前 `test/pre` 已配置完成。
+- 仓库已新增 `github-environment-bootstrap.ps1` 和私有配置示例：默认只做脱敏 Plan，显式 Apply 才写入公开变量、五个私有部署元数据 secret、SSH credential secrets、审批规则和 branch/tag policy；`test` 另从四个私有文件写入远端浏览器验收账号/密码 secrets。`prod` 有额外保护，Apply 后会实时复核。GitHub API 无法关闭管理员绕过，因此该项仍需在 UI 人工设置并由脚本读取实际状态确认。该工具不包含任何真实值，也不代表当前 `test/pre` 已配置完成。
 - 仓库已新增 `target-host-preflight.ps1` / `.sh`：通过单次 SSH 只读检查 Linux 工具、发布目录/软链、磁盘、私有文件权限、运行配置、MySQL 查询、systemd/sudo 和 Redis/S3/Elasticsearch/SMTP/Twilio/Stripe 网络入口；报告脱敏且明确不修改目标。隔离夹具覆盖完整通过、占位值、权限过宽和严格阻断；尚未获得真实目标机配置，因此没有真实预检结果。
 - 仓库已新增 `readiness-report.ps1` 和手工 `readiness` workflow：绑定 40 位主干提交，汇总该 SHA 的 CI 必需 job、GitHub Environment 审计和目标机预检，先保存 30 天脱敏 JSON/Markdown，再执行最终就绪门禁；任一缺口、加固 warning 或环境/区域错配都会阻断。该流程不打包、不部署、不回滚；当前没有真实 Environment/目标机配置，因此尚无 `readyForDeployment=true` 的真实报告。
+- 手工 release 已新增独立 `verify_source` job 和 `release-source-preflight.ps1`：只接受 `main` / `eu-pre-rc-*`，在进入 Environment 前要求同 ref、同 SHA 的最新 `ci` push 及两个必需 job 成功。已用 `eu-pre-rc-20261113-1` 的真实 Actions 运行 `43381478323` 只读验证该门禁可识别通过状态；没有触发发布或修改 GitHub 状态。
+- `release.yml` 的 test/pre/prod 已统一映射私有 `DEPLOY_RUNTIME_ENV_FILE`，准备 SSH 后在打包前严格运行目标机只读预检；任何运行配置、私有文件权限、MySQL、systemd/sudo 或依赖网络失败都会阻断制品生成和部署。当前仍无真实目标机，因此只有隔离夹具通过记录。
+- 2026-11-13 最新源码候选 `eu-pre-rc-20261113-1` 绑定 `c0720f877c2ee9d36c6c8ad7fb19afd534f75576`。其 [tag CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43381478323) 与 [nightly](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43379749086) 均通过：后端 711 项、用户 Web 293 项、管理端 193 项、商户端 77 项、Flutter 691 项及构建、8 条浏览器 smoke、13 条真实后端浏览器 E2E、MySQL/Redis/S3/Elasticsearch smoke 和 03–31 迁移集成全部成功。
+- PR #48–#52 已补签名 iOS IPA 流水线、nightly 咨询测试隔离、候选完整门禁、隔离 smoke 服务编排和远端 `test/EU` 浏览器验收。当前 Environment 仍未补齐，自动 release 没有执行打包、上传、部署或验收，因此源码标签不能替代环境化候选。
+- 当前 SHA 的 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43387040998) 已生成脱敏证据：CI ready，Environment 缺 6 个变量和 7 个 secret，目标机证据缺失，结论为 `readyForDeployment=false` 且未修改外部状态。
+- 该 readiness 运行早于手工 test 远端验收接线；当前仓库又为 `test` 增加 4 个验收 origin variables 和 4 个浏览器 credential secrets，下一次 readiness 会按新契约重新计数。
 
 ## 6. 下一步建议
 
@@ -538,4 +544,4 @@
 
 1. 由环境负责人使用 `github-environment-bootstrap.ps1` 按 `test`、`pre` 顺序补齐 Environment variables/secrets/protection；默认先审 Plan，真实值只进入私有文件、GitHub Environment 或密钥管理系统，并在 UI 关闭管理员绕过。
 2. 在真实目标机运行只读预检，并对同一个已通过主干 CI 的 40 位提交运行 `readiness` workflow，取得 `readyForDeployment=true` 的脱敏报告。
-3. 所有真实配置通过后，在报告绑定的不可变提交上生成环境化候选，先发布 `test` 再经审批发布 `pre`，完成数据库迁移、ES 重建、20 项台账、备份恢复和回滚演练。环境闭环后再继续新业务；FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。
+3. 所有真实配置通过后，在 `c0720f8…` 或报告绑定的更新不可变提交上生成新版本环境化候选，先发布 `test`，执行部署后验收和远端浏览器回归，再经审批发布 `pre`，完成数据库迁移、ES 重建、20 项台账、备份恢复和回滚演练。环境闭环后再继续新业务；FCM/APNs 真机、Google Maps 真机及正式商店发布按 EU 首发基线继续延期。

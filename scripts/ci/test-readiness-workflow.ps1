@@ -45,6 +45,24 @@ foreach ($name in @("DEPLOY_SSH_HOST", "DEPLOY_SSH_USER", "DEPLOY_REMOTE_ROOT", 
     Assert-True ($workflow.Contains("$name`: `${{ secrets.$name }}")) "readiness workflow must mask private deployment metadata $name"
     Assert-True (-not $workflow.Contains("$name`: `${{ vars.$name }}")) "readiness workflow must not expose private deployment metadata $name as a variable"
 }
+foreach ($name in @(
+    "REMOTE_ACCEPTANCE_WEB_BASE_URL",
+    "REMOTE_ACCEPTANCE_ADMIN_BASE_URL",
+    "REMOTE_ACCEPTANCE_MERCHANT_BASE_URL",
+    "REMOTE_ACCEPTANCE_BACKEND_BASE_URL"
+)) {
+    Assert-True ($workflow.Contains("$name`: `${{ vars.$name }}")) "readiness workflow must audit test remote acceptance variable $name"
+}
+foreach ($name in @(
+    "PLAYWRIGHT_E2E_ADMIN_ACCOUNT",
+    "PLAYWRIGHT_E2E_ADMIN_PASSWORD",
+    "PLAYWRIGHT_E2E_MERCHANT_ACCOUNT",
+    "PLAYWRIGHT_E2E_MERCHANT_PASSWORD"
+)) {
+    Assert-True ($workflow.Contains("$name`: `${{ secrets.$name }}")) "readiness workflow must audit remote acceptance secret name $name without reading it into reports"
+    Assert-True (-not $workflow.Contains("$name`: `${{ vars.$name }}")) "readiness workflow must not expose remote acceptance credential $name as a variable"
+}
 Assert-True ($workflow -notmatch '"\$\{\{ inputs[.]commit_sha \}\}"') "shell bodies must consume the commit through an environment variable"
+Assert-True ($workflow -notmatch 'PLAYWRIGHT_E2E_(ADMIN|MERCHANT)_(ACCOUNT|PASSWORD).*GITHUB_OUTPUT') "readiness workflow must never write browser credential bodies to outputs"
 
 Write-Output "readiness workflow contract passed"
