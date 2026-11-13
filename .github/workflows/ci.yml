@@ -128,6 +128,9 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x backend/mvnw
 
+      - name: Validate local smoke service composition
+        run: docker compose -f deploy/smoke-services.compose.yml config --quiet
+
       - name: Verify all
         shell: pwsh
         run: ./scripts/ci/verify-all.ps1 -IncludeMysqlSmoke -IncludeStorageSmoke -IncludeBrowserSmoke -IncludeBrowserE2E -IncludeElasticsearchSmoke -IncludeFlutter
