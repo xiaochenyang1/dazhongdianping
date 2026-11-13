@@ -42,6 +42,7 @@ Assert-True ($workflow -match "APP_S3_ENDPOINT") "workflow must provide the S3 e
 Assert-True ($workflow -match "subosito/flutter-action") "workflow must install Flutter"
 Assert-True ($workflow -match 'flutter-version:\s*"3\.44\.8"') "workflow must pin Flutter 3.44.8"
 Assert-True ($workflow -match "IncludeFlutter") "workflow must include the Flutter verification gate"
+Assert-True ($workflow -match 'docker compose -f deploy/smoke-services[.]compose[.]yml config --quiet') "workflow must validate the local smoke service composition"
 Assert-True ($workflow -match "merchant-web/package-lock\.json") "workflow must cache merchant-web dependencies"
 Assert-True ($workflow -match "npm ci --prefix merchant-web") "workflow must install merchant-web dependencies"
 
