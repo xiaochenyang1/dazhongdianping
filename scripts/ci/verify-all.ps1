@@ -5,6 +5,8 @@ param(
     [switch]$IncludeBrowserE2E,
     [switch]$IncludeElasticsearchSmoke,
     [switch]$IncludeFlutter,
+    [string]$MysqlSmokeDbName,
+    [switch]$DropMysqlSmokeDatabaseAfter,
     [switch]$DryRun
 )
 
@@ -61,7 +63,7 @@ if ($DryRun) {
     Write-Output "9. optional app: flutter test when -IncludeFlutter is set"
     Write-Output "10. optional app: flutter analyze when -IncludeFlutter is set"
     Write-Output "11. optional app: flutter build web --no-wasm-dry-run when -IncludeFlutter is set"
-    Write-Output "12. optional: scripts/ci/mysql-smoke.ps1 when -IncludeMysqlSmoke is set"
+    Write-Output "12. optional: scripts/ci/mysql-smoke.ps1 when -IncludeMysqlSmoke is set; -MysqlSmokeDbName selects an isolated database and -DropMysqlSmokeDatabaseAfter removes a database created by that run"
     Write-Output "13. optional: scripts/ci/storage-smoke.ps1 when -IncludeStorageSmoke is set"
     Write-Output "14. optional: scripts/ci/browser-smoke.ps1 when -IncludeBrowserSmoke is set"
     Write-Output "15. optional: scripts/ci/browser-e2e.ps1 when -IncludeBrowserE2E is set"
@@ -108,7 +110,14 @@ if ($IncludeFlutter) {
 
 if ($IncludeMysqlSmoke) {
     Write-Output "[verify-all] mysql smoke"
-    & (Join-Path $repoRoot "scripts\ci\mysql-smoke.ps1")
+    $mysqlSmokeParameters = @{}
+    if (-not [string]::IsNullOrWhiteSpace($MysqlSmokeDbName)) {
+        $mysqlSmokeParameters.DbName = $MysqlSmokeDbName
+    }
+    if ($DropMysqlSmokeDatabaseAfter) {
+        $mysqlSmokeParameters.DropDatabaseAfter = $true
+    }
+    & (Join-Path $repoRoot "scripts\ci\mysql-smoke.ps1") @mysqlSmokeParameters
     if ($LASTEXITCODE -ne 0) {
         throw "scripts/ci/mysql-smoke.ps1 exited with code $LASTEXITCODE"
     }
