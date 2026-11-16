@@ -1,0 +1,9 @@
+---
+all:
+  children:
+    dzdp_targets:
+      hosts:
+        test-target:
+          ansible_host: CHANGE_ME_TEST_HOST
+          ansible_user: deploy
+          ansible_port: 22

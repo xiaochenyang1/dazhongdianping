@@ -4,6 +4,8 @@ These files prepare the Linux host expected by `target-host-preflight.ps1`,
 `deploy-release.ps1`, and `rollback-release.ps1`. They are reference templates:
 replace every `CHANGE_ME` value and review the paths, users, ports, certificates,
 firewall rules, and package names for the selected provider before installation.
+For an existing Ubuntu 24.04 host, [`deploy/ansible/`](../ansible/README.md)
+automates these same files and permissions without creating cloud resources.
 
 ## Required host software
 

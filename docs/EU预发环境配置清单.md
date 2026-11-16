@@ -84,7 +84,7 @@ set +a
 
 ## 2. 目标机数据库迁移文件
 
-目标机尚未初始化时，先按 [`deploy/target-host/README.md`](../deploy/target-host/README.md) 安装运行用户、发布目录、后端启动器、四个 systemd unit、nginx 四域名配置和最小 sudoers 规则。模板不会创建云资源、DNS 或证书，也不包含真实地址和密钥；替换全部占位值并通过 `nginx -t`、`visudo -cf` 后，才能进入下面的私有配置和只读预检。sudoers 必须同时允许精确的 `restart`、逐服务 `is-active` 和首次部署恢复所需的整组 `stop`，目标机预检会逐项核对但不会执行这些动作。
+目标机尚未初始化时，先按 [`deploy/target-host/README.md`](../deploy/target-host/README.md) 安装运行用户、发布目录、后端启动器、四个 systemd unit、nginx 四域名配置和最小 sudoers 规则；已确认为 Ubuntu 24.04 的主机可使用 [`deploy/ansible/README.md`](../deploy/ansible/README.md) 自动应用同一套约束。模板和 playbook 不会创建云资源、DNS 或证书，也不包含真实地址和密钥；替换全部占位值并通过 `nginx -t`、`visudo -cf` 后，才能进入下面的私有配置和只读预检。sudoers 必须同时允许精确的 `restart`、逐服务 `is-active` 和首次部署恢复所需的整组 `stop`，目标机预检会逐项核对但不会执行这些动作。
 
 从 [`deploy/mysql-release.cnf.example`](../deploy/mysql-release.cnf.example) 复制真实文件到目标机私有路径，建议：
 

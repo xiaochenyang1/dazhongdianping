@@ -1,0 +1,28 @@
+[Unit]
+Description=Dazhongdianping backend
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ dzdp_runtime_user }}
+Group={{ dzdp_runtime_group }}
+EnvironmentFile={{ dzdp_runtime_env_target }}
+Environment=DZDP_RELEASE_ROOT={{ dzdp_release_root }}
+Environment=SERVER_ADDRESS=127.0.0.1
+Environment=SERVER_PORT=8080
+WorkingDirectory={{ dzdp_runtime_home }}
+ExecStart=/usr/local/libexec/dazhongdianping/run-backend.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+SuccessExitStatus=143
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths={{ dzdp_runtime_home }}
+
+[Install]
+WantedBy=multi-user.target
