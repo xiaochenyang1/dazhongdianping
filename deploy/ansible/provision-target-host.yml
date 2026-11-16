@@ -1,0 +1,298 @@
+---
+- name: Provision Dazhongdianping target host
+  hosts: dzdp_targets
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Require Ubuntu 24.04 LTS
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == "Ubuntu"
+          - ansible_facts.distribution_major_version == "24"
+        fail_msg: This playbook supports only Ubuntu 24.04 LTS targets.
+
+    - name: Validate public provisioning variables
+      ansible.builtin.assert:
+        that:
+          - dzdp_environment in ["test", "pre"]
+          - dzdp_region == "EU"
+          - dzdp_deploy_user == "deploy"
+          - dzdp_runtime_user == "dzdp"
+          - dzdp_runtime_group == "dzdp"
+          - dzdp_release_root is match('^/[A-Za-z0-9._/-]+$')
+          - dzdp_release_root != '/'
+          - "'//' not in dzdp_release_root"
+          - "'/..' not in dzdp_release_root"
+          - dzdp_runtime_home is match('^/[A-Za-z0-9._/-]+$')
+          - dzdp_runtime_home != '/'
+          - "'//' not in dzdp_runtime_home"
+          - "'/..' not in dzdp_runtime_home"
+          - dzdp_runtime_env_source.startswith('/')
+          - dzdp_mysql_defaults_source.startswith('/')
+          - dzdp_runtime_env_target == '/etc/dazhongdianping/eu-' ~ dzdp_environment ~ '.env'
+          - dzdp_mysql_defaults_target == '/etc/dazhongdianping/mysql-release.cnf'
+          - dzdp_web_host is match('^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$')
+          - dzdp_admin_host is match('^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$')
+          - dzdp_merchant_host is match('^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$')
+          - dzdp_api_host is match('^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$')
+          - "'.' in dzdp_web_host"
+          - "'.' in dzdp_admin_host"
+          - "'.' in dzdp_merchant_host"
+          - "'.' in dzdp_api_host"
+          - dzdp_tls_certificate_path is match('^/[A-Za-z0-9._/-]+$')
+          - dzdp_tls_certificate_key_path is match('^/[A-Za-z0-9._/-]+$')
+          - "'//' not in dzdp_tls_certificate_path"
+          - "'//' not in dzdp_tls_certificate_key_path"
+          - "'/..' not in dzdp_tls_certificate_path"
+          - "'/..' not in dzdp_tls_certificate_key_path"
+          - "'CHANGE_ME' not in dzdp_web_host"
+          - "'CHANGE_ME' not in dzdp_admin_host"
+          - "'CHANGE_ME' not in dzdp_merchant_host"
+          - "'CHANGE_ME' not in dzdp_api_host"
+          - "'CHANGE_ME' not in dzdp_tls_certificate_path"
+          - "'CHANGE_ME' not in dzdp_tls_certificate_key_path"
+        fail_msg: Replace every placeholder and retain the repository path and identity contract.
+
+  tasks:
+    - name: Install target-host packages
+      ansible.builtin.apt:
+        name:
+          - bash
+          - ca-certificates
+          - coreutils
+          - curl
+          - default-mysql-client
+          - findutils
+          - gawk
+          - grep
+          - nginx
+          - openjdk-17-jre-headless
+          - openssl
+          - sed
+          - sudo
+          - unzip
+          - util-linux
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Check deployment account
+      ansible.builtin.command:
+        argv:
+          - getent
+          - passwd
+          - "{{ dzdp_deploy_user }}"
+      register: dzdp_deploy_account
+      changed_when: false
+      failed_when: false
+
+    - name: Check nginx worker account
+      ansible.builtin.command:
+        argv:
+          - getent
+          - passwd
+          - "{{ dzdp_nginx_user }}"
+      register: dzdp_nginx_account
+      changed_when: false
+      failed_when: false
+
+    - name: Require existing deployment and nginx accounts
+      ansible.builtin.assert:
+        that:
+          - dzdp_deploy_account.rc == 0
+          - dzdp_nginx_account.rc == 0
+        fail_msg: The SSH deployment account and configured nginx worker account must exist.
+
+    - name: Create runtime group
+      ansible.builtin.group:
+        name: "{{ dzdp_runtime_group }}"
+        system: true
+        state: present
+
+    - name: Create runtime account
+      ansible.builtin.user:
+        name: "{{ dzdp_runtime_user }}"
+        group: "{{ dzdp_runtime_group }}"
+        home: "{{ dzdp_runtime_home }}"
+        shell: /usr/sbin/nologin
+        system: true
+        create_home: true
+        state: present
+
+    - name: Grant deployment account release-group access
+      ansible.builtin.user:
+        name: "{{ dzdp_deploy_user }}"
+        groups:
+          - "{{ dzdp_runtime_group }}"
+        append: true
+
+    - name: Grant nginx worker release-group access
+      ansible.builtin.user:
+        name: "{{ dzdp_nginx_user }}"
+        groups:
+          - "{{ dzdp_runtime_group }}"
+        append: true
+      notify: Validate and restart nginx
+
+    - name: Create target directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+        state: directory
+      loop:
+        - path: "{{ dzdp_release_root }}"
+          owner: "{{ dzdp_deploy_user }}"
+          group: "{{ dzdp_runtime_group }}"
+          mode: "2750"
+        - path: "{{ dzdp_runtime_home }}"
+          owner: "{{ dzdp_runtime_user }}"
+          group: "{{ dzdp_runtime_group }}"
+          mode: "0750"
+        - path: /usr/local/libexec/dazhongdianping
+          owner: root
+          group: root
+          mode: "0755"
+        - path: /etc/dazhongdianping
+          owner: "{{ dzdp_deploy_user }}"
+          group: "{{ dzdp_deploy_user }}"
+          mode: "0700"
+
+    - name: Install backend release runner
+      ansible.builtin.copy:
+        src: ../target-host/run-backend.sh
+        dest: /usr/local/libexec/dazhongdianping/run-backend.sh
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install private runtime environment
+      ansible.builtin.copy:
+        src: "{{ dzdp_runtime_env_source }}"
+        dest: "{{ dzdp_runtime_env_target }}"
+        owner: "{{ dzdp_deploy_user }}"
+        group: "{{ dzdp_deploy_user }}"
+        mode: "0600"
+      no_log: true
+
+    - name: Install private MySQL defaults
+      ansible.builtin.copy:
+        src: "{{ dzdp_mysql_defaults_source }}"
+        dest: "{{ dzdp_mysql_defaults_target }}"
+        owner: "{{ dzdp_deploy_user }}"
+        group: "{{ dzdp_deploy_user }}"
+        mode: "0600"
+      no_log: true
+
+    - name: Check TLS certificate
+      ansible.builtin.stat:
+        path: "{{ dzdp_tls_certificate_path }}"
+        follow: true
+      register: dzdp_tls_certificate
+
+    - name: Check TLS private key
+      ansible.builtin.stat:
+        path: "{{ dzdp_tls_certificate_key_path }}"
+        follow: true
+      register: dzdp_tls_certificate_key
+
+    - name: Require existing TLS material
+      ansible.builtin.assert:
+        that:
+          - dzdp_tls_certificate.stat.isreg | default(false)
+          - dzdp_tls_certificate_key.stat.isreg | default(false)
+        fail_msg: Install the reviewed TLS certificate and private key before applying nginx configuration.
+
+    - name: Install backend systemd unit
+      ansible.builtin.template:
+        src: templates/dzdp-backend.service.j2
+        dest: /etc/systemd/system/dzdp-backend.service
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      notify: Reload systemd
+
+    - name: Install nginx reload systemd units
+      ansible.builtin.copy:
+        src: "../target-host/systemd/{{ item }}.service.example"
+        dest: "/etc/systemd/system/{{ item }}.service"
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      loop:
+        - dzdp-web
+        - dzdp-admin-web
+        - dzdp-merchant-web
+      notify: Reload systemd
+
+    - name: Install deployment sudoers policy
+      ansible.builtin.copy:
+        src: ../target-host/dazhongdianping-deploy.sudoers.example
+        dest: /etc/sudoers.d/dazhongdianping-deploy
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+        backup: true
+
+    - name: Install nginx site configuration
+      ansible.builtin.template:
+        src: templates/dazhongdianping.conf.j2
+        dest: /etc/nginx/sites-available/dazhongdianping.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      notify: Validate and restart nginx
+
+    - name: Enable nginx site configuration
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/dazhongdianping.conf
+        dest: /etc/nginx/sites-enabled/dazhongdianping.conf
+        state: link
+      notify: Validate and restart nginx
+
+    - name: Disable default nginx site
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Validate and restart nginx
+
+    - name: Apply system service and nginx changes
+      ansible.builtin.meta: flush_handlers
+
+    - name: Enable nginx reload services
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop:
+        - dzdp-web
+        - dzdp-admin-web
+        - dzdp-merchant-web
+
+    - name: Enable backend service without starting it
+      ansible.builtin.systemd_service:
+        name: dzdp-backend
+        enabled: true
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+    - name: Validate nginx configuration
+      ansible.builtin.command: /usr/sbin/nginx -t
+      changed_when: false
+      listen: Validate and restart nginx
+
+    - name: Restart nginx with updated group membership
+      ansible.builtin.systemd_service:
+        name: nginx
+        enabled: true
+        state: restarted
+      listen: Validate and restart nginx

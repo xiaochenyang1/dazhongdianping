@@ -1,0 +1,22 @@
+---
+dzdp_environment: test
+dzdp_region: EU
+
+dzdp_deploy_user: deploy
+dzdp_runtime_user: dzdp
+dzdp_runtime_group: dzdp
+dzdp_nginx_user: www-data
+
+dzdp_release_root: /opt/dazhongdianping
+dzdp_runtime_home: /var/lib/dazhongdianping
+dzdp_runtime_env_source: /absolute/private/path/eu-test.env
+dzdp_runtime_env_target: /etc/dazhongdianping/eu-test.env
+dzdp_mysql_defaults_source: /absolute/private/path/mysql-release.cnf
+dzdp_mysql_defaults_target: /etc/dazhongdianping/mysql-release.cnf
+
+dzdp_web_host: CHANGE_ME_WEB_HOST
+dzdp_admin_host: CHANGE_ME_ADMIN_HOST
+dzdp_merchant_host: CHANGE_ME_MERCHANT_HOST
+dzdp_api_host: CHANGE_ME_API_HOST
+dzdp_tls_certificate_path: /etc/letsencrypt/live/CHANGE_ME/fullchain.pem
+dzdp_tls_certificate_key_path: /etc/letsencrypt/live/CHANGE_ME/privkey.pem

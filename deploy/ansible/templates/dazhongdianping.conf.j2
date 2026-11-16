@@ -1,0 +1,105 @@
+map $http_upgrade $dzdp_connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 80;
+    server_name {{ dzdp_web_host }} {{ dzdp_admin_host }} {{ dzdp_merchant_host }} {{ dzdp_api_host }};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name {{ dzdp_web_host }};
+
+    ssl_certificate {{ dzdp_tls_certificate_path }};
+    ssl_certificate_key {{ dzdp_tls_certificate_key_path }};
+    root {{ dzdp_release_root }}/current/web/dist;
+
+    location = /health {
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+    location /assets/ {
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name {{ dzdp_admin_host }};
+
+    ssl_certificate {{ dzdp_tls_certificate_path }};
+    ssl_certificate_key {{ dzdp_tls_certificate_key_path }};
+    root {{ dzdp_release_root }}/current/admin-web/dist;
+
+    location = /health {
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+    location /assets/ {
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name {{ dzdp_merchant_host }};
+
+    ssl_certificate {{ dzdp_tls_certificate_path }};
+    ssl_certificate_key {{ dzdp_tls_certificate_key_path }};
+    root {{ dzdp_release_root }}/current/merchant-web/dist;
+
+    location = /health {
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+    location /assets/ {
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name {{ dzdp_api_host }};
+
+    ssl_certificate {{ dzdp_tls_certificate_path }};
+    ssl_certificate_key {{ dzdp_tls_certificate_key_path }};
+    client_max_body_size 8m;
+
+    location /ws/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $dzdp_connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        # This reference topology is a single public nginx hop. Overwrite any
+        # client-supplied forwarding chain before sending it to the backend.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_read_timeout 60s;
+    }
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+}
