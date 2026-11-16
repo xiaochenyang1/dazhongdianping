@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -250,6 +251,24 @@ if [ "$DZDP_RELEASE_TEST_CASE" = migration-failure ]; then exit 23; fi
         self.assertEqual(checks, ['dzdp-backend', 'dzdp-web', 'dzdp-admin-web', 'dzdp-merchant-web'])
         self.assertEqual(len(self.http.read_text().splitlines()), 7)
         self.assertNotIn('WARNING', self.output)
+
+    def test_restrictive_remote_umask_still_allows_runtime_group_reads(self):
+        previous_umask = os.umask(0o077)
+        try:
+            self.assertEqual(self.invoke(), 0, self.output)
+        finally:
+            os.umask(previous_umask)
+
+        release = self.root / 'releases' / 'rc-new'
+        for path in (
+            release / 'backend' / 'fixture.jar',
+            release / 'web' / 'dist' / 'index.html',
+            release / 'admin-web' / 'dist' / 'index.html',
+            release / 'merchant-web' / 'dist' / 'index.html',
+        ):
+            self.assertNotEqual(path.stat().st_mode & stat.S_IRGRP, 0, f'{path} must be group-readable')
+        for path in (release, release / 'backend', release / 'web' / 'dist'):
+            self.assertNotEqual(path.stat().st_mode & stat.S_IXGRP, 0, f'{path} must be group-traversable')
 
     def test_upgrade_and_manual_rollback_keep_explicit_history(self):
         self.history()

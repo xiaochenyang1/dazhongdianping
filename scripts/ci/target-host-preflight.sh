@@ -460,6 +460,9 @@ sudo_ready=true
 if ! sudo -n -l -- systemctl restart "${services[@]}" >/dev/null 2>&1; then
   sudo_ready=false
 fi
+if ! sudo -n -l -- systemctl stop "${services[@]}" >/dev/null 2>&1; then
+  sudo_ready=false
+fi
 for service in "${services[@]}"; do
   if ! sudo -n -l -- systemctl is-active --quiet "$service" >/dev/null 2>&1; then
     sudo_ready=false

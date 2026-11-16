@@ -2,19 +2,27 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $scriptPath = Join-Path $repoRoot 'scripts\ci\stripe-preflight.sh'
-$envTemplatePath = Join-Path $repoRoot 'deploy\eu-pre.env.example'
+$envTemplatePaths = [ordered]@{
+    test = Join-Path $repoRoot 'deploy\eu-test.env.example'
+    pre = Join-Path $repoRoot 'deploy\eu-pre.env.example'
+}
 
 if (-not (Test-Path -LiteralPath $scriptPath)) { throw 'stripe preflight script is missing' }
-if (-not (Test-Path -LiteralPath $envTemplatePath)) { throw 'EU pre-release environment template is missing' }
+foreach ($entry in $envTemplatePaths.GetEnumerator()) {
+    if (-not (Test-Path -LiteralPath $entry.Value)) { throw "EU $($entry.Key) environment template is missing" }
+}
 
 $script = Get-Content -Raw -LiteralPath $scriptPath
-$template = Get-Content -Raw -LiteralPath $envTemplatePath
+$templates = [ordered]@{}
 $bash = (Get-Command bash -ErrorAction Stop).Source
 $previousTemplatePath = $env:DZDP_EU_ENV_TEMPLATE
 try {
-    $env:DZDP_EU_ENV_TEMPLATE = $envTemplatePath
-    & $bash -c 'set -a; source "$DZDP_EU_ENV_TEMPLATE"; set +a' 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw 'EU environment template must be sourceable by bash' }
+    foreach ($entry in $envTemplatePaths.GetEnumerator()) {
+        $templates[$entry.Key] = Get-Content -Raw -LiteralPath $entry.Value
+        $env:DZDP_EU_ENV_TEMPLATE = $entry.Value
+        & $bash -c 'set -a; source "$DZDP_EU_ENV_TEMPLATE"; set +a' 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "EU $($entry.Key) environment template must be sourceable by bash" }
+    }
 }
 finally {
     if ($null -eq $previousTemplatePath) {
@@ -23,6 +31,19 @@ finally {
     else {
         $env:DZDP_EU_ENV_TEMPLATE = $previousTemplatePath
     }
+}
+$templateVariableNames = [ordered]@{}
+foreach ($entry in $templates.GetEnumerator()) {
+    $templateVariableNames[$entry.Key] = @(
+        [regex]::Matches($entry.Value, '(?m)^(?<name>[A-Z][A-Z0-9_]*)=') |
+            ForEach-Object { $_.Groups['name'].Value } |
+            Sort-Object -Unique
+    )
+}
+$templateVariableDiff = @(Compare-Object $templateVariableNames.test $templateVariableNames.pre)
+if ($templateVariableDiff.Count -gt 0) {
+    $details = $templateVariableDiff | ForEach-Object { "$($_.InputObject) ($($_.SideIndicator))" }
+    throw "EU test/pre environment templates must define the same variables: $($details -join ', ')"
 }
 foreach ($name in @(
     'APP_RUNTIME_MODE',
@@ -80,15 +101,31 @@ foreach ($name in @(
     'PRERENDER_REGION'
 )) {
     if ($script -notmatch [regex]::Escape($name)) { throw "stripe preflight must check $name" }
-    if ($template -notmatch [regex]::Escape($name)) { throw "EU environment template must define $name" }
+    foreach ($entry in $templates.GetEnumerator()) {
+        if ($entry.Value -notmatch [regex]::Escape($name)) { throw "EU $($entry.Key) environment template must define $name" }
+    }
 }
-if ($template -notmatch 'PRERENDER_REGION=EU') { throw 'EU environment template must target EU' }
-if ($template -notmatch 'APP_RUNTIME_MODE=pre') { throw 'EU environment template must identify itself as pre-release' }
-if ($template -notmatch 'APP_PAYMENT_MOCK_ENABLED=false') { throw 'EU template must disable mock payment' }
-if ($template -notmatch 'APP_AUTH_VERIFICATION_MOCK_ENABLED=false') { throw 'EU template must disable mock verification codes' }
-if ($template -notmatch 'APP_AUTH_VERIFICATION_MAIL_ENABLED=true') { throw 'EU template must enable email verification' }
-if ($template -notmatch 'APP_AUTH_VERIFICATION_TWILIO_ENABLED=true') { throw 'EU template must enable international SMS verification' }
-if ($template -notmatch 'APP_SEARCH_FALLBACK_ON_ERROR=false') { throw 'EU template must disable search fallback so Elasticsearch failures stay visible' }
+foreach ($entry in $templates.GetEnumerator()) {
+    $environment = $entry.Key
+    $template = $entry.Value
+    if ($template -notmatch 'PRERENDER_REGION=EU') { throw "EU $environment environment template must target EU" }
+    if ($template -notmatch "APP_RUNTIME_MODE=$environment") { throw "EU $environment environment template must identify itself as $environment" }
+    if ($template -notmatch 'APP_PAYMENT_MOCK_ENABLED=false') { throw "EU $environment template must disable mock payment" }
+    if ($template -notmatch 'APP_AUTH_VERIFICATION_MOCK_ENABLED=false') { throw "EU $environment template must disable mock verification codes" }
+    if ($template -notmatch 'APP_AUTH_VERIFICATION_MAIL_ENABLED=true') { throw "EU $environment template must enable email verification" }
+    if ($template -notmatch 'APP_AUTH_VERIFICATION_TWILIO_ENABLED=true') { throw "EU $environment template must enable international SMS verification" }
+    if ($template -notmatch 'APP_SEARCH_FALLBACK_ON_ERROR=false') { throw "EU $environment template must disable search fallback so Elasticsearch failures stay visible" }
+    if ($template -notmatch 'APP_STATE_STORE_PROVIDER=redis') { throw "EU $environment template must use Redis state storage" }
+    if ($template -notmatch 'APP_FILE_STORAGE_PROVIDER=s3') { throw "EU $environment template must use S3 storage" }
+    if ($template -notmatch 'APP_SEARCH_PROVIDER=elasticsearch') { throw "EU $environment template must use Elasticsearch" }
+    if ($template -notmatch 'APP_PUSH_ENABLED=false') { throw "EU $environment template must keep push disabled until real-device smoke passes" }
+}
+if ($templates.test -notmatch 'APP_DB_NAME=dazhongdianping_eu_test') { throw 'EU test template must use the isolated test database name' }
+if ($templates.test -notmatch 'APP_STATE_STORE_KEY_PREFIX=dzdp:eu:test') { throw 'EU test template must use the isolated test state prefix' }
+if ($templates.test -notmatch 'APP_SEARCH_INDEX_NAME=dzdp_shop_eu_test_v1') { throw 'EU test template must use the isolated test search index' }
+if ($templates.pre -notmatch 'APP_DB_NAME=dazhongdianping_eu_pre') { throw 'EU pre template must use the isolated pre database name' }
+if ($templates.pre -notmatch 'APP_STATE_STORE_KEY_PREFIX=dzdp:eu:pre') { throw 'EU pre template must use the isolated pre state prefix' }
+if ($templates.pre -notmatch 'APP_SEARCH_INDEX_NAME=dzdp_shop_eu_v1') { throw 'EU pre template must use the isolated pre search index' }
 
 $contractEnvironment = [ordered]@{
     APP_RUNTIME_MODE = 'pre'
@@ -157,7 +194,9 @@ $contractEnvironment = [ordered]@{
 }
 $previousEnvironment = @{}
 function Invoke-PreflightContract {
-    & $bash $scriptPath 2>&1 | Out-Null
+    param([string[]]$Arguments = @())
+
+    & $bash $scriptPath @Arguments 2>&1 | Out-Null
     return $LASTEXITCODE
 }
 
@@ -169,6 +208,11 @@ try {
     }
 
     if ((Invoke-PreflightContract) -ne 0) { throw 'complete EU contract configuration must pass preflight' }
+
+    $env:APP_RUNTIME_MODE = 'test'
+    if ((Invoke-PreflightContract -Arguments @('--environment', 'test')) -ne 0) { throw 'complete EU test contract configuration must pass the explicit test preflight' }
+    if ((Invoke-PreflightContract) -eq 0) { throw 'EU test runtime must not pass the default pre environment gate' }
+    $env:APP_RUNTIME_MODE = $contractEnvironment.APP_RUNTIME_MODE
 
     $env:VITE_DEFAULT_REGION = 'CN'
     if ((Invoke-PreflightContract) -eq 0) { throw 'a CN default for new Web visitors must fail the Paris launch gate' }

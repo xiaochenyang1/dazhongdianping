@@ -247,7 +247,7 @@ set -euo pipefail
 mkdir -p '$RemoteRoot'
 test -w '$RemoteRoot' || { echo 'Release root is not writable' >&2; exit 1; }
 test -r '$DatabaseDefaultsFile' || { echo 'Database defaults file is not readable' >&2; exit 1; }
-for tool in flock sha256sum unzip readlink sudo systemctl; do
+for tool in chmod flock sha256sum unzip readlink sudo systemctl; do
   command -v "`$tool" >/dev/null || { echo "Missing deployment tool: `$tool" >&2; exit 1; }
 done
 "@
@@ -299,6 +299,10 @@ if [ -e '$remoteReleaseDir' ] || [ -L '$remoteReleaseDir' ]; then
 fi
 mkdir -p '$remoteReleaseDir'
 unzip -oq '$remoteBundlePath' -d '$remoteReleaseDir'
+# Release bundles contain deployable code and public Web assets, never private
+# runtime configuration. Ensure the shared runtime group can traverse and read
+# the extracted tree even when the SSH account uses a restrictive umask.
+chmod -R g+rX '$remoteReleaseDir'
 if [ ! -x '$remoteReleaseDir/database/mysql-migrate.sh' ]; then
   chmod 755 '$remoteReleaseDir/database/mysql-migrate.sh'
 fi

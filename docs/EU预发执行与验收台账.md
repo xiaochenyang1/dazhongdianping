@@ -1,6 +1,6 @@
 # EU 预发执行与验收台账
 
-更新时间：2026-11-13。首发范围沿用 [EU 基线](EU预发发布基线.md)：巴黎单城、EUR、`Europe/Paris`。本文件给出执行顺序和证据字段；空白验收项均为待执行，不能凭本地测试或配置门禁通过改为已验收。
+更新时间：2026-11-16。首发范围沿用 [EU 基线](EU预发发布基线.md)：巴黎单城、EUR、`Europe/Paris`。本文件给出执行顺序和证据字段；空白验收项均为待执行，不能凭本地测试或配置门禁通过改为已验收。
 
 ## 1. 当前交付与环境边界
 
@@ -35,23 +35,24 @@ PR #48–#53 已在 2026-11-13 前全部进入主干：签名 iOS IPA 流水线�
 | 版本与制品 | 固定 SHA/tag，CI 与 nightly 链接，ZIP、SHA-256、manifest | 当前源码候选 `eu-pre-rc-20261113-2` 绑定 `dc7d0ff…`，同 SHA 主干 CI、nightly 与 tag CI 已通过；源码门禁已用真实 Actions 数据确认 tag CI `43399956525` 的两个必需 job 成功，但尚无环境化 ZIP/manifest。历史技术包 `eu-pre-rc-20261108-2` 仅作旧基线证据，不能部署；真实配置补齐后须使用版本号唯一的环境化候选，不得改写现有标签 |
 | 目标机与发布服务 | `test` / `pre` SSH、发布根目录、四个服务、HTTPS smoke URL | 待提供 |
 | 数据库 | 私有 MySQL defaults 文件权限 `0400/0600`；迁移模式与已有库准确基线 | 待提供 |
-| 运行环境 | 私有 env 文件或密钥管理引用；严格 `pre`、Redis、S3、ES、CORS/可信代理 | 待提供 |
+| 运行环境 | 私有 env 文件或密钥管理引用；`test/pre` 身份与数据命名空间隔离，Redis、S3、ES、CORS/可信代理使用真实供应商模式 | 待提供 |
 | 支付 | Stripe test 账户、publishable key、服务端 key、Webhook endpoint/signing secret | 待提供 |
 | 验证码 | 可验收 SMTP 发信账号/域名、Twilio 服务、测试邮箱和欧洲手机号 | 待提供 |
 | 商户与运营 | 巴黎真实门店、商户/员工账号、EUR 套餐、合规图片、可订时段、客服/发票交付流程 | 待提供 |
 | 恢复与值班 | 备份位置、恢复目标、可回滚版本、告警接收人和执行负责人 | 待提供 |
 
-具体变量和模式约束沿用 [环境配置清单](EU预发环境配置清单.md) 与 [`deploy/eu-pre.env.example`](../deploy/eu-pre.env.example)。台账只记录配置文件路径、密钥管理引用和业务 ID，不记录密钥、完整验证码、完整电话、个人导出 ZIP 或原始支付报文。
+具体变量和模式约束沿用 [环境配置清单](EU预发环境配置清单.md)。`test` 使用 [`deploy/eu-test.env.example`](../deploy/eu-test.env.example)，`pre` 使用 [`deploy/eu-pre.env.example`](../deploy/eu-pre.env.example)。台账只记录配置文件路径、密钥管理引用和业务 ID，不记录密钥、完整验证码、完整电话、个人导出 ZIP 或原始支付报文。
 
 ## 3. 执行顺序
 
 1. 在目标环境核对运行与 GitHub Environment 配置，加载私有 env 后执行预检。发布 workflow 会在打包前再次运行目标机只读预检；预检通过只证明配置、权限与入口连通性，真实送达和支付仍按下一节验收。
 
    ```bash
+   DEPLOY_ENVIRONMENT=test # pre 环境改为 pre
    set -a
-   source /path/to/private/eu-pre.env
+   source "/path/to/private/eu-${DEPLOY_ENVIRONMENT}.env"
    set +a
-   ./scripts/ci/stripe-preflight.sh --check-cli
+   ./scripts/ci/stripe-preflight.sh --environment "$DEPLOY_ENVIRONMENT" --check-cli
    ```
 
 2. 在已通过 CI 的固定 SHA 干净工作区用真实构建配置打包，调用 `scripts/ci/package-release.ps1 -Version <新版本> -CommitSha <40位SHA>`，或设置 `APP_RELEASE_COMMIT_SHA`。脚本以实际 Git HEAD 为来源并校验显式 SHA，拒绝未提交改动、未跟踪构建输入和已有版本输出，不使用 `GITHUB_SHA` 冒充源码来源。核对包内后端 JAR、三端 dist、03–31 连续迁移与全部校验和、迁移 runner；manifest 的 SHA、EU 默认区域、API/WSS、Stripe 和实际 SEO 快照必须一致。配置变化重新生成新版本。

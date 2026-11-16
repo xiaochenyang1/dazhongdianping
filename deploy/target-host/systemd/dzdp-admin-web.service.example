@@ -1,0 +1,13 @@
+[Unit]
+Description=Reload nginx for the Dazhongdianping admin web
+Requires=nginx.service
+After=nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nginx -t
+ExecStart=/usr/bin/systemctl reload nginx.service
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
