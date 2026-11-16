@@ -104,7 +104,7 @@ set +a
 
 源码 SHA 由工作流按选定版本自动注入：打包使用 `APP_RELEASE_COMMIT_SHA`，部署使用 `DEPLOY_EXPECTED_COMMIT_SHA`，不要将它们配置成长期固定值。本地执行时分别传入 `package-release.ps1 -CommitSha <40位SHA>` 和 `deploy-release.ps1 -ExpectedCommitSha <同一40位SHA>`；两者必须来自通过 CI 的版本。实际 `test/pre` 包须分别按对应环境构建，不能直接复用未注入配置的技术候选。
 
-2026-11-13 只读核对 GitHub Environment：`test` 为 0 个变量、0 个 secret；`pre` 可见变量仍只有 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`，secret 为 0。不得把此清单当作变量值或凭证核验。正式发布前仍需补齐下表中依赖目标环境的变量和 secrets。
+2026-11-16 再次只读核对 GitHub Environment：`test` 仍为 0 个变量、0 个 secret。`pre` 最近一次（2026-11-13）核对时，可见变量仍只有 `DEPLOY_ADMIN_SERVICE`、`DEPLOY_BACKEND_SERVICE`、`DEPLOY_DB_MIGRATION_MODE`、`DEPLOY_MERCHANT_SERVICE`、`DEPLOY_SSH_PORT`、`DEPLOY_WEB_SERVICE`，secret 为 0。不得把此清单当作变量值或凭证核验。正式发布前仍需补齐下表中依赖目标环境的变量和 secrets。
 
 仓库提供了初始化工具，用来把经过审核的本地私有配置写入 GitHub Environment。先从独立的 `test` 示例复制私有配置、替换所有 `CHANGE_ME`，并核对 SSH 两个文件及远端浏览器验收四个凭据文件；该示例固定为 EU 且不增加人工审批门禁，保持主干 CI 成功后的自动 test 发布可用：
 
@@ -235,8 +235,7 @@ Environment protection：
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
 - 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
 - `test` 尚无四个远端验收 HTTPS origin 和四个专用管理员/商户凭据，无法执行手工发布后的 13 条浏览器验收。
-- 2026-11-10，PR [#46](https://github.com/xiaochenyang1/dazhongdianping/pull/46) 已把部署来源明细审计合入主干 `f6de5f9862ff30367b7dd2ad7177fc57542bee96`；该提交的 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42767544480) 两个必需 job 均通过。随后运行的只读 [`pre/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42769728523) 与 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42772204662) 均确认自定义部署来源只允许 `main` 与 `eu-pre-rc-*`，但两个 Environment 仍各缺 6 个公开变量和 7 个部署 secret，且无法连接目标机；`pre` 另缺 required reviewer，并仍允许管理员绕过。两份报告均为 `readyForDeployment=false`、`mutatedExternalState=false`，没有主机、私有路径或凭证正文；`prod` Environment 尚未创建。
-- 上述历史 readiness 运行早于手工 test 远端浏览器验收接线。按当前契约，空的 `test` Environment 还会额外缺少 4 个 `REMOTE_ACCEPTANCE_*` variables 和 4 个 `PLAYWRIGHT_E2E_*` secrets；必须重新运行 readiness 才能取得当前门禁的正式缺口计数。
+- 2026-11-16，针对主干 `bce9f5298ca31759dae75f4a5d2df528d8b5807a` 运行的只读 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43799239798) 已按当前契约完成审计并上传脱敏证据：主干 CI 两个必需 job 均通过，Environment 加固没有额外 warning；但仍缺 10 个 variables、11 个 secrets，且无法采集目标机证据。因此结果为 `readyForDeployment=false`、`mutatedExternalState=false`。正式缺口包括 4 个 `REMOTE_ACCEPTANCE_*` variables 和 4 个 `PLAYWRIGHT_E2E_*` secrets；`prod` Environment 尚未创建。
 - 当前技术候选 `eu-pre-rc-20261108-2` 已绑定历史主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 的合并基线为 `e92ba3c…`；环境配置补齐后必须从该提交或更新的已通过 CI 提交重新生成版本号唯一的环境化候选。
 - 目标代理网段和代理直连隔离尚未配置/验收。因此当前去重代码只在直连请求场景下能准确区分匿名客户端。
 
@@ -250,3 +249,5 @@ Environment protection：
 - 自动 `release` 已验证配置缺失时只完成门禁检查，打包、上传和部署均跳过。此项不替代真实 `test`/`pre` 发布、smoke 或回滚演练。
 - PR #37 合并提交 `e92ba3c…` 的 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42574817291) 全部通过；随后 [release 运行](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/42576540273) 再次确认 `test` 缺配置时只执行门禁，checkout、打包、上传、部署和验收证据均 skipped。
 - PR #46 合并提交 `f6de5f9…` 的主干 CI 与 03–31 迁移集成通过；最新 `test/pre` readiness 已能核对实际 branch/tag allowlist，当前策略均精确为 `main` 与 `eu-pre-rc-*`，不再把“只打开自定义策略开关”误判为完成。
+- PR [#55](https://github.com/xiaochenyang1/dazhongdianping/pull/55) 已把 Ubuntu 24.04 目标机的 systemd、nginx、sudoers、启动脚本和独立 `eu-test.env` 模板合入主干 `355ef835f7b1ce84c059f03ef203c2447bc2c521`；对应 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43790374540) 全部通过，[自动 release](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43792206516) 在空 `test` 配置处安全停止，checkout、打包、SSH、部署和验收均未执行。
+- PR [#56](https://github.com/xiaochenyang1/dazhongdianping/pull/56) 已把 provider-neutral 的 Ubuntu 24.04 Ansible 目标机 provisioning 合入主干 `bce9f5298ca31759dae75f4a5d2df528d8b5807a`；对应 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43797406446) 全部通过，[自动 release](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43798662965) 再次只执行配置门禁并跳过打包、SSH、部署和远程验收。Ansible 只接管已有 Ubuntu 主机，不创建 VM、DNS、TLS 证书或第三方账号，私有输入必须来自仓库外文件。
