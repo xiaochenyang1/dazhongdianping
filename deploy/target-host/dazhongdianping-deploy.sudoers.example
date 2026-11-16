@@ -1,0 +1,5 @@
+Cmnd_Alias DZDP_RELEASE_RESTART = /usr/bin/systemctl restart dzdp-backend dzdp-web dzdp-admin-web dzdp-merchant-web
+Cmnd_Alias DZDP_RELEASE_STOP = /usr/bin/systemctl stop dzdp-backend dzdp-web dzdp-admin-web dzdp-merchant-web
+Cmnd_Alias DZDP_RELEASE_STATUS = /usr/bin/systemctl is-active --quiet dzdp-backend, /usr/bin/systemctl is-active --quiet dzdp-web, /usr/bin/systemctl is-active --quiet dzdp-admin-web, /usr/bin/systemctl is-active --quiet dzdp-merchant-web
+
+deploy ALL=(root) NOPASSWD: DZDP_RELEASE_RESTART, DZDP_RELEASE_STOP, DZDP_RELEASE_STATUS

@@ -1,6 +1,6 @@
 # EU 首发与预发发布基线
 
-更新时间：2026-11-13
+更新时间：2026-11-16
 
 预发布加固已通过 PR #1 合入 `main`。后续发布仍必须使用通过 CI 的不可变提交 SHA 或最新 `eu-pre-rc-*` 标签，不把可移动分支名当作发布版本。
 
@@ -45,7 +45,7 @@ CN 保留为代码兼容区域，但不作为本轮真实支付验收目标；CN
 
 预发配置分成两套，缺一套都不能发布：
 
-1. 目标机运行环境：从 [`deploy/eu-pre.env.example`](../deploy/eu-pre.env.example) 复制到密钥管理系统或目标机，替换所有 `CHANGE_ME`。另将 [`deploy/mysql-release.cnf.example`](../deploy/mysql-release.cnf.example) 安装到目标机私有路径（建议 `/etc/dazhongdianping/mysql-release.cnf`），设置 `0400/0600`。
+1. 目标机运行环境：`test` 从 [`deploy/eu-test.env.example`](../deploy/eu-test.env.example) 复制，`pre` 从 [`deploy/eu-pre.env.example`](../deploy/eu-pre.env.example) 复制，放到密钥管理系统或对应目标机并替换所有 `CHANGE_ME`。两个环境使用独立的数据库、Redis key prefix 和 Elasticsearch index。另将 [`deploy/mysql-release.cnf.example`](../deploy/mysql-release.cnf.example) 安装到目标机私有路径（建议 `/etc/dazhongdianping/mysql-release.cnf`），设置 `0400/0600`。
 2. GitHub `pre` Environment：服务器发布至少配置 `DEPLOY_SSH_*`、`DEPLOY_REMOTE_ROOT`、`DEPLOY_DB_DEFAULTS_FILE`、`DEPLOY_DB_MIGRATION_MODE`、`VITE_API_BASE_URL`、`VITE_WS_BASE_URL`、`VITE_STRIPE_PUBLISHABLE_KEY`、`PUBLIC_SITE_URL`、`PRERENDER_API_BASE_URL` 与 SSH secrets；Android 发布再配置 `DZDP_ANDROID_APPLICATION_ID`、`DZDP_APP_API_BASE_URL` 和签名 secrets。移动流水线复用 `PUBLIC_SITE_URL` 与 `VITE_STRIPE_PUBLISHABLE_KEY` 注入分享域名和 Stripe。
 
 首次接管已有库时，GitHub Environment 还需设置一次性 `DEPLOY_DB_BASELINE_VERSION`，确认成功后立即移除。目标机环境就绪后执行：
@@ -54,7 +54,7 @@ CN 保留为代码兼容区域，但不作为本轮真实支付验收目标；CN
 set -a
 source /path/to/eu-pre.env
 set +a
-./scripts/ci/stripe-preflight.sh --check-cli
+./scripts/ci/stripe-preflight.sh --environment pre --check-cli
 ```
 
 预发必须满足：运行身份为严格 `pre`、Stripe test mode 开启、mock 支付关闭、验证码 mock/回显/控制台通道关闭、SMTP 邮件与 Twilio 国际短信均可配置、Redis 状态存储、HTTPS S3 endpoint/public URL、明确的 Elasticsearch endpoint/index 且关闭 fallback、EU SEO 构建、HTTPS Web/API 地址和 WSS 通知地址。`APP_CORS_ALLOWED_ORIGIN_PATTERNS` 必须逐项列出真实 HTTPS Web origin，不允许通配符、本机地址、userinfo 或路径。SMTP 必须启用认证、STARTTLS 和健康检查；Twilio 必须覆盖国际号码并排除默认交给阿里云的 `+86`。阿里云在 EU 首发门禁中为可选 CN 通道，启用时才校验其 AccessKey、签名、模板和 `+86` 路由。预检脚本会执行这些格式和模式检查，但不会输出密钥内容。

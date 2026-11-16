@@ -3,11 +3,13 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: source <eu-pre.env> && scripts/ci/stripe-preflight.sh [options]
+Usage: source <eu-test-or-pre.env> && scripts/ci/stripe-preflight.sh [options]
 
-Checks the EU pre-release runtime, verification, infrastructure, and Stripe
-configuration without printing secret values.
+Checks an EU test/pre runtime, verification, infrastructure, and Stripe
+configuration without printing secret values. The expected runtime defaults to
+pre for backward compatibility.
 Options:
+  --environment <name>    Require APP_RUNTIME_MODE to be test or pre.
   --check-cli             Require the Stripe CLI to be installed.
   --check-health <url>    GET a health endpoint after configuration checks.
   --help                  Show this help.
@@ -266,8 +268,18 @@ for entry in entries:
 
 health_url=""
 check_cli=false
+expected_environment="pre"
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --environment)
+      [[ $# -ge 2 ]] || { printf '%s\n' '--environment requires test or pre' >&2; exit 2; }
+      expected_environment="$2"
+      if [[ "$expected_environment" != "test" && "$expected_environment" != "pre" ]]; then
+        printf '%s\n' '--environment requires test or pre' >&2
+        exit 2
+      fi
+      shift 2
+      ;;
     --check-cli) check_cli=true; shift ;;
     --check-health)
       [[ $# -ge 2 ]] || { printf '%s\n' '--check-health requires a URL' >&2; exit 2; }
@@ -279,7 +291,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ "${APP_RUNTIME_MODE-}" == "pre" ]] || { printf '[invalid] APP_RUNTIME_MODE must be pre\n' >&2; failures=$((failures + 1)); }
+[[ "${APP_RUNTIME_MODE-}" == "$expected_environment" ]] || { printf '[invalid] APP_RUNTIME_MODE must be %s\n' "$expected_environment" >&2; failures=$((failures + 1)); }
 [[ "${APP_PAYMENT_STRIPE_ENABLED-}" == "true" ]] || { printf '[invalid] APP_PAYMENT_STRIPE_ENABLED must be true\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_PAYMENT_MOCK_ENABLED-}" == "false" ]] || { printf '[invalid] APP_PAYMENT_MOCK_ENABLED must be false\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_AUTH_VERIFICATION_MOCK_ENABLED-}" == "false" ]] || { printf '[invalid] APP_AUTH_VERIFICATION_MOCK_ENABLED must be false\n' >&2; failures=$((failures + 1)); }
@@ -378,7 +390,7 @@ if [[ -n "$health_url" ]]; then
 fi
 
 if [[ "$failures" -gt 0 ]]; then
-  printf '\nEU pre-release configuration failed with %d issue(s).\n' "$failures" >&2
+  printf '\nEU %s configuration failed with %d issue(s).\n' "$expected_environment" "$failures" >&2
   exit 1
 fi
-printf '\nEU pre-release configuration is ready for credentialed verification and Stripe E2E.\n'
+printf '\nEU %s configuration is ready for credentialed verification and Stripe E2E.\n' "$expected_environment"

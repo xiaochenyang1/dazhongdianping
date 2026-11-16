@@ -1,6 +1,6 @@
 # EU 预发环境配置清单
 
-更新时间：2026-11-13
+更新时间：2026-11-16
 
 当前候选基线以最新 `eu-pre-rc-*` tag 或通过 CI 的不可变提交 SHA 为准，不在本文内维护会过期的固定 SHA。
 
@@ -10,13 +10,13 @@
 
 首发地理与币种范围已冻结：巴黎单城（`Europe/Paris`），EU 订单仅 EUR；其他 EU 城市停用，英国/GBP 不包含在本次预发验收中。
 
-从 [`deploy/eu-pre.env.example`](../deploy/eu-pre.env.example) 复制一份到目标机或密钥管理系统，替换所有 `CHANGE_ME`。复制后的真实文件不得提交到仓库。
+目标机运行配置按环境分开：`test` 从 [`deploy/eu-test.env.example`](../deploy/eu-test.env.example) 复制，`pre` 从 [`deploy/eu-pre.env.example`](../deploy/eu-pre.env.example) 复制。将对应模板放到目标机或密钥管理系统，替换所有 `CHANGE_ME`；真实文件不得提交到仓库。两套模板共用真实供应商与基础设施模式，但数据库、Redis key prefix 和 Elasticsearch index 必须保持环境隔离。
 
 必须配置：
 
 | 类型 | 变量 |
 |---|---|
-| 运行身份 | `APP_RUNTIME_MODE=pre` |
+| 运行身份 | `test` 使用 `APP_RUNTIME_MODE=test`；`pre` 使用 `APP_RUNTIME_MODE=pre` |
 | 可信代理 | `APP_TRUSTED_PROXY_REGEX`：加单引号的锚定 Java 正则，只列出批准的 Ingress/负载均衡器 IPv4/IPv6 地址，用竖线分隔；IPv4 的点写作 `[.]` 或 `\.`，不接受网段、范围或通配符 |
 | MySQL | `APP_DB_HOST`、`APP_DB_PORT`、`APP_DB_NAME`、`APP_DB_USERNAME`、`APP_DB_PASSWORD` |
 | Redis | `APP_REDIS_HOST`、`APP_REDIS_PORT`、`APP_REDIS_PASSWORD`、`APP_REDIS_DATABASE`、`APP_STATE_STORE_PROVIDER=redis`、`APP_AD_CLICK_DEDUPE_SECONDS=1800` |
@@ -73,15 +73,18 @@
 预检命令：
 
 ```bash
+DEPLOY_ENVIRONMENT=test # pre 环境改为 pre
 set -a
-source /path/to/eu-pre.env
+source "/path/to/eu-${DEPLOY_ENVIRONMENT}.env"
 set +a
-./scripts/ci/stripe-preflight.sh --check-cli
+./scripts/ci/stripe-preflight.sh --environment "$DEPLOY_ENVIRONMENT" --check-cli
 ```
 
 运行预检需要 Bash、Python 3 和 Stripe CLI。没有安装 Stripe CLI 时，先去掉 `--check-cli` 只能证明配置格式，不算真实支付验收。
 
 ## 2. 目标机数据库迁移文件
+
+目标机尚未初始化时，先按 [`deploy/target-host/README.md`](../deploy/target-host/README.md) 安装运行用户、发布目录、后端启动器、四个 systemd unit、nginx 四域名配置和最小 sudoers 规则。模板不会创建云资源、DNS 或证书，也不包含真实地址和密钥；替换全部占位值并通过 `nginx -t`、`visudo -cf` 后，才能进入下面的私有配置和只读预检。sudoers 必须同时允许精确的 `restart`、逐服务 `is-active` 和首次部署恢复所需的整组 `stop`，目标机预检会逐项核对但不会执行这些动作。
 
 从 [`deploy/mysql-release.cnf.example`](../deploy/mysql-release.cnf.example) 复制真实文件到目标机私有路径，建议：
 
@@ -95,7 +98,7 @@ set +a
 - 文件不放在 release bundle 目录内。
 - GitHub Environment secret `DEPLOY_DB_DEFAULTS_FILE` 指向这个路径，避免私有目标机路径出现在 Actions 日志。
 - 首次接管已有库时，临时设置 `DEPLOY_DB_BASELINE_VERSION`；确认迁移成功后移除。
-- 安装后的真实运行 env 同样放在 release bundle 外，并由 `DEPLOY_RUNTIME_ENV_FILE` 指向；建议路径为 `/etc/dazhongdianping/eu-pre.env`，权限使用 `0400` 或 `0600`。
+- 安装后的真实运行 env 同样放在 release bundle 外，并由 `DEPLOY_RUNTIME_ENV_FILE` 指向；`test` 建议使用 `/etc/dazhongdianping/eu-test.env`，`pre` 建议使用 `/etc/dazhongdianping/eu-pre.env`，权限使用 `0400` 或 `0600`。
 
 ## 3. GitHub `test/pre` Environment
 
@@ -195,7 +198,7 @@ Secrets：
 | `DEPLOY_SSH_HOST` | 目标机域名或 IP |
 | `DEPLOY_SSH_USER` | 发布用户 |
 | `DEPLOY_REMOTE_ROOT` | 非根绝对路径，例如 `/opt/dazhongdianping` |
-| `DEPLOY_RUNTIME_ENV_FILE` | 目标机私有运行 env 的绝对路径，例如 `/etc/dazhongdianping/eu-pre.env` |
+| `DEPLOY_RUNTIME_ENV_FILE` | 目标机私有运行 env 的绝对路径：`test` 例如 `/etc/dazhongdianping/eu-test.env`，`pre` 例如 `/etc/dazhongdianping/eu-pre.env` |
 | `DEPLOY_DB_DEFAULTS_FILE` | 目标机 MySQL defaults 文件绝对路径 |
 | `DEPLOY_SSH_PRIVATE_KEY` | GitHub Actions 发布用 SSH 私钥 |
 | `DEPLOY_KNOWN_HOSTS` | 目标机 known_hosts 内容 |
@@ -215,7 +218,7 @@ Environment protection：
 
 1. 隐私告知覆盖 30 分钟以内的广告反刷 IP 临时处理；完成可信代理配置，并从代理入口验证真实地址恢复、伪造转发头拒绝和后端不可绕过代理直连。
 2. `stripe-preflight.sh --check-cli` 通过。
-3. 目标机后端以 `APP_RUNTIME_MODE=pre` 启动成功。
+3. 目标机后端以与发布环境一致的身份启动成功：`test` 为 `APP_RUNTIME_MODE=test`，`pre` 为 `APP_RUNTIME_MODE=pre`。
 4. MySQL、Redis、S3、Elasticsearch health/smoke 通过。
 5. SMTP 测试邮箱真实收到验证码。
 6. 至少一个欧洲手机号通过 Twilio 真实收到验证码。

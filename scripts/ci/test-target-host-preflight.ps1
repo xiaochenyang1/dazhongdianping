@@ -257,6 +257,7 @@ exit 0
     Assert-True ($sshLog -match 'bash -s -- --environment pre') "target preflight must send the remote audit over stdin"
     $sudoLog = Get-Content -LiteralPath $sudoLogPath -Raw
     Assert-True ($sudoLog -match '^-n -l -- systemctl restart' -or $sudoLog -match '(?m)^-n -l -- systemctl restart') "preflight must query restart authorization without restarting services"
+    Assert-True ($sudoLog -match '^-n -l -- systemctl stop' -or $sudoLog -match '(?m)^-n -l -- systemctl stop') "preflight must query first-deploy recovery stop authorization without stopping services"
 
     Write-ReadyRuntimeEnv -PlaceholderPassword
     $placeholderRaw = (& $preflightPath `
