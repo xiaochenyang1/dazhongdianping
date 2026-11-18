@@ -8,6 +8,8 @@ public class SearchProperties {
     private Provider provider = Provider.MYSQL;
     private String baseUrl = "http://127.0.0.1:9200";
     private String indexName = "dzdp_shop_v1";
+    private String username = "";
+    private String password = "";
     private boolean fallbackOnError = true;
     private int syncBatchSize = 50;
     private long syncLockTimeoutSeconds = 300;
@@ -39,6 +41,22 @@ public class SearchProperties {
 
     public void setIndexName(String indexName) {
         this.indexName = indexName;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public boolean isFallbackOnError() {

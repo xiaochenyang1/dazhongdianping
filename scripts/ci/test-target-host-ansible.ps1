@@ -45,10 +45,12 @@ Assert-True ($playbook -match "'//'.*not in dzdp_release_root") "release root mu
 
 $inventory = Get-Content -LiteralPath $inventoryPath -Raw
 Assert-True ($inventory -match 'CHANGE_ME_TEST_HOST') "example inventory must retain a target-host placeholder"
-Assert-True ($inventory -match 'ansible_user: deploy') "example inventory must use the deployment account"
+Assert-True ($inventory -match 'ansible_user: ubuntu') "example inventory must use the AWS provisioning account"
+Assert-True ($inventory -notmatch 'ansible_user: deploy') "the restricted release account must not be reused for provisioning"
 
 $vars = Get-Content -LiteralPath $varsPath -Raw
 Assert-True ($vars -match 'dzdp_environment: test') "test vars must identify the test runtime"
+Assert-True ($vars -match 'dzdp_deploy_user: deploy') "test vars must retain the restricted release account"
 Assert-True ($vars -match 'dzdp_runtime_env_target: /etc/dazhongdianping/eu-test[.]env') "test vars must install the isolated runtime env"
 Assert-True ($vars -match 'dzdp_release_root: /opt/dazhongdianping') "test vars must match the release workflow root"
 Assert-True ($vars -notmatch '(?i)(BEGIN (RSA |OPENSSH )?PRIVATE KEY|sk_(live|test)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9]{16,})') "example vars must not contain credentials"
@@ -66,6 +68,10 @@ Assert-True ($nginxTemplate.Replace("`r`n", "`n").Trim() -ceq $expectedNginx.Rep
 $gitignore = Get-Content -LiteralPath (Join-Path $repoRoot ".gitignore") -Raw
 Assert-True ($gitignore -match 'deploy/ansible/inventory[.]yml') "real Ansible inventory must be ignored"
 Assert-True ($gitignore -match 'deploy/ansible/vars/[*][.]yml') "real Ansible vars must be ignored"
+
+$readme = Get-Content -LiteralPath $readmePath -Raw
+Assert-True ($readme -match 'Canonical''s\s+`ubuntu`') "Ansible documentation must identify the privileged AWS provisioning account"
+Assert-True ($readme -match 'must not\s+have general sudo access') "Ansible documentation must keep deploy restricted"
 
 $ruby = Get-Command ruby -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($null -ne $ruby) {

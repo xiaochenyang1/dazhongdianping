@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -28,11 +29,35 @@ public class S3StorageConfig {
         if (StringUtils.hasText(s3.getEndpoint())) {
             builder.endpointOverride(URI.create(s3.getEndpoint()));
         }
-        if (StringUtils.hasText(s3.getAccessKey()) || StringUtils.hasText(s3.getSecretKey())) {
-            builder.credentialsProvider(StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(s3.getAccessKey(), s3.getSecretKey())
-            ));
+        boolean hasAccessKey = StringUtils.hasText(s3.getAccessKey());
+        boolean hasSecretKey = StringUtils.hasText(s3.getSecretKey());
+        switch (s3.getCredentialsProvider()) {
+            case STATIC -> builder.credentialsProvider(staticCredentials(s3, hasAccessKey, hasSecretKey));
+            case DEFAULT_CHAIN -> {
+                if (hasAccessKey || hasSecretKey) {
+                    throw new IllegalStateException(
+                            "APP_S3_CREDENTIALS_PROVIDER=default_chain cannot be combined with static S3 keys");
+                }
+                builder.credentialsProvider(DefaultCredentialsProvider.create());
+            }
+            case AUTO -> {
+                if (hasAccessKey || hasSecretKey) {
+                    builder.credentialsProvider(staticCredentials(s3, hasAccessKey, hasSecretKey));
+                }
+            }
         }
         return builder.build();
+    }
+
+    private StaticCredentialsProvider staticCredentials(
+            FileStorageProperties.S3 s3,
+            boolean hasAccessKey,
+            boolean hasSecretKey) {
+        if (!hasAccessKey || !hasSecretKey) {
+            throw new IllegalStateException(
+                    "static S3 credentials require both APP_S3_ACCESS_KEY and APP_S3_SECRET_KEY");
+        }
+        return StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(s3.getAccessKey(), s3.getSecretKey()));
     }
 }

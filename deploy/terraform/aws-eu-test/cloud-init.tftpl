@@ -1,0 +1,24 @@
+#cloud-config
+package_update: false
+package_upgrade: false
+
+users:
+  - default
+  - name: deploy
+    gecos: Dazhongdianping release account
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${jsonencode(deploy_ssh_public_key)}
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/60-dzdp-hardening.conf
+    owner: root:root
+    permissions: "0644"
+    content: |
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin no
+
+runcmd:
+  - [systemctl, reload, ssh]

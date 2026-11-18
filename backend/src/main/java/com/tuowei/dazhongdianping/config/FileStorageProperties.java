@@ -55,6 +55,7 @@ public class FileStorageProperties {
         private String publicBaseUrl = "";
         private String accessKey = "";
         private String secretKey = "";
+        private CredentialsProvider credentialsProvider = CredentialsProvider.AUTO;
         private boolean pathStyleAccessEnabled = false;
 
         public String getBucket() {
@@ -105,12 +106,26 @@ public class FileStorageProperties {
             this.secretKey = secretKey;
         }
 
+        public CredentialsProvider getCredentialsProvider() {
+            return credentialsProvider;
+        }
+
+        public void setCredentialsProvider(CredentialsProvider credentialsProvider) {
+            this.credentialsProvider = credentialsProvider;
+        }
+
         public boolean isPathStyleAccessEnabled() {
             return pathStyleAccessEnabled;
         }
 
         public void setPathStyleAccessEnabled(boolean pathStyleAccessEnabled) {
             this.pathStyleAccessEnabled = pathStyleAccessEnabled;
+        }
+
+        public enum CredentialsProvider {
+            AUTO,
+            DEFAULT_CHAIN,
+            STATIC
         }
     }
 }

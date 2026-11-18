@@ -3,7 +3,7 @@ spring:
     name: dazhongdianping-backend
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${APP_DB_HOST:127.0.0.1}:${APP_DB_PORT:3306}/${APP_DB_NAME:dazhongdianping}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${APP_DB_HOST:127.0.0.1}:${APP_DB_PORT:3306}/${APP_DB_NAME:dazhongdianping}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&sslMode=${APP_DB_SSL_MODE:DISABLED}&allowPublicKeyRetrieval=${APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL:true}
     username: ${APP_DB_USERNAME:root}
     password: ${APP_DB_PASSWORD:}
   data:
@@ -14,6 +14,8 @@ spring:
       database: ${APP_REDIS_DATABASE:0}
       connect-timeout: ${APP_REDIS_CONNECT_TIMEOUT:2s}
       timeout: ${APP_REDIS_TIMEOUT:2s}
+      ssl:
+        enabled: ${APP_REDIS_SSL_ENABLED:false}
   sql:
     init:
       mode: never
@@ -99,6 +101,8 @@ app:
     provider: ${APP_SEARCH_PROVIDER:mysql}
     base-url: ${APP_SEARCH_BASE_URL:http://127.0.0.1:9200}
     index-name: ${APP_SEARCH_INDEX_NAME:dzdp_shop_v1}
+    username: ${APP_SEARCH_USERNAME:}
+    password: ${APP_SEARCH_PASSWORD:}
     fallback-on-error: ${APP_SEARCH_FALLBACK_ON_ERROR:true}
     sync-batch-size: ${APP_SEARCH_SYNC_BATCH_SIZE:50}
     sync-fixed-delay-ms: ${APP_SEARCH_SYNC_FIXED_DELAY_MS:5000}
@@ -183,6 +187,7 @@ app:
       public-base-url: ${APP_S3_PUBLIC_BASE_URL:}
       access-key: ${APP_S3_ACCESS_KEY:}
       secret-key: ${APP_S3_SECRET_KEY:}
+      credentials-provider: ${APP_S3_CREDENTIALS_PROVIDER:auto}
       path-style-access-enabled: ${APP_S3_PATH_STYLE_ACCESS_ENABLED:false}
   push:
     enabled: ${APP_PUSH_ENABLED:false}

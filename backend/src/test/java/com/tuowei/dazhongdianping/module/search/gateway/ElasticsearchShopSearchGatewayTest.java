@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
@@ -145,6 +146,43 @@ class ElasticsearchShopSearchGatewayTest {
             assertThat(item.longitude()).isEqualTo(121.4365);
         });
         server.verify();
+    }
+
+    @Test
+    void shouldSendBasicAuthenticationWhenConfigured() {
+        SearchProperties properties = new SearchProperties();
+        properties.setBaseUrl("https://opensearch.test");
+        properties.setIndexName("shop_index");
+        properties.setUsername("search-user");
+        properties.setPassword("search-password");
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        ElasticsearchShopSearchGateway gateway = new ElasticsearchShopSearchGateway(
+                properties,
+                new ObjectMapper(),
+                builder
+        );
+
+        server.expect(requestTo("https://opensearch.test/shop_index/_search"))
+                .andExpect(header("Authorization", "Basic c2VhcmNoLXVzZXI6c2VhcmNoLXBhc3N3b3Jk"))
+                .andRespond(withSuccess("{\"hits\":{\"total\":{\"value\":0},\"hits\":[]}}", MediaType.APPLICATION_JSON));
+
+        assertThat(gateway.search(Region.EU, new ShopSearchQuery()).total()).isZero();
+        server.verify();
+    }
+
+    @Test
+    void shouldRejectIncompleteBasicAuthentication() {
+        SearchProperties properties = new SearchProperties();
+        properties.setUsername("search-user");
+
+        assertThatThrownBy(() -> new ElasticsearchShopSearchGateway(
+                properties,
+                new ObjectMapper(),
+                RestClient.builder()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("APP_SEARCH_USERNAME")
+                .hasMessageContaining("APP_SEARCH_PASSWORD");
     }
 
     @Test

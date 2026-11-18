@@ -61,11 +61,14 @@ APP_DB_PORT=3306
 APP_DB_NAME=dzdp_pre
 APP_DB_USERNAME=dzdp
 APP_DB_PASSWORD=$databasePassword
+APP_DB_SSL_MODE=REQUIRED
+APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL=false
 APP_REDIS_HOST=redis.internal.test
 APP_REDIS_PORT=6379
 APP_REDIS_PASSWORD=redis-password-fixture
 APP_REDIS_DATABASE=0
 APP_REDIS_HEALTH_ENABLED=true
+APP_REDIS_SSL_ENABLED=true
 APP_STATE_STORE_PROVIDER=redis
 APP_STATE_STORE_KEY_PREFIX=dzdp:eu:pre
 APP_AD_CLICK_DEDUPE_SECONDS=1800
@@ -97,16 +100,17 @@ APP_PAYMENT_STRIPE_SECRET_KEY=sk_test_fixture
 APP_PAYMENT_STRIPE_ENDPOINT_SECRET=whsec_fixture
 APP_PAYMENT_MOCK_ENABLED=false
 APP_SEARCH_PROVIDER=elasticsearch
-APP_SEARCH_BASE_URL=http://elasticsearch.internal.test:9200
+APP_SEARCH_BASE_URL=https://elasticsearch.internal.test
 APP_SEARCH_INDEX_NAME=dzdp_shop_eu_v1
+APP_SEARCH_USERNAME=search-user-fixture
+APP_SEARCH_PASSWORD=search-password-fixture
 APP_SEARCH_FALLBACK_ON_ERROR=false
 APP_FILE_STORAGE_PROVIDER=s3
 APP_S3_BUCKET=dzdp-pre
 APP_S3_REGION=eu-west-1
 APP_S3_ENDPOINT=https://s3.example.test
 APP_S3_PUBLIC_BASE_URL=https://cdn.example.test
-APP_S3_ACCESS_KEY=s3-access-fixture
-APP_S3_SECRET_KEY=s3-secret-fixture
+APP_S3_CREDENTIALS_PROVIDER=default_chain
 APP_S3_PATH_STYLE_ACCESS_ENABLED=false
 APP_PUSH_ENABLED=false
 APP_CORS_ALLOWED_ORIGIN_PATTERNS=https://www.example.test
@@ -192,7 +196,13 @@ exec /bin/bash "$@"
 printf 'Filesystem 1024-blocks Used Available Capacity Mounted-on\n'
 printf '/dev/fake 10000000 1000 9999000 1%% /fixture\n'
 '@
-    Write-Executable -Name "mysql" -Content "#!/bin/sh`nprintf '1\n'"
+    Write-Executable -Name "mysql" -Content @'
+#!/bin/sh
+case "$*" in
+  *Ssl_cipher*) printf 'Ssl_cipher\tTLS_AES_256_GCM_SHA384\n' ;;
+  *) printf '1\n' ;;
+esac
+'@
     Write-Executable -Name "java" -Content @'
 #!/bin/sh
 printf 'openjdk version "17.0.1"\n' >&2
@@ -207,8 +217,26 @@ exit 0
 printf '%s\n' "$*" >> "$DZDP_TARGET_SUDO_LOG"
 exit 0
 '@
-    Write-Executable -Name "curl" -Content "#!/bin/sh`nprintf '401'"
-    foreach ($name in @("timeout", "flock", "sha256sum")) {
+    Write-Executable -Name "curl" -Content @'
+#!/bin/sh
+if [ "${1:-}" = "--config" ]; then
+  config="$(cat)"
+  case "$config" in
+    *'user = "search-user-fixture:search-password-fixture"'*) printf '200' ;;
+    *) printf '401' ;;
+  esac
+else
+  printf '401'
+fi
+'@
+    Write-Executable -Name "openssl" -Content "#!/bin/sh`nexit 0"
+    Write-Executable -Name "timeout" -Content @'
+#!/bin/sh
+shift
+if [ "${1:-}" = "openssl" ]; then exec "$@"; fi
+exit 0
+'@
+    foreach ($name in @("flock", "sha256sum")) {
         Write-Executable -Name $name -Content "#!/bin/sh`nexit 0"
     }
 
@@ -236,7 +264,7 @@ exit 0
     Assert-True (-not $ready.MutatedTarget) "the report must state that the target was not mutated"
     Assert-True ($ready.Failed -eq 0) "complete target fixture must not report failures"
     foreach ($name in @(
-        "runtime-config", "mysql-connectivity", "systemd-services", "sudo-policy",
+        "runtime-config", "mysql-connectivity", "mysql-tls", "systemd-services", "sudo-policy",
         "redis-connectivity", "elasticsearch-connectivity", "s3-connectivity",
         "smtp-connectivity", "twilio-connectivity", "stripe-connectivity"
     )) {
@@ -258,6 +286,82 @@ exit 0
     $sudoLog = Get-Content -LiteralPath $sudoLogPath -Raw
     Assert-True ($sudoLog -match '^-n -l -- systemctl restart' -or $sudoLog -match '(?m)^-n -l -- systemctl restart') "preflight must query restart authorization without restarting services"
     Assert-True ($sudoLog -match '^-n -l -- systemctl stop' -or $sudoLog -match '(?m)^-n -l -- systemctl stop') "preflight must query first-deploy recovery stop authorization without stopping services"
+
+    Write-Executable -Name "curl" -Content "#!/bin/sh`nprintf '401'"
+    $searchAuthRaw = (& $preflightPath `
+        -Environment pre `
+        -Region EU `
+        -RemoteHost host.example.test `
+        -RemoteUser deploy `
+        -RemoteRoot $remoteRoot `
+        -RuntimeEnvFile $runtimeEnvPath `
+        -DatabaseDefaultsFile $databaseDefaultsPath `
+        -MinimumFreeMegabytes 256 `
+        -ReportOnly `
+        -Json) -join "`n"
+    $searchAuthReport = $searchAuthRaw | ConvertFrom-Json
+    $searchAuthFailures = @($searchAuthReport.Checks | Where-Object Status -eq "FAIL" | ForEach-Object Name)
+    Assert-True ("elasticsearch-connectivity" -in $searchAuthFailures) "OpenSearch 401 must block target readiness"
+    Assert-True ($searchAuthRaw -notmatch 'search-password-fixture') "OpenSearch authentication failure must not expose credentials"
+    Write-Executable -Name "curl" -Content @'
+#!/bin/sh
+if [ "${1:-}" = "--config" ]; then
+  config="$(cat)"
+  case "$config" in
+    *'user = "search-user-fixture:search-password-fixture"'*) printf '200' ;;
+    *) printf '401' ;;
+  esac
+else
+  printf '401'
+fi
+'@
+
+    Write-Executable -Name "openssl" -Content "#!/bin/sh`nexit 1"
+    $redisTlsRaw = (& $preflightPath `
+        -Environment pre `
+        -Region EU `
+        -RemoteHost host.example.test `
+        -RemoteUser deploy `
+        -RemoteRoot $remoteRoot `
+        -RuntimeEnvFile $runtimeEnvPath `
+        -DatabaseDefaultsFile $databaseDefaultsPath `
+        -MinimumFreeMegabytes 256 `
+        -ReportOnly `
+        -Json) -join "`n"
+    $redisTlsReport = $redisTlsRaw | ConvertFrom-Json
+    $redisTlsFailures = @($redisTlsReport.Checks | Where-Object Status -eq "FAIL" | ForEach-Object Name)
+    Assert-True ("redis-connectivity" -in $redisTlsFailures) "failed Redis TLS handshake must block target readiness"
+    Write-Executable -Name "openssl" -Content "#!/bin/sh`nexit 0"
+
+    Write-Executable -Name "mysql" -Content @'
+#!/bin/sh
+case "$*" in
+  *Ssl_cipher*) printf 'Ssl_cipher\t\n' ;;
+  *) printf '1\n' ;;
+esac
+'@
+    $mysqlTlsRaw = (& $preflightPath `
+        -Environment pre `
+        -Region EU `
+        -RemoteHost host.example.test `
+        -RemoteUser deploy `
+        -RemoteRoot $remoteRoot `
+        -RuntimeEnvFile $runtimeEnvPath `
+        -DatabaseDefaultsFile $databaseDefaultsPath `
+        -MinimumFreeMegabytes 256 `
+        -ReportOnly `
+        -Json) -join "`n"
+    $mysqlTlsReport = $mysqlTlsRaw | ConvertFrom-Json
+    $mysqlTlsFailures = @($mysqlTlsReport.Checks | Where-Object Status -eq "FAIL" | ForEach-Object Name)
+    Assert-True ("mysql-tls" -in $mysqlTlsFailures) "unencrypted MySQL session must block target readiness"
+    Assert-True ("mysql-connectivity" -notin $mysqlTlsFailures) "MySQL connectivity must remain independent from TLS proof"
+    Write-Executable -Name "mysql" -Content @'
+#!/bin/sh
+case "$*" in
+  *Ssl_cipher*) printf 'Ssl_cipher\tTLS_AES_256_GCM_SHA384\n' ;;
+  *) printf '1\n' ;;
+esac
+'@
 
     Write-ReadyRuntimeEnv -PlaceholderPassword
     $placeholderRaw = (& $preflightPath `

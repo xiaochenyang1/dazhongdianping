@@ -10,6 +10,8 @@ port=3306
 user=CHANGE_ME
 password=CHANGE_ME
 database=CHANGE_ME
-# Prefer certificate verification when the target MySQL service provides it.
+# Encrypt the migration connection by default. Upgrade to identity verification
+# when the provider CA is installed on the target host.
+ssl-mode=REQUIRED
 # ssl-mode=VERIFY_IDENTITY
 # ssl-ca=/etc/ssl/certs/mysql-ca.pem
