@@ -1,0 +1,22 @@
+# Copy to terraform.tfvars outside version control and replace every
+# CHANGE_ME value. A public key is not secret, but never place a private key in
+# Terraform configuration or state.
+
+ssh_public_key = "CHANGE_ME_SSH_PUBLIC_KEY"
+
+# Use the fixed public IPv4 CIDRs of approved operators or CI egress. The module
+# rejects 0.0.0.0/0 for SSH.
+ssh_ingress_cidrs = [
+  "203.0.113.10/32",
+]
+
+# Public web access is intentional for this single-host test topology. Narrow
+# these CIDRs if the test environment is not meant to be internet-accessible.
+web_ingress_cidrs = [
+  "0.0.0.0/0",
+]
+
+additional_tags = {
+  CostCenter = "CHANGE_ME"
+  Owner      = "CHANGE_ME"
+}

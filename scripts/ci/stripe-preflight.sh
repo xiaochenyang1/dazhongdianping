@@ -211,6 +211,45 @@ elasticsearch_index_check() {
   fi
 }
 
+database_ssl_mode_check() {
+  local value="${1-}"
+  check APP_DB_SSL_MODE "$value"
+  if is_present "$value"; then
+    case "$value" in
+      REQUIRED|VERIFY_CA|VERIFY_IDENTITY) ;;
+      *)
+        printf '[invalid] APP_DB_SSL_MODE must be REQUIRED, VERIFY_CA, or VERIFY_IDENTITY\n' >&2
+        failures=$((failures + 1))
+        ;;
+    esac
+  fi
+}
+
+s3_credentials_check() {
+  local provider="${APP_S3_CREDENTIALS_PROVIDER-}"
+  local access_key="${APP_S3_ACCESS_KEY-}"
+  local secret_key="${APP_S3_SECRET_KEY-}"
+
+  check APP_S3_CREDENTIALS_PROVIDER "$provider"
+  case "$provider" in
+    static)
+      check APP_S3_ACCESS_KEY "$access_key"
+      check APP_S3_SECRET_KEY "$secret_key"
+      ;;
+    default_chain)
+      if is_present "$access_key" || is_present "$secret_key"; then
+        printf '[invalid] APP_S3_CREDENTIALS_PROVIDER=default_chain cannot be combined with static S3 keys\n' >&2
+        failures=$((failures + 1))
+      fi
+      ;;
+    '') ;;
+    *)
+      printf '[invalid] APP_S3_CREDENTIALS_PROVIDER must be default_chain or static\n' >&2
+      failures=$((failures + 1))
+      ;;
+  esac
+}
+
 trusted_proxy_regex_check() {
   local value="${1-}"
   check APP_TRUSTED_PROXY_REGEX "$value"
@@ -309,6 +348,8 @@ if ! csv_contains "${APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES-}" "+8
 fi
 [[ "${APP_AUTH_VERIFICATION_ALIYUN_ENABLED-}" == "false" || "${APP_AUTH_VERIFICATION_ALIYUN_ENABLED-}" == "true" ]] || { printf '[invalid] APP_AUTH_VERIFICATION_ALIYUN_ENABLED must be true or false\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_STATE_STORE_PROVIDER-}" == "redis" ]] || { printf '[invalid] APP_STATE_STORE_PROVIDER must be redis\n' >&2; failures=$((failures + 1)); }
+[[ "${APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL-}" == "false" ]] || { printf '[invalid] APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL must be false\n' >&2; failures=$((failures + 1)); }
+[[ "${APP_REDIS_SSL_ENABLED-}" == "true" ]] || { printf '[invalid] APP_REDIS_SSL_ENABLED must be true\n' >&2; failures=$((failures + 1)); }
 trusted_proxy_regex_check "${APP_TRUSTED_PROXY_REGEX-}"
 [[ "${APP_AD_CLICK_DEDUPE_SECONDS-}" == "1800" ]] || { printf '[invalid] APP_AD_CLICK_DEDUPE_SECONDS must be 1800 (30 minutes)\n' >&2; failures=$((failures + 1)); }
 [[ "${APP_FILE_STORAGE_PROVIDER-}" == "s3" ]] || { printf '[invalid] APP_FILE_STORAGE_PROVIDER must be s3\n' >&2; failures=$((failures + 1)); }
@@ -326,6 +367,7 @@ check APP_DB_HOST "${APP_DB_HOST-}"
 check APP_DB_NAME "${APP_DB_NAME-}"
 check APP_DB_USERNAME "${APP_DB_USERNAME-}"
 check APP_DB_PASSWORD "${APP_DB_PASSWORD-}"
+database_ssl_mode_check "${APP_DB_SSL_MODE-}"
 check APP_REDIS_HOST "${APP_REDIS_HOST-}"
 check APP_REDIS_PASSWORD "${APP_REDIS_PASSWORD-}"
 secret_length_check APP_AUTH_JWT_SECRET "${APP_AUTH_JWT_SECRET-}"
@@ -349,10 +391,11 @@ check APP_S3_BUCKET "${APP_S3_BUCKET-}"
 check APP_S3_REGION "${APP_S3_REGION-}"
 url_check APP_S3_ENDPOINT "${APP_S3_ENDPOINT-}"
 url_check APP_S3_PUBLIC_BASE_URL "${APP_S3_PUBLIC_BASE_URL-}"
-check APP_S3_ACCESS_KEY "${APP_S3_ACCESS_KEY-}"
-check APP_S3_SECRET_KEY "${APP_S3_SECRET_KEY-}"
-endpoint_url_check APP_SEARCH_BASE_URL "${APP_SEARCH_BASE_URL-}"
+s3_credentials_check
+url_check APP_SEARCH_BASE_URL "${APP_SEARCH_BASE_URL-}"
 elasticsearch_index_check "${APP_SEARCH_INDEX_NAME-}"
+check APP_SEARCH_USERNAME "${APP_SEARCH_USERNAME-}"
+check APP_SEARCH_PASSWORD "${APP_SEARCH_PASSWORD-}"
 url_check PUBLIC_SITE_URL "${PUBLIC_SITE_URL-}"
 url_check PRERENDER_API_BASE_URL "${PRERENDER_API_BASE_URL-}"
 url_check VITE_API_BASE_URL "${VITE_API_BASE_URL-}"

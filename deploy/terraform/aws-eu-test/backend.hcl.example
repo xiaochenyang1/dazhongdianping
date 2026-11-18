@@ -1,0 +1,7 @@
+# The state bucket and lock table must already exist in the reviewed AWS
+# account. Do not reuse the application asset bucket for Terraform state.
+bucket         = "CHANGE_ME_TERRAFORM_STATE_BUCKET"
+key            = "dazhongdianping/aws-eu-test/terraform.tfstate"
+region         = "eu-west-3"
+encrypt        = true
+dynamodb_table = "CHANGE_ME_TERRAFORM_LOCK_TABLE"

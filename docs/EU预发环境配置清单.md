@@ -1,6 +1,6 @@
 # EU 预发环境配置清单
 
-更新时间：2026-11-16
+更新时间：2026-11-18
 
 当前候选基线以最新 `eu-pre-rc-*` tag 或通过 CI 的不可变提交 SHA 为准，不在本文内维护会过期的固定 SHA。
 
@@ -18,16 +18,16 @@
 |---|---|
 | 运行身份 | `test` 使用 `APP_RUNTIME_MODE=test`；`pre` 使用 `APP_RUNTIME_MODE=pre` |
 | 可信代理 | `APP_TRUSTED_PROXY_REGEX`：加单引号的锚定 Java 正则，只列出批准的 Ingress/负载均衡器 IPv4/IPv6 地址，用竖线分隔；IPv4 的点写作 `[.]` 或 `\.`，不接受网段、范围或通配符 |
-| MySQL | `APP_DB_HOST`、`APP_DB_PORT`、`APP_DB_NAME`、`APP_DB_USERNAME`、`APP_DB_PASSWORD` |
-| Redis | `APP_REDIS_HOST`、`APP_REDIS_PORT`、`APP_REDIS_PASSWORD`、`APP_REDIS_DATABASE`、`APP_STATE_STORE_PROVIDER=redis`、`APP_AD_CLICK_DEDUPE_SECONDS=1800` |
+| MySQL | `APP_DB_HOST`、`APP_DB_PORT`、`APP_DB_NAME`、`APP_DB_USERNAME`、`APP_DB_PASSWORD`、`APP_DB_SSL_MODE=REQUIRED/VERIFY_CA/VERIFY_IDENTITY`、`APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL=false` |
+| Redis | `APP_REDIS_HOST`、`APP_REDIS_PORT`、`APP_REDIS_PASSWORD`、`APP_REDIS_DATABASE`、`APP_REDIS_SSL_ENABLED=true`、`APP_STATE_STORE_PROVIDER=redis`、`APP_AD_CLICK_DEDUPE_SECONDS=1800` |
 | 安全密钥 | `APP_AUTH_JWT_SECRET`、`APP_PAYMENT_NOTIFY_SECRET`，长度至少 32 字符 |
 | 浏览器跨域 | `APP_CORS_ALLOWED_ORIGIN_PATTERNS`，逗号分隔列出三个 Web 的真实 HTTPS origin；禁止通配符、本机地址、userinfo 和路径 |
 | 验证码总开关 | `APP_AUTH_VERIFICATION_MOCK_ENABLED=false`、`APP_AUTH_VERIFICATION_EXPOSE_MOCK_CODE=false`、`APP_AUTH_VERIFICATION_DEV_CONSOLE_ENABLED=false` |
 | SMTP 邮件 | `APP_AUTH_VERIFICATION_MAIL_ENABLED=true`、`APP_MAIL_HOST`、`APP_MAIL_PORT`、`APP_MAIL_USERNAME`、`APP_MAIL_PASSWORD`、`APP_MAIL_SMTP_AUTH=true`、`APP_MAIL_STARTTLS_ENABLED=true`、`APP_MAIL_HEALTH_ENABLED=true`、`APP_AUTH_VERIFICATION_MAIL_FROM`、`APP_AUTH_VERIFICATION_MAIL_SUBJECT`、`APP_AUTH_VERIFICATION_BRAND_NAME` |
 | Twilio 国际短信 | `APP_AUTH_VERIFICATION_TWILIO_ENABLED=true`、`APP_AUTH_VERIFICATION_TWILIO_ACCOUNT_SID`、`APP_AUTH_VERIFICATION_TWILIO_AUTH_TOKEN`、`APP_AUTH_VERIFICATION_TWILIO_FROM` 或 `APP_AUTH_VERIFICATION_TWILIO_MESSAGING_SERVICE_SID`、`APP_AUTH_VERIFICATION_TWILIO_API_BASE_URL=https://api.twilio.com`、`APP_AUTH_VERIFICATION_TWILIO_ROUTE_PREFIXES=*`、`APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES=+86` |
 | Stripe test mode | `APP_PAYMENT_STRIPE_ENABLED=true`、`APP_PAYMENT_STRIPE_SECRET_KEY=sk_test_*`、`APP_PAYMENT_STRIPE_ENDPOINT_SECRET=whsec_*`、`APP_PAYMENT_MOCK_ENABLED=false` |
-| Elasticsearch | `APP_SEARCH_PROVIDER=elasticsearch`、`APP_SEARCH_BASE_URL`、`APP_SEARCH_INDEX_NAME`、`APP_SEARCH_FALLBACK_ON_ERROR=false` |
-| S3 兼容存储 | `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_BUCKET`、`APP_S3_REGION`、`APP_S3_ENDPOINT=https://...`、`APP_S3_PUBLIC_BASE_URL=https://...`、`APP_S3_ACCESS_KEY`、`APP_S3_SECRET_KEY` |
+| Elasticsearch / OpenSearch | `APP_SEARCH_PROVIDER=elasticsearch`、HTTPS `APP_SEARCH_BASE_URL`、`APP_SEARCH_INDEX_NAME`、`APP_SEARCH_USERNAME`、`APP_SEARCH_PASSWORD`、`APP_SEARCH_FALLBACK_ON_ERROR=false` |
+| S3 兼容存储 | `APP_FILE_STORAGE_PROVIDER=s3`、`APP_S3_BUCKET`、`APP_S3_REGION`、`APP_S3_ENDPOINT=https://...`、`APP_S3_PUBLIC_BASE_URL=https://...`、`APP_S3_CREDENTIALS_PROVIDER=default_chain/static`；AWS EC2 优先实例角色，非 AWS 静态模式才配置 `APP_S3_ACCESS_KEY`、`APP_S3_SECRET_KEY` |
 | 移动推送 | `APP_PUSH_ENABLED=false`，直到真实 FCM/APNs 真机 smoke 通过 |
 | 延期功能 | 部署总开关 `APP_LAUNCH_DEFERRED_FEATURES_ENABLED=false`，同时关闭所有区域的延期能力；另保留 `APP_LAUNCH_EU_CREATOR_REWARDS_ENABLED=false`、`APP_LAUNCH_EU_SECKILL_ENABLED=false`、`APP_LAUNCH_EU_GROUP_BUY_ENABLED=false` |
 | Web/SEO | `PUBLIC_SITE_URL=https://...`、`PRERENDER_API_BASE_URL=https://...`、`PRERENDER_REGION=EU`、`VITE_DEFAULT_REGION=EU`、`VITE_API_BASE_URL=https://...`、`VITE_WS_BASE_URL=wss://...`（只填 origin，不附加 `/ws`）、`VITE_STRIPE_PUBLISHABLE_KEY=pk_test_*` |
@@ -82,7 +82,22 @@ set +a
 
 运行预检需要 Bash、Python 3 和 Stripe CLI。没有安装 Stripe CLI 时，先去掉 `--check-cli` 只能证明配置格式，不算真实支付验收。
 
-## 2. 目标机数据库迁移文件
+## 2. AWS test 基础设施与目标机数据库迁移文件
+
+仓库已提供 [`deploy/terraform/aws-eu-test/`](../deploy/terraform/aws-eu-test/README.md) 作为巴黎 `eu-west-3` 的可复现 `test` 基线：双可用区 VPC 与公私子网、Ubuntu 24.04 EC2/EIP、强制 TLS 的私网 RDS MySQL、传输加密的私网 ElastiCache Redis、HTTPS 和内部用户认证的私网 OpenSearch、私有 S3 与 CloudFront OAC、EC2 instance role/default credential chain，以及只包含非敏感端点和 Secrets Manager ARN 的 outputs。该模块不创建 DNS、nginx 证书、应用数据库用户、供应商账号或目标机私有 env。
+
+目标机身份固定拆分：Canonical `ubuntu` 只用于 Ansible provisioning 和 `become`；cloud-init 创建的 `deploy` 不授予通用 sudo，只在 Ansible 安装仓库内最小 sudoers 后用于 GitHub 发布。不得把 `deploy` 改回 Ansible provisioning 用户，也不得在目标机安装长期 AWS access key。
+
+无 AWS 身份时只执行以下本地校验，不执行 plan/apply：
+
+```bash
+cd deploy/terraform/aws-eu-test
+terraform fmt -check -recursive
+terraform init -backend=false
+terraform validate
+```
+
+真实 plan 必须使用经审核且加密/版本化的远端 state 与非公网 SSH CIDR；`terraform apply` 会创建 EC2、EIP、RDS、ElastiCache、OpenSearch、CloudFront、S3 和 Secrets Manager 等付费资源，必须在 AWS 账号、预算、配额、DNS/TLS、备份恢复与销毁策略核准后另行执行。本轮仓库准备不包含 apply，也不能当作目标环境已交付。
 
 目标机尚未初始化时，先按 [`deploy/target-host/README.md`](../deploy/target-host/README.md) 安装运行用户、发布目录、后端启动器、四个 systemd unit、nginx 四域名配置和最小 sudoers 规则；已确认为 Ubuntu 24.04 的主机可使用 [`deploy/ansible/README.md`](../deploy/ansible/README.md) 自动应用同一套约束。模板和 playbook 不会创建云资源、DNS 或证书，也不包含真实地址和密钥；替换全部占位值并通过 `nginx -t`、`visudo -cf` 后，才能进入下面的私有配置和只读预检。sudoers 必须同时允许精确的 `restart`、逐服务 `is-active` 和首次部署恢复所需的整组 `stop`，目标机预检会逐项核对但不会执行这些动作。
 
@@ -153,7 +168,7 @@ GitHub Environment 审计通过且 SSH 已按发布工作流准备后，可独�
 ./scripts/ci/target-host-preflight.ps1 -Environment pre -Region EU -ReportOnly -Json
 ```
 
-脚本从 `DEPLOY_*` 变量读取 SSH、发布目录、运行 env、MySQL defaults 文件和四个 systemd 服务名，通过一次非交互 SSH 执行只读检查：Linux/部署工具、Java 17+、发布目录和 `current/previous` 软链安全、默认 2 GiB 可用空间、两个私有文件的 `0400/0600` 权限、运行参数名称/格式、MySQL `SELECT 1`、systemd unit、精确的无密码 sudo 权限，以及 Redis、Elasticsearch、S3、SMTP、Twilio、Stripe 的网络可达性。默认模式有失败即返回非零；`-ReportOnly` 用于盘点，`-DryRun` 只显示计划且不连接目标机。输出和 JSON 都不包含主机、私有路径或配置值，报告固定声明 `MutatedTarget=false`。`release` workflow 已在三个环境的打包步骤之前强制重跑严格模式；独立运行和 readiness 证据仍用于提前排障与交接。
+脚本从 `DEPLOY_*` 变量读取 SSH、发布目录、运行 env、MySQL defaults 文件和四个 systemd 服务名，通过一次非交互 SSH 执行只读检查：Linux/部署工具、Java 17+、发布目录和 `current/previous` 软链安全、默认 2 GiB 可用空间、两个私有文件的 `0400/0600` 权限、运行参数名称/格式、MySQL `SELECT 1` 与会话 TLS cipher、Redis 证书校验 TLS 握手、OpenSearch HTTPS Basic Auth 集群健康查询、S3 凭证模式、systemd unit、精确的无密码 sudo 权限，以及 S3、SMTP、Twilio、Stripe 的网络可达性。默认模式有失败即返回非零；`-ReportOnly` 用于盘点，`-DryRun` 只显示计划且不连接目标机。输出和 JSON 都不包含主机、私有路径或配置值，报告固定声明 `MutatedTarget=false`。`release` workflow 已在三个环境的打包步骤之前强制重跑严格模式；独立运行和 readiness 证据仍用于提前排障与交接。
 
 该预检不会创建目录、修改权限、重启服务或写入中间件；Redis/S3/SMTP/Twilio/Stripe 等网络检查也不等于带真实凭证的读写/送达/支付验收，后续仍必须执行对应 smoke。
 
@@ -233,7 +248,7 @@ Environment protection：
 
 - Stripe CLI 1.50.1 已安装；2026-11-09 加载仓库模板执行 `stripe-preflight.sh --check-cli` 后，CLI 检查通过，但仍有 29 个真实值/凭证缺失，因此没有 Stripe test 验收结果。
 - 没有 SMTP/Twilio 凭证与送达 smoke 结果。
-- 没有目标机 SSH、MySQL、Redis、S3、Elasticsearch、HTTPS/WSS 域名配置。
+- 没有可用 AWS 身份，也尚未对 AWS EU test Terraform 生成真实 plan 或执行 apply；因此仍没有目标机 SSH、MySQL、Redis、S3、OpenSearch、HTTPS/WSS 域名配置。仓库内 IaC 通过本地格式与 schema 校验不代表云资源已存在。
 - `test` 尚无四个远端验收 HTTPS origin 和四个专用管理员/商户凭据，无法执行手工发布后的 13 条浏览器验收。
 - 2026-11-16，针对主干 `bce9f5298ca31759dae75f4a5d2df528d8b5807a` 运行的只读 [`test/EU` readiness](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43799239798) 已按当前契约完成审计并上传脱敏证据：主干 CI 两个必需 job 均通过，Environment 加固没有额外 warning；但仍缺 10 个 variables、11 个 secrets，且无法采集目标机证据。因此结果为 `readyForDeployment=false`、`mutatedExternalState=false`。正式缺口包括 4 个 `REMOTE_ACCEPTANCE_*` variables 和 4 个 `PLAYWRIGHT_E2E_*` secrets；`prod` Environment 尚未创建。
 - 当前技术候选 `eu-pre-rc-20261108-2` 已绑定历史主干 `4ad66a0d…` 并通过制品与 H2 启动校验，但 manifest 中 API/WSS、Stripe 和 SEO 配置为空，只能作为技术候选，不能直接部署。PR [#37](https://github.com/xiaochenyang1/dazhongdianping/pull/37) 的合并基线为 `e92ba3c…`；环境配置补齐后必须从该提交或更新的已通过 CI 提交重新生成版本号唯一的环境化候选。
@@ -251,3 +266,4 @@ Environment protection：
 - PR #46 合并提交 `f6de5f9…` 的主干 CI 与 03–31 迁移集成通过；最新 `test/pre` readiness 已能核对实际 branch/tag allowlist，当前策略均精确为 `main` 与 `eu-pre-rc-*`，不再把“只打开自定义策略开关”误判为完成。
 - PR [#55](https://github.com/xiaochenyang1/dazhongdianping/pull/55) 已把 Ubuntu 24.04 目标机的 systemd、nginx、sudoers、启动脚本和独立 `eu-test.env` 模板合入主干 `355ef835f7b1ce84c059f03ef203c2447bc2c521`；对应 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43790374540) 全部通过，[自动 release](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43792206516) 在空 `test` 配置处安全停止，checkout、打包、SSH、部署和验收均未执行。
 - PR [#56](https://github.com/xiaochenyang1/dazhongdianping/pull/56) 已把 provider-neutral 的 Ubuntu 24.04 Ansible 目标机 provisioning 合入主干 `bce9f5298ca31759dae75f4a5d2df528d8b5807a`；对应 [主干 CI](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43797406446) 全部通过，[自动 release](https://github.com/xiaochenyang1/dazhongdianping/actions/runs/43798662965) 再次只执行配置门禁并跳过打包、SSH、部署和远程验收。Ansible 只接管已有 Ubuntu 主机，不创建 VM、DNS、TLS 证书或第三方账号，私有输入必须来自仓库外文件。
+- 当前分支新增 AWS EU `test` Terraform 基线与契约测试，并把 Ansible SSH provisioning 身份从发布账号 `deploy` 拆分为 Canonical `ubuntu`；CI 固定安装 Terraform 1.10.5，使用 AWS provider 5.100.0、Random provider 3.9.1 执行 `fmt`、`init -backend=false`、`validate`。本地同版本真实校验与统一 `verify-all` 已通过：后端 717 项、用户 Web 293 项、管理端 193 项、商户端 77 项均为 0 失败，三套 Web 生产构建和全部发布/回滚契约通过。尚未执行 plan/apply 或创建云资源。

@@ -5,8 +5,16 @@ Ubuntu 24.04 LTS server. It does not create a VM, DNS records, TLS certificates,
 databases, Redis, object storage, Elasticsearch, Stripe, SMTP, or Twilio
 accounts. Those resources must exist before the playbook is applied.
 
-The SSH deployment account must already exist and have passwordless `become`
-access for provisioning. Application releases still use the narrower sudoers
+For the AWS EU `test` topology, the reviewed repository-side resource baseline
+is under [`deploy/terraform/aws-eu-test/`](../terraform/aws-eu-test/README.md).
+Terraform validation or plan review does not authorize creating its paid
+resources; apply it only after separate account, cost, network, and lifecycle
+approval.
+
+The SSH provisioning account must already exist and have passwordless `become`
+access. On the repository's AWS Ubuntu 24.04 baseline this is Canonical's
+`ubuntu` account. The separate `deploy` account must already exist but must not
+have general sudo access; application releases use only the narrower sudoers
 policy installed by this playbook.
 
 ## Private inputs
@@ -23,7 +31,9 @@ cp deploy/ansible/vars/test.example.yml deploy/ansible/vars/test.yml
 
 Replace every `CHANGE_ME` value. The two controller-side source paths must point
 to private files with reviewed test values. Do not put secret values in the
-inventory or vars YAML.
+inventory or vars YAML. Keep `ansible_user: ubuntu` for AWS provisioning and
+keep `dzdp_deploy_user: deploy` in the vars file so privileged provisioning and
+routine releases remain separate identities.
 
 Before uploading the runtime file, validate its launch modes and provider
 configuration from an approved workstation:

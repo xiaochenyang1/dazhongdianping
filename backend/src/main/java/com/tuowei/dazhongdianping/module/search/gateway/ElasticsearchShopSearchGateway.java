@@ -9,13 +9,16 @@ import com.tuowei.dazhongdianping.module.browse.model.response.ShopListItemRespo
 import com.tuowei.dazhongdianping.module.search.model.ShopSearchQuery;
 import com.tuowei.dazhongdianping.module.search.model.ShopSearchDocument;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
@@ -37,6 +40,7 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
         this.searchProperties = searchProperties;
         this.objectMapper = objectMapper;
         restClientBuilder.baseUrl(searchProperties.getBaseUrl());
+        configureAuthentication(restClientBuilder);
         // Bound the connect/read time so a hung ES node fails fast and lets
         // ShopSearchService fall back to MySQL, instead of blocking the request
         // thread on the socket until the JVM default (effectively unbounded) elapses.
@@ -55,6 +59,23 @@ public class ElasticsearchShopSearchGateway implements ShopSearchGateway, ShopSe
             restClientBuilder.requestFactory(requestFactory);
         }
         this.restClient = restClientBuilder.build();
+    }
+
+    private void configureAuthentication(RestClient.Builder restClientBuilder) {
+        boolean hasUsername = StringUtils.hasText(searchProperties.getUsername());
+        boolean hasPassword = StringUtils.hasText(searchProperties.getPassword());
+        if (hasUsername != hasPassword) {
+            throw new IllegalStateException(
+                    "Elasticsearch basic authentication requires both APP_SEARCH_USERNAME and APP_SEARCH_PASSWORD");
+        }
+        if (hasUsername) {
+            restClientBuilder.defaultHeader(
+                    HttpHeaders.AUTHORIZATION,
+                    "Basic " + HttpHeaders.encodeBasicAuth(
+                            searchProperties.getUsername(),
+                            searchProperties.getPassword(),
+                            StandardCharsets.UTF_8));
+        }
     }
 
     @Override

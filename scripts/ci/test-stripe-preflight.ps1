@@ -47,6 +47,8 @@ if ($templateVariableDiff.Count -gt 0) {
 }
 foreach ($name in @(
     'APP_RUNTIME_MODE',
+    'APP_DB_SSL_MODE',
+    'APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL',
     'APP_TRUSTED_PROXY_REGEX',
     'APP_AD_CLICK_DEDUPE_SECONDS',
     'APP_AUTH_VERIFICATION_MOCK_ENABLED',
@@ -84,11 +86,15 @@ foreach ($name in @(
     'APP_PAYMENT_STRIPE_ENDPOINT_SECRET',
     'VITE_STRIPE_PUBLISHABLE_KEY',
     'APP_STATE_STORE_PROVIDER',
+    'APP_REDIS_SSL_ENABLED',
     'APP_FILE_STORAGE_PROVIDER',
     'APP_SEARCH_PROVIDER',
     'APP_SEARCH_BASE_URL',
     'APP_SEARCH_INDEX_NAME',
+    'APP_SEARCH_USERNAME',
+    'APP_SEARCH_PASSWORD',
     'APP_SEARCH_FALLBACK_ON_ERROR',
+    'APP_S3_CREDENTIALS_PROVIDER',
     'APP_S3_PUBLIC_BASE_URL',
     'APP_PUSH_ENABLED',
     'APP_CORS_ALLOWED_ORIGIN_PATTERNS',
@@ -116,8 +122,13 @@ foreach ($entry in $templates.GetEnumerator()) {
     if ($template -notmatch 'APP_AUTH_VERIFICATION_TWILIO_ENABLED=true') { throw "EU $environment template must enable international SMS verification" }
     if ($template -notmatch 'APP_SEARCH_FALLBACK_ON_ERROR=false') { throw "EU $environment template must disable search fallback so Elasticsearch failures stay visible" }
     if ($template -notmatch 'APP_STATE_STORE_PROVIDER=redis') { throw "EU $environment template must use Redis state storage" }
+    if ($template -notmatch 'APP_DB_SSL_MODE=(REQUIRED|VERIFY_CA|VERIFY_IDENTITY)') { throw "EU $environment template must require encrypted MySQL transport" }
+    if ($template -notmatch 'APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL=false') { throw "EU $environment template must disable MySQL public-key retrieval" }
+    if ($template -notmatch 'APP_REDIS_SSL_ENABLED=true') { throw "EU $environment template must require Redis TLS" }
     if ($template -notmatch 'APP_FILE_STORAGE_PROVIDER=s3') { throw "EU $environment template must use S3 storage" }
+    if ($template -notmatch 'APP_S3_CREDENTIALS_PROVIDER=default_chain') { throw "EU $environment template must use the AWS default credential chain" }
     if ($template -notmatch 'APP_SEARCH_PROVIDER=elasticsearch') { throw "EU $environment template must use Elasticsearch" }
+    if ($template -notmatch 'APP_SEARCH_BASE_URL=https://') { throw "EU $environment template must use HTTPS for search" }
     if ($template -notmatch 'APP_PUSH_ENABLED=false') { throw "EU $environment template must keep push disabled until real-device smoke passes" }
 }
 if ($templates.test -notmatch 'APP_DB_NAME=dazhongdianping_eu_test') { throw 'EU test template must use the isolated test database name' }
@@ -135,8 +146,11 @@ $contractEnvironment = [ordered]@{
     APP_DB_NAME = 'dzdp_eu_contract'
     APP_DB_USERNAME = 'dzdp_contract'
     APP_DB_PASSWORD = 'contract-password'
+    APP_DB_SSL_MODE = 'REQUIRED'
+    APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL = 'false'
     APP_REDIS_HOST = 'redis.internal'
     APP_REDIS_PASSWORD = 'contract-password'
+    APP_REDIS_SSL_ENABLED = 'true'
     APP_AUTH_JWT_SECRET = 'contract-jwt-secret-at-least-32-characters'
     APP_PAYMENT_NOTIFY_SECRET = 'contract-notify-secret-at-least-32-characters'
     APP_AUTH_VERIFICATION_MOCK_ENABLED = 'false'
@@ -169,14 +183,17 @@ $contractEnvironment = [ordered]@{
     APP_STATE_STORE_PROVIDER = 'redis'
     APP_FILE_STORAGE_PROVIDER = 's3'
     APP_S3_BUCKET = 'dzdp-contract'
-    APP_S3_REGION = 'eu-west-1'
+    APP_S3_REGION = 'eu-west-3'
     APP_S3_ENDPOINT = 'https://s3.internal.example'
     APP_S3_PUBLIC_BASE_URL = 'https://cdn.example.com'
-    APP_S3_ACCESS_KEY = 'contract-access'
-    APP_S3_SECRET_KEY = 'contract-secret'
+    APP_S3_CREDENTIALS_PROVIDER = 'default_chain'
+    APP_S3_ACCESS_KEY = ''
+    APP_S3_SECRET_KEY = ''
     APP_SEARCH_PROVIDER = 'elasticsearch'
-    APP_SEARCH_BASE_URL = 'http://search.internal:9200'
+    APP_SEARCH_BASE_URL = 'https://search.internal'
     APP_SEARCH_INDEX_NAME = 'dzdp_shop_eu_contract'
+    APP_SEARCH_USERNAME = 'search-contract-user'
+    APP_SEARCH_PASSWORD = 'search-contract-password'
     APP_SEARCH_FALLBACK_ON_ERROR = 'false'
     APP_PUSH_ENABLED = 'false'
     APP_CORS_ALLOWED_ORIGIN_PATTERNS = 'https://eu.example.com,https://admin.eu.example.com,https://merchant.eu.example.com'
@@ -287,9 +304,29 @@ try {
     if ((Invoke-PreflightContract) -eq 0) { throw 'short payment notification secret must fail preflight' }
     $env:APP_PAYMENT_NOTIFY_SECRET = $contractEnvironment.APP_PAYMENT_NOTIFY_SECRET
 
+    $env:APP_DB_SSL_MODE = 'DISABLED'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'disabled MySQL transport encryption must fail preflight' }
+    $env:APP_DB_SSL_MODE = $contractEnvironment.APP_DB_SSL_MODE
+
+    $env:APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL = 'true'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'enabled MySQL public-key retrieval must fail preflight' }
+    $env:APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL = $contractEnvironment.APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL
+
+    $env:APP_REDIS_SSL_ENABLED = 'false'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'disabled Redis TLS must fail preflight' }
+    $env:APP_REDIS_SSL_ENABLED = $contractEnvironment.APP_REDIS_SSL_ENABLED
+
     $env:APP_SEARCH_BASE_URL = ''
     if ((Invoke-PreflightContract) -eq 0) { throw 'missing APP_SEARCH_BASE_URL must fail preflight' }
     $env:APP_SEARCH_BASE_URL = $contractEnvironment.APP_SEARCH_BASE_URL
+
+    $env:APP_SEARCH_BASE_URL = 'http://search.internal:9200'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'non-HTTPS APP_SEARCH_BASE_URL must fail preflight' }
+    $env:APP_SEARCH_BASE_URL = $contractEnvironment.APP_SEARCH_BASE_URL
+
+    $env:APP_SEARCH_PASSWORD = ''
+    if ((Invoke-PreflightContract) -eq 0) { throw 'missing APP_SEARCH_PASSWORD must fail preflight' }
+    $env:APP_SEARCH_PASSWORD = $contractEnvironment.APP_SEARCH_PASSWORD
 
     $env:APP_SEARCH_INDEX_NAME = 'Invalid Index'
     if ((Invoke-PreflightContract) -eq 0) { throw 'invalid APP_SEARCH_INDEX_NAME must fail preflight' }
@@ -302,6 +339,17 @@ try {
     $env:APP_S3_PUBLIC_BASE_URL = 'http://cdn.example.com'
     if ((Invoke-PreflightContract) -eq 0) { throw 'non-HTTPS APP_S3_PUBLIC_BASE_URL must fail preflight' }
     $env:APP_S3_PUBLIC_BASE_URL = $contractEnvironment.APP_S3_PUBLIC_BASE_URL
+
+    $env:APP_S3_CREDENTIALS_PROVIDER = 'static'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'static S3 mode without keys must fail preflight' }
+    $env:APP_S3_ACCESS_KEY = 'contract-access'
+    $env:APP_S3_SECRET_KEY = 'contract-secret'
+    if ((Invoke-PreflightContract) -ne 0) { throw 'static S3 mode with both keys must pass preflight' }
+    $env:APP_S3_CREDENTIALS_PROVIDER = 'default_chain'
+    if ((Invoke-PreflightContract) -eq 0) { throw 'default-chain S3 mode with static keys must fail preflight' }
+    $env:APP_S3_ACCESS_KEY = ''
+    $env:APP_S3_SECRET_KEY = ''
+    if ((Invoke-PreflightContract) -ne 0) { throw 'default-chain S3 mode without static keys must pass preflight' }
 
     $env:VITE_WS_BASE_URL = 'ws://api.eu.example.com'
     if ((Invoke-PreflightContract) -eq 0) { throw 'non-WSS VITE_WS_BASE_URL must fail preflight' }

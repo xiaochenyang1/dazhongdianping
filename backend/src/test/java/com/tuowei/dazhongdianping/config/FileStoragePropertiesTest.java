@@ -21,6 +21,7 @@ class FileStoragePropertiesTest {
                         "app.file-storage.s3.public-base-url", "https://cdn.example.test/uploads",
                         "app.file-storage.s3.access-key", "test-access",
                         "app.file-storage.s3.secret-key", "test-secret",
+                        "app.file-storage.s3.credentials-provider", "static",
                         "app.file-storage.s3.path-style-access-enabled", "true"
                 )
         );
@@ -36,6 +37,8 @@ class FileStoragePropertiesTest {
         assertThat(properties.getS3().getPublicBaseUrl()).isEqualTo("https://cdn.example.test/uploads");
         assertThat(properties.getS3().getAccessKey()).isEqualTo("test-access");
         assertThat(properties.getS3().getSecretKey()).isEqualTo("test-secret");
+        assertThat(properties.getS3().getCredentialsProvider())
+                .isEqualTo(FileStorageProperties.S3.CredentialsProvider.STATIC);
         assertThat(properties.getS3().isPathStyleAccessEnabled()).isTrue();
     }
 }

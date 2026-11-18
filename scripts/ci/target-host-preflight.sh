@@ -119,7 +119,7 @@ else
 fi
 
 required_tools=(
-  bash awk chmod curl df find flock grep head java ln mkdir mysql readlink rm sed
+  bash awk chmod curl df find flock grep head java ln mkdir mysql openssl readlink rm sed
   sha256sum sort stat sudo systemctl timeout tr unzip
 )
 missing_tools=()
@@ -338,14 +338,15 @@ if $runtime_file_ready; then
   fi
   required_runtime_values=(
     APP_DB_HOST APP_DB_NAME APP_DB_USERNAME APP_DB_PASSWORD
-    APP_TRUSTED_PROXY_REGEX APP_REDIS_HOST APP_REDIS_PASSWORD APP_STATE_STORE_KEY_PREFIX
+    APP_DB_SSL_MODE APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL
+    APP_TRUSTED_PROXY_REGEX APP_REDIS_HOST APP_REDIS_PASSWORD APP_REDIS_SSL_ENABLED APP_STATE_STORE_KEY_PREFIX
     APP_AUTH_VERIFICATION_MAIL_FROM APP_AUTH_VERIFICATION_MAIL_SUBJECT
     APP_AUTH_VERIFICATION_BRAND_NAME APP_MAIL_HOST APP_MAIL_USERNAME APP_MAIL_PASSWORD
     APP_AUTH_VERIFICATION_TWILIO_ACCOUNT_SID APP_AUTH_VERIFICATION_TWILIO_AUTH_TOKEN
     APP_AUTH_VERIFICATION_TWILIO_ROUTE_PREFIXES APP_AUTH_VERIFICATION_TWILIO_EXCLUDED_ROUTE_PREFIXES
     APP_PAYMENT_STRIPE_SECRET_KEY APP_PAYMENT_STRIPE_ENDPOINT_SECRET
-    APP_SEARCH_BASE_URL APP_SEARCH_INDEX_NAME APP_S3_BUCKET APP_S3_REGION
-    APP_S3_ENDPOINT APP_S3_PUBLIC_BASE_URL APP_S3_ACCESS_KEY APP_S3_SECRET_KEY
+    APP_SEARCH_BASE_URL APP_SEARCH_INDEX_NAME APP_SEARCH_USERNAME APP_SEARCH_PASSWORD
+    APP_S3_BUCKET APP_S3_REGION APP_S3_ENDPOINT APP_S3_PUBLIC_BASE_URL APP_S3_CREDENTIALS_PROVIDER
     APP_CORS_ALLOWED_ORIGIN_PATTERNS PUBLIC_SITE_URL PRERENDER_API_BASE_URL
     VITE_API_BASE_URL VITE_WS_BASE_URL VITE_STRIPE_PUBLISHABLE_KEY
   )
@@ -353,8 +354,10 @@ if $runtime_file_ready; then
     require_runtime_value "$name"
   done
   require_runtime_equals APP_RUNTIME_MODE "$environment"
+  require_runtime_equals APP_DB_ALLOW_PUBLIC_KEY_RETRIEVAL false
   require_runtime_equals APP_STATE_STORE_PROVIDER redis
   require_runtime_equals APP_REDIS_HEALTH_ENABLED true
+  require_runtime_equals APP_REDIS_SSL_ENABLED true
   require_runtime_equals APP_AD_CLICK_DEDUPE_SECONDS 1800
   require_runtime_equals APP_FILE_STORAGE_PROVIDER s3
   require_runtime_equals APP_SEARCH_PROVIDER elasticsearch
@@ -388,9 +391,33 @@ if $runtime_file_ready; then
   if [[ "$s3_path_style" != "true" && "$s3_path_style" != "false" ]]; then
     mark_runtime_invalid APP_S3_PATH_STYLE_ACCESS_ENABLED
   fi
+  db_ssl_mode="$(get_config_value APP_DB_SSL_MODE || true)"
+  case "$db_ssl_mode" in
+    REQUIRED|VERIFY_CA|VERIFY_IDENTITY) ;;
+    *) mark_runtime_invalid APP_DB_SSL_MODE ;;
+  esac
+  s3_credentials_provider="$(get_config_value APP_S3_CREDENTIALS_PROVIDER || true)"
+  s3_access_key="$(get_config_value APP_S3_ACCESS_KEY || true)"
+  s3_secret_key="$(get_config_value APP_S3_SECRET_KEY || true)"
+  case "$s3_credentials_provider" in
+    static)
+      if ! runtime_value_present "$s3_access_key"; then
+        mark_runtime_invalid APP_S3_ACCESS_KEY
+      fi
+      if ! runtime_value_present "$s3_secret_key"; then
+        mark_runtime_invalid APP_S3_SECRET_KEY
+      fi
+      ;;
+    default_chain)
+      if runtime_value_present "$s3_access_key" || runtime_value_present "$s3_secret_key"; then
+        mark_runtime_invalid APP_S3_DEFAULT_CHAIN_WITH_STATIC_KEYS
+      fi
+      ;;
+    *) mark_runtime_invalid APP_S3_CREDENTIALS_PROVIDER ;;
+  esac
   require_runtime_url APP_S3_ENDPOINT https
   require_runtime_url APP_S3_PUBLIC_BASE_URL https
-  require_runtime_url APP_SEARCH_BASE_URL 'https?'
+  require_runtime_url APP_SEARCH_BASE_URL https
   require_runtime_url APP_AUTH_VERIFICATION_TWILIO_API_BASE_URL https
   require_runtime_url PUBLIC_SITE_URL https
   require_runtime_url PRERENDER_API_BASE_URL https
@@ -439,8 +466,17 @@ if $database_file_ready; then
   else
     emit FAIL mysql-connectivity "credentialed read-only query failed"
   fi
+
+  mysql_ssl_status="$(mysql --defaults-extra-file="$database_defaults_file" --batch --skip-column-names -e "SHOW SESSION STATUS LIKE 'Ssl_cipher'" 2>/dev/null || true)"
+  mysql_ssl_cipher="$(printf '%s\n' "$mysql_ssl_status" | awk '$1 == "Ssl_cipher" && NF >= 2 { print $2; exit }')"
+  if [[ -n "$mysql_ssl_cipher" ]]; then
+    emit PASS mysql-tls "database session negotiated TLS"
+  else
+    emit FAIL mysql-tls "database session did not prove an active TLS cipher"
+  fi
 else
   emit FAIL mysql-connectivity "database defaults file is unavailable"
+  emit FAIL mysql-tls "database defaults file is unavailable"
 fi
 
 service_units_ready=true
@@ -489,23 +525,69 @@ http_reachable() {
   [[ "$code" =~ ^[1-4][0-9][0-9]$ ]]
 }
 
+tls_reachable() {
+  local host="$1"
+  local port="$2"
+  if [[ ! "$host" =~ ^[A-Za-z0-9._:-]+$ || ! "$port" =~ ^[0-9]+$ ]]; then
+    return 1
+  fi
+  timeout 10 openssl s_client \
+    -connect "$host:$port" \
+    -servername "$host" \
+    -verify_return_error \
+    -brief </dev/null >/dev/null 2>&1
+}
+
+curl_config_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '%s' "$value"
+}
+
+http_basic_authenticated() {
+  local base_url="$1"
+  local username="$2"
+  local password="$3"
+  local url="${base_url%/}/_cluster/health"
+  local escaped_url escaped_credentials code
+  escaped_url="$(curl_config_escape "$url")"
+  escaped_credentials="$(curl_config_escape "$username:$password")"
+  code="$({
+    printf 'silent\n'
+    printf 'show-error\n'
+    printf 'output = "/dev/null"\n'
+    printf 'connect-timeout = 5\n'
+    printf 'max-time = 15\n'
+    printf 'write-out = "%%{http_code}"\n'
+    printf 'user = "%s"\n' "$escaped_credentials"
+    printf 'url = "%s"\n' "$escaped_url"
+  } | curl --config - 2>/dev/null || true)"
+  [[ "$code" == "200" ]]
+}
+
 redis_host="$(get_config_value APP_REDIS_HOST || true)"
 redis_port="$(get_config_value APP_REDIS_PORT || true)"
 search_base_url="$(get_config_value APP_SEARCH_BASE_URL || true)"
+search_username="$(get_config_value APP_SEARCH_USERNAME || true)"
+search_password="$(get_config_value APP_SEARCH_PASSWORD || true)"
 s3_endpoint="$(get_config_value APP_S3_ENDPOINT || true)"
 mail_host="$(get_config_value APP_MAIL_HOST || true)"
 mail_port="$(get_config_value APP_MAIL_PORT || true)"
 twilio_api_base_url="$(get_config_value APP_AUTH_VERIFICATION_TWILIO_API_BASE_URL || true)"
 
-if runtime_value_present "$redis_host" && tcp_reachable "$redis_host" "$redis_port"; then
-  emit PASS redis-connectivity "Redis TCP endpoint is reachable; authenticated smoke remains required"
+if runtime_value_present "$redis_host" && tls_reachable "$redis_host" "$redis_port"; then
+  emit PASS redis-connectivity "Redis endpoint completed a verified TLS handshake; authenticated smoke remains required"
 else
-  emit FAIL redis-connectivity "Redis TCP endpoint is not reachable"
+  emit FAIL redis-connectivity "Redis endpoint did not complete a verified TLS handshake"
 fi
-if runtime_value_present "$search_base_url" && http_reachable "$search_base_url"; then
-  emit PASS elasticsearch-connectivity "Elasticsearch endpoint is reachable; index smoke remains required"
+if runtime_value_present "$search_base_url" &&
+  runtime_value_present "$search_username" &&
+  runtime_value_present "$search_password" &&
+  http_basic_authenticated "$search_base_url" "$search_username" "$search_password"; then
+  emit PASS elasticsearch-connectivity "OpenSearch authenticated cluster-health query succeeded; index smoke remains required"
 else
-  emit FAIL elasticsearch-connectivity "Elasticsearch endpoint is not reachable"
+  emit FAIL elasticsearch-connectivity "OpenSearch authenticated cluster-health query failed"
 fi
 if runtime_value_present "$s3_endpoint" && http_reachable "$s3_endpoint"; then
   emit PASS s3-connectivity "S3 endpoint is reachable; credentialed object smoke remains required"

@@ -9,8 +9,8 @@ automates these same files and permissions without creating cloud resources.
 
 ## Required host software
 
-- Linux with systemd, Bash, Java 17+, nginx, MySQL client, curl, unzip, sudo,
-  `chmod`, `flock`, `sha256sum`, `readlink`, and GNU `stat`.
+- Linux with systemd, Bash, Java 17+, nginx, MySQL client, curl, OpenSSL,
+  unzip, sudo, `chmod`, `flock`, `sha256sum`, `readlink`, and GNU `stat`.
 - A non-interactive SSH account named `deploy` (or update the sudoers template
   and GitHub Environment consistently).
 - DNS and trusted HTTPS certificates for the user, admin, merchant, and API
